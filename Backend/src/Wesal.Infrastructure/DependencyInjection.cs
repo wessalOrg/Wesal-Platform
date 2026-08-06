@@ -7,6 +7,7 @@ using Wesal.Application.Common.Interfaces;
 using Wesal.Domain.Constants;
 using Wesal.Infrastructure.Auth;
 using Wesal.Infrastructure.CurrentUser;
+using Wesal.Infrastructure.Homepage;
 using Wesal.Infrastructure.Time;
 
 namespace Wesal.Infrastructure;
@@ -24,8 +25,12 @@ public static class DependencyInjection
 
         services.AddHttpContextAccessor();
 
+        services.AddOptions<HomepageIntroductionOptions>()
+            .Bind(configuration.GetSection(HomepageIntroductionOptions.SectionName));
+
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IHomepageIntroductionService, HomepageIntroductionService>();
         services.AddSingleton<IDateTime, DateTimeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
