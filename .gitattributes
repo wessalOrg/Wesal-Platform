@@ -1,0 +1,21 @@
+# Normalize line endings for cross-platform development
+* text=auto
+
+# Source files
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.props text eol=crlf
+*.slnx text eol=crlf
+*.json text eol=crlf
+*.md text eol=crlf
+
+# Binary files
+*.dll binary
+*.pdb binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+
+# Diff helpers for solution files
+*.sln text eol=crlf

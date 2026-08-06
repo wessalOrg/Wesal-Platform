@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Wesal.API/Wesal.API.csproj" />
+    <Project Path="src/Wesal.Application/Wesal.Application.csproj" />
+    <Project Path="src/Wesal.Domain/Wesal.Domain.csproj" />
+    <Project Path="src/Wesal.Infrastructure/Wesal.Infrastructure.csproj" />
+    <Project Path="src/Wesal.Persistence/Wesal.Persistence.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Wesal.Tests/Wesal.Tests.csproj" />
+  </Folder>
+</Solution>

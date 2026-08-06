@@ -1,0 +1,40 @@
+## .NET build artifacts
+bin/
+obj/
+*.user
+
+## Rider / Visual Studio
+.idea/
+.vs/
+.vscode/
+
+## Logs
+logs/
+*.log
+
+## Test results
+[Tt]est[Rr]esults/
+coverage/
+
+## User-specific files
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Publish output
+publish/
+artifacts/
+
+## Local configuration / secrets
+appsettings.Local.json
+*.user.json
+.env
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Uploads
+wwwroot/uploads/*
+!wwwroot/uploads/.gitkeep
