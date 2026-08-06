@@ -7,6 +7,7 @@ using Wesal.Application.Common.Interfaces;
 using Wesal.Domain.Constants;
 using Wesal.Infrastructure.Auth;
 using Wesal.Infrastructure.CurrentUser;
+using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Homepage;
 using Wesal.Infrastructure.Time;
 
@@ -31,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IHomepageIntroductionService, HomepageIntroductionService>();
+        services.AddScoped<IFeaturedHallsService, FeaturedHallsService>();
         services.AddSingleton<IDateTime, DateTimeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
