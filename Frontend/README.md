@@ -1,8 +1,8 @@
 # Wesal Frontend
 
-React 19 + Vite + Tailwind CSS + React Router + Axios.
+Next.js + React + TypeScript + Tailwind CSS.
 
-## Setup
+## التشغيل
 
 ```bash
 cd Frontend
@@ -10,24 +10,23 @@ npm install
 npm run dev
 ```
 
-## Scripts
+يفتح عادة على: http://localhost:3000
 
-| Command | Description |
+## الأوامر
+
+| الأمر | الوظيفة |
 |---|---|
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run preview` | Preview production build |
-| `npm run lint` | Run oxlint |
+| `npm run dev` | تشغيل التطوير |
+| `npm run build` | بناء للإنتاج |
+| `npm run start` | تشغيل نسخة الإنتاج |
+| `npm run lint` | فحص الكود |
 
-## Structure
+## البنية
 
 ```
 src/
-  pages/       # Route pages
-  services/    # API clients (Axios)
-  assets/      # Static assets
-  App.jsx      # Router setup
-  main.jsx     # Entry point
+  app/          # الصفحات والـ layout
+  lib/api.ts    # عميل Axios للـ API
 ```
 
-Copy `.env.example` to `.env` and set `VITE_API_BASE_URL` when the backend is ready.
+انسخ `.env.example` إلى `.env.local` وعدّل `NEXT_PUBLIC_API_BASE_URL` عند جاهزية الـ backend.
