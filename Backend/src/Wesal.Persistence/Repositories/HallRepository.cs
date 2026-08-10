@@ -16,13 +16,27 @@ public class HallRepository : IHallRepository
     }
 
     public async Task<IReadOnlyList<Hall>> GetApprovedHallsAsync(int count, CancellationToken cancellationToken = default)
-        => await _context.Halls
-            .AsNoTracking()
-            .Where(hall => hall.Status == HallStatus.Approved && !hall.IsDeleted)
+        => await ApprovedHallsQuery()
             .OrderByDescending(hall => hall.CreatedAt)
             .ThenBy(hall => hall.Name)
             .Take(count)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(
+        HallRegion region,
+        int count,
+        CancellationToken cancellationToken = default)
+        => await ApprovedHallsQuery()
+            .Where(hall => hall.Region == region)
+            .OrderByDescending(hall => hall.CreatedAt)
+            .ThenBy(hall => hall.Name)
+            .Take(count)
+            .ToListAsync(cancellationToken);
+
+    private IQueryable<Hall> ApprovedHallsQuery()
+        => _context.Halls
+            .AsNoTracking()
+            .Where(hall => hall.Status == HallStatus.Approved && !hall.IsDeleted);
 
     public async Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
         IReadOnlyCollection<Guid> hallIds,

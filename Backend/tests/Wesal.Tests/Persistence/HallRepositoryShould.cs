@@ -54,6 +54,113 @@ public class HallRepositoryShould
     }
 
     [Fact]
+    public async Task GetApprovedHallsByRegionAsync_ReturnsOnlyHallsInRequestedRegion()
+    {
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            new Hall { Id = Guid.NewGuid(), Name = "Gaza Hall", Status = HallStatus.Approved, Region = HallRegion.Gaza, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "North Hall", Status = HallStatus.Approved, Region = HallRegion.NorthGaza, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "Middle Hall", Status = HallStatus.Approved, Region = HallRegion.MiddleArea, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "South Hall", Status = HallStatus.Approved, Region = HallRegion.SouthGaza, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsByRegionAsync(HallRegion.Gaza, 10);
+
+        var item = Assert.Single(result);
+        Assert.Equal("Gaza Hall", item.Name);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsByRegionAsync_ReturnsEmptyWhenRegionHasNoHalls()
+    {
+        await using var context = CreateContext();
+        context.Halls.Add(new Hall
+        {
+            Id = Guid.NewGuid(),
+            Name = "Gaza Hall",
+            Status = HallStatus.Approved,
+            Region = HallRegion.Gaza,
+            CreatedAt = FixedNow
+        });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsByRegionAsync(HallRegion.SouthGaza, 10);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsByRegionAsync_ReturnsOnlyApprovedAndNotDeletedHalls()
+    {
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            new Hall { Id = Guid.NewGuid(), Name = "Approved", Status = HallStatus.Approved, Region = HallRegion.Gaza, CreatedAt = FixedNow.AddDays(-1) },
+            new Hall { Id = Guid.NewGuid(), Name = "Pending", Status = HallStatus.PendingReview, Region = HallRegion.Gaza, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "Rejected", Status = HallStatus.Rejected, Region = HallRegion.Gaza, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, IsDeleted = true, Region = HallRegion.Gaza, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsByRegionAsync(HallRegion.Gaza, 10);
+
+        Assert.Single(result);
+        Assert.Equal("Approved", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsByRegionAsync_LimitsResultCount()
+    {
+        await using var context = CreateContext();
+        for (var index = 0; index < 5; index++)
+        {
+            context.Halls.Add(new Hall
+            {
+                Id = Guid.NewGuid(),
+                Name = $"Hall {index}",
+                Status = HallStatus.Approved,
+                Region = HallRegion.Gaza,
+                CreatedAt = FixedNow.AddMinutes(-index)
+            });
+        }
+
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsByRegionAsync(HallRegion.Gaza, 3);
+
+        Assert.Equal(3, result.Count);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsByRegionAsync_ComposesFilterInQueryProviderBeforeMaterialization()
+    {
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            new Hall { Id = Guid.NewGuid(), Name = "Gaza Hall", Status = HallStatus.Approved, Region = HallRegion.Gaza, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "North Hall", Status = HallStatus.Approved, Region = HallRegion.NorthGaza, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var query = context.Halls
+            .AsNoTracking()
+            .Where(hall => hall.Status == HallStatus.Approved && !hall.IsDeleted)
+            .Where(hall => hall.Region == HallRegion.Gaza);
+
+        Assert.Contains("Region", query.Expression.ToString());
+
+        var repository = new HallRepository(context);
+        var result = await repository.GetApprovedHallsByRegionAsync(HallRegion.Gaza, 10);
+
+        Assert.Single(result);
+        Assert.Equal("Gaza Hall", result[0].Name);
+    }
+
+    [Fact]
     public async Task GetBookingPeriodsAsync_FiltersByHallIds()
     {
         await using var context = CreateContext();

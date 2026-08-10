@@ -205,6 +205,13 @@ public class FeaturedHallsServiceShould
         public Task<IReadOnlyList<Hall>> GetApprovedHallsAsync(int count, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>(Halls.Take(count).ToList());
 
+        public Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(
+            HallRegion region,
+            int count,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Hall>>(
+                Halls.Where(hall => hall.Region == region).Take(count).ToList());
+
         public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
             IReadOnlyCollection<Guid> hallIds,
             CancellationToken cancellationToken = default)

@@ -1,10 +1,16 @@
 using Wesal.Domain.Entities;
+using Wesal.Domain.Enums;
 
 namespace Wesal.Application.Common.Interfaces.Persistence;
 
 public interface IHallRepository
 {
     Task<IReadOnlyList<Hall>> GetApprovedHallsAsync(int count, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(
+        HallRegion region,
+        int count,
+        CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
         IReadOnlyCollection<Guid> hallIds,
