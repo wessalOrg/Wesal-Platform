@@ -30,3 +30,12 @@ src/
 ```
 
 انسخ `.env.example` إلى `.env.local` وعدّل `NEXT_PUBLIC_API_BASE_URL` عند جاهزية الـ backend.
+
+## Documentation
+
+ملفات توثيق الفرونت موجودة في [`docs/`](./docs/).
+
+- **Brand colors:** [`docs/wesal-brand-colors.md`](./docs/wesal-brand-colors.md) / [`docs/wesal-brand-colors.pdf`](./docs/wesal-brand-colors.pdf)
+- **QA & Security Workspace:** [WESAL - QA & Security Workspace](https://app.notion.com/p/WESAL-QA-Security-Workspace-3414ab11aef580c79230e5d3f9ea2834?source=copy_link)
+
+مجلد `documentation/` في جذر المشروع مخصّص لشغل الـ QA — لا يُستخدم لملفات الفرونت.

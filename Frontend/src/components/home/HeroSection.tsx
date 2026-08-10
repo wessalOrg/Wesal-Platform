@@ -157,7 +157,7 @@ export default function HeroSection() {
         className="hero-card hero-showcase relative mx-auto hidden w-full max-w-[90rem] overflow-hidden rounded-[32px] md:block"
         style={{ aspectRatio: `${VBW} / ${VBH}` }}
       >
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="hero-photo-pane absolute inset-0 overflow-hidden">
           <HeroSlideshow index={slide} />
           <div className="hero-photo-grade" aria-hidden="true" />
         </div>
@@ -267,7 +267,7 @@ export default function HeroSection() {
             <HeroCopy intro={intro} />
           </div>
         </div>
-        <div className="relative min-h-[22rem] w-full overflow-hidden rounded-b-[24px] sm:min-h-[28rem]">
+        <div className="hero-photo-pane relative min-h-[22rem] w-full overflow-hidden rounded-b-[24px] sm:min-h-[28rem]">
           <svg
             className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 w-full -translate-y-[1px]"
             viewBox="0 0 1000 80"

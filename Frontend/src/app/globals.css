@@ -413,6 +413,24 @@ h6 {
   }
 }
 
+/* Soft flash gleam — brief wink across the visible hall photo */
+@keyframes hero-gleam {
+  0%,
+  84%,
+  100% {
+    transform: translate3d(-20%, 0, 0) skewX(-16deg);
+    opacity: 0;
+  }
+  90% {
+    transform: translate3d(55%, 0, 0) skewX(-16deg);
+    opacity: 0.55;
+  }
+  95% {
+    transform: translate3d(150%, 0, 0) skewX(-16deg);
+    opacity: 0.1;
+  }
+}
+
 @keyframes hero-orb-pulse {
   0%,
   100% {
@@ -530,6 +548,41 @@ h6 {
   background: #2a1f1c;
 }
 
+.hero-photo-pane {
+  isolation: isolate;
+}
+
+/* Flash gleam over the visible hall photo (right of the cream curve) */
+.hero-photo-pane::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  top: -15%;
+  bottom: -15%;
+  /* Start over the visible photo area, not under the cream panel */
+  left: 38%;
+  z-index: 6;
+  width: 24%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.14) 35%,
+    rgba(255, 252, 240, 0.45) 50%,
+    rgba(226, 201, 138, 0.25) 58%,
+    rgba(255, 255, 255, 0.12) 70%,
+    transparent 100%
+  );
+  mix-blend-mode: soft-light;
+  animation: hero-gleam 6.5s ease-in-out 0.8s infinite;
+}
+
+@media (max-width: 767px) {
+  .hero-photo-pane::after {
+    left: 0;
+    width: 28%;
+  }
+}
+
 .hero-slide {
   position: absolute;
   inset: 0;
@@ -569,6 +622,7 @@ h6 {
   pointer-events: none;
   position: absolute;
   inset: 0;
+  z-index: 2;
   background:
     linear-gradient(
       90deg,
@@ -916,6 +970,7 @@ h6 {
   .hero-gold-line-mobile,
   .hero-gold-edge-mobile,
   .hero-sheen::after,
+  .hero-photo-pane::after,
   .hero-stage::before,
   .hero-stage::after,
   .hero-luxe-orb,

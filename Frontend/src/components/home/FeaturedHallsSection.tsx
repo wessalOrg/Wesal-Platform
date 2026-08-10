@@ -50,6 +50,7 @@ export default function FeaturedHallsSection() {
   }, [region, reloadKey]);
 
   const handleRegionChange = (next: HallRegion) => {
+    if (next === region) return;
     setErrorMessage(null);
     setStatus("loading");
     setRegion(next);
