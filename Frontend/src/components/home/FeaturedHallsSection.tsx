@@ -137,7 +137,7 @@ export default function FeaturedHallsSection() {
             </p>
             <button
               type="button"
-              onClick={() => setRegion("all")}
+              onClick={() => handleRegionChange("all")}
               className="btn-outline mt-4"
             >
               عرض جميع المناطق
