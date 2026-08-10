@@ -150,6 +150,85 @@ public class FeaturedHallsServiceShould
         Assert.All(featured.Availability, day => Assert.All(day.Periods, period => Assert.Equal(AvailabilityStatus.Available, period.Status)));
     }
 
+    [Fact]
+    public async Task GetFeaturedHallsAsync_WithRegion_FiltersHallsByRegion()
+    {
+        var fakeRepository = new FakeHallRepository();
+        fakeRepository.Halls.Add(CreateHall(name: "North 1", createdAt: FixedNow, region: HallRegion.NorthGaza));
+        fakeRepository.Halls.Add(CreateHall(name: "Gaza 1", createdAt: FixedNow.AddDays(-1), region: HallRegion.Gaza));
+        fakeRepository.Halls.Add(CreateHall(name: "Gaza 2", createdAt: FixedNow.AddDays(-2), region: HallRegion.Gaza));
+        fakeRepository.Halls.Add(CreateHall(name: "South 1", createdAt: FixedNow.AddDays(-3), region: HallRegion.SouthGaza));
+        foreach (var hall in fakeRepository.Halls)
+        {
+            fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
+        }
+
+        var service = CreateService(fakeRepository);
+
+        var result = await service.GetFeaturedHallsAsync(HallRegion.Gaza);
+
+        Assert.Collection(
+            result,
+            featured => Assert.Equal("Gaza 1", featured.HallName),
+            featured => Assert.Equal("Gaza 2", featured.HallName));
+        Assert.All(result, featured => Assert.Equal("Gaza", featured.Region));
+    }
+
+    [Fact]
+    public async Task GetFeaturedHallsAsync_WithRegion_ReturnsEmptyWhenRegionHasNoHalls()
+    {
+        var fakeRepository = new FakeHallRepository();
+        fakeRepository.Halls.Add(CreateHall(name: "Gaza 1", createdAt: FixedNow, region: HallRegion.Gaza));
+        fakeRepository.Periods.AddRange(CreatePeriods(fakeRepository.Halls[0].Id));
+
+        var service = CreateService(fakeRepository);
+
+        var result = await service.GetFeaturedHallsAsync(HallRegion.MiddleArea);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetFeaturedHallsAsync_WithRegion_LimitsToSixAndMapsAvailability()
+    {
+        var fakeRepository = new FakeHallRepository();
+        for (var index = 0; index < 8; index++)
+        {
+            var hall = CreateHall(name: $"Gaza {index}", createdAt: FixedNow.AddDays(-index), region: HallRegion.Gaza);
+            fakeRepository.Halls.Add(hall);
+            fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
+        }
+
+        var service = CreateService(fakeRepository);
+
+        var result = await service.GetFeaturedHallsAsync(HallRegion.Gaza);
+
+        Assert.Equal(FeaturedHallsService.FeatureCount, result.Count);
+        Assert.All(result, featured => Assert.Equal(FeaturedHallsService.AvailabilityDays, featured.Availability.Count));
+        Assert.All(result, featured => Assert.All(featured.Availability, day => Assert.Equal(2, day.Periods.Count)));
+    }
+
+    [Fact]
+    public async Task GetFeaturedHallsAsync_WithNoRegion_ReturnsHallsAcrossRegions()
+    {
+        var fakeRepository = new FakeHallRepository();
+        fakeRepository.Halls.Add(CreateHall(name: "North 1", createdAt: FixedNow, region: HallRegion.NorthGaza));
+        fakeRepository.Halls.Add(CreateHall(name: "Gaza 1", createdAt: FixedNow.AddDays(-1), region: HallRegion.Gaza));
+        fakeRepository.Halls.Add(CreateHall(name: "Middle 1", createdAt: FixedNow.AddDays(-2), region: HallRegion.MiddleArea));
+        fakeRepository.Halls.Add(CreateHall(name: "South 1", createdAt: FixedNow.AddDays(-3), region: HallRegion.SouthGaza));
+        foreach (var hall in fakeRepository.Halls)
+        {
+            fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
+        }
+
+        var service = CreateService(fakeRepository);
+
+        var result = await service.GetFeaturedHallsAsync();
+
+        Assert.Equal(4, result.Count);
+        Assert.All(result, featured => Assert.NotNull(featured.Availability));
+    }
+
     private static FeaturedHallsService CreateService(FakeHallRepository repository)
         => new(repository, new FakeDateTime(FixedNow), NullLogger<FeaturedHallsService>.Instance);
 

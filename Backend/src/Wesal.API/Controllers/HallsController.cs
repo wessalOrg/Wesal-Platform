@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Enums;
 
 namespace Wesal.API.Controllers;
 
@@ -21,10 +22,20 @@ public class HallsController : ControllerBase
     [HttpGet("featured")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<FeaturedHallDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<IReadOnlyList<FeaturedHallDto>>> GetFeaturedHalls(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<FeaturedHallDto>>> GetFeaturedHalls(
+        [FromQuery] HallRegion? region,
+        CancellationToken cancellationToken)
     {
-        var halls = await _featuredHallsService.GetFeaturedHallsAsync(cancellationToken);
+        if (region is not null && !Enum.IsDefined(region.Value))
+        {
+            ModelState.AddModelError(nameof(region), $"Region must be one of: {string.Join(", ", Enum.GetNames<HallRegion>())}.");
+
+            return ValidationProblem();
+        }
+
+        var halls = await _featuredHallsService.GetFeaturedHallsAsync(region, cancellationToken);
 
         return Ok(halls);
     }

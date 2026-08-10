@@ -27,15 +27,22 @@ public class FeaturedHallsService : IFeaturedHallsService
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<FeaturedHallDto>> GetFeaturedHallsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<FeaturedHallDto>> GetFeaturedHallsAsync(
+        HallRegion? region = null,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var halls = await _hallRepository.GetApprovedHallsAsync(FeatureCount, cancellationToken);
+        var halls = region is null
+            ? await _hallRepository.GetApprovedHallsAsync(FeatureCount, cancellationToken)
+            : await _hallRepository.GetApprovedHallsByRegionAsync(region.Value, FeatureCount, cancellationToken);
 
         if (halls.Count == 0)
         {
-            _logger.LogInformation("No approved halls found; returning an empty featured halls list.");
+            _logger.LogInformation(
+                "No approved halls found in region {Region}; returning an empty featured halls list.",
+                region?.ToString() ?? "All");
+
             return [];
         }
 
