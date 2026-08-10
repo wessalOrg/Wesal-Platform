@@ -1,12 +1,34 @@
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import Reveal from "@/components/ui/Reveal";
+import HeroSection from "@/components/home/HeroSection";
+import FeaturedHallsSection from "@/components/home/FeaturedHallsSection";
+import HowItWorksSection from "@/components/home/HowItWorksSection";
+import BenefitsSection from "@/components/home/BenefitsSection";
+import OwnerCtaSection from "@/components/home/OwnerCtaSection";
+
 export default function Home() {
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center bg-slate-50 px-6">
-      <h1 className="text-4xl font-semibold tracking-tight text-slate-900">
-        منصة وصال
-      </h1>
-      <p className="mt-3 text-base text-slate-600">
-        الفرونت إند جاهز بـ Next.js و TypeScript و Tailwind CSS
-      </p>
-    </main>
+    <>
+      <Navbar />
+      <main>
+        <HeroSection />
+        <Reveal as="div">
+          <FeaturedHallsSection />
+        </Reveal>
+        <Reveal as="div">
+          <HowItWorksSection />
+        </Reveal>
+        <Reveal as="div">
+          <OwnerCtaSection />
+        </Reveal>
+        <Reveal as="div">
+          <BenefitsSection />
+        </Reveal>
+      </main>
+      <Reveal as="div">
+        <Footer />
+      </Reveal>
+    </>
   );
 }
