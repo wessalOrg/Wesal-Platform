@@ -51,3 +51,40 @@ export const REGION_API_PARAMS: Record<Exclude<HallRegion, "all">, string> = {
   middle: "MiddleArea",
   south: "SouthGaza",
 };
+
+export type HallSlotPrice = {
+  label: string;
+  time?: string;
+  price: number | null;
+  priceLabel?: string | null;
+};
+
+export type BookingSelection = {
+  dateLabel: string;
+  periodLabel: string;
+};
+
+export type HallDetail = {
+  id: string;
+  name: string;
+  description: string;
+  location: string;
+  region: Exclude<HallRegion, "all">;
+  capacity: number;
+  capacityMax?: number | null;
+  amenities: string[];
+  gallery: string[];
+  mainImageUrl: string;
+  slotPrices: HallSlotPrice[];
+  ownerPhone?: string | null;
+  isActive: boolean;
+  rating?: number | null;
+  reviewCount?: number | null;
+  availabilityDays?: HallAvailabilityDay[];
+};
+
+export type HallDetailsLoadResult =
+  | { status: "success"; hall: HallDetail; source: "api" }
+  | { status: "unavailable"; hall: HallDetail; source: "api" | "fallback" }
+  | { status: "not_found"; source: "api" | "fallback" }
+  | { status: "error"; error: string; source: "fallback"; hall?: HallDetail };

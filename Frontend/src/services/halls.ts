@@ -1,11 +1,18 @@
 import api from "@/lib/api";
 import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
 import {
+  getHallDetailsFallback,
+  HALL_DETAILS_FALLBACK,
+} from "@/constants/hallDetailsFallback";
+import {
   REGION_API_PARAMS,
   type FeaturedHall,
   type HallAvailabilityDay,
   type HallDayPeriod,
+  type HallDetail,
+  type HallDetailsLoadResult,
   type HallRegion,
+  type HallSlotPrice,
   type PeriodStatus,
 } from "@/types/hall";
 
@@ -24,6 +31,7 @@ type ApiPeriod = {
   startTime?: string;
   endTime?: string;
   status?: number | string;
+  price?: number | null;
 };
 
 type ApiAvailabilityDay = {
@@ -42,13 +50,25 @@ type ApiFeaturedHall = {
   address?: string;
   location?: string;
   capacity?: number;
+  capacityMax?: number | null;
   price?: number | null;
+  morningPrice?: number | null;
+  eveningPrice?: number | null;
   priceLabel?: string | null;
   rating?: number | null;
   reviewCount?: number | null;
   shortDescription?: string | null;
+  description?: string | null;
   tags?: string[];
+  amenities?: string[];
+  gallery?: string[];
+  images?: string[];
+  contactPhone?: string | null;
+  ownerPhone?: string | null;
+  status?: number | string;
+  isActive?: boolean;
   availability?: ApiAvailabilityDay[];
+  bookingPeriods?: ApiPeriod[];
 };
 
 type FeaturedResponse = ApiFeaturedHall[] | { data: ApiFeaturedHall[] };
@@ -224,6 +244,172 @@ export async function fetchFeaturedHalls(
         err instanceof Error
           ? err.message
           : "تعذر الاتصال بالخادم. يتم عرض بيانات تجريبية.",
+    };
+  }
+}
+
+function formatPriceAmount(value: number): string {
+  return `${value.toLocaleString("en-US")} ₪`;
+}
+
+function mapSlotPrices(hall: ApiFeaturedHall, index: number): HallSlotPrice[] {
+  const fallback = getHallDetailsFallback(String(hall.hallId ?? hall.id ?? "")) ??
+    HALL_DETAILS_FALLBACK["1"];
+
+  if (hall.morningPrice != null || hall.eveningPrice != null) {
+    const slots: HallSlotPrice[] = [];
+    if (hall.morningPrice != null) {
+      slots.push({
+        label: "الفترة الصباحية",
+        price: hall.morningPrice,
+        priceLabel: formatPriceAmount(hall.morningPrice),
+      });
+    }
+    if (hall.eveningPrice != null) {
+      slots.push({
+        label: "الفترة المسائية",
+        price: hall.eveningPrice,
+        priceLabel: formatPriceAmount(hall.eveningPrice),
+      });
+    }
+    if (slots.length) return slots;
+  }
+
+  if (hall.bookingPeriods?.length) {
+    return hall.bookingPeriods.map((period) => ({
+      label: mapPeriodLabel(period.periodName, period.periodType),
+      time: formatTimeRange(period.startTime, period.endTime),
+      price: period.price ?? hall.price ?? null,
+      priceLabel:
+        period.price != null
+          ? formatPriceAmount(period.price)
+          : hall.price != null
+            ? formatPriceAmount(hall.price)
+            : null,
+    }));
+  }
+
+  if (hall.price != null) {
+    return [
+      {
+        label: "الفترة الصباحية",
+        price: hall.price,
+        priceLabel: formatPriceAmount(hall.price),
+      },
+      {
+        label: "الفترة المسائية",
+        price: hall.price,
+        priceLabel: formatPriceAmount(hall.price),
+      },
+    ];
+  }
+
+  return fallback?.slotPrices ?? [];
+}
+
+function resolveGalleryImages(
+  hall: ApiFeaturedHall,
+  mainImage: string,
+  index: number,
+): string[] {
+  const raw = [...(hall.gallery ?? []), ...(hall.images ?? [])]
+    .map((item) => item?.trim())
+    .filter(Boolean) as string[];
+
+  const resolved = raw.map((item, imageIndex) =>
+    resolveHallImage(item, index + imageIndex),
+  );
+
+  const unique = Array.from(new Set([mainImage, ...resolved]));
+  return unique.filter(Boolean);
+}
+
+function isHallActive(hall: ApiFeaturedHall): boolean {
+  if (hall.isActive === false) return false;
+  if (hall.status == null) return true;
+  if (typeof hall.status === "number") return hall.status === 1;
+  const normalized = hall.status.toLowerCase();
+  return normalized === "approved" || normalized === "active" || normalized === "1";
+}
+
+function mapApiHallDetail(hall: ApiFeaturedHall, index: number): HallDetail {
+  const id = String(hall.hallId ?? hall.id ?? "");
+  const fallback = getHallDetailsFallback(id) ?? HALL_DETAILS_FALLBACK["1"];
+  const mainImageUrl = resolveHallImage(hall.mainImage ?? hall.imageUrl, index);
+  const availabilityDays =
+    mapAvailabilityDays(hall.availability).length > 0
+      ? mapAvailabilityDays(hall.availability)
+      : (fallback.availabilityDays ?? []);
+
+  return {
+    id,
+    name: hall.hallName ?? hall.name ?? fallback.name,
+    description:
+      hall.description ??
+      hall.shortDescription ??
+      fallback.description,
+    location: hall.address ?? hall.location ?? fallback.location,
+    region: hall.region ? mapApiRegion(hall.region) : fallback.region,
+    capacity: hall.capacity ?? fallback.capacity,
+    capacityMax: hall.capacityMax ?? fallback.capacityMax ?? null,
+    amenities: hall.amenities ?? hall.tags ?? fallback.amenities,
+    gallery: resolveGalleryImages(hall, mainImageUrl, index),
+    mainImageUrl,
+    slotPrices: mapSlotPrices(hall, index),
+    ownerPhone: hall.contactPhone ?? hall.ownerPhone ?? fallback.ownerPhone ?? null,
+    isActive: isHallActive(hall),
+    rating: hall.rating ?? fallback.rating ?? null,
+    reviewCount: hall.reviewCount ?? fallback.reviewCount ?? null,
+    availabilityDays,
+  };
+}
+
+type HallDetailResponse = ApiFeaturedHall | { data: ApiFeaturedHall };
+
+function normalizeDetail(payload: HallDetailResponse): ApiFeaturedHall {
+  if ("data" in payload && payload.data) return payload.data;
+  return payload as ApiFeaturedHall;
+}
+
+/**
+ * Public hall details (US-LAND-04).
+ * GET /v1/halls/{id}
+ */
+export async function fetchHallDetails(id: string): Promise<HallDetailsLoadResult> {
+  const fallback = getHallDetailsFallback(id);
+
+  try {
+    const { data } = await api.get<HallDetailResponse>(`/halls/${id}`, {
+      timeout: 8000,
+    });
+    const raw = normalizeDetail(data);
+    const hall = mapApiHallDetail(raw, 0);
+
+    if (!hall.isActive) {
+      return { status: "unavailable", hall, source: "api" };
+    }
+
+    return { status: "success", hall, source: "api" };
+  } catch (err) {
+    if (fallback) {
+      if (!fallback.isActive) {
+        return { status: "unavailable", hall: fallback, source: "fallback" };
+      }
+
+      return {
+        status: "error",
+        error:
+          err instanceof Error
+            ? err.message
+            : "تعذر الاتصال بالخادم. يتم عرض بيانات تجريبية.",
+        source: "fallback",
+        hall: fallback,
+      };
+    }
+
+    return {
+      status: "not_found",
+      source: "api",
     };
   }
 }

@@ -1,30 +1,23 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import HallDetailsPage from "@/components/halls/HallDetailsPage";
+import HallDetailsSkeleton from "@/components/halls/HallDetailsSkeleton";
 
-type HallDetailsPageProps = {
+type HallDetailsRouteProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function HallDetailsPage({ params }: HallDetailsPageProps) {
+export default async function HallDetailsRoute({ params }: HallDetailsRouteProps) {
   const { id } = await params;
 
   return (
     <>
       <Navbar />
-      <main className="container-wesal min-h-[60svh] py-12">
-        <h1 className="text-3xl font-bold text-[var(--wesal-maroon)]">
-          تفاصيل القاعة
-        </h1>
-        <p className="mt-3 text-[var(--wesal-muted)]">
-          معرّف القاعة: {id}. صفحة التفاصيل الكاملة ستُبنى في US-LAND-04.
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex text-sm font-semibold text-[var(--wesal-maroon)] hover:underline"
-        >
-          العودة للرئيسية
-        </Link>
+      <main className="container-wesal w-full min-h-[60svh] overflow-x-hidden py-8 sm:py-12">
+        <Suspense fallback={<HallDetailsSkeleton />}>
+          <HallDetailsPage hallId={id} />
+        </Suspense>
       </main>
       <Footer />
     </>
