@@ -15,6 +15,11 @@ public class HallRepository : IHallRepository
         _context = context;
     }
 
+    public Task<Hall?> GetHallByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        => _context.Halls
+            .AsNoTracking()
+            .FirstOrDefaultAsync(hall => hall.Id == id, cancellationToken);
+
     public async Task<IReadOnlyList<Hall>> GetApprovedHallsAsync(int count, CancellationToken cancellationToken = default)
         => await ApprovedHallsQuery()
             .OrderByDescending(hall => hall.CreatedAt)
@@ -37,6 +42,16 @@ public class HallRepository : IHallRepository
         => _context.Halls
             .AsNoTracking()
             .Where(hall => hall.Status == HallStatus.Approved && !hall.IsDeleted);
+
+    public async Task<IReadOnlyList<HallImage>> GetHallImagesAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default)
+        => await _context.HallImages
+            .AsNoTracking()
+            .Where(image => image.HallId == hallId && !image.IsDeleted)
+            .OrderBy(image => image.DisplayOrder)
+            .ThenBy(image => image.CreatedAt)
+            .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
         IReadOnlyCollection<Guid> hallIds,

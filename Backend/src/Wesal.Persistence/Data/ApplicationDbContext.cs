@@ -15,6 +15,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Hall> Halls => Set<Hall>();
 
+    public DbSet<HallImage> HallImages => Set<HallImage>();
+
     public DbSet<HallBookingPeriod> HallBookingPeriods => Set<HallBookingPeriod>();
 
     public DbSet<HallAvailability> HallAvailabilities => Set<HallAvailability>();
@@ -53,6 +55,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasIndex(hall => hall.Status);
             entity.HasIndex(hall => new { hall.Status, hall.IsDeleted });
             entity.HasIndex(hall => hall.Region);
+        });
+
+        builder.Entity<HallImage>(entity =>
+        {
+            entity.ToTable("HallImages");
+
+            entity.Property(image => image.Url).IsRequired().HasMaxLength(500);
+
+            entity.HasIndex(image => new { image.HallId, image.DisplayOrder });
+            entity.HasIndex(image => new { image.HallId, image.IsDeleted });
+
+            entity.HasOne(image => image.Hall)
+                .WithMany(hall => hall.Images)
+                .HasForeignKey(image => image.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<HallBookingPeriod>(entity =>

@@ -14,14 +14,14 @@ export const metadata: Metadata = {
   description: "منصة حجز قاعات الأفراح في غزة",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html
-      lang="ar"
-      dir="rtl"
-      className={`${cairo.variable} h-full antialiased`}
-    >
-      <body className={`${cairo.className} flex min-h-full flex-col font-sans`}>
+    <html lang="ar" dir="rtl" className={`${cairo.variable} antialiased`}>
+      <body className={`${cairo.className} min-h-svh overflow-x-hidden font-sans`}>
         {children}
       </body>
     </html>

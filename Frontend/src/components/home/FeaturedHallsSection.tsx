@@ -6,7 +6,7 @@ import Link from "next/link";
 import RegionFilterBar from "@/components/home/RegionFilterBar";
 import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
 import { fetchFeaturedHalls, filterFeaturedByRegion } from "@/services/halls";
-import type { FeaturedHall, HallRegion, PeriodStatus } from "@/types/hall";
+import type { FeaturedHall, HallRegion } from "@/types/hall";
 
 type LoadStatus = "loading" | "ready" | "error";
 
@@ -18,7 +18,6 @@ export default function FeaturedHallsSection() {
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [usingFallback, setUsingFallback] = useState(true);
-  const [previewHall, setPreviewHall] = useState<FeaturedHall | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   const regionEmpty = status === "ready" && halls.length === 0;
@@ -153,20 +152,11 @@ export default function FeaturedHallsSection() {
             data-testid="featured-halls-grid"
           >
             {halls.map((hall, index) => (
-              <HallCard
-                key={hall.id}
-                hall={hall}
-                index={index}
-                onOpen={() => setPreviewHall(hall)}
-              />
+              <HallCard key={hall.id} hall={hall} index={index} />
             ))}
           </div>
         ) : null}
       </div>
-
-      {previewHall ? (
-        <HallPreviewDialog hall={previewHall} onClose={() => setPreviewHall(null)} />
-      ) : null}
     </section>
   );
 }
@@ -234,15 +224,7 @@ function HallImage({
   );
 }
 
-function HallCard({
-  hall,
-  index,
-  onOpen,
-}: {
-  hall: FeaturedHall;
-  index: number;
-  onOpen: () => void;
-}) {
+function HallCard({ hall, index }: { hall: FeaturedHall; index: number }) {
   const capacityLabel = hall.capacityMax
     ? `${hall.capacity} - ${hall.capacityMax} شخص`
     : `${hall.capacity} شخص`;
@@ -253,10 +235,10 @@ function HallCard({
       style={{ animationDelay: `${index * 90}ms` }}
       data-testid={`hall-card-${hall.id}`}
     >
-      <button
-        type="button"
-        onClick={onOpen}
-        className="block w-full cursor-pointer text-start"
+      <Link
+        href={`/halls/${hall.id}`}
+        className="block w-full text-start"
+        data-testid={`hall-card-link-${hall.id}`}
       >
         <div className="relative aspect-[4/3] overflow-hidden bg-[var(--wesal-pink)]">
           <HallImage
@@ -332,128 +314,8 @@ function HallCard({
             </p>
           ) : null}
         </div>
-      </button>
+      </Link>
     </article>
-  );
-}
-
-function statusLabel(status: PeriodStatus) {
-  return status === "booked" ? "Booked" : "Available";
-}
-
-function StatusBadge({ status }: { status: PeriodStatus }) {
-  const booked = status === "booked";
-  return (
-    <span
-      className={`rounded-full px-2.5 py-1 text-[0.7rem] font-bold tracking-wide ${
-        booked
-          ? "bg-[rgba(193,123,127,0.16)] text-[var(--wesal-maroon-dark)]"
-          : "bg-emerald-50 text-emerald-700"
-      }`}
-    >
-      {statusLabel(status)}
-    </span>
-  );
-}
-
-function HallPreviewDialog({
-  hall,
-  onClose,
-}: {
-  hall: FeaturedHall;
-  onClose: () => void;
-}) {
-  const previewDay = hall.availabilityDays?.[0] ?? null;
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center"
-      role="presentation"
-      data-testid="hall-preview-dialog"
-    >
-      <button
-        type="button"
-        className="absolute inset-0 bg-[rgba(40,25,20,0.45)] backdrop-blur-[2px]"
-        aria-label="إغلاق"
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="hall-preview-title"
-        className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_rgba(60,35,30,0.22)]"
-      >
-        <div className="relative aspect-[16/10] bg-[var(--wesal-pink)]">
-          <HallImage src={hall.imageUrl} alt="" fill className="object-cover" sizes="400px" />
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[var(--wesal-maroon)] shadow"
-            aria-label="إغلاق"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="space-y-4 p-5">
-          <div>
-            <h3 id="hall-preview-title" className="text-lg font-bold text-[var(--wesal-text)]">
-              {hall.name}
-            </h3>
-            <p className="mt-1 text-sm text-[var(--wesal-muted)]">{hall.location}</p>
-          </div>
-
-          {previewDay ? (
-            <div data-testid="hall-availability-day">
-              <p className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--wesal-maroon)]">
-                <CalendarIcon />
-                {previewDay.dateLabel}
-              </p>
-
-              <ul className="space-y-2">
-                {previewDay.periods.map((period) => (
-                  <li
-                    key={`${previewDay.dateLabel}-${period.label}`}
-                    className="flex items-center justify-between gap-3 rounded-xl bg-[var(--wesal-pink-soft)] px-3 py-3 text-sm"
-                  >
-                    <div>
-                      <p className="font-semibold text-[var(--wesal-text)]">{period.label}</p>
-                      {period.time ? (
-                        <p className="mt-0.5 text-xs text-[var(--wesal-muted)]">{period.time}</p>
-                      ) : null}
-                    </div>
-                    <StatusBadge status={period.status} />
-                  </li>
-                ))}
-              </ul>
-
-              <p className="mt-3 text-xs leading-6 text-[var(--wesal-muted)]">
-                كل يوم فيه فترتان مستقلتان يحدّدهما صاحب القاعة. عند الحجز تختار التاريخ
-                والفترة المتاحة.
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-[var(--wesal-muted)]">لا توجد بيانات توفر حالياً.</p>
-          )}
-
-          <button type="button" onClick={onClose} className="btn-primary w-full">
-            حسناً
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 

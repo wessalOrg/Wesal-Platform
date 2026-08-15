@@ -13,10 +13,27 @@ namespace Wesal.API.Controllers;
 public class HallsController : ControllerBase
 {
     private readonly IFeaturedHallsService _featuredHallsService;
+    private readonly IHallDetailsService _hallDetailsService;
 
-    public HallsController(IFeaturedHallsService featuredHallsService)
+    public HallsController(
+        IFeaturedHallsService featuredHallsService,
+        IHallDetailsService hallDetailsService)
     {
         _featuredHallsService = featuredHallsService;
+        _hallDetailsService = hallDetailsService;
+    }
+
+    [HttpGet("{id:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(HallDetailsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<HallDetailsDto>> GetHallDetails(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var hall = await _hallDetailsService.GetHallDetailsAsync(id, cancellationToken);
+
+        return Ok(hall);
     }
 
     [HttpGet("featured")]

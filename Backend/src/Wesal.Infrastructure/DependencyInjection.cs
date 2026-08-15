@@ -1,11 +1,14 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Domain.Constants;
 using Wesal.Infrastructure.Auth;
+using Wesal.Infrastructure.Bookings;
 using Wesal.Infrastructure.CurrentUser;
 using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Homepage;
@@ -33,12 +36,42 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IHomepageIntroductionService, HomepageIntroductionService>();
         services.AddScoped<IFeaturedHallsService, FeaturedHallsService>();
+        services.AddScoped<IHallDetailsService, HallDetailsService>();
+        services.AddScoped<IBookingRequestService, BookingRequestService>();
         services.AddSingleton<IDateTime, DateTimeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
                 options.MapInboundClaims = false;
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = context =>
+                    {
+                        if (context.Handled || context.Response.HasStarted)
+                        {
+                            return Task.CompletedTask;
+                        }
+
+                        context.HandleResponse();
+
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        context.Response.ContentType = "application/problem+json";
+
+                        var problemDetails = new ProblemDetails
+                        {
+                            Status = StatusCodes.Status401Unauthorized,
+                            Title = "You are not authenticated",
+                            Type = "https://httpstatuses.com/401",
+                            Extensions =
+                            {
+                                ["code"] = "Unauthorized"
+                            }
+                        };
+
+                        return context.Response.WriteAsJsonAsync(problemDetails);
+                    }
+                };
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,

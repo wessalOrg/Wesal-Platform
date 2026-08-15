@@ -1,8 +1,27 @@
-import Link from "next/link";
+import AuthStubForm from "@/components/auth/AuthStubForm";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
-export default function RegisterPage() {
+type RegisterPageProps = {
+  searchParams: Promise<{ redirect?: string; action?: string }>;
+};
+
+function buildAuthAlternateHref(
+  target: "login" | "register",
+  redirect?: string,
+  action?: string,
+): string {
+  if (!redirect) return target === "login" ? "/login" : "/register";
+
+  const params = new URLSearchParams({ redirect });
+  if (action) params.set("action", action);
+  return `/${target}?${params.toString()}`;
+}
+
+export default async function RegisterPage({ searchParams }: RegisterPageProps) {
+  const { redirect, action } = await searchParams;
+  const loginHref = buildAuthAlternateHref("login", redirect, action);
+
   return (
     <>
       <Navbar />
@@ -11,14 +30,25 @@ export default function RegisterPage() {
           إنشاء حساب
         </h1>
         <p className="mt-3 text-[var(--wesal-muted)]">
-          شاشة التسجيل ستُبنى في Epic 4.
+          {redirect ? (
+            <>
+              بعد إنشاء الحساب ستُعاد تلقائياً إلى القاعة التي اخترتها
+              {action === "book" ? " لمتابعة الحجز" : ""}.
+              <span className="mt-1 block text-sm text-[var(--wesal-text)]">
+                {decodeURIComponent(redirect)}
+              </span>
+            </>
+          ) : (
+            "أنشئ حساباً جديداً للبدء بالحجز."
+          )}
         </p>
-        <Link
-          href="/login"
-          className="mt-6 inline-flex text-sm font-semibold text-[var(--wesal-maroon)] hover:underline"
-        >
-          لديك حساب؟ سجّل الدخول
-        </Link>
+        <AuthStubForm
+          mode="register"
+          redirectTo={redirect}
+          action={action}
+          alternateHref={loginHref}
+          alternateLabel="لديك حساب؟ سجّل الدخول"
+        />
       </main>
       <Footer />
     </>
