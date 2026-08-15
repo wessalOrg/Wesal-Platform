@@ -277,9 +277,14 @@ public class FeaturedHallsServiceShould
     {
         public List<Hall> Halls { get; } = [];
 
+        public List<HallImage> Images { get; } = [];
+
         public List<HallBookingPeriod> Periods { get; } = [];
 
         public List<HallAvailability> Availability { get; } = [];
+
+        public Task<Hall?> GetHallByIdAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult(Halls.FirstOrDefault(hall => hall.Id == id));
 
         public Task<IReadOnlyList<Hall>> GetApprovedHallsAsync(int count, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>(Halls.Take(count).ToList());
@@ -290,6 +295,13 @@ public class FeaturedHallsServiceShould
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>(
                 Halls.Where(hall => hall.Region == region).Take(count).ToList());
+
+        public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<HallImage>>(
+                Images.Where(image => image.HallId == hallId && !image.IsDeleted)
+                    .OrderBy(image => image.DisplayOrder)
+                    .ThenBy(image => image.CreatedAt)
+                    .ToList());
 
         public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
             IReadOnlyCollection<Guid> hallIds,

@@ -217,6 +217,94 @@ public class HallRepositoryShould
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task GetHallByIdAsync_ReturnsHallById()
+    {
+        await using var context = CreateContext();
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved };
+        context.Halls.Add(hall);
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetHallByIdAsync(hall.Id);
+
+        Assert.NotNull(result);
+        Assert.Equal(hall.Id, result.Id);
+    }
+
+    [Fact]
+    public async Task GetHallByIdAsync_ReturnsNullWhenHallDoesNotExist()
+    {
+        await using var context = CreateContext();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetHallByIdAsync(Guid.NewGuid());
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetHallImagesAsync_ReturnsOnlyImagesForHall()
+    {
+        await using var context = CreateContext();
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved };
+        var otherHall = new Hall { Id = Guid.NewGuid(), Name = "Other", Status = HallStatus.Approved };
+        context.Halls.AddRange(hall, otherHall);
+        context.HallImages.AddRange(
+            new HallImage { HallId = hall.Id, Url = "hall.jpg", DisplayOrder = 1 },
+            new HallImage { HallId = otherHall.Id, Url = "other.jpg", DisplayOrder = 1 });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetHallImagesAsync(hall.Id);
+
+        var image = Assert.Single(result);
+        Assert.Equal("hall.jpg", image.Url);
+    }
+
+    [Fact]
+    public async Task GetHallImagesAsync_OrdersByDisplayOrder()
+    {
+        await using var context = CreateContext();
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved };
+        context.Halls.Add(hall);
+        context.HallImages.AddRange(
+            new HallImage { HallId = hall.Id, Url = "second.jpg", DisplayOrder = 2, CreatedAt = FixedNow.AddMinutes(-1) },
+            new HallImage { HallId = hall.Id, Url = "first.jpg", DisplayOrder = 1, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetHallImagesAsync(hall.Id);
+
+        Assert.Collection(
+            result,
+            image => Assert.Equal("first.jpg", image.Url),
+            image => Assert.Equal("second.jpg", image.Url));
+    }
+
+    [Fact]
+    public async Task GetHallImagesAsync_ExcludesDeletedImages()
+    {
+        await using var context = CreateContext();
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved };
+        context.Halls.Add(hall);
+        context.HallImages.AddRange(
+            new HallImage { HallId = hall.Id, Url = "visible.jpg", DisplayOrder = 1 },
+            new HallImage { HallId = hall.Id, Url = "hidden.jpg", DisplayOrder = 2, IsDeleted = true });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetHallImagesAsync(hall.Id);
+
+        var image = Assert.Single(result);
+        Assert.Equal("visible.jpg", image.Url);
+    }
+
     private static ApplicationDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
