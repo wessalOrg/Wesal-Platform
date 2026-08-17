@@ -21,6 +21,24 @@ public interface IHallRepository
 
     Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
+        string? name,
+        HallRegion? region,
+        string? area,
+        DateOnly? date,
+        BookingPeriodType? period,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    Task<int> SearchApprovedHallsCountAsync(
+        string? name,
+        HallRegion? region,
+        string? area,
+        DateOnly? date,
+        BookingPeriodType? period,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(

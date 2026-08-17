@@ -197,6 +197,34 @@ public class AllHallsServiceShould
             => Task.FromResult(
                 Halls.Count(hall => hall.Status == HallStatus.Approved && !hall.IsDeleted));
 
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
+            string? name,
+            HallRegion? region,
+            string? area,
+            DateOnly? date,
+            BookingPeriodType? period,
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Hall>>(
+                ApplySearch(name, region, area).Skip(skip).Take(take).ToList());
+
+        public Task<int> SearchApprovedHallsCountAsync(
+            string? name,
+            HallRegion? region,
+            string? area,
+            DateOnly? date,
+            BookingPeriodType? period,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<int>(ApplySearch(name, region, area).Count());
+
+        private IEnumerable<Hall> ApplySearch(string? name, HallRegion? region, string? area)
+            => Halls
+                .Where(hall => hall.Status == HallStatus.Approved && !hall.IsDeleted)
+                .Where(hall => name == null || hall.Name.Contains(name))
+                .Where(hall => !region.HasValue || hall.Region == region.Value)
+                .Where(hall => area == null || hall.Address.Contains(area));
+
         public Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(
             HallRegion region,
             int count,
