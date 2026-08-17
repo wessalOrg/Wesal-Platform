@@ -43,6 +43,21 @@ public class HallRepository : IHallRepository
             .AsNoTracking()
             .Where(hall => hall.Status == HallStatus.Approved && !hall.IsDeleted);
 
+    public async Task<IReadOnlyList<Hall>> GetApprovedHallsPaginatedAsync(
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+        => await ApprovedHallsQuery()
+            .OrderByDescending(hall => hall.CreatedAt)
+            .ThenBy(hall => hall.Name)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+    public async Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default)
+        => await ApprovedHallsQuery()
+            .CountAsync(cancellationToken);
+
     public async Task<IReadOnlyList<HallImage>> GetHallImagesAsync(
         Guid hallId,
         CancellationToken cancellationToken = default)

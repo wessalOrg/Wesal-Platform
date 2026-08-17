@@ -14,6 +14,13 @@ public interface IHallRepository
         int count,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Hall>> GetApprovedHallsPaginatedAsync(
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
