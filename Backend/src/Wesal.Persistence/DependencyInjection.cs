@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IHallRepository, HallRepository>();
         services.AddScoped<IRatingRepository, RatingRepository>();
+        services.AddScoped<ICommentRepository, CommentRepository>();
 
         return services;
     }

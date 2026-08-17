@@ -23,6 +23,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Rating> Ratings => Set<Rating>();
 
+    public DbSet<Comment> Comments => Set<Comment>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -115,6 +117,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(rating => rating.Hall)
                 .WithMany()
                 .HasForeignKey(rating => rating.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Comment>(entity =>
+        {
+            entity.ToTable("Comments");
+
+            entity.Property(comment => comment.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(comment => comment.Content).IsRequired().HasMaxLength(1000);
+
+            entity.HasIndex(comment => comment.HallId);
+
+            entity.HasOne(comment => comment.Hall)
+                .WithMany()
+                .HasForeignKey(comment => comment.HallId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
