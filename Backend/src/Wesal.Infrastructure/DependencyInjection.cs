@@ -1,10 +1,8 @@
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.Tokens;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Domain.Constants;
 using Wesal.Infrastructure.Auth;
@@ -80,19 +78,7 @@ public static class DependencyInjection
                         return context.Response.WriteAsJsonAsync(problemDetails);
                     }
                 };
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = jwtSettings.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = jwtSettings.Audience,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.FromMinutes(jwtSettings.ClockSkewMinutes),
-                    NameClaimType = ApplicationClaimTypes.UserName,
-                    RoleClaimType = ApplicationClaimTypes.Role
-                };
+                options.TokenValidationParameters = JwtTokenValidationParametersFactory.Create(jwtSettings);
             });
 
         services.AddAuthorization(options =>
