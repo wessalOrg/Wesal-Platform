@@ -150,6 +150,18 @@ public class BookingRequestServiceShould
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(Halls.Count);
 
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
+            string? name, HallRegion? region, string? area,
+            DateOnly? date, BookingPeriodType? period,
+            int skip, int take, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Hall>>(Halls.Skip(skip).Take(take).ToList());
+
+        public Task<int> SearchApprovedHallsCountAsync(
+            string? name, HallRegion? region, string? area,
+            DateOnly? date, BookingPeriodType? period,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(Halls.Count);
+
         public Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(
             HallRegion region,
             int count,

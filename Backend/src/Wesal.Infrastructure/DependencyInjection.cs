@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<IFeaturedHallsService, FeaturedHallsService>();
         services.AddScoped<IHallDetailsService, HallDetailsService>();
         services.AddScoped<IAllHallsService, AllHallsService>();
+        services.AddScoped<IHallSearchService, HallSearchService>();
         services.AddScoped<IBookingRequestService, BookingRequestService>();
         services.AddSingleton<IDateTime, DateTimeService>();
 

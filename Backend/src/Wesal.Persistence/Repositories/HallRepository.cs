@@ -58,6 +58,30 @@ public class HallRepository : IHallRepository
         => await ApprovedHallsQuery()
             .CountAsync(cancellationToken);
 
+    public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
+        string? name,
+        HallRegion? region,
+        string? area,
+        DateOnly? date,
+        BookingPeriodType? period,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException("Abdulaziz must implement: optimized DB-level search query with availability filtering.");
+    }
+
+    public Task<int> SearchApprovedHallsCountAsync(
+        string? name,
+        HallRegion? region,
+        string? area,
+        DateOnly? date,
+        BookingPeriodType? period,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException("Abdulaziz must implement: optimized DB-level search count query with availability filtering.");
+    }
+
     public async Task<IReadOnlyList<HallImage>> GetHallImagesAsync(
         Guid hallId,
         CancellationToken cancellationToken = default)
