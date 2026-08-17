@@ -13,6 +13,7 @@ using Wesal.Infrastructure.CurrentUser;
 using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Homepage;
 using Wesal.Infrastructure.Sessions;
+using Wesal.Infrastructure.Ratings;
 using Wesal.Infrastructure.Time;
 
 namespace Wesal.Infrastructure;
@@ -42,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IHallSearchService, HallSearchService>();
         services.AddScoped<IBookingRequestService, BookingRequestService>();
         services.AddScoped<ISessionService, SessionService>();
+        services.AddScoped<IRatingService, RatingService>();
         services.AddSingleton<IDateTime, DateTimeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -21,6 +21,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<HallAvailability> HallAvailabilities => Set<HallAvailability>();
 
+    public DbSet<Rating> Ratings => Set<Rating>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -98,6 +100,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(availability => availability.Hall)
                 .WithMany(hall => hall.Availability)
                 .HasForeignKey(availability => availability.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Rating>(entity =>
+        {
+            entity.ToTable("Ratings");
+
+            entity.Property(rating => rating.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(rating => rating.Value).IsRequired();
+
+            entity.HasIndex(rating => new { rating.HallId, rating.UserId }).IsUnique();
+
+            entity.HasOne(rating => rating.Hall)
+                .WithMany()
+                .HasForeignKey(rating => rating.HallId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
