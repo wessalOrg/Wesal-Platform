@@ -38,11 +38,6 @@ public class HallRepository : IHallRepository
             .Take(count)
             .ToListAsync(cancellationToken);
 
-    private IQueryable<Hall> ApprovedHallsQuery()
-        => _context.Halls
-            .AsNoTracking()
-            .Where(hall => hall.Status == HallStatus.Approved && !hall.IsDeleted);
-
     public async Task<IReadOnlyList<Hall>> GetApprovedHallsPaginatedAsync(
         int skip,
         int take,
@@ -58,7 +53,7 @@ public class HallRepository : IHallRepository
         => await ApprovedHallsQuery()
             .CountAsync(cancellationToken);
 
-    public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
+    public async Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
         string? name,
         HallRegion? region,
         string? area,
@@ -67,20 +62,22 @@ public class HallRepository : IHallRepository
         int skip,
         int take,
         CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException("Abdulaziz must implement: optimized DB-level search query with availability filtering.");
-    }
+        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, date, period)
+            .OrderByDescending(hall => hall.CreatedAt)
+            .ThenBy(hall => hall.Name)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
 
-    public Task<int> SearchApprovedHallsCountAsync(
+    public async Task<int> SearchApprovedHallsCountAsync(
         string? name,
         HallRegion? region,
         string? area,
         DateOnly? date,
         BookingPeriodType? period,
         CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException("Abdulaziz must implement: optimized DB-level search count query with availability filtering.");
-    }
+        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, date, period)
+            .CountAsync(cancellationToken);
 
     public async Task<IReadOnlyList<HallImage>> GetHallImagesAsync(
         Guid hallId,
@@ -91,6 +88,49 @@ public class HallRepository : IHallRepository
             .OrderBy(image => image.DisplayOrder)
             .ThenBy(image => image.CreatedAt)
             .ToListAsync(cancellationToken);
+
+    private IQueryable<Hall> ApprovedHallsQuery()
+        => _context.Halls
+            .AsNoTracking()
+            .Where(hall => hall.Status == HallStatus.Approved && !hall.IsDeleted);
+
+    private IQueryable<Hall> ApplySearchFilters(
+        IQueryable<Hall> query,
+        string? name,
+        HallRegion? region,
+        string? area,
+        DateOnly? date,
+        BookingPeriodType? period)
+    {
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            query = query.Where(hall => hall.Name.Contains(name));
+        }
+
+        if (region.HasValue)
+        {
+            query = query.Where(hall => hall.Region == region.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(area))
+        {
+            query = query.Where(hall => hall.Address.Contains(area));
+        }
+
+        if (date.HasValue && period.HasValue)
+        {
+            var selectedDate = date.Value;
+            var selectedPeriod = period.Value;
+
+            query = query.Where(hall => !_context.HallAvailabilities.Any(availability =>
+                availability.HallId == hall.Id
+                && availability.Date == selectedDate
+                && availability.PeriodType == selectedPeriod
+                && availability.Status == AvailabilityStatus.Booked));
+        }
+
+        return query;
+    }
 
     public async Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
         IReadOnlyCollection<Guid> hallIds,
