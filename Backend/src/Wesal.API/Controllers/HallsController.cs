@@ -14,13 +14,28 @@ public class HallsController : ControllerBase
 {
     private readonly IFeaturedHallsService _featuredHallsService;
     private readonly IHallDetailsService _hallDetailsService;
+    private readonly IAllHallsService _allHallsService;
 
     public HallsController(
         IFeaturedHallsService featuredHallsService,
-        IHallDetailsService hallDetailsService)
+        IHallDetailsService hallDetailsService,
+        IAllHallsService allHallsService)
     {
         _featuredHallsService = featuredHallsService;
         _hallDetailsService = hallDetailsService;
+        _allHallsService = allHallsService;
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PagedResult<HallListItemDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<HallListItemDto>>> GetHalls(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 12,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _allHallsService.GetApprovedHallsAsync(pageNumber, pageSize, cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}")]

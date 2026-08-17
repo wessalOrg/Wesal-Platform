@@ -305,6 +305,128 @@ public class HallRepositoryShould
         Assert.Equal("visible.jpg", image.Url);
     }
 
+    [Fact]
+    public async Task GetApprovedHallsPaginatedAsync_ReturnsCorrectPage()
+    {
+        await using var context = CreateContext();
+        for (var index = 0; index < 5; index++)
+        {
+            context.Halls.Add(new Hall
+            {
+                Id = Guid.NewGuid(),
+                Name = $"Hall {index}",
+                Status = HallStatus.Approved,
+                CreatedAt = FixedNow.AddMinutes(-index)
+            });
+        }
+
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsPaginatedAsync(skip: 0, take: 3);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal("Hall 0", result[0].Name);
+        Assert.Equal("Hall 1", result[1].Name);
+        Assert.Equal("Hall 2", result[2].Name);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsPaginatedAsync_ReturnsSecondPage()
+    {
+        await using var context = CreateContext();
+        for (var index = 0; index < 5; index++)
+        {
+            context.Halls.Add(new Hall
+            {
+                Id = Guid.NewGuid(),
+                Name = $"Hall {index}",
+                Status = HallStatus.Approved,
+                CreatedAt = FixedNow.AddMinutes(-index)
+            });
+        }
+
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsPaginatedAsync(skip: 3, take: 3);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("Hall 3", result[0].Name);
+        Assert.Equal("Hall 4", result[1].Name);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsPaginatedAsync_SkipsDeletedAndUnapproved()
+    {
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            new Hall { Id = Guid.NewGuid(), Name = "Approved 1", Status = HallStatus.Approved, CreatedAt = FixedNow.AddMinutes(-1) },
+            new Hall { Id = Guid.NewGuid(), Name = "Approved 2", Status = HallStatus.Approved, CreatedAt = FixedNow.AddMinutes(-2) },
+            new Hall { Id = Guid.NewGuid(), Name = "Pending", Status = HallStatus.PendingReview, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, IsDeleted = true, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsPaginatedAsync(skip: 0, take: 10);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("Approved 1", result[0].Name);
+        Assert.Equal("Approved 2", result[1].Name);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsPaginatedAsync_ReturnsEmptyForOversizedSkip()
+    {
+        await using var context = CreateContext();
+        context.Halls.Add(new Hall
+        {
+            Id = Guid.NewGuid(),
+            Name = "Only Hall",
+            Status = HallStatus.Approved,
+            CreatedAt = FixedNow
+        });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsPaginatedAsync(skip: 100, take: 10);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsCountAsync_ReturnsOnlyApprovedAndNotDeleted()
+    {
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            new Hall { Id = Guid.NewGuid(), Name = "Approved", Status = HallStatus.Approved, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "Pending", Status = HallStatus.PendingReview, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, IsDeleted = true, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsCountAsync();
+
+        Assert.Equal(1, result);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsCountAsync_ReturnsZeroWhenNoHalls()
+    {
+        await using var context = CreateContext();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsCountAsync();
+
+        Assert.Equal(0, result);
+    }
+
     private static ApplicationDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
