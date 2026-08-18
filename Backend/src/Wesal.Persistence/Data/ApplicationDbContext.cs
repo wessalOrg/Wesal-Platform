@@ -135,11 +135,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(comment => comment.UserId).IsRequired().HasMaxLength(450);
             entity.Property(comment => comment.Content).IsRequired().HasMaxLength(1000);
 
-            entity.HasIndex(comment => comment.HallId);
+            entity.HasIndex(comment => new { comment.HallId, comment.CreatedAt });
 
             entity.HasOne(comment => comment.Hall)
                 .WithMany()
                 .HasForeignKey(comment => comment.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(comment => comment.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
