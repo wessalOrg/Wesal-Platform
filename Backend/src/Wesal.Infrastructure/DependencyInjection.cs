@@ -15,6 +15,7 @@ using Wesal.Infrastructure.Homepage;
 using Wesal.Infrastructure.Sessions;
 using Wesal.Infrastructure.Ratings;
 using Wesal.Infrastructure.Comments;
+using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Time;
 
 namespace Wesal.Infrastructure;
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionService, SessionService>();
         services.AddScoped<IRatingService, RatingService>();
         services.AddScoped<ICommentService, CommentService>();
+        services.AddScoped<IConversationService, ConversationService>();
         services.AddSingleton<IDateTime, DateTimeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
