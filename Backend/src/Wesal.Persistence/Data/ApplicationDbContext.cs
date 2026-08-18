@@ -107,7 +107,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
         builder.Entity<Rating>(entity =>
         {
-            entity.ToTable("Ratings");
+            entity.ToTable("Ratings", table =>
+            {
+                table.HasCheckConstraint("CK_Ratings_Value", "\"Value\" BETWEEN 1 AND 5");
+            });
 
             entity.Property(rating => rating.UserId).IsRequired().HasMaxLength(450);
             entity.Property(rating => rating.Value).IsRequired();
@@ -117,6 +120,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(rating => rating.Hall)
                 .WithMany()
                 .HasForeignKey(rating => rating.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(rating => rating.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

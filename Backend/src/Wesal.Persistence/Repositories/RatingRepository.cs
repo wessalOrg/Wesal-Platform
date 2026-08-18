@@ -40,13 +40,19 @@ public sealed class RatingRepository : IRatingRepository
 
     public async Task<double> GetAverageRatingAsync(Guid hallId, CancellationToken cancellationToken = default)
     {
-        var ratings = await _context.Ratings
+        var hasRatings = await _context.Ratings
+            .AsNoTracking()
+            .AnyAsync(r => r.HallId == hallId, cancellationToken);
+
+        if (!hasRatings)
+        {
+            return 0;
+        }
+
+        return await _context.Ratings
             .AsNoTracking()
             .Where(r => r.HallId == hallId)
-            .Select(r => r.Value)
-            .ToListAsync(cancellationToken);
-
-        return ratings.Count == 0 ? 0 : ratings.Average();
+            .AverageAsync(r => r.Value, cancellationToken);
     }
 
     public async Task<int> GetTotalRatingsAsync(Guid hallId, CancellationToken cancellationToken = default)
