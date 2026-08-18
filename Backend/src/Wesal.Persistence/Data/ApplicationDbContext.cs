@@ -109,7 +109,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
         builder.Entity<Rating>(entity =>
         {
-            entity.ToTable("Ratings");
+            entity.ToTable("Ratings", table =>
+            {
+                table.HasCheckConstraint("CK_Ratings_Value", "\"Value\" BETWEEN 1 AND 5");
+            });
 
             entity.Property(rating => rating.UserId).IsRequired().HasMaxLength(450);
             entity.Property(rating => rating.Value).IsRequired();
@@ -120,6 +123,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
                 .WithMany()
                 .HasForeignKey(rating => rating.HallId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(rating => rating.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<Comment>(entity =>
@@ -129,11 +137,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(comment => comment.UserId).IsRequired().HasMaxLength(450);
             entity.Property(comment => comment.Content).IsRequired().HasMaxLength(1000);
 
-            entity.HasIndex(comment => comment.HallId);
+            entity.HasIndex(comment => new { comment.HallId, comment.CreatedAt });
 
             entity.HasOne(comment => comment.Hall)
                 .WithMany()
                 .HasForeignKey(comment => comment.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(comment => comment.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
