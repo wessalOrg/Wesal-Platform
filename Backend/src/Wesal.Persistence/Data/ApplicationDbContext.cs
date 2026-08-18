@@ -25,6 +25,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Comment> Comments => Set<Comment>();
 
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -132,6 +134,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(comment => comment.Hall)
                 .WithMany()
                 .HasForeignKey(comment => comment.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Conversation>(entity =>
+        {
+            entity.ToTable("Conversations");
+
+            entity.Property(conversation => conversation.SenderUserId).IsRequired().HasMaxLength(450);
+            entity.Property(conversation => conversation.HallOwnerId).IsRequired().HasMaxLength(450);
+
+            entity.HasIndex(conversation => conversation.HallId);
+
+            entity.HasOne(conversation => conversation.Hall)
+                .WithMany()
+                .HasForeignKey(conversation => conversation.HallId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
