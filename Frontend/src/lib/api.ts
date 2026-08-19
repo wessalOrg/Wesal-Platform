@@ -1,4 +1,6 @@
 import axios from "axios";
+import { ApiError } from "@/lib/api-error";
+import { getAccessToken } from "@/lib/auth-token";
 
 const api = axios.create({
   baseURL:
@@ -9,12 +11,24 @@ const api = axios.create({
   timeout: 8000,
 });
 
+api.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const message =
       error.response?.data?.message || error.message || "Request failed";
-    return Promise.reject(new Error(message));
+    const status =
+      typeof error.response?.status === "number"
+        ? error.response.status
+        : undefined;
+    return Promise.reject(new ApiError(message, status));
   },
 );
 

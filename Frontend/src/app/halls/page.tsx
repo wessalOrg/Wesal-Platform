@@ -1,24 +1,28 @@
-import Link from "next/link";
+import { Suspense } from "react";
+import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import HallsCatalogView from "@/components/halls/HallsCatalogView";
+
+export const metadata: Metadata = {
+  title: "القاعات | وصال",
+  description: "تصفح كل قاعات الأفراح المعتمدة على منصة وصال.",
+};
 
 export default function HallsPage() {
   return (
     <>
       <Navbar />
-      <main className="container-wesal min-h-[60svh] py-12">
-        <h1 className="text-3xl font-bold text-[var(--wesal-maroon)]">
-          القاعات
-        </h1>
-        <p className="mt-3 text-[var(--wesal-muted)]">
-          صفحة البحث الكامل والفلترة المتقدمة ستُكمَّل في تاسك US-LAND-07.
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex text-sm font-semibold text-[var(--wesal-maroon)] hover:underline"
+      <main className="min-h-[60svh] bg-[var(--wesal-cream)]">
+        <Suspense
+          fallback={
+            <div className="container-wesal py-10 text-sm text-[var(--wesal-muted)]">
+              جاري تحميل القاعات…
+            </div>
+          }
         >
-          العودة للرئيسية
-        </Link>
+          <HallsCatalogView />
+        </Suspense>
       </main>
       <Footer />
     </>

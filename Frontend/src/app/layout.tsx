@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { Cairo } from "next/font/google";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
 
 const cairo = Cairo({
   variable: "--font-wesal-sans",
   subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "600", "700", "800"],
   display: "swap",
+  preload: true,
 });
 
 export const metadata: Metadata = {
@@ -22,7 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${cairo.variable} h-full antialiased`}
     >
       <body className={`${cairo.className} flex min-h-full flex-col font-sans`}>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Infrastructure.Halls;
@@ -27,6 +28,24 @@ public class FeaturedHallsServiceShould
         var result = await service.GetFeaturedHallsAsync();
 
         Assert.Equal(6, result.Count);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsAsync_ReturnsAllApprovedHalls()
+    {
+        var fakeRepository = new FakeHallRepository();
+        for (var index = 0; index < 8; index++)
+        {
+            var hall = CreateHall(name: $"Hall {index}", createdAt: FixedNow.AddDays(-index));
+            fakeRepository.Halls.Add(hall);
+            fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
+        }
+
+        var service = CreateService(fakeRepository);
+
+        var result = await service.GetApprovedHallsAsync();
+
+        Assert.Equal(8, result.Count);
     }
 
     [Fact]
@@ -229,6 +248,30 @@ public class FeaturedHallsServiceShould
         Assert.All(result, featured => Assert.NotNull(featured.Availability));
     }
 
+    [Fact]
+    public async Task SearchHallsAsync_CombinesNameAndAddressFilters()
+    {
+        var fakeRepository = new FakeHallRepository();
+        var matching = CreateHall("Royal Hall", FixedNow, address: "Tel Al-Hawa");
+        var otherName = CreateHall("Andalus Hall", FixedNow.AddDays(-1), address: "Tel Al-Hawa");
+        var otherAddress = CreateHall("Royal Hall", FixedNow.AddDays(-2), address: "Rafah");
+        fakeRepository.Halls.AddRange(matching, otherName, otherAddress);
+        fakeRepository.Periods.AddRange(CreatePeriods(matching.Id));
+        fakeRepository.Periods.AddRange(CreatePeriods(otherName.Id));
+        fakeRepository.Periods.AddRange(CreatePeriods(otherAddress.Id));
+
+        var service = CreateService(fakeRepository);
+
+        var result = await service.SearchHallsAsync(new HallSearchQuery
+        {
+            Name = "Royal",
+            Address = "Hawa"
+        });
+
+        Assert.Single(result);
+        Assert.Equal(matching.Id, result[0].HallId);
+    }
+
     private static FeaturedHallsService CreateService(FakeHallRepository repository)
         => new(repository, new FakeDateTime(FixedNow), NullLogger<FeaturedHallsService>.Instance);
 
@@ -280,6 +323,9 @@ public class FeaturedHallsServiceShould
         public List<HallBookingPeriod> Periods { get; } = [];
 
         public List<HallAvailability> Availability { get; } = [];
+
+        public Task<Hall?> GetHallByIdAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult(Halls.FirstOrDefault(hall => hall.Id == id));
 
         public Task<IReadOnlyList<Hall>> GetApprovedHallsAsync(int count, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>(Halls.Take(count).ToList());

@@ -19,6 +19,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<HallAvailability> HallAvailabilities => Set<HallAvailability>();
 
+    public DbSet<Rating> Ratings => Set<Rating>();
+
+    public DbSet<Comment> Comments => Set<Comment>();
+
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -81,6 +87,63 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(availability => availability.Hall)
                 .WithMany(hall => hall.Availability)
                 .HasForeignKey(availability => availability.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Rating>(entity =>
+        {
+            entity.ToTable("Ratings");
+
+            entity.Property(rating => rating.UserId).IsRequired().HasMaxLength(450);
+            entity.ToTable(table => table.HasCheckConstraint("CK_Ratings_Value", "\"Value\" BETWEEN 1 AND 5"));
+            entity.HasIndex(rating => new { rating.HallId, rating.UserId }).IsUnique();
+
+            entity.HasOne(rating => rating.Hall)
+                .WithMany(hall => hall.Ratings)
+                .HasForeignKey(rating => rating.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(rating => rating.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Comment>(entity =>
+        {
+            entity.ToTable("Comments");
+
+            entity.Property(comment => comment.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(comment => comment.Body).IsRequired().HasMaxLength(1000);
+            entity.HasIndex(comment => new { comment.HallId, comment.CreatedAt });
+
+            entity.HasOne(comment => comment.Hall)
+                .WithMany(hall => hall.Comments)
+                .HasForeignKey(comment => comment.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(comment => comment.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Conversation>(entity =>
+        {
+            entity.ToTable("Conversations");
+
+            entity.Property(conversation => conversation.InitiatorUserId).IsRequired().HasMaxLength(450);
+            entity.Property(conversation => conversation.OwnerUserId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(conversation => new { conversation.HallId, conversation.InitiatorUserId }).IsUnique();
+
+            entity.HasOne(conversation => conversation.Hall)
+                .WithMany(hall => hall.Conversations)
+                .HasForeignKey(conversation => conversation.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(conversation => conversation.InitiatorUserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

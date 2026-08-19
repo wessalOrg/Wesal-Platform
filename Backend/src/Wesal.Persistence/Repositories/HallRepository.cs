@@ -15,6 +15,9 @@ public class HallRepository : IHallRepository
         _context = context;
     }
 
+    public Task<Hall?> GetHallByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        => _context.Halls.AsNoTracking().FirstOrDefaultAsync(hall => hall.Id == id, cancellationToken);
+
     public async Task<IReadOnlyList<Hall>> GetApprovedHallsAsync(int count, CancellationToken cancellationToken = default)
         => await ApprovedHallsQuery()
             .OrderByDescending(hall => hall.CreatedAt)

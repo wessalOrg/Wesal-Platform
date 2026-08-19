@@ -1,9 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
+import Reveal from "@/components/ui/Reveal";
 
 export default function OwnerCtaSection() {
   return (
     <section className="owner-cta relative isolate overflow-hidden py-16 sm:py-20">
+      <Reveal>
       <div
         dir="ltr"
         className="container-wesal relative z-10 grid items-center gap-10 lg:grid-cols-2 lg:gap-6"
@@ -66,6 +68,7 @@ export default function OwnerCtaSection() {
           </div>
         </div>
       </div>
+      </Reveal>
     </section>
   );
 }

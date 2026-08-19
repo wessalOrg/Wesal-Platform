@@ -5,6 +5,8 @@ namespace Wesal.Application.Common.Interfaces.Persistence;
 
 public interface IHallRepository
 {
+    Task<Hall?> GetHallByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Hall>> GetApprovedHallsAsync(int count, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(

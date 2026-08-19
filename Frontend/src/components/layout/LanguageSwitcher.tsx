@@ -19,6 +19,21 @@ type Props = {
   compact?: boolean;
 };
 
+export function useUiLang(): "ar" | "en" {
+  const [lang, setLang] = useState<"ar" | "en">("ar");
+
+  useEffect(() => {
+    const read = () => {
+      setLang(document.documentElement.lang === "en" ? "en" : "ar");
+    };
+    read();
+    window.addEventListener("wesal-lang-change", read);
+    return () => window.removeEventListener("wesal-lang-change", read);
+  }, []);
+
+  return lang;
+}
+
 export default function LanguageSwitcher({ className = "", compact = false }: Props) {
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<Lang>(LANGUAGES[0]);
@@ -46,8 +61,11 @@ export default function LanguageSwitcher({ className = "", compact = false }: Pr
   }, [open, close]);
 
   const selectLang = (next: Lang) => {
+    document.documentElement.lang = next.code;
+    document.documentElement.dir = next.dir;
     setLang(next);
     setOpen(false);
+    window.dispatchEvent(new Event("wesal-lang-change"));
   };
 
   useEffect(() => {
@@ -59,7 +77,7 @@ export default function LanguageSwitcher({ className = "", compact = false }: Pr
     <div ref={rootRef} className={`lang-switch relative ${className}`}>
       <button
         type="button"
-        className={`lang-switch-trigger inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-medium text-[var(--wesal-text)] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--wesal-pink-soft)] hover:text-[var(--wesal-maroon)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wesal-maroon)]/30 active:scale-[0.98] ${
+        className={`lang-switch-trigger inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-medium text-[var(--wesal-text)] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--wesal-pink-soft)] hover:text-[var(--wesal-maroon)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wesal-maroon)]/30 active:scale-[0.98] ${
           open ? "bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]" : ""
         } ${compact ? "w-full justify-between px-4 py-2.5" : ""}`}
         aria-haspopup="listbox"

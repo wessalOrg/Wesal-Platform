@@ -1,3 +1,5 @@
+import Reveal from "@/components/ui/Reveal";
+
 const BENEFITS = [
   {
     title: "وصول أوسع للعملاء",
@@ -51,6 +53,7 @@ export default function BenefitsSection() {
       id="benefits"
       className="benefits-section scroll-mt-20 bg-white py-12 sm:py-16"
     >
+      <Reveal>
       <div className="container-wesal">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="benefits-heading text-2xl font-extrabold text-[var(--wesal-maroon)] sm:text-3xl">
@@ -82,6 +85,7 @@ export default function BenefitsSection() {
           ))}
         </div>
       </div>
+      </Reveal>
     </section>
   );
 }

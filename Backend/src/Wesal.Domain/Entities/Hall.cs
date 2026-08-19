@@ -32,4 +32,10 @@ public class Hall : BaseAuditableEntity
     public ICollection<HallBookingPeriod> BookingPeriods { get; set; } = [];
 
     public ICollection<HallAvailability> Availability { get; set; } = [];
+
+    public ICollection<Rating> Ratings { get; set; } = [];
+
+    public ICollection<Comment> Comments { get; set; } = [];
+
+    public ICollection<Conversation> Conversations { get; set; } = [];
 }
