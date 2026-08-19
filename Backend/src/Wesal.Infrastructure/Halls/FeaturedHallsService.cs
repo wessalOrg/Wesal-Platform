@@ -85,7 +85,7 @@ public class FeaturedHallsService : IFeaturedHallsService
                 .Select(period => new HallBookingPeriodStatusDto
                 {
                     PeriodType = period.Type,
-                    PeriodName = GetPeriodName(period.Type),
+                    PeriodName = HallDisplayNames.GetPeriodName(period.Type),
                     StartTime = period.StartTime,
                     EndTime = period.EndTime,
                     Status = availabilityByKey.TryGetValue((hall.Id, date, period.Type), out var availability)
@@ -102,7 +102,7 @@ public class FeaturedHallsService : IFeaturedHallsService
             HallId = hall.Id,
             HallName = hall.Name,
             MainImage = hall.MainImageUrl,
-            Region = GetRegionDisplayName(hall.Region),
+            Region = HallDisplayNames.GetRegionDisplayName(hall.Region),
             Address = hall.Address,
             Capacity = hall.Capacity,
             Price = hall.ShowPrice ? hall.Price : null,
@@ -110,20 +110,4 @@ public class FeaturedHallsService : IFeaturedHallsService
             Availability = days
         };
     }
-
-    private static string GetRegionDisplayName(HallRegion region) => region switch
-    {
-        HallRegion.NorthGaza => "North Gaza",
-        HallRegion.Gaza => "Gaza",
-        HallRegion.MiddleArea => "Middle Area",
-        HallRegion.SouthGaza => "South Gaza",
-        _ => region.ToString()
-    };
-
-    private static string GetPeriodName(BookingPeriodType type) => type switch
-    {
-        BookingPeriodType.FirstPeriod => "First Period",
-        BookingPeriodType.SecondPeriod => "Second Period",
-        _ => type.ToString()
-    };
 }

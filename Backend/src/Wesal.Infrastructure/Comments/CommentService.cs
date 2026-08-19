@@ -1,4 +1,3 @@
-using System.Net;
 using System.Web;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
