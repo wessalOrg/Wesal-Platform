@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import WesalLogo from "@/components/brand/WesalLogo";
+import Reveal from "@/components/ui/Reveal";
 
 const QUICK_LINKS = [
   { href: "/", label: "الرئيسية" },
@@ -40,6 +41,7 @@ export default function Footer() {
         <span className="footer-twinkle footer-twinkle--4" />
       </div>
 
+      <Reveal>
       <div className="container-wesal relative z-10 py-12 sm:py-14">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           <div className="sm:col-span-2 lg:col-span-1">
@@ -167,7 +169,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="relative z-10 border-t border-white/50 bg-white/35 backdrop-blur-[2px]">
+      <div className="relative z-10 border-t border-white/50 bg-white/80">
         <div className="container-wesal flex flex-col items-center justify-center gap-2 py-4 text-center text-xs text-[var(--wesal-muted)]">
           <p>© {new Date().getFullYear()} وصال — جميع الحقوق محفوظة</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
@@ -180,6 +182,7 @@ export default function Footer() {
           </div>
         </div>
       </div>
+      </Reveal>
     </footer>
   );
 }

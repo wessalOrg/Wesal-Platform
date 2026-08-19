@@ -7,7 +7,7 @@ type RevealProps = {
   className?: string;
   /** Delay before observing, ms */
   delay?: number;
-  as?: "div" | "section";
+  as?: "div" | "section" | "footer";
 };
 
 function subscribeReducedMotion(onStoreChange: () => void) {
@@ -55,7 +55,7 @@ export default function Reveal({
           observer.unobserve(node);
         }
       },
-      { threshold: 0.14, rootMargin: "0px 0px -8% 0px" },
+      { threshold: 0.1, rootMargin: "0px 0px -6% 0px" },
     );
 
     observer.observe(node);

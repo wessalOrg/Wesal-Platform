@@ -1,19 +1,12 @@
-"use client";
-
-import { useEffect, useId, useState } from "react";
+import Image from "next/image";
 import { HOMEPAGE_INTRO_FALLBACK } from "@/constants/homepageFallback";
 import { fetchHomepageIntro } from "@/services/homepage";
 import type { HomepageIntro } from "@/types/homepage";
 
-const HALLS = [
-  {
-    src: "/hero/hall-slide-b.webp",
-    fallback: "/hero/hall-slide-b.jpg",
-    alt: "قاعة ملكية بكوشة ذهبية وثريا مركزية",
-  },
-] as const;
-
-const SLIDE_MS = 2000;
+const HERO_IMAGE = {
+  src: "/hero/hall-slide-b.webp",
+  alt: "قاعة ملكية بكوشة ذهبية وثريا مركزية",
+} as const;
 
 /** Exact design reference dimensions */
 const VBW = 1536;
@@ -28,59 +21,22 @@ const GOLD_D =
 const CREAM_D = `${CURVE_D} L0,${VBH} L0,0 Z`;
 
 const EDGE_MOBILE = "M 0 28 C 280 72, 720 72, 1000 28";
-const CREAM_MOBILE =
-  "M 0 0 L 1000 0 L 1000 28 C 720 72, 280 72, 0 28 Z";
+const CREAM_MOBILE = "M 0 0 L 1000 0 L 1000 28 C 720 72, 280 72, 0 28 Z";
 
-function useHeroSlide() {
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    if (HALLS.length < 2) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) return;
-
-    const id = window.setInterval(() => {
-      setIndex((current) => (current + 1) % HALLS.length);
-    }, SLIDE_MS);
-
-    return () => window.clearInterval(id);
-  }, []);
-
-  return index;
-}
-
-function HeroSlideshow({
-  index,
-  className = "",
-  showAlt = false,
-}: {
-  index: number;
-  className?: string;
-  showAlt?: boolean;
-}) {
+function HeroPhoto({ showAlt = false }: { showAlt?: boolean }) {
   return (
-    <div className={`hero-slideshow absolute inset-0 overflow-hidden ${className}`.trim()}>
-      {HALLS.map((hall, i) => {
-        const active = i === index;
-        return (
-          <div
-            key={hall.src}
-            className={`hero-slide${active ? " is-active" : ""}`}
-            aria-hidden={!active}
-          >
-            <picture>
-              <source srcSet={hall.src} type="image/webp" />
-              <img
-                src={hall.fallback}
-                alt={showAlt && active ? hall.alt : ""}
-                decoding="async"
-                fetchPriority={i === 0 ? "high" : "low"}
-                className="hero-photo"
-              />
-            </picture>
-          </div>
-        );
-      })}
+    <div className="hero-slideshow absolute inset-0 overflow-hidden">
+      <div className="hero-slide is-active">
+        <Image
+          src={HERO_IMAGE.src}
+          alt={showAlt ? HERO_IMAGE.alt : ""}
+          fill
+          priority
+          quality={75}
+          sizes="(min-width: 768px) 90rem, 100vw"
+          className="hero-photo"
+        />
+      </div>
     </div>
   );
 }
@@ -128,23 +84,16 @@ function HeroCopy({
   );
 }
 
-export default function HeroSection() {
-  const uid = useId().replace(/:/g, "");
-  const goldId = `wesal-gold-${uid}`;
-  const slide = useHeroSlide();
-  const activeHall = HALLS[slide];
-
-  const [intro, setIntro] = useState<HomepageIntro>(HOMEPAGE_INTRO_FALLBACK);
-
-  useEffect(() => {
-    let active = true;
-    void fetchHomepageIntro().then((data) => {
-      if (active && !data.isFallback) setIntro(data);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+export default async function HeroSection() {
+  const goldId = "wesal-hero-gold";
+  const intro = await Promise.race([
+    fetchHomepageIntro(),
+    new Promise<HomepageIntro>((resolve) => {
+      setTimeout(() => {
+        resolve({ ...HOMEPAGE_INTRO_FALLBACK, isFallback: true });
+      }, 400);
+    }),
+  ]);
 
   return (
     <section
@@ -158,7 +107,7 @@ export default function HeroSection() {
         style={{ aspectRatio: `${VBW} / ${VBH}` }}
       >
         <div className="hero-photo-pane absolute inset-0 overflow-hidden">
-          <HeroSlideshow index={slide} />
+          <HeroPhoto />
           <div className="hero-photo-grade" aria-hidden="true" />
         </div>
 
@@ -246,9 +195,7 @@ export default function HeroSection() {
           <HeroCopy titleId="wesal-hero-title" intro={intro} />
         </div>
 
-        <span className="sr-only" aria-live="polite">
-          {activeHall.alt}
-        </span>
+        <span className="sr-only">{HERO_IMAGE.alt}</span>
       </div>
 
       <div className="hero-card hero-showcase md:hidden">
@@ -275,12 +222,12 @@ export default function HeroSection() {
             aria-hidden="true"
           >
             <defs>
-              <linearGradient id={`${uid}-mcream`} x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="wesal-hero-mcream" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#FCFBF9" />
                 <stop offset="100%" stopColor="#F8F4EF" />
               </linearGradient>
             </defs>
-            <path d={CREAM_MOBILE} fill={`url(#${uid}-mcream)`} />
+            <path d={CREAM_MOBILE} fill="url(#wesal-hero-mcream)" />
             <path
               className="hero-gold-line-mobile"
               d={EDGE_MOBILE}
@@ -291,7 +238,7 @@ export default function HeroSection() {
               vectorEffect="non-scaling-stroke"
             />
           </svg>
-          <HeroSlideshow index={slide} showAlt />
+          <HeroPhoto showAlt />
           <div className="hero-photo-grade hero-photo-grade--mobile" aria-hidden="true" />
         </div>
       </div>

@@ -1,3 +1,5 @@
+import Reveal from "@/components/ui/Reveal";
+
 const STEPS = [
   {
     title: "مساعدك الذكي",
@@ -38,6 +40,7 @@ export default function HowItWorksSection() {
         <span className="how-glint how-glint--4" />
       </div>
 
+      <Reveal>
       <div className="container-wesal relative z-10">
         <div className="how-heading mx-auto max-w-2xl text-center">
           <p className="how-eyebrow mb-3 text-sm font-semibold tracking-wide text-[var(--wesal-gold)]">
@@ -76,6 +79,7 @@ export default function HowItWorksSection() {
           ))}
         </div>
       </div>
+      </Reveal>
     </section>
   );
 }

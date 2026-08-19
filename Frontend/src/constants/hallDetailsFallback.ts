@@ -1,4 +1,9 @@
-import type { HallDetail } from "@/types/hall";
+import {
+  DEFAULT_HALL_AMENITIES,
+  type HallDetail,
+  type HallDetails,
+  type HallReview,
+} from "@/types/hall";
 import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
 
 const GALLERY = [
@@ -160,4 +165,69 @@ export function getHallDetailsFallback(id: string): HallDetail | null {
     reviewCount: featured.reviewCount ?? null,
     availabilityDays: featured.availabilityDays ?? [],
   };
+}
+
+const MODAL_DESCRIPTIONS: Record<string, string> = {
+  "1": "قاعة بتصميم كلاسيكي عصري، تجمع بين الفخامة والبساطة، وتوفر مساحات واسعة مع إضاءة مدروسة بعناية.",
+  "2": "قاعة الأندلس بطابع كلاسيك وإضاءة مميزة، مثالية للحفلات المتوسطة في شمال غزة.",
+  "3": "قاعة النخيل الذهبية بأجواء مفتوحة مناسبة لحفلات الخطوبة والمناسبات الخارجية.",
+  "4": "قاعة الياسمين بديكور حديث وتكييف كامل، خيار عملي للمناسبات في جنوب غزة.",
+  "5": "قاعة القمر الفضي بسعة كبيرة ومرافق VIP وموقف سيارات للضيوف.",
+  "6": "قاعة الريحان خيار اقتصادي مكيّف للمناسبات الصغيرة والمتوسطة في رفح.",
+};
+
+const MODAL_NAMES: Record<string, string> = {
+  "1": "قاعة رويال الفاخرة",
+};
+
+export const DEMO_HALL_REVIEWS: HallReview[] = [
+  {
+    id: "r1",
+    author: "أحمد محمد",
+    rating: 5,
+    comment: "تجربة رائعة والقاعة غاية في الفخامة والخدمة ممتازة.",
+    timeAgo: "منذ أسبوع",
+  },
+  {
+    id: "r2",
+    author: "سارة خالد",
+    rating: 5,
+    comment: "المكان مثالي جداً والتنظيم كان احترافياً.",
+    timeAgo: "منذ أسبوعين",
+  },
+];
+
+/** Modal/catalog hall details when GET /halls/:id is unavailable. */
+export const HALL_MODAL_DETAILS_FALLBACK: HallDetails[] =
+  FEATURED_HALLS_FALLBACK.map((hall, index) => {
+    const extras = FEATURED_HALLS_FALLBACK.filter((_, i) => i !== index).slice(
+      0,
+      3,
+    );
+    const isRoyal = hall.id === "1";
+    const pageFallback = HALL_DETAILS_FALLBACK[hall.id];
+
+    return {
+      id: hall.id,
+      name: MODAL_NAMES[hall.id] ?? hall.name,
+      location: hall.location,
+      region: hall.region,
+      capacity: hall.capacity,
+      capacityMax: hall.capacityMax ?? null,
+      priceLabel: isRoyal ? "1500 ₪ / يوم" : hall.priceLabel,
+      rating: isRoyal ? 4.9 : hall.rating,
+      reviewCount: isRoyal ? 124 : hall.reviewCount,
+      description:
+        MODAL_DESCRIPTIONS[hall.id] ?? pageFallback?.description ?? null,
+      amenities: DEFAULT_HALL_AMENITIES,
+      reviews: DEMO_HALL_REVIEWS,
+      images: [hall.imageUrl, ...extras.map((item) => item.imageUrl)],
+      isAvailable: true,
+      isOwner: false,
+      availabilityDays: hall.availabilityDays ?? [],
+    };
+  });
+
+export function findHallDetailsFallback(id: string): HallDetails | undefined {
+  return HALL_MODAL_DETAILS_FALLBACK.find((hall) => hall.id === String(id));
 }
