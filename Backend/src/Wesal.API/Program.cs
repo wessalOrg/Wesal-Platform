@@ -53,12 +53,12 @@ try
 
             if (allowedOrigins.Length == 0)
             {
-                policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                throw new InvalidOperationException(
+                    "CORS is not configured. Set the Cors:AllowedOrigins configuration section " +
+                    "or provide the Cors__AllowedOrigins environment variable before starting the application.");
             }
-            else
-            {
-                policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
-            }
+
+            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
         });
     });
 
@@ -101,6 +101,13 @@ try
     app.UseSerilogRequestLogging();
 
     app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHsts();
+    }
+
+    app.UseHttpsRedirection();
 
     if (app.Environment.IsDevelopment())
     {
