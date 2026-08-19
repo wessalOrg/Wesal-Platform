@@ -14,6 +14,8 @@ using Wesal.Infrastructure.Sessions;
 using Wesal.Infrastructure.Ratings;
 using Wesal.Infrastructure.Comments;
 using Wesal.Infrastructure.Conversations;
+using Wesal.Infrastructure.Languages;
+using Wesal.Infrastructure.Localization;
 using Wesal.Infrastructure.Time;
 
 namespace Wesal.Infrastructure;
@@ -46,6 +48,8 @@ public static class DependencyInjection
         services.AddScoped<IRatingService, RatingService>();
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IConversationService, ConversationService>();
+        services.AddScoped<ILanguageService, LanguageService>();
+        services.AddScoped<ITranslationService, TranslationService>();
         services.AddSingleton<IDateTime, DateTimeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
