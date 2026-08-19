@@ -1,0 +1,27 @@
+**/.git
+**/.vs
+**/.vscode
+**/.idea
+**/bin
+**/obj
+**/logs
+**/publish
+**/artifacts
+**/node_modules
+**/.next
+**/out
+**/build
+**/.env
+**/appsettings.Local.json
+**/appsettings.Production.json
+**/Thumbs.db
+**/.DS_Store
+**/*.user
+**/*.userosscache
+**/*.sln.docstates
+
+# Frontend — not needed for backend image
+Frontend/
+
+# Documentation — not needed for runtime
+documentation/
