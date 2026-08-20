@@ -1,12 +1,8 @@
-import Image from "next/image";
+import HeroCopy from "@/components/home/HeroCopy";
+import HeroPhoto from "@/components/home/HeroPhoto";
 import { HOMEPAGE_INTRO_FALLBACK } from "@/constants/homepageFallback";
 import { fetchHomepageIntro } from "@/services/homepage";
 import type { HomepageIntro } from "@/types/homepage";
-
-const HERO_IMAGE = {
-  src: "/hero/hall-slide-b.webp",
-  alt: "قاعة ملكية بكوشة ذهبية وثريا مركزية",
-} as const;
 
 /** Exact design reference dimensions */
 const VBW = 1536;
@@ -22,67 +18,6 @@ const CREAM_D = `${CURVE_D} L0,${VBH} L0,0 Z`;
 
 const EDGE_MOBILE = "M 0 28 C 280 72, 720 72, 1000 28";
 const CREAM_MOBILE = "M 0 0 L 1000 0 L 1000 28 C 720 72, 280 72, 0 28 Z";
-
-function HeroPhoto({ showAlt = false }: { showAlt?: boolean }) {
-  return (
-    <div className="hero-slideshow absolute inset-0 overflow-hidden">
-      <div className="hero-slide is-active">
-        <Image
-          src={HERO_IMAGE.src}
-          alt={showAlt ? HERO_IMAGE.alt : ""}
-          fill
-          priority
-          quality={75}
-          sizes="(min-width: 768px) 90rem, 100vw"
-          className="hero-photo"
-        />
-      </div>
-    </div>
-  );
-}
-
-function HeroCopy({
-  titleId,
-  intro,
-}: {
-  titleId?: string;
-  intro: HomepageIntro;
-}) {
-  return (
-    <div dir="rtl" className="hero-copy-enter mx-auto w-full max-w-[18rem] text-center sm:max-w-[20rem]">
-      <p className="sr-only">{intro.platformName}</p>
-
-      <div className="hero-copy-tagline flex items-center gap-3">
-        <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-gold)]/70" />
-        <p className="hero-copy-eyebrow shrink-0 text-[0.75rem] font-medium leading-6 tracking-wide text-[var(--wesal-gold)] sm:text-[0.85rem]">
-          {intro.tagline}
-        </p>
-        <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-gold)]/70" />
-      </div>
-
-      <h1
-        id={titleId}
-        className="hero-copy-title mt-6 text-[1.75rem] font-extrabold leading-[1.4] sm:text-[2.2rem] lg:text-[2.45rem]"
-      >
-        <span className="hero-copy-line block text-[var(--wesal-maroon)]">
-          {intro.titleLine1}
-        </span>
-        <span className="hero-copy-line hero-copy-line--late mt-1 block text-[var(--wesal-maroon)]">
-          {intro.titleLine2}
-        </span>
-      </h1>
-
-      <div
-        className="hero-copy-divider mx-auto mt-5 h-px max-w-[10rem] bg-gradient-to-l from-transparent via-[var(--wesal-gold)] to-transparent"
-        aria-hidden="true"
-      />
-
-      <p className="hero-copy-desc mt-5 text-sm leading-8 text-[var(--wesal-muted)] sm:text-[0.95rem]">
-        {intro.description}
-      </p>
-    </div>
-  );
-}
 
 export default async function HeroSection() {
   const goldId = "wesal-hero-gold";
@@ -194,8 +129,6 @@ export default async function HeroSection() {
         <div className="relative z-10 flex h-full max-w-[34%] items-center justify-center px-6 md:px-10 lg:px-12">
           <HeroCopy titleId="wesal-hero-title" intro={intro} />
         </div>
-
-        <span className="sr-only">{HERO_IMAGE.alt}</span>
       </div>
 
       <div className="hero-card hero-showcase md:hidden">

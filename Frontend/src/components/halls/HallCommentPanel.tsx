@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useT } from "@/i18n";
 import {
   COMMENT_MAX_LENGTH,
   commentErrorMessage,
@@ -22,6 +23,7 @@ export default function HallCommentPanel({
   isHallOwner,
   onSubmitted,
 }: HallCommentPanelProps) {
+  const t = useT();
   const { session, status: authStatus } = useAuth();
   const role = session.role ?? "";
   const isOwnerRole = role.toLowerCase() === "hallowner" || isHallOwner;
@@ -60,7 +62,7 @@ export default function HallCommentPanel({
         className="mt-4 text-center text-sm leading-7 text-[#8a7a70]"
         data-testid="hall-comment-restricted"
       >
-        حسابك الحالي لا يسمح بإرسال تعليق.
+        {t("errors.comment.forbidden")}
       </p>
     );
   }
@@ -68,7 +70,12 @@ export default function HallCommentPanel({
   const submit = async () => {
     const validationError = validateCommentBody(body);
     if (validationError) {
-      setError(validationError);
+      const trimmed = body.trim();
+      setError(
+        trimmed.length > COMMENT_MAX_LENGTH
+          ? t("halls.comment.tooLong")
+          : t("halls.comment.tooShort"),
+      );
       setSuccess(false);
       return;
     }
@@ -102,12 +109,12 @@ export default function HallCommentPanel({
         htmlFor="hall-comment-body"
         className="block text-center text-base font-bold text-[var(--wesal-maroon)] sm:text-start"
       >
-        أضيفي تعليقك
+        {t("halls.comment.title")}
       </label>
       <textarea
         id="hall-comment-body"
         className="mt-3 min-h-28 w-full resize-y rounded-xl border border-[#eadfd6] bg-white px-3 py-3 text-sm leading-7 text-[#4a403c] outline-none transition focus:border-[var(--wesal-maroon)] focus:ring-2 focus:ring-[var(--wesal-maroon)]/15 disabled:opacity-60"
-        placeholder="شاركي انطباعك عن القاعة…"
+        placeholder={t("halls.comment.placeholder")}
         maxLength={COMMENT_MAX_LENGTH}
         disabled={submitting}
         value={body}
@@ -128,7 +135,7 @@ export default function HallCommentPanel({
           className="btn-primary min-h-11 w-full !rounded-xl !px-4 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:w-auto sm:min-h-12"
           disabled={submitting}
         >
-          {submitting ? "جاري الإرسال…" : "إرسال التعليق"}
+          {submitting ? t("common.loading") : t("halls.comment.submit")}
         </button>
       </div>
       {error ? (
@@ -144,7 +151,7 @@ export default function HallCommentPanel({
             onClick={() => void submit()}
             disabled={submitting}
           >
-            إعادة المحاولة
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
@@ -154,7 +161,7 @@ export default function HallCommentPanel({
           role="status"
           data-testid="hall-comment-success"
         >
-          تم نشر تعليقك.
+          {t("halls.comment.saved")}
         </p>
       ) : null}
     </form>

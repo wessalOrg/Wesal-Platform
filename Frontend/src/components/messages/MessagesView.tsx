@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useT } from "@/i18n";
 import {
   conversationErrorMessage,
   fetchConversation,
@@ -17,6 +18,7 @@ type MessagesViewProps = {
 type LoadStatus = "loading" | "ready" | "unauthorized" | "error";
 
 export default function MessagesView({ conversationId }: MessagesViewProps) {
+  const t = useT();
   const { session, status: authStatus } = useAuth();
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [thread, setThread] = useState<ConversationThread | null>(null);
@@ -55,12 +57,12 @@ export default function MessagesView({ conversationId }: MessagesViewProps) {
   if (status === "unauthorized") {
     return (
       <section className="rounded-2xl bg-white p-6 shadow-[0_12px_30px_rgba(90,55,45,0.08)]" data-testid="messages-unauthorized">
-        <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">الرسائل</h1>
+        <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">{t("messages.title")}</h1>
         <p className="mt-3 text-sm leading-7 text-[var(--wesal-muted)]">
-          سجّلي الدخول لفتح محادثتك مع صاحب القاعة.
+          {t("messages.loginRequired")}
         </p>
         <Link href={`/login?redirect=/messages/${conversationId}`} className="btn-primary mt-5">
-          تسجيل الدخول
+          {t("messages.goLogin")}
         </Link>
       </section>
     );
@@ -79,12 +81,12 @@ export default function MessagesView({ conversationId }: MessagesViewProps) {
   if (status === "error" || !thread) {
     return (
       <section className="rounded-2xl bg-white p-6 shadow-[0_12px_30px_rgba(90,55,45,0.08)]" data-testid="messages-error">
-        <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">تعذر فتح المحادثة</h1>
+        <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">{t("messages.error")}</h1>
         <p className="mt-3 text-sm leading-7 text-[var(--wesal-muted)]">
-          {message ?? "حدث خطأ أثناء تحميل المحادثة."}
+          {message ?? t("messages.error")}
         </p>
         <Link href="/halls" className="btn-outline mt-5">
-          العودة إلى القاعات
+          {t("common.backToHalls")}
         </Link>
       </section>
     );
@@ -96,12 +98,12 @@ export default function MessagesView({ conversationId }: MessagesViewProps) {
       data-testid="messages-thread"
     >
       <header className="border-b border-[var(--wesal-border)] px-5 py-4">
-        <p className="text-xs font-semibold text-[var(--wesal-gold)]">محادثة مع صاحب القاعة</p>
+        <p className="text-xs font-semibold text-[var(--wesal-gold)]">{t("messages.title")}</p>
         <h1 className="mt-1 text-xl font-bold text-[var(--wesal-maroon)]">{thread.hallName}</h1>
       </header>
       <div className="flex flex-1 items-center justify-center px-5 py-10 text-center">
         <p className="max-w-md text-sm leading-8 text-[var(--wesal-muted)]">
-          تم فتح المحادثة بنجاح. يمكنك الآن مراسلة صاحب القاعة من هنا. إرسال الرسائل سيُستكمل في مرحلة الرسائل الكاملة.
+          {t("messages.placeholder")}
         </p>
       </div>
       <form
@@ -109,18 +111,18 @@ export default function MessagesView({ conversationId }: MessagesViewProps) {
         onSubmit={(event) => event.preventDefault()}
       >
         <label className="sr-only" htmlFor="message-draft">
-          اكتب رسالتك
+          {t("messages.composerDisabled")}
         </label>
         <div className="flex gap-2">
           <input
             id="message-draft"
             type="text"
             disabled
-            placeholder="كتابة الرسالة قريباً"
+            placeholder={t("messages.composerDisabled")}
             className="min-h-11 min-w-0 flex-1 rounded-xl border border-[var(--wesal-border)] bg-[#faf7f4] px-3 text-sm"
           />
           <button type="submit" className="btn-primary shrink-0" disabled>
-            إرسال
+            {t("messages.send")}
           </button>
         </div>
       </form>

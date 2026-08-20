@@ -11,12 +11,15 @@ import HallDetailsSkeleton from "@/components/halls/HallDetailsSkeleton";
 import HallGalleryContainer from "@/components/halls/HallGalleryContainer";
 import HallHeader from "@/components/halls/HallHeader";
 import HallUnavailableBanner from "@/components/halls/HallUnavailableBanner";
+import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useBookButtonBehavior } from "@/hooks/useBookButtonBehavior";
 import { useHallDetails } from "@/hooks/useHallDetails";
+import { useT } from "@/i18n";
 import { buildHallDetailsPath, hasBookingIntent } from "@/lib/booking-intent";
 import { saveBookingHallContext } from "@/lib/auth-storage";
 import { resetBodyScrollLock } from "@/lib/body-scroll-lock";
+import { localizeHallDetail } from "@/lib/localize-hall-display";
 import type { BookingSelection } from "@/types/hall";
 
 type HallDetailsPageProps = {
@@ -24,6 +27,8 @@ type HallDetailsPageProps = {
 };
 
 export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
+  const t = useT();
+  const lang = useUiLang();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, hydrated } = useAuth();
@@ -101,7 +106,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           href="/"
           className="inline-flex text-sm font-semibold text-[var(--wesal-maroon)] hover:underline"
         >
-          العودة للرئيسية
+          {t("common.backHome")}
         </Link>
       </div>
     );
@@ -110,7 +115,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   if (state.phase === "ready" && state.result.status === "not_found") {
     return (
       <HallDetailsError
-        message="لم يتم العثور على القاعة المطلوبة."
+        message={t("halls.details.notFound")}
         onRetry={retry}
       />
     );
@@ -119,13 +124,14 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   if (!hall) {
     return (
       <HallDetailsError
-        message="حدث خطأ غير متوقع أثناء تحميل البيانات."
+        message={t("halls.details.unexpected")}
         onRetry={retry}
       />
     );
   }
 
   const isGuest = hydrated && !isAuthenticated;
+  const viewHall = localizeHallDetail(hall, lang);
 
   return (
     <div className="hall-details-page min-w-0 space-y-6 pb-10 sm:space-y-8 sm:pb-14">
@@ -136,36 +142,36 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           data-testid="hall-details-fallback-notice"
         >
           <p className="text-sm text-[var(--wesal-text)]">
-            تعذر الاتصال بالخادم حاليًا. يتم عرض بيانات تجريبية.
+            {t("halls.details.offline")}
             {errorMessage ? ` (${errorMessage})` : ""}
           </p>
           <button type="button" onClick={retry} className="btn-outline mt-3">
-            إعادة المحاولة
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
 
-      {unavailable ? <HallUnavailableBanner hallName={hall.name} /> : null}
+      {unavailable ? <HallUnavailableBanner hallName={viewHall.name} /> : null}
 
-      <HallGalleryContainer images={hall.gallery} hallName={hall.name} />
+      <HallGalleryContainer images={viewHall.gallery} hallName={viewHall.name} />
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(17.5rem,22rem)] lg:items-start lg:gap-8">
         <div className="order-2 min-w-0 space-y-8 lg:order-1">
-          <HallHeader hall={hall} />
+          <HallHeader hall={viewHall} />
 
           <section aria-labelledby="hall-description-heading">
             <h2
               id="hall-description-heading"
               className="text-lg font-bold text-[var(--wesal-maroon)] sm:text-xl"
             >
-              عن القاعة
+              {t("halls.details.about")}
             </h2>
             <p className="mt-3 text-sm leading-8 text-[var(--wesal-text)] sm:text-base">
-              {hall.description}
+              {viewHall.description}
             </p>
           </section>
 
-          <HallAmenitiesGrid amenities={hall.amenities} />
+          <HallAmenitiesGrid amenities={viewHall.amenities} />
 
           {isGuest && !unavailable ? (
             <section
@@ -174,8 +180,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
               aria-live="polite"
             >
               <p className="text-sm leading-7 text-[var(--wesal-text)]">
-                أنشئ حساباً أو سجّل الدخول لاختيار تاريخ الحجز والفترة. عند الضغط على
-                «اضغط للحجز» سيتم توجيهك لصفحة التسجيل مع حفظ هذه القاعة.
+                {t("halls.details.guestBookingHint")}
               </p>
             </section>
           ) : null}
@@ -183,8 +188,8 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
         <div className="order-1 min-w-0 lg:order-2 lg:sticky lg:top-[4.75rem] lg:z-[1] lg:self-start">
           <HallActionCard
-            slotPrices={hall.slotPrices}
-            ownerPhone={hall.ownerPhone}
+            slotPrices={viewHall.slotPrices}
+            ownerPhone={viewHall.ownerPhone}
             onBook={handleBook}
             disabled={unavailable}
             bookPending={!hydrated}
@@ -199,8 +204,8 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
       {hydrated && isAuthenticated && !unavailable ? (
         <HallBookingPanel
           open={bookingOpen}
-          hallName={hall.name}
-          days={hall.availabilityDays ?? []}
+          hallName={viewHall.name}
+          days={viewHall.availabilityDays ?? []}
           selection={bookingSelection}
           onSelect={setBookingSelection}
           onClose={() => setBookingOpen(false)}

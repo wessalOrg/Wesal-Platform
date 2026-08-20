@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import FieldSelect from "@/components/ui/FieldSelect";
 import CatalogHallCard, { isHallOpen } from "@/components/halls/CatalogHallCard";
+import { useT } from "@/i18n";
 import {
   fetchCatalogHalls,
   fetchSearchHalls,
@@ -44,11 +45,29 @@ const EMPTY_SEARCH: SearchDraft = {
 const FIELD_CLASS =
   "mt-1.5 h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-[#faf7f5] px-3 text-sm font-medium text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]";
 
-const PERIOD_OPTIONS: { id: HallBookingPeriodFilter; label: string }[] = [
-  { id: "all", label: "كل الفترات" },
-  { id: "first", label: "الفترة الأولى" },
-  { id: "second", label: "الفترة الثانية" },
+const PERIOD_IDS: HallBookingPeriodFilter[] = ["all", "first", "second"];
+
+const PERIOD_LABEL_KEYS: Record<HallBookingPeriodFilter, string> = {
+  all: "halls.catalog.periodAll",
+  first: "halls.catalog.periodFirst",
+  second: "halls.catalog.periodSecond",
+};
+
+const REGION_LABEL_KEYS: Record<HallRegion, string> = {
+  all: "region.all",
+  north: "region.north",
+  gaza: "region.gaza",
+  middle: "region.middle",
+  south: "region.south",
+};
+
+const SORT_OPTIONS: { id: SortFilter; labelKey: string }[] = [
+  { id: "all", labelKey: "halls.catalog.sortAll" },
+  { id: "top", labelKey: "halls.catalog.sortTop" },
+  { id: "open", labelKey: "halls.catalog.sortOpen" },
+  { id: "closed", labelKey: "halls.catalog.sortClosed" },
 ];
+
 const PAGE_SIZE = 6;
 const PAGE_BTN_CLASS =
   "flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-gold)]/60 bg-[var(--wesal-maroon)]/25 text-sm font-bold text-[var(--wesal-maroon)] shadow-[0_8px_22px_rgba(193,123,127,0.18)] transition hover:border-[var(--wesal-gold)] hover:bg-[var(--wesal-maroon)] hover:text-white disabled:cursor-not-allowed disabled:border-[var(--wesal-gold)]/25 disabled:bg-white/40 disabled:text-[var(--wesal-maroon)]/35 disabled:shadow-none";
@@ -108,6 +127,7 @@ function isSearchActive(filters: SearchDraft): boolean {
 }
 
 export default function HallsCatalogView() {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -181,10 +201,10 @@ export default function HallsCatalogView() {
           setErrorKind(null);
         } else if (!searching) {
           setHalls(result.halls);
-          setError(result.error ?? "تعذر الاتصال بالخادم.");
+          setError(result.error ?? t("halls.catalog.connectionError"));
           setErrorKind("catalog");
         } else {
-          setError(result.error ?? "تعذر تنفيذ البحث.");
+          setError(result.error ?? t("halls.catalog.searchError"));
           setErrorKind("search");
         }
 
@@ -197,7 +217,7 @@ export default function HallsCatalogView() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [filters, reloadKey]);
+  }, [filters, reloadKey, t]);
 
   const filtered = useMemo(() => {
     let next = filterCatalogHalls(halls, filters);
@@ -247,10 +267,14 @@ export default function HallsCatalogView() {
   };
 
   const regionLabel =
-    REGION_OPTIONS.find((option) => option.id === filters.region)?.label ?? "";
+    filters.region !== "all" ? t(REGION_LABEL_KEYS[filters.region]) : "";
   const periodLabel =
-    PERIOD_OPTIONS.find((option) => option.id === filters.period)?.label ?? "";
-  const pastDateMessage = getPastSearchDateMessage(filters.date);
+    filters.period !== "all" ? t(PERIOD_LABEL_KEYS[filters.period]) : "";
+  const isPastDate = Boolean(getPastSearchDateMessage(filters.date));
+  const periodOptions = PERIOD_IDS.map((id) => ({
+    id,
+    label: t(PERIOD_LABEL_KEYS[id]),
+  }));
 
   return (
     <div className="container-wesal py-8 sm:py-10" data-testid="halls-catalog">
@@ -263,58 +287,61 @@ export default function HallsCatalogView() {
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_auto]">
           <label className="block text-sm font-semibold text-[var(--wesal-maroon)]">
-            الاسم
+            {t("halls.catalog.name")}
             <input
               value={filters.name}
               onChange={(event) => updateFilter("name", event.target.value)}
-              placeholder="اسم الصالة"
+              placeholder={t("halls.catalog.namePlaceholder")}
               className={FIELD_CLASS}
             />
           </label>
           <label className="block text-sm font-semibold text-[var(--wesal-maroon)]">
-            الحي
+            {t("halls.catalog.area")}
             <input
               value={filters.area}
               onChange={(event) => updateFilter("area", event.target.value)}
-              placeholder="الرمال، النصر…"
+              placeholder={t("halls.catalog.areaPlaceholder")}
               className={FIELD_CLASS}
             />
           </label>
           <label className="block text-sm font-semibold text-[var(--wesal-maroon)]">
-            التاريخ
+            {t("halls.catalog.date")}
             <input
               type="text"
               inputMode="text"
               value={filters.date}
               onChange={(event) => updateFilter("date", event.target.value)}
-              placeholder="يوم/شهر/سنة"
+              placeholder={t("halls.catalog.datePlaceholder")}
               className={FIELD_CLASS}
             />
           </label>
           <label className="block text-sm font-semibold text-[var(--wesal-maroon)]">
-            المنطقة
+            {t("halls.catalog.region")}
             <FieldSelect
-              aria-label="المنطقة"
+              aria-label={t("halls.catalog.region")}
               value={filters.region}
               options={REGION_OPTIONS.map((option) => ({
                 id: option.id,
-                label: option.id === "all" ? "اختيار المنطقة" : option.label,
+                label:
+                  option.id === "all"
+                    ? t("halls.catalog.regionPick")
+                    : t(option.labelKey),
               }))}
               onChange={(region) => updateFilter("region", region)}
             />
           </label>
           <label className="block text-sm font-semibold text-[var(--wesal-maroon)]">
-            فترة الحجز
+            {t("halls.catalog.period")}
             <FieldSelect
-              aria-label="فترة الحجز"
+              aria-label={t("halls.catalog.period")}
               value={filters.period}
-              options={PERIOD_OPTIONS}
+              options={periodOptions}
               onChange={(period) => updateFilter("period", period)}
             />
           </label>
           <button type="submit" className="btn-primary mt-6 h-11 gap-2 lg:mt-7">
             <SearchIcon />
-            بحث
+            {t("halls.catalog.search")}
           </button>
         </div>
       </form>
@@ -338,15 +365,12 @@ export default function HallsCatalogView() {
       </div>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="ترتيب القاعات">
-          {(
-            [
-              { id: "all", label: "الكل" },
-              { id: "top", label: "الأعلى تقييماً" },
-              { id: "open", label: "صالات مفتوحة" },
-              { id: "closed", label: "قاعات مغلقة" },
-            ] as const
-          ).map((option) => {
+        <div
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label={t("halls.catalog.sortAria")}
+        >
+          {SORT_OPTIONS.map((option) => {
             const active = sort === option.id;
             return (
               <button
@@ -361,7 +385,7 @@ export default function HallsCatalogView() {
                     : "border border-[var(--wesal-maroon)] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
                 }`}
               >
-                {option.label}
+                {t(option.labelKey)}
               </button>
             );
           })}
@@ -370,21 +394,23 @@ export default function HallsCatalogView() {
           {status === "loading" || isRefreshing ? (
             <>
               <Spinner />
-              {status === "loading" ? "جاري تحميل القاعات…" : "جاري تحديث النتائج…"}
+              {status === "loading"
+                ? t("halls.catalog.loading")
+                : t("halls.catalog.updating")}
             </>
           ) : (
-            `تم العثور على ${filtered.length} صالة`
+            t("halls.catalog.found", { count: filtered.length })
           )}
         </p>
       </div>
 
-      {pastDateMessage ? (
+      {isPastDate ? (
         <div
           className="mt-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
           data-testid="halls-past-date-warning"
           role="alert"
         >
-          {pastDateMessage}
+          {t("halls.catalog.pastDate")}
         </div>
       ) : null}
 
@@ -396,8 +422,8 @@ export default function HallsCatalogView() {
         >
           <p>
             {errorKind === "search"
-              ? "تعذر تنفيذ البحث من الخادم. يتم التصفية محلياً."
-              : "تعذر الاتصال بالخادم حالياً. يتم عرض قاعات تجريبية."}
+              ? t("halls.catalog.searchOffline")
+              : t("halls.catalog.offline")}
             {error ? ` (${error})` : ""}
           </p>
           <button
@@ -406,7 +432,7 @@ export default function HallsCatalogView() {
             data-testid="halls-catalog-retry"
             onClick={() => setReloadKey((key) => key + 1)}
           >
-            إعادة المحاولة
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
@@ -419,7 +445,7 @@ export default function HallsCatalogView() {
           aria-live="polite"
         >
           <Spinner />
-          جاري جلب نتائج البحث…
+          {t("halls.catalog.updating")}
         </div>
       ) : null}
 
@@ -469,7 +495,7 @@ export default function HallsCatalogView() {
       {status === "ready" && visible.length === 0 ? (
         <div
           className={`mt-10 rounded-2xl border px-6 py-10 text-center ${
-            pastDateMessage
+            isPastDate
               ? "border-red-200 bg-red-50"
               : "border-[var(--wesal-border)] bg-white"
           }`}
@@ -477,25 +503,25 @@ export default function HallsCatalogView() {
         >
           <p
             className={`font-semibold ${
-              pastDateMessage ? "text-red-700" : "text-[var(--wesal-text)]"
+              isPastDate ? "text-red-700" : "text-[var(--wesal-text)]"
             }`}
           >
-            {pastDateMessage
-              ? "لا يمكن البحث بتاريخ مضى."
+            {isPastDate
+              ? t("halls.catalog.pastDateShort")
               : hasActiveFilters
-                ? "لا توجد قاعات مطابقة لبحثك حالياً."
-                : "لا توجد قاعات معتمدة حالياً."}
+                ? t("halls.catalog.empty")
+                : t("halls.catalog.emptyApproved")}
           </p>
           <p
             className={`mt-2 text-sm ${
-              pastDateMessage ? "text-red-600" : "text-[var(--wesal-muted)]"
+              isPastDate ? "text-red-600" : "text-[var(--wesal-muted)]"
             }`}
           >
-            {pastDateMessage
-              ? "عدّلي التاريخ ليوم اليوم أو لتاريخ قادم ثم اضغطي بحث."
+            {isPastDate
+              ? t("halls.catalog.emptyPastHint")
               : hasActiveFilters
-                ? "جرّبي تخفيف الفلاتر (الاسم، المنطقة، التاريخ، أو الفترة)."
-                : "عُد لاحقاً أو أعدّي المحاولة بعد قليل."}
+                ? t("halls.catalog.emptyFilterHint")
+                : t("halls.catalog.emptyLaterHint")}
           </p>
           {hasActiveFilters ? (
             <button
@@ -503,7 +529,7 @@ export default function HallsCatalogView() {
               className="btn-outline mt-5"
               onClick={clearAllFilters}
             >
-              مسح الفلاتر
+              {t("halls.catalog.clearFilters")}
             </button>
           ) : null}
         </div>
@@ -512,14 +538,14 @@ export default function HallsCatalogView() {
       {status === "ready" && pageCount > 1 ? (
         <nav
           className="mt-10 flex items-center justify-center gap-2 pb-4 sm:gap-3"
-          aria-label="ترقيم صفحات القاعات"
+          aria-label={t("halls.catalog.pagination")}
         >
           <button
             type="button"
             disabled={!hasPrev}
             onClick={() => goToPage(safePage - 1)}
             data-testid="halls-prev-page"
-            aria-label="الصفحة السابقة"
+            aria-label={t("halls.catalog.prevPage")}
             className={PAGE_BTN_CLASS}
           >
             <Chevron dir="right" />
@@ -538,7 +564,7 @@ export default function HallsCatalogView() {
                 key={item}
                 type="button"
                 onClick={() => goToPage(item)}
-                aria-label={`الصفحة ${item + 1}`}
+                aria-label={`${item + 1}`}
                 aria-current={item === safePage ? "page" : undefined}
                 data-testid={`halls-page-${item + 1}`}
                 className={
@@ -554,7 +580,7 @@ export default function HallsCatalogView() {
             disabled={!hasNext}
             onClick={() => goToPage(safePage + 1)}
             data-testid="halls-next-page"
-            aria-label="الصفحة التالية"
+            aria-label={t("halls.catalog.nextPage")}
             className={PAGE_BTN_CLASS}
           >
             <Chevron dir="left" />

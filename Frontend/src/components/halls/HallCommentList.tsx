@@ -1,6 +1,7 @@
 "use client";
 
 import { GoldStars } from "@/components/ui/GoldStar";
+import { useT } from "@/i18n";
 import type { HallReview } from "@/types/hall";
 
 type HallCommentListProps = {
@@ -8,13 +9,15 @@ type HallCommentListProps = {
 };
 
 export default function HallCommentList({ comments }: HallCommentListProps) {
+  const t = useT();
+
   if (comments.length === 0) {
     return (
       <p
         className="mt-4 text-center text-sm leading-7 text-[#8a7a70]"
         data-testid="hall-comments-empty"
       >
-        لا توجد تعليقات بعد.
+        {t("halls.comment.empty")}
       </p>
     );
   }

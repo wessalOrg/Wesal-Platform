@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useT } from "@/i18n";
 import {
   conversationErrorMessage,
   createHallConversation,
@@ -26,6 +27,7 @@ export default function HallContactButton({
   isAvailable = true,
   onOpened,
 }: HallContactButtonProps) {
+  const t = useT();
   const router = useRouter();
   const { session, status: authStatus } = useAuth();
   const authReady = authStatus === "ready";
@@ -39,7 +41,6 @@ export default function HallContactButton({
   const inFlight = useRef(false);
 
   const loginHref = `/login?redirect=/halls/${hallId}&intent=contact`;
-  const registerHref = `/register?redirect=/halls/${hallId}&intent=contact`;
 
   if (isOwnHall) {
     return null;
@@ -79,33 +80,27 @@ export default function HallContactButton({
 
   if (isGuest) {
     return (
-      <div className="min-w-0 flex-1" dir="rtl">
+      <div className="min-w-0 flex-1">
         <Link
           href={loginHref}
           className={CONTACT_BUTTON_CLASS}
           data-testid="hall-contact-button"
-          aria-label="تواصل مع صاحب القاعة"
+          aria-label={t("halls.contact.aria")}
         >
-          تواصل معنا
+          {t("halls.contact.cta")}
         </Link>
-        <p className="mt-2 text-start text-[11px] leading-5 text-[var(--wesal-muted)]">
-          للتواصل سجّلي الدخول أو{" "}
-          <Link href={registerHref} className="font-bold text-[var(--wesal-maroon)] underline underline-offset-4">
-            أنشئي حساباً
-          </Link>
-        </p>
       </div>
     );
   }
 
   if (!isAvailable) {
     return (
-      <div className="min-w-0 flex-1" dir="rtl">
+      <div className="min-w-0 flex-1">
         <button type="button" className={CONTACT_BUTTON_CLASS} disabled data-testid="hall-contact-button">
-          تواصل معنا
+          {t("halls.contact.cta")}
         </button>
         <p className="mt-2 text-start text-xs leading-5 text-[#a86267]" data-testid="hall-contact-unavailable" role="status">
-          القاعة غير متاحة أو مقفلة حالياً، ولا يمكن بدء محادثة.
+          {t("halls.contact.unavailable")}
         </p>
       </div>
     );
@@ -113,29 +108,29 @@ export default function HallContactButton({
 
   if (!canStartConversation) {
     return (
-      <div className="min-w-0 flex-1" dir="rtl">
+      <div className="min-w-0 flex-1">
         <button type="button" className={CONTACT_BUTTON_CLASS} disabled>
-          تواصل معنا
+          {t("halls.contact.cta")}
         </button>
         <p className="mt-2 text-start text-xs leading-5 text-[#a86267]" data-testid="hall-contact-restricted" role="status">
-          حسابك الحالي لا يسمح بمراسلة أصحاب القاعات.
+          {t("halls.contact.restricted")}
         </p>
       </div>
     );
   }
 
   return (
-    <div className="min-w-0 flex-1" dir="rtl">
+    <div className="min-w-0 flex-1">
       <button
         type="button"
         className={CONTACT_BUTTON_CLASS}
         data-testid="hall-contact-button"
-        aria-label="تواصل مع صاحب القاعة"
+        aria-label={t("halls.contact.aria")}
         disabled={submitting}
         aria-busy={submitting}
         onClick={() => void startConversation()}
       >
-        {submitting ? "جاري فتح المحادثة…" : "تواصل معنا"}
+        {submitting ? t("halls.contact.opening") : t("halls.contact.cta")}
       </button>
       {error ? (
         <p className="mt-2 text-start text-xs leading-5 text-[#a86267]" data-testid="hall-contact-error" role="alert">

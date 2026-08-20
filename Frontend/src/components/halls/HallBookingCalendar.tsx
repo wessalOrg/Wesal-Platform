@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n";
 import type { HallAvailabilityDay, PeriodStatus, BookingSelection } from "@/types/hall";
 
 type HallBookingCalendarProps = {
@@ -17,6 +18,8 @@ export default function HallBookingCalendar({
   onSelect,
   compact = false,
 }: HallBookingCalendarProps) {
+  const t = useT();
+
   if (!days.length) {
     return (
       <section
@@ -24,7 +27,7 @@ export default function HallBookingCalendar({
         data-testid="hall-booking-calendar-empty"
       >
         <p className="text-sm text-[var(--wesal-muted)]">
-          لا توجد بيانات توفر حالياً. حاول لاحقاً أو تواصل مع صاحب الصالة.
+          {t("halls.booking.emptyDays")}
         </p>
       </section>
     );
@@ -41,12 +44,10 @@ export default function HallBookingCalendar({
             id="hall-booking-heading"
             className="text-lg font-bold text-[var(--wesal-maroon)] sm:text-xl"
           >
-            التوفر والحجز
+            {t("halls.booking.availability")}
           </h2>
           <p className="mt-1 text-sm text-[var(--wesal-muted)]">
-            {interactive
-              ? "اختر التاريخ والفترة المتاحة لإتمام الحجز."
-              : "عرض الفترات المتاحة والمحجوزة."}
+            {t("halls.booking.pickHint")}
           </p>
         </>
       ) : null}
@@ -127,12 +128,13 @@ function PeriodBadge({
   status: PeriodStatus;
   selected?: boolean;
 }) {
+  const t = useT();
   const booked = status === "booked";
 
   if (selected) {
     return (
       <span className="rounded-full bg-[var(--wesal-maroon)] px-2.5 py-1 text-[0.7rem] font-bold text-white">
-        مختار
+        {t("halls.booking.selectedBadge")}
       </span>
     );
   }
@@ -145,7 +147,7 @@ function PeriodBadge({
           : "bg-emerald-50 text-emerald-700"
       }`}
     >
-      {booked ? "محجوز" : "متاح"}
+      {booked ? t("halls.booking.bookedBadge") : t("halls.booking.availableBadge")}
     </span>
   );
 }

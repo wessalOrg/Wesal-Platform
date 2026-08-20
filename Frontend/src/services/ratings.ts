@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
 
 export type HallRatingSummary = {
   hallId: string;
@@ -74,18 +75,18 @@ export async function submitHallRating(
 export function ratingErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 401) {
-      return "يجب تسجيل الدخول لإرسال التقييم.";
+      return t("errors.rating.unauthorized");
     }
     if (err.status === 403) {
-      return "لا يمكنك تقييم هذه القاعة من حسابك.";
+      return t("errors.rating.forbidden");
     }
     if (err.status === 404) {
-      return "تعذر العثور على القاعة.";
+      return t("errors.rating.notFound");
     }
     if (err.status === 409) {
-      return "سبق وقيّمتِ هذه القاعة.";
+      return t("errors.rating.conflict");
     }
-    return err.message || "تعذر إرسال التقييم. حاولي مرة أخرى.";
+    return err.message || t("errors.rating.generic");
   }
-  return "تعذر إرسال التقييم. حاولي مرة أخرى.";
+  return t("errors.rating.generic");
 }

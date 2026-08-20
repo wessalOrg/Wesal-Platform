@@ -3,10 +3,11 @@ import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import HallsCatalogView from "@/components/halls/HallsCatalogView";
+import { translate } from "@/i18n";
 
 export const metadata: Metadata = {
-  title: "القاعات | وصال",
-  description: "تصفح كل قاعات الأفراح المعتمدة على منصة وصال.",
+  title: translate("meta.hallsTitle", "ar"),
+  description: translate("meta.hallsDescription", "ar"),
 };
 
 export default function HallsPage() {
@@ -17,7 +18,7 @@ export default function HallsPage() {
         <Suspense
           fallback={
             <div className="container-wesal py-10 text-sm text-[var(--wesal-muted)]">
-              جاري تحميل القاعات…
+              {translate("halls.catalog.loading", "ar")}
             </div>
           }
         >

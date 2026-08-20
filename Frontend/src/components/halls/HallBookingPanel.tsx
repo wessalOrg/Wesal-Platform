@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import HallBookingCalendar from "@/components/halls/HallBookingCalendar";
+import { useT } from "@/i18n";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 import type { BookingSelection, HallAvailabilityDay } from "@/types/hall";
 
@@ -26,6 +27,8 @@ export default function HallBookingPanel({
   onClose,
   onConfirm,
 }: HallBookingPanelProps) {
+  const t = useT();
+
   useEffect(() => {
     if (!open) return;
 
@@ -54,7 +57,7 @@ export default function HallBookingPanel({
         <button
           type="button"
           className="fixed inset-0 bg-[rgba(40,25,20,0.5)] backdrop-blur-[2px]"
-          aria-label="إغلاق"
+          aria-label={t("common.close")}
           onClick={onClose}
         />
         <div
@@ -69,7 +72,7 @@ export default function HallBookingPanel({
                 id="hall-booking-panel-title"
                 className="text-lg font-bold text-[var(--wesal-text)]"
               >
-                اختيار موعد الحجز
+                {t("halls.booking.title")}
               </h2>
               <p className="mt-1 truncate text-sm text-[var(--wesal-muted)]">{hallName}</p>
             </div>
@@ -77,7 +80,7 @@ export default function HallBookingPanel({
               type="button"
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink)]"
-              aria-label="إغلاق"
+              aria-label={t("common.close")}
             >
               ✕
             </button>
@@ -96,14 +99,14 @@ export default function HallBookingPanel({
           <div className="shrink-0 border-t border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-5 py-4">
             {selection ? (
               <p className="mb-3 text-sm text-[var(--wesal-text)]">
-                المختار:{" "}
+                {t("halls.booking.selected")}{" "}
                 <span className="font-semibold text-[var(--wesal-maroon)]">
                   {selection.dateLabel} · {selection.periodLabel}
                 </span>
               </p>
             ) : (
               <p className="mb-3 text-sm text-[var(--wesal-muted)]">
-                اختر تاريخاً وفترة متاحة للمتابعة.
+                {t("halls.booking.pickHint")}
               </p>
             )}
             <button
@@ -113,7 +116,7 @@ export default function HallBookingPanel({
               className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
               data-testid="hall-booking-confirm"
             >
-              متابعة الحجز
+              {t("halls.booking.continue")}
             </button>
           </div>
         </div>

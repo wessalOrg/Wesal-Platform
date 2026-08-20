@@ -1,5 +1,7 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
+import { getStoredUiLang } from "@/lib/language";
 import type { HallReview } from "@/types/hall";
 
 export const COMMENT_MIN_LENGTH = 3;
@@ -25,13 +27,13 @@ type CommentResponse = {
 export function validateCommentBody(raw: string): string | null {
   const body = raw.trim();
   if (!body) {
-    return "اكتبي تعليقك قبل الإرسال.";
+    return t("halls.comment.emptyBody");
   }
   if (body.length < COMMENT_MIN_LENGTH) {
-    return `التعليق لازم يكون ${COMMENT_MIN_LENGTH} أحرف على الأقل.`;
+    return t("halls.comment.minLength", { count: COMMENT_MIN_LENGTH });
   }
   if (body.length > COMMENT_MAX_LENGTH) {
-    return `التعليق ما يتجاوز ${COMMENT_MAX_LENGTH} حرف.`;
+    return t("halls.comment.maxLength", { count: COMMENT_MAX_LENGTH });
   }
   return null;
 }
@@ -43,15 +45,15 @@ export function formatCommentTimeAgo(iso: string): string {
   }
 
   const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
-  if (minutes < 1) return "الآن";
-  if (minutes < 60) return `منذ ${minutes} دقيقة`;
+  if (minutes < 1) return t("common.now");
+  if (minutes < 60) return t("common.minutesAgo", { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `منذ ${hours} ساعة`;
+  if (hours < 24) return t("common.hoursAgo", { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `منذ ${days} يوم`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `منذ ${weeks} أسبوع`;
-  return date.toLocaleDateString("ar-EG");
+  if (days < 7) return t("common.daysAgo", { count: days });
+
+  const lang = typeof window === "undefined" ? "ar" : getStoredUiLang();
+  return date.toLocaleDateString(lang === "en" ? "en-GB" : "ar-EG");
 }
 
 export function mapCommentToReview(comment: HallComment): HallReview {
@@ -67,7 +69,7 @@ function mapResponse(data: CommentResponse, fallbackHallId: string): HallComment
   return {
     commentId: String(data.commentId ?? data.id ?? `comment-${Date.now()}`),
     hallId: String(data.hallId ?? fallbackHallId),
-    author: data.author?.trim() || "مستخدم",
+    author: data.author?.trim() || t("common.user"),
     body: data.body ?? "",
     createdAt: data.createdAt ?? new Date().toISOString(),
   };
@@ -102,18 +104,18 @@ export async function submitHallComment(
 export function commentErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 400) {
-      return "التعليق غير صالح. راجعي النص وحاولي مرة أخرى.";
+      return t("errors.comment.generic");
     }
     if (err.status === 401) {
-      return "يجب تسجيل الدخول لإرسال تعليق.";
+      return t("errors.comment.unauthorized");
     }
     if (err.status === 403) {
-      return "لا يمكنك التعليق على هذه القاعة من حسابك.";
+      return t("errors.comment.forbidden");
     }
     if (err.status === 404) {
-      return "تعذر العثور على القاعة.";
+      return t("errors.comment.notFound");
     }
-    return err.message || "تعذر إرسال التعليق. حاولي مرة أخرى.";
+    return err.message || t("errors.comment.generic");
   }
-  return "تعذر إرسال التعليق. حاولي مرة أخرى.";
+  return t("errors.comment.generic");
 }

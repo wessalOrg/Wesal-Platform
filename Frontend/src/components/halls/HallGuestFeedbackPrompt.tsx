@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useT } from "@/i18n";
 
 type HallGuestFeedbackPromptProps = {
   hallId: string;
@@ -12,6 +13,7 @@ export default function HallGuestFeedbackPrompt({
   hallId,
   isHallOwner,
 }: HallGuestFeedbackPromptProps) {
+  const t = useT();
   const { session, status } = useAuth();
   const isGuest = status === "ready" && !session.isAuthenticated;
 
@@ -29,15 +31,14 @@ export default function HallGuestFeedbackPrompt({
       className="wesal-gold-wave-text mx-auto mt-5 max-w-lg text-center text-[15px] font-bold leading-8"
       data-testid="hall-feedback-guest"
     >
-      شاركنا تجربتك،{" "}
+      {t("halls.guest.prompt")}{" "}
       <Link href={loginHref} className={linkClass}>
-        سجّل الدخول
-      </Link>
-      {" و"}
-      <Link href={registerHref} className={linkClass}>
-        انضم إلينا
+        {t("halls.guest.login")}
       </Link>{" "}
-      وكن جزءًا من وصال
+      {t("halls.guest.or")}{" "}
+      <Link href={registerHref} className={linkClass}>
+        {t("halls.guest.join")}
+      </Link>
     </p>
   );
 }

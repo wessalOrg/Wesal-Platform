@@ -1,10 +1,6 @@
-import {
-  DEFAULT_HALL_AMENITIES,
-  type HallDetail,
-  type HallDetails,
-  type HallReview,
-} from "@/types/hall";
+import type { HallDetail, HallDetails, HallReview } from "@/types/hall";
 import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
+import { getDefaultHallAmenities } from "@/lib/amenities";
 
 const GALLERY = [
   "/halls/featured-lotus.webp",
@@ -219,7 +215,7 @@ export const HALL_MODAL_DETAILS_FALLBACK: HallDetails[] =
       reviewCount: isRoyal ? 124 : hall.reviewCount,
       description:
         MODAL_DESCRIPTIONS[hall.id] ?? pageFallback?.description ?? null,
-      amenities: DEFAULT_HALL_AMENITIES,
+      amenities: [],
       reviews: DEMO_HALL_REVIEWS,
       images: [hall.imageUrl, ...extras.map((item) => item.imageUrl)],
       isAvailable: true,
@@ -229,5 +225,10 @@ export const HALL_MODAL_DETAILS_FALLBACK: HallDetails[] =
   });
 
 export function findHallDetailsFallback(id: string): HallDetails | undefined {
-  return HALL_MODAL_DETAILS_FALLBACK.find((hall) => hall.id === String(id));
+  const hall = HALL_MODAL_DETAILS_FALLBACK.find((item) => item.id === String(id));
+  if (!hall) return undefined;
+  return {
+    ...hall,
+    amenities: getDefaultHallAmenities(),
+  };
 }

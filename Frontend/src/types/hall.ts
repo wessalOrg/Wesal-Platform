@@ -72,19 +72,12 @@ export type HallDetails = {
   availabilityDays?: HallAvailabilityDay[];
 };
 
-export const DEFAULT_HALL_AMENITIES: HallAmenity[] = [
-  { id: "ac", label: "تكييف مركزي", icon: "ac" },
-  { id: "parking", label: "موقف VIP", icon: "parking" },
-  { id: "sound", label: "نظام صوت متطور", icon: "sound" },
-  { id: "dressing", label: "غرفة تجهيز", icon: "dressing" },
-];
-
-export const REGION_OPTIONS: { id: HallRegion; label: string }[] = [
-  { id: "all", label: "جميع المناطق" },
-  { id: "north", label: "شمال غزة" },
-  { id: "gaza", label: "غزة" },
-  { id: "middle", label: "المنطقة الوسطى" },
-  { id: "south", label: "جنوب غزة" },
+export const REGION_OPTIONS: { id: HallRegion; labelKey: string }[] = [
+  { id: "all", labelKey: "region.all" },
+  { id: "north", labelKey: "region.north" },
+  { id: "gaza", labelKey: "region.gaza" },
+  { id: "middle", labelKey: "region.middle" },
+  { id: "south", labelKey: "region.south" },
 ];
 
 /** Backend HallRegion enum query values */

@@ -1,11 +1,13 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
 import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
 import {
   findHallDetailsFallback,
   getHallDetailsFallback,
   HALL_DETAILS_FALLBACK,
 } from "@/constants/hallDetailsFallback";
+import { getDefaultHallAmenities } from "@/lib/amenities";
 import {
   REGION_API_PARAMS,
   type FeaturedHall,
@@ -148,12 +150,12 @@ function formatTimeRange(start?: string, end?: string): string | undefined {
 function mapPeriodLabel(name?: string, type?: number | string): string {
   const typeValue = typeof type === "string" ? type.toLowerCase() : type;
   if (name?.includes("First") || typeValue === 0 || typeValue === "firstperiod") {
-    return "الفترة الأولى";
+    return t("halls.period.first");
   }
   if (name?.includes("Second") || typeValue === 1 || typeValue === "secondperiod") {
-    return "الفترة الثانية";
+    return t("halls.period.second");
   }
-  return name ?? "فترة";
+  return name ?? t("halls.period.generic");
 }
 
 function mapAvailabilityDays(
@@ -249,7 +251,7 @@ export async function fetchFeaturedHalls(
       error:
         err instanceof Error
           ? err.message
-          : "تعذر الاتصال بالخادم. يتم عرض بيانات تجريبية.",
+          : t("errors.offlineDemo"),
     };
   }
 }
@@ -266,14 +268,14 @@ function mapSlotPrices(hall: ApiFeaturedHall, index: number): HallSlotPrice[] {
     const slots: HallSlotPrice[] = [];
     if (hall.morningPrice != null) {
       slots.push({
-        label: "الفترة الصباحية",
+        label: t("halls.period.morning"),
         price: hall.morningPrice,
         priceLabel: formatPriceAmount(hall.morningPrice),
       });
     }
     if (hall.eveningPrice != null) {
       slots.push({
-        label: "الفترة المسائية",
+        label: t("halls.period.evening"),
         price: hall.eveningPrice,
         priceLabel: formatPriceAmount(hall.eveningPrice),
       });
@@ -298,12 +300,12 @@ function mapSlotPrices(hall: ApiFeaturedHall, index: number): HallSlotPrice[] {
   if (hall.price != null) {
     return [
       {
-        label: "الفترة الصباحية",
+        label: t("halls.period.morning"),
         price: hall.price,
         priceLabel: formatPriceAmount(hall.price),
       },
       {
-        label: "الفترة المسائية",
+        label: t("halls.period.evening"),
         price: hall.price,
         priceLabel: formatPriceAmount(hall.price),
       },
@@ -407,7 +409,7 @@ export async function fetchHallDetails(id: string): Promise<HallDetailsLoadResul
         error:
           err instanceof Error
             ? err.message
-            : "تعذر الاتصال بالخادم. يتم عرض بيانات تجريبية.",
+            : t("errors.offlineDemo"),
         source: "fallback",
         hall: fallback,
       };
@@ -445,7 +447,7 @@ export async function fetchCatalogHalls(): Promise<FeaturedHallsLoadResult> {
         error:
           err instanceof Error
             ? err.message
-            : "تعذر الاتصال بالخادم. يتم عرض قاعات تجريبية.",
+            : t("errors.offlineHalls"),
       };
     }
   }
@@ -511,7 +513,7 @@ export async function fetchSearchHalls(
       halls: [],
       source: "fallback",
       error:
-        err instanceof Error ? err.message : "تعذر تنفيذ البحث. يتم التصفية محلياً.",
+        err instanceof Error ? err.message : t("errors.searchFallback"),
     };
   }
 }
@@ -554,7 +556,7 @@ export function getPastSearchDateMessage(value: string): string | null {
 
   if (selected >= today) return null;
 
-  return "التاريخ الذي أدخلتيه قد مضى. اختاري تاريخ اليوم أو تاريخاً قادماً.";
+  return t("halls.catalog.pastDate");
 }
 
 function dayMatchesIso(day: HallAvailabilityDay, iso: string) {
@@ -660,12 +662,9 @@ const UNAVAILABLE_STATUSES = new Set([
   "unavailable",
 ]);
 
-const DEFAULT_AMENITIES: HallAmenity[] = [
-  { id: "ac", label: "تكييف مركزي", icon: "ac" },
-  { id: "parking", label: "موقف VIP", icon: "parking" },
-  { id: "sound", label: "نظام صوت متطور", icon: "sound" },
-  { id: "dressing", label: "غرفة تجهيز", icon: "dressing" },
-];
+function getDefaultAmenities(): HallAmenity[] {
+  return getDefaultHallAmenities();
+}
 
 function unwrapHallDetails(payload: HallDetailsResponse): ApiHallDetails {
   if (payload && typeof payload === "object" && "data" in payload) {
@@ -696,11 +695,12 @@ function mapAmenities(
   raw?: ApiHallDetails["amenities"],
   fallback?: HallAmenity[],
 ): HallAmenity[] {
-  if (!raw?.length) return fallback ?? DEFAULT_AMENITIES;
+  const defaults = getDefaultAmenities();
+  if (!raw?.length) return fallback ?? defaults;
   return raw.map((item, index) => ({
     id: item.id ?? `amenity-${index}`,
-    label: item.label ?? item.name ?? "ميزة",
-    icon: item.icon ?? DEFAULT_AMENITIES[index % DEFAULT_AMENITIES.length].icon,
+    label: item.label ?? item.name ?? t("common.amenity"),
+    icon: item.icon ?? defaults[index % defaults.length].icon,
   }));
 }
 
@@ -711,7 +711,7 @@ function mapReviews(
   if (!raw?.length) return fallback ?? [];
   return raw.map((item, index) => ({
     id: item.id ?? `review-${index}`,
-    author: item.author ?? item.userName ?? "مستخدم",
+    author: item.author ?? item.userName ?? t("common.user"),
     rating: item.rating ?? 5,
     comment: item.comment ?? item.text ?? "",
     timeAgo: item.timeAgo ?? item.createdAt ?? "",
@@ -740,7 +740,7 @@ function mapApiHallDetails(raw: ApiHallDetails): HallDetails {
 
   return {
     id,
-    name: raw.hallName ?? raw.name ?? fallback?.name ?? "قاعة",
+    name: raw.hallName ?? raw.name ?? fallback?.name ?? t("common.hall"),
     location: raw.address ?? raw.location ?? fallback?.location ?? "",
     region: raw.region ? mapApiRegion(raw.region) : (fallback?.region ?? "gaza"),
     capacity: raw.capacity ?? fallback?.capacity ?? 0,
@@ -765,7 +765,7 @@ function mapApiHallDetails(raw: ApiHallDetails): HallDetails {
 export async function fetchHallById(id: string): Promise<HallByIdLoadResult> {
   const hallId = String(id).trim();
   if (!hallId) {
-    return { status: "unavailable", message: "معرّف القاعة غير صالح." };
+    return { status: "unavailable", message: t("errors.hallInvalid") };
   }
 
   try {
@@ -776,14 +776,14 @@ export async function fetchHallById(id: string): Promise<HallByIdLoadResult> {
     if (!hall.isAvailable) {
       return {
         status: "unavailable",
-        message: "هذه القاعة غير متاحة للعرض حاليًا.",
+        message: t("errors.hallUnavailable"),
       };
     }
     return { status: "ok", hall, source: "api" };
   } catch (err) {
     const status = err instanceof ApiError ? err.status : undefined;
     const message =
-      err instanceof Error ? err.message : "تعذر تحميل تفاصيل القاعة.";
+      err instanceof Error ? err.message : t("errors.hallLoad");
     const local = findHallDetailsFallback(hallId);
 
     if (status === 404 || status === 410) {
@@ -792,12 +792,12 @@ export async function fetchHallById(id: string): Promise<HallByIdLoadResult> {
           status: "ok",
           hall: local,
           source: "fallback",
-          warning: "تعذر الاتصال بالخادم. يتم عرض بيانات تجريبية.",
+          warning: t("errors.offlineDemo"),
         };
       }
       return {
         status: "unavailable",
-        message: "هذه القاعة غير متاحة أو غير موجودة.",
+        message: t("errors.hallMissing"),
       };
     }
 
@@ -806,8 +806,7 @@ export async function fetchHallById(id: string): Promise<HallByIdLoadResult> {
         status: "ok",
         hall: local,
         source: "fallback",
-        warning:
-          "تعذر الاتصال بالخادم حاليًا. يتم عرض بيانات تجريبية لهذه القاعة.",
+        warning: t("halls.details.offline"),
       };
     }
 

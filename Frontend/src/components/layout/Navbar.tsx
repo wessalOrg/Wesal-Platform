@@ -5,52 +5,35 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import WesalLogo from "@/components/brand/WesalLogo";
-import LanguageSwitcher, {
-  useUiLang,
-} from "@/components/layout/LanguageSwitcher";
+import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import { useT, useTranslateLang } from "@/i18n";
 
-const NAV_LINKS = [
-  { href: "/", ar: "الرئيسية", en: "Home" },
-  { href: "/halls", ar: "القاعات", en: "Halls" },
-  { href: "/about", ar: "من نحن", en: "About" },
+const NAV_HREFS = [
+  { href: "/", key: "nav.home" },
+  { href: "/halls", key: "nav.halls" },
+  { href: "/about", key: "nav.about" },
 ] as const;
 
-const COPY = {
-  ar: {
-    menu: "القائمة",
-    login: "تسجيل الدخول",
-    register: "إنشاء حساب",
-    logout: "تسجيل الخروج",
-    hello: "مرحباً",
-    account: "حسابي",
-  },
-  en: {
-    menu: "Menu",
-    login: "Log in",
-    register: "Create account",
-    logout: "Log out",
-    hello: "Hi",
-    account: "Account",
-  },
-};
-
-function roleLabel(role: string | null, lang: "ar" | "en"): string | null {
+function roleLabel(
+  role: string | null,
+  t: (key: string) => string,
+): string | null {
   if (!role) return null;
-  if (role === "HallOwner") return lang === "en" ? "Hall owner" : "صاحب قاعة";
-  if (role === "Admin") return lang === "en" ? "Admin" : "مشرف";
-  if (role === "RegisteredUser") return lang === "en" ? "Member" : "مستخدم";
+  if (role === "HallOwner") return t("nav.role.hallOwner");
+  if (role === "Admin") return t("nav.role.admin");
+  if (role === "RegisteredUser") return t("nav.role.member");
   return null;
 }
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const lang = useUiLang();
-  const t = COPY[lang];
+  const { lang, t } = useTranslateLang();
   const { session, status, logout } = useAuth();
   const authenticated = session.isAuthenticated;
-  const displayName = session.userName?.trim() || t.account;
-  const role = roleLabel(session.role, lang);
+  const displayName = session.userName?.trim() || t("nav.account");
+  const role = roleLabel(session.role, t);
+  const separator = lang === "en" ? "," : "،";
 
   useEffect(() => {
     setOpen(false);
@@ -86,21 +69,21 @@ export default function Navbar() {
           <Link
             href="/"
             className="flex min-w-0 shrink-0 items-center gap-2"
-            aria-label="وصال"
+            aria-label={t("brand.name")}
           >
             <span className="relative h-10 w-10 shrink-0 sm:h-11 sm:w-11">
               <WesalLogo className="h-full w-full" variant="brand" />
             </span>
             <span className="truncate text-xl font-bold text-[var(--wesal-maroon)] sm:text-2xl">
-              وصال
+              {t("brand.name")}
             </span>
           </Link>
 
           <nav
             className="hidden min-w-0 items-center gap-0.5 text-sm font-medium text-[var(--wesal-text)] md:flex"
-            aria-label={lang === "en" ? "Main" : "التنقل الرئيسي"}
+            aria-label={t("nav.main")}
           >
-            {NAV_LINKS.map((link) => {
+            {NAV_HREFS.map((link) => {
               const active = pathname === link.href;
               return (
                 <Link
@@ -112,7 +95,7 @@ export default function Navbar() {
                       : "hover:text-[var(--wesal-maroon)]"
                   }`}
                 >
-                  {link[lang]}
+                  {t(link.key)}
                 </Link>
               );
             })}
@@ -124,15 +107,18 @@ export default function Navbar() {
               <span className="h-11 w-40 shrink-0 animate-pulse rounded-xl bg-[var(--wesal-pink)]" />
             ) : authenticated ? (
               <AuthAccount
-                hello={t.hello}
+                hello={t("nav.hello")}
                 name={displayName}
                 role={role}
-                logoutLabel={t.logout}
-                separator={lang === "en" ? "," : "،"}
+                logoutLabel={t("nav.logout")}
+                separator={separator}
                 onLogout={() => void logout()}
               />
             ) : (
-              <GuestActions login={t.login} register={t.register} />
+              <GuestActions
+                login={t("nav.login")}
+                register={t("nav.register")}
+              />
             )}
           </div>
 
@@ -141,7 +127,7 @@ export default function Navbar() {
             className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)] lg:hidden"
             aria-expanded={open}
             aria-controls="mobile-nav"
-            aria-label={t.menu}
+            aria-label={t("nav.menu")}
             onClick={() => setOpen((value) => !value)}
           >
             {open ? "✕" : "☰"}
@@ -155,24 +141,24 @@ export default function Navbar() {
           className="wesal-navbar-mobile max-h-[min(32rem,calc(100svh-3.5rem))] overflow-y-auto border-t border-[var(--wesal-border)]/60 px-5 py-4 lg:hidden"
         >
           <div className="flex flex-col gap-3">
-            {NAV_LINKS.map((link) => (
+            {NAV_HREFS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 className="flex min-h-11 items-center py-2 text-sm font-medium text-[var(--wesal-text)]"
                 onClick={() => setOpen(false)}
               >
-                {link[lang]}
+                {t(link.key)}
               </Link>
             ))}
             <LanguageSwitcher compact />
             {authenticated ? (
               <AuthAccount
-                hello={t.hello}
+                hello={t("nav.hello")}
                 name={displayName}
                 role={role}
-                logoutLabel={t.logout}
-                separator={lang === "en" ? "," : "،"}
+                logoutLabel={t("nav.logout")}
+                separator={separator}
                 stacked
                 onLogout={() => {
                   setOpen(false);
@@ -181,8 +167,8 @@ export default function Navbar() {
               />
             ) : (
               <GuestActions
-                login={t.login}
-                register={t.register}
+                login={t("nav.login")}
+                register={t("nav.register")}
                 stacked
                 onNavigate={() => setOpen(false)}
               />
@@ -252,7 +238,8 @@ function AuthAccount({
           stacked ? "w-full text-start" : "max-w-[8.5rem] truncate lg:max-w-[10rem]"
         }`}
       >
-        {hello}{separator} {name}
+        {hello}
+        {separator} {name}
         {role ? (
           <span className="mt-0.5 block truncate text-xs font-medium text-[var(--wesal-muted)]">
             {role}
