@@ -1,5 +1,10 @@
 namespace Wesal.Application.Common.Models;
 
+public sealed class CreateConversationRequest
+{
+    public Guid HallId { get; init; }
+}
+
 public sealed class ConversationResponse
 {
     public Guid ConversationId { get; init; }
