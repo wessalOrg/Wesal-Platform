@@ -8,7 +8,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task InitializeSession_ReturnsNewSessionWithId()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
 
         var result = await service.InitializeSessionAsync(null);
 
@@ -20,7 +20,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task InitializeSession_WithEnglishLanguage_ReturnsEnglish()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
 
         var result = await service.InitializeSessionAsync("en");
 
@@ -30,7 +30,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task InitializeSession_WithArabicLanguage_ReturnsArabic()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
 
         var result = await service.InitializeSessionAsync("ar");
 
@@ -40,7 +40,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task InitializeSession_WithNullLanguage_DefaultsToArabic()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
 
         var result = await service.InitializeSessionAsync(null);
 
@@ -50,7 +50,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task InitializeSession_WithEmptyLanguage_DefaultsToArabic()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
 
         var result = await service.InitializeSessionAsync("");
 
@@ -60,7 +60,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task InitializeSession_WithWhitespaceLanguage_DefaultsToArabic()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
 
         var result = await service.InitializeSessionAsync("   ");
 
@@ -70,7 +70,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task InitializeSession_CreatesSession30MinutesFromNow()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
         var before = DateTime.UtcNow;
 
         var result = await service.InitializeSessionAsync(null);
@@ -84,7 +84,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task GetSession_ExistingSession_ReturnsSession()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
         var created = await service.InitializeSessionAsync(null);
 
         var result = await service.GetSessionAsync(created.SessionId);
@@ -97,7 +97,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task GetSession_NonexistentSession_ReturnsNull()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
 
         var result = await service.GetSessionAsync(Guid.NewGuid());
 
@@ -107,7 +107,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task GetSession_ExpiredSession_ReturnsNull()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
         var created = await service.InitializeSessionAsync(null);
 
         var expiredSession = new ChatSessionService.AiSession
@@ -132,7 +132,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task GetSession_ActiveSession_RefreshesExpiry()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
         var created = await service.InitializeSessionAsync(null);
 
         var result = await service.GetSessionAsync(created.SessionId);
@@ -144,7 +144,7 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task GetSession_RemovesExpiredSessionFromStore()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
         var created = await service.InitializeSessionAsync(null);
 
         var expiredSession = new ChatSessionService.AiSession
@@ -169,11 +169,125 @@ public class ChatSessionServiceShould
     [Fact]
     public async Task InitializeSession_MultipleCalls_ReturnsDifferentSessionIds()
     {
-        var service = new ChatSessionService();
+        using var service = new ChatSessionService();
 
         var result1 = await service.InitializeSessionAsync(null);
         var result2 = await service.InitializeSessionAsync(null);
 
         Assert.NotEqual(result1.SessionId, result2.SessionId);
+    }
+
+    [Fact]
+    public void SweepExpiredSessions_RemovesExpiredSessions()
+    {
+        using var service = new ChatSessionService(TimeSpan.FromHours(1));
+
+        var sessionsField = typeof(ChatSessionService)
+            .GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
+
+        var expiredSession = new ChatSessionService.AiSession
+        {
+            SessionId = Guid.NewGuid(),
+            Language = "ar",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-60),
+            LastActivityAt = DateTime.UtcNow.AddMinutes(-60),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(-1)
+        };
+        sessions[expiredSession.SessionId] = expiredSession;
+
+        service.SweepExpiredSessions();
+
+        Assert.False(sessions.ContainsKey(expiredSession.SessionId));
+    }
+
+    [Fact]
+    public void SweepExpiredSessions_PreservesActiveSessions()
+    {
+        using var service = new ChatSessionService(TimeSpan.FromHours(1));
+
+        var sessionsField = typeof(ChatSessionService)
+            .GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
+
+        var activeSession = new ChatSessionService.AiSession
+        {
+            SessionId = Guid.NewGuid(),
+            Language = "ar",
+            CreatedAt = DateTime.UtcNow,
+            LastActivityAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(30)
+        };
+        sessions[activeSession.SessionId] = activeSession;
+
+        service.SweepExpiredSessions();
+
+        Assert.True(sessions.ContainsKey(activeSession.SessionId));
+    }
+
+    [Fact]
+    public void SweepExpiredSessions_EmptyStore_DoesNotThrow()
+    {
+        using var service = new ChatSessionService(TimeSpan.FromHours(1));
+
+        var exception = Record.Exception(() => service.SweepExpiredSessions());
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void SweepExpiredSessions_MixedSessions_RemovesOnlyExpired()
+    {
+        using var service = new ChatSessionService(TimeSpan.FromHours(1));
+
+        var sessionsField = typeof(ChatSessionService)
+            .GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
+
+        var expired1 = new ChatSessionService.AiSession
+        {
+            SessionId = Guid.NewGuid(),
+            Language = "ar",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-60),
+            LastActivityAt = DateTime.UtcNow.AddMinutes(-60),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(-10)
+        };
+        var expired2 = new ChatSessionService.AiSession
+        {
+            SessionId = Guid.NewGuid(),
+            Language = "en",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-45),
+            LastActivityAt = DateTime.UtcNow.AddMinutes(-45),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(-5)
+        };
+        var active = new ChatSessionService.AiSession
+        {
+            SessionId = Guid.NewGuid(),
+            Language = "ar",
+            CreatedAt = DateTime.UtcNow,
+            LastActivityAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(25)
+        };
+
+        sessions[expired1.SessionId] = expired1;
+        sessions[expired2.SessionId] = expired2;
+        sessions[active.SessionId] = active;
+
+        service.SweepExpiredSessions();
+
+        Assert.False(sessions.ContainsKey(expired1.SessionId));
+        Assert.False(sessions.ContainsKey(expired2.SessionId));
+        Assert.True(sessions.ContainsKey(active.SessionId));
+        Assert.Single(sessions);
+    }
+
+    [Fact]
+    public void Dispose_StopsTimer()
+    {
+        var service = new ChatSessionService(TimeSpan.FromMilliseconds(50));
+
+        var disposeException = Record.Exception(() => service.Dispose());
+
+        Assert.Null(disposeException);
     }
 }

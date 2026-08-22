@@ -4,12 +4,28 @@ using Wesal.Application.Common.Models;
 
 namespace Wesal.Infrastructure.AiAssistant;
 
-public sealed class ChatSessionService : IChatSessionService
+public sealed class ChatSessionService : IChatSessionService, IDisposable
 {
     private static readonly TimeSpan SessionDuration = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan DefaultSweepInterval = TimeSpan.FromMinutes(5);
     private static readonly string DefaultLanguage = "ar";
 
     private readonly ConcurrentDictionary<Guid, AiSession> _sessions = new();
+    private readonly Timer _sweepTimer;
+
+    public ChatSessionService()
+        : this(null)
+    {
+    }
+
+    internal ChatSessionService(TimeSpan? sweepInterval)
+    {
+        _sweepTimer = new Timer(
+            callback: _ => SweepExpiredSessions(),
+            state: null,
+            dueTime: sweepInterval ?? DefaultSweepInterval,
+            period: sweepInterval ?? DefaultSweepInterval);
+    }
 
     public Task<AiSessionResponse> InitializeSessionAsync(string? language, CancellationToken cancellationToken = default)
     {
@@ -56,6 +72,23 @@ public sealed class ChatSessionService : IChatSessionService
             session.Language,
             session.CreatedAt,
             session.ExpiresAt));
+    }
+
+    internal void SweepExpiredSessions()
+    {
+        var now = DateTime.UtcNow;
+        foreach (var kvp in _sessions)
+        {
+            if (now > kvp.Value.ExpiresAt)
+            {
+                _sessions.TryRemove(kvp.Key, out _);
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _sweepTimer.Dispose();
     }
 
     internal sealed class AiSession
