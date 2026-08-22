@@ -236,6 +236,7 @@ const en: MessageCatalog = {
 
   "halls.comment.title": "Add your comment",
   "halls.comment.submit": "Post comment",
+  "halls.comment.submitting": "Posting…",
   "halls.comment.saved": "Your comment was posted.",
   "halls.comment.empty": "No comments yet.",
   "halls.comment.placeholder": "Share your experience with this hall…",
@@ -291,6 +292,29 @@ const en: MessageCatalog = {
   "messages.composerDisabled": "Messaging coming soon…",
   "messages.goLogin": "Log in",
 
+  "assistant.title": "Wesal AI Assistant",
+  "assistant.senderLabel": "Wesal Assistant",
+  "assistant.fab.open": "Open the Wesal AI Assistant",
+  "assistant.fab.close": "Close the Wesal AI Assistant",
+  "assistant.status.online": "Online now",
+  "assistant.status.connecting": "Connecting…",
+  "assistant.status.offline": "Offline",
+  "assistant.loading": "Starting the assistant…",
+  "assistant.greeting":
+    "Welcome to Wesal! I’m here to help you find the right hall — ask me about an area, a date, or a specific booking period.",
+  "assistant.composer.placeholder": "Type your message here…",
+  "assistant.composer.send": "Send",
+  "assistant.composer.hint": "Sending messages arrives with the AI chat release.",
+  "assistant.unavailable.title": "The assistant is taking a break",
+  "assistant.network.title": "You appear to be offline",
+  "assistant.error.title": "Could not start the assistant",
+  "assistant.retrying": "Retrying…",
+  "assistant.reconnect": "Reconnect",
+  "assistant.browseHalls": "Browse halls manually",
+  "assistant.invite.help": "How can I help you?",
+  "assistant.invite.halls": "Looking for a hall? Ask me about an area or a date.",
+  "assistant.invite.dismiss": "Dismiss invitation",
+
   "errors.generic": "Something went wrong.",
   "errors.requestFailed": "Request failed",
   "errors.offlineDemo":
@@ -316,6 +340,12 @@ const en: MessageCatalog = {
   "errors.comment.forbidden": "You are not allowed to comment on this hall.",
   "errors.comment.notFound": "Hall not found.",
   "errors.comment.generic": "Could not post the comment.",
+  "errors.assistant.init": "Could not start the AI assistant. Please try again.",
+  "errors.assistant.language": "That conversation language is not supported.",
+  "errors.assistant.unavailable":
+    "Our AI assistant is unavailable right now. You can browse manually or try again later.",
+  "errors.assistant.network":
+    "Your device looks offline. Check your connection and the assistant will come back automatically.",
 
   "about.title": "About us",
   "about.body":
@@ -341,7 +371,6 @@ const en: MessageCatalog = {
   "home.hero.imageAlt": "A royal hall with a golden stage and central chandelier",
 
   "halls.comment.emptyBody": "Write your comment before sending.",
-  "halls.comment.minLength": "Comment must be at least {count} characters.",
   "halls.comment.maxLength": "Comment cannot exceed {count} characters.",
 
   "home.owner.demo.nav.home": "Home",
