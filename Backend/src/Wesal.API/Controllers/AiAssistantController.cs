@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
