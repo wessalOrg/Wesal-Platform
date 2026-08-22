@@ -7,6 +7,7 @@ import CatalogHallCard from "@/components/halls/CatalogHallCard";
 import RegionFilterBar from "@/components/home/RegionFilterBar";
 import Reveal from "@/components/ui/Reveal";
 import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
+import { useT } from "@/i18n";
 import { fetchFeaturedHalls, filterFeaturedByRegion } from "@/services/halls";
 import type { FeaturedHall, HallRegion } from "@/types/hall";
 
@@ -18,6 +19,7 @@ const HallDetailsView = dynamic(
 type LoadStatus = "loading" | "ready" | "error";
 
 export default function FeaturedHallsSection() {
+  const t = useT();
   const [region, setRegion] = useState<HallRegion>("all");
   const [halls, setHalls] = useState<FeaturedHall[]>(
     FEATURED_HALLS_FALLBACK.slice(0, 6),
@@ -82,7 +84,7 @@ export default function FeaturedHallsSection() {
           id="featured-halls-heading"
           className="text-2xl font-bold text-[var(--wesal-maroon)] sm:text-3xl"
         >
-          قاعات مميزة لك
+          {t("home.featured.title")}
         </h2>
 
         <RegionFilterBar
@@ -92,7 +94,7 @@ export default function FeaturedHallsSection() {
         />
 
         <div className="mt-4">
-          <p className="text-sm text-[var(--wesal-muted)]">قاعات معتمدة وموثوقة</p>
+          <p className="text-sm text-[var(--wesal-muted)]">{t("home.featured.subtitle")}</p>
         </div>
 
         {status === "loading" ? (
@@ -114,7 +116,7 @@ export default function FeaturedHallsSection() {
             role="status"
           >
             <p className="text-sm text-[var(--wesal-text)]">
-              تعذر الاتصال بالخادم حاليًا. يتم عرض قاعات تجريبية.
+              {t("home.featured.offline")}
               {errorMessage ? ` (${errorMessage})` : ""}
             </p>
             <button
@@ -123,7 +125,7 @@ export default function FeaturedHallsSection() {
               className="btn-outline mt-3"
               data-testid="featured-halls-retry"
             >
-              إعادة المحاولة
+              {t("common.retry")}
             </button>
           </div>
         ) : null}
@@ -134,14 +136,14 @@ export default function FeaturedHallsSection() {
             data-testid="region-empty-state"
           >
             <p className="text-[var(--wesal-text)]">
-              لا توجد قاعات متاحة حاليًا في هذه المنطقة.
+              {t("home.featured.empty")}
             </p>
             <button
               type="button"
               onClick={() => handleRegionChange("all")}
               className="btn-outline mt-4"
             >
-              عرض جميع المناطق
+              {t("home.featured.showAllRegions")}
             </button>
           </div>
         ) : null}
@@ -170,7 +172,7 @@ export default function FeaturedHallsSection() {
             className="btn-primary gap-2"
             data-testid="browse-more-halls"
           >
-            عرض المزيد من القاعات
+            {t("home.featured.browseMore")}
             <ChevronIcon />
           </Link>
         </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { GoldStar } from "@/components/ui/GoldStar";
+import { useT } from "@/i18n";
 import {
   fetchHallRatingSummary,
   ratingErrorMessage,
@@ -20,6 +21,7 @@ export default function HallRatingPanel({
   isHallOwner,
   onRated,
 }: HallRatingPanelProps) {
+  const t = useT();
   const { session, status: authStatus } = useAuth();
   const role = session.role ?? "";
   const isOwnerRole = role.toLowerCase() === "hallowner" || isHallOwner;
@@ -73,7 +75,7 @@ export default function HallRatingPanel({
         className="mt-4 text-center text-sm leading-7 text-[#8a7a70]"
         data-testid="hall-rating-restricted"
       >
-        حسابك الحالي لا يسمح بإرسال تقييم.
+        {t("errors.rating.forbidden")}
       </p>
     );
   }
@@ -104,12 +106,12 @@ export default function HallRatingPanel({
       data-testid="hall-rating-control"
     >
       <p className="text-center text-base font-bold text-[var(--wesal-maroon)] sm:text-start">
-        {existing ? "عدّلي تقييمك" : "قيّمي هذه القاعة"}
+        {existing ? t("halls.rating.edit") : t("halls.rating.title")}
       </p>
       <div
         className="mt-3 flex flex-wrap items-center justify-center gap-1 sm:justify-start"
         role="radiogroup"
-        aria-label="التقييم من 5"
+        aria-label={t("halls.rating.title")}
       >
         {[1, 2, 3, 4, 5].map((star) => {
           const active = (hover || value) >= star;
@@ -119,7 +121,7 @@ export default function HallRatingPanel({
               type="button"
               role="radio"
               aria-checked={value === star}
-              aria-label={`${star} من 5`}
+              aria-label={`${star}`}
               disabled={submitting}
               className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition hover:bg-[var(--wesal-pink-soft)] disabled:cursor-not-allowed disabled:opacity-60"
               onMouseEnter={() => setHover(star)}
@@ -144,10 +146,14 @@ export default function HallRatingPanel({
           disabled={submitting || value < 1}
           onClick={() => void submit()}
         >
-          {submitting ? "جاري الإرسال…" : existing ? "تحديث التقييم" : "إرسال التقييم"}
+          {submitting
+            ? t("common.loading")
+            : existing
+              ? t("halls.rating.edit")
+              : t("halls.rating.submit")}
         </button>
         {value > 0 ? (
-          <p className="text-sm text-[var(--wesal-muted)]">{value} من 5</p>
+          <p className="text-sm text-[var(--wesal-muted)]">{value}</p>
         ) : null}
       </div>
       {error ? (
@@ -163,13 +169,13 @@ export default function HallRatingPanel({
             onClick={() => void submit()}
             disabled={submitting || value < 1}
           >
-            إعادة المحاولة
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
       {success ? (
         <p className="mt-3 text-sm font-medium text-[var(--wesal-maroon)]" role="status">
-          تم حفظ تقييمك.
+          {t("halls.rating.saved")}
         </p>
       ) : null}
     </div>

@@ -1,8 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import LangDir from "@/components/layout/LangDir";
+import { useUiLang } from "@/components/layout/LanguageProvider";
 import Reveal from "@/components/ui/Reveal";
+import { useT } from "@/i18n";
+import { langToDir } from "@/lib/language";
 
 export default function OwnerCtaSection() {
+  const t = useT();
+
   return (
     <section className="owner-cta relative isolate overflow-hidden py-16 sm:py-20">
       <Reveal>
@@ -10,34 +18,30 @@ export default function OwnerCtaSection() {
         dir="ltr"
         className="container-wesal relative z-10 grid items-center gap-10 lg:grid-cols-2 lg:gap-6"
       >
-        <div dir="rtl" className="owner-cta-copy text-start">
+        <LangDir className="owner-cta-copy text-start">
           <p className="owner-cta-line mb-3 text-sm font-semibold text-[var(--wesal-gold)]">
-            لأصحاب القاعات
+            {t("home.owner.eyebrow")}
           </p>
           <h2 className="owner-cta-line text-2xl font-extrabold leading-[1.45] text-[var(--wesal-maroon)] sm:text-3xl lg:text-[2.15rem]">
-            قاعتك تستحق أن تصل إلى جمهور أكبر
+            {t("home.owner.title")}
           </h2>
           <p className="owner-cta-line mt-4 max-w-xl text-sm leading-8 text-[var(--wesal-muted)] sm:text-base">
-            اعرض قاعتك على وصال، وكن أقرب إلى العملاء الباحثين عن المكان المناسب
-            لمناسباتهم. نظّم تفاصيل قاعتك ومواعيدها وطلبات الحجز بسهولة، واستفد من
-            أدوات تساعدك على تعزيز حضورك والتواصل مع عملائك في مكان واحد.
+            {t("home.owner.desc")}
           </p>
 
           <div className="owner-cta-line mt-7 flex flex-wrap gap-3">
             <Link href="/register?type=owner" className="btn-primary gap-2 px-6 py-3">
-              أضف قاعتك الآن
+              {t("home.owner.ctaPrimary")}
             </Link>
             <Link href="/#benefits" className="btn-outline px-6 py-3">
-              اكتشف المزايا
+              {t("home.owner.ctaSecondary")}
             </Link>
           </div>
 
-          <p className="owner-cta-line mt-4 text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm">
-            استثمر في حضور قاعتك بـ 120 ₪ شهريًا
-            <br />
-            ما يعادل 4 ₪ يوميًا فقط.
+          <p className="owner-cta-line mt-4 whitespace-pre-line text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm">
+            {t("home.owner.priceNote")}
           </p>
-        </div>
+        </LangDir>
 
         {/* UX/UI device scene: angled silver laptop + white phone on beige pedestal */}
         <div className="owner-scene" aria-hidden="false">
@@ -74,44 +78,63 @@ export default function OwnerCtaSection() {
 }
 
 function DashUI() {
+  const t = useT();
+  const lang = useUiLang();
+  const dir = langToDir(lang);
+
   const nav = [
-    { t: "الرئيسية", on: true },
-    { t: "القاعات", on: false },
-    { t: "التقويم", on: false },
-    { t: "العملاء", on: false },
-    { t: "الحجوزات", on: false },
-    { t: "المالية", on: false },
-    { t: "التقارير", on: false },
-    { t: "الإعدادات", on: false },
+    { label: t("home.owner.demo.nav.home"), on: true },
+    { label: t("home.owner.demo.nav.halls"), on: false },
+    { label: t("home.owner.demo.nav.calendar"), on: false },
+    { label: t("home.owner.demo.nav.clients"), on: false },
+    { label: t("home.owner.demo.nav.bookings"), on: false },
+    { label: t("home.owner.demo.nav.finance"), on: false },
+    { label: t("home.owner.demo.nav.reports"), on: false },
+    { label: t("home.owner.demo.nav.settings"), on: false },
   ];
 
   const stats = [
-    { l: "الحجوزات النشطة", v: "128" },
-    { l: "إجمالي المستخدمين", v: "1,482" },
-    { l: "الصالات الجديدة", v: "23" },
-    { l: "إجمالي الإيرادات", v: "45,250 ر.س" },
+    { l: t("home.owner.demo.stat.bookings"), v: "128" },
+    { l: t("home.owner.demo.stat.users"), v: "1,482" },
+    { l: t("home.owner.demo.stat.newHalls"), v: "23" },
+    { l: t("home.owner.demo.stat.revenue"), v: "45,250 ر.س" },
   ];
 
   const activities = [
-    { name: "قاعة اللوتس", time: "اليوم · 10:20", status: "مكتمل", tone: "ok" as const },
-    { name: "قاعة ريماس", time: "أمس · 18:40", status: "قيد الانتظار", tone: "wait" as const },
-    { name: "قاعة الأندلس", time: "الأحد · 14:15", status: "ملغي", tone: "bad" as const },
+    {
+      name: t("home.owner.demo.hall.lotus"),
+      time: t("home.owner.demo.today"),
+      status: t("home.owner.demo.status.done"),
+      tone: "ok" as const,
+    },
+    {
+      name: t("home.owner.demo.hall.rimas"),
+      time: t("home.owner.demo.yesterday"),
+      status: t("home.owner.demo.status.pending"),
+      tone: "wait" as const,
+    },
+    {
+      name: t("home.owner.demo.hall.andalus"),
+      time: t("home.owner.demo.sunday"),
+      status: t("home.owner.demo.status.cancelled"),
+      tone: "bad" as const,
+    },
   ];
 
   return (
-    <div className="dash" dir="rtl">
+    <div className="dash" dir={dir}>
       <aside className="dash-aside">
-        <div className="dash-logo">وصال</div>
+        <div className="dash-logo">{t("brand.name")}</div>
         {nav.map((n) => (
-          <div key={n.t} className={`dash-link ${n.on ? "on" : ""}`}>
+          <div key={n.label} className={`dash-link ${n.on ? "on" : ""}`}>
             <i />
-            <span>{n.t}</span>
+            <span>{n.label}</span>
           </div>
         ))}
       </aside>
 
       <main className="dash-main">
-        <h4 className="dash-title">نظرة عامة</h4>
+        <h4 className="dash-title">{t("home.owner.demo.overview")}</h4>
 
         <div className="dash-cards">
           {stats.map((c) => (
@@ -124,7 +147,7 @@ function DashUI() {
 
         <div className="dash-grid">
           <section className="dash-panel">
-            <h5>الحجوزات خلال آخر 7 أيام</h5>
+            <h5>{t("home.owner.demo.chart")}</h5>
             <svg viewBox="0 0 260 100" className="dash-svg" aria-hidden="true" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="dashGoldFill" x1="0" y1="0" x2="0" y2="1">
@@ -156,7 +179,7 @@ function DashUI() {
           </section>
 
           <section className="dash-panel">
-            <h5>أحدث النشاطات</h5>
+            <h5>{t("home.owner.demo.activity")}</h5>
             <div className="dash-rows">
               {activities.map((a) => (
                 <div key={a.name} className="dash-row">
@@ -176,10 +199,21 @@ function DashUI() {
 }
 
 function PhoneUI() {
+  const t = useT();
+  const lang = useUiLang();
+  const dir = langToDir(lang);
+
+  const icons = [
+    t("home.owner.demo.icon.ac"),
+    t("home.owner.demo.icon.garden"),
+    t("home.owner.demo.icon.vip"),
+    t("home.owner.demo.icon.parking"),
+  ];
+
   return (
-    <div className="pui" dir="rtl">
+    <div className="pui" dir={dir}>
       <div className="pui-top">
-        <span className="pui-brand">وصال</span>
+        <span className="pui-brand">{t("brand.name")}</span>
       </div>
       <div className="pui-hero">
         <Image
@@ -192,22 +226,22 @@ function PhoneUI() {
       </div>
       <div className="pui-body">
         <div className="pui-title">
-          <h4>قاعة ريماس الملكية</h4>
+          <h4>{t("home.owner.demo.phoneTitle")}</h4>
           <span>★ 4.9</span>
         </div>
         <div className="pui-icons">
-          {["مكيف", "حديقة", "VIP", "موقف"].map((t) => (
-            <div key={t} className="pui-ico">
+          {icons.map((label) => (
+            <div key={label} className="pui-ico">
               <i />
-              <span>{t}</span>
+              <span>{label}</span>
             </div>
           ))}
         </div>
-        <p className="pui-serv">الخدمات المقدمة</p>
+        <p className="pui-serv">{t("home.owner.demo.services")}</p>
         <ul>
-          <li>تنسيق كامل للقاعة</li>
-          <li>إضاءة وتصوير</li>
-          <li>ضيافة واستقبال</li>
+          <li>{t("home.owner.demo.service1")}</li>
+          <li>{t("home.owner.demo.service2")}</li>
+          <li>{t("home.owner.demo.service3")}</li>
         </ul>
       </div>
     </div>

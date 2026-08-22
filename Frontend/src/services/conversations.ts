@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
 
 export type ConversationThread = {
   conversationId: string;
@@ -26,7 +27,7 @@ function mapResponse(data: ConversationResponse, fallbackHallId: string): Conver
   return {
     conversationId: String(data.conversationId ?? data.id ?? ""),
     hallId: String(data.hallId ?? fallbackHallId),
-    hallName: data.hallName?.trim() || "قاعة",
+    hallName: data.hallName?.trim() || t("common.hall"),
     initiatorUserId: data.initiatorUserId ?? "",
     ownerUserId: data.ownerUserId ?? "",
     createdAt: data.createdAt ?? new Date().toISOString(),
@@ -42,7 +43,7 @@ export async function createHallConversation(hallId: string): Promise<Conversati
   );
   const thread = mapResponse(data, hallId);
   if (!thread.conversationId) {
-    throw new ApiError("تعذر إنشاء المحادثة.", 500);
+    throw new ApiError(t("errors.conversation.create"), 500);
   }
   return thread;
 }
@@ -56,20 +57,16 @@ export async function fetchConversation(conversationId: string): Promise<Convers
 
 export function conversationErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
-    const raw = (err.message ?? "").toLowerCase();
     if (err.status === 401) {
-      return "يجب تسجيل الدخول للتواصل مع صاحب القاعة.";
+      return t("errors.conversation.unauthorized");
     }
     if (err.status === 403) {
-      if (raw.includes("own hall") || raw.includes("yourself") || raw.includes("your own")) {
-        return "لا يمكنك مراسلة قاعتك.";
-      }
-      return "لا يمكنك مراسلة هذه القاعة من حسابك.";
+      return t("errors.conversation.forbidden");
     }
     if (err.status === 404) {
-      return "هذه القاعة غير متاحة أو مقفلة، ولا يمكن التواصل معها.";
+      return t("errors.conversation.notFound");
     }
-    return err.message || "تعذر بدء المحادثة. حاولي مرة أخرى.";
+    return err.message || t("errors.conversation.start");
   }
-  return "تعذر بدء المحادثة. حاولي مرة أخرى.";
+  return t("errors.conversation.start");
 }

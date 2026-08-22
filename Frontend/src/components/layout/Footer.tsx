@@ -1,28 +1,33 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
 import WesalLogo from "@/components/brand/WesalLogo";
 import Reveal from "@/components/ui/Reveal";
+import { useT } from "@/i18n";
 
 const QUICK_LINKS = [
-  { href: "/", label: "الرئيسية" },
-  { href: "/halls", label: "القاعات" },
-  { href: "/about", label: "من نحن" },
-  { href: "/faq", label: "الأسئلة الشائعة" },
-];
+  { href: "/", labelKey: "nav.home" },
+  { href: "/halls", labelKey: "nav.halls" },
+  { href: "/about", labelKey: "nav.about" },
+  { href: "/faq", labelKey: "nav.faq" },
+] as const;
 
 const ACCOUNT_LINKS = [
-  { href: "/register", label: "إنشاء حساب" },
-  { href: "/login", label: "تسجيل الدخول" },
-  { href: "/register?type=owner", label: "سجّل قاعتك" },
-];
+  { href: "/register", labelKey: "nav.register" },
+  { href: "/login", labelKey: "nav.login" },
+  { href: "/register?type=owner", labelKey: "footer.registerHall" },
+] as const;
 
 const SUPPORT_LINKS = [
-  { href: "/faq", label: "مركز المساعدة" },
-  { href: "/about", label: "عن وصال" },
-  { href: "/halls", label: "تصفح القاعات" },
-];
+  { href: "/faq", labelKey: "footer.helpCenter" },
+  { href: "/about", labelKey: "footer.aboutWesal" },
+  { href: "/halls", labelKey: "footer.browseHalls" },
+] as const;
 
 export default function Footer() {
+  const t = useT();
+
   return (
     <footer className="wesal-footer relative isolate overflow-hidden border-t border-[var(--wesal-border)]">
       <div className="footer-marble" aria-hidden="true">
@@ -48,22 +53,21 @@ export default function Footer() {
             <div className="flex items-center gap-2.5">
               <WesalLogo className="h-11 w-11" variant="brand" />
               <span className="text-xl font-extrabold text-[var(--wesal-maroon)]">
-                وصال
+                {t("brand.name")}
               </span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-8 text-[var(--wesal-muted)]">
-              منصة حجز قاعات الأفراح في غزة — ابحث، قارن، واحجز بثقة لتبدأ
-              مناسبتك من مكان يليق بها.
+              {t("brand.tagline")}
             </p>
 
             <div className="mt-5 flex items-center gap-2">
-              <SocialLink href="https://www.facebook.com" label="فيسبوك">
+              <SocialLink href="https://www.facebook.com" label={t("footer.facebook")}>
                 <FacebookIcon />
               </SocialLink>
-              <SocialLink href="https://www.instagram.com" label="إنستغرام">
+              <SocialLink href="https://www.instagram.com" label={t("footer.instagram")}>
                 <InstagramIcon />
               </SocialLink>
-              <SocialLink href="https://wa.me/970599000000" label="واتساب">
+              <SocialLink href="https://wa.me/970599000000" label={t("footer.whatsapp")}>
                 <WhatsAppIcon />
               </SocialLink>
             </div>
@@ -71,16 +75,16 @@ export default function Footer() {
 
           <div>
             <h3 className="text-sm font-extrabold text-[var(--wesal-maroon)]">
-              روابط سريعة
+              {t("footer.quickLinks")}
             </h3>
             <ul className="mt-4 space-y-2.5 text-sm text-[var(--wesal-muted)]">
               {QUICK_LINKS.map((item) => (
-                <li key={item.href + item.label}>
+                <li key={item.href + item.labelKey}>
                   <Link
                     href={item.href}
                     className="transition-colors hover:text-[var(--wesal-maroon)]"
                   >
-                    {item.label}
+                    {t(item.labelKey)}
                   </Link>
                 </li>
               ))}
@@ -89,32 +93,32 @@ export default function Footer() {
 
           <div>
             <h3 className="text-sm font-extrabold text-[var(--wesal-maroon)]">
-              الحساب
+              {t("footer.account")}
             </h3>
             <ul className="mt-4 space-y-2.5 text-sm text-[var(--wesal-muted)]">
               {ACCOUNT_LINKS.map((item) => (
-                <li key={item.href + item.label}>
+                <li key={item.href + item.labelKey}>
                   <Link
                     href={item.href}
                     className="transition-colors hover:text-[var(--wesal-maroon)]"
                   >
-                    {item.label}
+                    {t(item.labelKey)}
                   </Link>
                 </li>
               ))}
             </ul>
 
             <h3 className="mt-7 text-sm font-extrabold text-[var(--wesal-maroon)]">
-              المساعدة
+              {t("footer.help")}
             </h3>
             <ul className="mt-4 space-y-2.5 text-sm text-[var(--wesal-muted)]">
               {SUPPORT_LINKS.map((item) => (
-                <li key={item.href + item.label}>
+                <li key={item.href + item.labelKey}>
                   <Link
                     href={item.href}
                     className="transition-colors hover:text-[var(--wesal-maroon)]"
                   >
-                    {item.label}
+                    {t(item.labelKey)}
                   </Link>
                 </li>
               ))}
@@ -123,15 +127,13 @@ export default function Footer() {
 
           <div>
             <h3 className="text-sm font-extrabold text-[var(--wesal-maroon)]">
-              تواصل معنا
+              {t("footer.contact")}
             </h3>
             <ul className="mt-4 space-y-3 text-sm text-[var(--wesal-muted)]">
               <li>
                 <ContactRow icon={<PinIcon />}>
-                  <span>
-                    قطاع غزة
-                    <br />
-                    فلسطين
+                  <span className="whitespace-pre-line">
+                    {t("footer.location").replace(" / ", "\n")}
                   </span>
                 </ContactRow>
               </li>
@@ -157,11 +159,7 @@ export default function Footer() {
               </li>
               <li>
                 <ContactRow icon={<ClockIcon />}>
-                  <span>
-                    يومياً من 9 صباحاً
-                    <br />
-                    حتى 10 مساءً
-                  </span>
+                  <span>{t("footer.hours")}</span>
                 </ContactRow>
               </li>
             </ul>
@@ -171,13 +169,15 @@ export default function Footer() {
 
       <div className="relative z-10 border-t border-white/50 bg-white/80">
         <div className="container-wesal flex flex-col items-center justify-center gap-2 py-4 text-center text-xs text-[var(--wesal-muted)]">
-          <p>© {new Date().getFullYear()} وصال — جميع الحقوق محفوظة</p>
+          <p>
+            © {new Date().getFullYear()} {t("brand.name")} — {t("footer.rights")}
+          </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link href="/about" className="transition-colors hover:text-[var(--wesal-maroon)]">
-              سياسة الخصوصية
+              {t("footer.privacy")}
             </Link>
             <Link href="/faq" className="transition-colors hover:text-[var(--wesal-maroon)]">
-              الشروط والأحكام
+              {t("footer.terms")}
             </Link>
           </div>
         </div>

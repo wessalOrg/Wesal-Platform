@@ -1,3 +1,6 @@
+"use client";
+
+import { useT } from "@/i18n";
 import type { HallDetail } from "@/types/hall";
 
 type HallHeaderProps = {
@@ -5,9 +8,14 @@ type HallHeaderProps = {
 };
 
 export default function HallHeader({ hall }: HallHeaderProps) {
+  const t = useT();
   const capacityLabel = hall.capacityMax
-    ? `${hall.capacity} – ${hall.capacityMax} شخص`
-    : `${hall.capacity} شخص`;
+    ? t("common.peopleRange", { min: hall.capacity, max: hall.capacityMax })
+    : t("common.peopleCount", { count: hall.capacity });
+  const ratingAria =
+    hall.rating != null
+      ? t("halls.details.ratingAria", { rating: hall.rating })
+      : undefined;
 
   return (
     <header className="space-y-3" data-testid="hall-header">
@@ -18,7 +26,7 @@ export default function HallHeader({ hall }: HallHeaderProps) {
         {hall.rating != null ? (
           <span
             className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--wesal-pink-soft)] px-3 py-1.5 text-sm font-semibold text-[var(--wesal-text)]"
-            aria-label={`التقييم ${hall.rating} من 5`}
+            aria-label={ratingAria}
           >
             <StarIcon />
             {Number(hall.rating).toFixed(1)}

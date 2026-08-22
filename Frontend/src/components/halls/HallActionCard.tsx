@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useT } from "@/i18n";
 import type { HallSlotPrice } from "@/types/hall";
 
 type HallActionCardProps = {
@@ -26,12 +27,16 @@ export default function HallActionCard({
   registerHref = "/register",
   onGuestAuthNavigate,
 }: HallActionCardProps) {
+  const t = useT();
+
   return (
     <aside
       className="hall-action-card w-full rounded-2xl border border-[var(--wesal-border)] bg-white p-5 shadow-[0_14px_40px_rgba(90,55,45,0.1)]"
       data-testid="hall-action-card"
     >
-      <h2 className="text-base font-bold text-[var(--wesal-text)]">أسعار الفترات</h2>
+      <h2 className="text-base font-bold text-[var(--wesal-text)]">
+        {t("halls.details.slotPrices")}
+      </h2>
 
       <ul className="mt-4 space-y-3">
         {slotPrices.length ? (
@@ -54,14 +59,14 @@ export default function HallActionCard({
           ))
         ) : (
           <li className="rounded-xl bg-[var(--wesal-pink-soft)] px-3.5 py-3 text-sm text-[var(--wesal-muted)]">
-            الأسعار غير متاحة حالياً.
+            {t("halls.booking.emptyDays")}
           </li>
         )}
       </ul>
 
       {isGuest ? (
         <p className="mt-4 text-xs leading-6 text-[var(--wesal-muted)]">
-          سجّل الدخول أو أنشئ حساباً لاختيار التاريخ والفترة.
+          {t("halls.details.guestBookingHint")}
         </p>
       ) : null}
 
@@ -73,7 +78,7 @@ export default function HallActionCard({
           className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
           data-testid="hall-book-button"
         >
-          {bookPending ? "جاري التحقق..." : "اضغط للحجز"}
+          {bookPending ? t("common.loading") : t("halls.details.pressToBook")}
         </button>
 
         {isGuest ? (
@@ -83,14 +88,14 @@ export default function HallActionCard({
               onClick={onGuestAuthNavigate}
               className="btn-outline w-full text-center text-xs sm:text-sm"
             >
-              تسجيل الدخول
+              {t("nav.login")}
             </Link>
             <Link
               href={registerHref}
               onClick={onGuestAuthNavigate}
               className="btn-outline w-full text-center text-xs sm:text-sm"
             >
-              إنشاء حساب
+              {t("nav.register")}
             </Link>
           </div>
         ) : null}
@@ -101,11 +106,11 @@ export default function HallActionCard({
             className="btn-outline w-full"
             data-testid="hall-contact-owner"
           >
-            تواصل مع صاحب الصالة
+            {t("halls.details.contactOwner")}
           </a>
         ) : (
           <button type="button" className="btn-outline w-full" disabled>
-            تواصل مع صاحب الصالة
+            {t("halls.details.contactOwner")}
           </button>
         )}
       </div>

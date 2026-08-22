@@ -1,9 +1,18 @@
 "use client";
 
+import { useT } from "@/i18n";
 import {
   REGION_OPTIONS,
   type HallRegion,
 } from "@/types/hall";
+
+const REGION_LABEL_KEYS: Record<HallRegion, string> = {
+  all: "region.all",
+  north: "region.north",
+  gaza: "region.gaza",
+  middle: "region.middle",
+  south: "region.south",
+};
 
 type RegionFilterBarProps = {
   value: HallRegion;
@@ -16,11 +25,13 @@ export default function RegionFilterBar({
   onChange,
   disabled = false,
 }: RegionFilterBarProps) {
+  const t = useT();
+
   return (
     <div
       className="mt-6 flex flex-wrap gap-2"
       role="tablist"
-      aria-label="فلتر المناطق"
+      aria-label={t("region.filterAria")}
       data-testid="region-filter"
     >
       {REGION_OPTIONS.map((option) => {
@@ -40,7 +51,7 @@ export default function RegionFilterBar({
                 : "border-[1.5px] border-[var(--wesal-maroon)] bg-white text-[var(--wesal-maroon)] hover:-translate-y-0.5 hover:bg-[var(--wesal-maroon)] hover:text-white hover:shadow-[0_8px_18px_rgba(193,123,127,0.25)] active:scale-[0.98]"
             }`}
           >
-            {option.label}
+            {t(option.labelKey)}
           </button>
         );
       })}

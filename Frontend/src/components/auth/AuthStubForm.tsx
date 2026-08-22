@@ -8,6 +8,7 @@ import {
   resolveAuthRedirect,
   setStoredAuth,
 } from "@/lib/auth-storage";
+import { useT } from "@/i18n";
 
 type AuthStubFormProps = {
   mode: "login" | "register";
@@ -24,6 +25,7 @@ export default function AuthStubForm({
   alternateHref,
   alternateLabel,
 }: AuthStubFormProps) {
+  const t = useT();
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -35,7 +37,7 @@ export default function AuthStubForm({
       token: `stub-${Date.now()}`,
       user: {
         id: "demo-user",
-        name: mode === "login" ? "مستخدم وصال" : "عضو جديد",
+        name: mode === "login" ? t("auth.stub.demoUser") : t("auth.stub.newMember"),
         email: "demo@wesal.ps",
       },
     });
@@ -45,18 +47,21 @@ export default function AuthStubForm({
     router.push(destination);
   };
 
-  const title = mode === "login" ? "دخول سريع (تجريبي)" : "تسجيل سريع (تجريبي)";
+  const title =
+    mode === "login" ? t("auth.stub.loginTitle") : t("auth.stub.registerTitle");
 
   return (
     <div className="mt-8 max-w-md rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] p-5">
       <p className="text-sm font-semibold text-[var(--wesal-maroon)]">{title}</p>
       <p className="mt-1 text-xs leading-6 text-[var(--wesal-muted)]">
-        حتى اكتمال Epic 4/5 — يحفظ جلسة تجريبية في المتصفح ويعيدك للقاعة.
+        {t("auth.stub.hint")}
       </p>
 
       <form onSubmit={handleSubmit} className="mt-4 space-y-3">
         <label className="block text-sm">
-          <span className="mb-1 block font-medium text-[var(--wesal-text)]">البريد الإلكتروني</span>
+          <span className="mb-1 block font-medium text-[var(--wesal-text)]">
+            {t("auth.stub.email")}
+          </span>
           <input
             type="email"
             defaultValue="demo@wesal.ps"
@@ -64,7 +69,9 @@ export default function AuthStubForm({
           />
         </label>
         <label className="block text-sm">
-          <span className="mb-1 block font-medium text-[var(--wesal-text)]">كلمة المرور</span>
+          <span className="mb-1 block font-medium text-[var(--wesal-text)]">
+            {t("auth.stub.password")}
+          </span>
           <input
             type="password"
             defaultValue="demo1234"
@@ -72,7 +79,7 @@ export default function AuthStubForm({
           />
         </label>
         <button type="submit" disabled={pending} className="btn-primary w-full">
-          {mode === "login" ? "تسجيل الدخول والمتابعة" : "إنشاء حساب والمتابعة"}
+          {mode === "login" ? t("auth.stub.loginSubmit") : t("auth.stub.registerSubmit")}
         </button>
       </form>
 

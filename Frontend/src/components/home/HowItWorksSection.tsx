@@ -1,27 +1,29 @@
+"use client";
+
 import Reveal from "@/components/ui/Reveal";
+import { useT } from "@/i18n";
 
 const STEPS = [
   {
-    title: "مساعدك الذكي",
-    description:
-      "أخبر مساعد وصال بما تبحث عنه، ودعه يساعدك في اكتشاف القاعات الأقرب لاحتياجاتك وتفضيلاتك.",
+    titleKey: "home.how.step1.title",
+    descKey: "home.how.step1.desc",
     icon: "spark",
   },
   {
-    title: "اكتشف وقارن",
-    description:
-      "استكشف القاعات المعتمدة، واطّلع على تفاصيلها وقارن بين الخيارات المتاحة لتجد ما يناسب مناسبتك.",
+    titleKey: "home.how.step2.title",
+    descKey: "home.how.step2.desc",
     icon: "search",
   },
   {
-    title: "احجز بكل سهولة",
-    description:
-      "أرسل طلب حجزك بخطوات بسيطة، وتابع حالته حتى تأكيد موعد مناسبتك.",
+    titleKey: "home.how.step3.title",
+    descKey: "home.how.step3.desc",
     icon: "book",
   },
 ] as const;
 
 export default function HowItWorksSection() {
+  const t = useT();
+
   return (
     <section className="how-section relative isolate overflow-hidden py-16 sm:py-20">
       <div className="how-section-bg" aria-hidden="true">
@@ -44,21 +46,20 @@ export default function HowItWorksSection() {
       <div className="container-wesal relative z-10">
         <div className="how-heading mx-auto max-w-2xl text-center">
           <p className="how-eyebrow mb-3 text-sm font-semibold tracking-wide text-[var(--wesal-gold)]">
-            من البحث إلى تأكيد الحجز
+            {t("home.how.eyebrow")}
           </p>
           <h2 className="text-2xl font-extrabold leading-snug text-[var(--wesal-maroon)] sm:text-3xl">
-            كيف تعمل وصال؟
+            {t("home.how.title")}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-8 text-[var(--wesal-text)]/80 sm:text-base">
-            تجربة متكاملة تساعدك على الوصول إلى القاعة الأنسب، بمساعدة ذكية وخيارات
-            واضحة في كل خطوة.
+            {t("home.how.subtitle")}
           </p>
         </div>
 
         <div className="mt-12 grid gap-5 md:grid-cols-3 md:gap-6">
           {STEPS.map((step, index) => (
             <article
-              key={step.title}
+              key={step.titleKey}
               className="how-card group relative overflow-hidden rounded-2xl border border-white/70 bg-white/85 p-7 text-center shadow-[0_14px_36px_rgba(90,55,45,0.08)] backdrop-blur-md"
               style={{ animationDelay: `${180 + index * 160}ms` }}
             >
@@ -70,10 +71,10 @@ export default function HowItWorksSection() {
                 <StepIcon type={step.icon} />
               </div>
               <h3 className="mt-5 text-lg font-extrabold text-[var(--wesal-maroon)]">
-                {step.title}
+                {t(step.titleKey)}
               </h3>
               <p className="mt-2.5 text-sm leading-8 text-[var(--wesal-text)]/75">
-                {step.description}
+                {t(step.descKey)}
               </p>
             </article>
           ))}

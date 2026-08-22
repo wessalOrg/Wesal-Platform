@@ -1,53 +1,22 @@
+"use client";
+
 import Reveal from "@/components/ui/Reveal";
+import { useT } from "@/i18n";
 
 const BENEFITS = [
-  {
-    title: "وصول أوسع للعملاء",
-    description:
-      "اعرض قاعتك أمام الباحثين عن المكان المناسب لمناسباتهم ووسّع حضورك على المنصة.",
-    icon: "users" as const,
-  },
-  {
-    title: "إدارة الحجوزات بسهولة",
-    description: "تابع طلبات الحجز والمواعيد ونظّمها من مكان واحد بكل سهولة.",
-    icon: "calendar" as const,
-  },
-  {
-    title: "عرض احترافي لقاعتك",
-    description:
-      "اعرض صور قاعتك وتفاصيلها وخدماتها بطريقة أنيقة تساعد العملاء على التعرّف عليها.",
-    icon: "gallery" as const,
-  },
-  {
-    title: "تواصل مباشر مع العملاء",
-    description: "استقبل استفسارات العملاء وتابع طلباتهم بسهولة عبر المنصة.",
-    icon: "chat" as const,
-  },
-  {
-    title: "إشعارات فورية",
-    description: "ابقَ على اطلاع عند وصول طلب حجز جديد أو حدوث تحديث مهم على حجوزاتك.",
-    icon: "bell" as const,
-  },
-  {
-    title: "إحصائيات وتقارير",
-    description:
-      "تابع أداء قاعتك وبيانات الحجوزات من خلال مؤشرات تساعدك على اتخاذ قرارات أفضل.",
-    icon: "chart" as const,
-  },
-  {
-    title: "تقييمات تعزز الثقة",
-    description: "اجمع تقييمات وتجارب عملائك وساهم في بناء حضور موثوق لقاعتك.",
-    icon: "star" as const,
-  },
-  {
-    title: "إدارة التوافر والمواعيد",
-    description:
-      "حدّث المواعيد والفترات المتاحة للحجز لتساعد العملاء على معرفة التوافر بسهولة.",
-    icon: "slots" as const,
-  },
+  { titleKey: "home.benefits.b1.title", descKey: "home.benefits.b1.desc", icon: "users" as const },
+  { titleKey: "home.benefits.b2.title", descKey: "home.benefits.b2.desc", icon: "calendar" as const },
+  { titleKey: "home.benefits.b3.title", descKey: "home.benefits.b3.desc", icon: "gallery" as const },
+  { titleKey: "home.benefits.b4.title", descKey: "home.benefits.b4.desc", icon: "chat" as const },
+  { titleKey: "home.benefits.b5.title", descKey: "home.benefits.b5.desc", icon: "bell" as const },
+  { titleKey: "home.benefits.b6.title", descKey: "home.benefits.b6.desc", icon: "chart" as const },
+  { titleKey: "home.benefits.b7.title", descKey: "home.benefits.b7.desc", icon: "star" as const },
+  { titleKey: "home.benefits.b8.title", descKey: "home.benefits.b8.desc", icon: "slots" as const },
 ];
 
 export default function BenefitsSection() {
+  const t = useT();
+
   return (
     <section
       id="benefits"
@@ -57,18 +26,17 @@ export default function BenefitsSection() {
       <div className="container-wesal">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="benefits-heading text-2xl font-extrabold text-[var(--wesal-maroon)] sm:text-3xl">
-            لماذا تنضم إلى وصال؟
+            {t("home.benefits.title")}
           </h2>
           <p className="mt-3 text-sm leading-7 text-[var(--wesal-muted)] sm:text-base">
-            أدوات متكاملة تساعدك على عرض قاعتك، تنظيم حجوزاتك، والتواصل مع عملائك بكل
-            سهولة.
+            {t("home.benefits.subtitle")}
           </p>
         </div>
 
         <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-10">
           {BENEFITS.map((benefit, index) => (
             <article
-              key={benefit.title}
+              key={benefit.titleKey}
               className="benefit-card group flex flex-col items-center text-center"
               style={{ animationDelay: `${100 + index * 70}ms` }}
             >
@@ -76,10 +44,10 @@ export default function BenefitsSection() {
                 <BenefitIcon name={benefit.icon} />
               </div>
               <h3 className="mt-3 text-sm font-bold text-[var(--wesal-maroon)] sm:text-[0.95rem]">
-                {benefit.title}
+                {t(benefit.titleKey)}
               </h3>
               <p className="mt-1.5 max-w-[15rem] text-xs leading-6 text-[var(--wesal-muted)] sm:text-[0.8rem]">
-                {benefit.description}
+                {t(benefit.descKey)}
               </p>
             </article>
           ))}

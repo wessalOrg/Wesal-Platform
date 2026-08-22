@@ -13,6 +13,9 @@ import HallCommentPanel from "@/components/halls/HallCommentPanel";
 import HallGuestFeedbackPrompt from "@/components/halls/HallGuestFeedbackPrompt";
 import HallRatingPanel from "@/components/halls/HallRatingPanel";
 import { DEMO_HALL_REVIEWS, findHallDetailsFallback } from "@/constants/hallDetailsFallback";
+import { useUiLang } from "@/components/layout/LanguageProvider";
+import { useT } from "@/i18n";
+import { localizeHallDetails, localizePriceLabel } from "@/lib/localize-hall-display";
 import { fetchHallComments, mapCommentToReview } from "@/services/comments";
 import { fetchHallById } from "@/services/halls";
 import type { BookingSelection, HallAmenity, HallDetails } from "@/types/hall";
@@ -25,6 +28,8 @@ type HallDetailsViewProps = {
 };
 
 export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProps) {
+  const t = useT();
+  const lang = useUiLang();
   const router = useRouter();
   const { session, status: authStatus } = useAuth();
   const authReady = authStatus === "ready";
@@ -117,7 +122,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
       <button
         type="button"
         className="absolute inset-0 bg-[rgba(60,40,35,0.28)]"
-        aria-label="إغلاق"
+        aria-label={t("common.close")}
         onClick={close}
       />
       <div className="relative z-10 flex h-[100dvh] w-full min-h-0 max-w-6xl flex-col overflow-hidden sm:h-[min(92dvh,900px)]">
@@ -148,12 +153,11 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
     return shell(
       <StateCard
         testId="hall-unavailable-state"
-        title="القاعة غير متاحة"
-        description={
-          message ??
-          "هذه القاعة غير متاحة للعرض أو التواصل حالياً (مقفلة، قيد المراجعة، مرفوضة، أو محذوفة)."
-        }
+        title={t("halls.details.unavailableTitle")}
+        description={message ?? t("halls.details.unavailableDesc")}
         onClose={close}
+        closeLabel={t("common.close")}
+        backLabel={t("common.backToHalls")}
       />,
     );
   }
@@ -162,24 +166,27 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
     return shell(
       <StateCard
         testId="hall-error-state"
-        title="تعذر تحميل التفاصيل"
-        description={message ?? "حدث خطأ أثناء جلب بيانات القاعة."}
+        title={t("halls.details.errorTitle")}
+        description={message ?? t("halls.details.errorDesc")}
         onClose={close}
+        closeLabel={t("common.close")}
+        backLabel={t("common.backToHalls")}
       >
         <button
           type="button"
           onClick={() => setReloadKey((key) => key + 1)}
           className="btn-primary"
         >
-          إعادة المحاولة
+          {t("common.retry")}
         </button>
       </StateCard>,
     );
   }
 
-  const capacityLabel = hall.capacityMax
-    ? `${hall.capacity}-${hall.capacityMax} شخص`
-    : `${hall.capacity} شخص`;
+  const viewHall = localizeHallDetails(hall, lang);
+  const capacityLabel = viewHall.capacityMax
+    ? t("common.peopleRange", { min: viewHall.capacity, max: viewHall.capacityMax })
+    : t("common.peopleCount", { count: viewHall.capacity });
 
   return shell(
     <article
@@ -190,14 +197,14 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
           type="button"
           onClick={close}
           className="sticky top-3 z-20 me-3 ms-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-maroon)] text-white shadow-md sm:h-11 sm:w-11 lg:absolute lg:end-4 lg:top-4 lg:me-0 lg:ms-0"
-          aria-label="إغلاق"
+          aria-label={t("common.close")}
           data-testid="hall-details-close"
         >
           <CloseIcon />
         </button>
 
         <div className="shrink-0 bg-white px-3 pb-2 pt-3 sm:px-5 sm:pt-5 lg:h-full lg:w-1/2 lg:overflow-y-auto lg:p-6">
-          <HallGallery hallName={hall.name} images={hall.images} />
+          <HallGallery hallName={viewHall.name} images={viewHall.images} />
         </div>
 
         <div className="min-h-0 flex-none px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 lg:w-1/2 lg:min-w-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:p-8">
@@ -216,14 +223,21 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
           >
             <div className="min-w-0">
               <h1 className="text-lg font-extrabold leading-8 break-words text-[var(--wesal-maroon)] sm:text-[1.65rem]">
-                {hall.name}
+                {viewHall.name}
               </h1>
-              {hall.priceLabel ? <PriceLine label={hall.priceLabel} /> : null}
+              {viewHall.priceLabel ? (
+                <PriceLine
+                  label={
+                    localizePriceLabel(viewHall.priceLabel, lang) ??
+                    viewHall.priceLabel
+                  }
+                />
+              ) : null}
             </div>
-            {hall.rating != null ? (
+            {viewHall.rating != null ? (
               <p className="mt-1 inline-flex shrink-0 items-center gap-1 text-[15px] font-semibold text-[var(--wesal-maroon)]">
                 <GoldStar size={16} />
-                {Number(hall.rating).toFixed(1)}
+                {Number(viewHall.rating).toFixed(1)}
               </p>
             ) : null}
           </header>
@@ -231,34 +245,34 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
           <div className="mt-5 grid grid-cols-1 gap-3 min-[400px]:grid-cols-2" data-testid="hall-location">
             <InfoCard
               icon={<PinIcon />}
-              label="الموقع"
-              value={hall.location}
+              label={t("halls.details.location")}
+              value={viewHall.location}
             />
             <InfoCard
               icon={<GuestsIcon />}
-              label="السعة"
+              label={t("halls.details.capacity")}
               value={capacityLabel}
             />
           </div>
 
-          {hall.description ? (
+          {viewHall.description ? (
             <section className="mt-7" data-testid="hall-main-info">
               <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">
-                وصف القاعة
+                {t("halls.details.description")}
               </h2>
               <p className="mt-2.5 text-[15px] font-medium leading-8 text-[#5c534e]">
-                {hall.description}
+                {viewHall.description}
               </p>
             </section>
           ) : null}
 
-          {hall.amenities.length > 0 ? (
+          {viewHall.amenities.length > 0 ? (
             <section className="mt-7">
               <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">
-                المرافق والخدمات
+                {t("halls.details.amenities")}
               </h2>
               <ul className="mt-4 grid grid-cols-1 gap-x-5 gap-y-4 min-[400px]:grid-cols-2">
-                {hall.amenities.map((amenity) => (
+                {viewHall.amenities.map((amenity) => (
                   <li
                     key={amenity.id}
                     className="flex min-w-0 items-center gap-2 text-[15px] font-medium leading-8 text-[#5c534e]"
@@ -273,11 +287,11 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             </section>
           ) : null}
 
-          {!hall.isOwner && canBook ? (
+          {!viewHall.isOwner && canBook ? (
             <HallBookingPanel
               open={bookingOpen}
-              hallName={hall.name}
-              days={hall.availabilityDays ?? []}
+              hallName={viewHall.name}
+              days={viewHall.availabilityDays ?? []}
               selection={bookingSelection}
               onSelect={setBookingSelection}
               onClose={() => setBookingOpen(false)}
@@ -290,25 +304,25 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
 
           <section className="mt-7">
             <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">
-              تقييمات العملاء
+              {t("halls.details.reviews")}
             </h2>
-            {hall.rating != null ? (
+            {viewHall.rating != null ? (
               <div className="mt-4 flex items-center justify-center gap-5 rounded-2xl bg-[#f7f1ec] px-4 py-5 shadow-[0_12px_30px_rgba(110,60,55,0.12)] sm:gap-8 sm:px-8 sm:py-6">
                 <p className="text-4xl font-extrabold leading-none text-[var(--wesal-maroon)] sm:text-5xl lg:text-6xl">
-                  {Number(hall.rating).toFixed(1)}
+                  {Number(viewHall.rating).toFixed(1)}
                 </p>
                 <div className="flex flex-col items-center">
-                  <GoldStars rating={hall.rating} size={18} />
+                  <GoldStars rating={viewHall.rating} size={18} />
                   <p className="mt-1.5 text-center text-sm text-[var(--wesal-maroon)]">
-                    بناءً على {hall.reviewCount ?? 0} تقييم
+                    {t("halls.details.basedOn", { count: viewHall.reviewCount ?? 0 })}
                   </p>
                 </div>
               </div>
             ) : null}
 
             <HallRatingPanel
-              hallId={hall.id}
-              isHallOwner={Boolean(hall.isOwner)}
+              hallId={viewHall.id}
+              isHallOwner={Boolean(viewHall.isOwner)}
               onRated={({ averageRating, totalRatings }) => {
                 setHall((current) =>
                   current
@@ -323,8 +337,8 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             />
 
             <HallCommentPanel
-              hallId={hall.id}
-              isHallOwner={Boolean(hall.isOwner)}
+              hallId={viewHall.id}
+              isHallOwner={Boolean(viewHall.isOwner)}
               onSubmitted={(review) => {
                 setHall((current) =>
                   current
@@ -334,50 +348,49 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
               }}
             />
 
-            <HallCommentList comments={hall.reviews} />
+            <HallCommentList comments={viewHall.reviews} />
 
             <HallGuestFeedbackPrompt
-              hallId={hall.id}
-              isHallOwner={Boolean(hall.isOwner)}
+              hallId={viewHall.id}
+              isHallOwner={Boolean(viewHall.isOwner)}
             />
           </section>
 
-          {hall.isOwner ? (
+          {viewHall.isOwner ? (
             <p
               className="mt-6 rounded-2xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-start text-sm leading-7 text-[var(--wesal-muted)]"
               data-testid="hall-actions-owner"
               role="status"
             >
-              أنت مالك هذه القاعة — لا يظهر زر التواصل أو الحجز على قاعتك.
+              {t("halls.details.ownerBanner")}
             </p>
-          ) : !hall.isAvailable ? (
+          ) : !viewHall.isAvailable ? (
             <p
               className="mt-6 rounded-2xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-start text-sm leading-7 text-[var(--wesal-muted)]"
               data-testid="hall-actions-unavailable"
               role="status"
             >
-              هذه القاعة غير متاحة أو مقفلة حالياً، لذلك تم إيقاف التواصل والحجز.
+              {t("halls.details.unavailableActions")}
             </p>
           ) : (
             <div
               className="sticky bottom-0 mt-5 bg-gradient-to-t from-white from-65% to-transparent pb-1 pt-4"
               data-testid="hall-actions"
-              dir="rtl"
             >
               <div className="flex gap-2 sm:gap-3">
                 <HallContactButton
-                  hallId={hall.id}
+                  hallId={viewHall.id}
                   isOwnHall={false}
-                  isAvailable={hall.isAvailable}
+                  isAvailable={viewHall.isAvailable}
                   onOpened={onClose}
                 />
                 {isGuest ? (
                   <Link
-                    href={`/register?redirect=/halls/${hall.id}&intent=book`}
+                    href={`/register?redirect=/halls/${viewHall.id}&intent=book`}
                     className="btn-primary min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:!min-h-12 sm:!text-[15px]"
                     data-testid="hall-book-button"
                   >
-                    احجز الآن
+                    {t("halls.details.bookNow")}
                   </Link>
                 ) : (
                   <button
@@ -390,7 +403,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                       setBookingOpen(true);
                     }}
                   >
-                    {canBook ? "احجز الآن" : "…"}
+                    {canBook ? t("halls.details.bookNow") : "…"}
                   </button>
                 )}
               </div>
@@ -429,12 +442,16 @@ function StateCard({
   children,
   testId,
   onClose,
+  closeLabel,
+  backLabel,
 }: {
   title: string;
   description: string;
   children?: ReactNode;
   testId: string;
   onClose: () => void;
+  closeLabel: string;
+  backLabel: string;
 }) {
   return (
     <div
@@ -447,10 +464,10 @@ function StateCard({
       <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
         {children}
         <button type="button" className="btn-outline" onClick={onClose}>
-          إغلاق
+          {closeLabel}
         </button>
         <Link href="/halls" className="btn-outline">
-          العودة إلى القاعات
+          {backLabel}
         </Link>
       </div>
     </div>
