@@ -11,9 +11,13 @@ public sealed class ConversationResponse
 
     public Guid HallId { get; init; }
 
-    public string HallOwnerId { get; init; } = string.Empty;
+    public string HallName { get; init; } = string.Empty;
 
-    public string SenderUserId { get; init; } = string.Empty;
+    public string InitiatorUserId { get; init; } = string.Empty;
+
+    public string OwnerUserId { get; init; } = string.Empty;
 
     public DateTimeOffset CreatedAt { get; init; }
+
+    public bool IsExisting { get; init; }
 }

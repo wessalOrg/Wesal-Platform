@@ -37,8 +37,8 @@ function mapResponse(data: ConversationResponse, fallbackHallId: string): Conver
 
 export async function createHallConversation(hallId: string): Promise<ConversationThread> {
   const { data } = await api.post<ConversationResponse>(
-    "/conversations",
-    { hallId },
+    `/halls/${hallId}/conversations`,
+    undefined,
     { timeout: 8000 },
   );
   const thread = mapResponse(data, hallId);

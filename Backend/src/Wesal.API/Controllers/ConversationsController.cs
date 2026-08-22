@@ -9,7 +9,6 @@ namespace Wesal.API.Controllers;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/halls/{hallId:guid}/conversations")]
 public class ConversationsController : ControllerBase
 {
     private readonly IConversationService _conversationService;
@@ -19,7 +18,7 @@ public class ConversationsController : ControllerBase
         _conversationService = conversationService;
     }
 
-    [HttpPost]
+    [HttpPost("api/v{version:apiVersion}/halls/{hallId:guid}/conversations")]
     [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
     [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -30,6 +29,20 @@ public class ConversationsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _conversationService.CreateConversationAsync(hallId, cancellationToken);
-        return CreatedAtAction(nameof(CreateConversation), new { hallId = response.HallId }, response);
+        return CreatedAtAction(nameof(GetConversation), new { version = "1", conversationId = response.ConversationId }, response);
+    }
+
+    [HttpGet("api/v{version:apiVersion}/conversations/{conversationId:guid}")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ConversationResponse>> GetConversation(
+        Guid conversationId,
+        CancellationToken cancellationToken)
+    {
+        var response = await _conversationService.GetConversationAsync(conversationId, cancellationToken);
+        return Ok(response);
     }
 }
