@@ -44,6 +44,13 @@ public sealed class ConversationService : IConversationService
 
         var senderUserId = _currentUser.UserId!;
 
+        var existing = await _conversationRepository.GetByHallAndUserAsync(hallId, senderUserId, cancellationToken);
+
+        if (existing is not null)
+        {
+            return MapToResponse(existing, hall.Name, isExisting: true);
+        }
+
         var conversation = new Conversation
         {
             HallId = hallId,
@@ -53,13 +60,48 @@ public sealed class ConversationService : IConversationService
 
         await _conversationRepository.AddAsync(conversation, cancellationToken);
 
+        return MapToResponse(conversation, hall.Name, isExisting: false);
+    }
+
+    public async Task<ConversationResponse> GetConversationAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        EnsureAuthenticated();
+
+        var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
+
+        if (conversation is null)
+        {
+            throw new NotFoundException(nameof(Conversation), conversationId);
+        }
+
+        var userId = _currentUser.UserId!;
+        var isParticipant = string.Equals(userId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(userId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase)
+            || _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+
+        if (!isParticipant)
+        {
+            throw new ForbiddenException("You do not have access to this conversation.");
+        }
+
+        return MapToResponse(conversation, conversation.Hall?.Name ?? string.Empty, isExisting: true);
+    }
+
+    private static ConversationResponse MapToResponse(Conversation conversation, string hallName, bool isExisting)
+    {
         return new ConversationResponse
         {
             ConversationId = conversation.Id,
             HallId = conversation.HallId,
-            HallOwnerId = conversation.HallOwnerId,
-            SenderUserId = conversation.SenderUserId,
-            CreatedAt = conversation.CreatedAt
+            HallName = hallName,
+            InitiatorUserId = conversation.SenderUserId,
+            OwnerUserId = conversation.HallOwnerId,
+            CreatedAt = conversation.CreatedAt,
+            IsExisting = isExisting
         };
     }
 

@@ -1,17 +1,25 @@
 import api from "@/lib/api";
+import { ApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
 import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
 import {
+  findHallDetailsFallback,
   getHallDetailsFallback,
   HALL_DETAILS_FALLBACK,
 } from "@/constants/hallDetailsFallback";
+import { getDefaultHallAmenities } from "@/lib/amenities";
 import {
   REGION_API_PARAMS,
   type FeaturedHall,
+  type HallAmenity,
   type HallAvailabilityDay,
+  type HallBookingPeriodFilter,
   type HallDayPeriod,
   type HallDetail,
+  type HallDetails,
   type HallDetailsLoadResult,
   type HallRegion,
+  type HallReview,
   type HallSlotPrice,
   type PeriodStatus,
 } from "@/types/hall";
@@ -142,12 +150,12 @@ function formatTimeRange(start?: string, end?: string): string | undefined {
 function mapPeriodLabel(name?: string, type?: number | string): string {
   const typeValue = typeof type === "string" ? type.toLowerCase() : type;
   if (name?.includes("First") || typeValue === 0 || typeValue === "firstperiod") {
-    return "الفترة الأولى";
+    return t("halls.period.first");
   }
   if (name?.includes("Second") || typeValue === 1 || typeValue === "secondperiod") {
-    return "الفترة الثانية";
+    return t("halls.period.second");
   }
-  return name ?? "فترة";
+  return name ?? t("halls.period.generic");
 }
 
 function mapAvailabilityDays(
@@ -243,7 +251,7 @@ export async function fetchFeaturedHalls(
       error:
         err instanceof Error
           ? err.message
-          : "تعذر الاتصال بالخادم. يتم عرض بيانات تجريبية.",
+          : t("errors.offlineDemo"),
     };
   }
 }
@@ -260,14 +268,14 @@ function mapSlotPrices(hall: ApiFeaturedHall, index: number): HallSlotPrice[] {
     const slots: HallSlotPrice[] = [];
     if (hall.morningPrice != null) {
       slots.push({
-        label: "الفترة الصباحية",
+        label: t("halls.period.morning"),
         price: hall.morningPrice,
         priceLabel: formatPriceAmount(hall.morningPrice),
       });
     }
     if (hall.eveningPrice != null) {
       slots.push({
-        label: "الفترة المسائية",
+        label: t("halls.period.evening"),
         price: hall.eveningPrice,
         priceLabel: formatPriceAmount(hall.eveningPrice),
       });
@@ -292,12 +300,12 @@ function mapSlotPrices(hall: ApiFeaturedHall, index: number): HallSlotPrice[] {
   if (hall.price != null) {
     return [
       {
-        label: "الفترة الصباحية",
+        label: t("halls.period.morning"),
         price: hall.price,
         priceLabel: formatPriceAmount(hall.price),
       },
       {
-        label: "الفترة المسائية",
+        label: t("halls.period.evening"),
         price: hall.price,
         priceLabel: formatPriceAmount(hall.price),
       },
@@ -401,7 +409,7 @@ export async function fetchHallDetails(id: string): Promise<HallDetailsLoadResul
         error:
           err instanceof Error
             ? err.message
-            : "تعذر الاتصال بالخادم. يتم عرض بيانات تجريبية.",
+            : t("errors.offlineDemo"),
         source: "fallback",
         hall: fallback,
       };
@@ -411,5 +419,397 @@ export async function fetchHallDetails(id: string): Promise<HallDetailsLoadResul
       status: "not_found",
       source: "api",
     };
+  }
+}
+
+/**
+ * All approved halls for the catalog page (US-LAND-06).
+ * GET /v1/halls, then GET /v1/halls/search if the listing route is missing.
+ */
+export async function fetchCatalogHalls(): Promise<FeaturedHallsLoadResult> {
+  const load = async (path: string) => {
+    const { data } = await api.get<FeaturedResponse>(path, { timeout: 8000 });
+    return {
+      halls: normalize(data).map(mapApiHall),
+      source: "api" as const,
+    };
+  };
+
+  try {
+    return await load("/halls");
+  } catch {
+    try {
+      return await load("/halls/search");
+    } catch (err) {
+      return {
+        halls: FEATURED_HALLS_FALLBACK,
+        source: "fallback",
+        error:
+          err instanceof Error
+            ? err.message
+            : t("errors.offlineHalls"),
+      };
+    }
+  }
+}
+
+export type HallSearchFilters = {
+  name?: string;
+  area?: string;
+  region?: HallRegion;
+  date?: string;
+  period?: HallBookingPeriodFilter;
+};
+
+export function filterCatalogHalls(
+  halls: FeaturedHall[],
+  filters: HallSearchFilters,
+): FeaturedHall[] {
+  const name = filters.name?.trim() ?? "";
+  const area = filters.area?.trim() ?? "";
+  const region = filters.region ?? "all";
+  const date = filters.date?.trim() ?? "";
+  const period = filters.period ?? "all";
+
+  if (getPastSearchDateMessage(date)) return [];
+
+  return halls.filter((hall) => {
+    if (name && !includesLoose(hall.name, name)) return false;
+    if (area && !includesLoose(hall.location, area)) return false;
+    if (region !== "all" && hall.region !== region) return false;
+    if (!matchesDateAndPeriod(hall, date, period)) return false;
+    return true;
+  });
+}
+
+/** GET /v1/halls/search — falls back so the catalog can still filter locally. */
+export async function fetchSearchHalls(
+  filters: HallSearchFilters,
+): Promise<FeaturedHallsLoadResult> {
+  const params: Record<string, string> = {};
+  if (filters.name?.trim()) params.name = filters.name.trim();
+  if (filters.area?.trim()) params.address = filters.area.trim();
+  if (filters.region && filters.region !== "all") {
+    params.region = REGION_API_PARAMS[filters.region];
+  }
+  const dateIso = filters.date?.trim()
+    ? parseTypedDateToIso(filters.date)
+    : null;
+  if (dateIso) params.date = dateIso;
+  if (filters.period === "first") params.period = "FirstPeriod";
+  if (filters.period === "second") params.period = "SecondPeriod";
+
+  try {
+    const { data } = await api.get<FeaturedResponse>("/halls/search", {
+      params,
+      timeout: 8000,
+    });
+    return {
+      halls: normalize(data).map(mapApiHall),
+      source: "api",
+    };
+  } catch (err) {
+    return {
+      halls: [],
+      source: "fallback",
+      error:
+        err instanceof Error ? err.message : t("errors.searchFallback"),
+    };
+  }
+}
+
+function includesLoose(haystack: string, needle: string) {
+  return haystack.toLowerCase().includes(needle.toLowerCase());
+}
+
+function matchesPeriodLabel(label: string, period: "first" | "second") {
+  const value = label.toLowerCase();
+  if (period === "first") {
+    return label.includes("الأولى") || value.includes("first");
+  }
+  return label.includes("الثانية") || value.includes("second");
+}
+
+function parseTypedDateToIso(value: string): string | null {
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+  const slash = trimmed.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
+  if (slash) {
+    const day = slash[1].padStart(2, "0");
+    const month = slash[2].padStart(2, "0");
+    return `${slash[3]}-${month}-${day}`;
+  }
+
+  return null;
+}
+
+export function getPastSearchDateMessage(value: string): string | null {
+  const iso = parseTypedDateToIso(value);
+  if (!iso) return null;
+
+  const [year, month, day] = iso.split("-").map(Number);
+  const selected = new Date(year, month - 1, day);
+  const today = new Date();
+  selected.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  if (selected >= today) return null;
+
+  return t("halls.catalog.pastDate");
+}
+
+function dayMatchesIso(day: HallAvailabilityDay, iso: string) {
+  if (day.dateIso === iso) return true;
+  return day.dateLabel === formatDateLabel(iso);
+}
+
+function dayMatchesQuery(day: HallAvailabilityDay, query: string) {
+  if (includesLoose(day.dateLabel, query)) return true;
+  if (day.dateIso && includesLoose(day.dateIso, query)) return true;
+
+  const iso = parseTypedDateToIso(query);
+  if (!iso) return false;
+  return dayMatchesIso(day, iso);
+}
+
+function matchesDateAndPeriod(
+  hall: FeaturedHall,
+  dateQuery: string,
+  period: HallBookingPeriodFilter,
+) {
+  if (!dateQuery && period === "all") return true;
+
+  const days = hall.availabilityDays ?? [];
+  if (days.length === 0) return false;
+
+  const relevant = dateQuery
+    ? days.filter((day) => dayMatchesQuery(day, dateQuery))
+    : days;
+  if (dateQuery && relevant.length === 0) return false;
+
+  return relevant.some((day) =>
+    day.periods.some((item) => {
+      if (item.status !== "available") return false;
+      if (period === "all") return true;
+      return matchesPeriodLabel(item.label, period);
+    }),
+  );
+}
+
+type ApiHallDetails = {
+  hallId?: string;
+  id?: string;
+  hallName?: string;
+  name?: string;
+  mainImage?: string | null;
+  mainImageUrl?: string | null;
+  imageUrl?: string | null;
+  images?: Array<string | { url?: string; imageUrl?: string }>;
+  gallery?: Array<string | { url?: string; imageUrl?: string }>;
+  region?: string;
+  address?: string;
+  location?: string;
+  capacity?: number;
+  capacityMax?: number | null;
+  price?: number | null;
+  priceLabel?: string | null;
+  showPrice?: boolean;
+  rating?: number | null;
+  reviewCount?: number | null;
+  description?: string | null;
+  shortDescription?: string | null;
+  amenities?: Array<{
+    id?: string;
+    label?: string;
+    name?: string;
+    icon?: HallAmenity["icon"];
+  }>;
+  reviews?: Array<{
+    id?: string;
+    author?: string;
+    userName?: string;
+    rating?: number;
+    comment?: string;
+    text?: string;
+    timeAgo?: string;
+    createdAt?: string;
+  }>;
+  status?: string | number;
+  isAvailable?: boolean;
+  isDeleted?: boolean;
+  isOwner?: boolean;
+};
+
+type HallDetailsResponse = ApiHallDetails | { data: ApiHallDetails };
+
+export type HallByIdLoadResult =
+  | {
+      status: "ok";
+      hall: HallDetails;
+      source: "api" | "fallback";
+      warning?: string;
+    }
+  | { status: "unavailable"; message: string }
+  | { status: "error"; message: string };
+
+const UNAVAILABLE_STATUSES = new Set([
+  "pending",
+  "pendingreview",
+  "rejected",
+  "locked",
+  "deleted",
+  "unavailable",
+]);
+
+function getDefaultAmenities(): HallAmenity[] {
+  return getDefaultHallAmenities();
+}
+
+function unwrapHallDetails(payload: HallDetailsResponse): ApiHallDetails {
+  if (payload && typeof payload === "object" && "data" in payload) {
+    return payload.data ?? {};
+  }
+  return payload;
+}
+
+function mapImageEntry(
+  entry: string | { url?: string; imageUrl?: string } | null | undefined,
+  index: number,
+): string | null {
+  if (!entry) return null;
+  if (typeof entry === "string") return resolveHallImage(entry, index);
+  return resolveHallImage(entry.url ?? entry.imageUrl, index);
+}
+
+function isHallUnavailable(raw: ApiHallDetails): boolean {
+  if (raw.isAvailable === false || raw.isDeleted === true) return true;
+  if (raw.status == null) return false;
+  if (typeof raw.status === "number") return raw.status !== 1;
+  const normalized = raw.status.toLowerCase().replace(/[\s_-]/g, "");
+  if (normalized === "approved" || normalized === "available") return false;
+  return UNAVAILABLE_STATUSES.has(normalized) || normalized !== "approved";
+}
+
+function mapAmenities(
+  raw?: ApiHallDetails["amenities"],
+  fallback?: HallAmenity[],
+): HallAmenity[] {
+  const defaults = getDefaultAmenities();
+  if (!raw?.length) return fallback ?? defaults;
+  return raw.map((item, index) => ({
+    id: item.id ?? `amenity-${index}`,
+    label: item.label ?? item.name ?? t("common.amenity"),
+    icon: item.icon ?? defaults[index % defaults.length].icon,
+  }));
+}
+
+function mapReviews(
+  raw?: ApiHallDetails["reviews"],
+  fallback?: HallReview[],
+): HallReview[] {
+  if (!raw?.length) return fallback ?? [];
+  return raw.map((item, index) => ({
+    id: item.id ?? `review-${index}`,
+    author: item.author ?? item.userName ?? t("common.user"),
+    rating: item.rating ?? 5,
+    comment: item.comment ?? item.text ?? "",
+    timeAgo: item.timeAgo ?? item.createdAt ?? "",
+  }));
+}
+
+function mapApiHallDetails(raw: ApiHallDetails): HallDetails {
+  const fallback = findHallDetailsFallback(String(raw.hallId ?? raw.id ?? ""));
+  const id = String(raw.hallId ?? raw.id ?? fallback?.id ?? "");
+  const galleryRaw = raw.images ?? raw.gallery ?? [];
+  const gallery = galleryRaw
+    .map((entry, index) => mapImageEntry(entry, index))
+    .filter((url): url is string => Boolean(url));
+  const main = resolveHallImage(
+    raw.mainImage ?? raw.mainImageUrl ?? raw.imageUrl,
+    0,
+  );
+  const images = Array.from(
+    new Set([main, ...gallery, ...(fallback?.images ?? [])].filter(Boolean)),
+  );
+  const priceLabel =
+    raw.showPrice === false
+      ? null
+      : (raw.priceLabel ??
+        (raw.price != null ? `${raw.price} / يوم` : fallback?.priceLabel));
+
+  return {
+    id,
+    name: raw.hallName ?? raw.name ?? fallback?.name ?? t("common.hall"),
+    location: raw.address ?? raw.location ?? fallback?.location ?? "",
+    region: raw.region ? mapApiRegion(raw.region) : (fallback?.region ?? "gaza"),
+    capacity: raw.capacity ?? fallback?.capacity ?? 0,
+    capacityMax: raw.capacityMax ?? fallback?.capacityMax ?? null,
+    priceLabel,
+    rating: raw.rating ?? fallback?.rating ?? null,
+    reviewCount: raw.reviewCount ?? fallback?.reviewCount ?? null,
+    description:
+      raw.description ?? raw.shortDescription ?? fallback?.description ?? null,
+    amenities: mapAmenities(raw.amenities, fallback?.amenities),
+    reviews: mapReviews(raw.reviews, fallback?.reviews),
+    images: images.length > 0 ? images : (fallback?.images ?? [main]),
+    isAvailable: !isHallUnavailable(raw),
+    isOwner: raw.isOwner ?? false,
+    availabilityDays: fallback?.availabilityDays ?? [],
+  };
+}
+
+/**
+ * US-LAND-04 — GET /v1/halls/:id for the hall details modal.
+ */
+export async function fetchHallById(id: string): Promise<HallByIdLoadResult> {
+  const hallId = String(id).trim();
+  if (!hallId) {
+    return { status: "unavailable", message: t("errors.hallInvalid") };
+  }
+
+  try {
+    const { data } = await api.get<HallDetailsResponse>(`/halls/${hallId}`, {
+      timeout: 2500,
+    });
+    const hall = mapApiHallDetails(unwrapHallDetails(data));
+    if (!hall.isAvailable) {
+      return {
+        status: "unavailable",
+        message: t("errors.hallUnavailable"),
+      };
+    }
+    return { status: "ok", hall, source: "api" };
+  } catch (err) {
+    const status = err instanceof ApiError ? err.status : undefined;
+    const message =
+      err instanceof Error ? err.message : t("errors.hallLoad");
+    const local = findHallDetailsFallback(hallId);
+
+    if (status === 404 || status === 410) {
+      if (local) {
+        return {
+          status: "ok",
+          hall: local,
+          source: "fallback",
+          warning: t("errors.offlineDemo"),
+        };
+      }
+      return {
+        status: "unavailable",
+        message: t("errors.hallMissing"),
+      };
+    }
+
+    if (local) {
+      return {
+        status: "ok",
+        hall: local,
+        source: "fallback",
+        warning: t("halls.details.offline"),
+      };
+    }
+
+    return { status: "error", message };
   }
 }

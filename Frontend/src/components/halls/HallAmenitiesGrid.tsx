@@ -1,8 +1,14 @@
+"use client";
+
+import { useT } from "@/i18n";
+
 type HallAmenitiesGridProps = {
   amenities: string[];
 };
 
 export default function HallAmenitiesGrid({ amenities }: HallAmenitiesGridProps) {
+  const t = useT();
+
   if (!amenities.length) return null;
 
   return (
@@ -11,7 +17,7 @@ export default function HallAmenitiesGrid({ amenities }: HallAmenitiesGridProps)
         id="hall-amenities-heading"
         className="text-lg font-bold text-[var(--wesal-maroon)] sm:text-xl"
       >
-        المرافق والخدمات
+        {t("halls.details.amenities")}
       </h2>
       <ul className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
         {amenities.map((amenity) => (
@@ -39,7 +45,7 @@ function CheckIcon() {
       className="shrink-0 text-[var(--wesal-maroon)]"
     >
       <path
-        d="M5 12.5 9.5 17 19 7"
+        d="M5 12.5l4 4 10-10"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import HallImage, { HALL_IMAGE_PLACEHOLDER } from "@/components/halls/HallImage";
+import { useT } from "@/i18n";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 
 type HallGalleryProps = {
@@ -10,6 +11,7 @@ type HallGalleryProps = {
 };
 
 export default function HallGallery({ images, hallName }: HallGalleryProps) {
+  const t = useT();
   const isEmptyGallery = images.length === 0;
   const gallery = isEmptyGallery ? [HALL_IMAGE_PLACEHOLDER] : images;
   const [activeIndex, setActiveIndex] = useState(0);
@@ -64,7 +66,7 @@ export default function HallGallery({ images, hallName }: HallGalleryProps) {
             role="status"
             data-testid="hall-gallery-empty"
           >
-            لا توجد صور لهذه القاعة — يتم عرض صورة افتراضية.
+            {t("halls.gallery.empty")}
           </p>
         ) : null}
 
@@ -72,7 +74,7 @@ export default function HallGallery({ images, hallName }: HallGalleryProps) {
           type="button"
           onClick={() => openLightbox(activeIndex)}
           className="group relative block w-full max-w-full cursor-zoom-in overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink)]"
-          aria-label={`عرض صورة ${hallName} بالحجم الكامل`}
+          aria-label={t("halls.gallery.openFull", { name: hallName })}
         >
           <div className="relative aspect-[16/10] w-full sm:aspect-[21/10]">
             <HallImage
@@ -94,7 +96,7 @@ export default function HallGallery({ images, hallName }: HallGalleryProps) {
           <div
             className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgba(193,123,127,0.35)]"
             role="list"
-            aria-label="معرض الصور"
+            aria-label={t("halls.gallery.openFull", { name: hallName })}
           >
             {gallery.map((image, index) => {
               const active = index === activeIndex;
@@ -112,7 +114,7 @@ export default function HallGallery({ images, hallName }: HallGalleryProps) {
                       ? "border-[var(--wesal-maroon)] shadow-[0_6px_16px_rgba(193,123,127,0.25)]"
                       : "border-[var(--wesal-border)] opacity-80 hover:opacity-100"
                   }`}
-                  aria-label={`صورة ${index + 1} من ${gallery.length}${active ? " (محددة)" : ""}`}
+                  aria-label={`${index + 1} / ${gallery.length}`}
                   aria-current={active ? "true" : undefined}
                 >
                   <HallImage
@@ -139,7 +141,7 @@ export default function HallGallery({ images, hallName }: HallGalleryProps) {
             <button
               type="button"
               className="fixed inset-0 bg-[rgba(40,25,20,0.72)] backdrop-blur-[3px]"
-              aria-label="إغلاق معرض الصور"
+              aria-label={t("common.close")}
               onClick={closeLightbox}
             />
             <div
@@ -149,14 +151,15 @@ export default function HallGallery({ images, hallName }: HallGalleryProps) {
               className="hall-lightbox-panel relative z-10 flex w-full max-w-5xl max-h-[90vh] flex-col overflow-hidden rounded-2xl bg-[var(--wesal-pink)] shadow-[0_24px_60px_rgba(40,25,20,0.35)]"
             >
               <p id={lightboxTitleId} className="sr-only">
-                معرض صور {hallName} — صورة {lightboxIndex + 1} من {gallery.length}
+                {t("halls.gallery.openFull", { name: hallName })} —{" "}
+                {lightboxIndex + 1} / {gallery.length}
               </p>
 
               <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
                 <div className="relative aspect-[16/10] min-h-[200px] w-full sm:min-h-[300px]">
                   <HallImage
                     src={gallery[lightboxIndex] ?? HALL_IMAGE_PLACEHOLDER}
-                    alt={`${hallName} — صورة ${lightboxIndex + 1}`}
+                    alt={`${hallName} — ${lightboxIndex + 1}`}
                     fill
                     priority
                     className="object-contain"
@@ -174,7 +177,7 @@ export default function HallGallery({ images, hallName }: HallGalleryProps) {
                   type="button"
                   onClick={closeLightbox}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] text-lg text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink)]"
-                  aria-label="إغلاق"
+                  aria-label={t("common.close")}
                 >
                   ✕
                 </button>
@@ -186,7 +189,7 @@ export default function HallGallery({ images, hallName }: HallGalleryProps) {
                     type="button"
                     onClick={showPrev}
                     className="absolute right-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[var(--wesal-maroon)] shadow"
-                    aria-label="الصورة السابقة"
+                    aria-label={t("halls.catalog.prevPage")}
                   >
                     ›
                   </button>
@@ -194,7 +197,7 @@ export default function HallGallery({ images, hallName }: HallGalleryProps) {
                     type="button"
                     onClick={showNext}
                     className="absolute left-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[var(--wesal-maroon)] shadow"
-                    aria-label="الصورة التالية"
+                    aria-label={t("halls.catalog.nextPage")}
                   >
                     ‹
                   </button>

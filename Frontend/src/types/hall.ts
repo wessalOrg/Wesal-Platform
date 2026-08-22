@@ -15,8 +15,11 @@ export type HallDayPeriod = {
 
 export type HallAvailabilityDay = {
   dateLabel: string;
+  dateIso?: string;
   periods: HallDayPeriod[];
 };
+
+export type HallBookingPeriodFilter = "all" | "first" | "second";
 
 export type FeaturedHall = {
   id: string;
@@ -36,12 +39,45 @@ export type FeaturedHall = {
   availabilityDays?: HallAvailabilityDay[];
 };
 
-export const REGION_OPTIONS: { id: HallRegion; label: string }[] = [
-  { id: "all", label: "جميع المناطق" },
-  { id: "north", label: "شمال غزة" },
-  { id: "gaza", label: "غزة" },
-  { id: "middle", label: "المنطقة الوسطى" },
-  { id: "south", label: "جنوب غزة" },
+export type HallAmenity = {
+  id: string;
+  label: string;
+  icon: "ac" | "sound" | "parking" | "dressing";
+};
+
+export type HallReview = {
+  id: string;
+  author: string;
+  rating?: number | null;
+  comment: string;
+  timeAgo: string;
+};
+
+export type HallDetails = {
+  id: string;
+  name: string;
+  location: string;
+  region: Exclude<HallRegion, "all">;
+  capacity: number;
+  capacityMax?: number | null;
+  priceLabel?: string | null;
+  rating?: number | null;
+  reviewCount?: number | null;
+  description?: string | null;
+  amenities: HallAmenity[];
+  reviews: HallReview[];
+  images: string[];
+  isAvailable: boolean;
+  isOwner?: boolean;
+  availabilityDays?: HallAvailabilityDay[];
+};
+
+export const REGION_OPTIONS: { id: HallRegion; labelKey: string }[] = [
+  { id: "all", labelKey: "region.all" },
+  { id: "north", labelKey: "region.north" },
+  { id: "gaza", labelKey: "region.gaza" },
+  { id: "middle", labelKey: "region.middle" },
+  { id: "south", labelKey: "region.south" },
 ];
 
 /** Backend HallRegion enum query values */

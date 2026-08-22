@@ -27,15 +27,35 @@ public class FeaturedHallsService : IFeaturedHallsService
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<FeaturedHallDto>> GetFeaturedHallsAsync(
+    public Task<IReadOnlyList<FeaturedHallDto>> GetFeaturedHallsAsync(
         HallRegion? region = null,
         CancellationToken cancellationToken = default)
+        => GetMappedHallsAsync(region, FeatureCount, cancellationToken);
+
+    public Task<IReadOnlyList<FeaturedHallDto>> GetApprovedHallsAsync(
+        CancellationToken cancellationToken = default)
+        => GetMappedHallsAsync(region: null, take: null, cancellationToken);
+
+    public async Task<IReadOnlyList<FeaturedHallDto>> SearchHallsAsync(
+        HallSearchQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var halls = await GetMappedHallsAsync(query.Region, take: null, cancellationToken);
+
+        return halls.Where(hall => MatchesSearch(hall, query)).ToList();
+    }
+
+    private async Task<IReadOnlyList<FeaturedHallDto>> GetMappedHallsAsync(
+        HallRegion? region,
+        int? take,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        var limit = take ?? int.MaxValue;
         var halls = region is null
-            ? await _hallRepository.GetApprovedHallsAsync(FeatureCount, cancellationToken)
-            : await _hallRepository.GetApprovedHallsByRegionAsync(region.Value, FeatureCount, cancellationToken);
+            ? await _hallRepository.GetApprovedHallsAsync(limit, cancellationToken)
+            : await _hallRepository.GetApprovedHallsByRegionAsync(region.Value, limit, cancellationToken);
 
         if (halls.Count == 0)
         {
@@ -68,6 +88,35 @@ public class FeaturedHallsService : IFeaturedHallsService
             .ToList();
     }
 
+    private static bool MatchesSearch(FeaturedHallDto hall, HallSearchQuery query)
+    {
+        if (!string.IsNullOrWhiteSpace(query.Name)
+            && !hall.HallName.Contains(query.Name.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Address)
+            && !hall.Address.Contains(query.Address.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (query.Date is null && query.Period is null)
+        {
+            return true;
+        }
+
+        var days = query.Date is { } date
+            ? hall.Availability.Where(day => day.Date == date)
+            : hall.Availability.AsEnumerable();
+
+        return days.Any(day =>
+            day.Periods.Any(period =>
+                period.Status == AvailabilityStatus.Available
+                && (query.Period is null || period.PeriodType == query.Period)));
+    }
+
     private static FeaturedHallDto BuildFeaturedHall(
         Hall hall,
         IReadOnlyDictionary<Guid, List<HallBookingPeriod>> periodsByHall,
@@ -85,7 +134,7 @@ public class FeaturedHallsService : IFeaturedHallsService
                 .Select(period => new HallBookingPeriodStatusDto
                 {
                     PeriodType = period.Type,
-                    PeriodName = GetPeriodName(period.Type),
+                    PeriodName = HallDisplayNames.GetPeriodName(period.Type),
                     StartTime = period.StartTime,
                     EndTime = period.EndTime,
                     Status = availabilityByKey.TryGetValue((hall.Id, date, period.Type), out var availability)
@@ -102,7 +151,7 @@ public class FeaturedHallsService : IFeaturedHallsService
             HallId = hall.Id,
             HallName = hall.Name,
             MainImage = hall.MainImageUrl,
-            Region = GetRegionDisplayName(hall.Region),
+            Region = HallDisplayNames.GetRegionDisplayName(hall.Region),
             Address = hall.Address,
             Capacity = hall.Capacity,
             Price = hall.ShowPrice ? hall.Price : null,
@@ -110,20 +159,4 @@ public class FeaturedHallsService : IFeaturedHallsService
             Availability = days
         };
     }
-
-    private static string GetRegionDisplayName(HallRegion region) => region switch
-    {
-        HallRegion.NorthGaza => "North Gaza",
-        HallRegion.Gaza => "Gaza",
-        HallRegion.MiddleArea => "Middle Area",
-        HallRegion.SouthGaza => "South Gaza",
-        _ => region.ToString()
-    };
-
-    private static string GetPeriodName(BookingPeriodType type) => type switch
-    {
-        BookingPeriodType.FirstPeriod => "First Period",
-        BookingPeriodType.SecondPeriod => "Second Period",
-        _ => type.ToString()
-    };
 }

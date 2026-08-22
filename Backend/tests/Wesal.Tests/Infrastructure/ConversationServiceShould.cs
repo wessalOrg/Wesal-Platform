@@ -21,8 +21,10 @@ public class ConversationServiceShould
         var result = await service.CreateConversationAsync(hall.Id);
 
         Assert.Equal(hall.Id, result.HallId);
-        Assert.Equal("owner-1", result.HallOwnerId);
-        Assert.Equal("user-1", result.SenderUserId);
+        Assert.Equal("owner-1", result.OwnerUserId);
+        Assert.Equal("user-1", result.InitiatorUserId);
+        Assert.Equal("Test Hall", result.HallName);
+        Assert.False(result.IsExisting);
         Assert.NotEqual(Guid.Empty, result.ConversationId);
     }
 
@@ -53,8 +55,8 @@ public class ConversationServiceShould
         var result = await service.CreateConversationAsync(hall.Id);
 
         Assert.Equal(hall.Id, result.HallId);
-        Assert.Equal("owner-1", result.HallOwnerId);
-        Assert.Equal("owner-2", result.SenderUserId);
+        Assert.Equal("owner-1", result.OwnerUserId);
+        Assert.Equal("owner-2", result.InitiatorUserId);
     }
 
     [Fact]
@@ -183,7 +185,7 @@ public class ConversationServiceShould
         var result = await service.CreateConversationAsync(hall.Id);
 
         Assert.Equal(hall.Id, result.HallId);
-        Assert.Equal("admin-1", result.SenderUserId);
+        Assert.Equal("admin-1", result.InitiatorUserId);
     }
 
     [Fact]
@@ -196,7 +198,7 @@ public class ConversationServiceShould
 
         var result = await service.CreateConversationAsync(hall.Id);
 
-        Assert.Equal("authenticated-user", result.SenderUserId);
+        Assert.Equal("authenticated-user", result.InitiatorUserId);
     }
 
     [Fact]
@@ -209,7 +211,7 @@ public class ConversationServiceShould
 
         var result = await service.CreateConversationAsync(hall.Id);
 
-        Assert.Equal("actual-owner-id", result.HallOwnerId);
+        Assert.Equal("actual-owner-id", result.OwnerUserId);
     }
 
     [Fact]
@@ -222,6 +224,203 @@ public class ConversationServiceShould
 
         await Assert.ThrowsAsync<ForbiddenException>(() =>
             service.CreateConversationAsync(hall.Id));
+    }
+
+    [Fact]
+    public async Task CreateConversation_ExistingConversation_ReturnsExistingWithFlag()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+
+        var existing = new Conversation
+        {
+            Id = Guid.NewGuid(),
+            HallId = hall.Id,
+            SenderUserId = "user-1",
+            HallOwnerId = "owner-1",
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5)
+        };
+        repository.Conversations.Add(existing);
+
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        var result = await service.CreateConversationAsync(hall.Id);
+
+        Assert.True(result.IsExisting);
+        Assert.Equal(existing.Id, result.ConversationId);
+        Assert.Single(repository.Conversations);
+    }
+
+    [Fact]
+    public async Task CreateConversation_NoExisting_CreatesNewWithFlagFalse()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        var result = await service.CreateConversationAsync(hall.Id);
+
+        Assert.False(result.IsExisting);
+        Assert.Single(repository.Conversations);
+    }
+
+    [Fact]
+    public async Task CreateConversation_DifferentUser_SameHall_CreatesSeparateConversation()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+
+        var existing = new Conversation
+        {
+            Id = Guid.NewGuid(),
+            HallId = hall.Id,
+            SenderUserId = "user-1",
+            HallOwnerId = "owner-1",
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5)
+        };
+        repository.Conversations.Add(existing);
+
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "user-2", roles: [ApplicationRoles.RegisteredUser]);
+
+        var result = await service.CreateConversationAsync(hall.Id);
+
+        Assert.False(result.IsExisting);
+        Assert.Equal(2, repository.Conversations.Count);
+    }
+
+    [Fact]
+    public async Task CreateConversation_ReturnsHallName()
+    {
+        var hall = CreateApprovedHall("My Wedding Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        var result = await service.CreateConversationAsync(hall.Id);
+
+        Assert.Equal("My Wedding Hall", result.HallName);
+    }
+
+    [Fact]
+    public async Task GetConversation_Participant_ReturnsConversation()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var conversationId = Guid.NewGuid();
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        repository.Conversations.Add(new Conversation
+        {
+            Id = conversationId,
+            HallId = hall.Id,
+            SenderUserId = "user-1",
+            HallOwnerId = "owner-1",
+            Hall = hall,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        var result = await service.GetConversationAsync(conversationId);
+
+        Assert.Equal(conversationId, result.ConversationId);
+        Assert.Equal("Test Hall", result.HallName);
+        Assert.True(result.IsExisting);
+    }
+
+    [Fact]
+    public async Task GetConversation_HallOwner_ReturnsConversation()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var conversationId = Guid.NewGuid();
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        repository.Conversations.Add(new Conversation
+        {
+            Id = conversationId,
+            HallId = hall.Id,
+            SenderUserId = "user-1",
+            HallOwnerId = "owner-1",
+            Hall = hall,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var result = await service.GetConversationAsync(conversationId);
+
+        Assert.Equal(conversationId, result.ConversationId);
+    }
+
+    [Fact]
+    public async Task GetConversation_Admin_ReturnsConversation()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var conversationId = Guid.NewGuid();
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        repository.Conversations.Add(new Conversation
+        {
+            Id = conversationId,
+            HallId = hall.Id,
+            SenderUserId = "user-1",
+            HallOwnerId = "owner-1",
+            Hall = hall,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "admin-1", roles: [ApplicationRoles.Admin]);
+
+        var result = await service.GetConversationAsync(conversationId);
+
+        Assert.Equal(conversationId, result.ConversationId);
+    }
+
+    [Fact]
+    public async Task GetConversation_NonParticipant_ThrowsForbidden()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var conversationId = Guid.NewGuid();
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        repository.Conversations.Add(new Conversation
+        {
+            Id = conversationId,
+            HallId = hall.Id,
+            SenderUserId = "user-1",
+            HallOwnerId = "owner-1",
+            Hall = hall,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "stranger-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.GetConversationAsync(conversationId));
+    }
+
+    [Fact]
+    public async Task GetConversation_NonexistentId_ThrowsNotFound()
+    {
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository();
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.GetConversationAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetConversation_Unauthenticated_ThrowsUnauthorized()
+    {
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository();
+        var service = CreateService(repository, hallRepository, authenticated: false);
+
+        await Assert.ThrowsAsync<UnauthorizedException>(() =>
+            service.GetConversationAsync(Guid.NewGuid()));
     }
 
     private static Hall CreateApprovedHall(string name, string ownerId)
@@ -253,6 +452,16 @@ public class ConversationServiceShould
         {
             Conversations.Add(conversation);
             return Task.CompletedTask;
+        }
+
+        public Task<Conversation?> GetByHallAndUserAsync(Guid hallId, string userId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Conversations.FirstOrDefault(c => c.HallId == hallId && c.SenderUserId == userId));
+        }
+
+        public Task<Conversation?> GetByIdWithHallAsync(Guid conversationId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Conversations.FirstOrDefault(c => c.Id == conversationId));
         }
     }
 

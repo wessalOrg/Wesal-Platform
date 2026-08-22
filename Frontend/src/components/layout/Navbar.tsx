@@ -1,75 +1,135 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthProvider";
 import WesalLogo from "@/components/brand/WesalLogo";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import { useT, useTranslateLang } from "@/i18n";
 
-const navLinks = [
-  { href: "/", label: "الرئيسية" },
-  { href: "/halls", label: "القاعات" },
-  { href: "/about", label: "من نحن" },
-];
+const NAV_HREFS = [
+  { href: "/", key: "nav.home" },
+  { href: "/halls", key: "nav.halls" },
+  { href: "/about", key: "nav.about" },
+] as const;
+
+function roleLabel(
+  role: string | null,
+  t: (key: string) => string,
+): string | null {
+  if (!role) return null;
+  if (role === "HallOwner") return t("nav.role.hallOwner");
+  if (role === "Admin") return t("nav.role.admin");
+  if (role === "RegisteredUser") return t("nav.role.member");
+  return null;
+}
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { lang, t } = useTranslateLang();
+  const { session, status, logout } = useAuth();
+  const authenticated = session.isAuthenticated;
+  const displayName = session.userName?.trim() || t("nav.account");
+  const role = roleLabel(session.role, t);
+  const separator = lang === "en" ? "," : "،";
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    const onResize = () => {
+      if (window.matchMedia("(min-width: 1024px)").matches) setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   return (
     <header className="wesal-navbar sticky top-0 z-50">
       <div className="wesal-navbar-bg" aria-hidden="true" />
       <div className="container-wesal relative z-10">
-        <div className="flex h-14 items-center justify-between gap-3 sm:h-16">
-          <Link href="/" className="flex shrink-0 items-center gap-2">
-            <span className="relative h-10 w-10 sm:h-11 sm:w-11">
+        <div className="flex h-14 min-w-0 items-center justify-between gap-2 sm:h-16 sm:gap-3">
+          <Link
+            href="/"
+            className="flex min-w-0 shrink-0 items-center gap-2"
+            aria-label={t("brand.name")}
+          >
+            <span className="relative h-10 w-10 shrink-0 sm:h-11 sm:w-11">
               <WesalLogo className="h-full w-full" variant="brand" />
             </span>
-            <span className="text-xl font-bold text-[var(--wesal-maroon)] sm:text-2xl">
-              وصال
+            <span className="truncate text-xl font-bold text-[var(--wesal-maroon)] sm:text-2xl">
+              {t("brand.name")}
             </span>
           </Link>
 
           <nav
-            className="hidden items-center gap-1 text-sm font-medium text-[var(--wesal-text)] md:flex"
-            aria-label="التنقل الرئيسي"
+            className="hidden min-w-0 items-center gap-0.5 text-sm font-medium text-[var(--wesal-text)] md:flex"
+            aria-label={t("nav.main")}
           >
-            {navLinks.map((link) => {
+            {NAV_HREFS.map((link) => {
               const active = pathname === link.href;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`rounded-full px-3 py-1.5 transition ${
+                  className={`whitespace-nowrap rounded-full px-2.5 py-1.5 transition lg:px-3 ${
                     active
                       ? "text-[var(--wesal-maroon)] underline decoration-[var(--wesal-maroon)] decoration-2 underline-offset-8"
                       : "hover:text-[var(--wesal-maroon)]"
                   }`}
                 >
-                  {link.label}
+                  {t(link.key)}
                 </Link>
               );
             })}
           </nav>
 
-          <div className="hidden items-center gap-2.5 md:flex lg:gap-3">
+          <div className="hidden min-w-0 items-center gap-2 lg:flex lg:gap-3">
             <LanguageSwitcher />
-            <Link href="/login" className="btn-outline">
-              تسجيل الدخول
-            </Link>
-            <Link href="/register" className="btn-primary">
-              إنشاء حساب
-            </Link>
+            {status === "loading" ? (
+              <span className="h-11 w-40 shrink-0 animate-pulse rounded-xl bg-[var(--wesal-pink)]" />
+            ) : authenticated ? (
+              <AuthAccount
+                hello={t("nav.hello")}
+                name={displayName}
+                role={role}
+                logoutLabel={t("nav.logout")}
+                separator={separator}
+                onLogout={() => void logout()}
+              />
+            ) : (
+              <GuestActions
+                login={t("nav.login")}
+                register={t("nav.register")}
+              />
+            )}
           </div>
 
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)] md:hidden"
+            className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)] lg:hidden"
             aria-expanded={open}
             aria-controls="mobile-nav"
+            aria-label={t("nav.menu")}
             onClick={() => setOpen((value) => !value)}
           >
-            <span className="sr-only">القائمة</span>
             {open ? "✕" : "☰"}
           </button>
         </div>
@@ -78,37 +138,121 @@ export default function Navbar() {
       {open ? (
         <div
           id="mobile-nav"
-          className="wesal-navbar-mobile border-t border-[var(--wesal-border)]/60 px-5 py-4 md:hidden"
+          className="wesal-navbar-mobile max-h-[min(32rem,calc(100svh-3.5rem))] overflow-y-auto border-t border-[var(--wesal-border)]/60 px-5 py-4 lg:hidden"
         >
           <div className="flex flex-col gap-3">
-            {navLinks.map((link) => (
+            {NAV_HREFS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="py-2 text-sm font-medium text-[var(--wesal-text)]"
+                className="flex min-h-11 items-center py-2 text-sm font-medium text-[var(--wesal-text)]"
                 onClick={() => setOpen(false)}
               >
-                {link.label}
+                {t(link.key)}
               </Link>
             ))}
             <LanguageSwitcher compact />
-            <Link
-              href="/login"
-              className="btn-outline w-full"
-              onClick={() => setOpen(false)}
-            >
-              تسجيل الدخول
-            </Link>
-            <Link
-              href="/register"
-              className="btn-primary w-full"
-              onClick={() => setOpen(false)}
-            >
-              إنشاء حساب
-            </Link>
+            {authenticated ? (
+              <AuthAccount
+                hello={t("nav.hello")}
+                name={displayName}
+                role={role}
+                logoutLabel={t("nav.logout")}
+                separator={separator}
+                stacked
+                onLogout={() => {
+                  setOpen(false);
+                  void logout();
+                }}
+              />
+            ) : (
+              <GuestActions
+                login={t("nav.login")}
+                register={t("nav.register")}
+                stacked
+                onNavigate={() => setOpen(false)}
+              />
+            )}
           </div>
         </div>
       ) : null}
     </header>
+  );
+}
+
+function GuestActions({
+  login,
+  register,
+  stacked = false,
+  onNavigate,
+}: {
+  login: string;
+  register: string;
+  stacked?: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      <Link
+        href="/login"
+        className={`btn-outline min-h-11 whitespace-nowrap ${stacked ? "w-full" : "shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
+        onClick={onNavigate}
+      >
+        {login}
+      </Link>
+      <Link
+        href="/register"
+        className={`btn-primary min-h-11 whitespace-nowrap ${stacked ? "w-full" : "shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
+        onClick={onNavigate}
+      >
+        {register}
+      </Link>
+    </>
+  );
+}
+
+function AuthAccount({
+  hello,
+  name,
+  role,
+  logoutLabel,
+  separator,
+  stacked = false,
+  onLogout,
+}: {
+  hello: string;
+  name: string;
+  role: string | null;
+  logoutLabel: string;
+  separator: string;
+  stacked?: boolean;
+  onLogout: () => void;
+}) {
+  return (
+    <div
+      className={`flex min-w-0 items-center gap-2.5 ${stacked ? "w-full flex-col" : ""}`}
+      data-testid="navbar-authenticated"
+    >
+      <p
+        className={`min-w-0 text-sm font-semibold text-[var(--wesal-maroon)] ${
+          stacked ? "w-full text-start" : "max-w-[8.5rem] truncate lg:max-w-[10rem]"
+        }`}
+      >
+        {hello}
+        {separator} {name}
+        {role ? (
+          <span className="mt-0.5 block truncate text-xs font-medium text-[var(--wesal-muted)]">
+            {role}
+          </span>
+        ) : null}
+      </p>
+      <button
+        type="button"
+        className={`btn-outline min-h-11 whitespace-nowrap ${stacked ? "w-full" : "shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
+        onClick={onLogout}
+      >
+        {logoutLabel}
+      </button>
+    </div>
   );
 }

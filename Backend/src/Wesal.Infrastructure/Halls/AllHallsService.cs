@@ -1,7 +1,6 @@
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
-using Wesal.Infrastructure.Halls;
 
 namespace Wesal.Infrastructure.Halls;
 
