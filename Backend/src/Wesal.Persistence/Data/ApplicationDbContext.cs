@@ -27,6 +27,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Conversation> Conversations => Set<Conversation>();
 
+    public DbSet<AISession> AISessions => Set<AISession>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -163,6 +165,29 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
                 .WithMany()
                 .HasForeignKey(conversation => conversation.HallId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<AISession>(entity =>
+        {
+            entity.ToTable("AISessions");
+
+            entity.Property(session => session.SessionId).HasMaxLength(450);
+
+            entity.Property(session => session.UserId).HasMaxLength(450);
+
+            entity.Property(session => session.Status).HasMaxLength(500);
+
+            entity.Property(session => session.GuestIdentifier).HasMaxLength(450);
+
+            entity.HasIndex(session => session.SessionId).IsUnique();
+
+            entity.HasIndex(session => new { session.IsGuestSession, session.GuestIdentifier });
+
+            entity.HasIndex(session => new { session.UserId, session.IsGuestSession });
+
+            entity.Property(session => session.CreatedAt).HasColumnType("datetime2");
+
+            entity.Property(session => session.LastAccessedAt).HasColumnType("datetime2");
         });
     }
 }

@@ -129,6 +129,53 @@ namespace Wesal.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", "wesal");
                 });
 
+            modelBuilder.Entity("Wesal.Domain.Entities.AISession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AiServiceStatus")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GuestIdentifier")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<bool>("IsGuestSession")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastAccessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SessionId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId")
+                        .IsUnique();
+
+                    b.HasIndex("IsGuestSession", "GuestIdentifier");
+
+                    b.HasIndex("UserId", "IsGuestSession");
+
+                    b.ToTable("AISessions", "wesal");
+                });
+
             modelBuilder.Entity("Wesal.Domain.Entities.Comment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -167,6 +214,44 @@ namespace Wesal.Persistence.Migrations
                     b.HasIndex("HallId", "CreatedAt");
 
                     b.ToTable("Comments", "wesal");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.Conversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("HallId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("HallOwnerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("SenderUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HallId");
+
+                    b.ToTable("Conversations", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.Hall", b =>
@@ -549,6 +634,17 @@ namespace Wesal.Persistence.Migrations
                     b.HasOne("Wesal.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hall");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.Conversation", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
+                        .WithMany()
+                        .HasForeignKey("HallId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

@@ -74,6 +74,27 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
             session.ExpiresAt));
     }
 
+    public Task<AiSessionResponse?> PeekSessionAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        if (!_sessions.TryGetValue(sessionId, out var session))
+        {
+            return Task.FromResult<AiSessionResponse?>(null);
+        }
+
+        if (DateTime.UtcNow > session.ExpiresAt)
+        {
+            _sessions.TryRemove(sessionId, out _);
+            return Task.FromResult<AiSessionResponse?>(null);
+        }
+
+        // No mutation: do not update LastActivityAt/ExpiresAt
+        return Task.FromResult<AiSessionResponse?>(new AiSessionResponse(
+            session.SessionId,
+            session.Language,
+            session.CreatedAt,
+            session.ExpiresAt));
+    }
+
     internal void SweepExpiredSessions()
     {
         var now = DateTime.UtcNow;

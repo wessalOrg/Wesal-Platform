@@ -34,8 +34,10 @@ public class AISessionRepository : GenericRepository<AISession>, IAISessionRepos
 
     public async Task<IReadOnlyList<AISession>> GetExpiredSessionsAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.AISessions
-            .Where(s => EF.Property<DateTime>(s, "LastAccessedAt") < DateTime.UtcNow.AddHours(-24))
-            .ToListAsync(cancellationToken);
+        var cutoff = DateTime.UtcNow.AddHours(-24);
+        // Use client evaluation for IsExpired to ensure consistent handling of nullable LastAccessedAt
+        // and avoid EF translation issues. Efficient enough for AI session dataset.
+        var all = await _context.AISessions.AsNoTracking().ToListAsync(cancellationToken);
+        return all.Where(s => s.IsExpired).ToList();
     }
 }
