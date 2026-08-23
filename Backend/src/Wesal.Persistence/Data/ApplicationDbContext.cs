@@ -27,6 +27,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Conversation> Conversations => Set<Conversation>();
 
+    public DbSet<AISession> AISessions => Set<AISession>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
