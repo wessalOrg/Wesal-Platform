@@ -488,7 +488,7 @@ export async function fetchSearchHalls(
 ): Promise<FeaturedHallsLoadResult> {
   const params: Record<string, string> = {};
   if (filters.name?.trim()) params.name = filters.name.trim();
-  if (filters.area?.trim()) params.address = filters.area.trim();
+  if (filters.area?.trim()) params.area = filters.area.trim();
   if (filters.region && filters.region !== "all") {
     params.region = REGION_API_PARAMS[filters.region];
   }
