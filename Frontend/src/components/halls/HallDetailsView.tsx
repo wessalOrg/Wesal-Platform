@@ -71,9 +71,10 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
         });
         setWarning(result.warning ?? null);
         setStatus("ready");
+        // A null result means the comments API was unreachable, so the placeholder
+        // reviews stay; an empty list is authoritative and clears them.
         const comments = await fetchHallComments(hallId);
         if (!active || comments == null) return;
-        if (comments.length === 0) return;
         setHall((current) =>
           current
             ? { ...current, reviews: comments.map(mapCommentToReview) }

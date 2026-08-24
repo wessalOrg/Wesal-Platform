@@ -46,7 +46,7 @@ export default function HallCommentList({ comments }: HallCommentListProps) {
               </span>
             ) : null}
           </div>
-          <p className="mt-2 text-start text-[15px] leading-7 text-[#4a403c] break-words">
+          <p className="mt-2 whitespace-pre-line text-start text-[15px] leading-7 text-[#4a403c] break-words">
             {review.comment}
           </p>
         </li>

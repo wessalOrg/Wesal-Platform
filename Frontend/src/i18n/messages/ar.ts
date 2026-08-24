@@ -233,6 +233,7 @@ const ar: MessageCatalog = {
 
   "halls.comment.title": "أضيفي تعليقك",
   "halls.comment.submit": "إرسال التعليق",
+  "halls.comment.submitting": "جاري النشر…",
   "halls.comment.saved": "تم نشر تعليقك.",
   "halls.comment.empty": "لا توجد تعليقات بعد.",
   "halls.comment.placeholder": "اكتبي تجربتك مع القاعة…",
@@ -287,6 +288,29 @@ const ar: MessageCatalog = {
   "messages.composerDisabled": "كتابة الرسائل قريباً…",
   "messages.goLogin": "تسجيل الدخول",
 
+  "assistant.title": "مساعد وصال الذكي",
+  "assistant.senderLabel": "مساعد وصال",
+  "assistant.fab.open": "افتح مساعد وصال الذكي",
+  "assistant.fab.close": "إغلاق مساعد وصال الذكي",
+  "assistant.status.online": "متصل الآن",
+  "assistant.status.connecting": "جاري الاتصال…",
+  "assistant.status.offline": "غير متصل",
+  "assistant.loading": "جاري تهيئة المساعد…",
+  "assistant.greeting":
+    "أهلاً بك في وصال! أنا هنا لمساعدتك في إيجاد القاعة المناسبة — اسألني عن منطقة أو تاريخ أو فترة حجز معينة.",
+  "assistant.composer.placeholder": "اكتب رسالتك هنا…",
+  "assistant.composer.send": "إرسال",
+  "assistant.composer.hint": "إرسال الرسائل سيُفعّل مع إطلاق المحادثة الذكية.",
+  "assistant.unavailable.title": "المساعد في استراحة",
+  "assistant.network.title": "لا يوجد اتصال بالإنترنت",
+  "assistant.error.title": "تعذر بدء المساعد",
+  "assistant.retrying": "جاري إعادة المحاولة…",
+  "assistant.reconnect": "إعادة الاتصال",
+  "assistant.browseHalls": "تصفح القاعات يدوياً",
+  "assistant.invite.help": "كيف أقدر أساعدك؟",
+  "assistant.invite.halls": "تبحث عن قاعة؟ اسألني عن منطقة أو تاريخ.",
+  "assistant.invite.dismiss": "إخفاء الدعوة",
+
   "errors.generic": "حدث خطأ غير متوقع.",
   "errors.requestFailed": "فشل الطلب",
   "errors.offlineDemo":
@@ -312,6 +336,12 @@ const ar: MessageCatalog = {
   "errors.comment.forbidden": "غير مسموح لك بالتعليق على هذه القاعة.",
   "errors.comment.notFound": "القاعة غير موجودة.",
   "errors.comment.generic": "تعذر نشر التعليق.",
+  "errors.assistant.init": "تعذر تهيئة المساعد الذكي. جرّب مرة أخرى.",
+  "errors.assistant.language": "لغة المحادثة غير مدعومة.",
+  "errors.assistant.unavailable":
+    "مساعدنا الذكي غير متاح حالياً، يمكنك التصفح يدوياً أو المحاولة مرة أخرى لاحقاً.",
+  "errors.assistant.network":
+    "يبدو أن جهازك غير متصل بالإنترنت. تحقق من الاتصال وسيعود المساعد تلقائياً.",
 
   "about.title": "من نحن",
   "about.body":
@@ -337,7 +367,6 @@ const ar: MessageCatalog = {
   "home.hero.imageAlt": "قاعة ملكية بكوشة ذهبية وثريا مركزية",
 
   "halls.comment.emptyBody": "اكتبي تعليقك قبل الإرسال.",
-  "halls.comment.minLength": "التعليق لازم يكون {count} أحرف على الأقل.",
   "halls.comment.maxLength": "التعليق ما يتجاوز {count} حرف.",
 
   "home.owner.demo.nav.home": "الرئيسية",

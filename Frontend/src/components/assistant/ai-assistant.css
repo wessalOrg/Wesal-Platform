@@ -1,0 +1,360 @@
+/* Floating AI assistant — button, panel and message-state visuals. */
+
+.wesal-ai-fab {
+  background: linear-gradient(
+    145deg,
+    var(--wesal-maroon-soft) 0%,
+    var(--wesal-maroon) 52%,
+    var(--wesal-maroon-dark) 100%
+  );
+  box-shadow:
+    0 14px 32px rgba(193, 123, 127, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.35) inset;
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms ease,
+    filter 220ms ease;
+}
+
+.wesal-ai-fab:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 18px 38px rgba(168, 98, 103, 0.48);
+  filter: brightness(1.04);
+}
+
+.wesal-ai-fab:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/*
+ * Set by the boot script before first paint from the saved position, so a dragged
+ * button never flashes in its default corner on load. React's inline style takes
+ * over from the first commit and overrides these.
+ */
+html[data-wesal-fab-placed="true"] .wesal-ai-fab {
+  inset-inline-start: auto;
+  inset-inline-end: auto;
+  bottom: auto;
+  left: var(--wesal-fab-left);
+  top: var(--wesal-fab-top);
+}
+
+/*
+ * While dragging, the hover lift and press scale would fight the pointer, so the
+ * button is frozen and only follows the finger/cursor.
+ */
+.wesal-ai-fab-dragging,
+.wesal-ai-fab-dragging:hover,
+.wesal-ai-fab-dragging:active {
+  transform: none;
+  transition: none;
+  cursor: grabbing;
+  box-shadow: 0 20px 44px rgba(168, 98, 103, 0.5);
+}
+
+/* Slow breathing ring — keeps the assistant discoverable without nagging. */
+.wesal-ai-fab-halo {
+  pointer-events: none;
+  position: absolute;
+  inset: -0.35rem;
+  border-radius: 9999px;
+  border: 1.5px solid rgba(193, 123, 127, 0.45);
+  opacity: 0;
+  animation: wesal-ai-halo 3.4s ease-out infinite;
+}
+
+.wesal-ai-fab-spark {
+  animation: wesal-ai-spark 4.5s ease-in-out infinite;
+}
+
+@keyframes wesal-ai-halo {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.92);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+@keyframes wesal-ai-spark {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.08) rotate(8deg);
+  }
+}
+
+/*
+ * Opening and closing are one motion in two directions: the panel rises out of
+ * the button and settles back into it. Only `opacity` and `transform` animate,
+ * so the work stays on the compositor. Nothing here decides *whether* the panel
+ * is open; the component only tells us which direction to play.
+ */
+.wesal-ai-panel {
+  transform-origin: bottom center;
+}
+
+@media (min-width: 640px) {
+  /* Desktop/tablet: grow from the floating button's default end-corner. */
+  .wesal-ai-panel {
+    transform-origin: bottom right;
+  }
+
+  .wesal-ai-panel:dir(rtl) {
+    transform-origin: bottom left;
+  }
+}
+
+.wesal-ai-panel[data-motion="in"],
+.wesal-ai-panel[data-motion="out"] {
+  will-change: opacity, transform;
+}
+
+.wesal-ai-panel[data-motion="in"] {
+  animation: wesal-ai-panel-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/*
+ * Shorter than the entrance, as a dismissal should feel immediate, and with the
+ * easing reversed so it reads as the same gesture played backwards.
+ */
+.wesal-ai-panel[data-motion="out"] {
+  animation: wesal-ai-panel-out 180ms cubic-bezier(0.4, 0, 0.9, 0.4) both;
+  /* Belt and braces with `inert`: a panel on its way out never takes a tap. */
+  pointer-events: none;
+}
+
+@media (max-width: 639px) {
+  .wesal-ai-panel[data-motion="in"] {
+    animation-duration: 220ms;
+  }
+
+  .wesal-ai-panel[data-motion="out"] {
+    animation-duration: 160ms;
+  }
+}
+
+@keyframes wesal-ai-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes wesal-ai-panel-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+
+.wesal-ai-panel-header {
+  background: linear-gradient(
+    135deg,
+    #fbeef0 0%,
+    var(--wesal-pink) 55%,
+    #fbf2f1 100%
+  );
+  border-bottom: 1px solid var(--wesal-border);
+}
+
+.wesal-ai-panel-body {
+  background: var(--wesal-pink-soft);
+}
+
+.wesal-ai-avatar,
+.wesal-ai-send {
+  background: linear-gradient(
+    150deg,
+    var(--wesal-maroon-soft) 0%,
+    var(--wesal-maroon) 55%,
+    var(--wesal-maroon-dark) 100%
+  );
+  box-shadow: 0 6px 16px rgba(193, 123, 127, 0.35);
+}
+
+.wesal-ai-dot {
+  display: block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 9999px;
+  background: var(--wesal-maroon-soft);
+  animation: wesal-ai-dot 1.25s ease-in-out infinite;
+}
+
+.wesal-ai-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.wesal-ai-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes wesal-ai-dot {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-0.2rem);
+  }
+}
+
+/*
+ * Passive chat invitation. Coordinates are written by the component from live
+ * measurements, so the bubble stays hidden until it has a spot that is inside the
+ * viewport and clear of the platform's own controls.
+ */
+.wesal-ai-invite {
+  left: 0;
+  top: 0;
+  max-width: min(17rem, calc(100vw - 1.5rem));
+  visibility: hidden;
+}
+
+.wesal-ai-invite[data-state="shown"] {
+  visibility: visible;
+  animation: wesal-ai-invite-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes wesal-ai-invite-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Grow out of the button rather than out of thin air. */
+.wesal-ai-invite[data-placement="right"] {
+  transform-origin: left center;
+}
+
+.wesal-ai-invite[data-placement="left"] {
+  transform-origin: right center;
+}
+
+.wesal-ai-invite[data-placement="above"] {
+  transform-origin: center bottom;
+}
+
+.wesal-ai-invite[data-placement="below"] {
+  transform-origin: center top;
+}
+
+/*
+ * The tail is a rotated square clipped to the two edges that stay outside the
+ * bubble, so only its outline shows. `--wesal-invite-tail` is the distance to the
+ * button's centre along the shared edge, which keeps it pointing at the button
+ * even after the bubble has been clamped away from a screen edge.
+ */
+.wesal-ai-invite-tail {
+  position: absolute;
+  width: 0.6rem;
+  height: 0.6rem;
+  background: #fff;
+  border: 1px solid var(--wesal-border);
+  clip-path: polygon(0 0, 0 100%, 100% 100%);
+}
+
+.wesal-ai-invite[data-placement="right"] .wesal-ai-invite-tail {
+  left: -0.3rem;
+  top: var(--wesal-invite-tail, 50%);
+  margin-top: -0.3rem;
+  transform: rotate(45deg);
+}
+
+.wesal-ai-invite[data-placement="left"] .wesal-ai-invite-tail {
+  right: -0.3rem;
+  top: var(--wesal-invite-tail, 50%);
+  margin-top: -0.3rem;
+  transform: rotate(225deg);
+}
+
+.wesal-ai-invite[data-placement="above"] .wesal-ai-invite-tail {
+  bottom: -0.3rem;
+  left: var(--wesal-invite-tail, 50%);
+  margin-left: -0.3rem;
+  transform: rotate(-45deg);
+}
+
+.wesal-ai-invite[data-placement="below"] .wesal-ai-invite-tail {
+  top: -0.3rem;
+  left: var(--wesal-invite-tail, 50%);
+  margin-left: -0.3rem;
+  transform: rotate(135deg);
+}
+
+/* Retry affordance inside the unavailable notice. */
+.wesal-ai-spinner {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: wesal-ai-spin 700ms linear infinite;
+}
+
+@keyframes wesal-ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+ * Short viewports (landscape phones) — keep the panel clear of the floating
+ * button and inside the viewport so it never blocks the page underneath.
+ */
+@media (max-height: 30rem) {
+  .wesal-ai-panel {
+    max-height: calc(100svh - 7.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wesal-ai-fab,
+  .wesal-ai-fab-halo,
+  .wesal-ai-fab-spark,
+  .wesal-ai-panel,
+  .wesal-ai-invite,
+  .wesal-ai-dot {
+    animation: none !important;
+    transition: none;
+    transform: none;
+  }
+
+  .wesal-ai-panel[data-motion="in"],
+  .wesal-ai-panel[data-motion="out"] {
+    will-change: auto;
+  }
+
+  /* Kept spinning, just calmer — a frozen spinner reads as a broken UI. */
+  .wesal-ai-spinner {
+    animation-duration: 1.6s;
+  }
+
+  .wesal-ai-fab:hover {
+    transform: none;
+  }
+
+  .wesal-ai-fab-halo {
+    opacity: 0;
+  }
+}

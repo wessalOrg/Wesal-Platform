@@ -4,7 +4,7 @@ import { t } from "@/i18n";
 import { getStoredUiLang } from "@/lib/language";
 import type { HallReview } from "@/types/hall";
 
-export const COMMENT_MIN_LENGTH = 3;
+/** Mirrors the API rule: content must be non-blank and at most this long. */
 export const COMMENT_MAX_LENGTH = 1000;
 
 export type HallComment = {
@@ -15,22 +15,45 @@ export type HallComment = {
   createdAt: string;
 };
 
+/** Mirrors the API `CommentResponse` contract exactly. */
 type CommentResponse = {
   commentId?: string;
-  id?: string;
   hallId?: string;
-  author?: string;
-  body?: string;
+  content?: string;
+  userName?: string;
   createdAt?: string;
 };
+
+const HTML_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: "\u00a0",
+};
+
+/** Comment text is stored HTML-encoded, so entities are decoded once before render. */
+function decodeHtmlEntities(raw: string): string {
+  if (!raw.includes("&")) return raw;
+  return raw.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, token: string) => {
+    const key = token.toLowerCase();
+    if (!key.startsWith("#")) {
+      return HTML_ENTITIES[key] ?? match;
+    }
+    const code = key.startsWith("#x")
+      ? Number.parseInt(key.slice(2), 16)
+      : Number.parseInt(key.slice(1), 10);
+    return Number.isFinite(code) && code > 0 && code <= 0x10ffff
+      ? String.fromCodePoint(code)
+      : match;
+  });
+}
 
 export function validateCommentBody(raw: string): string | null {
   const body = raw.trim();
   if (!body) {
     return t("halls.comment.emptyBody");
-  }
-  if (body.length < COMMENT_MIN_LENGTH) {
-    return t("halls.comment.minLength", { count: COMMENT_MIN_LENGTH });
   }
   if (body.length > COMMENT_MAX_LENGTH) {
     return t("halls.comment.maxLength", { count: COMMENT_MAX_LENGTH });
@@ -66,11 +89,13 @@ export function mapCommentToReview(comment: HallComment): HallReview {
 }
 
 function mapResponse(data: CommentResponse, fallbackHallId: string): HallComment {
+  const author = (data.userName ?? "").trim();
   return {
-    commentId: String(data.commentId ?? data.id ?? `comment-${Date.now()}`),
+    commentId: String(data.commentId ?? `comment-${Date.now()}`),
     hallId: String(data.hallId ?? fallbackHallId),
-    author: data.author?.trim() || t("common.user"),
-    body: data.body ?? "",
+    // The hall comments list omits the writer name, so fall back to a neutral label.
+    author: author ? decodeHtmlEntities(author) : t("common.user"),
+    body: decodeHtmlEntities(data.content ?? ""),
     createdAt: data.createdAt ?? new Date().toISOString(),
   };
 }
@@ -95,7 +120,7 @@ export async function submitHallComment(
 ): Promise<HallComment> {
   const { data } = await api.post<CommentResponse>(
     "/comments",
-    { hallId, body: body.trim() },
+    { hallId, content: body.trim() },
     { timeout: 8000 },
   );
   return mapResponse(data, hallId);
