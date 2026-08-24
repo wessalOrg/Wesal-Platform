@@ -12,10 +12,12 @@ namespace Wesal.API.Controllers;
 public class AiAssistantController : ControllerBase
 {
     private readonly IChatSessionService _chatSessionService;
+    private readonly IHowToService _howToService;
 
-    public AiAssistantController(IChatSessionService chatSessionService)
+    public AiAssistantController(IChatSessionService chatSessionService, IHowToService howToService)
     {
         _chatSessionService = chatSessionService;
+        _howToService = howToService;
     }
 
     [HttpPost]
@@ -46,6 +48,31 @@ public class AiAssistantController : ControllerBase
         {
             return NotFound();
         }
+
+        return Ok(response);
+    }
+
+    [HttpPost("{sessionId:guid}/how-to")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(HowToResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<HowToResponse>> AskHowTo(
+        Guid sessionId,
+        [FromBody] HowToRequest request,
+        CancellationToken cancellationToken)
+    {
+        var session = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken);
+
+        if (session is null)
+        {
+            return NotFound();
+        }
+
+        var response = await _howToService.AskHowToAsync(
+            request.Question!,
+            session.Language,
+            cancellationToken);
 
         return Ok(response);
     }
