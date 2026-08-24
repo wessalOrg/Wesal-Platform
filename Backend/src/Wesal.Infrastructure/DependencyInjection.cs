@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<ITranslationService, TranslationService>();
         services.AddSingleton<IChatSessionService, ChatSessionService>();
         services.AddSingleton<IHowToService, HowToService>();
+        services.AddSingleton<IRecommendationService, RecommendationServiceStub>();
         services.AddSingleton<IDateTime, DateTimeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

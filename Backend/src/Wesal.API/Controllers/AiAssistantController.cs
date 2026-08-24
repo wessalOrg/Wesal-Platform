@@ -13,11 +13,16 @@ public class AiAssistantController : ControllerBase
 {
     private readonly IChatSessionService _chatSessionService;
     private readonly IHowToService _howToService;
+    private readonly IRecommendationService _recommendationService;
 
-    public AiAssistantController(IChatSessionService chatSessionService, IHowToService howToService)
+    public AiAssistantController(
+        IChatSessionService chatSessionService,
+        IHowToService howToService,
+        IRecommendationService recommendationService)
     {
         _chatSessionService = chatSessionService;
         _howToService = howToService;
+        _recommendationService = recommendationService;
     }
 
     [HttpPost]
@@ -73,6 +78,47 @@ public class AiAssistantController : ControllerBase
             request.Question!,
             session.Language,
             cancellationToken);
+
+        return Ok(response);
+    }
+
+    [HttpPost("{sessionId:guid}/recommend")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(RecommendationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(RecommendationResponse), StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult<RecommendationResponse>> GetRecommendations(
+        Guid sessionId,
+        [FromBody] RecommendationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var session = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken);
+
+        if (session is null)
+        {
+            return NotFound();
+        }
+
+        RecommendationResponse response;
+        try
+        {
+            response = await _recommendationService.GetRecommendationsAsync(
+                request.Message!,
+                session.Language,
+                cancellationToken);
+        }
+        catch (Exception)
+        {
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new RecommendationResponse(
+                    RecommendationStatus.AiUnavailable,
+                    null,
+                    Array.Empty<HallRecommendationDto>(),
+                    "The recommendation service is temporarily unavailable. Please try again later.",
+                    DateTime.UtcNow));
+        }
 
         return Ok(response);
     }
