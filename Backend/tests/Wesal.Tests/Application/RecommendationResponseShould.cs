@@ -49,6 +49,7 @@ public class RecommendationResponseShould
             new ExtractedCriteriaDto("Gaza", null, null, null, null),
             Array.Empty<HallRecommendationDto>(),
             "Please provide a date to find available halls.",
+            "en",
             DateTime.UtcNow);
 
         Assert.Equal(RecommendationStatus.IncompleteCriteria, response.Status);
@@ -63,6 +64,7 @@ public class RecommendationResponseShould
             new ExtractedCriteriaDto("Gaza", "Al-Nasr", new DateOnly(2026, 8, 2), "FirstPeriod", 200),
             Array.Empty<HallRecommendationDto>(),
             "No halls found matching your criteria.",
+            "ar",
             DateTime.UtcNow);
 
         Assert.Equal(RecommendationStatus.NoResults, response.Status);
@@ -77,6 +79,7 @@ public class RecommendationResponseShould
             null,
             Array.Empty<HallRecommendationDto>(),
             "The recommendation service is temporarily unavailable.",
+            "ar",
             DateTime.UtcNow);
 
         Assert.Equal(RecommendationStatus.AiUnavailable, response.Status);
@@ -161,9 +164,9 @@ public class RecommendationResponseShould
         var criteria = new ExtractedCriteriaDto("Gaza", null, null, null, null);
 
         var a = new RecommendationResponse(
-            RecommendationStatus.Success, criteria, Array.Empty<HallRecommendationDto>(), msg, timestamp);
+            RecommendationStatus.Success, criteria, Array.Empty<HallRecommendationDto>(), msg, "ar", timestamp);
         var b = new RecommendationResponse(
-            RecommendationStatus.Success, criteria, Array.Empty<HallRecommendationDto>(), msg, timestamp);
+            RecommendationStatus.Success, criteria, Array.Empty<HallRecommendationDto>(), msg, "ar", timestamp);
 
         Assert.Equal(a, b);
     }
@@ -174,9 +177,9 @@ public class RecommendationResponseShould
         var timestamp = DateTime.UtcNow;
 
         var a = new RecommendationResponse(
-            RecommendationStatus.Success, null, Array.Empty<HallRecommendationDto>(), "msg1", timestamp);
+            RecommendationStatus.Success, null, Array.Empty<HallRecommendationDto>(), "msg1", "ar", timestamp);
         var b = new RecommendationResponse(
-            RecommendationStatus.NoResults, null, Array.Empty<HallRecommendationDto>(), "msg2", timestamp);
+            RecommendationStatus.NoResults, null, Array.Empty<HallRecommendationDto>(), "msg2", "ar", timestamp);
 
         Assert.NotEqual(a, b);
     }
@@ -196,6 +199,7 @@ public class RecommendationResponseShould
             criteria,
             halls,
             "Found 2 halls matching your criteria.",
+            "en",
             DateTime.UtcNow);
     }
 }

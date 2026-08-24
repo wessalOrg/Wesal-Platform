@@ -117,6 +117,7 @@ public class AiAssistantController : ControllerBase
                     null,
                     Array.Empty<HallRecommendationDto>(),
                     "The recommendation service is temporarily unavailable. Please try again later.",
+                    session.Language,
                     DateTime.UtcNow));
         }
 

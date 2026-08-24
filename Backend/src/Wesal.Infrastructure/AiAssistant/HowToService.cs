@@ -24,6 +24,7 @@ public sealed partial class HowToService : IHowToService
         return Task.FromResult(new HowToResponse(
             answer,
             category,
+            effectiveLanguage,
             DateTime.UtcNow));
     }
 

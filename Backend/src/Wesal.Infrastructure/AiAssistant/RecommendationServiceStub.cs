@@ -10,16 +10,23 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// </summary>
 public sealed class RecommendationServiceStub : IRecommendationService
 {
+    private const string DefaultLanguage = "ar";
+
     public Task<RecommendationResponse> GetRecommendationsAsync(
         string message,
         string? language,
         CancellationToken cancellationToken = default)
     {
+        var effectiveLanguage = string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language;
+
         return Task.FromResult(new RecommendationResponse(
             RecommendationStatus.AiUnavailable,
             null,
             Array.Empty<HallRecommendationDto>(),
-            "The recommendation service is not yet available. Please try again later.",
+            effectiveLanguage == "en"
+                ? "The recommendation service is not yet available. Please try again later."
+                : "خدمة التوصيات غير متاحة حالياً. يرجى المحاولة لاحقاً.",
+            effectiveLanguage,
             DateTime.UtcNow));
     }
 }
