@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Infrastructure.AiAssistant;
 
@@ -10,7 +12,10 @@ namespace Wesal.Tests.Infrastructure;
 /// </summary>
 public class BilingualArchitectureContractShould
 {
-    private readonly HowToService _howToService = new();
+    private static ISubscriptionPaymentService CreatePaymentService()
+        => new SubscriptionPaymentService(Options.Create(new SubscriptionPaymentOptions()));
+
+    private readonly HowToService _howToService = new(CreatePaymentService());
     private readonly RecommendationServiceStub _recommendationService = new();
 
     [Fact]

@@ -9,6 +9,13 @@ public sealed partial class HowToService : IHowToService
     private const string DefaultLanguage = "ar";
     private const string FallbackCategory = "general";
 
+    private readonly ISubscriptionPaymentService _subscriptionPaymentService;
+
+    public HowToService(ISubscriptionPaymentService subscriptionPaymentService)
+    {
+        _subscriptionPaymentService = subscriptionPaymentService;
+    }
+
     public Task<HowToResponse> AskHowToAsync(
         string question,
         string? language,
@@ -31,7 +38,7 @@ public sealed partial class HowToService : IHowToService
     private static string Normalize(string input) =>
         WhitespaceRegex().Replace(input.Trim().ToLowerInvariant(), " ");
 
-    private static (string Answer, string Category) MatchEnglish(string question)
+    private (string Answer, string Category) MatchEnglish(string question)
     {
         if (ContainsAny(question, "search", "find", "look for", "browse halls", "filter"))
             return ("To search for halls: go to the Browse & Search page from the navigation bar. You can filter halls by region (North Gaza, Gaza, Middle Area, South Gaza), by area, by date, by booking period, or by hall name. You can combine multiple filters. Only approved halls appear in results.", "search");
@@ -70,7 +77,10 @@ public sealed partial class HowToService : IHowToService
             return ("To switch the site language: tap the language toggle button in the top navigation bar. The site supports Arabic (default, RTL) and English (LTR). All content and layout adjust automatically when you switch.", "language");
 
         if (ContainsAny(question, "payment", "subscription", "pay", "ils"))
-            return ("To pay your subscription as a Hall Owner: contact the Admin via WhatsApp at +972597744476 to arrange payment. The subscription is 120 ILS per 30-day cycle per hall. Once the Admin confirms your payment, your hall's management features unlock.", "payment");
+        {
+            var details = _subscriptionPaymentService.GetPaymentDetails();
+            return ($"To pay your subscription as a Hall Owner: contact the Admin via WhatsApp at {details.AdminWhatsAppContact} to arrange payment. The subscription is {details.SubscriptionPriceIls:F0} ILS per {details.SubscriptionCycleDays}-day cycle per hall. Once the Admin confirms your payment, your hall's management features unlock.", "payment");
+        }
 
         if (ContainsAny(question, "how to use", "how do i", "help", "guide", "tutorial", "what can", "what is wesal", "about wesal", "about this site"))
             return ("Wesal is a wedding hall booking platform for Gaza. You can browse approved wedding halls, search by region and date, view hall details and availability, book halls, rate and comment on halls, and message hall owners directly. Register for free to access booking, commenting, rating, and messaging features.", "general");
@@ -81,7 +91,7 @@ public sealed partial class HowToService : IHowToService
         return ("I can help you with how to use Wesal. You can ask about: searching for halls, booking a hall, viewing hall details, rating and commenting on halls, contacting hall owners, registration, login, language switching, and more. What would you like to know?", "general");
     }
 
-    private static (string Answer, string Category) MatchArabic(string question)
+    private (string Answer, string Category) MatchArabic(string question)
     {
         if (ContainsAny(question, "بحث", "ابحث", "أبحث", "تصفية", "about search", "about filter", "search", "find", "browse", "filter"))
             return ("للبحث عن قاعات: انتقل إلى صفحة الاستكشاف والبحث من شريط التنقل. يمكنك تصفية القاعات حسب المنطقة (شمال غزة، غزة، الوسطى، جنوب المنطقة)، المنطقة الفئة، التاريخ، فترة الحجز، أو اسم القاعة. يمكنك الجمع بين عدة مرشحات. فقط القاعات المعتمدة تظهر في النتائج.", "search");
@@ -120,7 +130,10 @@ public sealed partial class HowToService : IHowToService
             return ("لتبديل لغة الموقع: اضغط على زر تبديل اللغة في شريط التنقل العلوي. الموقع يدعم العربية (الافتراضي، من اليمين لليسار) والإنجليزية (من اليسار لليمين). جميع المحتوى والتخطيط يتكيفون تلقائياً عند التبديل.", "language");
 
         if (ContainsAny(question, "دفع", "اشتراك", "ريال", "about payment", "about subscription", "about pay", "about ils"))
-            return ("لدفع اشتراكك كصاحب قاعة: تواصل مع المدير عبر واتساب على الرقم 972597744476 لترتيب الدفع. الاشتراك 120 شيكل لكل 30 يوم لكل قاعة. بمجرد تأكيد المدير للدفع، يتم فتح ميزات إدارة قاعدتك.", "payment");
+        {
+            var details = _subscriptionPaymentService.GetPaymentDetails();
+            return ($"لدفع اشتراكك كصاحب قاعة: تواصل مع المدير عبر واتساب على الرقم {details.AdminWhatsAppContact} لترتيب الدفع. الاشتراك {details.SubscriptionPriceIls:F0} شيكل لكل {details.SubscriptionCycleDays} يوم لكل قاعة. بمجرد تأكيد المدير للدفع، يتم فتح ميزات إدارة قاعدتك.", "payment");
+        }
 
         if (ContainsAny(question, "كيف أستخدم", "كيف يمكنني", "مساعدة", "دليل", "تعليم", "ما هو وصال", "عن وصال", "عن هذا الموقع", "about how to use", "about how do i", "about help", "about guide", "about tutorial", "about what can", "about what is wesal", "about about wesal", "about about this site"))
             return ("وصال هو منصة حجز قاعات أفراح في غزة. يمكنك تصفح القاعات المعتمدة، البحث حسب المنطقة والتاريخ، عرض تفاصيل القاعات والتوفر، حجز القاعات، تقييم وتعليق على القاعات، والتواصل مع أصحاب القاعات مباشرة. سجل مجاناً للوصول إلى ميزات الحجز والتعليق والتقييم والمراسلة.", "general");

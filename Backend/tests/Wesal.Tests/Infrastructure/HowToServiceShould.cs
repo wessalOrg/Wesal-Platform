@@ -1,10 +1,15 @@
+using Microsoft.Extensions.Options;
+using Wesal.Application.Common.Interfaces;
 using Wesal.Infrastructure.AiAssistant;
 
 namespace Wesal.Tests.Infrastructure;
 
 public class HowToServiceShould
 {
-    private readonly HowToService _service = new();
+    private static ISubscriptionPaymentService CreatePaymentService()
+        => new SubscriptionPaymentService(Options.Create(new SubscriptionPaymentOptions()));
+
+    private readonly HowToService _service = new(CreatePaymentService());
 
     [Fact]
     public async Task AskHowTo_SearchQuestion_ReturnsSearchAnswer()

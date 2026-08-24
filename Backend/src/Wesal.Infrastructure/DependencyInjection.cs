@@ -37,6 +37,9 @@ public static class DependencyInjection
         services.AddOptions<HomepageIntroductionOptions>()
             .Bind(configuration.GetSection(HomepageIntroductionOptions.SectionName));
 
+        services.AddOptions<SubscriptionPaymentOptions>()
+            .Bind(configuration.GetSection(SubscriptionPaymentOptions.SectionName));
+
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IHomepageIntroductionService, HomepageIntroductionService>();
@@ -54,6 +57,7 @@ public static class DependencyInjection
         services.AddSingleton<IChatSessionService, ChatSessionService>();
         services.AddSingleton<IHowToService, HowToService>();
         services.AddSingleton<IRecommendationService, RecommendationServiceStub>();
+        services.AddSingleton<ISubscriptionPaymentService, SubscriptionPaymentService>();
         services.AddSingleton<IDateTime, DateTimeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
