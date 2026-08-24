@@ -79,7 +79,12 @@ type ApiFeaturedHall = {
   bookingPeriods?: ApiPeriod[];
 };
 
-type FeaturedResponse = ApiFeaturedHall[] | { data: ApiFeaturedHall[] };
+type PagedHallResponse = { items?: ApiFeaturedHall[] };
+
+type FeaturedResponse =
+  | ApiFeaturedHall[]
+  | { data?: ApiFeaturedHall[] }
+  | PagedHallResponse;
 
 export type FeaturedHallsLoadResult = {
   halls: FeaturedHall[];
@@ -111,7 +116,11 @@ function resolveHallImage(
 
 function normalize(payload: FeaturedResponse): ApiFeaturedHall[] {
   if (Array.isArray(payload)) return payload;
-  return payload.data ?? [];
+  if (payload && typeof payload === "object") {
+    if ("items" in payload && Array.isArray(payload.items)) return payload.items;
+    if ("data" in payload && Array.isArray(payload.data)) return payload.data;
+  }
+  return [];
 }
 
 function mapApiRegion(region?: string): Exclude<HallRegion, "all"> {
@@ -607,6 +616,7 @@ type ApiHallDetails = {
   imageUrl?: string | null;
   images?: Array<string | { url?: string; imageUrl?: string }>;
   gallery?: Array<string | { url?: string; imageUrl?: string }>;
+  photos?: Array<{ id?: string; url?: string }>;
   region?: string;
   address?: string;
   location?: string;
@@ -721,12 +731,16 @@ function mapReviews(
 function mapApiHallDetails(raw: ApiHallDetails): HallDetails {
   const fallback = findHallDetailsFallback(String(raw.hallId ?? raw.id ?? ""));
   const id = String(raw.hallId ?? raw.id ?? fallback?.id ?? "");
-  const galleryRaw = raw.images ?? raw.gallery ?? [];
+  const photosUrls =
+    raw.photos
+      ?.map((p) => p.url)
+      .filter((url): url is string => Boolean(url)) ?? [];
+  const galleryRaw = [...photosUrls, ...(raw.images ?? []), ...(raw.gallery ?? [])];
   const gallery = galleryRaw
     .map((entry, index) => mapImageEntry(entry, index))
     .filter((url): url is string => Boolean(url));
   const main = resolveHallImage(
-    raw.mainImage ?? raw.mainImageUrl ?? raw.imageUrl,
+    raw.mainImage ?? raw.mainImageUrl ?? raw.imageUrl ?? photosUrls[0] ?? null,
     0,
   );
   const images = Array.from(
