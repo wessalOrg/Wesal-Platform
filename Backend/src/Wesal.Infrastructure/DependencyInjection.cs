@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddSingleton<IHowToService, HowToService>();
         services.AddSingleton<IRecommendationService, RecommendationServiceStub>();
         services.AddSingleton<ISubscriptionPaymentService, SubscriptionPaymentService>();
+        services.AddScoped<IHallRecommendationMatcher, HallRecommendationMatcher>();
         services.AddSingleton<IDateTime, DateTimeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
