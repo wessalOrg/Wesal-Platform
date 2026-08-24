@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 
@@ -10,10 +11,12 @@ public sealed partial class HowToService : IHowToService
     private const string FallbackCategory = "general";
 
     private readonly ISubscriptionPaymentService _subscriptionPaymentService;
+    private readonly IAiLanguageDetector _languageDetector;
 
-    public HowToService(ISubscriptionPaymentService subscriptionPaymentService)
+    public HowToService(ISubscriptionPaymentService subscriptionPaymentService, IAiLanguageDetector? languageDetector = null)
     {
         _subscriptionPaymentService = subscriptionPaymentService;
+        _languageDetector = languageDetector ?? new AiLanguageDetector();
     }
 
     public Task<HowToResponse> AskHowToAsync(
@@ -21,7 +24,8 @@ public sealed partial class HowToService : IHowToService
         string? language,
         CancellationToken cancellationToken = default)
     {
-        var effectiveLanguage = string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language;
+        var detected = _languageDetector.Detect(question);
+        var effectiveLanguage = detected ?? (string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language);
         var normalized = Normalize(question);
 
         var (answer, category) = effectiveLanguage == "en"

@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<IAiResponseValidator, AiResponseValidator>();
         services.AddScoped<IAiFallbackProvider, AiFallbackProvider>();
         services.AddSingleton<Common.Interfaces.IRecommendationCriteriaExtractor, Ai.NaturalLanguageCriteriaExtractor>();
+        services.AddSingleton<Ai.IAiLanguageDetector, Ai.AiLanguageDetector>();
 
         return services;
     }

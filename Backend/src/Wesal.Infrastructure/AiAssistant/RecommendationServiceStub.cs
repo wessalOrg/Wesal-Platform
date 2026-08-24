@@ -1,3 +1,4 @@
+using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 
@@ -11,13 +12,20 @@ namespace Wesal.Infrastructure.AiAssistant;
 public sealed class RecommendationServiceStub : IRecommendationService
 {
     private const string DefaultLanguage = "ar";
+    private readonly IAiLanguageDetector _languageDetector;
+
+    public RecommendationServiceStub(IAiLanguageDetector? languageDetector = null)
+    {
+        _languageDetector = languageDetector ?? new AiLanguageDetector();
+    }
 
     public Task<RecommendationResponse> GetRecommendationsAsync(
         string message,
         string? language,
         CancellationToken cancellationToken = default)
     {
-        var effectiveLanguage = string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language;
+        var detected = _languageDetector.Detect(message);
+        var effectiveLanguage = detected ?? (string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language);
 
         return Task.FromResult(new RecommendationResponse(
             RecommendationStatus.AiUnavailable,
