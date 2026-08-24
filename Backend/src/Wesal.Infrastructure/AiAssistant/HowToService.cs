@@ -12,11 +12,16 @@ public sealed partial class HowToService : IHowToService
 
     private readonly ISubscriptionPaymentService _subscriptionPaymentService;
     private readonly IAiLanguageDetector _languageDetector;
+    private readonly ISubscriptionPaymentIntentDetector _paymentIntentDetector;
 
-    public HowToService(ISubscriptionPaymentService subscriptionPaymentService, IAiLanguageDetector? languageDetector = null)
+    public HowToService(
+        ISubscriptionPaymentService subscriptionPaymentService,
+        IAiLanguageDetector? languageDetector = null,
+        ISubscriptionPaymentIntentDetector? paymentIntentDetector = null)
     {
         _subscriptionPaymentService = subscriptionPaymentService;
         _languageDetector = languageDetector ?? new AiLanguageDetector();
+        _paymentIntentDetector = paymentIntentDetector ?? new SubscriptionPaymentIntentDetector();
     }
 
     public Task<HowToResponse> AskHowToAsync(
@@ -26,6 +31,17 @@ public sealed partial class HowToService : IHowToService
     {
         var detected = _languageDetector.Detect(question);
         var effectiveLanguage = detected ?? (string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language);
+
+        // Subscription-payment intent takes priority and uses trusted backend contact (anti-hallucination)
+        if (_paymentIntentDetector.IsSubscriptionPaymentIntent(question))
+        {
+            var details = _subscriptionPaymentService.GetPaymentDetails();
+            var paymentAnswer = effectiveLanguage == "en"
+                ? $"To pay your subscription as a Hall Owner: contact the Admin via WhatsApp at {details.AdminWhatsAppContact} to arrange payment. The subscription is {details.SubscriptionPriceIls:F0} ILS per {details.SubscriptionCycleDays}-day cycle per hall. Once the Admin confirms your payment, your hall's management features unlock."
+                : $"لدفع اشتراكك كصاحب قاعة: تواصل مع المدير عبر واتساب على الرقم {details.AdminWhatsAppContact} لترتيب الدفع. الاشتراك {details.SubscriptionPriceIls:F0} شيكل لكل {details.SubscriptionCycleDays} يوم لكل قاعة. بمجرد تأكيد المدير للدفع، يتم فتح ميزات إدارة قاعدتك.";
+            return Task.FromResult(new HowToResponse(paymentAnswer, "payment", effectiveLanguage, DateTime.UtcNow));
+        }
+
         var normalized = Normalize(question);
 
         var (answer, category) = effectiveLanguage == "en"

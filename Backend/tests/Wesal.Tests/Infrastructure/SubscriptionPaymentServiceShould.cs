@@ -20,7 +20,7 @@ public class SubscriptionPaymentServiceShould
 
         var contact = service.GetAdminWhatsAppContact();
 
-        Assert.Equal("+972597744476", contact);
+        Assert.Equal("+972597765489", contact);
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class SubscriptionPaymentServiceShould
 
         var details = service.GetPaymentDetails();
 
-        Assert.Equal("+972597744476", details.AdminWhatsAppContact);
+        Assert.Equal("+972597765489", details.AdminWhatsAppContact);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class SubscriptionPaymentServiceShould
 
         var response = await service.GetSubscriptionPaymentResponseAsync("en", CancellationToken.None);
 
-        Assert.Contains("+972597744476", response.Answer);
+        Assert.Contains("+972597765489", response.Answer);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class SubscriptionPaymentServiceShould
 
         var response = await service.GetSubscriptionPaymentResponseAsync("ar", CancellationToken.None);
 
-        Assert.Contains("+972597744476", response.Answer);
+        Assert.Contains("+972597765489", response.Answer);
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class SubscriptionPaymentServiceShould
 
         var response = await service.GetSubscriptionPaymentResponseAsync("en", CancellationToken.None);
 
-        Assert.Equal("+972597744476", response.TrustedContact.PhoneNumber);
+        Assert.Equal("+972597765489", response.TrustedContact.PhoneNumber);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class SubscriptionPaymentServiceShould
         var response = await service.GetSubscriptionPaymentResponseAsync("en", CancellationToken.None);
 
         Assert.StartsWith("https://wa.me/", response.TrustedContact.WhatsAppLink);
-        Assert.Contains("972597744476", response.TrustedContact.WhatsAppLink);
+        Assert.Contains("972597765489", response.TrustedContact.WhatsAppLink);
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class SubscriptionPaymentServiceShould
         var contact2 = service2.GetAdminWhatsAppContact();
 
         Assert.Equal(contact1, contact2);
-        Assert.Equal("+972597744476", contact1);
+        Assert.Equal("+972597765489", contact1);
     }
 
     [Fact]
@@ -201,7 +201,7 @@ public class SubscriptionPaymentServiceShould
     {
         var options = new SubscriptionPaymentOptions();
 
-        Assert.Equal("+972597744476", options.AdminWhatsAppContact);
+        Assert.Equal("+972597765489", options.AdminWhatsAppContact);
         Assert.Equal(120m, options.SubscriptionPriceIls);
         Assert.Equal(30, options.SubscriptionCycleDays);
     }
