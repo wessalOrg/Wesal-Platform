@@ -68,18 +68,14 @@ export default function HallCommentPanel({
   }
 
   const submit = async () => {
+    if (submitting) return;
+
     const validationError = validateCommentBody(body);
     if (validationError) {
-      const trimmed = body.trim();
-      setError(
-        trimmed.length > COMMENT_MAX_LENGTH
-          ? t("halls.comment.tooLong")
-          : t("halls.comment.tooShort"),
-      );
+      setError(validationError);
       setSuccess(false);
       return;
     }
-    if (submitting) return;
 
     setSubmitting(true);
     setError(null);
@@ -117,6 +113,8 @@ export default function HallCommentPanel({
         placeholder={t("halls.comment.placeholder")}
         maxLength={COMMENT_MAX_LENGTH}
         disabled={submitting}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? "hall-comment-error" : undefined}
         value={body}
         onChange={(event) => {
           setBody(event.target.value);
@@ -134,12 +132,21 @@ export default function HallCommentPanel({
           type="submit"
           className="btn-primary min-h-11 w-full !rounded-xl !px-4 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:w-auto sm:min-h-12"
           disabled={submitting}
+          aria-busy={submitting}
         >
-          {submitting ? t("common.loading") : t("halls.comment.submit")}
+          {submitting ? (
+            <span className="inline-flex items-center justify-center gap-2">
+              <Spinner />
+              {t("halls.comment.submitting")}
+            </span>
+          ) : (
+            t("halls.comment.submit")
+          )}
         </button>
       </div>
       {error ? (
         <div
+          id="hall-comment-error"
           className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700"
           role="alert"
           data-testid="hall-comment-error"
@@ -165,5 +172,31 @@ export default function HallCommentPanel({
         </p>
       ) : null}
     </form>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg
+      className="h-4 w-4 animate-spin"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeOpacity="0.25"
+        strokeWidth="2.4"
+      />
+      <path
+        d="M21 12a9 9 0 0 0-9-9"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
