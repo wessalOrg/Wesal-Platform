@@ -40,6 +40,11 @@ const nextConfig: NextConfig = {
         port: "5298",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "wesal-platform.onrender.com",
+        pathname: "/**",
+      },
     ],
   },
 };
