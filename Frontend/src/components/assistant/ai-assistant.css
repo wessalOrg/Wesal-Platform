@@ -173,6 +173,17 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
 
 .wesal-ai-panel-body {
   background: var(--wesal-pink-soft);
+  overflow-x: hidden;
+}
+
+.wesal-ai-bubble-user {
+  background: linear-gradient(
+    150deg,
+    var(--wesal-maroon-soft) 0%,
+    var(--wesal-maroon) 55%,
+    var(--wesal-maroon-dark) 100%
+  );
+  box-shadow: 0 6px 16px rgba(193, 123, 127, 0.28);
 }
 
 .wesal-ai-avatar,
@@ -184,6 +195,32 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
     var(--wesal-maroon-dark) 100%
   );
   box-shadow: 0 6px 16px rgba(193, 123, 127, 0.35);
+  touch-action: manipulation;
+}
+
+.wesal-ai-composer {
+  padding-bottom: max(0.875rem, env(safe-area-inset-bottom, 0px));
+}
+
+/*
+ * Content direction follows the first strong character, not the site locale.
+ * Placeholder chrome stays aligned with the surrounding UI while the field is empty.
+ */
+.wesal-ai-composer-field {
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  touch-action: manipulation;
+}
+
+.wesal-ai-composer-field:placeholder-shown {
+  direction: inherit;
+  text-align: start;
+  unicode-bidi: isolate;
+}
+
+[dir="rtl"] .wesal-ai-send-icon {
+  transform: scaleX(-1);
 }
 
 .wesal-ai-dot {
@@ -319,12 +356,218 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
 }
 
 /*
+ * Long replies stay inside the bubble and the thread: wrap anywhere, then
+ * scroll the copy if it still exceeds a viewport-relative cap.
+ */
+.wesal-ai-bubble-copy {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-height: min(40svh, 16rem);
+  text-align: start;
+  unicode-bidi: isolate;
+}
+
+.wesal-ai-bubble-copy[dir="ltr"] {
+  text-align: start;
+}
+
+.wesal-ai-bubble-copy[dir="rtl"] {
+  text-align: start;
+}
+
+.wesal-ai-wa-link {
+  position: relative;
+  z-index: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-height: 1.75rem;
+  align-items: center;
+  gap: 0.3rem;
+  margin-inline: 0.05rem;
+  padding: 0.1rem 0.25rem;
+  vertical-align: baseline;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  unicode-bidi: isolate;
+  color: var(--wesal-maroon);
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: 1px;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  user-select: text;
+  transition:
+    background-color 120ms ease,
+    text-decoration-thickness 120ms ease;
+}
+
+.wesal-ai-wa-link:visited {
+  color: var(--wesal-maroon);
+}
+
+.wesal-ai-wa-link-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.wesal-ai-wa-glyph {
+  width: 0.9em;
+  height: 0.9em;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.wesal-ai-wa-fallback {
+  display: inline;
+  max-width: 100%;
+  unicode-bidi: isolate;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.wesal-ai-bubble-user .wesal-ai-wa-link,
+.wesal-ai-bubble-user .wesal-ai-wa-link:visited {
+  color: inherit;
+}
+
+@media (hover: hover) {
+  .wesal-ai-wa-link:hover {
+    background: rgba(193, 123, 127, 0.12);
+    text-decoration-thickness: 2px;
+  }
+}
+
+.wesal-ai-wa-link:focus-visible {
+  outline: 2px solid var(--wesal-maroon-soft);
+  outline-offset: 2px;
+  background: rgba(193, 123, 127, 0.12);
+}
+
+.wesal-ai-wa-link:active {
+  background: rgba(193, 123, 127, 0.22);
+  text-decoration-thickness: 2px;
+}
+
+@media (pointer: coarse) {
+  .wesal-ai-wa-link {
+    min-height: 2.75rem;
+    padding: 0.25rem 0.45rem;
+  }
+}
+
+.wesal-ai-chat-shell {
+  min-width: 0;
+  background: var(--wesal-pink-soft);
+}
+
+.wesal-ai-chat-chip {
+  overflow-wrap: anywhere;
+}
+
+.wesal-ai-hall {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.wesal-ai-hall-card {
+  max-width: 100%;
+  cursor: pointer;
+}
+
+.wesal-ai-hall-card:hover:not(:disabled) {
+  box-shadow: 0 8px 18px rgba(193, 123, 127, 0.16);
+}
+
+.wesal-ai-hall-card:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.wesal-ai-hall-badge {
+  line-height: 1.2;
+  text-align: start;
+}
+
+.wesal-ai-hall-thumb {
+  min-width: 4rem;
+}
+
+.wesal-ai-hall-empty {
+  overflow-wrap: anywhere;
+}
+
+.wesal-ai-hall-skel-thumb {
+  width: 4rem;
+  height: 4rem;
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+}
+
+.wesal-ai-chat-skel-bubble {
+  border-radius: 1rem;
+  border: 1px solid var(--wesal-border);
+  background: #fff;
+  padding: 0.7rem 0.85rem;
+}
+
+.wesal-ai-chat-skel-bubble-user {
+  background: color-mix(in srgb, var(--wesal-maroon) 12%, white);
+}
+
+.wesal-ai-chat-skel-line {
+  display: block;
+  height: 0.55rem;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #f1e4e2 0%, #f8eeec 45%, #f1e4e2 100%);
+  background-size: 200% 100%;
+  animation: wesal-ai-skel 1.2s ease-in-out infinite;
+}
+
+.wesal-ai-chat-skel-line + .wesal-ai-chat-skel-line {
+  margin-top: 0.45rem;
+}
+
+@keyframes wesal-ai-skel {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+/*
  * Short viewports (landscape phones) — keep the panel clear of the floating
  * button and inside the viewport so it never blocks the page underneath.
  */
 @media (max-height: 30rem) {
   .wesal-ai-panel {
     max-height: calc(100svh - 7.5rem);
+  }
+
+  .wesal-ai-bubble-copy {
+    max-height: min(28svh, 10rem);
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .wesal-ai-panel {
+    width: min(24rem, calc(100vw - 3rem));
+  }
+}
+
+@media (min-width: 1024px) {
+  .wesal-ai-panel {
+    width: 26rem;
   }
 }
 
@@ -334,7 +577,9 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
   .wesal-ai-fab-spark,
   .wesal-ai-panel,
   .wesal-ai-invite,
-  .wesal-ai-dot {
+  .wesal-ai-dot,
+  .wesal-ai-chat-skel-line,
+  .wesal-ai-wa-link {
     animation: none !important;
     transition: none;
     transform: none;
@@ -351,6 +596,10 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
   }
 
   .wesal-ai-fab:hover {
+    transform: none;
+  }
+
+  .wesal-ai-hall-card:active:not(:disabled) {
     transform: none;
   }
 
