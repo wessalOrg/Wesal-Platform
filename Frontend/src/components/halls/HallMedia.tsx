@@ -13,7 +13,8 @@ function canOptimizeRemote(src: string) {
     return (
       host === "images.unsplash.com" ||
       host === "localhost" ||
-      host === "127.0.0.1"
+      host === "127.0.0.1" ||
+      host === "wesal-platform.onrender.com"
     );
   } catch {
     return false;
