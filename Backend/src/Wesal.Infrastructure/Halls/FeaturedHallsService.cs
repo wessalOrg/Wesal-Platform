@@ -68,16 +68,11 @@ public class FeaturedHallsService : IFeaturedHallsService
 
         var hallIds = halls.Select(hall => hall.Id).ToHashSet();
 
-        var periodsTask = _hallRepository.GetBookingPeriodsAsync(hallIds, cancellationToken);
         var fromDate = DateOnly.FromDateTime(_dateTime.Now.UtcDateTime);
         var toDate = fromDate.AddDays(AvailabilityDays - 1);
 
-        var availabilityTask = _hallRepository.GetAvailabilityAsync(hallIds, fromDate, toDate, cancellationToken);
-
-        await Task.WhenAll(periodsTask, availabilityTask);
-
-        var periods = periodsTask.Result;
-        var availability = availabilityTask.Result;
+        var periods = await _hallRepository.GetBookingPeriodsAsync(hallIds, cancellationToken);
+        var availability = await _hallRepository.GetAvailabilityAsync(hallIds, fromDate, toDate, cancellationToken);
 
         var availabilityByKey = availability.ToDictionary(item => (item.HallId, item.Date, item.PeriodType));
         var periodsByHall = periods.GroupBy(period => period.HallId)
