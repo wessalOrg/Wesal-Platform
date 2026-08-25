@@ -15,9 +15,9 @@ public class AISession : BaseEntity
     [MaxLength(450)]
     public string? UserId { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
-    public DateTime? LastAccessedAt { get; set; }
+    public DateTimeOffset? LastAccessedAt { get; set; }
 
     [MaxLength(500)]
     public string? Status { get; set; }
@@ -28,5 +28,5 @@ public class AISession : BaseEntity
     [MaxLength(450)]
     public string? GuestIdentifier { get; set; }
 
-    public bool IsExpired => LastAccessedAt.HasValue && DateTime.UtcNow - LastAccessedAt > TimeSpan.FromHours(24);
+    public bool IsExpired => LastAccessedAt.HasValue && DateTimeOffset.UtcNow - LastAccessedAt > TimeSpan.FromHours(24);
 }

@@ -12,7 +12,7 @@ using Wesal.Persistence.Data;
 namespace Wesal.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260822182301_AISessionStorage")]
+    [Migration("20260825101619_AISessionStorage")]
     partial class AISessionStorage
     {
         /// <inheritdoc />
@@ -142,8 +142,8 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("GuestIdentifier")
                         .HasMaxLength(450)
@@ -152,11 +152,8 @@ namespace Wesal.Persistence.Migrations
                     b.Property<bool>("IsGuestSession")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("LastAccessedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<object>("SessionData")
-                        .HasColumnType("json");
+                    b.Property<DateTimeOffset?>("LastAccessedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SessionId")
                         .HasMaxLength(450)

@@ -139,8 +139,8 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("GuestIdentifier")
                         .HasMaxLength(450)
@@ -149,8 +149,8 @@ namespace Wesal.Persistence.Migrations
                     b.Property<bool>("IsGuestSession")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("LastAccessedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("LastAccessedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SessionId")
                         .HasMaxLength(450)
