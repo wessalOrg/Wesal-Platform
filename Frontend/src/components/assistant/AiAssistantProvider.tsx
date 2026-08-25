@@ -8,6 +8,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import AiAssistantFab from "@/components/assistant/AiAssistantFab";
 import AiAssistantInvitation from "@/components/assistant/AiAssistantInvitation";
 import AiAssistantPanel from "@/components/assistant/AiAssistantPanel";
@@ -55,7 +56,10 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
     toggleAssistant,
     retry,
   } = controls;
+  const pathname = usePathname();
   const fabRef = useRef<HTMLButtonElement>(null);
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
   const drag = useDraggableFab(toggleAssistant, fabRef);
   const {
     isVisible: invitationVisible,
@@ -82,6 +86,11 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
       mountedProviders -= 1;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isOpenRef.current) return;
+    closeAssistant();
+  }, [pathname, closeAssistant]);
 
   const handleClose = useCallback(() => {
     closeAssistant();

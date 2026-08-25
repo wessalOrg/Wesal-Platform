@@ -304,7 +304,13 @@ const en: MessageCatalog = {
     "Welcome to Wesal! I’m here to help you find the right hall — ask me about an area, a date, or a specific booking period.",
   "assistant.composer.placeholder": "Type your message here…",
   "assistant.composer.send": "Send",
-  "assistant.composer.hint": "Sending messages arrives with the AI chat release.",
+  "assistant.composer.hint": "Enter to send · Shift+Enter for a new line",
+  "assistant.chat.thinking": "The assistant is writing…",
+  "assistant.chat.sending": "Sending…",
+  "assistant.chat.foundHalls": "Here are halls that may match your request.",
+  "assistant.chat.available": "Available",
+  "assistant.chat.unavailableHall": "Unavailable for this date",
+  "assistant.chat.whatsappAria": "Open WhatsApp chat with {label} (opens in a new tab)",
   "assistant.unavailable.title": "The assistant is taking a break",
   "assistant.network.title": "You appear to be offline",
   "assistant.error.title": "Could not start the assistant",
@@ -314,6 +320,30 @@ const en: MessageCatalog = {
   "assistant.invite.help": "How can I help you?",
   "assistant.invite.halls": "Looking for a hall? Ask me about an area or a date.",
   "assistant.invite.dismiss": "Dismiss invitation",
+  "assistant.chat.empty.title": "Start a conversation",
+  "assistant.chat.empty.body":
+    "Ask about a hall, an area, a date, or how booking on Wesal works — I’ll answer here.",
+  "assistant.chat.empty.hintHall": "A hall in Gaza",
+  "assistant.chat.empty.hintHowTo": "How do I book a hall?",
+  "assistant.chat.retry": "Retry",
+  "assistant.chat.retryTitle": "The last message did not go through",
+  "assistant.chat.retryBody":
+    "Your conversation is still here. You can retry the last question without reloading the page.",
+  "assistant.chat.crashTitle": "This conversation view ran into a problem",
+  "assistant.chat.crashBody": "The rest of Wesal is fine. Retry to show the chat again.",
+  "assistant.chat.loadingLabel": "Loading the conversation…",
+  "assistant.chat.recommend.loading": "Looking for matching halls…",
+  "assistant.chat.recommend.noResultsTitle": "No halls matched this request",
+  "assistant.chat.recommend.noResultsContext":
+    "Nothing matched {context}. Try another area, date, or period — or browse halls yourself.",
+  "assistant.chat.recommend.requested": "Requested",
+  "assistant.chat.recommend.availableForDate": "Available for this date",
+  "assistant.chat.recommend.openHall": "Open {name} details",
+  "assistant.chat.recommend.opening": "Opening hall…",
+  "assistant.chat.recommend.invalidHall":
+    "This recommendation is missing hall details, so it cannot be opened.",
+  "assistant.chat.recommend.missingHall":
+    "This hall is no longer listed. Browse halls to pick another one.",
 
   "errors.generic": "Something went wrong.",
   "errors.requestFailed": "Request failed",
@@ -346,6 +376,17 @@ const en: MessageCatalog = {
     "Our AI assistant is unavailable right now. You can browse manually or try again later.",
   "errors.assistant.network":
     "Your device looks offline. Check your connection and the assistant will come back automatically.",
+  "errors.assistant.chat.empty": "Type a question before sending.",
+  "errors.assistant.chat.tooLong": "That question is longer than allowed.",
+  "errors.assistant.chat.validation": "The question could not be understood. Try a shorter or clearer phrasing.",
+  "errors.assistant.chat.send": "Could not send the message. Please try again.",
+  "errors.assistant.chat.expired": "The assistant session expired. Close it and open it again.",
+  "errors.assistant.chat.unavailable":
+    "Recommendations are unavailable right now. You can browse halls manually.",
+  "errors.assistant.chat.noResults": "No matching halls were found. Try another area or date.",
+  "errors.assistant.chat.incomplete":
+    "I need a bit more detail — for example an area or event date.",
+  "errors.assistant.chat.emptyReply": "The assistant returned an empty reply. Please try again.",
 
   "about.title": "About us",
   "about.body":

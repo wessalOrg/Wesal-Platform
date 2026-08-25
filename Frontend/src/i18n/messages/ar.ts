@@ -300,7 +300,13 @@ const ar: MessageCatalog = {
     "أهلاً بك في وصال! أنا هنا لمساعدتك في إيجاد القاعة المناسبة — اسألني عن منطقة أو تاريخ أو فترة حجز معينة.",
   "assistant.composer.placeholder": "اكتب رسالتك هنا…",
   "assistant.composer.send": "إرسال",
-  "assistant.composer.hint": "إرسال الرسائل سيُفعّل مع إطلاق المحادثة الذكية.",
+  "assistant.composer.hint": "Enter للإرسال · Shift+Enter لسطر جديد",
+  "assistant.chat.thinking": "المساعد يكتب…",
+  "assistant.chat.sending": "جاري الإرسال…",
+  "assistant.chat.foundHalls": "هذه قاعات قد تناسب طلبك.",
+  "assistant.chat.available": "متاحة",
+  "assistant.chat.unavailableHall": "غير متاحة في هذا الموعد",
+  "assistant.chat.whatsappAria": "فتح محادثة واتساب مع {label} (تُفتح في تبويب جديد)",
   "assistant.unavailable.title": "المساعد في استراحة",
   "assistant.network.title": "لا يوجد اتصال بالإنترنت",
   "assistant.error.title": "تعذر بدء المساعد",
@@ -310,6 +316,30 @@ const ar: MessageCatalog = {
   "assistant.invite.help": "كيف أقدر أساعدك؟",
   "assistant.invite.halls": "تبحث عن قاعة؟ اسألني عن منطقة أو تاريخ.",
   "assistant.invite.dismiss": "إخفاء الدعوة",
+  "assistant.chat.empty.title": "ابدئي المحادثة",
+  "assistant.chat.empty.body":
+    "اسألي عن قاعة أو منطقة أو تاريخ أو طريقة الحجز على وصال — سأجيبك من هنا.",
+  "assistant.chat.empty.hintHall": "قاعة في غزة",
+  "assistant.chat.empty.hintHowTo": "كيف أحجز قاعة؟",
+  "assistant.chat.retry": "إعادة المحاولة",
+  "assistant.chat.retryTitle": "لم يتم إرسال آخر رسالة",
+  "assistant.chat.retryBody":
+    "محادثتك ما زالت هنا. يمكنك إعادة إرسال السؤال الأخير دون إعادة تحميل الصفحة.",
+  "assistant.chat.crashTitle": "تعذر عرض المحادثة",
+  "assistant.chat.crashBody": "بقية المنصة تعمل بشكل طبيعي. أعيدي المحاولة لعرض الدردشة.",
+  "assistant.chat.loadingLabel": "جاري تحميل المحادثة…",
+  "assistant.chat.recommend.loading": "جاري البحث عن قاعات مناسبة…",
+  "assistant.chat.recommend.noResultsTitle": "لا توجد قاعات مطابقة لهذا الطلب",
+  "assistant.chat.recommend.noResultsContext":
+    "لم أجد نتائج لـ {context}. جرّبي منطقة أو تاريخاً أو فترة أخرى — أو تصفحي القاعات يدوياً.",
+  "assistant.chat.recommend.requested": "الموعد المطلوب",
+  "assistant.chat.recommend.availableForDate": "متاحة في هذا الموعد",
+  "assistant.chat.recommend.openHall": "فتح تفاصيل {name}",
+  "assistant.chat.recommend.opening": "جاري فتح القاعة…",
+  "assistant.chat.recommend.invalidHall":
+    "هذه التوصية ناقصة ولا يمكن فتح صفحة القاعة.",
+  "assistant.chat.recommend.missingHall":
+    "هذه القاعة لم تعد مدرجة. تصفحي القاعات لاختيار قاعة أخرى.",
 
   "errors.generic": "حدث خطأ غير متوقع.",
   "errors.requestFailed": "فشل الطلب",
@@ -342,6 +372,17 @@ const ar: MessageCatalog = {
     "مساعدنا الذكي غير متاح حالياً، يمكنك التصفح يدوياً أو المحاولة مرة أخرى لاحقاً.",
   "errors.assistant.network":
     "يبدو أن جهازك غير متصل بالإنترنت. تحقق من الاتصال وسيعود المساعد تلقائياً.",
+  "errors.assistant.chat.empty": "اكتبي سؤالاً قبل الإرسال.",
+  "errors.assistant.chat.tooLong": "السؤال أطول من الحد المسموح.",
+  "errors.assistant.chat.validation": "تعذر فهم السؤال. جرّبي صيغة أقصر أو أوضح.",
+  "errors.assistant.chat.send": "تعذر إرسال الرسالة. حاول مرة أخرى.",
+  "errors.assistant.chat.expired": "انتهت جلسة المساعد. أغلقيه ثم افتحيه من جديد.",
+  "errors.assistant.chat.unavailable":
+    "خدمة التوصيات غير متاحة حالياً. يمكنك تصفح القاعات يدوياً.",
+  "errors.assistant.chat.noResults": "لم أجد قاعات مطابقة. جرّبي منطقة أو تاريخاً آخر.",
+  "errors.assistant.chat.incomplete":
+    "أحتاج تفاصيل أوضح — مثلاً المنطقة أو تاريخ المناسبة.",
+  "errors.assistant.chat.emptyReply": "لم يصل رد من المساعد. حاول مرة أخرى.",
 
   "about.title": "من نحن",
   "about.body":
