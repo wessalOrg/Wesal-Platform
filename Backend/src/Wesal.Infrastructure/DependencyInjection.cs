@@ -56,7 +56,7 @@ public static class DependencyInjection
         services.AddScoped<ITranslationService, TranslationService>();
         services.AddSingleton<IChatSessionService, ChatSessionService>();
         services.AddSingleton<IHowToService, HowToService>();
-        services.AddSingleton<IRecommendationService, RecommendationServiceStub>();
+        services.AddScoped<IRecommendationService, RecommendationService>();
         services.AddSingleton<ISubscriptionPaymentService, SubscriptionPaymentService>();
         services.AddScoped<IHallRecommendationMatcher, HallRecommendationMatcher>();
         services.AddSingleton<IDateTime, DateTimeService>();

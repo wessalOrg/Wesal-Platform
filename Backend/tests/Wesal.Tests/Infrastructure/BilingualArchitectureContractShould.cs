@@ -1,7 +1,11 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Infrastructure.AiAssistant;
+using Wesal.Persistence.Data;
+using Wesal.Persistence.Repositories;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -10,13 +14,29 @@ namespace Wesal.Tests.Infrastructure;
 /// These tests ensure ResponseLanguage flows correctly through the DTOs and services,
 /// and that the language precedence contract is upheld.
 /// </summary>
-public class BilingualArchitectureContractShould
+public class BilingualArchitectureContractShould : IDisposable
 {
     private static ISubscriptionPaymentService CreatePaymentService()
         => new SubscriptionPaymentService(Options.Create(new SubscriptionPaymentOptions()));
 
-    private readonly HowToService _howToService = new(CreatePaymentService());
-    private readonly RecommendationServiceStub _recommendationService = new();
+    private readonly ApplicationDbContext _context;
+    private readonly HowToService _howToService;
+    private readonly RecommendationService _recommendationService;
+
+    public BilingualArchitectureContractShould()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _context = new ApplicationDbContext(options);
+
+        var repo = new HallRepository(_context);
+        var extractor = new NaturalLanguageCriteriaExtractor();
+        var matcher = new HallRecommendationMatcher(repo);
+
+        _howToService = new HowToService(CreatePaymentService());
+        _recommendationService = new RecommendationService(extractor, matcher);
+    }
 
     [Fact]
     public void HowToResponse_ContainsResponseLanguage()
@@ -83,25 +103,23 @@ public class BilingualArchitectureContractShould
     }
 
     [Fact]
-    public async Task RecommendationStub_EnglishLanguage_ReturnsEnglishResponseLanguage()
+    public async Task Recommendation_EnglishLanguage_ReturnsEnglishResponseLanguage()
     {
-        var result = await _recommendationService.GetRecommendationsAsync("I need a hall", "en", CancellationToken.None);
+        var result = await _recommendationService.GetRecommendationsAsync("I need a hall in Gaza", "en", CancellationToken.None);
 
         Assert.Equal("en", result.ResponseLanguage);
-        Assert.Contains("not yet available", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task RecommendationStub_ArabicLanguage_ReturnsArabicResponseLanguage()
+    public async Task Recommendation_ArabicLanguage_ReturnsArabicResponseLanguage()
     {
-        var result = await _recommendationService.GetRecommendationsAsync("أحتاج قاعة", "ar", CancellationToken.None);
+        var result = await _recommendationService.GetRecommendationsAsync("أحتاج قاعة في غزة", "ar", CancellationToken.None);
 
         Assert.Equal("ar", result.ResponseLanguage);
-        Assert.Contains("غير متاحة", result.Message);
     }
 
     [Fact]
-    public async Task RecommendationStub_NullLanguage_DefaultsToArabic()
+    public async Task Recommendation_NullLanguage_DefaultsToArabic()
     {
         var result = await _recommendationService.GetRecommendationsAsync("12345", null, CancellationToken.None);
 
@@ -109,7 +127,7 @@ public class BilingualArchitectureContractShould
     }
 
     [Fact]
-    public async Task RecommendationStub_EmptyLanguage_DefaultsToArabic()
+    public async Task Recommendation_EmptyLanguage_DefaultsToArabic()
     {
         var result = await _recommendationService.GetRecommendationsAsync("12345", "", CancellationToken.None);
 
@@ -156,4 +174,6 @@ public class BilingualArchitectureContractShould
 
         Assert.Equal("en", result.ResponseLanguage);
     }
+
+    public void Dispose() => _context.Dispose();
 }

@@ -1,7 +1,10 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Infrastructure.AiAssistant;
+using Wesal.Persistence.Data;
+using Wesal.Persistence.Repositories;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -9,6 +12,18 @@ public class AiBilingualProcessingShould
 {
     private readonly IAiLanguageDetector _detector = new AiLanguageDetector();
     private ISubscriptionPaymentService CreatePayment() => new SubscriptionPaymentService(Options.Create(new SubscriptionPaymentOptions()));
+
+    private static RecommendationService CreateRecommendationService()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var context = new ApplicationDbContext(options);
+        var repo = new HallRepository(context);
+        var extractor = new NaturalLanguageCriteriaExtractor();
+        var matcher = new HallRecommendationMatcher(repo);
+        return new RecommendationService(extractor, matcher, new AiLanguageDetector());
+    }
 
     [Fact]
     public async Task ArabicMessage_ResultsInArabicResponse()
@@ -79,7 +94,7 @@ public class AiBilingualProcessingShould
     [Fact]
     public async Task Recommendation_StillFunctional_AfterBilingual()
     {
-        var service = new RecommendationServiceStub(_detector);
+        var service = CreateRecommendationService();
         var result = await service.GetRecommendationsAsync("أحتاج قاعة في غزة", "en", CancellationToken.None);
         Assert.Equal("ar", result.ResponseLanguage);
     }
@@ -87,7 +102,7 @@ public class AiBilingualProcessingShould
     [Fact]
     public async Task Recommendation_EnglishQuery_ArabicSite_ReturnsEnglish()
     {
-        var service = new RecommendationServiceStub(_detector);
+        var service = CreateRecommendationService();
         var result = await service.GetRecommendationsAsync("I need a hall in Gaza", "ar", CancellationToken.None);
         Assert.Equal("en", result.ResponseLanguage);
     }
