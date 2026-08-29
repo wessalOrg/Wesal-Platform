@@ -42,6 +42,8 @@ public static class DependencyInjection
         services.AddScoped<IRatingRepository, RatingRepository>();
         services.AddScoped<ICommentRepository, CommentRepository>();
         services.AddScoped<IConversationRepository, ConversationRepository>();
+        services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IAISessionRepository, AISessionRepository>();
         services.AddScoped<ITokenRevocationRepository, TokenRevocationRepository>();
 

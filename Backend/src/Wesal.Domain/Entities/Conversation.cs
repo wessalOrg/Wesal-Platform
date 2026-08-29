@@ -11,4 +11,6 @@ public class Conversation : BaseAuditableEntity
     public string SenderUserId { get; set; } = string.Empty;
 
     public string HallOwnerId { get; set; } = string.Empty;
+
+    public ICollection<Message> Messages { get; set; } = [];
 }

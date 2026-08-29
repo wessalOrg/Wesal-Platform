@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Wesal.Persistence.Data;
@@ -11,9 +12,11 @@ using Wesal.Persistence.Data;
 namespace Wesal.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260829120033_AddMessages")]
+    partial class AddMessages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -174,58 +177,6 @@ namespace Wesal.Persistence.Migrations
                     b.HasIndex("UserId", "IsGuestSession");
 
                     b.ToTable("AISessions", "wesal");
-                });
-
-            modelBuilder.Entity("Wesal.Domain.Entities.Booking", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("text");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date");
-
-                    b.Property<Guid>("HallId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Period")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid?>("RejectionMessageId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("RejectionReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("RequesterUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RejectionMessageId")
-                        .IsUnique();
-
-                    b.HasIndex("HallId", "RequesterUserId");
-
-                    b.ToTable("Bookings", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.Comment", b =>
@@ -738,17 +689,6 @@ namespace Wesal.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Wesal.Domain.Entities.Booking", b =>
-                {
-                    b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
-                        .WithMany()
-                        .HasForeignKey("HallId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Hall");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.Comment", b =>

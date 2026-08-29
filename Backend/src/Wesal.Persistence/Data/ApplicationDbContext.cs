@@ -27,9 +27,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Conversation> Conversations => Set<Conversation>();
 
+    public DbSet<Message> Messages => Set<Message>();
+
     public DbSet<AISession> AISessions => Set<AISession>();
 
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
+
+    public DbSet<Booking> Bookings => Set<Booking>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -169,6 +173,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        builder.Entity<Message>(entity =>
+        {
+            entity.ToTable("Messages");
+
+            entity.Property(message => message.SenderUserId).IsRequired().HasMaxLength(450);
+            entity.Property(message => message.Content).IsRequired().HasMaxLength(1000);
+
+            entity.HasIndex(message => new { message.ConversationId, message.CreatedAt });
+
+            entity.HasOne(message => message.Conversation)
+                .WithMany(conversation => conversation.Messages)
+                .HasForeignKey(message => message.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         builder.Entity<AISession>(entity =>
         {
             entity.ToTable("AISessions");
@@ -203,6 +222,26 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasIndex(token => token.Jti).IsUnique();
 
             entity.Property(token => token.RevokedAt).HasColumnType("timestamp with time zone");
+        });
+
+        builder.Entity<Booking>(entity =>
+        {
+            entity.ToTable("Bookings");
+
+            entity.Property(booking => booking.RequesterUserId).IsRequired().HasMaxLength(450);
+
+            entity.Property(booking => booking.Date).HasColumnType("date");
+
+            entity.Property(booking => booking.RejectionReason).HasMaxLength(1000);
+
+            entity.HasIndex(booking => new { booking.HallId, booking.RequesterUserId });
+
+            entity.HasIndex(booking => booking.RejectionMessageId).IsUnique();
+
+            entity.HasOne(booking => booking.Hall)
+                .WithMany()
+                .HasForeignKey(booking => booking.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
