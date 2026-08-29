@@ -160,6 +160,17 @@ public class RegisterRequestValidatorShould
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterRequest.Password));
+        Assert.Contains(result.Errors, error => error.ErrorMessage == "Password must be at least 8 characters.");
+    }
+
+    [Fact]
+    public async Task Validate_PasswordExactlyEightCharactersSatisfyingAllRules_Passes()
+    {
+        var validator = new RegisterRequestValidator();
+
+        var result = await validator.ValidateAsync(CreateRequest(password: "P@ssw0rd", confirmPassword: "P@ssw0rd"));
+
+        Assert.True(result.IsValid);
     }
 
     [Fact]
@@ -171,6 +182,18 @@ public class RegisterRequestValidatorShould
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterRequest.Password));
+        Assert.Contains(result.Errors, error => error.ErrorMessage == "Password must include at least one uppercase letter.");
+    }
+
+    [Fact]
+    public async Task Validate_PasswordMissingLowercase_Fails()
+    {
+        var validator = new RegisterRequestValidator();
+
+        var result = await validator.ValidateAsync(CreateRequest(password: "PASSWORD123!"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.ErrorMessage == "Password must include at least one lowercase letter.");
     }
 
     [Fact]
@@ -179,6 +202,56 @@ public class RegisterRequestValidatorShould
         var validator = new RegisterRequestValidator();
 
         var result = await validator.ValidateAsync(CreateRequest(password: "Passwordabc!"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterRequest.Password));
+        Assert.Contains(result.Errors, error => error.ErrorMessage == "Password must include at least one number.");
+    }
+
+    [Fact]
+    public async Task Validate_PasswordMissingNonAlphanumeric_Fails()
+    {
+        var validator = new RegisterRequestValidator();
+
+        var result = await validator.ValidateAsync(CreateRequest(password: "Password1234"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.ErrorMessage == "Password must include at least one non-alphanumeric character.");
+    }
+
+    [Fact]
+    public async Task Validate_PasswordViolatingMultipleRules_ReturnsAllViolations()
+    {
+        var validator = new RegisterRequestValidator();
+
+        var result = await validator.ValidateAsync(CreateRequest(password: "abc", confirmPassword: "abc"));
+
+        Assert.False(result.IsValid);
+        var passwordErrors = result.Errors
+            .Where(error => error.PropertyName == nameof(RegisterRequest.Password))
+            .ToList();
+        Assert.Contains(passwordErrors, error => error.ErrorMessage == "Password must be at least 8 characters.");
+        Assert.Contains(passwordErrors, error => error.ErrorMessage == "Password must include at least one uppercase letter.");
+        Assert.Contains(passwordErrors, error => error.ErrorMessage == "Password must include at least one number.");
+        Assert.Contains(passwordErrors, error => error.ErrorMessage == "Password must include at least one non-alphanumeric character.");
+        Assert.Equal(4, passwordErrors.Count);
+    }
+
+    [Fact]
+    public async Task Validate_NullPassword_RejectedWithoutThrowing()
+    {
+        var validator = new RegisterRequestValidator();
+        var request = new RegisterRequest
+        {
+            FullName = "Omar Khaled",
+            Email = "omar.khaled@example.com",
+            PhoneNumber = "+970599123456",
+            Password = null!,
+            ConfirmPassword = "Password123!",
+            AccountType = AccountTypes.RegularUser
+        };
+
+        var result = await validator.ValidateAsync(request);
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterRequest.Password));

@@ -147,14 +147,31 @@ public class RegistrationServiceShould
     }
 
     [Fact]
-    public async Task Register_PasswordViolatingPolicy_MapsIdentityErrorToValidationException()
+    public async Task Register_InvalidPasswordDirectSubmission_MapsAllViolationsToPasswordErrorsAndCreatesNoUser()
     {
-        var (service, _) = CreateService();
+        var (service, context) = CreateService();
 
         var exception = await Assert.ThrowsAsync<ValidationException>(() =>
             service.RegisterAsync(CreateRequest(email: "weak@example.com", password: "weak", accountType: AccountTypes.RegularUser)));
 
-        Assert.Contains(nameof(RegisterRequest.Password), exception.Errors.Keys);
+        Assert.True(exception.Errors.TryGetValue(nameof(RegisterRequest.Password), out var passwordErrors));
+        Assert.Equal(4, passwordErrors.Length);
+        Assert.Empty(context.Users);
+    }
+
+    [Fact]
+    public async Task Register_WeakPassword_RejectedForBothAccountTypesWithoutCreatingUser()
+    {
+        var (service, context) = CreateService();
+
+        var regularException = await Assert.ThrowsAsync<ValidationException>(() =>
+            service.RegisterAsync(CreateRequest(email: "regular@example.com", password: "weak", accountType: AccountTypes.RegularUser)));
+        var ownerException = await Assert.ThrowsAsync<ValidationException>(() =>
+            service.RegisterAsync(CreateRequest(email: "owner@example.com", password: "weak", accountType: AccountTypes.HallOwner)));
+
+        Assert.Contains(nameof(RegisterRequest.Password), regularException.Errors.Keys);
+        Assert.Contains(nameof(RegisterRequest.Password), ownerException.Errors.Keys);
+        Assert.Empty(context.Users);
     }
 
     [Fact]

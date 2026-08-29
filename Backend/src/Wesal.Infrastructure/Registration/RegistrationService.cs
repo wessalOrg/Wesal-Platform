@@ -83,21 +83,20 @@ public sealed class RegistrationService : IRegistrationService
 
     private static void ThrowForCreateErrors(IEnumerable<IdentityError> errors)
     {
-        var error = errors.FirstOrDefault();
-        if (error is null)
+        var identityErrors = errors.ToList();
+        if (identityErrors.Count == 0)
         {
             return;
         }
 
-        if (error.Code is "DuplicateUserName" or "DuplicateEmail")
+        if (identityErrors.Any(error => error.Code is "DuplicateUserName" or "DuplicateEmail"))
         {
             throw new ConflictException("An account with this email is already registered.");
         }
 
-        throw new ValidationException(new Dictionary<string, string[]>
-        {
-            [FieldForKey(error.Code)] = [error.Description]
-        });
+        throw new ValidationException(identityErrors
+            .GroupBy(error => FieldForKey(error.Code))
+            .ToDictionary(group => group.Key, group => group.Select(error => error.Description).ToArray()));
     }
 
     private static string FieldForKey(string errorCode) => errorCode switch

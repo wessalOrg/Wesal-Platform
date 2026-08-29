@@ -51,19 +51,19 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .WithMessage($"Password cannot exceed {MaxPasswordLength} characters.");
 
         RuleFor(request => request.Password)
-            .Must(password => password.Any(char.IsUpper))
+            .Must(password => password is not null && password.Any(char.IsUpper))
             .WithMessage("Password must include at least one uppercase letter.");
 
         RuleFor(request => request.Password)
-            .Must(password => password.Any(char.IsLower))
+            .Must(password => password is not null && password.Any(char.IsLower))
             .WithMessage("Password must include at least one lowercase letter.");
 
         RuleFor(request => request.Password)
-            .Must(password => password.Any(char.IsDigit))
+            .Must(password => password is not null && password.Any(char.IsDigit))
             .WithMessage("Password must include at least one number.");
 
         RuleFor(request => request.Password)
-            .Must(password => password.Any(character => !char.IsLetterOrDigit(character)))
+            .Must(password => password is not null && password.Any(character => !char.IsLetterOrDigit(character)))
             .WithMessage("Password must include at least one non-alphanumeric character.");
 
         RuleFor(request => request.ConfirmPassword)
