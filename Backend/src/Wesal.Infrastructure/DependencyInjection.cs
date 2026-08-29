@@ -41,6 +41,7 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(SubscriptionPaymentOptions.SectionName));
 
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IHomepageIntroductionService, HomepageIntroductionService>();
         services.AddScoped<IFeaturedHallsService, FeaturedHallsService>();
