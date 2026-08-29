@@ -8,16 +8,22 @@ using Wesal.Infrastructure.Identity;
 
 namespace Wesal.Infrastructure.Auth;
 
-public sealed class AuthService : IAuthService
+public sealed class AuthService : IAuthService, IRegistrationService
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly ITokenService _tokenService;
 
-    public AuthService(UserManager<ApplicationUser> userManager, ITokenService tokenService)
+    public AuthService(UserManager<ApplicationUser> userManager, RoleManager<ApplicationRole> roleManager, ITokenService tokenService)
     {
         _userManager = userManager;
+        _roleManager = roleManager;
         _tokenService = tokenService;
     }
+
+    // IRegistrationService explicit implementation delegates to IAuthService
+    async Task<RegisterResponse> IRegistrationService.RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
+        => await RegisterAsync(request, cancellationToken);
 
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
@@ -34,9 +40,12 @@ public sealed class AuthService : IAuthService
         if (existingByPhone is not null)
             throw new ConflictException("Phone number already exists.");
 
-        // Validate AccountType is supported (reuse Mohammed's logic)
-        if (request.AccountType != ApplicationRoles.RegisteredUser && request.AccountType != ApplicationRoles.HallOwner)
-            throw new ValidationException(new Dictionary<string, string[]> { ["AccountType"] = new[] { $"Account type must be either '{ApplicationRoles.RegisteredUser}' or '{ApplicationRoles.HallOwner}'." } });
+        // Validate AccountType is supported (reuse Mohammed's logic via AccountTypes)
+        if (!AccountTypes.IsValid(request.AccountType) && request.AccountType != ApplicationRoles.RegisteredUser)
+            throw new ValidationException(new Dictionary<string, string[]> { ["AccountType"] = new[] { $"Account type must be one of: {string.Join(", ", AccountTypes.All)}." } });
+
+        var normalizedAccountType = AccountTypes.IsValid(request.AccountType) ? AccountTypes.Normalize(request.AccountType) : request.AccountType!;
+        var role = AccountTypes.IsValid(request.AccountType) ? AccountTypes.ToRole(request.AccountType) : request.AccountType!;
 
         // Ensure password confirmation (defense in depth)
         if (request.Password != request.ConfirmPassword)
@@ -65,7 +74,9 @@ public sealed class AuthService : IAuthService
             throw new ValidationException(errors);
         }
 
-        var roleResult = await _userManager.AddToRoleAsync(user, request.AccountType);
+        await EnsureRoleExistsAsync(role, cancellationToken);
+
+        var roleResult = await _userManager.AddToRoleAsync(user, role);
         if (!roleResult.Succeeded)
         {
             // Rollback user creation if role assignment fails
@@ -74,15 +85,27 @@ public sealed class AuthService : IAuthService
             throw new ValidationException(errors);
         }
 
-        var roles = new[] { request.AccountType };
+        var roles = new[] { role };
         var token = _tokenService.CreateToken(user.Id, user.UserName!, user.Email!, roles);
 
-        return new RegisterResponse(
-            user.Id,
-            user.FullName,
-            user.Email!,
-            user.PhoneNumber!,
-            request.AccountType,
-            token);
+        return new RegisterResponse
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            Email = user.Email!,
+            PhoneNumber = user.PhoneNumber!,
+            AccountType = normalizedAccountType,
+            Role = role,
+            Token = token
+        };
+    }
+
+    private async Task EnsureRoleExistsAsync(string role, CancellationToken cancellationToken)
+    {
+        if (await _roleManager.RoleExistsAsync(role))
+            return;
+        var createResult = await _roleManager.CreateAsync(new ApplicationRole(role));
+        if (!createResult.Succeeded)
+            throw new DomainException("Failed to prepare the requested account type.");
     }
 }

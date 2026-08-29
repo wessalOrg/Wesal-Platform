@@ -2,6 +2,18 @@ namespace Wesal.Application.Common.Models;
 
 public class RegisterRequest
 {
+    public RegisterRequest() { }
+
+    public RegisterRequest(string fullName, string email, string phoneNumber, string password, string confirmPassword, string? accountType)
+    {
+        FullName = fullName;
+        Email = email;
+        PhoneNumber = phoneNumber;
+        Password = password;
+        ConfirmPassword = confirmPassword;
+        AccountType = accountType;
+    }
+
     public string FullName { get; init; } = string.Empty;
 
     public string Email { get; init; } = string.Empty;

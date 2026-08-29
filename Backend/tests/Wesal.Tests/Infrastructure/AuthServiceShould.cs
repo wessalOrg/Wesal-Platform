@@ -57,7 +57,7 @@ public class AuthServiceShould : IDisposable
 
         _userManager = _serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var tokenService = _serviceProvider.GetRequiredService<ITokenService>();
-        _authService = new AuthService(_userManager, tokenService);
+        _authService = new AuthService(_userManager, roleManager, tokenService);
     }
 
     [Fact]
