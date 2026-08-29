@@ -1,3 +1,4 @@
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 
 namespace Wesal.Application.Common.Interfaces.Persistence;
@@ -9,4 +10,12 @@ public interface IConversationRepository
     Task<Conversation?> GetByHallAndUserAsync(Guid hallId, string userId, CancellationToken cancellationToken = default);
 
     Task<Conversation?> GetByIdWithHallAsync(Guid conversationId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(
+        string userId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<UserDisplayInfo>> GetUserDisplayNamesAsync(
+        IReadOnlyCollection<string> userIds,
+        CancellationToken cancellationToken = default);
 }

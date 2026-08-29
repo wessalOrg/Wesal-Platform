@@ -27,6 +27,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Conversation> Conversations => Set<Conversation>();
 
+    public DbSet<Message> Messages => Set<Message>();
+
     public DbSet<AISession> AISessions => Set<AISession>();
 
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
@@ -166,6 +168,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(conversation => conversation.Hall)
                 .WithMany()
                 .HasForeignKey(conversation => conversation.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Message>(entity =>
+        {
+            entity.ToTable("Messages");
+
+            entity.Property(message => message.SenderUserId).IsRequired().HasMaxLength(450);
+            entity.Property(message => message.Content).IsRequired().HasMaxLength(1000);
+
+            entity.HasIndex(message => new { message.ConversationId, message.CreatedAt });
+
+            entity.HasOne(message => message.Conversation)
+                .WithMany(conversation => conversation.Messages)
+                .HasForeignKey(message => message.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

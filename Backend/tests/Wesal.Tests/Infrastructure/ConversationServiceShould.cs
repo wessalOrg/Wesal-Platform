@@ -1,5 +1,6 @@
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
@@ -441,7 +442,7 @@ public class ConversationServiceShould
     {
         var effectiveUserId = authenticated && userId is null ? "test-user-1" : userId;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? []);
-        return new ConversationService(conversationRepository, hallRepository, currentUser);
+        return new ConversationService(conversationRepository, new FakeMessageRepository(), hallRepository, currentUser);
     }
 
     private sealed class FakeConversationRepository : IConversationRepository
@@ -463,6 +464,33 @@ public class ConversationServiceShould
         {
             return Task.FromResult(Conversations.FirstOrDefault(c => c.Id == conversationId));
         }
+
+        public Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            var conversations = Conversations
+                .Where(c => (c.SenderUserId == userId || c.HallOwnerId == userId) && c.Hall?.IsDeleted != true)
+                .OrderByDescending(c => c.CreatedAt)
+                .ThenByDescending(c => c.Id)
+                .ToList();
+            return Task.FromResult<IReadOnlyList<Conversation>>(conversations);
+        }
+
+        public Task<IReadOnlyList<UserDisplayInfo>> GetUserDisplayNamesAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default)
+        {
+            var displayInfos = userIds
+                .Select(id => new UserDisplayInfo { UserId = id, FullName = $"Display of {id}" })
+                .ToList();
+            return Task.FromResult<IReadOnlyList<UserDisplayInfo>>(displayInfos);
+        }
+    }
+
+    private sealed class FakeMessageRepository : IMessageRepository
+    {
+        public Task<IReadOnlyList<Message>> GetByConversationAsync(Guid conversationId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Message>>([]);
+
+        public Task<IReadOnlyList<Message>> GetByConversationIdsAsync(IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Message>>([]);
     }
 
     private sealed class FakeHallRepository : IHallRepository
