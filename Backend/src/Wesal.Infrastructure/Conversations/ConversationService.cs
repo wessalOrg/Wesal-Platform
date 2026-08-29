@@ -12,17 +12,20 @@ public sealed class ConversationService : IConversationService
 {
     private readonly IConversationRepository _conversationRepository;
     private readonly IMessageRepository _messageRepository;
+    private readonly IBookingRejectionService _bookingRejectionService;
     private readonly IHallRepository _hallRepository;
     private readonly ICurrentUserService _currentUser;
 
     public ConversationService(
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository,
+        IBookingRejectionService bookingRejectionService,
         IHallRepository hallRepository,
         ICurrentUserService currentUser)
     {
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
+        _bookingRejectionService = bookingRejectionService;
         _hallRepository = hallRepository;
         _currentUser = currentUser;
     }
@@ -101,6 +104,8 @@ public sealed class ConversationService : IConversationService
 
         var userId = GetAuthenticatedUserId();
 
+        await DeliverPendingRejectionNotificationsAsync(cancellationToken);
+
         var conversations = await _conversationRepository.GetParticipantConversationsAsync(userId, cancellationToken);
 
         if (conversations.Count == 0)
@@ -162,6 +167,8 @@ public sealed class ConversationService : IConversationService
 
         var userId = GetAuthenticatedUserId();
 
+        await DeliverPendingRejectionNotificationsAsync(cancellationToken);
+
         var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
 
         if (conversation is null || conversation.Hall?.IsDeleted == true)
@@ -204,6 +211,22 @@ public sealed class ConversationService : IConversationService
                 })
                 .ToList()
         };
+    }
+
+    private async Task DeliverPendingRejectionNotificationsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _bookingRejectionService.DeliverPendingRejectionNotificationsAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // Best-effort delivery: pending notifications stay pending and are retried on a later read.
+        }
     }
 
     private static string OtherParticipantId(Conversation conversation, string userId)

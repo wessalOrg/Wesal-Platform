@@ -64,6 +64,33 @@ public class MessageRepositoryShould
     }
 
     [Fact]
+    public async Task AddAsync_AddsMessageForCallerCommit()
+    {
+        await using var context = CreateContext();
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall" };
+        var conversation = new Conversation
+        {
+            Id = Guid.NewGuid(),
+            HallId = hall.Id,
+            SenderUserId = "user-1",
+            HallOwnerId = "owner-1"
+        };
+        context.Halls.Add(hall);
+        context.Conversations.Add(conversation);
+        context.SaveChanges();
+        var message = CreateMessage(conversation.Id, "Rejection notice", DateTimeOffset.UtcNow);
+        var repository = new MessageRepository(context);
+
+        await repository.AddAsync(message);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetByConversationAsync(conversation.Id);
+        var stored = Assert.Single(result);
+        Assert.Equal(message.Id, stored.Id);
+        Assert.Equal("Rejection notice", stored.Content);
+    }
+
+    [Fact]
     public void Model_ConfiguresIndexAndCascadeForMessage()
     {
         using var context = CreateContext();

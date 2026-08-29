@@ -362,7 +362,7 @@ public class MessageInboxServiceShould
     {
         var effectiveUserId = authenticated ? userId ?? "test-user-1" : null;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? []);
-        return new ConversationService(conversationRepository, messageRepository, new FakeHallRepository(), currentUser);
+        return new ConversationService(conversationRepository, messageRepository, new FakeBookingRejectionService(), new FakeHallRepository(), currentUser);
     }
 
     private sealed class FakeConversationRepository : IConversationRepository
@@ -436,6 +436,12 @@ public class MessageInboxServiceShould
     {
         public List<Message> Messages { get; } = [];
 
+        public Task AddAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            Messages.Add(message);
+            return Task.CompletedTask;
+        }
+
         public Task<IReadOnlyList<Message>> GetByConversationAsync(Guid conversationId, CancellationToken cancellationToken = default)
         {
             var messages = Messages
@@ -456,6 +462,19 @@ public class MessageInboxServiceShould
                 .ToList();
             return Task.FromResult<IReadOnlyList<Message>>(messages);
         }
+    }
+
+    private sealed class FakeBookingRejectionService : IBookingRejectionService
+    {
+        public Task<RejectBookingResultDto> RejectBookingAsync(
+            Guid hallId,
+            Guid bookingId,
+            RejectBookingRequestDto request,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new RejectBookingResultDto());
+
+        public Task<int> DeliverPendingRejectionNotificationsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
     }
 
     private sealed class FakeHallRepository : IHallRepository

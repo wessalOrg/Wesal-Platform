@@ -14,6 +14,11 @@ public sealed class MessageRepository : IMessageRepository
         _context = context;
     }
 
+    public async Task AddAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        await _context.Messages.AddAsync(message, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Message>> GetByConversationAsync(
         Guid conversationId,
         CancellationToken cancellationToken = default)

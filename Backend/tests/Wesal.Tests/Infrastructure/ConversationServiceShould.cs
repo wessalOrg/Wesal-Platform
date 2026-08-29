@@ -442,7 +442,7 @@ public class ConversationServiceShould
     {
         var effectiveUserId = authenticated && userId is null ? "test-user-1" : userId;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? []);
-        return new ConversationService(conversationRepository, new FakeMessageRepository(), hallRepository, currentUser);
+        return new ConversationService(conversationRepository, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepository, currentUser);
     }
 
     private sealed class FakeConversationRepository : IConversationRepository
@@ -486,11 +486,27 @@ public class ConversationServiceShould
 
     private sealed class FakeMessageRepository : IMessageRepository
     {
+        public Task AddAsync(Message message, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
         public Task<IReadOnlyList<Message>> GetByConversationAsync(Guid conversationId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Message>>([]);
 
         public Task<IReadOnlyList<Message>> GetByConversationIdsAsync(IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Message>>([]);
+    }
+
+    private sealed class FakeBookingRejectionService : IBookingRejectionService
+    {
+        public Task<RejectBookingResultDto> RejectBookingAsync(
+            Guid hallId,
+            Guid bookingId,
+            RejectBookingRequestDto request,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new RejectBookingResultDto());
+
+        public Task<int> DeliverPendingRejectionNotificationsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
     }
 
     private sealed class FakeHallRepository : IHallRepository
