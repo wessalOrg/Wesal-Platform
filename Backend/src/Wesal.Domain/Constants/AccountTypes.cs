@@ -40,4 +40,25 @@ public static class AccountTypes
         => Normalize(accountType) == RegularUser
             ? ApplicationRoles.RegisteredUser
             : ApplicationRoles.HallOwner;
+
+    /// <summary>Maps a persisted role back to the account type, or null when the role is not an account role.</summary>
+    public static string? FromRole(string? role)
+    {
+        if (role is null)
+        {
+            return null;
+        }
+
+        if (role.Equals(ApplicationRoles.RegisteredUser, StringComparison.OrdinalIgnoreCase))
+        {
+            return RegularUser;
+        }
+
+        if (role.Equals(ApplicationRoles.HallOwner, StringComparison.OrdinalIgnoreCase))
+        {
+            return HallOwner;
+        }
+
+        return null;
+    }
 }

@@ -68,4 +68,33 @@ public class AccountTypesShould
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => AccountTypes.Normalize(null));
     }
+
+    [Theory]
+    [InlineData(ApplicationRoles.RegisteredUser, AccountTypes.RegularUser)]
+    [InlineData(ApplicationRoles.HallOwner, AccountTypes.HallOwner)]
+    [InlineData("registereduser", AccountTypes.RegularUser)]
+    [InlineData("HALLOWNER", AccountTypes.HallOwner)]
+    public void FromRole_MapsAccountRoleToAccountType(string role, string expectedAccountType)
+    {
+        Assert.Equal(expectedAccountType, AccountTypes.FromRole(role));
+    }
+
+    [Theory]
+    [InlineData("Admin")]
+    [InlineData("Guest")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void FromRole_ReturnsNullForNonAccountRoles(string? role)
+    {
+        Assert.Null(AccountTypes.FromRole(role));
+    }
+
+    [Fact]
+    public void FromRole_IsInverseOfToRoleForBothAccountTypes()
+    {
+        foreach (var accountType in AccountTypes.All)
+        {
+            Assert.Equal(accountType, AccountTypes.FromRole(AccountTypes.ToRole(accountType)));
+        }
+    }
 }

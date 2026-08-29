@@ -54,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<IRegistrationService, RegistrationService>();
+        services.AddScoped<ILoginService, LoginService>();
         services.AddScoped<ILanguageService, LanguageService>();
         services.AddScoped<ITranslationService, TranslationService>();
         services.AddSingleton<IChatSessionService, ChatSessionService>();

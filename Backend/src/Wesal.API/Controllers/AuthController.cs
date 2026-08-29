@@ -12,10 +12,14 @@ namespace Wesal.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IRegistrationService _registrationService;
+    private readonly ILoginService _loginService;
 
-    public AuthController(IRegistrationService registrationService)
+    public AuthController(
+        IRegistrationService registrationService,
+        ILoginService loginService)
     {
         _registrationService = registrationService;
+        _loginService = loginService;
     }
 
     [HttpPost("register")]
@@ -29,5 +33,19 @@ public class AuthController : ControllerBase
     {
         var response = await _registrationService.RegisterAsync(request, cancellationToken);
         return CreatedAtAction(nameof(Register), new { version = "1" }, response);
+    }
+
+    [HttpPost("login")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<LoginResponse>> Login(
+        [FromBody] LoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _loginService.LoginAsync(request, cancellationToken);
+        return Ok(response);
     }
 }
