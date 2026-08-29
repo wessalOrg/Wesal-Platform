@@ -21,7 +21,7 @@ public class HallSearchService : IHallSearchService
         var pageSize = Math.Clamp(request.PageSize, 1, 50);
         var skip = (pageNumber - 1) * pageSize;
 
-        var hallsTask = _hallRepository.SearchApprovedHallsAsync(
+        var halls = await _hallRepository.SearchApprovedHallsAsync(
             request.Name,
             request.Region,
             request.Area,
@@ -31,18 +31,13 @@ public class HallSearchService : IHallSearchService
             pageSize,
             cancellationToken);
 
-        var countTask = _hallRepository.SearchApprovedHallsCountAsync(
+        var totalCount = await _hallRepository.SearchApprovedHallsCountAsync(
             request.Name,
             request.Region,
             request.Area,
             request.Date,
             request.Period,
             cancellationToken);
-
-        await Task.WhenAll(hallsTask, countTask);
-
-        var halls = hallsTask.Result;
-        var totalCount = countTask.Result;
 
         var items = halls
             .Select(hall => new HallListItemDto

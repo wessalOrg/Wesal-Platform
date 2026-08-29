@@ -23,13 +23,8 @@ public class AllHallsService : IAllHallsService
 
         var skip = (pageNumber - 1) * pageSize;
 
-        var hallsTask = _hallRepository.GetApprovedHallsPaginatedAsync(skip, pageSize, cancellationToken);
-        var countTask = _hallRepository.GetApprovedHallsCountAsync(cancellationToken);
-
-        await Task.WhenAll(hallsTask, countTask);
-
-        var halls = hallsTask.Result;
-        var totalCount = countTask.Result;
+        var halls = await _hallRepository.GetApprovedHallsPaginatedAsync(skip, pageSize, cancellationToken);
+        var totalCount = await _hallRepository.GetApprovedHallsCountAsync(cancellationToken);
 
         var items = halls
             .Select(hall => new HallListItemDto

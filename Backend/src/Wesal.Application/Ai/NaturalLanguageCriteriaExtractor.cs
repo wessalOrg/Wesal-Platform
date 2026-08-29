@@ -43,17 +43,39 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
 
     private static string? ExtractArea(string message, string? region)
     {
-        // If region already extracted, area is optional secondary location.
-        // For now, treat area as free-text location after prepositions, but reuse region if area not distinct.
-        // Simple heuristic: if message contains "in <word>" or "في <word>" extract next word as area if not region
         var match = AreaRegex().Match(message);
         if (match.Success)
         {
             var area = match.Groups[1].Value.Trim();
-            if (!string.IsNullOrWhiteSpace(area) && !string.Equals(area, region, StringComparison.OrdinalIgnoreCase))
-                return area;
+            if (string.IsNullOrWhiteSpace(area))
+                return null;
+
+            // Exact match (case-insensitive)
+            if (string.Equals(area, region, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            // Cross-language match: "غزة" == "Gaza", "شمال غزة" == "NorthGaza", etc.
+            if (IsSameRegion(area, region))
+                return null;
+
+            return area;
         }
         return null;
+    }
+
+    private static bool IsSameRegion(string area, string? region)
+    {
+        if (string.IsNullOrWhiteSpace(region))
+            return false;
+
+        return region.ToLowerInvariant() switch
+        {
+            "gaza" => area is "غزة" or "مدينة غزة",
+            "northgaza" => area.Contains("شمال غزة") || area.Contains("شمال"),
+            "southgaza" => area.Contains("جنوب غزة") || area.Contains("جنوب"),
+            "middlearea" => area.Contains("الوسطى") || area.Contains("الوسطي") || area.Contains("وسط غزة"),
+            _ => false
+        };
     }
 
     private static DateOnly? ExtractDate(string message)

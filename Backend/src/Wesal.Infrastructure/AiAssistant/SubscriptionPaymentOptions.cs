@@ -9,7 +9,7 @@ public sealed class SubscriptionPaymentOptions
 {
     public const string SectionName = "SubscriptionPayment";
 
-    public const string DefaultAdminWhatsApp = "+972597765489";
+    public const string DefaultAdminWhatsApp = "+972597744476";
 
     /// <summary>
     /// The canonical Admin WhatsApp contact for subscription payment inquiries.

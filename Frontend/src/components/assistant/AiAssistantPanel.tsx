@@ -8,9 +8,12 @@ import {
 } from "react";
 import AiAssistantSparkIcon from "@/components/assistant/AiAssistantSparkIcon";
 import AiAssistantUnavailableNotice from "@/components/assistant/AiAssistantUnavailableNotice";
-import { useUiLang } from "@/components/layout/LanguageProvider";
+import AiChatComposer from "@/components/assistant/AiChatComposer";
+import AiChatErrorBoundary from "@/components/assistant/AiChatErrorBoundary";
+import AiChatShell from "@/components/assistant/AiChatShell";
+import AiChatThread from "@/components/assistant/AiChatThread";
+import { useAiChat } from "@/hooks/useAiChat";
 import { useT } from "@/i18n";
-import type { UiLang } from "@/lib/language";
 import type {
   AiAssistantPhase,
   AiSession,
@@ -82,17 +85,7 @@ const STATUS_KEY: Record<AiAssistantPhase, string> = {
   unavailable: "assistant.status.offline",
 };
 
-function formatTime(iso: string, lang: UiLang): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-
-  return date.toLocaleTimeString(lang === "en" ? "en-GB" : "ar-EG-u-nu-latn", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-/** Presentation only — every decision about sessions lives in `useAiAssistant`. */
+/** Presentation only — session lifecycle lives in `useAiAssistant`. */
 export default function AiAssistantPanel({
   open,
   id,
@@ -106,11 +99,15 @@ export default function AiAssistantPanel({
   onBrowseHalls,
 }: AiAssistantPanelProps) {
   const t = useT();
-  const lang = useUiLang();
   const panelRef = useRef<HTMLDivElement>(null);
   const failed = phase === "error" || phase === "unavailable";
   // Keep the failure on screen while retrying instead of flashing back to a spinner.
   const showFailure = failed || (isRetrying && errorKey !== null);
+  const sessionReady = phase === "active" && Boolean(session?.sessionId);
+  const chat = useAiChat({
+    sessionId: sessionReady && session ? session.sessionId : null,
+    greeting: t("assistant.greeting"),
+  });
 
   /**
    * `open` is still Lillian's source of truth. This only chooses how the panel
@@ -209,7 +206,7 @@ export default function AiAssistantPanel({
       // and not announced, so the animation cannot get between the user and the app.
       inert={isExiting}
       onAnimationEnd={handleAnimationEnd}
-      className="wesal-ai-panel fixed inset-x-4 bottom-[5.75rem] z-[105] flex max-h-[min(72svh,34rem)] flex-col overflow-hidden rounded-3xl border border-[var(--wesal-border)] bg-white shadow-[0_24px_60px_rgba(60,35,30,0.22)] outline-none sm:inset-x-auto sm:bottom-[6.5rem] sm:end-6 sm:w-[22rem]"
+      className="wesal-ai-panel fixed inset-x-3 bottom-[5.75rem] z-[105] flex max-h-[min(70svh,32rem)] min-w-0 flex-col overflow-hidden rounded-3xl border border-[var(--wesal-border)] bg-white shadow-[0_24px_60px_rgba(60,35,30,0.22)] outline-none sm:inset-x-auto sm:bottom-[6.5rem] sm:end-6 sm:w-[22rem] md:w-[24rem] lg:w-[26rem] lg:max-h-[min(78svh,38rem)]"
     >
       <div className="wesal-ai-panel-header flex shrink-0 items-center gap-3 px-4 py-3.5">
         <span className="wesal-ai-avatar flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white">
@@ -260,71 +257,56 @@ export default function AiAssistantPanel({
         </button>
       </div>
 
-      <div className="wesal-ai-panel-body min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
-        {showFailure ? null : (
-          <p className="flex items-center gap-1.5 text-[0.68rem] text-[var(--wesal-muted)]">
-            <AiAssistantSparkIcon className="h-3 w-3 text-[var(--wesal-maroon)]" />
-            {t("assistant.senderLabel")}
-          </p>
-        )}
-
+      <AiChatErrorBoundary>
         {showFailure ? (
-          <AiAssistantUnavailableNotice
-            reason={unavailableReason}
-            messageKey={errorKey}
-            isRetrying={isRetrying}
-            onRetry={onRetry}
-            onBrowseHalls={onBrowseHalls}
-          />
-        ) : phase === "loading" ? (
-          <div className="w-fit rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-3">
-            <span className="sr-only">{t("assistant.loading")}</span>
-            <span className="flex items-center gap-1.5" aria-hidden="true">
-              <i className="wesal-ai-dot" />
-              <i className="wesal-ai-dot" />
-              <i className="wesal-ai-dot" />
-            </span>
-          </div>
-        ) : (
-          <>
-            <div className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 text-[0.82rem] leading-6 text-[var(--wesal-text)]">
-              {t("assistant.greeting")}
-            </div>
-            {session ? (
-              <p className="text-end text-[0.65rem] text-[var(--wesal-muted)]">
-                {formatTime(session.createdAt, lang)}
-              </p>
-            ) : null}
-          </>
-        )}
-      </div>
-
-      {/* The design ends the unavailable state at the two actions, with no composer. */}
-      {showFailure ? null : (
-        <div className="shrink-0 border-t border-[var(--wesal-border)] bg-white px-4 pb-3.5 pt-3">
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              disabled
-              placeholder={t("assistant.composer.placeholder")}
-              aria-label={t("assistant.composer.placeholder")}
-              className="min-w-0 flex-1 rounded-full border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-2.5 text-[0.8rem] text-[var(--wesal-text)] placeholder:text-[var(--wesal-muted)] disabled:cursor-not-allowed"
+          <div className="wesal-ai-panel-body min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+            <AiAssistantUnavailableNotice
+              reason={unavailableReason}
+              messageKey={errorKey}
+              isRetrying={isRetrying}
+              onRetry={onRetry}
+              onBrowseHalls={onBrowseHalls}
             />
-            <button
-              type="button"
-              disabled
-              aria-label={t("assistant.composer.send")}
-              className="wesal-ai-send flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-4 w-4">
-                <path d="M4.6 4.3 20.2 11.4a.65.65 0 0 1 0 1.2L4.6 19.7a.65.65 0 0 1-.9-.75l1.5-5.6a.65.65 0 0 1 .53-.48l6.6-.87-6.6-.87a.65.65 0 0 1-.53-.48l-1.5-5.6a.65.65 0 0 1 .9-.75Z" />
-              </svg>
-            </button>
           </div>
-          <p className="mt-2 text-center text-[0.65rem] text-[var(--wesal-muted)]">
-            {t("assistant.composer.hint")}
-          </p>
-        </div>
+        ) : phase === "loading" && !sessionReady ? (
+          <AiChatShell
+            surface="loading"
+            canRetry={false}
+            isRetrying={false}
+            onRetry={() => undefined}
+          />
+        ) : (
+          <AiChatShell
+            surface={chat.surface}
+            canRetry={chat.canRetry}
+            isRetrying={chat.isSending}
+            onRetry={() => {
+              void chat.retry();
+            }}
+            onPrompt={
+              sessionReady
+                ? (text) => {
+                    void chat.send(text);
+                  }
+                : undefined
+            }
+          >
+            <AiChatThread
+              messages={chat.messages}
+              isSending={chat.isSending}
+              isRecommending={chat.isRecommending}
+            />
+          </AiChatShell>
+        )}
+      </AiChatErrorBoundary>
+
+      {showFailure ? null : (
+        <AiChatComposer
+          disabled={!sessionReady}
+          sending={chat.isSending}
+          sendState={chat.sendState}
+          onSend={chat.send}
+        />
       )}
     </div>
   );

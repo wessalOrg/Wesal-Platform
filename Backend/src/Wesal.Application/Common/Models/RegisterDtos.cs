@@ -1,17 +1,35 @@
 namespace Wesal.Application.Common.Models;
 
-public sealed record RegisterRequest(
-    string FullName,
-    string Email,
-    string PhoneNumber,
-    string Password,
-    string ConfirmPassword,
-    string AccountType);
+public class RegisterRequest
+{
+    public string FullName { get; init; } = string.Empty;
 
-public sealed record RegisterResponse(
-    string UserId,
-    string FullName,
-    string Email,
-    string PhoneNumber,
-    string AccountType,
-    string Token);
+    public string Email { get; init; } = string.Empty;
+
+    public string PhoneNumber { get; init; } = string.Empty;
+
+    public string Password { get; init; } = string.Empty;
+
+    public string ConfirmPassword { get; init; } = string.Empty;
+
+    public string? AccountType { get; init; }
+}
+
+public class RegisterResponse
+{
+    public string Id { get; init; } = string.Empty;
+
+    public string UserId => Id;
+
+    public string FullName { get; init; } = string.Empty;
+
+    public string Email { get; init; } = string.Empty;
+
+    public string PhoneNumber { get; init; } = string.Empty;
+
+    public string AccountType { get; init; } = string.Empty;
+
+    public string Role { get; init; } = string.Empty;
+
+    public string Token { get; init; } = string.Empty;
+}

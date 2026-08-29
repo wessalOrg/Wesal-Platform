@@ -29,6 +29,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<AISession> AISessions => Set<AISession>();
 
+    public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -185,9 +187,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.HasIndex(session => new { session.UserId, session.IsGuestSession });
 
-            entity.Property(session => session.CreatedAt).HasColumnType("datetime2");
+            entity.Property(session => session.CreatedAt).HasColumnType("timestamp with time zone");
 
-            entity.Property(session => session.LastAccessedAt).HasColumnType("datetime2");
+            entity.Property(session => session.LastAccessedAt).HasColumnType("timestamp with time zone");
+        });
+
+        builder.Entity<RevokedToken>(entity =>
+        {
+            entity.ToTable("RevokedTokens");
+
+            entity.Property(token => token.Jti).IsRequired().HasMaxLength(450);
+
+            entity.Property(token => token.UserId).IsRequired().HasMaxLength(450);
+
+            entity.HasIndex(token => token.Jti).IsUnique();
+
+            entity.Property(token => token.RevokedAt).HasColumnType("timestamp with time zone");
         });
     }
 }

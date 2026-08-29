@@ -23,7 +23,7 @@ public class HowToPaymentContactShould
 
         var result = await howToService.AskHowToAsync("how do I pay my subscription?", "en", CancellationToken.None);
 
-        Assert.Contains("+972597765489", result.Answer);
+        Assert.Contains("+972597744476", result.Answer);
         Assert.Equal("payment", result.Category);
     }
 
@@ -35,7 +35,7 @@ public class HowToPaymentContactShould
 
         var result = await howToService.AskHowToAsync("كيف أدفع الاشتراك", "ar", CancellationToken.None);
 
-        Assert.Contains("+972597765489", result.Answer);
+        Assert.Contains("+972597744476", result.Answer);
         Assert.Equal("payment", result.Category);
     }
 
@@ -48,7 +48,7 @@ public class HowToPaymentContactShould
         var result = await howToService.AskHowToAsync("subscription payment", "en", CancellationToken.None);
 
         Assert.Contains("120", result.Answer);
-        Assert.Contains("+972597765489", result.Answer);
+        Assert.Contains("+972597744476", result.Answer);
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class HowToPaymentContactShould
         var result = await howToService.AskHowToAsync("اشتراك دفع", "ar", CancellationToken.None);
 
         Assert.Contains("120", result.Answer);
-        Assert.Contains("+972597765489", result.Answer);
+        Assert.Contains("+972597744476", result.Answer);
     }
 
     [Fact]

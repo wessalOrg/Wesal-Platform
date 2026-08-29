@@ -12,8 +12,8 @@ using Wesal.Persistence.Data;
 namespace Wesal.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260822182301_AISessionStorage")]
-    partial class AISessionStorage
+    [Migration("20260829111638_RevokedTokens")]
+    partial class RevokedTokens
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -142,8 +142,8 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("GuestIdentifier")
                         .HasMaxLength(450)
@@ -152,11 +152,8 @@ namespace Wesal.Persistence.Migrations
                     b.Property<bool>("IsGuestSession")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("LastAccessedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<object>("SessionData")
-                        .HasColumnType("json");
+                    b.Property<DateTimeOffset?>("LastAccessedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SessionId")
                         .HasMaxLength(450)
@@ -478,6 +475,33 @@ namespace Wesal.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_Ratings_Value", "\"Value\" BETWEEN 1 AND 5");
                         });
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.RevokedToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Jti")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTimeOffset>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Jti")
+                        .IsUnique();
+
+                    b.ToTable("RevokedTokens", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Infrastructure.Identity.ApplicationRole", b =>

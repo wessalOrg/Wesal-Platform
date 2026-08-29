@@ -28,7 +28,7 @@ public class SubscriptionPaymentIntentHandlingShould
     {
         var service = CreateHowToService();
         var result = await service.AskHowToAsync(message, "en", CancellationToken.None);
-        Assert.Contains("+972597765489", result.Answer);
+        Assert.Contains("+972597744476", result.Answer);
         Assert.DoesNotContain("+970567581412", result.Answer);
         Assert.Equal("payment", result.Category);
     }
@@ -48,7 +48,7 @@ public class SubscriptionPaymentIntentHandlingShould
     {
         var service = CreateHowToService();
         var result = await service.AskHowToAsync(message, "ar", CancellationToken.None);
-        Assert.Contains("+972597765489", result.Answer);
+        Assert.Contains("+972597744476", result.Answer);
         Assert.DoesNotContain("+970567581412", result.Answer);
         Assert.Equal("payment", result.Category);
     }
@@ -63,7 +63,7 @@ public class SubscriptionPaymentIntentHandlingShould
     {
         var service = CreateHowToService();
         var result = await service.AskHowToAsync(message, "en", CancellationToken.None);
-        Assert.Contains("+972597765489", result.Answer);
+        Assert.Contains("+972597744476", result.Answer);
         Assert.Equal("payment", result.Category);
     }
 
@@ -78,7 +78,7 @@ public class SubscriptionPaymentIntentHandlingShould
         var service = CreateHowToService();
         var result = await service.AskHowToAsync(message, "en", CancellationToken.None);
         Assert.NotEqual("payment", result.Category);
-        Assert.DoesNotContain("+972597765489", result.Answer);
+        Assert.DoesNotContain("+972597744476", result.Answer);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class SubscriptionPaymentIntentHandlingShould
     {
         var service = CreateHowToService();
         var result = await service.AskHowToAsync("How do I pay my subscription?", "en", CancellationToken.None);
-        Assert.Contains("+972597765489", result.Answer);
+        Assert.Contains("+972597744476", result.Answer);
         Assert.DoesNotContain("+970567581412", result.Answer);
         // Ensure no alternative number is returned
         Assert.DoesNotContain("+970", result.Answer);
@@ -97,7 +97,7 @@ public class SubscriptionPaymentIntentHandlingShould
     {
         var service = CreateHowToService();
         var result = await service.AskHowToAsync("كيف أدفع الاشتراك؟", "ar", CancellationToken.None);
-        Assert.Contains("+972597765489", result.Answer);
+        Assert.Contains("+972597744476", result.Answer);
         Assert.DoesNotContain("+970567581412", result.Answer);
     }
 
@@ -120,6 +120,6 @@ public class SubscriptionPaymentIntentHandlingShould
         // This ensures Hall Owner flow works without breaking existing AllowAnonymous behavior
         var service = CreateHowToService();
         var result = await service.AskHowToAsync("I need to renew my subscription", "en", CancellationToken.None);
-        Assert.Contains("+972597765489", result.Answer);
+        Assert.Contains("+972597744476", result.Answer);
     }
 }
