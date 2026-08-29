@@ -1,9 +1,12 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Wesal.Application.Common.Interfaces;
+using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Domain.Constants;
 using Wesal.Infrastructure.Auth;
 using Wesal.Infrastructure.Bookings;
@@ -55,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<IRegistrationService, RegistrationService>();
         services.AddScoped<ILoginService, LoginService>();
+        services.AddScoped<ILogoutService, LogoutService>();
         services.AddScoped<ILanguageService, LanguageService>();
         services.AddScoped<ITranslationService, TranslationService>();
         services.AddSingleton<IChatSessionService, ChatSessionService>();
@@ -70,6 +74,24 @@ public static class DependencyInjection
                 options.MapInboundClaims = false;
                 options.Events = new JwtBearerEvents
                 {
+                    OnTokenValidated = async context =>
+                    {
+                        var jti = context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Jti);
+
+                        if (string.IsNullOrWhiteSpace(jti))
+                        {
+                            context.Fail("The authentication token does not carry a revocable session identifier.");
+                            return;
+                        }
+
+                        var tokenRevocationRepository = context.HttpContext.RequestServices
+                            .GetRequiredService<ITokenRevocationRepository>();
+
+                        if (await tokenRevocationRepository.IsRevokedAsync(jti, context.HttpContext.RequestAborted))
+                        {
+                            context.Fail("The authentication token has been invalidated by logout.");
+                        }
+                    },
                     OnChallenge = context =>
                     {
                         if (context.Handled || context.Response.HasStarted)
