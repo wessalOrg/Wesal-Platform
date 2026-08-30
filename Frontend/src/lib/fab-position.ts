@@ -2,8 +2,9 @@ export const FAB_POSITION_STORAGE_KEY = "wesal_ai_fab_position";
 
 /** Keeps the button clear of every viewport edge, whatever the saved value says. */
 export const FAB_VIEWPORT_MARGIN_PX = 8;
-/** Must track the button's rendered size (`h-14 w-14`); only the boot script needs it. */
-const FAB_SIZE_PX = 56;
+/** Must track the standing host (`w-[6.5rem]` / `h-[10.75rem]`); only the boot script needs it. */
+const FAB_WIDTH_PX = 104;
+const FAB_HEIGHT_PX = 172;
 
 export const FAB_PLACED_ATTRIBUTE = "data-wesal-fab-placed";
 export const FAB_LEFT_CSS_VAR = "--wesal-fab-left";
@@ -75,7 +76,7 @@ export function writeStoredFabPosition(ratio: FabPositionRatio): void {
  */
 export const FAB_POSITION_BOOT_SCRIPT = `(function(){try{var r=localStorage.getItem(${JSON.stringify(
   FAB_POSITION_STORAGE_KEY,
-)});if(!r)return;var v=JSON.parse(r);if(!v||typeof v!=="object")return;var x=v.x,y=v.y;if(typeof x!=="number"||typeof y!=="number"||!isFinite(x)||!isFinite(y)||x<0||x>1||y<0||y>1)return;var m=${FAB_VIEWPORT_MARGIN_PX},s=${FAB_SIZE_PX};var fx=Math.max(0,window.innerWidth-s-m*2),fy=Math.max(0,window.innerHeight-s-m*2);var d=document.documentElement;d.style.setProperty(${JSON.stringify(
+)});if(!r)return;var v=JSON.parse(r);if(!v||typeof v!=="object")return;var x=v.x,y=v.y;if(typeof x!=="number"||typeof y!=="number"||!isFinite(x)||!isFinite(y)||x<0||x>1||y<0||y>1)return;var m=${FAB_VIEWPORT_MARGIN_PX},w=${FAB_WIDTH_PX},h=${FAB_HEIGHT_PX};var fx=Math.max(0,window.innerWidth-w-m*2),fy=Math.max(0,window.innerHeight-h-m*2);var d=document.documentElement;d.style.setProperty(${JSON.stringify(
   FAB_LEFT_CSS_VAR,
 )},(m+x*fx)+"px");d.style.setProperty(${JSON.stringify(
   FAB_TOP_CSS_VAR,

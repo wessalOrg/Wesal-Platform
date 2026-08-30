@@ -245,7 +245,7 @@ const en: MessageCatalog = {
 
   "halls.guest.prompt": "To add a rating or comment,",
   "halls.guest.login": "log in",
-  "halls.guest.or": "or",
+  "halls.guest.or": "and ",
   "halls.guest.join": "join us",
 
   "halls.gallery.empty":
@@ -296,6 +296,9 @@ const en: MessageCatalog = {
   "assistant.senderLabel": "Wesal Assistant",
   "assistant.fab.open": "Open the Wesal AI Assistant",
   "assistant.fab.close": "Close the Wesal AI Assistant",
+  "assistant.fab.greet1": "I'd be glad to help",
+  "assistant.fab.greet2": "Looking for a hall?",
+  "assistant.fab.greet3": "We'll choose the finest together",
   "assistant.status.online": "Online now",
   "assistant.status.connecting": "Connecting…",
   "assistant.status.offline": "Offline",

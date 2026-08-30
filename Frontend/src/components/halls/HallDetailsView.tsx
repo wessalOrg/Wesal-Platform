@@ -191,24 +191,29 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
 
   return shell(
     <article
-      className="wesal-modal-scroll relative flex h-full min-h-0 w-full flex-col overflow-y-auto overscroll-contain rounded-t-[1.75rem] bg-white shadow-[0_24px_80px_rgba(60,35,30,0.18)] sm:rounded-[1.75rem] lg:flex-row lg:overflow-hidden"
+      className="wesal-modal-scroll relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-t-[1.75rem] bg-white shadow-[0_24px_80px_rgba(60,35,30,0.18)] sm:rounded-[1.75rem] lg:flex-row"
       data-testid="hall-details-ready"
     >
         <button
           type="button"
           onClick={close}
-          className="sticky top-3 z-20 me-3 ms-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-maroon)] text-white shadow-md sm:h-11 sm:w-11 lg:absolute lg:end-4 lg:top-4 lg:me-0 lg:ms-0"
+          className="absolute end-3 top-3 z-20 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-maroon)] text-white shadow-md sm:end-4 sm:top-4 sm:h-11 sm:w-11"
           aria-label={t("common.close")}
           data-testid="hall-details-close"
         >
           <CloseIcon />
         </button>
 
-        <div className="shrink-0 bg-white px-3 pb-2 pt-3 sm:px-5 sm:pt-5 lg:h-full lg:w-1/2 lg:overflow-y-auto lg:p-6">
+        <div className="hidden h-full w-1/2 shrink-0 overflow-y-auto overscroll-contain bg-white p-6 lg:block">
           <HallGallery hallName={viewHall.name} images={viewHall.images} />
         </div>
 
-        <div className="min-h-0 flex-none px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 lg:w-1/2 lg:min-w-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:p-8">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:w-1/2 lg:min-w-0">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="shrink-0 bg-white px-3 pb-2 pt-3 sm:px-5 sm:pt-5 lg:hidden">
+          <HallGallery hallName={viewHall.name} images={viewHall.images} />
+        </div>
+        <div className="px-4 pb-4 sm:px-6 lg:h-full lg:px-8 lg:pb-6 lg:pt-8">
           {warning ? (
             <p
               className="mb-4 rounded-xl bg-[var(--wesal-pink-soft)] px-3 py-2 text-xs text-[var(--wesal-text)]"
@@ -373,18 +378,24 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             >
               {t("halls.details.unavailableActions")}
             </p>
-          ) : (
+          ) : null}
+        </div>
+        </div>
+
+          {!viewHall.isOwner && viewHall.isAvailable ? (
             <div
-              className="sticky bottom-0 mt-5 bg-gradient-to-t from-white from-65% to-transparent pb-1 pt-4"
+              className="shrink-0 border-t border-[var(--wesal-border)] bg-white px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8"
               data-testid="hall-actions"
             >
               <div className="flex gap-2 sm:gap-3">
-                <HallContactButton
-                  hallId={viewHall.id}
-                  isOwnHall={false}
-                  isAvailable={viewHall.isAvailable}
-                  onOpened={onClose}
-                />
+                <div className="min-w-0 flex-1">
+                  <HallContactButton
+                    hallId={viewHall.id}
+                    isOwnHall={false}
+                    isAvailable={viewHall.isAvailable}
+                    onOpened={onClose}
+                  />
+                </div>
                 {isGuest ? (
                   <Link
                     href={`/register?redirect=/halls/${viewHall.id}&intent=book`}
@@ -409,7 +420,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                 )}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </article>,
     );

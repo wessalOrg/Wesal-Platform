@@ -1,12 +1,15 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type AnimationEvent as ReactAnimationEvent,
+  type RefObject,
 } from "react";
-import AiAssistantSparkIcon from "@/components/assistant/AiAssistantSparkIcon";
+import AiAssistantAvatar from "@/components/assistant/AiAssistantAvatar";
 import AiAssistantUnavailableNotice from "@/components/assistant/AiAssistantUnavailableNotice";
 import AiChatComposer from "@/components/assistant/AiChatComposer";
 import AiChatErrorBoundary from "@/components/assistant/AiChatErrorBoundary";
@@ -14,6 +17,7 @@ import AiChatShell from "@/components/assistant/AiChatShell";
 import AiChatThread from "@/components/assistant/AiChatThread";
 import { useAiChat } from "@/hooks/useAiChat";
 import { useT } from "@/i18n";
+import { placeBubble, type Rect } from "@/lib/bubble-placement";
 import type {
   AiAssistantPhase,
   AiSession,
@@ -28,6 +32,8 @@ type AiAssistantPanelProps = {
   errorKey: string | null;
   unavailableReason: AiUnavailableReason | null;
   isRetrying: boolean;
+  /** Floating button the chat should open beside — follows wherever the user left it. */
+  anchorRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   onRetry: () => void;
   onBrowseHalls: () => void;
@@ -40,6 +46,9 @@ type AiAssistantPanelProps = {
  * so a dismissal can never hang half-open.
  */
 const PANEL_EXIT_FALLBACK_MS = 320;
+/** Prefer rising out of the FAB; fall back to the sides when there is no room above. */
+const PANEL_SIDES = ["above", "left", "right", "below"] as const;
+const CRITICAL_UI_SELECTOR = "header.wesal-navbar, [data-wesal-critical]";
 
 type PanelMotion = "closed" | "in" | "open" | "out";
 
@@ -77,6 +86,21 @@ function nextMotion(open: boolean, current: PanelMotion): PanelMotion {
   return canPlayPanelMotion() ? "out" : "closed";
 }
 
+function readCriticalUiRects(): Rect[] {
+  return Array.from(document.querySelectorAll(CRITICAL_UI_SELECTOR))
+    .map((element) => {
+      const { left, top, width, height } = element.getBoundingClientRect();
+      return { left, top, width, height };
+    })
+    .filter((rect) => rect.width > 0 && rect.height > 0);
+}
+
+function panelWidthForViewport(viewportWidth: number): number {
+  if (viewportWidth < 640) return Math.min(viewportWidth - 24, viewportWidth * 0.94);
+  if (viewportWidth < 1024) return Math.min(384, viewportWidth - 48);
+  return Math.min(416, viewportWidth - 48);
+}
+
 const STATUS_KEY: Record<AiAssistantPhase, string> = {
   idle: "assistant.status.online",
   loading: "assistant.status.connecting",
@@ -94,12 +118,14 @@ export default function AiAssistantPanel({
   errorKey,
   unavailableReason,
   isRetrying,
+  anchorRef,
   onClose,
   onRetry,
   onBrowseHalls,
 }: AiAssistantPanelProps) {
   const t = useT();
   const panelRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef(0);
   const failed = phase === "error" || phase === "unavailable";
   // Keep the failure on screen while retrying instead of flashing back to a spinner.
   const showFailure = failed || (isRetrying && errorKey !== null);
@@ -121,6 +147,121 @@ export default function AiAssistantPanel({
 
   const isExiting = motion === "out";
   const isVisible = motion !== "closed";
+
+  const place = useCallback(() => {
+    const panel = panelRef.current;
+    const anchor = anchorRef.current;
+    if (!panel || !anchor) return;
+
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    const width = panelWidthForViewport(viewport.width);
+    panel.style.width = `${width}px`;
+
+    const anchorRect = anchor.getBoundingClientRect();
+    const gapAbove = Math.max(160, anchorRect.top - 24);
+    const gapBelow = Math.max(160, viewport.height - (anchorRect.top + anchorRect.height) - 24);
+    const maxHeight = Math.min(
+      viewport.width < 640 ? viewport.height * 0.7 : viewport.height * 0.78,
+      608,
+      Math.max(gapAbove, gapBelow, 280),
+    );
+    panel.style.maxHeight = `${maxHeight}px`;
+
+    // Prefer offset sizes so an in-progress scale animation does not shrink the box
+    // used for placement and pull the panel into the FAB.
+    const size = {
+      width: panel.offsetWidth || width,
+      height: panel.offsetHeight || maxHeight,
+    };
+    const placement = placeBubble({
+      anchor: {
+        left: anchorRect.left,
+        top: anchorRect.top,
+        width: anchorRect.width,
+        height: anchorRect.height,
+      },
+      bubble: size,
+      viewport,
+      avoid: readCriticalUiRects(),
+      preferredSides: [...PANEL_SIDES],
+    });
+
+    if (!placement) {
+      const left = Math.min(
+        Math.max(12, anchorRect.left + anchorRect.width / 2 - width / 2),
+        viewport.width - width - 12,
+      );
+      const top = Math.max(12, anchorRect.top - size.height - 12);
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
+      panel.dataset.placement = "above";
+      panel.dataset.anchored = "true";
+      return;
+    }
+
+    panel.style.left = `${placement.left}px`;
+    panel.style.top = `${placement.top}px`;
+    panel.dataset.placement = placement.side;
+    panel.dataset.anchored = "true";
+  }, [anchorRef]);
+
+  const reposition = useCallback(() => {
+    window.cancelAnimationFrame(frameRef.current);
+    frameRef.current = window.requestAnimationFrame(place);
+  }, [place]);
+
+  useLayoutEffect(() => {
+    if (!isVisible) return;
+    place();
+    return () => window.cancelAnimationFrame(frameRef.current);
+  }, [isVisible, place, motion, showFailure, sessionReady, chat.messages.length]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const panel = panelRef.current;
+    if (!panel || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(reposition);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [isVisible, reposition]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    window.addEventListener("resize", reposition);
+    window.addEventListener("orientationchange", reposition);
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("orientationchange", reposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  }, [isVisible, reposition]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+
+    let last = "";
+    const track = () => {
+      const rect = anchor.getBoundingClientRect();
+      const key = `${Math.round(rect.left)}|${Math.round(rect.top)}|${Math.round(rect.width)}`;
+      if (key === last) return;
+      last = key;
+      reposition();
+    };
+
+    track();
+    const pulse = window.setInterval(track, 250);
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(track);
+    observer?.observe(anchor);
+
+    return () => {
+      window.clearInterval(pulse);
+      observer?.disconnect();
+    };
+  }, [anchorRef, isVisible, reposition]);
 
   useEffect(() => {
     if (motion !== "in") return;
@@ -206,11 +347,11 @@ export default function AiAssistantPanel({
       // and not announced, so the animation cannot get between the user and the app.
       inert={isExiting}
       onAnimationEnd={handleAnimationEnd}
-      className="wesal-ai-panel fixed inset-x-3 bottom-[5.75rem] z-[105] flex max-h-[min(70svh,32rem)] min-w-0 flex-col overflow-hidden rounded-3xl border border-[var(--wesal-border)] bg-white shadow-[0_24px_60px_rgba(60,35,30,0.22)] outline-none sm:inset-x-auto sm:bottom-[6.5rem] sm:end-6 sm:w-[22rem] md:w-[24rem] lg:w-[26rem] lg:max-h-[min(78svh,38rem)]"
+      className="wesal-ai-panel wesal-ai-panel--anchored fixed z-[105] flex min-w-0 flex-col overflow-hidden rounded-3xl border border-[var(--wesal-border)] bg-white shadow-[0_24px_60px_rgba(60,35,30,0.22)] outline-none"
     >
       <div className="wesal-ai-panel-header flex shrink-0 items-center gap-3 px-4 py-3.5">
-        <span className="wesal-ai-avatar flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white">
-          <AiAssistantSparkIcon className="h-5 w-5" />
+        <span className="wesal-ai-avatar flex h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#f3e4e2] ring-2 ring-white/80">
+          <AiAssistantAvatar />
         </span>
         <div className="min-w-0 flex-1">
           <h2

@@ -113,6 +113,7 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
         errorKey={errorKey}
         unavailableReason={unavailableReason}
         isRetrying={isRetrying}
+        anchorRef={fabRef}
         onClose={handleClose}
         onRetry={retry}
         onBrowseHalls={closeAssistant}

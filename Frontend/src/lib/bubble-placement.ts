@@ -26,6 +26,11 @@ export type PlaceBubbleInput = {
   /** Screen areas the bubble must not cover, e.g. the sticky navigation bar. */
   avoid?: Rect[];
   margin?: number;
+  /**
+   * Override the default “open toward free space” side order.
+   * Chat panels prefer `above` the FAB; invitation bubbles keep the default.
+   */
+  preferredSides?: BubbleSide[];
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -63,6 +68,7 @@ export function placeBubble({
   viewport,
   avoid = [],
   margin = FAB_VIEWPORT_MARGIN_PX,
+  preferredSides,
 }: PlaceBubbleInput): BubblePlacement | null {
   // An unmeasurable anchor or bubble would produce NaN coordinates, and a NaN
   // offset silently drops the bubble at the top-left corner of the screen.
@@ -96,9 +102,11 @@ export function placeBubble({
   const roomRight = viewport.width - (anchor.left + anchor.width);
 
   const sides: BubbleSide[] =
-    roomRight >= roomLeft
-      ? ["right", "left", "above", "below"]
-      : ["left", "right", "above", "below"];
+    preferredSides && preferredSides.length > 0
+      ? preferredSides
+      : roomRight >= roomLeft
+        ? ["right", "left", "above", "below"]
+        : ["left", "right", "above", "below"];
 
   for (const side of sides) {
     let left: number;
