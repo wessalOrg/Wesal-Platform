@@ -34,6 +34,8 @@ public sealed class GoogleAiSettings
     /// <summary>Maximum characters of user content to send to Gemini.</summary>
     public int MaxContextCharacters { get; set; } = 2000;
 
-    /// <summary>Request timeout for Gemini HTTP calls, in seconds.</summary>
-    public int TimeoutSeconds { get; set; } = 30;
+    /// <summary>Request timeout for Gemini HTTP calls, in seconds. Kept below the
+    /// frontend's 25s request timeout so a slow Gemini call falls back to the
+    /// deterministic provider before the client aborts the request.</summary>
+    public int TimeoutSeconds { get; set; } = 15;
 }

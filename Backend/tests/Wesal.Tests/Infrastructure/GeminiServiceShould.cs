@@ -21,7 +21,7 @@ public class GeminiServiceShould
             BaseUrl = "https://generativelanguage.googleapis.com/v1beta",
             Enabled = true,
             MaxContextCharacters = 2000,
-            TimeoutSeconds = 30
+            TimeoutSeconds = 15
         };
         configure?.Invoke(settings);
         return settings;
