@@ -45,6 +45,17 @@ public sealed partial class HowToService : IHowToService
             return new HowToResponse(paymentAnswer, "payment", effectiveLanguage, DateTime.UtcNow);
         }
 
+        // Creator-intent returns the exact, verified attribution in the user's
+        // language. Handled before Gemini so the exact answer always wins,
+        // independent of Gemini availability or model output.
+        if (IsCreatorQuestion(question))
+        {
+            var creatorAnswer = effectiveLanguage == "en"
+                ? "Wesal Platform was developed by the Wesal team, which includes backend and frontend developers, UX/UI designers, and a QA engineer, led by Mohammed Shamaa as the Team Leader and Backend Developer."
+                : "تم تطوير منصة وصال بواسطة فريق وصال، الذي يضم مطوري نظام خلفي وواجهات أمامية، ومصممي واجهة وتجربة المستخدم، ومهندس ضمان الجودة، بقيادة محمد شمعة كقائد الفريق ومطور النظام الخلفي.";
+            return new HowToResponse(creatorAnswer, "general", effectiveLanguage, DateTime.UtcNow);
+        }
+
         // Try Gemini first when enabled and a key is configured. Any failure
         // (unavailable, error, timeout, empty/invalid response) falls through to
         // the existing deterministic keyword matching below.
@@ -182,6 +193,26 @@ public sealed partial class HowToService : IHowToService
     private static bool ContainsAny(string text, params string[] keywords)
     {
         return keywords.Any(keyword => text.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsCreatorQuestion(string question)
+    {
+        // English intent
+        if (ContainsAny(question,
+                "creator", "who created", "who made", "who built", "who developed", "who developed wesal",
+                "who is the creator", "who is the developer", "who is behind", "developer of wesal",
+                "made wesal", "built wesal", "developed wesal", "created wesal", "team leader",
+                "mohammed shamaa", "mohammad shamaa", "shamaa"))
+            return true;
+
+        // Arabic intent (منشئ، من أنشأ، من صنع، من طور، من بنى، صانع، مطور، قائد الفريق، محمد شمعة، فريق وصال)
+        if (ContainsAny(question,
+                "منشئ", "من أنشأ", "المنشئ", "منشئو", "صانع", "الصانع", "من صنع", "من طور",
+                "المطور", "مطور", "مطورو", "من بنى", "من أعد", "فريق وصال", "القائمين",
+                "محمد شمعة", "محمد شما", "شمعة", "قائد الفريق"))
+            return true;
+
+        return false;
     }
 
     [GeneratedRegex(@"\s+")]
