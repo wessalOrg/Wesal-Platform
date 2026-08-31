@@ -13,18 +13,21 @@ public sealed partial class HowToService : IHowToService
     private readonly ISubscriptionPaymentService _subscriptionPaymentService;
     private readonly IAiLanguageDetector _languageDetector;
     private readonly ISubscriptionPaymentIntentDetector _paymentIntentDetector;
+    private readonly IGeminiService? _geminiService;
 
     public HowToService(
         ISubscriptionPaymentService subscriptionPaymentService,
         IAiLanguageDetector? languageDetector = null,
-        ISubscriptionPaymentIntentDetector? paymentIntentDetector = null)
+        ISubscriptionPaymentIntentDetector? paymentIntentDetector = null,
+        IGeminiService? geminiService = null)
     {
         _subscriptionPaymentService = subscriptionPaymentService;
         _languageDetector = languageDetector ?? new AiLanguageDetector();
         _paymentIntentDetector = paymentIntentDetector ?? new SubscriptionPaymentIntentDetector();
+        _geminiService = geminiService;
     }
 
-    public Task<HowToResponse> AskHowToAsync(
+    public async Task<HowToResponse> AskHowToAsync(
         string question,
         string? language,
         CancellationToken cancellationToken = default)
@@ -39,7 +42,19 @@ public sealed partial class HowToService : IHowToService
             var paymentAnswer = effectiveLanguage == "en"
                 ? $"To pay your subscription as a Hall Owner: contact the Admin via WhatsApp at {details.AdminWhatsAppContact} to arrange payment. The subscription is {details.SubscriptionPriceIls:F0} ILS per {details.SubscriptionCycleDays}-day cycle per hall. Once the Admin confirms your payment, your hall's management features unlock."
                 : $"لدفع اشتراكك كصاحب قاعة: تواصل مع المدير عبر واتساب على الرقم {details.AdminWhatsAppContact} لترتيب الدفع. الاشتراك {details.SubscriptionPriceIls:F0} شيكل لكل {details.SubscriptionCycleDays} يوم لكل قاعة. بمجرد تأكيد المدير للدفع، يتم فتح ميزات إدارة قاعدتك.";
-            return Task.FromResult(new HowToResponse(paymentAnswer, "payment", effectiveLanguage, DateTime.UtcNow));
+            return new HowToResponse(paymentAnswer, "payment", effectiveLanguage, DateTime.UtcNow);
+        }
+
+        // Try Gemini first when enabled and a key is configured. Any failure
+        // (unavailable, error, timeout, empty/invalid response) falls through to
+        // the existing deterministic keyword matching below.
+        if (_geminiService?.IsAvailable == true)
+        {
+            var geminiAnswer = await _geminiService.GenerateTextAsync(question, effectiveLanguage, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(geminiAnswer))
+            {
+                return new HowToResponse(geminiAnswer, "general", effectiveLanguage, DateTime.UtcNow);
+            }
         }
 
         var normalized = Normalize(question);
@@ -48,11 +63,11 @@ public sealed partial class HowToService : IHowToService
             ? MatchEnglish(normalized)
             : MatchArabic(normalized);
 
-        return Task.FromResult(new HowToResponse(
+        return new HowToResponse(
             answer,
             category,
             effectiveLanguage,
-            DateTime.UtcNow));
+            DateTime.UtcNow);
     }
 
     private static string Normalize(string input) =>

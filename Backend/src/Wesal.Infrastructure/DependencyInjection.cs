@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Domain.Constants;
@@ -44,6 +45,16 @@ public static class DependencyInjection
         services.AddOptions<SubscriptionPaymentOptions>()
             .Bind(configuration.GetSection(SubscriptionPaymentOptions.SectionName));
 
+        services.AddOptions<GoogleAiSettings>()
+            .Bind(configuration.GetSection(GoogleAiSettings.SectionName));
+
+        services.AddHttpClient(GeminiService.HttpClientName, (sp, client) =>
+        {
+            var settings = sp.GetRequiredService<IOptions<GoogleAiSettings>>().Value;
+            var timeoutSeconds = settings.TimeoutSeconds > 0 ? settings.TimeoutSeconds : 30;
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        });
+
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -70,6 +81,7 @@ public static class DependencyInjection
         services.AddSingleton<ISubscriptionPaymentService, SubscriptionPaymentService>();
         services.AddScoped<IHallRecommendationMatcher, HallRecommendationMatcher>();
         services.AddSingleton<IDateTime, DateTimeService>();
+        services.AddSingleton<IGeminiService, GeminiService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
