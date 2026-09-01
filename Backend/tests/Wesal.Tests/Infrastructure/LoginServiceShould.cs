@@ -162,7 +162,7 @@ public class LoginServiceShould
         await registration.RegisterAsync(
             CreateRegisterRequest("wrongpass@example.com", "+970599666666", AccountTypes.RegularUser));
 
-        var exception = await Assert.ThrowsAsync<UnauthorizedException>(() =>
+        var exception = await Assert.ThrowsAsync<ValidationException>(() =>
             login.LoginAsync(new LoginRequest
             {
                 Identifier = "wrongpass@example.com",
@@ -170,6 +170,8 @@ public class LoginServiceShould
             }));
 
         Assert.NotNull(exception);
+        Assert.True(exception.Errors.ContainsKey("Password"));
+        Assert.Contains("Incorrect password.", exception.Errors["Password"]);
 
         var user = await context.Users.SingleAsync(item => item.Email == "wrongpass@example.com");
         Assert.Equal(1, user.AccessFailedCount);
@@ -180,20 +182,26 @@ public class LoginServiceShould
     {
         var (login, _, _) = CreateService();
 
-        var unknownException = await Assert.ThrowsAsync<UnauthorizedException>(() =>
+        var unknownException = await Assert.ThrowsAsync<ValidationException>(() =>
             login.LoginAsync(new LoginRequest
             {
                 Identifier = "nobody@example.com",
                 Password = Password
             }));
-        var wrongPasswordException = await Assert.ThrowsAsync<UnauthorizedException>(() =>
-            login.LoginAsync(new LoginRequest
+        // Unknown email should map to Identifier/Email field
+        Assert.True(unknownException.Errors.ContainsKey("Identifier") || unknownException.Errors.ContainsKey("Email"));
+        Assert.Contains(unknownException.Errors.Values.SelectMany(v => v), msg => msg.Contains("not registered", StringComparison.OrdinalIgnoreCase));
+
+        // Wrong password should map to Password field
+        var (login2, registration2, _) = CreateService();
+        await registration2.RegisterAsync(CreateRegisterRequest("regular2@example.com", "+970599000001", AccountTypes.RegularUser));
+        var wrongPasswordException = await Assert.ThrowsAsync<ValidationException>(() =>
+            login2.LoginAsync(new LoginRequest
             {
-                Identifier = "regular@example.com",
+                Identifier = "regular2@example.com",
                 Password = "WrongPassword1!"
             }));
-
-        Assert.Equal(wrongPasswordException.Message, unknownException.Message);
+        Assert.True(wrongPasswordException.Errors.ContainsKey("Password"));
     }
 
     [Fact]
@@ -203,19 +211,21 @@ public class LoginServiceShould
         await registration.RegisterAsync(
             CreateRegisterRequest("known@example.com", "+970599123456", AccountTypes.RegularUser));
 
-        await Assert.ThrowsAsync<UnauthorizedException>(() =>
+        var ex1 = await Assert.ThrowsAsync<ValidationException>(() =>
             login.LoginAsync(new LoginRequest
             {
                 Identifier = "unknown-phone",
                 Password = Password
             }));
+        Assert.True(ex1.Errors.ContainsKey("Identifier") || ex1.Errors.ContainsKey("PhoneNumber"));
 
-        await Assert.ThrowsAsync<UnauthorizedException>(() =>
+        var ex2 = await Assert.ThrowsAsync<ValidationException>(() =>
             login.LoginAsync(new LoginRequest
             {
                 Identifier = "+000000000000",
                 Password = Password
             }));
+        Assert.True(ex2.Errors.ContainsKey("Identifier") || ex2.Errors.ContainsKey("PhoneNumber"));
     }
 
     [Fact]
@@ -227,7 +237,7 @@ public class LoginServiceShould
 
         for (var attempt = 0; attempt < 4; attempt++)
         {
-            await Assert.ThrowsAsync<UnauthorizedException>(() =>
+            await Assert.ThrowsAsync<ValidationException>(() =>
                 login.LoginAsync(new LoginRequest
                 {
                     Identifier = "recovery@example.com",
@@ -257,7 +267,7 @@ public class LoginServiceShould
 
         for (var attempt = 0; attempt < 4; attempt++)
         {
-            await Assert.ThrowsAsync<UnauthorizedException>(() =>
+            await Assert.ThrowsAsync<ValidationException>(() =>
                 login.LoginAsync(new LoginRequest
                 {
                     Identifier = "locked@example.com",

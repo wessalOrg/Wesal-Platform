@@ -207,7 +207,7 @@ public class LoginPostAuthenticationStateShould
         await registration.RegisterAsync(
             CreateRegisterRequest("regular@example.com", "+970599888888", AccountTypes.RegularUser));
 
-        await Assert.ThrowsAsync<UnauthorizedException>(() =>
+        await Assert.ThrowsAsync<ValidationException>(() =>
             login.LoginAsync(new LoginRequest
             {
                 Identifier = "regular@example.com",

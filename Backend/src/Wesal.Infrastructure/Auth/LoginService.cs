@@ -36,7 +36,14 @@ public sealed class LoginService : ILoginService
         var user = await FindUserByIdentifierAsync(identifier);
         if (user is null)
         {
-            throw new UnauthorizedException("Invalid identifiers or password.");
+            var isEmailIdentifier = identifier.Contains('@');
+            var field = isEmailIdentifier ? "Email" : "PhoneNumber";
+            var message = isEmailIdentifier ? "Email is not registered." : "Phone number is not registered.";
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["Identifier"] = new[] { message },
+                [field] = new[] { message }
+            });
         }
 
         if (await _userManager.IsLockedOutAsync(user))
@@ -53,7 +60,10 @@ public sealed class LoginService : ILoginService
                 await ThrowForBlockedAccountAsync(user);
             }
 
-            throw new UnauthorizedException("Invalid identifiers or password.");
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["Password"] = new[] { "Incorrect password." }
+            });
         }
 
         await _userManager.ResetAccessFailedCountAsync(user);
