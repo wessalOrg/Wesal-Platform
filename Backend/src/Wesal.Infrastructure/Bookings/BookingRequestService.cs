@@ -1,6 +1,7 @@
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
@@ -27,6 +28,11 @@ public class BookingRequestService : IBookingRequestService
         if (!_currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUser.UserId))
         {
             throw new UnauthorizedException("You must be logged in to submit a booking request.");
+        }
+
+        if (_currentUser.Roles.Contains(ApplicationRoles.HallOwner, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new ForbiddenException("Hall owners cannot book halls.");
         }
 
         var hall = await _hallRepository.GetHallByIdAsync(request.HallId, cancellationToken);
