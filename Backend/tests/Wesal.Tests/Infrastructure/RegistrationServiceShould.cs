@@ -178,8 +178,8 @@ public class RegistrationServiceShould
     public async Task Register_SecondUserWithDifferentAccountType_DoesNotAffectExistingRole()
     {
         var (service, context) = CreateService();
-        await service.RegisterAsync(CreateRequest(email: "first@example.com", accountType: AccountTypes.RegularUser));
-        await service.RegisterAsync(CreateRequest(email: "second@example.com", accountType: AccountTypes.HallOwner));
+        await service.RegisterAsync(CreateRequest(email: "first@example.com", phoneNumber: "+970599111111", accountType: AccountTypes.RegularUser));
+        await service.RegisterAsync(CreateRequest(email: "second@example.com", phoneNumber: "+970599222222", accountType: AccountTypes.HallOwner));
 
         var firstUser = await context.Users.SingleAsync(item => item.Email == "first@example.com");
         var firstUserRole = await context.UserRoles.SingleAsync(item => item.UserId == firstUser.Id);

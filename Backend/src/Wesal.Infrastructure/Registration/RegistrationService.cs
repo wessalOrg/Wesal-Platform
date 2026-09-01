@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
@@ -35,15 +36,31 @@ public sealed class RegistrationService : IRegistrationService
         var role = AccountTypes.ToRole(request.AccountType);
         await EnsureRoleExistsAsync(role, cancellationToken);
 
+        var normalizedPhone = request.PhoneNumber.Trim();
+        var existingByPhone = await _userManager.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.PhoneNumber == normalizedPhone, cancellationToken);
+        if (existingByPhone is not null)
+            throw new ConflictException("Phone number already exists.");
+
         var user = new ApplicationUser
         {
             UserName = request.Email,
             Email = request.Email,
             FullName = request.FullName.Trim(),
-            PhoneNumber = request.PhoneNumber.Trim()
+            PhoneNumber = normalizedPhone
         };
 
-        var createResult = await _userManager.CreateAsync(user, request.Password);
+        IdentityResult createResult;
+        try
+        {
+            createResult = await _userManager.CreateAsync(user, request.Password);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("PhoneNumber") == true || ex.Message.Contains("PhoneNumber"))
+        {
+            throw new ConflictException("Phone number already exists.");
+        }
+
         if (!createResult.Succeeded)
         {
             ThrowForCreateErrors(createResult.Errors);

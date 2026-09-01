@@ -59,7 +59,16 @@ public sealed class AuthService : IAuthService, IRegistrationService
             PhoneNumber = normalizedPhone
         };
 
-        var createResult = await _userManager.CreateAsync(user, request.Password);
+        IdentityResult createResult;
+        try
+        {
+            createResult = await _userManager.CreateAsync(user, request.Password);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("PhoneNumber") == true || ex.Message.Contains("PhoneNumber"))
+        {
+            throw new ConflictException("Phone number already exists.");
+        }
+
         if (!createResult.Succeeded)
         {
             var errors = createResult.Errors

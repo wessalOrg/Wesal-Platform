@@ -53,6 +53,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
         builder.Entity<ApplicationUser>(entity =>
         {
             entity.Property(user => user.FullName).HasMaxLength(150);
+            entity.HasIndex(user => user.PhoneNumber).IsUnique().HasFilter("\"PhoneNumber\" IS NOT NULL");
         });
 
         builder.Entity<Hall>(entity =>
