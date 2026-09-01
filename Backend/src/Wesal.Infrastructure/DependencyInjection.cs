@@ -21,6 +21,7 @@ using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.AiAssistant;
 using Wesal.Infrastructure.Languages;
 using Wesal.Infrastructure.Localization;
+using Wesal.Infrastructure.Profile;
 using Wesal.Infrastructure.Registration;
 using Wesal.Infrastructure.Time;
 
@@ -73,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<IRegistrationService, RegistrationService>();
         services.AddScoped<ILoginService, LoginService>();
         services.AddScoped<ILogoutService, LogoutService>();
+        services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<ILanguageService, LanguageService>();
         services.AddScoped<ITranslationService, TranslationService>();
         services.AddSingleton<IChatSessionService, ChatSessionService>();
