@@ -74,6 +74,13 @@ public class AuthorizationHallActionsShould
         public Task<IReadOnlyList<Message>> GetByConversationAsync(Guid conversationId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Message>>([]);
         public Task<IReadOnlyList<Message>> GetByConversationIdsAsync(IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Message>>([]);
         public Task AddAsync(Message message, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<Message?> GetByClientRequestIdAsync(string senderUserId, string clientRequestId, CancellationToken cancellationToken = default) => Task.FromResult<Message?>(null);
+    }
+
+    private sealed class FakeConversationNotifier : IConversationNotifier
+    {
+        public Task NotifyMessageSentAsync(MessageSentEvent message, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class FakeBookingRejectionService : IBookingRejectionService
@@ -130,7 +137,7 @@ public class AuthorizationHallActionsShould
     {
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
-        var service = new ConversationService(new FakeConversationRepository(), new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepo, new FakeCurrentUserService(null, false));
+        var service = new ConversationService(new FakeConversationRepository(), new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepo, new FakeCurrentUserService(null, false), new FakeConversationNotifier());
         await Assert.ThrowsAsync<UnauthorizedException>(() => service.CreateConversationAsync(hall.Id));
     }
 
@@ -174,7 +181,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
         var convRepo = new FakeConversationRepository();
-        var service = new ConversationService(convRepo, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepo, new FakeCurrentUserService("user-1", true, ApplicationRoles.RegisteredUser));
+        var service = new ConversationService(convRepo, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepo, new FakeCurrentUserService("user-1", true, ApplicationRoles.RegisteredUser), new FakeConversationNotifier());
         var result = await service.CreateConversationAsync(hall.Id);
         Assert.Equal(hall.Id, result.HallId);
         Assert.False(result.IsExisting);
@@ -221,7 +228,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(hallId, "owner-1");
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
         var convRepo = new FakeConversationRepository();
-        var service = new ConversationService(convRepo, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
+        var service = new ConversationService(convRepo, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner), new FakeConversationNotifier());
         var ex = await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateConversationAsync(hallId));
         Assert.Contains("own hall", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(convRepo.Conversations);
@@ -233,7 +240,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "other-owner");
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
         var convRepo = new FakeConversationRepository();
-        var service = new ConversationService(convRepo, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
+        var service = new ConversationService(convRepo, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner), new FakeConversationNotifier());
         var result = await service.CreateConversationAsync(hall.Id);
         Assert.Equal(hall.Id, result.HallId);
     }
@@ -257,7 +264,7 @@ public class AuthorizationHallActionsShould
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
         var convRepo = new FakeConversationRepository();
         // HallOwner tries to contact own hall - server must block regardless of client flag
-        var service = new ConversationService(convRepo, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
+        var service = new ConversationService(convRepo, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner), new FakeConversationNotifier());
         await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateConversationAsync(hall.Id));
         // Verify ownership determined server-side: hall.OwnerId is server data
         Assert.Equal("owner-1", hall.OwnerId);
