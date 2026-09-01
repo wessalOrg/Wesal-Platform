@@ -180,8 +180,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.Property(message => message.SenderUserId).IsRequired().HasMaxLength(450);
             entity.Property(message => message.Content).IsRequired().HasMaxLength(1000);
+            entity.Property(message => message.ClientRequestId).HasMaxLength(450);
 
             entity.HasIndex(message => new { message.ConversationId, message.CreatedAt });
+            entity.HasIndex(message => new { message.SenderUserId, message.ClientRequestId }).IsUnique();
 
             entity.HasOne(message => message.Conversation)
                 .WithMany(conversation => conversation.Messages)

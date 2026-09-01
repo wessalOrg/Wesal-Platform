@@ -19,6 +19,22 @@ public sealed class MessageRepository : IMessageRepository
         await _context.Messages.AddAsync(message, cancellationToken);
     }
 
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<Message?> GetByClientRequestIdAsync(
+        string senderUserId,
+        string clientRequestId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Messages
+            .FirstOrDefaultAsync(
+                message => message.SenderUserId == senderUserId && message.ClientRequestId == clientRequestId,
+                cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Message>> GetByConversationAsync(
         Guid conversationId,
         CancellationToken cancellationToken = default)

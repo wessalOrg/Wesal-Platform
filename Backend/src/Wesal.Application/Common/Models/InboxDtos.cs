@@ -51,3 +51,18 @@ public sealed class UserDisplayInfo
 
     public string FullName { get; init; } = string.Empty;
 }
+
+public sealed class MessageSentEvent
+{
+    public Guid MessageId { get; init; }
+
+    public Guid ConversationId { get; init; }
+
+    public string SenderUserId { get; init; } = string.Empty;
+
+    public string SenderName { get; init; } = string.Empty;
+
+    public string Content { get; init; } = string.Empty;
+
+    public DateTimeOffset SentAt { get; init; }
+}

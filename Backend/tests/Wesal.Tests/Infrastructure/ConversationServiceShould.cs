@@ -442,7 +442,7 @@ public class ConversationServiceShould
     {
         var effectiveUserId = authenticated && userId is null ? "test-user-1" : userId;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? []);
-        return new ConversationService(conversationRepository, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepository, currentUser);
+        return new ConversationService(conversationRepository, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepository, currentUser, new FakeConversationNotifier());
     }
 
     private sealed class FakeConversationRepository : IConversationRepository
@@ -488,6 +488,12 @@ public class ConversationServiceShould
     {
         public Task AddAsync(Message message, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<Message?> GetByClientRequestIdAsync(string senderUserId, string clientRequestId, CancellationToken cancellationToken = default)
+            => Task.FromResult<Message?>(null);
 
         public Task<IReadOnlyList<Message>> GetByConversationAsync(Guid conversationId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Message>>([]);
@@ -563,5 +569,11 @@ public class ConversationServiceShould
         public string? Email => null;
         public bool IsAuthenticated { get; }
         public IReadOnlyList<string> Roles { get; }
+    }
+
+    private sealed class FakeConversationNotifier : IConversationNotifier
+    {
+        public Task NotifyMessageSentAsync(MessageSentEvent message, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 }

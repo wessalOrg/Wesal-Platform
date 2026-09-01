@@ -71,4 +71,23 @@ public class ConversationsController : ControllerBase
         var response = await _conversationService.GetConversationThreadAsync(conversationId, cancellationToken);
         return Ok(response);
     }
+
+    [HttpPost("api/v{version:apiVersion}/conversations/{conversationId:guid}/messages")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(SendMessageResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SendMessageResponse>> SendMessage(
+        Guid conversationId,
+        SendMessageRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _conversationService.SendMessageAsync(conversationId, request, cancellationToken);
+        return CreatedAtAction(
+            nameof(GetConversationMessages),
+            new { version = "1", conversationId },
+            response);
+    }
 }

@@ -535,6 +535,15 @@ public class BookingCancellationServiceShould
             _pending.Clear();
         }
 
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            CommitPending();
+            return Task.CompletedTask;
+        }
+
+        public Task<Message?> GetByClientRequestIdAsync(string senderUserId, string clientRequestId, CancellationToken cancellationToken = default)
+            => Task.FromResult(_committed.FirstOrDefault(m => m.SenderUserId == senderUserId && m.ClientRequestId == clientRequestId));
+
         public Task<IReadOnlyList<Message>> GetByConversationAsync(Guid conversationId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Message>>(_committed
                 .Where(m => m.ConversationId == conversationId)

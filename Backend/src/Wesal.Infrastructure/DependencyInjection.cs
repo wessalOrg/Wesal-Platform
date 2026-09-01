@@ -71,6 +71,7 @@ public static class DependencyInjection
         services.AddScoped<IRatingService, RatingService>();
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IConversationService, ConversationService>();
+        services.AddScoped<IConversationNotifier, ConversationNotifier>();
         services.AddScoped<IRegistrationService, RegistrationService>();
         services.AddScoped<ILoginService, LoginService>();
         services.AddScoped<ILogoutService, LogoutService>();

@@ -11,4 +11,9 @@ public interface IConversationService
     Task<IReadOnlyList<ConversationSummaryResponse>> GetMyConversationsAsync(CancellationToken cancellationToken = default);
 
     Task<MessageThreadResponse> GetConversationThreadAsync(Guid conversationId, CancellationToken cancellationToken = default);
+
+    Task<SendMessageResponse> SendMessageAsync(
+        Guid conversationId,
+        SendMessageRequest request,
+        CancellationToken cancellationToken = default);
 }

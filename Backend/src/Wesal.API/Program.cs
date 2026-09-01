@@ -7,6 +7,7 @@ using Serilog;
 using Wesal.API.Filters;
 using Wesal.Application;
 using Wesal.Infrastructure;
+using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Logging;
 using Wesal.Infrastructure.Middleware;
 using Wesal.Persistence;
@@ -65,6 +66,8 @@ try
             policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
         });
     });
+
+    services.AddSignalR();
 
     services.AddHealthChecks()
         .AddDbContextCheck<ApplicationDbContext>(name: "database");
@@ -136,6 +139,7 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+    app.MapHub<ConversationHub>("/hubs/conversation");
     app.MapHealthChecks("/health");
 
     app.MapGet("/", () => Results.Ok(new { service = "Wesal API", status = "running", version = "v1" }));

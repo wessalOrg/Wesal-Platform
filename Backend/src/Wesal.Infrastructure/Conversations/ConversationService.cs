@@ -15,19 +15,22 @@ public sealed class ConversationService : IConversationService
     private readonly IBookingRejectionService _bookingRejectionService;
     private readonly IHallRepository _hallRepository;
     private readonly ICurrentUserService _currentUser;
+    private readonly IConversationNotifier _notifier;
 
     public ConversationService(
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository,
         IBookingRejectionService bookingRejectionService,
         IHallRepository hallRepository,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IConversationNotifier notifier)
     {
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
         _bookingRejectionService = bookingRejectionService;
         _hallRepository = hallRepository;
         _currentUser = currentUser;
+        _notifier = notifier;
     }
 
     public async Task<ConversationResponse> CreateConversationAsync(
@@ -210,6 +213,150 @@ public sealed class ConversationService : IConversationService
                     SentAt = message.CreatedAt
                 })
                 .ToList()
+        };
+    }
+
+    public async Task<SendMessageResponse> SendMessageAsync(
+        Guid conversationId,
+        SendMessageRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        EnsureAuthenticated();
+        ValidateMessageContent(request.Content);
+
+        var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
+
+        if (conversation is null || conversation.Hall?.IsDeleted == true)
+        {
+            throw new NotFoundException(nameof(Conversation), conversationId);
+        }
+
+        var senderUserId = _currentUser.UserId!;
+
+        var isParticipant = string.Equals(senderUserId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(senderUserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase)
+            || _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+
+        if (!isParticipant)
+        {
+            throw new ForbiddenException("You do not have access to this conversation.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ClientRequestId))
+        {
+            var existing = await _messageRepository.GetByClientRequestIdAsync(
+                senderUserId, request.ClientRequestId, cancellationToken);
+
+            if (existing is not null)
+            {
+                var senderName = await ResolveSenderNameAsync(senderUserId, cancellationToken);
+                return MapToSendMessageResponse(existing, conversationId, senderName, isDuplicate: true);
+            }
+        }
+
+        var message = new Message
+        {
+            ConversationId = conversationId,
+            SenderUserId = senderUserId,
+            Content = request.Content.Trim(),
+            ClientRequestId = string.IsNullOrWhiteSpace(request.ClientRequestId)
+                ? null
+                : request.ClientRequestId
+        };
+
+        await _messageRepository.AddAsync(message, cancellationToken);
+
+        try
+        {
+            await _messageRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (IsUniqueViolation(ex) && !string.IsNullOrWhiteSpace(request.ClientRequestId))
+        {
+            var duplicate = await _messageRepository.GetByClientRequestIdAsync(
+                senderUserId, request.ClientRequestId, cancellationToken);
+
+            if (duplicate is not null)
+            {
+                var senderName = await ResolveSenderNameAsync(senderUserId, cancellationToken);
+                return MapToSendMessageResponse(duplicate, conversationId, senderName, isDuplicate: true);
+            }
+
+            throw;
+        }
+
+        var resolvedSenderName = await ResolveSenderNameAsync(senderUserId, cancellationToken);
+
+        await NotifyMessageSentAsync(conversationId, message, resolvedSenderName, cancellationToken);
+
+        return MapToSendMessageResponse(message, conversationId, resolvedSenderName);
+    }
+
+    private async Task<string> ResolveSenderNameAsync(string senderUserId, CancellationToken cancellationToken)
+    {
+        var users = await _conversationRepository.GetUserDisplayNamesAsync([senderUserId], cancellationToken);
+        return users.FirstOrDefault(info => info.UserId == senderUserId)?.FullName ?? string.Empty;
+    }
+
+    private async Task NotifyMessageSentAsync(
+        Guid conversationId,
+        Message message,
+        string senderName,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notifier.NotifyMessageSentAsync(new MessageSentEvent
+            {
+                MessageId = message.Id,
+                ConversationId = conversationId,
+                SenderUserId = message.SenderUserId,
+                SenderName = senderName,
+                Content = message.Content,
+                SentAt = message.CreatedAt
+            }, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // Best-effort delivery: message is already persisted and accessible via thread retrieval.
+        }
+    }
+
+    private void ValidateMessageContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw new ValidationException("Message content is required.");
+        }
+
+        if (content.Trim().Length > 1000)
+        {
+            throw new ValidationException("Message content must not exceed 1000 characters.");
+        }
+    }
+
+    private static bool IsUniqueViolation(Exception ex)
+    {
+        return ex.Message.Contains("23505", StringComparison.Ordinal)
+            || ex.InnerException is not null && ex.InnerException.Message.Contains("23505", StringComparison.Ordinal);
+    }
+
+    private static SendMessageResponse MapToSendMessageResponse(Message message, Guid conversationId, string senderName, bool isDuplicate = false)
+    {
+        return new SendMessageResponse
+        {
+            MessageId = message.Id,
+            ConversationId = conversationId,
+            SenderUserId = message.SenderUserId,
+            SenderName = senderName,
+            Content = message.Content,
+            SentAt = message.CreatedAt,
+            IsDuplicate = isDuplicate
         };
     }
 

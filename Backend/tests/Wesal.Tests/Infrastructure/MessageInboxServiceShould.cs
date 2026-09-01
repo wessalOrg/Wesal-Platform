@@ -362,7 +362,7 @@ public class MessageInboxServiceShould
     {
         var effectiveUserId = authenticated ? userId ?? "test-user-1" : null;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? []);
-        return new ConversationService(conversationRepository, messageRepository, new FakeBookingRejectionService(), new FakeHallRepository(), currentUser);
+        return new ConversationService(conversationRepository, messageRepository, new FakeBookingRejectionService(), new FakeHallRepository(), currentUser, new FakeConversationNotifier());
     }
 
     private sealed class FakeConversationRepository : IConversationRepository
@@ -441,6 +441,12 @@ public class MessageInboxServiceShould
             Messages.Add(message);
             return Task.CompletedTask;
         }
+
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<Message?> GetByClientRequestIdAsync(string senderUserId, string clientRequestId, CancellationToken cancellationToken = default)
+            => Task.FromResult<Message?>(null);
 
         public Task<IReadOnlyList<Message>> GetByConversationAsync(Guid conversationId, CancellationToken cancellationToken = default)
         {
@@ -526,5 +532,11 @@ public class MessageInboxServiceShould
         public string? Email => null;
         public bool IsAuthenticated { get; }
         public IReadOnlyList<string> Roles { get; }
+    }
+
+    private sealed class FakeConversationNotifier : IConversationNotifier
+    {
+        public Task NotifyMessageSentAsync(MessageSentEvent message, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 }
