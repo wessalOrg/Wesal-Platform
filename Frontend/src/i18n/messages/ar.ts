@@ -242,7 +242,7 @@ const ar: MessageCatalog = {
 
   "halls.guest.prompt": "لإضافة تقييم أو تعليق،",
   "halls.guest.login": "سجّل الدخول",
-  "halls.guest.or": "أو",
+  "halls.guest.or": "و",
   "halls.guest.join": "انضم إلينا",
 
   "halls.gallery.empty":
@@ -292,6 +292,9 @@ const ar: MessageCatalog = {
   "assistant.senderLabel": "مساعد وصال",
   "assistant.fab.open": "افتح مساعد وصال الذكي",
   "assistant.fab.close": "إغلاق مساعد وصال الذكي",
+  "assistant.fab.greet1": "يسعدني مساعدتك",
+  "assistant.fab.greet2": "تبحث عن قاعة؟",
+  "assistant.fab.greet3": "نختار الأجمل معاً",
   "assistant.status.online": "متصل الآن",
   "assistant.status.connecting": "جاري الاتصال…",
   "assistant.status.offline": "غير متصل",
@@ -316,9 +319,9 @@ const ar: MessageCatalog = {
   "assistant.invite.help": "كيف أقدر أساعدك؟",
   "assistant.invite.halls": "تبحث عن قاعة؟ اسألني عن منطقة أو تاريخ.",
   "assistant.invite.dismiss": "إخفاء الدعوة",
-  "assistant.chat.empty.title": "ابدئي المحادثة",
+  "assistant.chat.empty.title": "ابدأ المحادثة",
   "assistant.chat.empty.body":
-    "اسألي عن قاعة أو منطقة أو تاريخ أو طريقة الحجز على وصال — سأجيبك من هنا.",
+    "اسأل عن قاعة أو منطقة أو تاريخ أو طريقة الحجز على وصال — سأجيبك من هنا.",
   "assistant.chat.empty.hintHall": "قاعة في غزة",
   "assistant.chat.empty.hintHowTo": "كيف أحجز قاعة؟",
   "assistant.chat.retry": "إعادة المحاولة",

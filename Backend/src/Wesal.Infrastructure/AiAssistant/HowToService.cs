@@ -13,18 +13,21 @@ public sealed partial class HowToService : IHowToService
     private readonly ISubscriptionPaymentService _subscriptionPaymentService;
     private readonly IAiLanguageDetector _languageDetector;
     private readonly ISubscriptionPaymentIntentDetector _paymentIntentDetector;
+    private readonly IGeminiService? _geminiService;
 
     public HowToService(
         ISubscriptionPaymentService subscriptionPaymentService,
         IAiLanguageDetector? languageDetector = null,
-        ISubscriptionPaymentIntentDetector? paymentIntentDetector = null)
+        ISubscriptionPaymentIntentDetector? paymentIntentDetector = null,
+        IGeminiService? geminiService = null)
     {
         _subscriptionPaymentService = subscriptionPaymentService;
         _languageDetector = languageDetector ?? new AiLanguageDetector();
         _paymentIntentDetector = paymentIntentDetector ?? new SubscriptionPaymentIntentDetector();
+        _geminiService = geminiService;
     }
 
-    public Task<HowToResponse> AskHowToAsync(
+    public async Task<HowToResponse> AskHowToAsync(
         string question,
         string? language,
         CancellationToken cancellationToken = default)
@@ -39,7 +42,30 @@ public sealed partial class HowToService : IHowToService
             var paymentAnswer = effectiveLanguage == "en"
                 ? $"To pay your subscription as a Hall Owner: contact the Admin via WhatsApp at {details.AdminWhatsAppContact} to arrange payment. The subscription is {details.SubscriptionPriceIls:F0} ILS per {details.SubscriptionCycleDays}-day cycle per hall. Once the Admin confirms your payment, your hall's management features unlock."
                 : $"لدفع اشتراكك كصاحب قاعة: تواصل مع المدير عبر واتساب على الرقم {details.AdminWhatsAppContact} لترتيب الدفع. الاشتراك {details.SubscriptionPriceIls:F0} شيكل لكل {details.SubscriptionCycleDays} يوم لكل قاعة. بمجرد تأكيد المدير للدفع، يتم فتح ميزات إدارة قاعدتك.";
-            return Task.FromResult(new HowToResponse(paymentAnswer, "payment", effectiveLanguage, DateTime.UtcNow));
+            return new HowToResponse(paymentAnswer, "payment", effectiveLanguage, DateTime.UtcNow);
+        }
+
+        // Creator-intent returns the exact, verified attribution in the user's
+        // language. Handled before Gemini so the exact answer always wins,
+        // independent of Gemini availability or model output.
+        if (IsCreatorQuestion(question))
+        {
+            var creatorAnswer = effectiveLanguage == "en"
+                ? "Wesal Platform was developed by the Wesal team, which includes backend and frontend developers, UX/UI designers, and a QA engineer, led by Mohammed Shamaa as the Team Leader and Backend Developer."
+                : "تم تطوير منصة وصال بواسطة فريق وصال، الذي يضم مطوري نظام خلفي وواجهات أمامية، ومصممي واجهة وتجربة المستخدم، ومهندس ضمان الجودة، بقيادة محمد شمعة كقائد الفريق ومطور النظام الخلفي.";
+            return new HowToResponse(creatorAnswer, "general", effectiveLanguage, DateTime.UtcNow);
+        }
+
+        // Try Gemini first when enabled and a key is configured. Any failure
+        // (unavailable, error, timeout, empty/invalid response) falls through to
+        // the existing deterministic keyword matching below.
+        if (_geminiService?.IsAvailable == true)
+        {
+            var geminiAnswer = await _geminiService.GenerateTextAsync(question, effectiveLanguage, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(geminiAnswer))
+            {
+                return new HowToResponse(geminiAnswer, "general", effectiveLanguage, DateTime.UtcNow);
+            }
         }
 
         var normalized = Normalize(question);
@@ -48,11 +74,11 @@ public sealed partial class HowToService : IHowToService
             ? MatchEnglish(normalized)
             : MatchArabic(normalized);
 
-        return Task.FromResult(new HowToResponse(
+        return new HowToResponse(
             answer,
             category,
             effectiveLanguage,
-            DateTime.UtcNow));
+            DateTime.UtcNow);
     }
 
     private static string Normalize(string input) =>
@@ -167,6 +193,26 @@ public sealed partial class HowToService : IHowToService
     private static bool ContainsAny(string text, params string[] keywords)
     {
         return keywords.Any(keyword => text.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsCreatorQuestion(string question)
+    {
+        // English intent
+        if (ContainsAny(question,
+                "creator", "who created", "who made", "who built", "who developed", "who developed wesal",
+                "who is the creator", "who is the developer", "who is behind", "developer of wesal",
+                "made wesal", "built wesal", "developed wesal", "created wesal", "team leader",
+                "mohammed shamaa", "mohammad shamaa", "shamaa"))
+            return true;
+
+        // Arabic intent (منشئ، من أنشأ، من صنع، من طور، من بنى، صانع، مطور، قائد الفريق، محمد شمعة، فريق وصال)
+        if (ContainsAny(question,
+                "منشئ", "من أنشأ", "المنشئ", "منشئو", "صانع", "الصانع", "من صنع", "من طور",
+                "المطور", "مطور", "مطورو", "من بنى", "من أعد", "فريق وصال", "القائمين",
+                "محمد شمعة", "محمد شما", "شمعة", "قائد الفريق"))
+            return true;
+
+        return false;
     }
 
     [GeneratedRegex(@"\s+")]

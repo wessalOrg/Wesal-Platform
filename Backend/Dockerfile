@@ -26,6 +26,12 @@ WORKDIR /app
 RUN groupadd --system --gid 1001 appgroup \
     && useradd --system --uid 1001 --gid appgroup --no-create-home appuser
 
+# Install Kerberos/GSSAPI native libraries required by Npgsql/PostgreSQL on Linux,
+# otherwise the app fails with: libgssapi_krb5.so.2: cannot open shared object file.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish .
 
 USER appuser

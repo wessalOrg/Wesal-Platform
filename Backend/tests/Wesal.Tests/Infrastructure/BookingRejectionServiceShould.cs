@@ -480,6 +480,24 @@ public class BookingRejectionServiceShould
                 .ToList();
             return Task.FromResult<IReadOnlyList<Booking>>(pending);
         }
+
+        public Task<int> CancelPendingAsync(Guid bookingId, string requesterUserId, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public Task<bool> HasOtherActiveBookingsAsync(
+            Guid hallId,
+            DateOnly date,
+            BookingPeriodType periodType,
+            Guid bookingId,
+            CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public Task<int> ReleasePeriodAsync(
+            Guid hallId,
+            DateOnly date,
+            BookingPeriodType periodType,
+            CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
     }
 
     private sealed class FakeConversationRepository : IConversationRepository
@@ -560,6 +578,9 @@ public class BookingRejectionServiceShould
 
         public IGenericRepository<TEntity> Repository<TEntity>()
             where TEntity : BaseEntity
+            => throw new NotImplementedException();
+
+        public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

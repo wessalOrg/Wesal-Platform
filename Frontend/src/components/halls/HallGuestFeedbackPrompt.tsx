@@ -24,18 +24,18 @@ export default function HallGuestFeedbackPrompt({
   const loginHref = `/login?redirect=/halls/${hallId}&intent=comment`;
   const registerHref = `/register?redirect=/halls/${hallId}&intent=comment`;
   const linkClass =
-    "underline decoration-[#c4a05c] decoration-1 underline-offset-[5px] hover:decoration-[#e8c35a]";
+    "text-[#8a6a2e] underline decoration-[#c4a05c] decoration-1 underline-offset-[5px] hover:text-[#6b521c] hover:decoration-[#e8c35a]";
 
   return (
     <p
-      className="wesal-gold-wave-text mx-auto mt-5 max-w-lg text-center text-[15px] font-bold leading-8"
+      className="mx-auto mt-5 max-w-lg text-center text-[15px] font-bold leading-8"
       data-testid="hall-feedback-guest"
     >
-      {t("halls.guest.prompt")}{" "}
+      <span className="wesal-gold-wave-text">{t("halls.guest.prompt")}</span>{" "}
       <Link href={loginHref} className={linkClass}>
         {t("halls.guest.login")}
       </Link>{" "}
-      {t("halls.guest.or")}{" "}
+      <span className="wesal-gold-wave-text">{t("halls.guest.or")}</span>
       <Link href={registerHref} className={linkClass}>
         {t("halls.guest.join")}
       </Link>
