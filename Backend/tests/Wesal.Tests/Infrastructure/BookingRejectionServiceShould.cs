@@ -498,6 +498,13 @@ public class BookingRejectionServiceShould
             BookingPeriodType periodType,
             CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
+
+        public Task<int> ReservePeriodAsync(
+            Guid hallId,
+            DateOnly date,
+            BookingPeriodType periodType,
+            CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
     }
 
     private sealed class FakeConversationRepository : IConversationRepository

@@ -137,4 +137,68 @@ public sealed class BookingRepository : IBookingRepository
 
         return 1;
     }
+
+    public async Task<int> ReservePeriodAsync(
+        Guid hallId,
+        DateOnly date,
+        BookingPeriodType periodType,
+        CancellationToken cancellationToken = default)
+    {
+        if (_context.Database.IsRelational())
+        {
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                INSERT INTO wesal."HallAvailabilities" ("Id", "HallId", "Date", "PeriodType", "Status", "CreatedAt", "UpdatedAt")
+                VALUES ({Guid.NewGuid()}, {hallId}, {date}, {(int)periodType}, {(int)AvailabilityStatus.Booked}, {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow})
+                ON CONFLICT ("HallId", "Date", "PeriodType") DO NOTHING;
+                """,
+                cancellationToken);
+
+            return await _context.HallAvailabilities
+                .Where(availability =>
+                    availability.HallId == hallId
+                    && availability.Date == date
+                    && availability.PeriodType == periodType
+                    && availability.Status == AvailabilityStatus.Available)
+                .ExecuteUpdateAsync(
+                    set =>
+                        set.SetProperty(availability => availability.Status, AvailabilityStatus.Booked)
+                            .SetProperty(availability => availability.UpdatedAt, DateTimeOffset.UtcNow),
+                    cancellationToken);
+        }
+
+        var existing = await _context.HallAvailabilities
+            .FirstOrDefaultAsync(availability =>
+                availability.HallId == hallId
+                && availability.Date == date
+                && availability.PeriodType == periodType,
+                cancellationToken);
+
+        if (existing is null)
+        {
+            _context.HallAvailabilities.Add(new HallAvailability
+            {
+                HallId = hallId,
+                Date = date,
+                PeriodType = periodType,
+                Status = AvailabilityStatus.Booked
+            });
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return 1;
+        }
+
+        if (existing.Status == AvailabilityStatus.Booked)
+        {
+            return 0;
+        }
+
+        existing.Status = AvailabilityStatus.Booked;
+        existing.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return 1;
+    }
 }

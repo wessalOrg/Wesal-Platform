@@ -25,4 +25,10 @@ public interface IBookingRepository
         DateOnly date,
         BookingPeriodType periodType,
         CancellationToken cancellationToken = default);
+
+    Task<int> ReservePeriodAsync(
+        Guid hallId,
+        DateOnly date,
+        BookingPeriodType periodType,
+        CancellationToken cancellationToken = default);
 }

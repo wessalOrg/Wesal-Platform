@@ -7,4 +7,8 @@ public interface IBookingRequestService
     Task<BookingRequestValidationResultDto> ValidateBookingRequestAsync(
         BookingRequestDto request,
         CancellationToken cancellationToken = default);
+
+    Task<BookingRequestResultDto> CreateBookingRequestAsync(
+        BookingRequestDto request,
+        CancellationToken cancellationToken = default);
 }

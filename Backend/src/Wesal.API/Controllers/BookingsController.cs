@@ -21,16 +21,18 @@ public class BookingsController : ControllerBase
 
     [HttpPost]
     [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
-    [ProducesResponseType(typeof(BookingRequestValidationResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BookingRequestResultDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<BookingRequestValidationResultDto>> SubmitBookingRequest(
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<BookingRequestResultDto>> SubmitBookingRequest(
         [FromBody] BookingRequestDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _bookingRequestService.ValidateBookingRequestAsync(request, cancellationToken);
+        var result = await _bookingRequestService.CreateBookingRequestAsync(request, cancellationToken);
 
-        return Ok(result);
+        return CreatedAtAction(nameof(SubmitBookingRequest), new { version = "1" }, result);
     }
 }

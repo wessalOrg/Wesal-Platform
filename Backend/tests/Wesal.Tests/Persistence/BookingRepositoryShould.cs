@@ -140,6 +140,18 @@ public class BookingRepositoryShould
     }
 
     [Fact]
+    public void Model_ConfiguresUniqueIndexForHallAvailability()
+    {
+        using var context = CreateContext();
+        var entityType = context.Model.FindEntityType(typeof(HallAvailability))!;
+
+        Assert.Contains(
+            entityType.GetIndexes(),
+            index => index.IsUnique
+                && index.Properties.Select(property => property.Name).SequenceEqual(["HallId", "Date", "PeriodType"]));
+    }
+
+    [Fact]
     public async Task CancelPendingAsync_PendingBooking_TransitionsToCancelled()
     {
         await using var context = CreateContext();
@@ -392,6 +404,75 @@ public class BookingRepositoryShould
         var stored = await repository.GetByIdWithHallAsync(cancelled.Id);
         Assert.NotNull(stored);
         Assert.Equal(BookingStatus.Cancelled, stored!.Status);
+    }
+
+    [Fact]
+    public async Task ReservePeriodAsync_NoAvailabilityRow_BooksAndReturnsOne()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var date = new DateOnly(2035, 6, 1);
+        var repository = new BookingRepository(context);
+
+        var affectedRows = await repository.ReservePeriodAsync(hall.Id, date, BookingPeriodType.FirstPeriod);
+
+        Assert.Equal(1, affectedRows);
+        var stored = Assert.Single(context.HallAvailabilities);
+        Assert.Equal(hall.Id, stored.HallId);
+        Assert.Equal(date, stored.Date);
+        Assert.Equal(BookingPeriodType.FirstPeriod, stored.PeriodType);
+        Assert.Equal(AvailabilityStatus.Booked, stored.Status);
+    }
+
+    [Fact]
+    public async Task ReservePeriodAsync_AvailableRow_BooksAndReturnsOne()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var date = new DateOnly(2035, 6, 1);
+        var availability = SeedAvailability(context, hall, date, BookingPeriodType.FirstPeriod, AvailabilityStatus.Available);
+        var repository = new BookingRepository(context);
+
+        var affectedRows = await repository.ReservePeriodAsync(hall.Id, date, BookingPeriodType.FirstPeriod);
+
+        Assert.Equal(1, affectedRows);
+        var stored = await context.HallAvailabilities.FindAsync(availability.Id);
+        Assert.Equal(AvailabilityStatus.Booked, stored!.Status);
+    }
+
+    [Fact]
+    public async Task ReservePeriodAsync_BookedRow_ReturnsZero()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var date = new DateOnly(2035, 6, 1);
+        var availability = SeedAvailability(context, hall, date, BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
+        var repository = new BookingRepository(context);
+
+        var affectedRows = await repository.ReservePeriodAsync(hall.Id, date, BookingPeriodType.FirstPeriod);
+
+        Assert.Equal(0, affectedRows);
+        var stored = await context.HallAvailabilities.FindAsync(availability.Id);
+        Assert.Equal(AvailabilityStatus.Booked, stored!.Status);
+    }
+
+    [Fact]
+    public async Task ReservePeriodAsync_OnlyBooksExactPeriod_UnrelatedPeriodsUntouched()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var date = new DateOnly(2035, 6, 1);
+        var target = SeedAvailability(context, hall, date, BookingPeriodType.FirstPeriod, AvailabilityStatus.Available);
+        var otherPeriod = SeedAvailability(context, hall, date, BookingPeriodType.SecondPeriod, AvailabilityStatus.Booked);
+        var otherDate = SeedAvailability(context, hall, new DateOnly(2035, 6, 2), BookingPeriodType.FirstPeriod, AvailabilityStatus.Available);
+        var repository = new BookingRepository(context);
+
+        var affectedRows = await repository.ReservePeriodAsync(hall.Id, date, BookingPeriodType.FirstPeriod);
+
+        Assert.Equal(1, affectedRows);
+        Assert.Equal(AvailabilityStatus.Booked, (await context.HallAvailabilities.FindAsync(target.Id))!.Status);
+        Assert.Equal(AvailabilityStatus.Booked, (await context.HallAvailabilities.FindAsync(otherPeriod.Id))!.Status);
+        Assert.Equal(AvailabilityStatus.Available, (await context.HallAvailabilities.FindAsync(otherDate.Id))!.Status);
     }
 
     private static async Task<int> TryApproveAsync(ApplicationDbContext context, Guid bookingId)

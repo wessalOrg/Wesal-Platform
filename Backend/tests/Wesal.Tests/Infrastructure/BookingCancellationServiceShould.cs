@@ -484,6 +484,13 @@ public class BookingCancellationServiceShould
             ReleasedPeriods.Add((hallId, date, periodType));
             return Task.FromResult(1);
         }
+
+        public Task<int> ReservePeriodAsync(
+            Guid hallId,
+            DateOnly date,
+            BookingPeriodType periodType,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(1);
     }
 
     private sealed class FakeConversationRepository : IConversationRepository

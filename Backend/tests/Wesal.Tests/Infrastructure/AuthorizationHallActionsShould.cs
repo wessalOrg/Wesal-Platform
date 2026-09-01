@@ -104,13 +104,45 @@ public class AuthorizationHallActionsShould
         public IReadOnlyList<string> Roles { get; }
     }
 
+    private sealed class FakeBookingRepository : IBookingRepository
+    {
+        public Task AddAsync(Booking booking, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<Booking?> GetByIdWithHallAsync(Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult<Booking?>(null);
+        public Task<IReadOnlyList<Booking>> GetPendingRejectionNotificationsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Booking>>([]);
+        public Task<int> CancelPendingAsync(Guid bookingId, string requesterUserId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<bool> HasOtherActiveBookingsAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<int> ReleasePeriodAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> ReservePeriodAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, CancellationToken cancellationToken = default) => Task.FromResult(1);
+    }
+
+    private sealed class FakeUnitOfWork : IUnitOfWork
+    {
+        public IGenericRepository<TEntity> Repository<TEntity>() where TEntity : Wesal.Domain.Common.BaseEntity
+            => throw new NotSupportedException();
+        public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IWesalTransaction>(new FakeWesalTransaction());
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
+    }
+
+    private sealed class FakeWesalTransaction : IWesalTransaction
+    {
+        public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RollbackAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private static BookingRequestService CreateBookingService(
+        FakeHallRepository repo,
+        FakeCurrentUserService user)
+        => new(repo, user, new FakeBookingRepository(), new FakeUnitOfWork());
+
     // Guest attempts → 401
     [Fact]
     public async Task Booking_Guest_ThrowsUnauthorized()
     {
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
-        var service = new BookingRequestService(repo, new FakeCurrentUserService(null, false));
+        var service = CreateBookingService(repo, new FakeCurrentUserService(null, false));
         await Assert.ThrowsAsync<UnauthorizedException>(() => service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] }));
     }
 
@@ -147,7 +179,7 @@ public class AuthorizationHallActionsShould
     {
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
-        var service = new BookingRequestService(repo, new FakeCurrentUserService("user-1", true, ApplicationRoles.RegisteredUser));
+        var service = CreateBookingService(repo, new FakeCurrentUserService("user-1", true, ApplicationRoles.RegisteredUser));
         var result = await service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] });
         Assert.Equal(hall.Id, result.HallId);
     }
@@ -193,7 +225,7 @@ public class AuthorizationHallActionsShould
     {
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
-        var service = new BookingRequestService(repo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
+        var service = CreateBookingService(repo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
         var ex = await Assert.ThrowsAsync<ForbiddenException>(() => service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] }));
         Assert.Contains("Hall owners", ex.Message);
         // No booking side effect already ensured by service not storing
@@ -252,7 +284,7 @@ public class AuthorizationHallActionsShould
         // BookingRequestDto does not contain userId, but we simulate HallOwner trying to book - still forbidden via role
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
-        var service = new BookingRequestService(repo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
+        var service = CreateBookingService(repo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
         await Assert.ThrowsAsync<ForbiddenException>(() => service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] }));
     }
 
@@ -277,7 +309,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
         // Simulate HallOwner with correct server role, even if client tries to claim RegisteredUser
-        var service = new BookingRequestService(repo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
+        var service = CreateBookingService(repo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
         await Assert.ThrowsAsync<ForbiddenException>(() => service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] }));
     }
 }
