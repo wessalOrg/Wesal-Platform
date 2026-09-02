@@ -47,11 +47,6 @@ public static class DependencyInjection
         services.AddOptions<GoogleAiSettings>()
             .Bind(configuration.GetSection(GoogleAiSettings.SectionName));
 
-        services.AddOptions<PasswordResetOptions>()
-            .Bind(configuration.GetSection(PasswordResetOptions.SectionName))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-
         services.AddHttpClient(GeminiService.HttpClientName, (sp, client) =>
         {
             var settings = sp.GetRequiredService<IOptions<GoogleAiSettings>>().Value;
@@ -61,8 +56,6 @@ public static class DependencyInjection
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IPasswordResetService, PasswordResetService>();
-        services.AddScoped<IPasswordResetLinkSender, LoggingPasswordResetLinkSender>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IHomepageIntroductionService, HomepageIntroductionService>();
         services.AddScoped<IFeaturedHallsService, FeaturedHallsService>();

@@ -18,20 +18,17 @@ public class AuthController : ControllerBase
     private readonly ILogoutService _logoutService;
     private readonly ICurrentUserService _currentUser;
     private readonly IAuthService _authService;
-    private readonly IPasswordResetService _passwordResetService;
 
     public AuthController(
         ILoginService loginService,
         ILogoutService logoutService,
         ICurrentUserService currentUser,
-        IAuthService authService,
-        IPasswordResetService passwordResetService)
+        IAuthService authService)
     {
         _loginService = loginService;
         _logoutService = logoutService;
         _currentUser = currentUser;
         _authService = authService;
-        _passwordResetService = passwordResetService;
     }
 
     [HttpPost("register")]
@@ -75,29 +72,4 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("forgot-password")]
-    [AllowAnonymous]
-    [ProducesResponseType(typeof(ForgotPasswordResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ForgotPasswordResponse>> ForgotPassword(
-        [FromBody] ForgotPasswordRequest request,
-        CancellationToken cancellationToken)
-    {
-        var response = await _passwordResetService.ForgotPasswordAsync(request, cancellationToken);
-
-        return Ok(response);
     }
-
-    [HttpPost("reset-password")]
-    [AllowAnonymous]
-    [ProducesResponseType(typeof(ResetPasswordResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ResetPasswordResponse>> ResetPassword(
-        [FromBody] ResetPasswordRequest request,
-        CancellationToken cancellationToken)
-    {
-        var response = await _passwordResetService.ResetPasswordAsync(request, cancellationToken);
-
-        return Ok(response);
-    }
-}

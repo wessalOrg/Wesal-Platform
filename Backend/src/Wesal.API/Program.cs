@@ -219,13 +219,6 @@ static void ValidateNonDevelopmentConfiguration(IWebHostEnvironment environment,
             "ConnectionStrings:DefaultConnection must be overridden via the ConnectionStrings__DefaultConnection environment variable outside Development.");
     }
 
-    var resetPageUrl = configuration["PasswordReset:ResetPageUrl"] ?? string.Empty;
-    if (resetPageUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase))
-    {
-        throw new InvalidOperationException(
-            "PasswordReset:ResetPageUrl must point to the deployed frontend reset page outside Development.");
-    }
-
     var geminiModel = configuration["GoogleAI:GeminiModel"] ?? string.Empty;
     if (string.IsNullOrWhiteSpace(geminiModel) || !geminiModel.StartsWith("gemini-", StringComparison.Ordinal))
     {
