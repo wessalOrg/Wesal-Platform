@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -58,11 +59,6 @@ public sealed class GeminiService : IGeminiService
             return null;
         }
 
-        var model = string.IsNullOrWhiteSpace(_settings.GeminiModel) ? "gemini-3.6-flash" : _settings.GeminiModel;
-        var baseUrl = string.IsNullOrWhiteSpace(_settings.BaseUrl)
-            ? "https://generativelanguage.googleapis.com/v1beta"
-            : _settings.BaseUrl.TrimEnd('/');
-
         // Enforce the context limit before the prompt leaves the server.
         var userPrompt = GeminiPromptBuilder.BuildUserPrompt(prompt, _settings.MaxContextCharacters);
         if (string.IsNullOrWhiteSpace(userPrompt))
@@ -75,7 +71,7 @@ public sealed class GeminiService : IGeminiService
 
         var client = _httpClientFactory.CreateClient(HttpClientName);
 
-        var url = $"{baseUrl}/models/{Uri.EscapeDataString(model)}:generateContent";
+        var url = $"{GetBaseUrl()}/models/{Uri.EscapeDataString(GetModel())}:generateContent";
         var body = new GeminiGenerateContentRequest(
             [new GeminiContent([new GeminiPart(userPrompt)])],
             new GeminiContent([new GeminiPart(systemInstruction)]),
@@ -150,6 +146,122 @@ public sealed class GeminiService : IGeminiService
         }
     }
 
+    public async Task<T?> GenerateStructuredAsync<T>(
+        string prompt,
+        string systemInstruction,
+        JsonNode responseSchema,
+        CancellationToken cancellationToken = default) where T : class
+    {
+        if (!IsAvailable)
+        {
+            _logger.LogInformation(
+                "Gemini is not available (disabled or missing API key); skipping structured request.");
+            return null;
+        }
+
+        // Enforce the context limit before the prompt leaves the server.
+        var userPrompt = GeminiPromptBuilder.BuildUserPrompt(prompt, _settings.MaxContextCharacters);
+        if (string.IsNullOrWhiteSpace(userPrompt))
+        {
+            _logger.LogInformation("Gemini prompt is empty after context limiting; skipping structured request.");
+            return null;
+        }
+
+        var client = _httpClientFactory.CreateClient(HttpClientName);
+
+        var url = $"{GetBaseUrl()}/models/{Uri.EscapeDataString(GetModel())}:generateContent";
+        var body = new GeminiGenerateContentRequest(
+            [new GeminiContent([new GeminiPart(userPrompt)])],
+            new GeminiContent([new GeminiPart(systemInstruction)]),
+            new GeminiGenerationConfig("application/json", responseSchema));
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = JsonContent.Create(body, options: JsonOptions)
+        };
+        request.Headers.TryAddWithoutValidation("x-goog-api-key", _settings.ApiKey);
+
+        try
+        {
+            using var response = await client.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var status = (int)response.StatusCode;
+                // 400 can mean the schema is unsupported by the configured model;
+                // treat it like any other failure so the caller can degrade.
+                _logger.LogWarning(
+                    "Gemini structured request failed with HTTP {Status}; falling back to deterministic classifier.",
+                    status);
+                return null;
+            }
+
+            GeminiGenerateContentResponse? parsed;
+            try
+            {
+                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                parsed = await JsonSerializer.DeserializeAsync<GeminiGenerateContentResponse>(
+                    stream,
+                    JsonOptions,
+                    cancellationToken);
+            }
+            catch (JsonException)
+            {
+                _logger.LogWarning("Gemini returned malformed JSON; falling back to deterministic classifier.");
+                return null;
+            }
+
+            var text = ExtractText(parsed);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                _logger.LogWarning("Gemini returned an empty structured response; falling back to deterministic classifier.");
+                return null;
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<T>(text, JsonOptions);
+            }
+            catch (JsonException)
+            {
+                _logger.LogWarning("Gemini structured output was not valid JSON; falling back to deterministic classifier.");
+                return null;
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The HttpClient's internal timeout fired (client cancellation) rather than
+            // the caller cancelling the operation.
+            _logger.LogWarning("Gemini structured request timed out after {Timeout}s; falling back to deterministic classifier.", _settings.TimeoutSeconds);
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException)
+        {
+            _logger.LogWarning("Gemini structured request failed due to a network error; falling back to deterministic classifier.");
+            return null;
+        }
+        catch (JsonException)
+        {
+            _logger.LogWarning("Gemini structured request/response serialization failed; falling back to deterministic classifier.");
+            return null;
+        }
+    }
+
+    private string GetModel()
+        => string.IsNullOrWhiteSpace(_settings.GeminiModel) ? "gemini-3.6-flash" : _settings.GeminiModel;
+
+    private string GetBaseUrl()
+        => string.IsNullOrWhiteSpace(_settings.BaseUrl)
+            ? "https://generativelanguage.googleapis.com/v1beta"
+            : _settings.BaseUrl.TrimEnd('/');
+
     private static string? ExtractText(GeminiGenerateContentResponse? response)
     {
         if (response?.Candidates is null || response.Candidates.Count == 0)
@@ -184,7 +296,9 @@ public sealed class GeminiService : IGeminiService
 
     private sealed record GeminiPart(string? Text);
 
-    private sealed record GeminiGenerationConfig();
+    private sealed record GeminiGenerationConfig(
+        string? ResponseMimeType = null,
+        JsonNode? ResponseSchema = null);
 
     private sealed record GeminiGenerateContentResponse(
         IReadOnlyList<GeminiCandidate>? Candidates);

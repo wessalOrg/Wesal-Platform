@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddSingleton<Common.Interfaces.IRecommendationCriteriaExtractor, Ai.NaturalLanguageCriteriaExtractor>();
         services.AddSingleton<Ai.IAiLanguageDetector, Ai.AiLanguageDetector>();
         services.AddSingleton<Ai.ISubscriptionPaymentIntentDetector, Ai.SubscriptionPaymentIntentDetector>();
+        services.AddSingleton<Ai.AiIntentFallbackClassifier>();
 
         return services;
     }

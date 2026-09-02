@@ -96,5 +96,9 @@ public class HowToServiceCreatorShould
             Called = true;
             return Task.FromResult(Result);
         }
+
+        public Task<T?> GenerateStructuredAsync<T>(string prompt, string systemInstruction, System.Text.Json.Nodes.JsonNode responseSchema, CancellationToken cancellationToken = default)
+            where T : class
+            => Task.FromResult<T?>(null);
     }
 }

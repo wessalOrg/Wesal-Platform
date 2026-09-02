@@ -88,6 +88,8 @@ public static class DependencyInjection
         services.AddScoped<IHallRecommendationMatcher, HallRecommendationMatcher>();
         services.AddSingleton<IDateTime, DateTimeService>();
         services.AddSingleton<IGeminiService, GeminiService>();
+        services.AddSingleton<IAiIntentExtractor, GeminiAiIntentExtractor>();
+        services.AddScoped<IAiAssistantService, AiAssistantService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>

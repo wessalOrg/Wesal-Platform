@@ -14,15 +14,18 @@ public class AiAssistantController : ControllerBase
     private readonly IChatSessionService _chatSessionService;
     private readonly IHowToService _howToService;
     private readonly IRecommendationService _recommendationService;
+    private readonly IAiAssistantService _aiAssistantService;
 
     public AiAssistantController(
         IChatSessionService chatSessionService,
         IHowToService howToService,
-        IRecommendationService recommendationService)
+        IRecommendationService recommendationService,
+        IAiAssistantService aiAssistantService)
     {
         _chatSessionService = chatSessionService;
         _howToService = howToService;
         _recommendationService = recommendationService;
+        _aiAssistantService = aiAssistantService;
     }
 
     [HttpPost]
@@ -119,6 +122,49 @@ public class AiAssistantController : ControllerBase
                     "The recommendation service is temporarily unavailable. Please try again later.",
                     session.Language,
                     DateTime.UtcNow));
+        }
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Unified assistant turn: the backend classifies the message into a structured
+    /// intent (optionally via Gemini) and resolves it against verified platform data.
+    /// The returned <see cref="AiAssistantResponse"/> carries a stable discriminator
+    /// so the frontend can render halls/details/availability/clarification distinctly.
+    /// Existing /how-to and /recommend endpoints remain untouched.
+    /// </summary>
+    [HttpPost("{sessionId:guid}/assistant")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AiAssistantResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AiAssistantResponse>> AskAssistant(
+        Guid sessionId,
+        [FromBody] AiAssistantRequest request,
+        CancellationToken cancellationToken)
+    {
+        var session = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken);
+
+        if (session is null)
+        {
+            return NotFound();
+        }
+
+        var message = request?.Message?.Trim();
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return BadRequest(new { Message = "Message is required." });
+        }
+
+        AiAssistantResponse response;
+        try
+        {
+            response = await _aiAssistantService.ProcessMessageAsync(message, session.Language, cancellationToken);
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest(new { Message = "Message is invalid." });
         }
 
         return Ok(response);
