@@ -156,11 +156,11 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Auth submit: white/idle until required fields are filled */
+/* Auth submit: gray/idle until required fields are filled */
 button.btn-primary.wesal-auth-submit:disabled {
-  background: #fff;
-  color: #c9a0a3;
-  border: 1px solid var(--wesal-border);
+  background: #e8e2de;
+  color: #9a8f8a;
+  border: 1px solid #ddd5d0;
   box-shadow: none;
   transform: none;
   filter: none;
@@ -169,8 +169,8 @@ button.btn-primary.wesal-auth-submit:disabled {
 
 button.btn-primary.wesal-auth-submit:disabled:hover,
 button.btn-primary.wesal-auth-submit:disabled:active {
-  background: #fff;
-  color: #c9a0a3;
+  background: #e8e2de;
+  color: #9a8f8a;
   box-shadow: none;
   transform: none;
   filter: none;
