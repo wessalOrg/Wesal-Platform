@@ -348,7 +348,8 @@ public sealed class GeminiService : IGeminiService
     /// where the request must not be duplicated.
     /// </summary>
     private static bool IsRecoverableStatus(HttpStatusCode status)
-        => status is HttpStatusCode.Unauthorized
+        => status is HttpStatusCode.RequestTimeout
+            or HttpStatusCode.Unauthorized
             or HttpStatusCode.Forbidden
             or HttpStatusCode.TooManyRequests
             or HttpStatusCode.InternalServerError
