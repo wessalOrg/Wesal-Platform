@@ -14,24 +14,24 @@ namespace Wesal.API.Controllers;
 [Route("api/v{version:apiVersion}/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly IRegistrationService _registrationService;
     private readonly ILoginService _loginService;
     private readonly ILogoutService _logoutService;
     private readonly ICurrentUserService _currentUser;
     private readonly IAuthService _authService;
+    private readonly IPasswordResetService _passwordResetService;
 
     public AuthController(
-        IRegistrationService registrationService,
         ILoginService loginService,
         ILogoutService logoutService,
         ICurrentUserService currentUser,
-        IAuthService authService)
+        IAuthService authService,
+        IPasswordResetService passwordResetService)
     {
-        _registrationService = registrationService;
         _loginService = loginService;
         _logoutService = logoutService;
         _currentUser = currentUser;
         _authService = authService;
+        _passwordResetService = passwordResetService;
     }
 
     [HttpPost("register")]
@@ -43,8 +43,6 @@ public class AuthController : ControllerBase
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        // Use IAuthService for full flow (includes phone check and token) but return IRegistrationService compatible response
-        // Both services share same logic via AccountTypes and role mapping
         var response = await _authService.RegisterAsync(request, cancellationToken);
         return CreatedAtAction(nameof(Register), new { version = "1" }, response);
     }
@@ -73,6 +71,32 @@ public class AuthController : ControllerBase
         var userId = _currentUser.UserId ?? string.Empty;
 
         var response = await _logoutService.LogoutAsync(jti, userId, cancellationToken);
+
+        return Ok(response);
+    }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ForgotPasswordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ForgotPasswordResponse>> ForgotPassword(
+        [FromBody] ForgotPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _passwordResetService.ForgotPasswordAsync(request, cancellationToken);
+
+        return Ok(response);
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ResetPasswordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ResetPasswordResponse>> ResetPassword(
+        [FromBody] ResetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _passwordResetService.ResetPasswordAsync(request, cancellationToken);
 
         return Ok(response);
     }

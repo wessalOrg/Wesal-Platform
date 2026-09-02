@@ -31,24 +31,6 @@ public class FeaturedHallsServiceShould
     }
 
     [Fact]
-    public async Task GetApprovedHallsAsync_ReturnsAllApprovedHalls()
-    {
-        var fakeRepository = new FakeHallRepository();
-        for (var index = 0; index < 8; index++)
-        {
-            var hall = CreateHall(name: $"Hall {index}", createdAt: FixedNow.AddDays(-index));
-            fakeRepository.Halls.Add(hall);
-            fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
-        }
-
-        var service = CreateService(fakeRepository);
-
-        var result = await service.GetApprovedHallsAsync();
-
-        Assert.Equal(8, result.Count);
-    }
-
-    [Fact]
     public async Task GetFeaturedHallsAsync_ReturnsEmptyListWhenNoHallsExist()
     {
         var service = CreateService(new FakeHallRepository());
@@ -246,30 +228,6 @@ public class FeaturedHallsServiceShould
 
         Assert.Equal(4, result.Count);
         Assert.All(result, featured => Assert.NotNull(featured.Availability));
-    }
-
-    [Fact]
-    public async Task SearchHallsAsync_CombinesNameAndAddressFilters()
-    {
-        var fakeRepository = new FakeHallRepository();
-        var matching = CreateHall("Royal Hall", FixedNow, address: "Tel Al-Hawa");
-        var otherName = CreateHall("Andalus Hall", FixedNow.AddDays(-1), address: "Tel Al-Hawa");
-        var otherAddress = CreateHall("Royal Hall", FixedNow.AddDays(-2), address: "Rafah");
-        fakeRepository.Halls.AddRange(matching, otherName, otherAddress);
-        fakeRepository.Periods.AddRange(CreatePeriods(matching.Id));
-        fakeRepository.Periods.AddRange(CreatePeriods(otherName.Id));
-        fakeRepository.Periods.AddRange(CreatePeriods(otherAddress.Id));
-
-        var service = CreateService(fakeRepository);
-
-        var result = await service.SearchHallsAsync(new HallSearchQuery
-        {
-            Name = "Royal",
-            Address = "Hawa"
-        });
-
-        Assert.Single(result);
-        Assert.Equal(matching.Id, result[0].HallId);
     }
 
     private static FeaturedHallsService CreateService(FakeHallRepository repository)

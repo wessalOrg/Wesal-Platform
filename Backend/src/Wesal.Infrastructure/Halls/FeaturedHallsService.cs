@@ -32,19 +32,6 @@ public class FeaturedHallsService : IFeaturedHallsService
         CancellationToken cancellationToken = default)
         => GetMappedHallsAsync(region, FeatureCount, cancellationToken);
 
-    public Task<IReadOnlyList<FeaturedHallDto>> GetApprovedHallsAsync(
-        CancellationToken cancellationToken = default)
-        => GetMappedHallsAsync(region: null, take: null, cancellationToken);
-
-    public async Task<IReadOnlyList<FeaturedHallDto>> SearchHallsAsync(
-        HallSearchQuery query,
-        CancellationToken cancellationToken = default)
-    {
-        var halls = await GetMappedHallsAsync(query.Region, take: null, cancellationToken);
-
-        return halls.Where(hall => MatchesSearch(hall, query)).ToList();
-    }
-
     private async Task<IReadOnlyList<FeaturedHallDto>> GetMappedHallsAsync(
         HallRegion? region,
         int? take,
@@ -81,35 +68,6 @@ public class FeaturedHallsService : IFeaturedHallsService
         return halls
             .Select(hall => BuildFeaturedHall(hall, periodsByHall, availabilityByKey, fromDate, toDate))
             .ToList();
-    }
-
-    private static bool MatchesSearch(FeaturedHallDto hall, HallSearchQuery query)
-    {
-        if (!string.IsNullOrWhiteSpace(query.Name)
-            && !hall.HallName.Contains(query.Name.Trim(), StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (!string.IsNullOrWhiteSpace(query.Address)
-            && !hall.Address.Contains(query.Address.Trim(), StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (query.Date is null && query.Period is null)
-        {
-            return true;
-        }
-
-        var days = query.Date is { } date
-            ? hall.Availability.Where(day => day.Date == date)
-            : hall.Availability.AsEnumerable();
-
-        return days.Any(day =>
-            day.Periods.Any(period =>
-                period.Status == AvailabilityStatus.Available
-                && (query.Period is null || period.PeriodType == query.Period)));
     }
 
     private static FeaturedHallDto BuildFeaturedHall(

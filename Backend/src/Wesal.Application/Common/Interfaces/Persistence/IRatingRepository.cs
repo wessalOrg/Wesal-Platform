@@ -10,6 +10,11 @@ public interface IRatingRepository
 
     Task UpdateAsync(Rating rating, CancellationToken cancellationToken = default);
 
+    Task<(double AverageRating, int TotalRatings, int? UserRating)> GetSummaryAsync(
+        Guid hallId,
+        string? currentUserId,
+        CancellationToken cancellationToken = default);
+
     Task<double> GetAverageRatingAsync(Guid hallId, CancellationToken cancellationToken = default);
 
     Task<int> GetTotalRatingsAsync(Guid hallId, CancellationToken cancellationToken = default);

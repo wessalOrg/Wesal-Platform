@@ -58,8 +58,7 @@ public sealed class RatingService : IRatingService
 
         await _ratingRepository.AddAsync(rating, cancellationToken);
 
-        var average = await _ratingRepository.GetAverageRatingAsync(request.HallId, cancellationToken);
-        var total = await _ratingRepository.GetTotalRatingsAsync(request.HallId, cancellationToken);
+        var (average, total, _) = await _ratingRepository.GetSummaryAsync(request.HallId, userId, cancellationToken);
 
         return new RatingResponse
         {
@@ -99,8 +98,7 @@ public sealed class RatingService : IRatingService
         existingRating.Value = request.Value;
         await _ratingRepository.UpdateAsync(existingRating, cancellationToken);
 
-        var average = await _ratingRepository.GetAverageRatingAsync(request.HallId, cancellationToken);
-        var total = await _ratingRepository.GetTotalRatingsAsync(request.HallId, cancellationToken);
+        var (average, total, _) = await _ratingRepository.GetSummaryAsync(request.HallId, userId, cancellationToken);
 
         return new RatingResponse
         {
@@ -125,16 +123,10 @@ public sealed class RatingService : IRatingService
             throw new NotFoundException(nameof(Hall), hallId);
         }
 
-        var average = await _ratingRepository.GetAverageRatingAsync(hallId, cancellationToken);
-        var total = await _ratingRepository.GetTotalRatingsAsync(hallId, cancellationToken);
-
-        int? userRating = null;
-
-        if (_currentUser.IsAuthenticated && !string.IsNullOrWhiteSpace(_currentUser.UserId))
-        {
-            var userExistingRating = await _ratingRepository.GetByHallAndUserAsync(hallId, _currentUser.UserId, cancellationToken);
-            userRating = userExistingRating?.Value;
-        }
+        var (average, total, userRating) = await _ratingRepository.GetSummaryAsync(
+            hallId,
+            _currentUser.IsAuthenticated && !string.IsNullOrWhiteSpace(_currentUser.UserId) ? _currentUser.UserId : null,
+            cancellationToken);
 
         return new HallRatingSummary
         {

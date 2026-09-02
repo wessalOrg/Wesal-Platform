@@ -239,6 +239,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.HasIndex(booking => new { booking.HallId, booking.RequesterUserId });
 
+            entity.HasIndex(booking => new { booking.HallId, booking.Date, booking.Period, booking.Status });
+
             entity.HasIndex(booking => booking.RejectionMessageId).IsUnique();
 
             entity.HasOne(booking => booking.Hall)

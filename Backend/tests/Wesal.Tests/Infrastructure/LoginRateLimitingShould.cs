@@ -7,7 +7,6 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Auth;
 using Wesal.Infrastructure.Identity;
-using Wesal.Infrastructure.Registration;
 using Wesal.Infrastructure.Time;
 using Wesal.Persistence.Data;
 
@@ -18,7 +17,7 @@ public class LoginRateLimitingShould
     private const string Password = "Password123!";
     private const string SecretKey = "test_signing_key_that_is_at_least_32_characters_long";
 
-    private static (LoginService Login, RegistrationService Registration, ApplicationDbContext Context) CreateService()
+    private static (LoginService Login, AuthService Registration, ApplicationDbContext Context) CreateService()
     {
         var services = new ServiceCollection();
         services.AddDbContext<ApplicationDbContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString()));
@@ -39,7 +38,7 @@ public class LoginRateLimitingShould
         var context = provider.GetRequiredService<ApplicationDbContext>();
         var tokenService = new TokenService(Options.Create(new JwtSettings { Issuer = "WesalTests", Audience = "WesalTests", SecretKey = SecretKey, ExpirationMinutes = 30, ClockSkewMinutes = 5 }));
         var login = new LoginService(userManager, tokenService, new DateTimeService());
-        var registration = new RegistrationService(userManager, roleManager);
+        var registration = new AuthService(userManager, roleManager, tokenService);
         return (login, registration, context);
     }
 

@@ -592,10 +592,6 @@ public class BookingRejectionServiceShould
             ThrowOnNextSave = false;
         }
 
-        public IGenericRepository<TEntity> Repository<TEntity>()
-            where TEntity : BaseEntity
-            => throw new NotImplementedException();
-
         public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 

@@ -8,7 +8,6 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Auth;
 using Wesal.Infrastructure.Identity;
-using Wesal.Infrastructure.Registration;
 using Wesal.Infrastructure.Time;
 using Wesal.Persistence.Data;
 
@@ -32,7 +31,7 @@ public class LoginServiceShould
         AccountType = accountType
     };
 
-    private static (LoginService Login, RegistrationService Registration, ApplicationDbContext Context) CreateService()
+    private static (LoginService Login, AuthService Registration, ApplicationDbContext Context) CreateService()
     {
         var services = new ServiceCollection();
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -68,7 +67,7 @@ public class LoginServiceShould
         }));
 
         var loginService = new LoginService(userManager, tokenService, new DateTimeService());
-        var registrationService = new RegistrationService(userManager, roleManager);
+        var registrationService = new AuthService(userManager, roleManager, tokenService);
 
         return (loginService, registrationService, context);
     }

@@ -573,10 +573,6 @@ public class BookingRequestServiceShould
 
         public int SaveCount { get; private set; }
 
-        public IGenericRepository<TEntity> Repository<TEntity>()
-            where TEntity : BaseEntity
-            => throw new NotSupportedException();
-
         public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IWesalTransaction>(Transaction);
 

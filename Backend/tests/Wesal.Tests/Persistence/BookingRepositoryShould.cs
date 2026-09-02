@@ -132,6 +132,10 @@ public class BookingRepositoryShould
             entityType.GetIndexes(),
             index => index.Properties.Select(property => property.Name).SequenceEqual(["HallId", "RequesterUserId"]));
 
+        Assert.Contains(
+            entityType.GetIndexes(),
+            index => index.Properties.Select(property => property.Name).SequenceEqual(["HallId", "Date", "Period", "Status"]));
+
         var foreignKeys = entityType.GetForeignKeys().ToList();
         Assert.Contains(
             foreignKeys,

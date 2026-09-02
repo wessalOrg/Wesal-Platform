@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Domain.Entities;
@@ -6,11 +5,11 @@ using Wesal.Persistence.Data;
 
 namespace Wesal.Persistence.Repositories;
 
-public class AISessionRepository : GenericRepository<AISession>, IAISessionRepository
+public class AISessionRepository : IAISessionRepository
 {
     private readonly ApplicationDbContext _context;
 
-    public AISessionRepository(ApplicationDbContext context) : base(context)
+    public AISessionRepository(ApplicationDbContext context)
     {
         _context = context;
     }
@@ -39,5 +38,12 @@ public class AISessionRepository : GenericRepository<AISession>, IAISessionRepos
         // and avoid EF translation issues. Efficient enough for AI session dataset.
         var all = await _context.AISessions.AsNoTracking().ToListAsync(cancellationToken);
         return all.Where(s => s.IsExpired).ToList();
+    }
+
+    public async Task<AISession> AddAsync(AISession entity, CancellationToken cancellationToken = default)
+    {
+        _context.AISessions.Add(entity);
+        await _context.SaveChangesAsync(cancellationToken);
+        return entity;
     }
 }

@@ -18,47 +18,7 @@ public sealed class SubscriptionPaymentIntentDetector : ISubscriptionPaymentInte
 
         // Check for subscription/payment intent keywords
         // This covers all examples from the user story and handles natural variations
-        if (ContainsAny(normalized, EnglishPaymentKeywords) || ContainsAny(normalized, ArabicPaymentKeywords))
-        {
-            // Ensure it's not an unrelated question that merely contains generic words
-            // Unrelated examples should not be classified as payment
-            if (IsUnrelatedQuestion(normalized))
-                return false;
-
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool IsUnrelatedQuestion(string normalized)
-    {
-        // Unrelated patterns that should NOT be considered subscription-payment
-        // These contain generic words but are about other features
-        var unrelatedKeywords = new[]
-        {
-            "add a hall",
-            "booking rules",
-            "change my password",
-            "hall rating",
-            "how does booking work",
-            "إضافة قاعة",
-            "قواعد الحجز",
-            "تغيير كلمة المرور",
-            "تقييم قاعتي",
-            "كيف يعمل الحجز"
-        };
-
-        // If message contains unrelated keywords and does NOT contain payment/subscription keywords strongly, it's unrelated
-        // But since we already checked for payment keywords, we need to ensure unrelated with payment keywords still counts as payment
-        // So we only exclude if it contains unrelated AND does not contain strong payment intent
-        // For now, be conservative: only exclude if it clearly is about other features without payment context
-        // The task says ambiguous subscription-related should prefer payment, so we should not over-exclude
-
-        // Simple check: if message is exactly about other features and doesn't contain pay/subscription in a subscription context, it's unrelated
-        // Since our payment keywords already filtered, if it reached here it has payment keywords, so don't exclude
-        // This method is reserved for future refinement
-        return false;
+        return ContainsAny(normalized, EnglishPaymentKeywords) || ContainsAny(normalized, ArabicPaymentKeywords);
     }
 
     private static bool ContainsAny(string text, string[] keywords)

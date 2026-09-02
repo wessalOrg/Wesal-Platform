@@ -338,6 +338,16 @@ public class RatingServiceShould
         public Task UpdateAsync(Rating rating, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
+        public Task<(double AverageRating, int TotalRatings, int? UserRating)> GetSummaryAsync(Guid hallId, string? currentUserId, CancellationToken cancellationToken = default)
+        {
+            var hallRatings = Ratings.Where(r => r.HallId == hallId).ToList();
+            var average = hallRatings.Count == 0 ? 0 : hallRatings.Average(r => r.Value);
+            var userRating = currentUserId == null
+                ? (int?)null
+                : hallRatings.FirstOrDefault(r => r.UserId == currentUserId)?.Value;
+            return Task.FromResult((average, hallRatings.Count, userRating));
+        }
+
         public Task<double> GetAverageRatingAsync(Guid hallId, CancellationToken cancellationToken = default)
         {
             var hallRatings = Ratings.Where(r => r.HallId == hallId).ToList();

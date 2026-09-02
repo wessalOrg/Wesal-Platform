@@ -12,10 +12,12 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// Communicates with the Google Gemini REST API using an HttpClient obtained
 /// from <see cref="IHttpClientFactory"/>. All HTTP/timeout/JSON failure modes are
 /// converted to a null result (recoverable) with diagnostic logging that never
-/// includes the API key. The API key is injected only as a query parameter on the
-/// outgoing request and is never logged or returned. User/context input is
-/// truncated to <see cref="GoogleAiSettings.MaxContextCharacters"/> before being
-/// sent, so a maliciously large request cannot consume unbounded Gemini quota.
+/// includes the API key. The API key is sent in the "x-goog-api-key" request
+/// header rather than as a URL query parameter, so it never appears in access
+/// logs, proxies, or the request line, and is never logged or returned. User/
+/// context input is truncated to <see cref="GoogleAiSettings.MaxContextCharacters"/>
+/// before being sent, so a maliciously large request cannot consume unbounded
+/// Gemini quota.
 /// </summary>
 public sealed class GeminiService : IGeminiService
 {
@@ -73,7 +75,7 @@ public sealed class GeminiService : IGeminiService
 
         var client = _httpClientFactory.CreateClient(HttpClientName);
 
-        var url = $"{baseUrl}/models/{Uri.EscapeDataString(model)}:generateContent?key={Uri.EscapeDataString(_settings.ApiKey)}";
+        var url = $"{baseUrl}/models/{Uri.EscapeDataString(model)}:generateContent";
         var body = new GeminiGenerateContentRequest(
             [new GeminiContent([new GeminiPart(userPrompt)])],
             new GeminiContent([new GeminiPart(systemInstruction)]),
@@ -83,6 +85,7 @@ public sealed class GeminiService : IGeminiService
         {
             Content = JsonContent.Create(body, options: JsonOptions)
         };
+        request.Headers.TryAddWithoutValidation("x-goog-api-key", _settings.ApiKey);
 
         try
         {

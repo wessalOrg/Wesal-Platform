@@ -20,9 +20,7 @@ using Wesal.Infrastructure.Comments;
 using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.AiAssistant;
 using Wesal.Infrastructure.Languages;
-using Wesal.Infrastructure.Localization;
 using Wesal.Infrastructure.Profile;
-using Wesal.Infrastructure.Registration;
 using Wesal.Infrastructure.Time;
 
 namespace Wesal.Infrastructure;
@@ -49,6 +47,11 @@ public static class DependencyInjection
         services.AddOptions<GoogleAiSettings>()
             .Bind(configuration.GetSection(GoogleAiSettings.SectionName));
 
+        services.AddOptions<PasswordResetOptions>()
+            .Bind(configuration.GetSection(PasswordResetOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddHttpClient(GeminiService.HttpClientName, (sp, client) =>
         {
             var settings = sp.GetRequiredService<IOptions<GoogleAiSettings>>().Value;
@@ -58,6 +61,8 @@ public static class DependencyInjection
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IPasswordResetService, PasswordResetService>();
+        services.AddScoped<IPasswordResetLinkSender, LoggingPasswordResetLinkSender>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IHomepageIntroductionService, HomepageIntroductionService>();
         services.AddScoped<IFeaturedHallsService, FeaturedHallsService>();
@@ -72,12 +77,10 @@ public static class DependencyInjection
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<IConversationNotifier, ConversationNotifier>();
-        services.AddScoped<IRegistrationService, RegistrationService>();
         services.AddScoped<ILoginService, LoginService>();
         services.AddScoped<ILogoutService, LogoutService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<ILanguageService, LanguageService>();
-        services.AddScoped<ITranslationService, TranslationService>();
         services.AddSingleton<IChatSessionService, ChatSessionService>();
         services.AddSingleton<IHowToService, HowToService>();
         services.AddScoped<IRecommendationService, RecommendationService>();

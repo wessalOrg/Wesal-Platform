@@ -146,25 +146,22 @@ public sealed class BookingRepository : IBookingRepository
     {
         if (_context.Database.IsRelational())
         {
-            await _context.Database.ExecuteSqlInterpolatedAsync(
+            // Single-statement conditional upsert so that reserving a fresh
+            // (HallId, Date, PeriodType) combination succeeds atomically:
+            // - no row yet        -> inserted as Booked, 1 row affected
+            // - row Available     -> updated to Booked,  1 row affected
+            // - row already Booked -> WHERE excludes the update, 0 rows affected
+            return await _context.Database.ExecuteSqlInterpolatedAsync(
                 $"""
                 INSERT INTO wesal."HallAvailabilities" ("Id", "HallId", "Date", "PeriodType", "Status", "CreatedAt", "UpdatedAt")
                 VALUES ({Guid.NewGuid()}, {hallId}, {date}, {(int)periodType}, {(int)AvailabilityStatus.Booked}, {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow})
-                ON CONFLICT ("HallId", "Date", "PeriodType") DO NOTHING;
+                ON CONFLICT ("HallId", "Date", "PeriodType")
+                DO UPDATE
+                SET "Status" = {(int)AvailabilityStatus.Booked},
+                    "UpdatedAt" = {DateTimeOffset.UtcNow}
+                WHERE wesal."HallAvailabilities"."Status" <> {(int)AvailabilityStatus.Booked};
                 """,
                 cancellationToken);
-
-            return await _context.HallAvailabilities
-                .Where(availability =>
-                    availability.HallId == hallId
-                    && availability.Date == date
-                    && availability.PeriodType == periodType
-                    && availability.Status == AvailabilityStatus.Available)
-                .ExecuteUpdateAsync(
-                    set =>
-                        set.SetProperty(availability => availability.Status, AvailabilityStatus.Booked)
-                            .SetProperty(availability => availability.UpdatedAt, DateTimeOffset.UtcNow),
-                    cancellationToken);
         }
 
         var existing = await _context.HallAvailabilities

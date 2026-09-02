@@ -1,9 +1,12 @@
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using Wesal.API;
 using Wesal.API.Filters;
 using Wesal.Application;
 using Wesal.Infrastructure;
@@ -69,6 +72,27 @@ try
 
     services.AddSignalR();
 
+    var rateLimitingOptions = new RateLimitingOptions();
+    configuration.GetSection(RateLimitingOptions.SectionName).Bind(rateLimitingOptions);
+
+    if (rateLimitingOptions.Enabled)
+    {
+        services.AddRateLimiter(limiterOptions =>
+        {
+            limiterOptions.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            limiterOptions.AddPolicy(RateLimitingOptions.GlobalPolicyName, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = rateLimitingOptions.PermitLimit,
+                        Window = TimeSpan.FromSeconds(rateLimitingOptions.WindowSeconds),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+        });
+    }
+
     services.AddHealthChecks()
         .AddDbContextCheck<ApplicationDbContext>(name: "database");
 
@@ -105,10 +129,20 @@ try
 
     var app = builder.Build();
 
+    ValidateNonDevelopmentConfiguration(app.Environment, configuration);
+
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Database.Migrate();
+
+        if (app.Environment.IsDevelopment())
+        {
+            db.Database.Migrate();
+        }
+        else
+        {
+            Log.Information("Skipping startup migration - apply migrations via the deployment pipeline.");
+        }
     }
 
     app.UseSerilogRequestLogging();
@@ -135,6 +169,11 @@ try
 
     app.UseCors(CorsPolicyName);
 
+    if (rateLimitingOptions.Enabled)
+    {
+        app.UseRateLimiter();
+    }
+
     app.UseAuthentication();
     app.UseAuthorization();
 
@@ -153,4 +192,44 @@ catch (Exception exception)
 finally
 {
     Log.CloseAndFlush();
+}
+
+static void ValidateNonDevelopmentConfiguration(IWebHostEnvironment environment, IConfiguration configuration)
+{
+    if (environment.IsDevelopment())
+    {
+        return;
+    }
+
+    const string placeholderJwtSecret = "CHANGE_ME_in_production_use_a_strong_secret_of_at_least_32_characters";
+    const string developmentConnectionString = "Host=localhost;Port=5432;Database=wesal;Username=postgres;Password=postgres";
+
+    var jwtSecret = configuration["Jwt:SecretKey"] ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(jwtSecret) || string.Equals(jwtSecret, placeholderJwtSecret, StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException(
+            "Jwt:SecretKey must be overridden with a strong secret via the Jwt__SecretKey environment variable outside Development.");
+    }
+
+    var connectionString = configuration.GetConnectionString("DefaultConnection") ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(connectionString)
+        || string.Equals(connectionString, developmentConnectionString, StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException(
+            "ConnectionStrings:DefaultConnection must be overridden via the ConnectionStrings__DefaultConnection environment variable outside Development.");
+    }
+
+    var resetPageUrl = configuration["PasswordReset:ResetPageUrl"] ?? string.Empty;
+    if (resetPageUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException(
+            "PasswordReset:ResetPageUrl must point to the deployed frontend reset page outside Development.");
+    }
+
+    var geminiModel = configuration["GoogleAI:GeminiModel"] ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(geminiModel) || !geminiModel.StartsWith("gemini-", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException(
+            "GoogleAI:GeminiModel must be a valid Gemini model id (e.g. gemini-2.5-flash) or be left unset outside Development.");
+    }
 }

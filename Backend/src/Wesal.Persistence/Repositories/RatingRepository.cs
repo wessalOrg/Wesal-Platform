@@ -38,6 +38,30 @@ public sealed class RatingRepository : IRatingRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<(double AverageRating, int TotalRatings, int? UserRating)> GetSummaryAsync(
+        Guid hallId,
+        string? currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var summary = await _context.Ratings
+            .AsNoTracking()
+            .Where(rating => rating.HallId == hallId)
+            .GroupBy(rating => rating.HallId)
+            .Select(group => new
+            {
+                Average = group.Average(rating => rating.Value),
+                Total = group.Count(),
+                UserRating = currentUserId == null
+                    ? (int?)null
+                    : group.Where(rating => rating.UserId == currentUserId).Select(rating => (int?)rating.Value).FirstOrDefault()
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return summary is null
+            ? (0, 0, null)
+            : (summary.Average, summary.Total, summary.UserRating);
+    }
+
     public async Task<double> GetAverageRatingAsync(Guid hallId, CancellationToken cancellationToken = default)
     {
         var hasRatings = await _context.Ratings

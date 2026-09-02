@@ -586,10 +586,6 @@ public class BookingCancellationServiceShould
             return Task.FromResult<IWesalTransaction>(new FakeTransaction(snapshot, _bookings, _onCommit, _onRollback));
         }
 
-        public IGenericRepository<TEntity> Repository<TEntity>()
-            where TEntity : BaseEntity
-            => throw new NotImplementedException();
-
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             if (ThrowOnSave)

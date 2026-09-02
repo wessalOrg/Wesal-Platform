@@ -150,6 +150,44 @@ public class RatingRepositoryShould
     }
 
     [Fact]
+    public async Task GetSummaryAsync_ComputesAverageAndTotalIncludingUserRating()
+    {
+        await using var context = CreateContext();
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall" };
+        context.Halls.Add(hall);
+        context.Ratings.AddRange(
+            new Rating { HallId = hall.Id, UserId = "user-1", Value = 4 },
+            new Rating { HallId = hall.Id, UserId = "user-2", Value = 2 });
+        await context.SaveChangesAsync();
+
+        var repository = new RatingRepository(context);
+
+        var (average, total, userRating) = await repository.GetSummaryAsync(hall.Id, "user-1");
+
+        Assert.Equal(3.0, average);
+        Assert.Equal(2, total);
+        Assert.Equal(4, userRating);
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_OmitsUserRatingForAnonymousCaller()
+    {
+        await using var context = CreateContext();
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall" };
+        context.Halls.Add(hall);
+        context.Ratings.Add(new Rating { HallId = hall.Id, UserId = "user-1", Value = 5 });
+        await context.SaveChangesAsync();
+
+        var repository = new RatingRepository(context);
+
+        var (average, total, userRating) = await repository.GetSummaryAsync(hall.Id, null);
+
+        Assert.Equal(5.0, average);
+        Assert.Equal(1, total);
+        Assert.Null(userRating);
+    }
+
+    [Fact]
     public void Model_ConfiguresUniqueIndexAndRelationshipsForRating()
     {
         using var context = CreateContext();

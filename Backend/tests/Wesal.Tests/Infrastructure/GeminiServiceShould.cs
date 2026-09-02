@@ -164,20 +164,23 @@ public class GeminiServiceShould
     }
 
     [Fact]
-    public async Task GenerateTextAsync_RequestCarriesApiKeyAsQueryButNotInBody()
+    public async Task GenerateTextAsync_SendsApiKeyInHeaderNotUrlOrBody()
     {
-        string? requestBody = null;
         string? requestUrl = null;
+        string? requestBody = null;
+        IEnumerable<string>? apiKeyHeader = null;
         var service = CreateService(request =>
         {
             requestUrl = request.RequestUri!.ToString();
             requestBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            apiKeyHeader = request.Headers.TryGetValues("x-goog-api-key", out var values) ? values : null;
             return Json(HttpStatusCode.OK, SuccessResponse("ok"));
         });
 
         await service.GenerateTextAsync("hello", "en", CancellationToken.None);
 
-        Assert.Contains("key=test-server-key-not-real", requestUrl);
+        Assert.Equal(["test-server-key-not-real"], apiKeyHeader);
+        Assert.DoesNotContain("test-server-key-not-real", requestUrl);
         Assert.DoesNotContain("test-server-key-not-real", requestBody);
     }
 

@@ -10,7 +10,6 @@ using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
 using Wesal.Infrastructure.Auth;
 using Wesal.Infrastructure.Identity;
-using Wesal.Infrastructure.Registration;
 using Wesal.Infrastructure.Time;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
@@ -31,7 +30,7 @@ public class LogoutSessionInvalidationShould
         ClockSkewMinutes = 5
     };
 
-    private static (LoginService Login, RegistrationService Registration, LogoutService Logout, TokenRevocationRepository Revocations, ApplicationDbContext Context) CreateService()
+    private static (LoginService Login, AuthService Registration, LogoutService Logout, TokenRevocationRepository Revocations, ApplicationDbContext Context) CreateService()
     {
         var services = new ServiceCollection();
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -61,7 +60,7 @@ public class LogoutSessionInvalidationShould
         var revocations = new TokenRevocationRepository(context);
 
         var loginService = new LoginService(userManager, tokenService, new DateTimeService());
-        var registrationService = new RegistrationService(userManager, roleManager);
+        var registrationService = new AuthService(userManager, roleManager, tokenService);
         var logoutService = new LogoutService(revocations);
 
         return (loginService, registrationService, logoutService, revocations, context);

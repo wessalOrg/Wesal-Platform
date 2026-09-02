@@ -8,7 +8,7 @@ using Wesal.Infrastructure.Identity;
 
 namespace Wesal.Infrastructure.Auth;
 
-public sealed class AuthService : IAuthService, IRegistrationService
+public sealed class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
@@ -20,10 +20,6 @@ public sealed class AuthService : IAuthService, IRegistrationService
         _roleManager = roleManager;
         _tokenService = tokenService;
     }
-
-    // IRegistrationService explicit implementation delegates to IAuthService
-    async Task<RegisterResponse> IRegistrationService.RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
-        => await RegisterAsync(request, cancellationToken);
 
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
