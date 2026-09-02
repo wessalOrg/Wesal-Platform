@@ -34,6 +34,7 @@ const EMPTY_RECOMMENDATION = {
   criteria: null,
   lang: null,
   category: null,
+  availability: null as AiChatMessage["availability"],
 };
 
 function greetingMessage(text: string): AiChatMessage {
@@ -199,6 +200,7 @@ export function useAiChat({ sessionId, greeting }: UseAiChatInput): AiChatContro
             criteria: turn.criteria,
             lang: turn.lang,
             category: turn.category,
+            availability: turn.availability,
           },
         ]);
         setSendState("success");

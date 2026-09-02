@@ -313,6 +313,8 @@ const en: MessageCatalog = {
   "assistant.chat.foundHalls": "Here are halls that may match your request.",
   "assistant.chat.available": "Available",
   "assistant.chat.unavailableHall": "Unavailable for this date",
+  "assistant.chat.availability.title": "Availability of {name} on {date}",
+  "assistant.chat.availability.booked": "Booked",
   "assistant.chat.whatsappAria": "Open WhatsApp chat with {label} (opens in a new tab)",
   "assistant.unavailable.title": "The assistant is taking a break",
   "assistant.network.title": "You appear to be offline",

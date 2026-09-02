@@ -5,6 +5,7 @@ import type {
   AiChatTextLang,
   AiChatVariant,
   AiExtractedCriteria,
+  AiHallAvailability,
   AiRecommendedHall,
   RecommendationStatus,
 } from "@/types/ai-chat";
@@ -13,22 +14,17 @@ import { parseChatResponseLanguage } from "@/lib/ai-chat-text-direction";
 const CHAT_TIMEOUT_MS = 25_000;
 const QUESTION_MAX_LENGTH = 500;
 
-const RECOMMENDATION_STATUSES: RecommendationStatus[] = [
-  "Success",
-  "IncompleteCriteria",
-  "NoResults",
-  "AiUnavailable",
+const ASSISTANT_KINDS: readonly string[] = [
+  "Answer",
+  "Halls",
+  "HallDetails",
+  "Availability",
+  "Clarification",
+  "Unsupported",
+  "Error",
 ];
 
-type HowToRequest = { question?: string | null };
-type HowToResponse = {
-  answer?: string | null;
-  category?: string | null;
-  responseLanguage?: string | null;
-  timestamp?: string;
-};
-
-type RecommendationRequest = { message?: string | null };
+type AssistantRequest = { message?: string | null };
 type HallRecommendationDto = {
   hallId?: string;
   hallName?: string | null;
@@ -40,22 +36,49 @@ type HallRecommendationDto = {
   isAvailable?: boolean;
   unavailableReason?: string | null;
 };
-type ExtractedCriteriaDto = {
+type AssistantHallDetailsDto = {
+  hallId?: string;
+  hallName?: string | null;
+  region?: string | null;
+  address?: string | null;
+  description?: string | null;
+  capacity?: number | null;
+  price?: number | null;
+  contactPhone?: string | null;
+  status?: string | null;
+  photos?: { id?: string; url?: string }[] | null;
+};
+type AssistantAvailabilityPeriodDto = {
+  periodType?: string | null;
+  periodName?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  status?: string | null;
+};
+type AssistantAvailabilityDayDto = {
+  hallId?: string;
+  hallName?: string | null;
+  date?: string | null;
+  periods?: AssistantAvailabilityPeriodDto[] | null;
+};
+type AssistantIntentDto = {
+  intent?: string | null;
   region?: string | null;
   area?: string | null;
   date?: string | { year?: number; month?: number; day?: number } | null;
-  bookingPeriod?: string | number | null;
+  bookingPeriod?: string | null;
   capacity?: number | null;
-  eventDate?: string | null;
-  period?: string | number | null;
+  hallName?: string | null;
 };
-type RecommendationResponse = {
-  status?: RecommendationStatus | string | number;
-  extractedCriteria?: ExtractedCriteriaDto | null;
-  recommendations?: HallRecommendationDto[] | null;
+type AssistantResponseDto = {
+  kind?: string | null;
   message?: string | null;
   responseLanguage?: string | null;
   timestamp?: string;
+  halls?: HallRecommendationDto[] | null;
+  hallDetails?: AssistantHallDetailsDto | null;
+  availability?: AssistantAvailabilityDayDto | null;
+  intent?: AssistantIntentDto | null;
 };
 
 type ProblemDetails = {
@@ -75,6 +98,7 @@ export type AiChatTurn = {
   category: string | null;
   timestamp: string;
   sessionExpired: boolean;
+  availability: AiHallAvailability | null;
 };
 
 function newId(): string {
@@ -96,9 +120,8 @@ export function validateChatQuestion(raw: string): string | null {
 }
 
 /**
- * Usage / payment questions stay on `/how-to`. Hall-search phrasing goes to
- * `/recommend`. Payment and "how do I…" must not be classified as a hall search
- * just because the sentence mentions a hall.
+ * Only used to pick the loading skeleton while a turn is in flight. The backend
+ * owns intent classification now; the choice no longer routes the request.
  */
 export function isUsageQuestion(text: string): boolean {
   return (
@@ -116,29 +139,13 @@ export function isHallSearchQuestion(text: string): boolean {
   );
 }
 
-export function normalizeRecommendationStatus(
-  value: unknown,
-): RecommendationStatus | null {
-  if (typeof value === "string" && RECOMMENDATION_STATUSES.includes(value as RecommendationStatus)) {
-    return value as RecommendationStatus;
-  }
-  if (typeof value === "number" && RECOMMENDATION_STATUSES[value]) {
-    return RECOMMENDATION_STATUSES[value];
-  }
+function normalizeAssistantKind(value: unknown): string | null {
+  if (typeof value === "string" && ASSISTANT_KINDS.includes(value)) return value;
   return null;
 }
 
 function readTrimmed(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function readCapacity(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function readPeriod(value: unknown): string | null {
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  return readTrimmed(value);
 }
 
 function readDate(value: unknown): string | null {
@@ -157,37 +164,6 @@ function readDate(value: unknown): string | null {
   return null;
 }
 
-export function parseExtractedCriteria(raw: unknown): AiExtractedCriteria | null {
-  if (!raw || typeof raw !== "object") return null;
-  const row = raw as ExtractedCriteriaDto;
-  const criteria: AiExtractedCriteria = {
-    region: readTrimmed(row.region),
-    area: readTrimmed(row.area),
-    date: readDate(row.date) || readTrimmed(row.eventDate),
-    bookingPeriod: readPeriod(row.bookingPeriod ?? row.period),
-    capacity: readCapacity(row.capacity),
-  };
-  if (
-    !criteria.region &&
-    !criteria.area &&
-    !criteria.date &&
-    !criteria.bookingPeriod &&
-    criteria.capacity == null
-  ) {
-    return null;
-  }
-  return criteria;
-}
-
-/** True when a chat payload is a recommend response, not a how-to answer. */
-export function isRecommendationPayload(data: unknown): data is RecommendationResponse {
-  if (!data || typeof data !== "object") return false;
-  const row = data as RecommendationResponse;
-  if (Array.isArray(row.recommendations)) return true;
-  if (row.extractedCriteria && typeof row.extractedCriteria === "object") return true;
-  return normalizeRecommendationStatus(row.status) !== null;
-}
-
 function mapHalls(list: HallRecommendationDto[] | null | undefined): AiRecommendedHall[] {
   if (!list?.length) return [];
   return list
@@ -203,6 +179,64 @@ function mapHalls(list: HallRecommendationDto[] | null | undefined): AiRecommend
       unavailableReason: hall.unavailableReason?.trim() || null,
     }))
     .filter((hall) => hall.hallId);
+}
+
+function mapHallDetails(details: AssistantHallDetailsDto | null | undefined): AiRecommendedHall | null {
+  if (!details) return null;
+  const hallId = String(details.hallId ?? "");
+  if (!hallId) return null;
+  return {
+    hallId,
+    hallName: readTrimmed(details.hallName) ?? "",
+    region: readTrimmed(details.region),
+    address: readTrimmed(details.address),
+    capacity: typeof details.capacity === "number" ? details.capacity : null,
+    price: typeof details.price === "number" ? details.price : null,
+    mainImage: readTrimmed(details.photos?.[0]?.url),
+    isAvailable: details.status === "Approved",
+    unavailableReason: null,
+  };
+}
+
+function mapAvailability(data: AssistantAvailabilityDayDto | null | undefined): AiHallAvailability | null {
+  if (!data) return null;
+  const hallId = String(data.hallId ?? "");
+  if (!hallId) return null;
+  return {
+    hallId,
+    hallName: readTrimmed(data.hallName) ?? "",
+    date: readTrimmed(data.date) ?? "",
+    periods: Array.isArray(data.periods)
+      ? data.periods.map((period) => ({
+          periodType: readTrimmed(period.periodType) ?? "",
+          periodName: readTrimmed(period.periodName) ?? "",
+          startTime: readTrimmed(period.startTime) ?? "",
+          endTime: readTrimmed(period.endTime) ?? "",
+          status: readTrimmed(period.status) ?? "Available",
+        }))
+      : [],
+  };
+}
+
+function parseAssistantCriteria(intent: AssistantIntentDto | null | undefined): AiExtractedCriteria | null {
+  if (!intent) return null;
+  const criteria: AiExtractedCriteria = {
+    region: readTrimmed(intent.region),
+    area: readTrimmed(intent.area),
+    date: readDate(intent.date),
+    bookingPeriod: readTrimmed(intent.bookingPeriod),
+    capacity: typeof intent.capacity === "number" ? intent.capacity : null,
+  };
+  if (
+    !criteria.region &&
+    !criteria.area &&
+    !criteria.date &&
+    !criteria.bookingPeriod &&
+    criteria.capacity == null
+  ) {
+    return null;
+  }
+  return criteria;
 }
 
 function problemMessage(data: unknown): string | null {
@@ -232,79 +266,124 @@ function emptyTurn(
     category: null,
     timestamp: new Date().toISOString(),
     sessionExpired: extras?.sessionExpired ?? false,
+    availability: null,
   };
 }
 
-function mapRecommendation(data: RecommendationResponse): AiChatTurn {
-  const status = normalizeRecommendationStatus(data.status);
-  const halls = mapHalls(data.recommendations);
-  const criteria = parseExtractedCriteria(data.extractedCriteria);
-  const lang = parseChatResponseLanguage(data.responseLanguage);
-  const text = (data.message ?? "").trim();
-  const resolvedStatus =
-    status ?? (halls.length ? "Success" : "NoResults");
+function isAssistantPayload(data: unknown): data is AssistantResponseDto {
+  if (!data || typeof data !== "object") return false;
+  const row = data as AssistantResponseDto;
+  return normalizeAssistantKind(row.kind) !== null || typeof row.message === "string";
+}
 
-  if (resolvedStatus === "AiUnavailable") {
-    return {
-      text: text || "errors.assistant.chat.unavailable",
-      variant: "fallback",
-      halls,
-      recommendationStatus: resolvedStatus,
-      criteria,
-      lang,
-      category: null,
-      timestamp: stamp(data.timestamp),
-      sessionExpired: false,
-    };
+function mapAssistant(data: AssistantResponseDto): AiChatTurn {
+  const kind = normalizeAssistantKind(data.kind);
+  const text = readTrimmed(data.message) ?? "";
+  const lang = parseChatResponseLanguage(data.responseLanguage);
+  const timestamp = stamp(data.timestamp);
+  const criteria = parseAssistantCriteria(data.intent);
+  const halls = mapHalls(data.halls);
+
+  switch (kind) {
+    case "Halls":
+      return {
+        text: text || (halls.length ? "assistant.chat.foundHalls" : "errors.assistant.chat.noResults"),
+        variant: halls.length ? "default" : "fallback",
+        halls,
+        recommendationStatus: halls.length ? "Success" : "NoResults",
+        criteria,
+        lang,
+        category: null,
+        timestamp,
+        sessionExpired: false,
+        availability: null,
+      };
+    case "HallDetails": {
+      const detail = mapHallDetails(data.hallDetails);
+      return {
+        text: text || "errors.assistant.chat.emptyReply",
+        variant: detail ? "default" : "fallback",
+        halls: detail ? [detail] : [],
+        recommendationStatus: detail ? "Success" : "NoResults",
+        criteria: null,
+        lang,
+        category: null,
+        timestamp,
+        sessionExpired: false,
+        availability: null,
+      };
+    }
+    case "Availability":
+      return {
+        text: text || "errors.assistant.chat.emptyReply",
+        variant: "default",
+        halls: [],
+        recommendationStatus: null,
+        criteria,
+        lang,
+        category: null,
+        timestamp,
+        sessionExpired: false,
+        availability: mapAvailability(data.availability),
+      };
+    case "Clarification":
+      return {
+        text: text || "errors.assistant.chat.incomplete",
+        variant: "help",
+        halls: [],
+        recommendationStatus: null,
+        criteria,
+        lang,
+        category: null,
+        timestamp,
+        sessionExpired: false,
+        availability: null,
+      };
+    case "Unsupported":
+      return {
+        text: text || "errors.assistant.chat.send",
+        variant: "fallback",
+        halls: [],
+        recommendationStatus: null,
+        criteria: null,
+        lang,
+        category: null,
+        timestamp,
+        sessionExpired: false,
+        availability: null,
+      };
+    case "Error":
+      return {
+        text: text || "errors.assistant.chat.unavailable",
+        variant: "fallback",
+        halls: [],
+        recommendationStatus: null,
+        criteria: null,
+        lang,
+        category: null,
+        timestamp,
+        sessionExpired: false,
+        availability: null,
+      };
+    default:
+      // Unknown discriminator (new backend kind, proxy HTML, ...): show the text
+      // the backend sent instead of crashing the turn.
+      return emptyTurn(
+        text || "errors.assistant.chat.emptyReply",
+        "default",
+      );
   }
-  if (resolvedStatus === "NoResults" || (resolvedStatus === "Success" && halls.length === 0)) {
-    return {
-      text: text || "errors.assistant.chat.noResults",
-      variant: "fallback",
-      halls,
-      recommendationStatus: "NoResults",
-      criteria,
-      lang,
-      category: null,
-      timestamp: stamp(data.timestamp),
-      sessionExpired: false,
-    };
-  }
-  if (resolvedStatus === "IncompleteCriteria") {
-    return {
-      text: text || "errors.assistant.chat.incomplete",
-      variant: "help",
-      halls,
-      recommendationStatus: resolvedStatus,
-      criteria,
-      lang,
-      category: null,
-      timestamp: stamp(data.timestamp),
-      sessionExpired: false,
-    };
-  }
-  return {
-    text: text || (halls.length ? "assistant.chat.foundHalls" : "errors.assistant.chat.noResults"),
-    variant: halls.length ? "default" : "fallback",
-    halls,
-    recommendationStatus: halls.length ? "Success" : "NoResults",
-    criteria,
-    lang,
-    category: null,
-    timestamp: stamp(data.timestamp),
-    sessionExpired: false,
-  };
 }
 
 async function postChat<T>(
   url: string,
-  body: HowToRequest | RecommendationRequest,
+  body: AssistantRequest,
   signal?: AbortSignal,
 ) {
   return api.post<T>(url, body, {
     timeout: CHAT_TIMEOUT_MS,
     signal,
-    // 503 on `/recommend` still carries a fallback RecommendationResponse.
+    // 503 is tolerated so a proxy error is still surfaced as an assistant turn.
     validateStatus: (status) =>
       status === 200 || status === 400 || status === 404 || status === 503,
   });
@@ -325,47 +404,10 @@ export async function sendAiChatTurn(
   }
 
   const text = raw.trim();
-  const useRecommend = isHallSearchQuestion(text);
 
   try {
-    if (!useRecommend) {
-      const { status, data } = await postChat<HowToResponse | ProblemDetails>(
-        `/ai/sessions/${sessionId}/how-to`,
-        { question: text },
-        signal,
-      );
-      if (status === 404) {
-        return emptyTurn("errors.assistant.chat.expired", "error", { sessionExpired: true });
-      }
-      if (status === 400) {
-        throw new ApiError(
-          problemMessage(data) || "errors.assistant.chat.validation",
-          400,
-        );
-      }
-      if (status === 503) {
-        throw new ApiError(
-          problemMessage(data) || "errors.assistant.chat.send",
-          503,
-        );
-      }
-      const howTo = data as HowToResponse;
-      const answer = howTo.answer?.trim();
-      return {
-        text: answer || "errors.assistant.chat.emptyReply",
-        variant: "help",
-        halls: [],
-        recommendationStatus: null,
-        criteria: null,
-        lang: parseChatResponseLanguage(howTo.responseLanguage),
-        category: (howTo.category ?? "").trim() || null,
-        timestamp: stamp(howTo.timestamp),
-        sessionExpired: false,
-      };
-    }
-
-    const { status, data } = await postChat<RecommendationResponse | ProblemDetails>(
-      `/ai/sessions/${sessionId}/recommend`,
+    const { status, data } = await postChat<AssistantResponseDto | ProblemDetails>(
+      `/ai/sessions/${sessionId}/assistant`,
       { message: text },
       signal,
     );
@@ -379,12 +421,17 @@ export async function sendAiChatTurn(
         400,
       );
     }
-
-    if (!isRecommendationPayload(data)) {
-      throw new ApiError("errors.assistant.chat.send", status === 503 ? 503 : 502);
+    if (status === 503) {
+      throw new ApiError(
+        problemMessage(data) || "errors.assistant.chat.send",
+        503,
+      );
+    }
+    if (!isAssistantPayload(data)) {
+      throw new ApiError("errors.assistant.chat.send", 502);
     }
 
-    return mapRecommendation(data);
+    return mapAssistant(data);
   } catch (err) {
     if (err instanceof ApiError) throw err;
     if (isBrowserOffline()) throw new ApiError("errors.assistant.network", 0);

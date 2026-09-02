@@ -1,6 +1,7 @@
 "use client";
 
 import AiAssistantSparkIcon from "@/components/assistant/AiAssistantSparkIcon";
+import AiHallAvailabilityCard from "@/components/assistant/AiHallAvailabilityCard";
 import AiHallRecommendationList from "@/components/assistant/AiHallRecommendationList";
 import WhatsAppActionLink from "@/components/assistant/WhatsAppActionLink";
 import { useT } from "@/i18n";
@@ -102,11 +103,16 @@ export default function AiChatMessageBubble({ message }: AiChatMessageProps) {
           </div>
         </div>
         {isUser ? null : (
-          <AiHallRecommendationList
-            halls={message.halls}
-            status={message.recommendationStatus}
-            criteria={message.criteria}
-          />
+          <>
+            <AiHallRecommendationList
+              halls={message.halls}
+              status={message.recommendationStatus}
+              criteria={message.criteria}
+            />
+            {message.availability ? (
+              <AiHallAvailabilityCard availability={message.availability} />
+            ) : null}
+          </>
         )}
       </div>
     </article>

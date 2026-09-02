@@ -309,6 +309,8 @@ const ar: MessageCatalog = {
   "assistant.chat.foundHalls": "هذه قاعات قد تناسب طلبك.",
   "assistant.chat.available": "متاحة",
   "assistant.chat.unavailableHall": "غير متاحة في هذا الموعد",
+  "assistant.chat.availability.title": "توفر قاعة {name} في {date}",
+  "assistant.chat.availability.booked": "محجوزة",
   "assistant.chat.whatsappAria": "فتح محادثة واتساب مع {label} (تُفتح في تبويب جديد)",
   "assistant.unavailable.title": "المساعد في استراحة",
   "assistant.network.title": "لا يوجد اتصال بالإنترنت",
