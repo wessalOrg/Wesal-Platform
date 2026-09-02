@@ -91,6 +91,12 @@ public class GlobalExceptionHandlingMiddleware
                 Extensions = { ["code"] = code }
             };
 
+        // Surface the concrete conflict reason (email/phone already exists) to the client.
+        if (exception is ConflictException)
+        {
+            problemDetails.Detail = exception.Message;
+        }
+
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/problem+json";
 

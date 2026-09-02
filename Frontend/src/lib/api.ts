@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ApiError } from "@/lib/api-error";
+import { ApiError, parseApiFieldErrors } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
 
 const api = axios.create({
@@ -22,13 +22,30 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const data = error.response?.data;
+    const fieldErrors = parseApiFieldErrors(data);
+    const firstFieldMessage = Object.values(fieldErrors)[0]?.[0];
+    const detail = typeof data?.detail === "string" ? data.detail : undefined;
+    const code =
+      typeof data?.code === "string"
+        ? data.code
+        : typeof data?.extensions?.code === "string"
+          ? data.extensions.code
+          : undefined;
     const message =
-      error.response?.data?.message || error.message || "Request failed";
+      (typeof data?.message === "string" && data.message) ||
+      detail ||
+      (typeof data?.title === "string" && data.title) ||
+      firstFieldMessage ||
+      error.message ||
+      "Request failed";
     const status =
       typeof error.response?.status === "number"
         ? error.response.status
         : undefined;
-    return Promise.reject(new ApiError(message, status));
+    return Promise.reject(
+      new ApiError(message, status, fieldErrors, { detail, code }),
+    );
   },
 );
 

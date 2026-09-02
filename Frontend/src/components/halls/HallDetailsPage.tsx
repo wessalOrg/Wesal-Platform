@@ -12,7 +12,7 @@ import HallGalleryContainer from "@/components/halls/HallGalleryContainer";
 import HallHeader from "@/components/halls/HallHeader";
 import HallUnavailableBanner from "@/components/halls/HallUnavailableBanner";
 import { useUiLang } from "@/components/layout/LanguageProvider";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { useBookButtonBehavior } from "@/hooks/useBookButtonBehavior";
 import { useHallDetails } from "@/hooks/useHallDetails";
 import { useT } from "@/i18n";
@@ -31,7 +31,9 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   const lang = useUiLang();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, hydrated } = useAuth();
+  const { session, status: authStatus } = useAuth();
+  const isAuthenticated = session.isAuthenticated;
+  const hydrated = authStatus === "ready";
   const { state, hall, unavailable, usingFallback, errorMessage, retry } =
     useHallDetails(hallId);
 
@@ -75,8 +77,10 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     if (state.phase !== "ready" || unavailable || !hall) return;
 
     bookIntentHandled.current = true;
-    openBookingFlow();
-    router.replace(buildHallDetailsPath(hallId), { scroll: false });
+    queueMicrotask(() => {
+      openBookingFlow();
+      router.replace(buildHallDetailsPath(hallId), { scroll: false });
+    });
   }, [
     hydrated,
     isAuthenticated,

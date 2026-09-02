@@ -84,6 +84,7 @@ export function getBookingHallContext(): { hallId: string; returnPath: string } 
 
 /**
  * Resolve post-auth destination from redirect param, action flag, or sessionStorage.
+ * Only same-origin relative paths are allowed (blocks open redirects).
  */
 export function resolveAuthRedirect(
   redirectParam?: string,
@@ -101,6 +102,7 @@ export function resolveAuthRedirect(
     path = getBookingHallContext()?.returnPath;
   }
 
+  path = sanitizeInternalPath(path);
   if (!path) return "/";
 
   const wantsBooking =
@@ -111,6 +113,18 @@ export function resolveAuthRedirect(
   const basePath = path.split("?")[0] ?? path;
   return wantsBooking ? withBookingIntent(basePath) : path;
 }
+
+/** Allow only in-app relative paths like `/halls/1` — reject absolute/protocol URLs. */
+export function sanitizeInternalPath(path?: string | null): string | undefined {
+  if (!path) return undefined;
+  const trimmed = path.trim();
+  if (!trimmed.startsWith("/")) return undefined;
+  if (trimmed.startsWith("//") || trimmed.startsWith("/\\")) return undefined;
+  if (trimmed.includes("://")) return undefined;
+  if (/[\x00-\x1f]/.test(trimmed)) return undefined;
+  return trimmed;
+}
+
 
 export function clearBookingHallContext(): void {
   if (typeof window === "undefined") return;
