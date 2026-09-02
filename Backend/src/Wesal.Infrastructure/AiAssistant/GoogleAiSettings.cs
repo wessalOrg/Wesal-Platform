@@ -12,8 +12,15 @@ namespace Wesal.Infrastructure.AiAssistant;
 ///   GoogleAI__MaxContextCharacters -> GoogleAI:MaxContextCharacters
 ///   GoogleAI__TimeoutSeconds       -> GoogleAI:TimeoutSeconds
 ///
-/// The API key is read only from configuration and never committed,
-/// logged, or exposed to the frontend.
+/// Optionally a secondary key/model can be configured for failover resilience:
+///   GoogleAI__ApiKey_2      -> GoogleAI:ApiKey_2
+///   GoogleAI__GeminiModel_2 -> GoogleAI:GeminiModel_2
+///
+/// The secondary key is only used when the primary key fails on a recoverable
+/// condition (429/5xx, timeout, network error, invalid/empty output). Two keys on
+/// the same Google Cloud project share the same quota, so this provides resilience
+/// only, not additional quota. The API keys are read only from configuration and
+/// never committed, logged, or exposed to the frontend.
 /// </summary>
 public sealed class GoogleAiSettings
 {
@@ -22,8 +29,14 @@ public sealed class GoogleAiSettings
     /// <summary>Google AI Studio / Gemini API key. Server-side only.</summary>
     public string ApiKey { get; set; } = string.Empty;
 
+    /// <summary>Optional secondary Gemini API key used only for failover on recoverable failures.</summary>
+    public string ApiKey2 { get; set; } = string.Empty;
+
     /// <summary>Gemini model identifier (e.g. a supported Gemini Flash model).</summary>
     public string GeminiModel { get; set; } = "gemini-3.6-flash";
+
+    /// <summary>Optional secondary Gemini model used only for failover.</summary>
+    public string GeminiModel2 { get; set; } = "gemini-3.6-flash";
 
     /// <summary>Base URL of the Gemini REST API (without model or key).</summary>
     public string BaseUrl { get; set; } = "https://generativelanguage.googleapis.com/v1beta";
