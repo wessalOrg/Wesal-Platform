@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Configuration;
+
 namespace Wesal.Infrastructure.AiAssistant;
 
 /// <summary>
@@ -29,13 +31,17 @@ public sealed class GoogleAiSettings
     /// <summary>Google AI Studio / Gemini API key. Server-side only.</summary>
     public string ApiKey { get; set; } = string.Empty;
 
-    /// <summary>Optional secondary Gemini API key used only for failover on recoverable failures.</summary>
+    /// <summary>Optional secondary Gemini API key used only for failover on recoverable failures.
+    /// Bound from <c>GoogleAI:ApiKey_2</c> (env <c>GoogleAI__ApiKey_2</c>).</summary>
+    [ConfigurationKeyName("ApiKey_2")]
     public string ApiKey2 { get; set; } = string.Empty;
 
     /// <summary>Gemini model identifier (e.g. a supported Gemini Flash model).</summary>
     public string GeminiModel { get; set; } = "gemini-3.6-flash";
 
-    /// <summary>Optional secondary Gemini model used only for failover.</summary>
+    /// <summary>Optional secondary Gemini model used only for failover.
+    /// Bound from <c>GoogleAI:GeminiModel_2</c> (env <c>GoogleAI__GeminiModel_2</c>).</summary>
+    [ConfigurationKeyName("GeminiModel_2")]
     public string GeminiModel2 { get; set; } = "gemini-3.6-flash";
 
     /// <summary>Base URL of the Gemini REST API (without model or key).</summary>

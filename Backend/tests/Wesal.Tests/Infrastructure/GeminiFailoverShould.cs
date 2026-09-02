@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
@@ -393,6 +394,65 @@ public class GeminiFailoverShould
         Assert.NotNull(result);
         Assert.Contains("/models/gemini-3.6-flash:generateContent", primaryUrl);
         Assert.Contains("/models/gemini-2.5-flash:generateContent", secondaryUrl);
+    }
+
+    [Fact]
+    public async Task ConfigBinding_SecondaryEnvVars_PopulateSecondarySettings()
+    {
+        // Guards against the production regression where GoogleAI__ApiKey_2 /
+        // GoogleAI__GeminiModel_2 did not bind to the settings object, leaving the
+        // failover path inactive. The binder must map the underscored key names.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GoogleAI:ApiKey"] = "primary-key",
+                ["GoogleAI:GeminiModel"] = "gemini-3.6-flash",
+                ["GoogleAI:ApiKey_2"] = "secondary-key",
+                ["GoogleAI:GeminiModel_2"] = "gemini-2.5-flash",
+                ["GoogleAI:Enabled"] = "true"
+            })
+            .Build();
+
+        var settings = config.GetSection(GoogleAiSettings.SectionName).Get<GoogleAiSettings>()!;
+
+        Assert.Equal("secondary-key", settings.ApiKey2);
+        Assert.Equal("gemini-2.5-flash", settings.GeminiModel2);
+    }
+
+    [Fact]
+    public async Task GenerateText_FailsOver_WhenSecondaryBoundFromConfig()
+    {
+        // End-to-end check through the binder: a 401 on the primary must switch to
+        // the secondary key that was bound from the GoogleAI__ApiKey_2 config path.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GoogleAI:ApiKey"] = "primary-key",
+                ["GoogleAI:GeminiModel"] = "gemini-3.6-flash",
+                ["GoogleAI:ApiKey_2"] = "secondary-key",
+                ["GoogleAI:GeminiModel_2"] = "gemini-3.6-flash",
+                ["GoogleAI:Enabled"] = "true"
+            })
+            .Build();
+        var settings = config.GetSection(GoogleAiSettings.SectionName).Get<GoogleAiSettings>()!;
+
+        var secondaryCalls = 0;
+        var handler = new FakeHttpHandler(request =>
+        {
+            if (request.Headers.TryGetValues("x-goog-api-key", out var keys) && keys.Contains("secondary-key"))
+            {
+                secondaryCalls++;
+                return Json(HttpStatusCode.OK, SuccessResponse("secondary answer"));
+            }
+            return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+        });
+        var factory = new FakeHttpClientFactory(handler);
+        var service = new GeminiService(factory, Options.Create(settings), NullLogger<GeminiService>.Instance);
+
+        var result = await service.GenerateTextAsync("question", "en", CancellationToken.None);
+
+        Assert.Equal("secondary answer", result);
+        Assert.Equal(1, secondaryCalls);
     }
 
     private static string ExtractModel(HttpRequestMessage request)
