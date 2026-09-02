@@ -65,6 +65,16 @@ export default function RegisterFormCard({
   const [pending, setPending] = useState(false);
   const [success, setSuccess] = useState(previewSuccess);
 
+  const canSubmit =
+    Boolean(accountType) &&
+    fullName.trim().length > 0 &&
+    email.trim().length > 0 &&
+    phoneNumber.trim().length > 0 &&
+    password.length > 0 &&
+    confirmPassword.length > 0 &&
+    !pending &&
+    !success;
+
   const fieldValues: FieldValues = {
     fullName,
     email,
@@ -439,9 +449,9 @@ export default function RegisterFormCard({
 
         <button
           type="submit"
-          disabled={pending || success}
+          disabled={!canSubmit}
           aria-busy={pending || undefined}
-          className="btn-primary mt-1 w-full !min-h-11 !rounded-xl !text-[0.95rem]"
+          className="btn-primary wesal-auth-submit mt-1 w-full !min-h-11 !rounded-xl !text-[0.95rem]"
           data-testid="register-submit"
         >
           {pending ? t("auth.register.form.submitting") : t("auth.register.form.submit")}

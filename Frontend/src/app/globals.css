@@ -156,6 +156,26 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Auth submit: white/idle until required fields are filled */
+button.btn-primary.wesal-auth-submit:disabled {
+  background: #fff;
+  color: #c9a0a3;
+  border: 1px solid var(--wesal-border);
+  box-shadow: none;
+  transform: none;
+  filter: none;
+  opacity: 1;
+}
+
+button.btn-primary.wesal-auth-submit:disabled:hover,
+button.btn-primary.wesal-auth-submit:disabled:active {
+  background: #fff;
+  color: #c9a0a3;
+  box-shadow: none;
+  transform: none;
+  filter: none;
+}
+
 .wesal-modal-scroll {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;

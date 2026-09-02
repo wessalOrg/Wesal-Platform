@@ -51,6 +51,9 @@ export default function LoginFormCard({
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
+  const canSubmit =
+    identifier.trim().length > 0 && password.length > 0 && !pending;
+
   const localizeApiFieldMessage = (field: FieldKey, message: string): string => {
     const lower = message.toLowerCase();
     if (field === "identifier") {
@@ -262,9 +265,9 @@ export default function LoginFormCard({
 
         <button
           type="submit"
-          disabled={pending}
+          disabled={!canSubmit}
           aria-busy={pending || undefined}
-          className="btn-primary mt-1.5 w-full !min-h-12 !rounded-xl !text-base"
+          className="btn-primary wesal-auth-submit mt-1.5 w-full !min-h-12 !rounded-xl !text-base"
           data-testid="login-submit"
         >
           {pending ? t("auth.login.form.submitting") : t("auth.login.form.submit")}
