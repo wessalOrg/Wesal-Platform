@@ -384,6 +384,73 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
   transform-origin: bottom center;
 }
 
+.wesal-ai-panel-resize {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  inset-inline-start: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0 0 0.65rem 0;
+  background:
+    linear-gradient(
+      135deg,
+      transparent 42%,
+      rgba(154, 92, 96, 0.45) 42%,
+      rgba(154, 92, 96, 0.45) 48%,
+      transparent 48%,
+      transparent 58%,
+      rgba(154, 92, 96, 0.55) 58%,
+      rgba(154, 92, 96, 0.55) 64%,
+      transparent 64%
+    );
+  cursor: nwse-resize;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:dir(rtl) .wesal-ai-panel-resize {
+  border-radius: 0 0 0 0.65rem;
+  cursor: nesw-resize;
+  background:
+    linear-gradient(
+      -135deg,
+      transparent 42%,
+      rgba(154, 92, 96, 0.45) 42%,
+      rgba(154, 92, 96, 0.45) 48%,
+      transparent 48%,
+      transparent 58%,
+      rgba(154, 92, 96, 0.55) 58%,
+      rgba(154, 92, 96, 0.55) 64%,
+      transparent 64%
+    );
+}
+
+.wesal-ai-panel-resize:hover,
+.wesal-ai-panel-resize:focus-visible,
+.wesal-ai-panel[data-resizing="true"] .wesal-ai-panel-resize {
+  background-color: rgba(251, 238, 240, 0.9);
+}
+
+.wesal-ai-panel-resize:focus-visible {
+  outline: 2px solid var(--wesal-maroon-soft);
+  outline-offset: 1px;
+}
+
+.wesal-ai-panel[data-resizing="true"] {
+  user-select: none;
+  transition: none;
+}
+
+@media (pointer: coarse) {
+  .wesal-ai-panel-resize {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}
+
 /* Anchored to the floating button — coordinates come from live FAB measurements. */
 .wesal-ai-panel--anchored {
   left: 0;

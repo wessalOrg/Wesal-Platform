@@ -8,14 +8,22 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import AiAssistantFab from "@/components/assistant/AiAssistantFab";
-import AiAssistantInvitation from "@/components/assistant/AiAssistantInvitation";
-import AiAssistantPanel from "@/components/assistant/AiAssistantPanel";
 import { useAiAssistant, type AiAssistantControls } from "@/hooks/useAiAssistant";
 import { useAiInvitation } from "@/hooks/useAiInvitation";
 import { useDraggableFab } from "@/hooks/useDraggableFab";
 import "@/components/assistant/ai-assistant.css";
+
+const AiAssistantPanel = dynamic(() => import("@/components/assistant/AiAssistantPanel"), {
+  ssr: false,
+});
+
+const AiAssistantInvitation = dynamic(
+  () => import("@/components/assistant/AiAssistantInvitation"),
+  { ssr: false },
+);
 
 const PANEL_ID = "wesal-ai-assistant-panel";
 
@@ -105,19 +113,21 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
   return (
     <AiAssistantContext.Provider value={controls}>
       {children}
-      <AiAssistantPanel
-        open={isOpen}
-        id={PANEL_ID}
-        phase={phase}
-        session={session}
-        errorKey={errorKey}
-        unavailableReason={unavailableReason}
-        isRetrying={isRetrying}
-        anchorRef={fabRef}
-        onClose={handleClose}
-        onRetry={retry}
-        onBrowseHalls={closeAssistant}
-      />
+      {isOpen ? (
+        <AiAssistantPanel
+          open={isOpen}
+          id={PANEL_ID}
+          phase={phase}
+          session={session}
+          errorKey={errorKey}
+          unavailableReason={unavailableReason}
+          isRetrying={isRetrying}
+          anchorRef={fabRef}
+          onClose={handleClose}
+          onRetry={retry}
+          onBrowseHalls={closeAssistant}
+        />
+      ) : null}
       <AiAssistantFab
         open={isOpen}
         phase={phase}

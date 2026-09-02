@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { clearAccessToken } from "@/lib/auth-token";
+import { clearStoredAuth } from "@/lib/auth-storage";
 import { fetchSession } from "@/services/session";
 import { GUEST_SESSION, type SessionState } from "@/types/session";
 
@@ -33,11 +34,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void refreshSession();
-  }, [refreshSession]);
+    let cancelled = false;
+    void fetchSession().then((next) => {
+      if (cancelled) return;
+      setSession(next);
+      setStatus("ready");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const logout = useCallback(async () => {
     clearAccessToken();
+    clearStoredAuth();
     setSession(GUEST_SESSION);
     setStatus("ready");
   }, []);

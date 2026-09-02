@@ -32,7 +32,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: LANGUAGE_BOOT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: FAB_POSITION_BOOT_SCRIPT }} />
       </head>
-      <body className={`${cairo.className} min-h-svh overflow-x-hidden font-sans`}>
+      <body className={`${cairo.variable} ${cairo.className} min-h-svh overflow-x-hidden font-sans`}>
         <AuthProvider>
           <LanguageProvider>
             <AiAssistantProvider>{children}</AiAssistantProvider>

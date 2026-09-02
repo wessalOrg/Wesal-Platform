@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import WesalLogo from "@/components/brand/WesalLogo";
+import AuthNavIcons from "@/components/layout/AuthNavIcons";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
-import { useT, useTranslateLang } from "@/i18n";
+import { useTranslateLang } from "@/i18n";
+import { markAuthNavigation } from "@/lib/auth-nav";
 
 const NAV_HREFS = [
   { href: "/", key: "nav.home" },
@@ -25,19 +27,41 @@ function roleLabel(
   return null;
 }
 
-export default function Navbar() {
-  const [open, setOpen] = useState(false);
+export default function Navbar({
+  variant = "default",
+}: {
+  variant?: "default" | "overlay";
+}) {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const [menuPath, setMenuPath] = useState(pathname);
+  const router = useRouter();
   const { lang, t } = useTranslateLang();
   const { session, status, logout } = useAuth();
   const authenticated = session.isAuthenticated;
   const displayName = session.userName?.trim() || t("nav.account");
   const role = roleLabel(session.role, t);
   const separator = lang === "en" ? "," : "،";
+  const overlay = variant === "overlay";
+  const profileLabel = t("nav.profile");
+  const messagesLabel = t("nav.messages");
+
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    if (open) setOpen(false);
+  }
 
   useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+    if (authenticated) return;
+    router.prefetch("/login");
+    router.prefetch("/register");
+  }, [authenticated, router]);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    router.prefetch("/profile");
+    router.prefetch("/messages");
+  }, [authenticated, router]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -62,7 +86,10 @@ export default function Navbar() {
   }, [open]);
 
   return (
-    <header className="wesal-navbar sticky top-0 z-50">
+    <header
+      className={`wesal-navbar ${overlay ? "wesal-navbar--overlay" : "sticky top-0"} z-50`}
+      data-variant={variant}
+    >
       <div className="wesal-navbar-bg" aria-hidden="true" />
       <div className="container-wesal relative z-10">
         <div className="flex h-14 min-w-0 items-center justify-between gap-2 sm:h-16 sm:gap-3">
@@ -101,44 +128,56 @@ export default function Navbar() {
             })}
           </nav>
 
-          <div className="hidden min-w-0 items-center gap-2 lg:flex lg:gap-3">
-            <LanguageSwitcher />
-            {status === "loading" ? (
-              <span className="h-11 w-40 shrink-0 animate-pulse rounded-xl bg-[var(--wesal-pink)]" />
-            ) : authenticated ? (
-              <AuthAccount
-                hello={t("nav.hello")}
-                name={displayName}
-                role={role}
-                logoutLabel={t("nav.logout")}
-                separator={separator}
-                onLogout={() => void logout()}
-              />
-            ) : (
-              <GuestActions
-                login={t("nav.login")}
-                register={t("nav.register")}
-              />
-            )}
-          </div>
+          <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:gap-3">
+            <div className="hidden min-w-0 items-center gap-2 lg:flex lg:gap-3">
+              <LanguageSwitcher />
+              {status === "loading" ? (
+                <span className="h-11 w-40 shrink-0 animate-pulse rounded-xl bg-[var(--wesal-pink)]" />
+              ) : authenticated ? (
+                <AuthAccount
+                  hello={t("nav.hello")}
+                  name={displayName}
+                  role={role}
+                  logoutLabel={t("nav.logout")}
+                  separator={separator}
+                  onLogout={() => void logout()}
+                />
+              ) : (
+                <GuestActions
+                  login={t("nav.login")}
+                  register={t("nav.register")}
+                />
+              )}
+            </div>
 
-          <button
-            type="button"
-            className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)] lg:hidden"
-            aria-expanded={open}
-            aria-controls="mobile-nav"
-            aria-label={t("nav.menu")}
-            onClick={() => setOpen((value) => !value)}
-          >
-            {open ? "✕" : "☰"}
-          </button>
+            {/* Far-left (visual) cluster in RTL: icons sit at the outer edge with the menu */}
+            {authenticated ? (
+              <AuthNavIcons
+                profileLabel={profileLabel}
+                messagesLabel={messagesLabel}
+              />
+            ) : null}
+
+            <button
+              type="button"
+              className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)] lg:hidden"
+              aria-expanded={open}
+              aria-controls="mobile-nav"
+              aria-label={t("nav.menu")}
+              onClick={() => setOpen((value) => !value)}
+            >
+              {open ? "✕" : "☰"}
+            </button>
+          </div>
         </div>
       </div>
 
       {open ? (
         <div
           id="mobile-nav"
-          className="wesal-navbar-mobile max-h-[min(32rem,calc(100svh-3.5rem))] overflow-y-auto border-t border-[var(--wesal-border)]/60 px-5 py-4 lg:hidden"
+          className={`wesal-navbar-mobile max-h-[min(32rem,calc(100svh-3.5rem))] overflow-y-auto border-t border-[var(--wesal-border)]/60 px-5 py-4 lg:hidden ${
+            overlay ? "wesal-navbar-mobile--overlay" : ""
+          }`}
         >
           <div className="flex flex-col gap-3">
             {NAV_HREFS.map((link) => (
@@ -151,6 +190,14 @@ export default function Navbar() {
                 {t(link.key)}
               </Link>
             ))}
+            {authenticated ? (
+              <AuthNavIcons
+                profileLabel={profileLabel}
+                messagesLabel={messagesLabel}
+                stacked
+                onNavigate={() => setOpen(false)}
+              />
+            ) : null}
             <LanguageSwitcher compact />
             {authenticated ? (
               <AuthAccount
@@ -191,19 +238,26 @@ function GuestActions({
   stacked?: boolean;
   onNavigate?: () => void;
 }) {
+  const goAuth = () => {
+    markAuthNavigation();
+    onNavigate?.();
+  };
+
   return (
     <>
       <Link
         href="/login"
+        prefetch
         className={`btn-outline min-h-11 whitespace-nowrap ${stacked ? "w-full" : "shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
-        onClick={onNavigate}
+        onClick={goAuth}
       >
         {login}
       </Link>
       <Link
         href="/register"
+        prefetch
         className={`btn-primary min-h-11 whitespace-nowrap ${stacked ? "w-full" : "shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
-        onClick={onNavigate}
+        onClick={goAuth}
       >
         {register}
       </Link>

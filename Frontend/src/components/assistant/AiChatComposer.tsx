@@ -91,7 +91,7 @@ export default function AiChatComposer({
   return (
     <form
       onSubmit={onSubmit}
-      className="wesal-ai-composer shrink-0 border-t border-[var(--wesal-border)] bg-white px-4 pt-3"
+      className="wesal-ai-composer shrink-0 border-t border-[var(--wesal-border)] bg-white px-4 py-3"
       data-testid="ai-chat-composer"
     >
       <div className="flex items-end gap-2">
@@ -139,9 +139,11 @@ export default function AiChatComposer({
           </svg>
         </button>
       </div>
-      <p className="mt-2 text-center text-[0.65rem] text-[var(--wesal-muted)]">
-        {sending ? t("assistant.chat.sending") : t("assistant.composer.hint")}
-      </p>
+      {sending ? (
+        <p className="mt-2 text-center text-[0.65rem] text-[var(--wesal-muted)]" aria-live="polite">
+          {t("assistant.chat.sending")}
+        </p>
+      ) : null}
     </form>
   );
 }

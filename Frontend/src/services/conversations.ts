@@ -55,6 +55,47 @@ export async function fetchConversation(conversationId: string): Promise<Convers
   return mapResponse(data, "");
 }
 
+export type ConversationSummary = {
+  conversationId: string;
+  hallId: string;
+  hallName: string;
+  otherParticipantName: string;
+  lastMessagePreview: string;
+  lastMessageAt: string | null;
+  messageCount: number;
+  createdAt: string;
+};
+
+type ConversationSummaryResponse = {
+  conversationId?: string;
+  hallId?: string;
+  hallName?: string;
+  otherParticipantName?: string;
+  lastMessagePreview?: string;
+  lastMessageAt?: string | null;
+  messageCount?: number;
+  createdAt?: string;
+};
+
+export async function fetchMyConversations(): Promise<ConversationSummary[]> {
+  const { data } = await api.get<ConversationSummaryResponse[]>("/conversations", {
+    timeout: 8000,
+  });
+
+  if (!Array.isArray(data)) return [];
+
+  return data.map((item) => ({
+    conversationId: String(item.conversationId ?? ""),
+    hallId: String(item.hallId ?? ""),
+    hallName: item.hallName?.trim() || t("common.hall"),
+    otherParticipantName: item.otherParticipantName?.trim() || t("common.user"),
+    lastMessagePreview: item.lastMessagePreview?.trim() || "",
+    lastMessageAt: item.lastMessageAt ?? null,
+    messageCount: Number(item.messageCount ?? 0),
+    createdAt: item.createdAt ?? new Date().toISOString(),
+  }));
+}
+
 export function conversationErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 401) {

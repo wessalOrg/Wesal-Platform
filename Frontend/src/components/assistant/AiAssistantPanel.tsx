@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type AnimationEvent as ReactAnimationEvent,
+  type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
 import AiAssistantAvatar from "@/components/assistant/AiAssistantAvatar";
@@ -49,8 +50,16 @@ const PANEL_EXIT_FALLBACK_MS = 320;
 /** Prefer rising out of the FAB; fall back to the sides when there is no room above. */
 const PANEL_SIDES = ["above", "left", "right", "below"] as const;
 const CRITICAL_UI_SELECTOR = "header.wesal-navbar, [data-wesal-critical]";
+const PANEL_MIN_WIDTH_PX = 280;
+const PANEL_MIN_HEIGHT_PX = 320;
+const PANEL_EDGE_GAP_PX = 12;
 
 type PanelMotion = "closed" | "in" | "open" | "out";
+type PanelSize = { width: number; height: number };
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 function prefersReducedMotion(): boolean {
   return (
@@ -101,6 +110,22 @@ function panelWidthForViewport(viewportWidth: number): number {
   return Math.min(416, viewportWidth - 48);
 }
 
+function panelMaxHeightForViewport(
+  viewport: { width: number; height: number },
+  anchorRect: DOMRect,
+): number {
+  const gapAbove = Math.max(160, anchorRect.top - 24);
+  const gapBelow = Math.max(
+    160,
+    viewport.height - (anchorRect.top + anchorRect.height) - 24,
+  );
+  return Math.min(
+    viewport.width < 640 ? viewport.height * 0.7 : viewport.height * 0.78,
+    608,
+    Math.max(gapAbove, gapBelow, 280),
+  );
+}
+
 const STATUS_KEY: Record<AiAssistantPhase, string> = {
   idle: "assistant.status.online",
   loading: "assistant.status.connecting",
@@ -126,6 +151,8 @@ export default function AiAssistantPanel({
   const t = useT();
   const panelRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef(0);
+  const userSizeRef = useRef<PanelSize | null>(null);
+  const resizingRef = useRef(false);
   const failed = phase === "error" || phase === "unavailable";
   // Keep the failure on screen while retrying instead of flashing back to a spinner.
   const showFailure = failed || (isRetrying && errorKey !== null);
@@ -154,24 +181,35 @@ export default function AiAssistantPanel({
     if (!panel || !anchor) return;
 
     const viewport = { width: window.innerWidth, height: window.innerHeight };
-    const width = panelWidthForViewport(viewport.width);
+    const anchorRect = anchor.getBoundingClientRect();
+    const maxWidth = Math.max(PANEL_MIN_WIDTH_PX, viewport.width - PANEL_EDGE_GAP_PX * 2);
+    const maxHeight = Math.max(
+      PANEL_MIN_HEIGHT_PX,
+      viewport.height - PANEL_EDGE_GAP_PX * 2,
+    );
+    const defaultWidth = panelWidthForViewport(viewport.width);
+    const defaultMaxHeight = panelMaxHeightForViewport(viewport, anchorRect);
+    const custom = userSizeRef.current;
+
+    const width = custom
+      ? clamp(custom.width, PANEL_MIN_WIDTH_PX, maxWidth)
+      : defaultWidth;
     panel.style.width = `${width}px`;
 
-    const anchorRect = anchor.getBoundingClientRect();
-    const gapAbove = Math.max(160, anchorRect.top - 24);
-    const gapBelow = Math.max(160, viewport.height - (anchorRect.top + anchorRect.height) - 24);
-    const maxHeight = Math.min(
-      viewport.width < 640 ? viewport.height * 0.7 : viewport.height * 0.78,
-      608,
-      Math.max(gapAbove, gapBelow, 280),
-    );
-    panel.style.maxHeight = `${maxHeight}px`;
+    if (custom) {
+      const height = clamp(custom.height, PANEL_MIN_HEIGHT_PX, maxHeight);
+      panel.style.height = `${height}px`;
+      panel.style.maxHeight = `${height}px`;
+    } else {
+      panel.style.height = "";
+      panel.style.maxHeight = `${defaultMaxHeight}px`;
+    }
 
     // Prefer offset sizes so an in-progress scale animation does not shrink the box
     // used for placement and pull the panel into the FAB.
     const size = {
       width: panel.offsetWidth || width,
-      height: panel.offsetHeight || maxHeight,
+      height: panel.offsetHeight || (custom?.height ?? defaultMaxHeight),
     };
     const placement = placeBubble({
       anchor: {
@@ -188,10 +226,10 @@ export default function AiAssistantPanel({
 
     if (!placement) {
       const left = Math.min(
-        Math.max(12, anchorRect.left + anchorRect.width / 2 - width / 2),
-        viewport.width - width - 12,
+        Math.max(PANEL_EDGE_GAP_PX, anchorRect.left + anchorRect.width / 2 - width / 2),
+        viewport.width - width - PANEL_EDGE_GAP_PX,
       );
-      const top = Math.max(12, anchorRect.top - size.height - 12);
+      const top = Math.max(PANEL_EDGE_GAP_PX, anchorRect.top - size.height - PANEL_EDGE_GAP_PX);
       panel.style.left = `${left}px`;
       panel.style.top = `${top}px`;
       panel.dataset.placement = "above";
@@ -206,9 +244,67 @@ export default function AiAssistantPanel({
   }, [anchorRef]);
 
   const reposition = useCallback(() => {
+    if (resizingRef.current) return;
     window.cancelAnimationFrame(frameRef.current);
     frameRef.current = window.requestAnimationFrame(place);
   }, [place]);
+
+  const onResizePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const handle = event.currentTarget;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startWidth = panel.offsetWidth;
+    const startHeight = panel.offsetHeight;
+    const isRtl = document.documentElement.dir === "rtl";
+    const maxWidth = () =>
+      Math.max(PANEL_MIN_WIDTH_PX, window.innerWidth - PANEL_EDGE_GAP_PX * 2);
+    const maxHeight = () =>
+      Math.max(PANEL_MIN_HEIGHT_PX, window.innerHeight - PANEL_EDGE_GAP_PX * 2);
+
+    resizingRef.current = true;
+    panel.dataset.resizing = "true";
+    handle.setPointerCapture(event.pointerId);
+
+    const onMove = (moveEvent: PointerEvent) => {
+      // Handle sits at top-inline-start: grow when dragging away from the FAB side.
+      const widthDelta = isRtl ? moveEvent.clientX - startX : startX - moveEvent.clientX;
+      const heightDelta = startY - moveEvent.clientY;
+      const nextSize: PanelSize = {
+        width: clamp(startWidth + widthDelta, PANEL_MIN_WIDTH_PX, maxWidth()),
+        height: clamp(startHeight + heightDelta, PANEL_MIN_HEIGHT_PX, maxHeight()),
+      };
+      userSizeRef.current = nextSize;
+      panel.style.width = `${nextSize.width}px`;
+      panel.style.height = `${nextSize.height}px`;
+      panel.style.maxHeight = `${nextSize.height}px`;
+      place();
+    };
+
+    const onUp = (upEvent: PointerEvent) => {
+      resizingRef.current = false;
+      panel.dataset.resizing = "false";
+      try {
+        handle.releasePointerCapture(upEvent.pointerId);
+      } catch {
+        /* already released */
+      }
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+      place();
+    };
+
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  };
 
   useLayoutEffect(() => {
     if (!isVisible) return;
@@ -349,6 +445,13 @@ export default function AiAssistantPanel({
       onAnimationEnd={handleAnimationEnd}
       className="wesal-ai-panel wesal-ai-panel--anchored fixed z-[105] flex min-w-0 flex-col overflow-hidden rounded-3xl border border-[var(--wesal-border)] bg-white shadow-[0_24px_60px_rgba(60,35,30,0.22)] outline-none"
     >
+      <button
+        type="button"
+        aria-label={t("assistant.panel.resize")}
+        data-testid="ai-assistant-resize"
+        onPointerDown={onResizePointerDown}
+        className="wesal-ai-panel-resize"
+      />
       <div className="wesal-ai-panel-header flex shrink-0 items-center gap-3 px-4 py-3.5">
         <span className="wesal-ai-avatar flex h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#f3e4e2] ring-2 ring-white/80">
           <AiAssistantAvatar />
