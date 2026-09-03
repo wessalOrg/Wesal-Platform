@@ -159,6 +159,14 @@ export function mapLoginApiFieldErrors(
   return mapped;
 }
 
+export function isUnauthorizedApiError(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status === 401;
+}
+
+export function isForbiddenApiError(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status === 403;
+}
+
 /** Invalid login credentials (generic — never reveal whether the account exists). */
 export function isInvalidLoginCredentialsError(error: ApiError): boolean {
   if (error.status === 401) return true;

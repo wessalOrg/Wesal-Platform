@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { fetchHallDetails } from "@/services/halls";
 import type { HallDetail, HallDetailsLoadResult } from "@/types/hall";
 
@@ -10,6 +11,7 @@ type LoadState =
   | { phase: "fatal"; message: string };
 
 export function useHallDetails(hallId: string) {
+  const { session, status: authStatus } = useAuth();
   const [reloadKey, setReloadKey] = useState(0);
   const [state, setState] = useState<LoadState>({ phase: "loading" });
 
@@ -18,6 +20,11 @@ export function useHallDetails(hallId: string) {
   }, []);
 
   useEffect(() => {
+    if (authStatus !== "ready") {
+      setState({ phase: "loading" });
+      return;
+    }
+
     let active = true;
     setState({ phase: "loading" });
 
@@ -38,7 +45,7 @@ export function useHallDetails(hallId: string) {
     return () => {
       active = false;
     };
-  }, [hallId, reloadKey]);
+  }, [hallId, reloadKey, authStatus, session.isAuthenticated]);
 
   const hall: HallDetail | undefined =
     state.phase === "ready"

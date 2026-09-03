@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/i18n";
@@ -10,14 +10,21 @@ import { getStoredAuth } from "@/lib/auth-storage";
 export default function ProfileView() {
   const t = useT();
   const router = useRouter();
-  const { session, status, logout } = useAuth();
+  const { session, status, logout, isLoggingOut } = useAuth();
+  const hadSessionRef = useRef(false);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session.isAuthenticated) {
-      router.replace("/login?redirect=/profile");
+    if (status === "loading" || isLoggingOut) return;
+    if (session.isAuthenticated) {
+      hadSessionRef.current = true;
+      return;
     }
-  }, [router, session.isAuthenticated, status]);
+    if (hadSessionRef.current) {
+      hadSessionRef.current = false;
+      return;
+    }
+    router.replace("/login?redirect=/profile");
+  }, [isLoggingOut, router, session.isAuthenticated, status]);
 
   if (status === "loading" || !session.isAuthenticated) {
     return (
@@ -76,8 +83,10 @@ export default function ProfileView() {
         <button
           type="button"
           className="btn-outline min-h-11"
+          disabled={isLoggingOut}
+          aria-busy={isLoggingOut || undefined}
           onClick={() => {
-            void logout().then(() => router.push("/"));
+            void logout();
           }}
         >
           {t("nav.logout")}

@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { GoldStar } from "@/components/ui/GoldStar";
 import HallMedia from "@/components/halls/HallMedia";
+import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
+import { buildRegisterRedirectPath } from "@/lib/auth-storage";
+import { buildHallDetailsPath } from "@/lib/booking-intent";
+import type { HallActionPermissions } from "@/lib/hall-action-permissions";
 import {
   localizeBookedSummary,
   localizeHallName,
@@ -29,6 +33,8 @@ export default function CatalogHallCard({
 }: CatalogHallCardProps) {
   const t = useT();
   const lang = useUiLang();
+  const permissions = useHallPermissions();
+  const bookHref = catalogBookHref(hall.id, permissions);
   const name = localizeHallName(hall.id, hall.name, lang);
   const location = localizeLocation(hall.location, lang);
   const priceLabel = localizePriceLabel(hall.priceLabel, lang);
@@ -144,9 +150,9 @@ export default function CatalogHallCard({
               </span>
             ))}
           </div>
-          {showBookButton ? (
+          {showBookButton && bookHref ? (
             <Link
-              href={`/register?redirect=/halls/${hall.id}&intent=book`}
+              href={bookHref}
               className="btn-primary !min-h-9 shrink-0 !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b]"
               onClick={(event) => event.stopPropagation()}
             >
@@ -157,6 +163,13 @@ export default function CatalogHallCard({
       </div>
     </article>
   );
+}
+
+function catalogBookHref(hallId: string, permissions: HallActionPermissions) {
+  if (!permissions.authReady) return null;
+  if (permissions.canBook) return buildHallDetailsPath(hallId, true);
+  if (permissions.isGuest) return buildRegisterRedirectPath(hallId);
+  return null;
 }
 
 export function isHallOpen(hall: FeaturedHall) {

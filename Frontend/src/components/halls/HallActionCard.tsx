@@ -1,33 +1,39 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useT } from "@/i18n";
 import type { HallSlotPrice } from "@/types/hall";
 
 type HallActionCardProps = {
   slotPrices: HallSlotPrice[];
-  ownerPhone?: string | null;
   onBook: () => void;
   disabled?: boolean;
   bookPending?: boolean;
   isGuest?: boolean;
+  canBook?: boolean;
+  showContact?: boolean;
   loginHref?: string;
   registerHref?: string;
   onGuestAuthNavigate?: () => void;
+  contactSlot?: ReactNode;
 };
 
 export default function HallActionCard({
   slotPrices,
-  ownerPhone,
   onBook,
   disabled = false,
   bookPending = false,
   isGuest = false,
+  canBook = false,
+  showContact = false,
   loginHref = "/login",
   registerHref = "/register",
   onGuestAuthNavigate,
+  contactSlot,
 }: HallActionCardProps) {
   const t = useT();
+  const showGuestAuth = isGuest && !disabled;
 
   return (
     <aside
@@ -64,56 +70,48 @@ export default function HallActionCard({
         )}
       </ul>
 
-      {isGuest ? (
+      {showGuestAuth ? (
         <p className="mt-4 text-xs leading-6 text-[var(--wesal-muted)]">
           {t("halls.details.guestBookingHint")}
         </p>
       ) : null}
 
-      <div className="mt-5 space-y-2.5">
-        <button
-          type="button"
-          onClick={onBook}
-          disabled={disabled || bookPending}
-          className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
-          data-testid="hall-book-button"
-        >
-          {bookPending ? t("common.loading") : t("halls.details.pressToBook")}
-        </button>
-
-        {isGuest ? (
-          <div className="grid grid-cols-2 gap-2">
-            <Link
-              href={loginHref}
-              onClick={onGuestAuthNavigate}
-              className="btn-outline w-full text-center text-xs sm:text-sm"
+      {canBook || showGuestAuth || showContact ? (
+        <div className="mt-5 space-y-2.5">
+          {canBook ? (
+            <button
+              type="button"
+              onClick={onBook}
+              disabled={disabled || bookPending}
+              className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
+              data-testid="hall-book-button"
             >
-              {t("nav.login")}
-            </Link>
-            <Link
-              href={registerHref}
-              onClick={onGuestAuthNavigate}
-              className="btn-outline w-full text-center text-xs sm:text-sm"
-            >
-              {t("nav.register")}
-            </Link>
-          </div>
-        ) : null}
+              {bookPending ? t("common.loading") : t("halls.details.pressToBook")}
+            </button>
+          ) : null}
 
-        {ownerPhone ? (
-          <a
-            href={`tel:${ownerPhone.replace(/\s+/g, "")}`}
-            className="btn-outline w-full"
-            data-testid="hall-contact-owner"
-          >
-            {t("halls.details.contactOwner")}
-          </a>
-        ) : (
-          <button type="button" className="btn-outline w-full" disabled>
-            {t("halls.details.contactOwner")}
-          </button>
-        )}
-      </div>
+          {showGuestAuth ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href={loginHref}
+                onClick={onGuestAuthNavigate}
+                className="btn-outline w-full text-center text-xs sm:text-sm"
+              >
+                {t("nav.login")}
+              </Link>
+              <Link
+                href={registerHref}
+                onClick={onGuestAuthNavigate}
+                className="btn-outline w-full text-center text-xs sm:text-sm"
+              >
+                {t("nav.register")}
+              </Link>
+            </div>
+          ) : null}
+
+          {showContact ? contactSlot : null}
+        </div>
+      ) : null}
     </aside>
   );
 }

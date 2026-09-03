@@ -14,6 +14,7 @@ import HallGuestFeedbackPrompt from "@/components/halls/HallGuestFeedbackPrompt"
 import HallRatingPanel from "@/components/halls/HallRatingPanel";
 import { DEMO_HALL_REVIEWS, findHallDetailsFallback } from "@/constants/hallDetailsFallback";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useT } from "@/i18n";
 import { localizeHallDetails, localizePriceLabel } from "@/lib/localize-hall-display";
 import { fetchHallComments, mapCommentToReview } from "@/services/comments";
@@ -32,9 +33,6 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   const lang = useUiLang();
   const router = useRouter();
   const { session, status: authStatus } = useAuth();
-  const authReady = authStatus === "ready";
-  const isGuest = authReady && !session.isAuthenticated;
-  const canBook = authReady && session.isAuthenticated;
   const local = findHallDetailsFallback(hallId);
   const [loadedId, setLoadedId] = useState(hallId);
   const [status, setStatus] = useState<ViewStatus>(local ? "ready" : "loading");
@@ -46,6 +44,13 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   const [bookingSelection, setBookingSelection] = useState<BookingSelection | null>(
     null,
   );
+  const { canBook, canContactOwner, isGuest, isOwnHall } = useHallPermissions(hall);
+
+  useEffect(() => {
+    if (canBook) return;
+    setBookingOpen(false);
+    setBookingSelection(null);
+  }, [canBook]);
 
   if (loadedId !== hallId) {
     setLoadedId(hallId);
@@ -56,6 +61,8 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   }
 
   useEffect(() => {
+    if (authStatus !== "ready") return;
+
     let active = true;
     const cached = findHallDetailsFallback(hallId);
 
@@ -91,7 +98,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
     return () => {
       active = false;
     };
-  }, [hallId, reloadKey]);
+  }, [hallId, reloadKey, authStatus, session.isAuthenticated]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -293,7 +300,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             </section>
           ) : null}
 
-          {!viewHall.isOwner && canBook ? (
+          {canBook ? (
             <HallBookingPanel
               open={bookingOpen}
               hallName={viewHall.name}
@@ -328,7 +335,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
 
             <HallRatingPanel
               hallId={viewHall.id}
-              isHallOwner={Boolean(viewHall.isOwner)}
+              isHallOwner={isOwnHall}
               onRated={({ averageRating, totalRatings }) => {
                 setHall((current) =>
                   current
@@ -344,7 +351,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
 
             <HallCommentPanel
               hallId={viewHall.id}
-              isHallOwner={Boolean(viewHall.isOwner)}
+              isHallOwner={isOwnHall}
               onSubmitted={(review) => {
                 setHall((current) =>
                   current
@@ -358,11 +365,11 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
 
             <HallGuestFeedbackPrompt
               hallId={viewHall.id}
-              isHallOwner={Boolean(viewHall.isOwner)}
+              isHallOwner={isOwnHall}
             />
           </section>
 
-          {viewHall.isOwner ? (
+          {isOwnHall ? (
             <p
               className="mt-6 rounded-2xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-start text-sm leading-7 text-[var(--wesal-muted)]"
               data-testid="hall-actions-owner"
@@ -382,43 +389,53 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
         </div>
         </div>
 
-          {!viewHall.isOwner && viewHall.isAvailable ? (
+          {!isOwnHall && viewHall.isAvailable && (isGuest || canContactOwner || canBook) ? (
             <div
               className="shrink-0 border-t border-[var(--wesal-border)] bg-white px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8"
               data-testid="hall-actions"
             >
-              <div className="flex gap-2 sm:gap-3">
-                <div className="min-w-0 flex-1">
-                  <HallContactButton
-                    hallId={viewHall.id}
-                    isOwnHall={false}
-                    isAvailable={viewHall.isAvailable}
-                    onOpened={onClose}
-                  />
-                </div>
-                {isGuest ? (
+              {isGuest ? (
+                <div className="flex gap-2 sm:gap-3">
+                  <Link
+                    href={`/login?redirect=/halls/${viewHall.id}&intent=book`}
+                    className="btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px]"
+                  >
+                    {t("nav.login")}
+                  </Link>
                   <Link
                     href={`/register?redirect=/halls/${viewHall.id}&intent=book`}
-                    className="btn-primary min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:!min-h-12 sm:!text-[15px]"
-                    data-testid="hall-book-button"
+                    className="btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px]"
                   >
-                    {t("halls.details.bookNow")}
+                    {t("nav.register")}
                   </Link>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn-primary min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:!min-h-12 sm:!text-[15px]"
-                    data-testid="hall-book-button"
-                    disabled={!canBook}
-                    onClick={() => {
-                      setBookingSelection(null);
-                      setBookingOpen(true);
-                    }}
-                  >
-                    {canBook ? t("halls.details.bookNow") : "…"}
-                  </button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="flex gap-2 sm:gap-3">
+                  {canContactOwner ? (
+                    <div className="min-w-0 flex-1">
+                      <HallContactButton
+                        hallId={viewHall.id}
+                        isOwnHall={false}
+                        isAvailable={viewHall.isAvailable}
+                        onOpened={onClose}
+                      />
+                    </div>
+                  ) : null}
+                  {canBook ? (
+                    <button
+                      type="button"
+                      className="btn-primary min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:!min-h-12 sm:!text-[15px]"
+                      data-testid="hall-book-button"
+                      onClick={() => {
+                        setBookingSelection(null);
+                        setBookingOpen(true);
+                      }}
+                    >
+                      {t("halls.details.bookNow")}
+                    </button>
+                  ) : null}
+                </div>
+              )}
             </div>
           ) : null}
         </div>

@@ -1,3 +1,4 @@
+import { clearAccessToken } from "@/lib/auth-token";
 import {
   buildHallDetailsPath,
   withBookingIntent,
@@ -40,6 +41,12 @@ export function clearStoredAuth(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(AUTH_STORAGE_KEY);
   window.dispatchEvent(new Event("wesal-auth-change"));
+}
+
+/** Clears access token + persisted auth payload. Does not touch unrelated storage. */
+export function clearAuthSession(): void {
+  clearAccessToken();
+  clearStoredAuth();
 }
 
 const BOOKING_HALL_KEY = "wesal_booking_hall";

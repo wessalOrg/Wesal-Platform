@@ -73,6 +73,7 @@ type ApiFeaturedHall = {
   images?: string[];
   contactPhone?: string | null;
   ownerPhone?: string | null;
+  isOwner?: boolean;
   status?: number | string;
   isActive?: boolean;
   availability?: ApiAvailabilityDay[];
@@ -375,6 +376,7 @@ function mapApiHallDetail(hall: ApiFeaturedHall, index: number): HallDetail {
     slotPrices: mapSlotPrices(hall, index),
     ownerPhone: hall.contactPhone ?? hall.ownerPhone ?? fallback.ownerPhone ?? null,
     isActive: isHallActive(hall),
+    isOwner: Boolean(hall.isOwner),
     rating: hall.rating ?? fallback.rating ?? null,
     reviewCount: hall.reviewCount ?? fallback.reviewCount ?? null,
     availabilityDays,

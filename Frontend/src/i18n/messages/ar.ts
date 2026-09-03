@@ -127,8 +127,6 @@ const ar: MessageCatalog = {
     "اعرض قاعتك على وصال، وكن أقرب إلى العملاء الباحثين عن المكان المناسب لمناسباتهم. نظّم تفاصيل قاعتك ومواعيدها وطلبات الحجز بسهولة، واستفد من أدوات تساعدك على تعزيز حضورك والتواصل مع عملائك في مكان واحد.",
   "home.owner.ctaPrimary": "أضف قاعتك الآن",
   "home.owner.ctaSecondary": "اكتشف المزايا",
-  "home.owner.priceNote":
-    "استثمر في حضور قاعتك بـ 120 ₪ شهريًا\nما يعادل 4 ₪ يوميًا فقط.",
 
   "halls.catalog.title": "القاعات",
   "halls.catalog.loading": "جاري تحميل القاعات…",
@@ -156,16 +154,16 @@ const ar: MessageCatalog = {
   "halls.catalog.empty": "لا توجد قاعات مطابقة لبحثك حالياً.",
   "halls.catalog.emptyApproved": "لا توجد قاعات معتمدة حالياً.",
   "halls.catalog.emptyPastHint":
-    "عدّلي التاريخ ليوم اليوم أو لتاريخ قادم ثم اضغطي بحث.",
+    "يرجى تعديل التاريخ ليوم اليوم أو لتاريخ قادم ثم الضغط على بحث.",
   "halls.catalog.emptyFilterHint":
-    "جرّبي تخفيف الفلاتر (الاسم، المنطقة، التاريخ، أو الفترة).",
-  "halls.catalog.emptyLaterHint": "عُد لاحقاً أو أعدّي المحاولة بعد قليل.",
+    "يمكن تخفيف الفلاتر (الاسم، المنطقة، التاريخ، أو الفترة).",
+  "halls.catalog.emptyLaterHint": "يمكن العودة لاحقاً أو إعادة المحاولة بعد قليل.",
   "halls.catalog.offline":
     "تعذر الاتصال بالخادم حالياً. يتم عرض قاعات تجريبية.",
   "halls.catalog.searchOffline":
     "تعذر تنفيذ البحث من الخادم. يتم التصفية محلياً.",
   "halls.catalog.pastDate":
-    "التاريخ الذي أدخلتيه قد مضى. اختاري تاريخ اليوم أو تاريخاً قادماً.",
+    "التاريخ الذي تم إدخاله قد مضى. يرجى اختيار تاريخ اليوم أو تاريخاً قادماً.",
   "halls.catalog.pastDateShort": "لا يمكن البحث بتاريخ مضى.",
   "halls.catalog.connectionError": "تعذر الاتصال بالخادم.",
   "halls.catalog.searchError": "تعذر تنفيذ البحث.",
@@ -196,19 +194,19 @@ const ar: MessageCatalog = {
   "halls.details.offline":
     "تعذر الاتصال بالخادم حاليًا. يتم عرض بيانات تجريبية.",
   "halls.details.ownerBanner":
-    "أنت مالك هذه القاعة — لا يظهر زر التواصل أو الحجز على قاعتك.",
+    "هذا الحساب يملك هذه القاعة — لا يظهر زر التواصل أو الحجز عليها.",
   "halls.details.unavailableActions":
     "هذه القاعة غير متاحة أو مقفلة حالياً، لذلك تم إيقاف التواصل والحجز.",
   "halls.details.guestBookingHint":
-    "أنشئ حساباً أو سجّل الدخول لاختيار تاريخ الحجز والفترة. عند الضغط على «اضغط للحجز» سيتم توجيهك لصفحة التسجيل مع حفظ هذه القاعة.",
+    "يرجى إنشاء حساب أو تسجيل الدخول لاختيار تاريخ الحجز والفترة. عند الضغط على «اضغط للحجز» يتم التوجيه لصفحة التسجيل مع حفظ هذه القاعة.",
   "halls.details.bookNow": "احجز الآن",
   "halls.details.slotPrices": "أسعار الفترات",
   "halls.details.pressToBook": "اضغط للحجز",
   "halls.details.contactOwner": "تواصل مع صاحب الصالة",
 
   "halls.contact.cta": "تواصل معنا",
-  "halls.contact.guestHint": "للتواصل سجّلي الدخول أو",
-  "halls.contact.createAccount": "أنشئي حساباً",
+  "halls.contact.guestHint": "للتواصل يرجى تسجيل الدخول أو",
+  "halls.contact.createAccount": "إنشاء حساب",
   "halls.contact.unavailable":
     "القاعة غير متاحة أو مقفلة حالياً، ولا يمكن بدء محادثة.",
   "halls.contact.restricted":
@@ -218,7 +216,7 @@ const ar: MessageCatalog = {
 
   "halls.booking.title": "اختيار موعد الحجز",
   "halls.booking.selected": "المختار:",
-  "halls.booking.pickHint": "اختر تاريخاً وفترة متاحة للمتابعة.",
+  "halls.booking.pickHint": "يرجى اختيار تاريخ وفترة متاحة للمتابعة.",
   "halls.booking.continue": "متابعة الحجز",
   "halls.booking.availability": "التوفر والحجز",
   "halls.booking.selectedBadge": "مختار",
@@ -226,26 +224,26 @@ const ar: MessageCatalog = {
   "halls.booking.availableBadge": "متاح",
   "halls.booking.emptyDays": "لا توجد أيام توفر معروضة حالياً.",
 
-  "halls.rating.title": "قيّمي هذه القاعة",
-  "halls.rating.edit": "عدّلي تقييمك",
+  "halls.rating.title": "تقييم هذه القاعة",
+  "halls.rating.edit": "تعديل التقييم",
   "halls.rating.submit": "إرسال التقييم",
   "halls.rating.saved": "تم حفظ تقييمك.",
   "halls.rating.ownerBlocked": "لا يمكن لصاحب القاعة تقييم قاعته.",
-  "halls.rating.loginRequired": "سجّلي الدخول لتقييم القاعة.",
+  "halls.rating.loginRequired": "يرجى تسجيل الدخول لتقييم القاعة.",
 
-  "halls.comment.title": "أضيفي تعليقك",
+  "halls.comment.title": "إضافة تعليق",
   "halls.comment.submit": "إرسال التعليق",
   "halls.comment.submitting": "جاري النشر…",
   "halls.comment.saved": "تم نشر تعليقك.",
   "halls.comment.empty": "لا توجد تعليقات بعد.",
-  "halls.comment.placeholder": "اكتبي تجربتك مع القاعة…",
+  "halls.comment.placeholder": "شاركنا تجربتك مع القاعة…",
   "halls.comment.tooShort": "التعليق قصير جداً.",
   "halls.comment.tooLong": "التعليق طويل جداً.",
 
   "halls.guest.prompt": "لإضافة تقييم أو تعليق،",
-  "halls.guest.login": "سجّل الدخول",
+  "halls.guest.login": "تسجيل الدخول",
   "halls.guest.or": "و",
-  "halls.guest.join": "انضم إلينا",
+  "halls.guest.join": "إنشاء حساب",
 
   "halls.gallery.empty":
     "لا توجد صور لهذه القاعة — يتم عرض صورة افتراضية.",
@@ -260,11 +258,11 @@ const ar: MessageCatalog = {
   "halls.price.perDay": "{price} / يوم",
 
   "auth.login.title": "مرحبًا بعودتك",
-  "auth.login.subtitle": "سجّل دخولك لمتابعة تجربتك مع وصال",
+  "auth.login.subtitle": "تسجيل الدخول لمتابعة تجربتك مع وصال",
   "auth.login.form.username": "البريد الالكتروني او رقم الهاتف",
-  "auth.login.form.usernamePlaceholder": "أدخل البريد الالكتروني او رقم الهاتف",
+  "auth.login.form.usernamePlaceholder": "البريد الالكتروني او رقم الهاتف",
   "auth.login.form.password": "كلمة المرور",
-  "auth.login.form.passwordPlaceholder": "أدخل كلمة المرور",
+  "auth.login.form.passwordPlaceholder": "كلمة المرور",
   "auth.login.form.submit": "تسجيل الدخول",
   "auth.login.form.submitting": "جاري تسجيل الدخول…",
   "auth.login.form.showPassword": "إظهار كلمة المرور",
@@ -277,16 +275,16 @@ const ar: MessageCatalog = {
   "auth.login.form.error.password": "يرجى إدخال كلمة المرور",
   "auth.login.form.error.passwordInvalid": "كلمة المرور غير صالحة",
   "auth.login.form.error.invalidCredentials":
-    "بيانات الدخول غير صحيحة. تحققي من البريد/الهاتف وكلمة المرور ثم حاولي مرة أخرى.",
+    "بيانات الدخول غير صحيحة. يرجى التحقق من البريد/الهاتف وكلمة المرور ثم المحاولة مرة أخرى.",
   "auth.login.form.error.blocked":
-    "تم إيقاف الحساب مؤقتًا. حاولي مرة أخرى بعد حوالي {minutes} دقيقة.",
+    "تم إيقاف الحساب مؤقتًا. يمكن المحاولة مرة أخرى بعد حوالي {minutes} دقيقة.",
   "auth.login.form.error.blockedGeneric":
-    "تم إيقاف الحساب مؤقتًا بسبب محاولات متكررة. حاولي لاحقًا.",
+    "تم إيقاف الحساب مؤقتًا بسبب محاولات متكررة. يرجى المحاولة لاحقًا.",
   "auth.login.form.error.network":
-    "تعذر الاتصال بالخادم. تحققي من الإنترنت وحاولي مرة أخرى.",
-  "auth.login.form.error.generic": "تعذر تسجيل الدخول. تحققي من البيانات وحاولي مرة أخرى.",
+    "تعذر الاتصال بالخادم. يرجى التحقق من الإنترنت ثم المحاولة مرة أخرى.",
+  "auth.login.form.error.generic": "تعذر تسجيل الدخول. يرجى التحقق من البيانات ثم المحاولة مرة أخرى.",
   "auth.login.noAccount": "ليس لديك حساب ؟",
-  "auth.login.registerLink": "قم بإنشاء حساب",
+  "auth.login.registerLink": "إنشاء حساب",
   "auth.register.title": "إنشاء حساب جديد",
   "auth.register.subtitle":
     "انضم إلينا، ابحث عن قاعة مناسبة أو أدر قاعتك وحجوزاتك بكل سهولة.",
@@ -305,7 +303,7 @@ const ar: MessageCatalog = {
   "auth.register.feature.bookingBody":
     "وصال يقرّب أصحاب القاعات والباحثين عنها لتجربة أكثر سهولة ووضوحًا.",
   "auth.register.welcome": "أهلًا بك في وصال",
-  "auth.register.chooseType": "اختر نوع حسابك، ثم أكمل بياناتك للبدء.",
+  "auth.register.chooseType": "يرجى اختيار نوع الحساب، ثم إكمال البيانات للبدء.",
   "auth.register.type.userTitle": "باحث عن قاعة",
   "auth.register.type.userBody": "اكتشف خيارات متنوعة، واختر القاعة التي تليق بمناسبتك.",
   "auth.register.type.ownerTitle": "صاحب قاعة",
@@ -318,13 +316,13 @@ const ar: MessageCatalog = {
   "auth.register.form.accountTypeLabel": "نوع الحساب:",
   "auth.register.form.changeType": "تغيير",
   "auth.register.form.fullName": "اسم المستخدم",
-  "auth.register.form.fullNamePlaceholder": "ادخل اسمك",
+  "auth.register.form.fullNamePlaceholder": "اسم المستخدم",
   "auth.register.form.email": "البريد الإلكتروني",
   "auth.register.form.emailPlaceholder": "example@gmail.com",
   "auth.register.form.phone": "رقم الهاتف",
   "auth.register.form.phonePlaceholder": "05x xxx xxxx",
   "auth.register.form.password": "كلمة المرور",
-  "auth.register.form.passwordPlaceholder": "ادخل كلمة المرور",
+  "auth.register.form.passwordPlaceholder": "كلمة المرور",
   "auth.register.form.confirmPassword": "تأكيد كلمة المرور",
   "auth.register.form.confirmPasswordPlaceholder": "********",
   "auth.register.form.submit": "إنشاء حساب",
@@ -354,30 +352,30 @@ const ar: MessageCatalog = {
     "نوع الحساب غير صالح. يرجى اختيار باحث عن قاعة أو صاحب قاعة ثم المحاولة مجددًا.",
   "auth.register.form.error.conflict": "هذه البيانات مستخدمة بالفعل لحساب موجود.",
   "auth.register.form.error.conflictLogin": "تسجيل الدخول بدلاً من ذلك",
-  "auth.register.form.error.network": "تعذر الاتصال بالخادم. تحققي من الإنترنت وحاولي مرة أخرى.",
-  "auth.register.form.error.generic": "تعذر إنشاء الحساب. تحققي من البيانات وحاولي مرة أخرى.",
+  "auth.register.form.error.network": "تعذر الاتصال بالخادم. يرجى التحقق من الإنترنت ثم المحاولة مرة أخرى.",
+  "auth.register.form.error.generic": "تعذر إنشاء الحساب. يرجى التحقق من البيانات ثم المحاولة مرة أخرى.",
   "auth.register.success.title": "مرحبًا بك في وصال",
   "auth.register.success.subtitle": "اكتمل إنشاء حسابك بنجاح",
   "auth.register.success.body":
     "أصبحت الآن جزءًا من وصال،\nحيث تبدأ تفاصيل مناسبتك بكل سهولة.",
   "auth.register.success.cta": "ابدأ مع وصال",
   "auth.register.success.loginFallback": "الانتقال لتسجيل الدخول",
-  "auth.redirect.base": "بعد تسجيل الدخول ستُعاد تلقائياً إلى القاعة التي اخترتها",
+  "auth.redirect.base": "بعد تسجيل الدخول يتم الإعادة تلقائياً إلى القاعة المختارة",
   "auth.redirect.registerBase":
-    "بعد إنشاء الحساب ستُعاد تلقائياً إلى القاعة التي اخترتها",
+    "بعد إنشاء الحساب يتم الإعادة تلقائياً إلى القاعة المختارة",
   "auth.redirect.book": " لمتابعة الحجز",
   "auth.redirect.contact": " للتواصل مع صاحب القاعة",
-  "auth.login.default": "سجّل الدخول لمتابعة الحجز.",
-  "auth.register.default": "أنشئ حساباً جديداً للبدء بالحجز.",
+  "auth.login.default": "يرجى تسجيل الدخول لمتابعة الحجز.",
+  "auth.register.default": "يرجى إنشاء حساب جديد للبدء بالحجز.",
   "auth.alternate.register": "ليس لديك حساب؟ إنشاء حساب",
-  "auth.alternate.login": "لديك حساب؟ سجّل الدخول",
+  "auth.alternate.login": "لديك حساب؟ تسجيل الدخول",
 
   "messages.title": "الرسائل",
   "messages.inboxTitle": "رسائلي",
   "messages.inboxSubtitle": "محادثاتك مع أصحاب القاعات.",
-  "messages.inboxEmpty": "لا توجد محادثات بعد. تواصلي مع قاعة من صفحة التفاصيل.",
+  "messages.inboxEmpty": "لا توجد محادثات بعد. يمكن التواصل مع قاعة من صفحة التفاصيل.",
   "messages.inboxError": "تعذر تحميل الرسائل.",
-  "messages.loginRequired": "سجّلي الدخول لعرض المحادثة.",
+  "messages.loginRequired": "يرجى تسجيل الدخول لعرض المحادثة.",
   "messages.error": "تعذر تحميل المحادثة.",
   "messages.placeholder":
     "يمكنك بدء المحادثة. إرسال الرسائل سيُفعّل في Epic لاحق.",
@@ -393,7 +391,7 @@ const ar: MessageCatalog = {
 
   "assistant.title": "مساعد وصال الذكي",
   "assistant.senderLabel": "مساعد وصال",
-  "assistant.fab.open": "افتح مساعد وصال الذكي",
+  "assistant.fab.open": "فتح مساعد وصال الذكي",
   "assistant.fab.close": "إغلاق مساعد وصال الذكي",
   "assistant.fab.greet1": "يسعدني مساعدتك",
   "assistant.fab.greet2": "تبحث عن قاعة؟",
@@ -403,8 +401,8 @@ const ar: MessageCatalog = {
   "assistant.status.offline": "غير متصل",
   "assistant.loading": "جاري تهيئة المساعد…",
   "assistant.greeting":
-    "أهلاً بك في وصال! أنا هنا لمساعدتك في إيجاد القاعة المناسبة — اسألني عن منطقة أو تاريخ أو فترة حجز معينة.",
-  "assistant.composer.placeholder": "اكتب رسالتك هنا…",
+    "أهلاً بك في وصال! أنا هنا للمساعدة في إيجاد القاعة المناسبة — يمكن السؤال عن منطقة أو تاريخ أو فترة حجز معينة.",
+  "assistant.composer.placeholder": "رسالتك هنا…",
   "assistant.composer.send": "إرسال",
   "assistant.panel.resize": "تغيير حجم نافذة المساعد",
   "assistant.chat.thinking": "المساعد يكتب…",
@@ -422,11 +420,11 @@ const ar: MessageCatalog = {
   "assistant.reconnect": "إعادة الاتصال",
   "assistant.browseHalls": "تصفح القاعات يدوياً",
   "assistant.invite.help": "كيف أقدر أساعدك؟",
-  "assistant.invite.halls": "تبحث عن قاعة؟ اسألني عن منطقة أو تاريخ.",
+  "assistant.invite.halls": "البحث عن قاعة؟ يمكن السؤال عن منطقة أو تاريخ.",
   "assistant.invite.dismiss": "إخفاء الدعوة",
-  "assistant.chat.empty.title": "ابدأ المحادثة",
+  "assistant.chat.empty.title": "بدء المحادثة",
   "assistant.chat.empty.body":
-    "اسأل عن قاعة أو منطقة أو تاريخ أو طريقة الحجز على وصال — سأجيبك من هنا.",
+    "يمكن السؤال عن قاعة أو منطقة أو تاريخ أو طريقة الحجز على وصال من هنا.",
   "assistant.chat.empty.hintHall": "قاعة في غزة",
   "assistant.chat.empty.hintHowTo": "كيف أحجز قاعة؟",
   "assistant.chat.retry": "إعادة المحاولة",
@@ -434,12 +432,12 @@ const ar: MessageCatalog = {
   "assistant.chat.retryBody":
     "محادثتك ما زالت هنا. يمكنك إعادة إرسال السؤال الأخير دون إعادة تحميل الصفحة.",
   "assistant.chat.crashTitle": "تعذر عرض المحادثة",
-  "assistant.chat.crashBody": "بقية المنصة تعمل بشكل طبيعي. أعيدي المحاولة لعرض الدردشة.",
+  "assistant.chat.crashBody": "بقية المنصة تعمل بشكل طبيعي. يرجى إعادة المحاولة لعرض الدردشة.",
   "assistant.chat.loadingLabel": "جاري تحميل المحادثة…",
   "assistant.chat.recommend.loading": "جاري البحث عن قاعات مناسبة…",
   "assistant.chat.recommend.noResultsTitle": "لا توجد قاعات مطابقة لهذا الطلب",
   "assistant.chat.recommend.noResultsContext":
-    "لم أجد نتائج لـ {context}. جرّبي منطقة أو تاريخاً أو فترة أخرى — أو تصفحي القاعات يدوياً.",
+    "لم أجد نتائج لـ {context}. يمكن تجربة منطقة أو تاريخ أو فترة أخرى — أو تصفح القاعات يدوياً.",
   "assistant.chat.recommend.requested": "الموعد المطلوب",
   "assistant.chat.recommend.availableForDate": "متاحة في هذا الموعد",
   "assistant.chat.recommend.openHall": "فتح تفاصيل {name}",
@@ -447,7 +445,7 @@ const ar: MessageCatalog = {
   "assistant.chat.recommend.invalidHall":
     "هذه التوصية ناقصة ولا يمكن فتح صفحة القاعة.",
   "assistant.chat.recommend.missingHall":
-    "هذه القاعة لم تعد مدرجة. تصفحي القاعات لاختيار قاعة أخرى.",
+    "هذه القاعة لم تعد مدرجة. يمكن تصفح القاعات لاختيار قاعة أخرى.",
 
   "errors.generic": "حدث خطأ غير متوقع.",
   "errors.requestFailed": "فشل الطلب",
@@ -463,34 +461,34 @@ const ar: MessageCatalog = {
   "errors.conversation.start": "تعذر بدء المحادثة.",
   "errors.conversation.create": "تعذر إنشاء المحادثة.",
   "errors.conversation.unauthorized": "يجب تسجيل الدخول لبدء محادثة.",
-  "errors.conversation.forbidden": "لا يمكنك مراسلة هذه القاعة.",
+  "errors.conversation.forbidden": "غير مسموح بمراسلة هذه القاعة.",
   "errors.conversation.notFound": "القاعة غير موجودة أو غير متاحة.",
-  "errors.rating.unauthorized": "سجّلي الدخول لتقييم القاعة.",
+  "errors.rating.unauthorized": "يرجى تسجيل الدخول لتقييم القاعة.",
   "errors.rating.forbidden": "غير مسموح لك بتقييم هذه القاعة.",
   "errors.rating.notFound": "القاعة غير موجودة.",
-  "errors.rating.conflict": "لقد قيّمتِ هذه القاعة مسبقاً.",
+  "errors.rating.conflict": "تم تقييم هذه القاعة مسبقاً.",
   "errors.rating.generic": "تعذر حفظ التقييم.",
-  "errors.comment.unauthorized": "سجّلي الدخول لإضافة تعليق.",
+  "errors.comment.unauthorized": "يرجى تسجيل الدخول لإضافة تعليق.",
   "errors.comment.forbidden": "غير مسموح لك بالتعليق على هذه القاعة.",
   "errors.comment.notFound": "القاعة غير موجودة.",
   "errors.comment.generic": "تعذر نشر التعليق.",
-  "errors.assistant.init": "تعذر تهيئة المساعد الذكي. جرّب مرة أخرى.",
+  "errors.assistant.init": "تعذر تهيئة المساعد الذكي. يرجى المحاولة مرة أخرى.",
   "errors.assistant.language": "لغة المحادثة غير مدعومة.",
   "errors.assistant.unavailable":
-    "مساعدنا الذكي غير متاح حالياً، يمكنك التصفح يدوياً أو المحاولة مرة أخرى لاحقاً.",
+    "مساعدنا الذكي غير متاح حالياً، يمكن التصفح يدوياً أو المحاولة مرة أخرى لاحقاً.",
   "errors.assistant.network":
-    "يبدو أن جهازك غير متصل بالإنترنت. تحقق من الاتصال وسيعود المساعد تلقائياً.",
-  "errors.assistant.chat.empty": "اكتبي سؤالاً قبل الإرسال.",
+    "يبدو أنه لا يوجد اتصال بالإنترنت. يرجى التحقق من الاتصال وسيعود المساعد تلقائياً.",
+  "errors.assistant.chat.empty": "يرجى كتابة سؤال قبل الإرسال.",
   "errors.assistant.chat.tooLong": "السؤال أطول من الحد المسموح.",
-  "errors.assistant.chat.validation": "تعذر فهم السؤال. جرّبي صيغة أقصر أو أوضح.",
-  "errors.assistant.chat.send": "تعذر إرسال الرسالة. حاول مرة أخرى.",
-  "errors.assistant.chat.expired": "انتهت جلسة المساعد. أغلقيه ثم افتحيه من جديد.",
+  "errors.assistant.chat.validation": "تعذر فهم السؤال. يمكن تجربة صيغة أقصر أو أوضح.",
+  "errors.assistant.chat.send": "تعذر إرسال الرسالة. يرجى المحاولة مرة أخرى.",
+  "errors.assistant.chat.expired": "انتهت جلسة المساعد. يرجى إغلاقه ثم فتحه من جديد.",
   "errors.assistant.chat.unavailable":
-    "خدمة التوصيات غير متاحة حالياً. يمكنك تصفح القاعات يدوياً.",
-  "errors.assistant.chat.noResults": "لم أجد قاعات مطابقة. جرّبي منطقة أو تاريخاً آخر.",
+    "خدمة التوصيات غير متاحة حالياً. يمكن تصفح القاعات يدوياً.",
+  "errors.assistant.chat.noResults": "لم أجد قاعات مطابقة. يمكن تجربة منطقة أو تاريخ آخر.",
   "errors.assistant.chat.incomplete":
     "أحتاج تفاصيل أوضح — مثلاً المنطقة أو تاريخ المناسبة.",
-  "errors.assistant.chat.emptyReply": "لم يصل رد من المساعد. حاول مرة أخرى.",
+  "errors.assistant.chat.emptyReply": "لم يصل رد من المساعد. يرجى المحاولة مرة أخرى.",
 
   "about.title": "من نحن",
   "about.body":
@@ -517,7 +515,7 @@ const ar: MessageCatalog = {
   "home.hero.title2": "الذي يليق بيومك",
   "home.hero.imageAlt": "قاعة ملكية بكوشة ذهبية وثريا مركزية",
 
-  "halls.comment.emptyBody": "اكتبي تعليقك قبل الإرسال.",
+  "halls.comment.emptyBody": "يرجى كتابة التعليق قبل الإرسال.",
   "halls.comment.maxLength": "التعليق ما يتجاوز {count} حرف.",
 
   "home.owner.demo.nav.home": "الرئيسية",

@@ -6,21 +6,30 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import HallActionCard from "@/components/halls/HallActionCard";
 import HallAmenitiesGrid from "@/components/halls/HallAmenitiesGrid";
 import HallBookingPanel from "@/components/halls/HallBookingPanel";
+import HallCommentList from "@/components/halls/HallCommentList";
+import HallCommentPanel from "@/components/halls/HallCommentPanel";
+import HallContactButton from "@/components/halls/HallContactButton";
 import HallDetailsError from "@/components/halls/HallDetailsError";
 import HallDetailsSkeleton from "@/components/halls/HallDetailsSkeleton";
 import HallGalleryContainer from "@/components/halls/HallGalleryContainer";
+import HallGuestFeedbackPrompt from "@/components/halls/HallGuestFeedbackPrompt";
 import HallHeader from "@/components/halls/HallHeader";
+import HallRatingPanel from "@/components/halls/HallRatingPanel";
 import HallUnavailableBanner from "@/components/halls/HallUnavailableBanner";
 import { useUiLang } from "@/components/layout/LanguageProvider";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { useBookButtonBehavior } from "@/hooks/useBookButtonBehavior";
 import { useHallDetails } from "@/hooks/useHallDetails";
+import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useT } from "@/i18n";
 import { buildHallDetailsPath, hasBookingIntent } from "@/lib/booking-intent";
 import { saveBookingHallContext } from "@/lib/auth-storage";
 import { resetBodyScrollLock } from "@/lib/body-scroll-lock";
 import { localizeHallDetail } from "@/lib/localize-hall-display";
-import type { BookingSelection } from "@/types/hall";
+import {
+  fetchHallComments,
+  mapCommentToReview,
+} from "@/services/comments";
+import type { BookingSelection, HallReview } from "@/types/hall";
 
 type HallDetailsPageProps = {
   hallId: string;
@@ -31,19 +40,26 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   const lang = useUiLang();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { session, status: authStatus } = useAuth();
-  const isAuthenticated = session.isAuthenticated;
-  const hydrated = authStatus === "ready";
   const { state, hall, unavailable, usingFallback, errorMessage, retry } =
     useHallDetails(hallId);
+  const permissions = useHallPermissions(hall);
 
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingSelection, setBookingSelection] = useState<BookingSelection | null>(
     null,
   );
+  const [reviews, setReviews] = useState<HallReview[]>([]);
   const bookIntentHandled = useRef(false);
 
+  const isOwnHall = permissions.isOwnHall;
+  const { canBook, canContactOwner, isGuest, authReady } = permissions;
   const shouldOpenBooking = hasBookingIntent(searchParams);
+
+  useEffect(() => {
+    if (canBook) return;
+    setBookingOpen(false);
+    setBookingSelection(null);
+  }, [canBook]);
 
   useEffect(() => {
     return () => resetBodyScrollLock();
@@ -53,6 +69,18 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     bookIntentHandled.current = false;
   }, [hallId]);
 
+  useEffect(() => {
+    let active = true;
+    setReviews([]);
+    void fetchHallComments(hallId).then((comments) => {
+      if (!active || comments == null) return;
+      setReviews(comments.map(mapCommentToReview));
+    });
+    return () => {
+      active = false;
+    };
+  }, [hallId]);
+
   const openBookingFlow = useCallback(() => {
     setBookingSelection(null);
     setBookingOpen(true);
@@ -60,8 +88,8 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
   const { handleBook, loginHref, registerHref } = useBookButtonBehavior({
     hallId,
-    hydrated,
-    isAuthenticated,
+    hydrated: authReady,
+    canBook,
     unavailable,
     onOpenBooking: openBookingFlow,
   });
@@ -71,7 +99,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   }, [hallId]);
 
   useEffect(() => {
-    if (!hydrated || !isAuthenticated || !shouldOpenBooking || bookIntentHandled.current) {
+    if (!authReady || !canBook || !shouldOpenBooking || bookIntentHandled.current) {
       return;
     }
     if (state.phase !== "ready" || unavailable || !hall) return;
@@ -82,8 +110,8 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
       router.replace(buildHallDetailsPath(hallId), { scroll: false });
     });
   }, [
-    hydrated,
-    isAuthenticated,
+    authReady,
+    canBook,
     shouldOpenBooking,
     state.phase,
     unavailable,
@@ -134,8 +162,8 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     );
   }
 
-  const isGuest = hydrated && !isAuthenticated;
   const viewHall = localizeHallDetail(hall, lang);
+  const showActions = !unavailable && !isOwnHall;
 
   return (
     <div className="hall-details-page min-w-0 space-y-6 pb-10 sm:space-y-8 sm:pb-14">
@@ -177,35 +205,72 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
           <HallAmenitiesGrid amenities={viewHall.amenities} />
 
-          {isGuest && !unavailable ? (
-            <section
-              className="rounded-2xl border border-dashed border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] p-5"
-              data-testid="hall-guest-booking-notice"
-              aria-live="polite"
+          {isOwnHall ? (
+            <p
+              className="rounded-2xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-sm leading-7 text-[var(--wesal-muted)]"
+              data-testid="hall-actions-owner"
+              role="status"
             >
-              <p className="text-sm leading-7 text-[var(--wesal-text)]">
-                {t("halls.details.guestBookingHint")}
-              </p>
-            </section>
+              {t("halls.details.ownerBanner")}
+            </p>
           ) : null}
+
+          <section aria-labelledby="hall-reviews-heading">
+            <h2
+              id="hall-reviews-heading"
+              className="text-lg font-bold text-[var(--wesal-maroon)] sm:text-xl"
+            >
+              {t("halls.details.reviews")}
+            </h2>
+
+            <HallRatingPanel
+              hallId={viewHall.id}
+              isHallOwner={isOwnHall}
+            />
+
+            <HallCommentPanel
+              hallId={viewHall.id}
+              isHallOwner={isOwnHall}
+              onSubmitted={(review) => {
+                setReviews((current) => [review, ...current]);
+              }}
+            />
+
+            <HallCommentList comments={reviews} />
+
+            <HallGuestFeedbackPrompt
+              hallId={viewHall.id}
+              isHallOwner={isOwnHall}
+            />
+          </section>
         </div>
 
         <div className="order-1 min-w-0 lg:order-2 lg:sticky lg:top-[4.75rem] lg:z-[1] lg:self-start">
           <HallActionCard
             slotPrices={viewHall.slotPrices}
-            ownerPhone={viewHall.ownerPhone}
             onBook={handleBook}
             disabled={unavailable}
-            bookPending={!hydrated}
+            bookPending={!authReady}
             isGuest={isGuest}
+            canBook={canBook}
+            showContact={showActions && canContactOwner}
             loginHref={loginHref}
             registerHref={registerHref}
             onGuestAuthNavigate={preserveGuestBookingContext}
+            contactSlot={
+              showActions ? (
+                <HallContactButton
+                  hallId={viewHall.id}
+                  isOwnHall={isOwnHall}
+                  isAvailable={!unavailable}
+                />
+              ) : null
+            }
           />
         </div>
       </div>
 
-      {hydrated && isAuthenticated && !unavailable ? (
+      {canBook && !unavailable ? (
         <HallBookingPanel
           open={bookingOpen}
           hallName={viewHall.name}
