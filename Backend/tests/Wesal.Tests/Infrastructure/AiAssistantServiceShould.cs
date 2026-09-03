@@ -318,6 +318,66 @@ public class AiAssistantServiceShould
     }
 
     private Guid HallId { get; } = Guid.NewGuid();
+
+    [Fact]
+    public void MergeWithContext_NoPriorSearch_ReturnsIntentUnchanged()
+    {
+        var intent = With(AiIntentType.SearchHalls, region: "Gaza", date: null);
+
+        var result = AiAssistantService.MergeWithContext(intent, null);
+
+        Assert.Same(intent, result);
+    }
+
+    [Fact]
+    public void MergeWithContext_PriorSearchCarriesForwardMissingCriteria()
+    {
+        var prior = With(AiIntentType.SearchHalls, region: "Gaza", date: new DateOnly(2026, 12, 1));
+        var context = new AiConversationContext(
+            [new AiConversationTurn("user", "أريد قاعة في غزة بتاريخ 2026-12-01")],
+            prior);
+
+        // Follow-up only adds a new region refinement; date from prior should be kept.
+        var followUp = new AiAssistantIntentDto(
+            AiIntentType.SearchHalls, "SouthGaza", null, null, null, null, null);
+
+        var result = AiAssistantService.MergeWithContext(followUp, context);
+
+        Assert.Equal(AiIntentType.SearchHalls, result.Intent);
+        Assert.Equal("SouthGaza", result.Region);
+        Assert.Equal(new DateOnly(2026, 12, 1), result.Date);
+    }
+
+    [Fact]
+    public void MergeWithContext_ExplicitValueWinsOverPrior()
+    {
+        var prior = With(AiIntentType.SearchHalls, region: "Gaza", date: null);
+        var context = new AiConversationContext(
+            [new AiConversationTurn("user", "أريد قاعة في غزة")],
+            prior);
+
+        var followUp = new AiAssistantIntentDto(
+            AiIntentType.SearchHalls, "Gaza", null, new DateOnly(2026, 11, 5), null, 400, null);
+
+        var result = AiAssistantService.MergeWithContext(followUp, context);
+
+        Assert.Equal(new DateOnly(2026, 11, 5), result.Date);
+        Assert.Equal(400, result.Capacity);
+    }
+
+    [Fact]
+    public void MergeWithContext_NonSearchIntent_Unchanged()
+    {
+        var prior = With(AiIntentType.SearchHalls, region: "Gaza", date: null);
+        var context = new AiConversationContext([new AiConversationTurn("user", "أريد قاعة")], prior);
+
+        var howTo = With(AiIntentType.HowTo);
+
+        var result = AiAssistantService.MergeWithContext(howTo, context);
+
+        Assert.Equal(AiIntentType.HowTo, result.Intent);
+        Assert.Null(result.Region);
+    }
     private DateOnly FutureDate => DateOnly.FromDateTime(_dateTime.Now.UtcDateTime).AddDays(7);
     private DateOnly PastDate => DateOnly.FromDateTime(_dateTime.Now.UtcDateTime).AddDays(-7);
 
@@ -333,7 +393,7 @@ public class AiAssistantServiceShould
         public AiAssistantIntentDto Result { get; set; } = new(AiIntentType.Unknown, null, null, null, null, null, null);
         public Action<string?>? OnExtract { get; set; }
 
-        public Task<AiAssistantIntentDto> ExtractAsync(string message, string? language, CancellationToken cancellationToken = default)
+        public Task<AiAssistantIntentDto> ExtractAsync(string message, string? language, CancellationToken cancellationToken = default, AiConversationContext? context = null)
         {
             OnExtract?.Invoke(message);
             return Task.FromResult(Result);

@@ -15,4 +15,19 @@ public interface IChatSessionService
     /// multi-tab polling. Returns null for missing/expired/invalid sessions.
     /// </summary>
     Task<AiSessionResponse?> PeekSessionAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the bounded, in-memory conversation state (recent user turns plus the
+    /// last structured intent) for a live session, or an empty context when the
+    /// session is missing/expired or has no history yet. Read-only: never refreshes
+    /// session expiry (safe alongside passive multi-tab polling).
+    /// </summary>
+    Task<AiConversationContext> GetConversationContextAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records one user turn and the structured intent it produced into the session's
+    /// conversation memory. No-op for missing/expired sessions. The intent is captured
+    /// so later turns can carry criteria forward across the conversation.
+    /// </summary>
+    Task SaveTurnAsync(Guid sessionId, string userMessage, AiAssistantIntentDto? intent, CancellationToken cancellationToken = default);
 }

@@ -41,12 +41,18 @@ public sealed class GeminiAiIntentExtractor : IAiIntentExtractor
     public async Task<AiAssistantIntentDto> ExtractAsync(
         string message,
         string? language,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        AiConversationContext? context = null)
     {
         if (_geminiService.IsAvailable)
         {
-            var payload = await _geminiService.GenerateStructuredAsync<GeminiIntentPayload>(
+            var userPrompt = GeminiPromptBuilder.BuildIntentUserPrompt(
                 message,
+                context,
+                GeminiPromptBuilder.MaxIntentPromptCharacters);
+
+            var payload = await _geminiService.GenerateStructuredAsync<GeminiIntentPayload>(
+                userPrompt,
                 GeminiPromptBuilder.BuildIntentSystemInstruction(language),
                 GeminiPromptBuilder.BuildIntentSchema(),
                 cancellationToken);

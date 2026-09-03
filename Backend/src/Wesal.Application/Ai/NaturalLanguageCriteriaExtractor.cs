@@ -32,11 +32,11 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         if (lower.Contains("middle area") || lower.Contains("middle")) return HallRegion.MiddleArea.ToString();
         if (lower.Contains("gaza")) return HallRegion.Gaza.ToString();
 
-        // Arabic regions
-        if (message.Contains("شمال غزة")) return HallRegion.NorthGaza.ToString();
-        if (message.Contains("جنوب غزة") || message.Contains("جنوب")) return HallRegion.SouthGaza.ToString();
-        if (message.Contains("الوسطى") || message.Contains("الوسطي") || message.Contains("وسط غزة")) return HallRegion.MiddleArea.ToString();
-        if (message.Contains("غزة")) return HallRegion.Gaza.ToString();
+        // Arabic regions + Gazan governorate/city colloquial references
+        if (message.Contains("شمال غزة") || message.Contains("بيت حانون") || message.Contains("بيت لاهيا") || message.Contains("بيت لاهيه") || message.Contains("جباليا") || message.Contains("جبلية")) return HallRegion.NorthGaza.ToString();
+        if (message.Contains("جنوب غزة") || message.Contains("جنوب") || message.Contains("رفح") || message.Contains("خان يونس") || message.Contains("خانيونس") || message.Contains("عبسان") || message.Contains("القرارة") || message.Contains("بني سهيلا")) return HallRegion.SouthGaza.ToString();
+        if (message.Contains("الوسطى") || message.Contains("الوسطي") || message.Contains("وسط غزة") || message.Contains("دير البلح") || message.Contains("ديرالبلح") || message.Contains("النصيرات") || message.Contains("الزوايدة") || message.Contains("المغازي") || message.Contains("البريج") || message.Contains("وادي غزة")) return HallRegion.MiddleArea.ToString();
+        if (message.Contains("غزة") || message.Contains("الرمال") || message.Contains("التفاح") || message.Contains("الشجاعية") || message.Contains("النصر") || message.Contains("الزيتون") || message.Contains("الصبرة")) return HallRegion.Gaza.ToString();
 
         return null;
     }
@@ -215,6 +215,6 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
     [GeneratedRegex(@"\b(?<day>\d{1,2})\s+(?<month>january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\b", RegexOptions.IgnoreCase)]
     private static partial Regex DayMonthRegex();
 
-    [GeneratedRegex(@"(?:capacity\s*[:\-]?\s*|سعة\s*[:\-]?\s*|for\s+)(\d{2,4})\b|(\d{2,4})\s*(?:people|persons|person|guest|شخص|ضيف)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:capacity\s*[:\-]?\s*|سعة\s*[:\-]?\s*|لكذا|بـ?سعة\s*|for\s+)(\d{2,4})\b|(\d{2,4})\s*(?:people|persons|person|guest|شخص|أشخاص|ناس|فرد|نفر|ضيف)", RegexOptions.IgnoreCase)]
     private static partial Regex CapacityRegex();
 }

@@ -14,5 +14,6 @@ public interface IAiIntentExtractor
     Task<AiAssistantIntentDto> ExtractAsync(
         string message,
         string? language,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        AiConversationContext? context = null);
 }

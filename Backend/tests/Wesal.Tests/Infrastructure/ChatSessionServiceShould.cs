@@ -1,4 +1,5 @@
 using Wesal.Application.Common.Interfaces;
+using Wesal.Application.Common.Models;
 using Wesal.Infrastructure.AiAssistant;
 
 namespace Wesal.Tests.Infrastructure;
@@ -289,5 +290,92 @@ public class ChatSessionServiceShould
         var disposeException = Record.Exception(() => service.Dispose());
 
         Assert.Null(disposeException);
+    }
+
+    [Fact]
+    public async Task SaveTurn_ThenGetContext_ReturnsTurnAndIntent()
+    {
+        using var service = new ChatSessionService();
+        var session = await service.InitializeSessionAsync(null);
+        var intent = new AiAssistantIntentDto(
+            AiIntentType.SearchHalls, "Gaza", null, null, null, 300, null);
+
+        await service.SaveTurnAsync(session.SessionId, "أريد قاعة في غزة لـ 300 شخص", intent);
+        var context = await service.GetConversationContextAsync(session.SessionId);
+
+        Assert.Single(context.Turns);
+        Assert.Equal("user", context.Turns[0].Role);
+        Assert.Equal("أريد قاعة في غزة لـ 300 شخص", context.Turns[0].Text);
+        Assert.NotNull(context.LastIntent);
+        Assert.Equal(AiIntentType.SearchHalls, context.LastIntent!.Intent);
+        Assert.Equal(300, context.LastIntent!.Capacity);
+    }
+
+    [Fact]
+    public async Task SaveTurn_MultipleTurns_BoundedToLimit()
+    {
+        using var service = new ChatSessionService();
+        var session = await service.InitializeSessionAsync(null);
+
+        for (var i = 1; i <= 10; i++)
+        {
+            await service.SaveTurnAsync(session.SessionId, $"message {i}", null);
+        }
+
+        var context = await service.GetConversationContextAsync(session.SessionId);
+
+        Assert.Equal(6, context.Turns.Count);
+        Assert.Equal("message 5", context.Turns[0].Text);
+        Assert.Equal("message 10", context.Turns[^1].Text);
+    }
+
+    [Fact]
+    public async Task SaveTurn_EmptyMessage_DoesNotRecord()
+    {
+        using var service = new ChatSessionService();
+        var session = await service.InitializeSessionAsync(null);
+
+        await service.SaveTurnAsync(session.SessionId, "   ", null);
+        var context = await service.GetConversationContextAsync(session.SessionId);
+
+        Assert.Empty(context.Turns);
+    }
+
+    [Fact]
+    public async Task SaveTurn_MissingSession_NoOp()
+    {
+        using var service = new ChatSessionService();
+
+        await service.SaveTurnAsync(Guid.NewGuid(), "hello", null);
+        var context = await service.GetConversationContextAsync(Guid.NewGuid());
+
+        Assert.Empty(context.Turns);
+        Assert.Null(context.LastIntent);
+    }
+
+    [Fact]
+    public async Task GetContext_ExpiredSession_ReturnsEmpty()
+    {
+        using var service = new ChatSessionService();
+        var created = await service.InitializeSessionAsync(null);
+
+        var expiredSession = new ChatSessionService.AiSession
+        {
+            SessionId = created.SessionId,
+            Language = created.Language,
+            CreatedAt = created.CreatedAt,
+            LastActivityAt = created.CreatedAt,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        var sessionsField = typeof(ChatSessionService)
+            .GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
+        sessions[created.SessionId] = expiredSession;
+
+        var context = await service.GetConversationContextAsync(created.SessionId);
+
+        Assert.Empty(context.Turns);
+        Assert.Null(context.LastIntent);
     }
 }

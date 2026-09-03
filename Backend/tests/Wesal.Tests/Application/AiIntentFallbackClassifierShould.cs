@@ -115,4 +115,32 @@ public class AiIntentFallbackClassifierShould
 
         Assert.Equal(AiIntentType.HowTo, result.Intent);
     }
+
+    [Fact]
+    public void Classify_EventWord_WithoutCriteria_AsSearchHalls()
+    {
+        var result = _classifier.Classify("بدي قاعة لعُرس");
+        Assert.Equal(AiIntentType.SearchHalls, result.Intent);
+    }
+
+    [Fact]
+    public void Classify_EnglishWedding_WithoutCriteria_AsSearchHalls()
+    {
+        var result = _classifier.Classify("I want a hall for a wedding");
+        Assert.Equal(AiIntentType.SearchHalls, result.Intent);
+    }
+
+    [Fact]
+    public void Classify_BookingCommandWithHall_RemainsUnsupported()
+    {
+        var result = _classifier.Classify("احجز لي قاعة الآن");
+        Assert.Equal(AiIntentType.Unsupported, result.Intent);
+    }
+
+    [Fact]
+    public void Classify_HowToBookHall_RemainsHowTo()
+    {
+        var result = _classifier.Classify("كيف أحجز قاعة؟");
+        Assert.Equal(AiIntentType.HowTo, result.Intent);
+    }
 }

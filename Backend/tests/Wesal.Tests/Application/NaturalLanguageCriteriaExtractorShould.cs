@@ -126,4 +126,54 @@ public class NaturalLanguageCriteriaExtractorShould
         Assert.Null(result.Region);
         Assert.Null(result.Date);
     }
+
+    [Fact]
+    public void Extract_GazanSouthGovernorate_Rafah_ReturnsSouth()
+    {
+        var result = _extractor.Extract("قاعة في رفح");
+        Assert.Equal(HallRegion.SouthGaza.ToString(), result.Region);
+    }
+
+    [Fact]
+    public void Extract_GazanSouthGovernorate_KhanYounis_ReturnsSouth()
+    {
+        var result = _extractor.Extract("قاعة في خان يونس");
+        Assert.Equal(HallRegion.SouthGaza.ToString(), result.Region);
+    }
+
+    [Fact]
+    public void Extract_GazanNorthGovernorate_BeitHanoon_ReturnsNorth()
+    {
+        var result = _extractor.Extract("قاعة في بيت حانون");
+        Assert.Equal(HallRegion.NorthGaza.ToString(), result.Region);
+    }
+
+    [Fact]
+    public void Extract_GazanMiddleGovernorate_DeirAlBalah_ReturnsMiddle()
+    {
+        var result = _extractor.Extract("قاعة في دير البلح");
+        Assert.Equal(HallRegion.MiddleArea.ToString(), result.Region);
+    }
+
+    [Fact]
+    public void Extract_Capacity_WithNawalPeople_Nawas()
+    {
+        var result = _extractor.Extract("قاعة في غزة لـ 300 ناس");
+        Assert.Equal(HallRegion.Gaza.ToString(), result.Region);
+        Assert.Equal(300, result.Capacity);
+    }
+
+    [Fact]
+    public void Extract_Capacity_WithFard_Nafar()
+    {
+        var result = _extractor.Extract("قاعة سعة 150 نفر");
+        Assert.Equal(150, result.Capacity);
+    }
+
+    [Fact]
+    public void Extract_Capacity_WithAshkhas_ReturnsCapacity()
+    {
+        var result = _extractor.Extract("قاعة لـ 200 شخص");
+        Assert.Equal(200, result.Capacity);
+    }
 }

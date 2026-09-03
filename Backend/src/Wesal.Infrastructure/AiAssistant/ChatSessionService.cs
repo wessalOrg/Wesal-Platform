@@ -107,6 +107,46 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
         }
     }
 
+    public Task<AiConversationContext> GetConversationContextAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        if (!_sessions.TryGetValue(sessionId, out var session)
+            || DateTime.UtcNow > session.ExpiresAt)
+        {
+            return Task.FromResult(new AiConversationContext([], null));
+        }
+
+        var turns = session.RecordedMessages
+            .Select(m => new AiConversationTurn("user", m))
+            .ToList();
+
+        return Task.FromResult(new AiConversationContext(turns, session.LastIntent));
+    }
+
+    public Task SaveTurnAsync(Guid sessionId, string userMessage, AiAssistantIntentDto? intent, CancellationToken cancellationToken = default)
+    {
+        var message = (userMessage ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(message) || !_sessions.TryGetValue(sessionId, out var session))
+        {
+            return Task.CompletedTask;
+        }
+
+        lock (session)
+        {
+            session.RecordedMessages.Add(message);
+            if (session.RecordedMessages.Count > MaxRecordedTurns)
+            {
+                session.RecordedMessages.RemoveRange(0, session.RecordedMessages.Count - MaxRecordedTurns);
+            }
+
+            if (intent is not null)
+            {
+                session.LastIntent = intent;
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
         _sweepTimer.Dispose();
@@ -119,5 +159,10 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
         public DateTime CreatedAt { get; set; }
         public DateTime LastActivityAt { get; set; }
         public DateTime ExpiresAt { get; set; }
+
+        public List<string> RecordedMessages { get; } = [];
+        public AiAssistantIntentDto? LastIntent { get; set; }
     }
+
+    private const int MaxRecordedTurns = 6;
 }

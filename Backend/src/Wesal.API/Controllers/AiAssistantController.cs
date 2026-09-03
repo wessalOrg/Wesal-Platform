@@ -157,15 +157,19 @@ public class AiAssistantController : ControllerBase
             return BadRequest(new { Message = "Message is required." });
         }
 
+        var context = await _chatSessionService.GetConversationContextAsync(sessionId, cancellationToken);
+
         AiAssistantResponse response;
         try
         {
-            response = await _aiAssistantService.ProcessMessageAsync(message, session.Language, cancellationToken);
+            response = await _aiAssistantService.ProcessMessageAsync(message, session.Language, cancellationToken, context);
         }
         catch (ArgumentException)
         {
             return BadRequest(new { Message = "Message is invalid." });
         }
+
+        await _chatSessionService.SaveTurnAsync(sessionId, message, response.Intent, cancellationToken);
 
         return Ok(response);
     }

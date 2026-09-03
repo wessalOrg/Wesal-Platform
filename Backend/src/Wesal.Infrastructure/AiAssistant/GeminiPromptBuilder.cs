@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Wesal.Application.Ai;
+using Wesal.Application.Common.Models;
 
 namespace Wesal.Infrastructure.AiAssistant;
 
@@ -10,8 +11,38 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// limit (from <see cref="GoogleAiSettings.MaxContextCharacters"/>) so a
 /// maliciously large request cannot consume unbounded Gemini quota.
 /// </summary>
-public static class GeminiPromptBuilder
+    public static class GeminiPromptBuilder
 {
+    /// <summary>
+    /// Hard ceiling applied to the user prompt (current message plus any conversation
+    /// history included for context). Keeps a single intent-classification call
+    /// bounded so a long chat history cannot consume unbounded Gemini quota.
+    /// </summary>
+    public const int MaxIntentPromptCharacters = 4000;
+
+    /// <summary>
+    /// Builds the user prompt for intent classification from the current message and,
+    /// when present, the session's recent conversation history. The history is included
+    /// purely as disambiguation context so short references ("أقرب لغزة", "300 شخص",
+    /// "فيه قاعة...") resolve correctly; it is bounded and always followed by the
+    /// current message so the classifier knows exactly what to classify.
+    /// </summary>
+    public static string BuildIntentUserPrompt(string message, AiConversationContext? context, int maxContextCharacters = MaxIntentPromptCharacters)
+    {
+        var current = (message ?? string.Empty).Trim();
+        if (context is null || context.Turns.Count == 0)
+        {
+            return current.Length > maxContextCharacters
+                ? current.Substring(current.Length - maxContextCharacters)
+                : current;
+        }
+
+        var history = string.Join("\n", context.Turns.Select(t => $"{t.Role}: {t.Text}"));
+        var combined = $"Conversation so far:\n{history}\n\nCurrent message to classify: {current}";
+
+        return LimitContext(combined, maxContextCharacters);
+    }
+
     /// <summary>
     /// Builds the system instruction that establishes Gemini as the Wesal
     /// assistant, grounds it in the actual implemented features (via

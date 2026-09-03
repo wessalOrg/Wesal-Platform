@@ -59,7 +59,8 @@ public sealed class AiAssistantService : IAiAssistantService
     public async Task<AiAssistantResponse> ProcessMessageAsync(
         string message,
         string? language,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        AiConversationContext? context = null)
     {
         var text = message?.Trim();
         if (string.IsNullOrWhiteSpace(text) || text.Length > MaxMessageLength)
@@ -74,7 +75,8 @@ public sealed class AiAssistantService : IAiAssistantService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var intent = await _intentExtractor.ExtractAsync(text, effectiveLanguage, cancellationToken);
+        var intent = await _intentExtractor.ExtractAsync(text, effectiveLanguage, cancellationToken, context);
+        intent = MergeWithContext(intent, context);
 
         return intent.Intent switch
         {
@@ -86,6 +88,46 @@ public sealed class AiAssistantService : IAiAssistantService
             AiIntentType.Unsupported => BuildUnsupported(effectiveLanguage, intention: intent),
             _ => BuildClarification(effectiveLanguage, intention: intent)
         };
+    }
+
+    /// <summary>
+    /// When the user is refining a previous hall search (a follow-up expressed with
+    /// pronouns or partial criteria, e.g. "خليها أقرب على غزة" or "300 شخص"), carry
+    /// forward any search criterion that was established earlier in the conversation
+    /// but is not re-stated this turn. Only applies when both the current and prior
+    /// intents are hall searches, so it never invents values Gemini rejected.
+    /// </summary>
+    internal static AiAssistantIntentDto MergeWithContext(AiAssistantIntentDto intent, AiConversationContext? context)
+    {
+        if (context?.LastIntent is not { Intent: AiIntentType.SearchHalls } prior
+            || intent.Intent != AiIntentType.SearchHalls)
+        {
+            return intent;
+        }
+
+        var region = intent.Region ?? prior.Region;
+        var area = intent.Area ?? prior.Area;
+        var date = intent.Date ?? prior.Date;
+        var period = intent.BookingPeriod ?? prior.BookingPeriod;
+        var capacity = intent.Capacity ?? prior.Capacity;
+
+        if (region == intent.Region
+            && area == intent.Area
+            && date == intent.Date
+            && period == intent.BookingPeriod
+            && capacity == intent.Capacity)
+        {
+            return intent;
+        }
+
+        return new AiAssistantIntentDto(
+            intent.Intent,
+            region,
+            area,
+            date,
+            period,
+            capacity,
+            intent.HallName);
     }
 
     private async Task<AiAssistantResponse> HandleHowToAsync(string text, string language, AiAssistantIntentDto intention, CancellationToken cancellationToken)

@@ -14,5 +14,6 @@ public interface IAiAssistantService
     Task<AiAssistantResponse> ProcessMessageAsync(
         string message,
         string? language,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        AiConversationContext? context = null);
 }
