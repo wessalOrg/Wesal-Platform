@@ -127,11 +127,11 @@ export function useAiInvitation({
         return;
       }
 
-      setMessageKey(
-        invitationMessageKey(
-          record.day === invitationDayKey(now) ? record.shownToday : 0,
-        ),
-      );
+      // Rotate through the copy pool deterministically. Newer records carry a
+      // cumulative `messageCursor`; older ones fall back to today's count so the
+      // first two slots still don't repeat each other immediately.
+      const cursor = record.messageCursor ?? (record.day === invitationDayKey(now) ? record.shownToday : 0);
+      setMessageKey(invitationMessageKey(cursor));
       setIsVisible(true);
     };
 
