@@ -79,7 +79,6 @@ type ApiFeaturedHall = {
   isOwner?: boolean;
   status?: number | string;
   isActive?: boolean;
-  isOwner?: boolean;
   availability?: ApiAvailabilityDay[];
   bookingPeriods?: ApiPeriod[];
 };
@@ -398,7 +397,6 @@ function mapApiHallDetail(hall: ApiFeaturedHall, index: number): HallDetail {
     isOwner: Boolean(hall.isOwner),
     rating: hall.rating ?? fallback.rating ?? null,
     reviewCount: hall.reviewCount ?? fallback.reviewCount ?? null,
-    isOwner: hall.isOwner ?? false,
     availabilityDays,
   };
 }

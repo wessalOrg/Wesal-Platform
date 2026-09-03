@@ -10,7 +10,7 @@ export class BookingError extends ApiError {
     status?: number,
     extras?: { kind?: BookingErrorKind; fields?: BookingFieldErrors; details?: unknown },
   ) {
-    super(message, status, extras?.details);
+    super(message, status, {}, { details: extras?.details });
     this.name = "BookingError";
     this.kind = extras?.kind ?? kindFromStatus(status);
     this.fields = extras?.fields ?? {};

@@ -124,7 +124,6 @@ export type HallDetail = {
   isOwner?: boolean;
   rating?: number | null;
   reviewCount?: number | null;
-  isOwner?: boolean;
   availabilityDays?: HallAvailabilityDay[];
 };
 
