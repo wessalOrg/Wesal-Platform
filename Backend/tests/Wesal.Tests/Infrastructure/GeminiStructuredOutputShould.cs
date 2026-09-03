@@ -32,6 +32,7 @@ public class GeminiStructuredOutputShould
         Func<HttpRequestMessage, HttpResponseMessage> responder,
         GoogleAiSettings? settings = null)
     {
+        GeminiService.ResetCircuitBreaker();
         var handler = new FakeHttpHandler(responder);
         var factory = new FakeHttpClientFactory(handler);
         return new GeminiService(factory, Options.Create(settings ?? Settings()), NullLogger<GeminiService>.Instance);

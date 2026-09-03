@@ -53,8 +53,12 @@ public sealed class GoogleAiSettings
     /// <summary>Maximum characters of user content to send to Gemini.</summary>
     public int MaxContextCharacters { get; set; } = 2000;
 
-    /// <summary>Request timeout for Gemini HTTP calls, in seconds. Kept below the
-    /// frontend's 25s request timeout so a slow Gemini call falls back to the
-    /// deterministic provider before the client aborts the request.</summary>
-    public int TimeoutSeconds { get; set; } = 15;
+    /// <summary>Request timeout for a single Gemini HTTP call, in seconds. Must stay
+    /// well below the frontend's 25 s request budget because a single /assistant
+    /// turn can issue up to two Gemini calls (structured intent + HowTo text),
+    /// each with an optional secondary-key failover — worst-case 4 sequential
+    /// HTTP attempts. At 8 s the worst case is 32 s, but the circuit breaker
+    /// (after the first failure) short-circuits the remaining calls so the
+    /// actual latency is ~8-16 s.</summary>
+    public int TimeoutSeconds { get; set; } = 8;
 }

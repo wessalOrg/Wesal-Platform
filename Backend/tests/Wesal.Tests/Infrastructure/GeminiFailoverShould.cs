@@ -35,6 +35,7 @@ public class GeminiFailoverShould
         Func<HttpRequestMessage, HttpResponseMessage> responder,
         GoogleAiSettings? settings = null)
     {
+        GeminiService.ResetCircuitBreaker();
         var handler = new FakeHttpHandler(responder);
         var factory = new FakeHttpClientFactory(handler);
         return new GeminiService(factory, Options.Create(settings ?? Settings()), NullLogger<GeminiService>.Instance);
@@ -448,6 +449,7 @@ public class GeminiFailoverShould
             return new HttpResponseMessage(HttpStatusCode.Unauthorized);
         });
         var factory = new FakeHttpClientFactory(handler);
+        GeminiService.ResetCircuitBreaker();
         var service = new GeminiService(factory, Options.Create(settings), NullLogger<GeminiService>.Instance);
 
         var result = await service.GenerateTextAsync("question", "en", CancellationToken.None);

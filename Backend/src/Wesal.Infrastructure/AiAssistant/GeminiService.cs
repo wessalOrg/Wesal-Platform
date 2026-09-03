@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
@@ -34,6 +35,9 @@ public sealed class GeminiService : IGeminiService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    private const int CircuitBreakerCooldownSeconds = 60;
+    private static long _circuitOpenUntilUtcTicks;
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly GoogleAiSettings _settings;
     private readonly ILogger<GeminiService> _logger;
@@ -49,7 +53,35 @@ public sealed class GeminiService : IGeminiService
     }
 
     public bool IsAvailable
-        => _settings.Enabled && !string.IsNullOrWhiteSpace(_settings.ApiKey);
+    {
+        get
+        {
+            if (!_settings.Enabled || string.IsNullOrWhiteSpace(_settings.ApiKey))
+                return false;
+            var until = Volatile.Read(ref _circuitOpenUntilUtcTicks);
+            if (until > 0 && Environment.TickCount64 < until)
+                return false;
+            if (until > 0)
+                Volatile.Write(ref _circuitOpenUntilUtcTicks, 0);
+            return true;
+        }
+    }
+
+    private static void RecordFailure()
+    {
+        var until = Environment.TickCount64 + CircuitBreakerCooldownSeconds * 1000L;
+        Volatile.Write(ref _circuitOpenUntilUtcTicks, until);
+    }
+
+    private static void RecordSuccess()
+    {
+        Volatile.Write(ref _circuitOpenUntilUtcTicks, 0);
+    }
+
+    internal static void ResetCircuitBreaker()
+    {
+        Volatile.Write(ref _circuitOpenUntilUtcTicks, 0);
+    }
 
     public async Task<string?> GenerateTextAsync(
         string prompt,
@@ -85,6 +117,7 @@ public sealed class GeminiService : IGeminiService
 
         if (primary.Value is not null)
         {
+            RecordSuccess();
             return primary.Value;
         }
 
@@ -101,9 +134,14 @@ public sealed class GeminiService : IGeminiService
                 "secondary",
                 cancellationToken);
 
+            if (secondary.Value is not null)
+                RecordSuccess();
+            else
+                RecordFailure();
             return secondary.Value;
         }
 
+        RecordFailure();
         return null;
     }
 
@@ -140,6 +178,7 @@ public sealed class GeminiService : IGeminiService
 
         if (primary.Value is not null)
         {
+            RecordSuccess();
             return primary.Value;
         }
 
@@ -156,9 +195,14 @@ public sealed class GeminiService : IGeminiService
                 "secondary",
                 cancellationToken);
 
+            if (secondary.Value is not null)
+                RecordSuccess();
+            else
+                RecordFailure();
             return secondary.Value;
         }
 
+        RecordFailure();
         return null;
     }
 
