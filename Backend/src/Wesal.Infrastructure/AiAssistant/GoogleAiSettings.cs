@@ -37,7 +37,7 @@ public sealed class GoogleAiSettings
     /// <summary>Request timeout for a single Gemini HTTP call, in seconds. Must stay
     /// well below the frontend's 25 s request budget because a single /assistant
     /// turn can issue multiple Gemini calls (structured intent + HowTo text).
-    /// At 8 s the worst case is ~16 s with the circuit breaker short-circuiting
-    /// after the first failure.</summary>
-    public int TimeoutSeconds { get; set; } = 8;
+    /// At 5 s the worst case is ~10 s with two sequential calls; the circuit
+    /// breaker short-circuits after the first failure.</summary>
+    public int TimeoutSeconds { get; set; } = 5;
 }

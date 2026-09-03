@@ -68,6 +68,11 @@ public class GlobalExceptionHandlingMiddleware
                 "You are not authorized to perform this action",
                 "Forbidden",
                 null),
+            OperationCanceledException => (
+                StatusCodes.Status503ServiceUnavailable,
+                "The request timed out due to a transient issue. Please try again.",
+                "ServiceUnavailable",
+                null),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "An unexpected error occurred",

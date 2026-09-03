@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Enums;
@@ -110,8 +111,18 @@ public class HallsController : ControllerBase
             return ValidationProblem();
         }
 
-        var halls = await _featuredHallsService.GetFeaturedHallsAsync(region, cancellationToken);
-
-        return Ok(halls);
+        try
+        {
+            var halls = await _featuredHallsService.GetFeaturedHallsAsync(region, cancellationToken);
+            return Ok(halls);
+        }
+        catch (OperationCanceledException)
+        {
+            return Ok(Array.Empty<FeaturedHallDto>());
+        }
+        catch (DbException)
+        {
+            return Ok(Array.Empty<FeaturedHallDto>());
+        }
     }
 }
