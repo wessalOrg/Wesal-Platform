@@ -13,17 +13,18 @@ namespace Wesal.Infrastructure.AiAssistant;
 
 /// <summary>
 /// Communicates with the Google Gemini REST API using an HttpClient obtained
-/// from <see cref="IHttpClientFactory"/>. Each logical user request is attempted
-/// at most twice, strictly in order: the primary key/model first, then — only if a
-/// recoverable failure occurs and a secondary key is configured — the secondary
-/// key/model. All HTTP/timeout/JSON failure modes are converted to a null result
-/// (recoverable) with diagnostic logging that never includes the API key. Permanent
-/// failures (HTTP 400) and caller cancellation are never duplicated on the
-/// secondary key. The API key is sent in the "x-goog-api-key" request header rather
-/// than as a URL query parameter, so it never appears in access logs, proxies, or
-/// the request line, and is never logged or returned. User/context input is
-/// truncated to <see cref="GoogleAiSettings.MaxContextCharacters"/> before being
-/// sent, so a maliciously large request cannot consume unbounded Gemini quota.
+/// from <see cref="IHttpClientFactory"/>. Each request uses a single configured
+/// API key and model. All HTTP/timeout/JSON failure modes are converted to a null
+/// result (recoverable) with diagnostic logging that never includes the API key.
+/// A circuit breaker opens for <see cref="CircuitBreakerCooldownSeconds"/> seconds
+/// after any failure, causing <see cref="IsAvailable"/> to return false so
+/// upstream consumers (e.g. <see cref="GeminiAiIntentExtractor"/>) fall back to
+/// deterministic classification without making another HTTP call. The API key is
+/// sent in the "x-goog-api-key" request header rather than as a URL query
+/// parameter, so it never appears in access logs, proxies, or the request line,
+/// and is never logged or returned. User/context input is truncated to
+/// <see cref="GoogleAiSettings.MaxContextCharacters"/> before being sent, so a
+/// maliciously large request cannot consume unbounded Gemini quota.
 /// </summary>
 public sealed class GeminiService : IGeminiService
 {
@@ -95,7 +96,6 @@ public sealed class GeminiService : IGeminiService
             return null;
         }
 
-        // Enforce the context limit before the prompt leaves the server.
         var userPrompt = GeminiPromptBuilder.BuildUserPrompt(prompt, _settings.MaxContextCharacters);
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
@@ -105,40 +105,15 @@ public sealed class GeminiService : IGeminiService
 
         var systemInstruction = GeminiPromptBuilder.BuildSystemInstruction(language, _settings.MaxContextCharacters);
 
-        // Primary attempt: primary key + primary model.
-        var primary = await TryTextAttemptAsync(
-            _settings.ApiKey,
-            GetModel(_settings.GeminiModel),
+        var result = await TryTextAttemptAsync(
             userPrompt,
             systemInstruction,
-            null,
-            "primary",
             cancellationToken);
 
-        if (primary.Value is not null)
+        if (result is not null)
         {
             RecordSuccess();
-            return primary.Value;
-        }
-
-        // Recoverable failure (5xx/429/401/403/network/timeout/invalid output): try secondary key/model.
-        if (primary.ShouldFailOver && HasSecondaryKey && !cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogInformation("Primary Gemini key failed; attempting failover with the secondary key.");
-            var secondary = await TryTextAttemptAsync(
-                _settings.ApiKey2,
-                GetModel(_settings.GeminiModel2),
-                userPrompt,
-                systemInstruction,
-                null,
-                "secondary",
-                cancellationToken);
-
-            if (secondary.Value is not null)
-                RecordSuccess();
-            else
-                RecordFailure();
-            return secondary.Value;
+            return result;
         }
 
         RecordFailure();
@@ -158,7 +133,6 @@ public sealed class GeminiService : IGeminiService
             return null;
         }
 
-        // Enforce the context limit before the prompt leaves the server.
         var userPrompt = GeminiPromptBuilder.BuildUserPrompt(prompt, _settings.MaxContextCharacters);
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
@@ -166,59 +140,29 @@ public sealed class GeminiService : IGeminiService
             return null;
         }
 
-        // Primary attempt: primary key + primary model.
-        var primary = await TryStructuredAttemptAsync<T>(
-            _settings.ApiKey,
-            GetModel(_settings.GeminiModel),
+        var result = await TryStructuredAttemptAsync<T>(
             userPrompt,
             systemInstruction,
             responseSchema,
-            "primary",
             cancellationToken);
 
-        if (primary.Value is not null)
+        if (result is not null)
         {
             RecordSuccess();
-            return primary.Value;
-        }
-
-        // Recoverable failure (5xx/429/401/403/network/timeout/invalid output): try secondary key/model.
-        if (primary.ShouldFailOver && HasSecondaryKey && !cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogInformation("Primary Gemini key failed; attempting failover with the secondary key.");
-            var secondary = await TryStructuredAttemptAsync<T>(
-                _settings.ApiKey2,
-                GetModel(_settings.GeminiModel2),
-                userPrompt,
-                systemInstruction,
-                responseSchema,
-                "secondary",
-                cancellationToken);
-
-            if (secondary.Value is not null)
-                RecordSuccess();
-            else
-                RecordFailure();
-            return secondary.Value;
+            return result;
         }
 
         RecordFailure();
         return null;
     }
 
-    private bool HasSecondaryKey
-        => _settings.Enabled && !string.IsNullOrWhiteSpace(_settings.ApiKey2);
-
-    private async Task<AttemptResult<string?>> TryTextAttemptAsync(
-        string apiKey,
-        string model,
+    private async Task<string?> TryTextAttemptAsync(
         string userPrompt,
         string systemInstruction,
-        JsonNode? responseSchema,
-        string keyLabel,
         CancellationToken cancellationToken)
     {
         var client = _httpClientFactory.CreateClient(HttpClientName);
+        var model = GetModel(_settings.GeminiModel);
         var url = $"{GetBaseUrl()}/models/{Uri.EscapeDataString(model)}:generateContent";
         var body = new GeminiGenerateContentRequest(
             [new GeminiContent([new GeminiPart(userPrompt)])],
@@ -229,7 +173,7 @@ public sealed class GeminiService : IGeminiService
         {
             Content = JsonContent.Create(body, options: JsonOptions)
         };
-        request.Headers.TryAddWithoutValidation("x-goog-api-key", apiKey);
+        request.Headers.TryAddWithoutValidation("x-goog-api-key", _settings.ApiKey);
 
         try
         {
@@ -242,9 +186,9 @@ public sealed class GeminiService : IGeminiService
             {
                 var status = (int)response.StatusCode;
                 _logger.LogWarning(
-                    "Gemini {Key} request failed with HTTP {Status}; falling back to deterministic provider.",
-                    keyLabel, status);
-                return new AttemptResult<string?>(IsRecoverableStatus(response.StatusCode), null);
+                    "Gemini request failed with HTTP {Status}; falling back to deterministic provider.",
+                    status);
+                return null;
             }
 
             GeminiGenerateContentResponse? parsed;
@@ -258,25 +202,23 @@ public sealed class GeminiService : IGeminiService
             }
             catch (JsonException)
             {
-                _logger.LogWarning("Gemini {Key} returned malformed JSON; falling back to deterministic provider.", keyLabel);
-                return new AttemptResult<string?>(true, null);
+                _logger.LogWarning("Gemini returned malformed JSON; falling back to deterministic provider.");
+                return null;
             }
 
             var text = ExtractText(parsed);
             if (string.IsNullOrWhiteSpace(text))
             {
-                _logger.LogWarning("Gemini {Key} returned an empty response; falling back to deterministic provider.", keyLabel);
-                return new AttemptResult<string?>(true, null);
+                _logger.LogWarning("Gemini returned an empty response; falling back to deterministic provider.");
+                return null;
             }
 
-            return new AttemptResult<string?>(false, text);
+            return text;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            // The HttpClient's internal timeout fired (client cancellation) rather than
-            // the caller cancelling the operation.
-            _logger.LogWarning("Gemini {Key} request timed out after {Timeout}s; falling back to deterministic provider.", keyLabel, _settings.TimeoutSeconds);
-            return new AttemptResult<string?>(true, null);
+            _logger.LogWarning("Gemini request timed out after {Timeout}s; falling back to deterministic provider.", _settings.TimeoutSeconds);
+            return null;
         }
         catch (OperationCanceledException)
         {
@@ -284,26 +226,24 @@ public sealed class GeminiService : IGeminiService
         }
         catch (HttpRequestException)
         {
-            _logger.LogWarning("Gemini {Key} request failed due to a network error; falling back to deterministic provider.", keyLabel);
-            return new AttemptResult<string?>(true, null);
+            _logger.LogWarning("Gemini request failed due to a network error; falling back to deterministic provider.");
+            return null;
         }
         catch (JsonException)
         {
-            _logger.LogWarning("Gemini {Key} request/response serialization failed; falling back to deterministic provider.", keyLabel);
-            return new AttemptResult<string?>(true, null);
+            _logger.LogWarning("Gemini request/response serialization failed; falling back to deterministic provider.");
+            return null;
         }
     }
 
-    private async Task<AttemptResult<T?>> TryStructuredAttemptAsync<T>(
-        string apiKey,
-        string model,
+    private async Task<T?> TryStructuredAttemptAsync<T>(
         string userPrompt,
         string systemInstruction,
         JsonNode responseSchema,
-        string keyLabel,
         CancellationToken cancellationToken) where T : class
     {
         var client = _httpClientFactory.CreateClient(HttpClientName);
+        var model = GetModel(_settings.GeminiModel);
         var url = $"{GetBaseUrl()}/models/{Uri.EscapeDataString(model)}:generateContent";
         var body = new GeminiGenerateContentRequest(
             [new GeminiContent([new GeminiPart(userPrompt)])],
@@ -314,7 +254,7 @@ public sealed class GeminiService : IGeminiService
         {
             Content = JsonContent.Create(body, options: JsonOptions)
         };
-        request.Headers.TryAddWithoutValidation("x-goog-api-key", apiKey);
+        request.Headers.TryAddWithoutValidation("x-goog-api-key", _settings.ApiKey);
 
         try
         {
@@ -327,9 +267,9 @@ public sealed class GeminiService : IGeminiService
             {
                 var status = (int)response.StatusCode;
                 _logger.LogWarning(
-                    "Gemini {Key} structured request failed with HTTP {Status}; falling back to deterministic classifier.",
-                    keyLabel, status);
-                return new AttemptResult<T?>(IsRecoverableStatus(response.StatusCode), null);
+                    "Gemini structured request failed with HTTP {Status}; falling back to deterministic classifier.",
+                    status);
+                return null;
             }
 
             GeminiGenerateContentResponse? parsed;
@@ -343,32 +283,32 @@ public sealed class GeminiService : IGeminiService
             }
             catch (JsonException)
             {
-                _logger.LogWarning("Gemini {Key} returned malformed JSON; falling back to deterministic classifier.", keyLabel);
-                return new AttemptResult<T?>(true, null);
+                _logger.LogWarning("Gemini returned malformed JSON; falling back to deterministic classifier.");
+                return null;
             }
 
             var text = ExtractText(parsed);
             if (string.IsNullOrWhiteSpace(text))
             {
-                _logger.LogWarning("Gemini {Key} returned an empty structured response; falling back to deterministic classifier.", keyLabel);
-                return new AttemptResult<T?>(true, null);
+                _logger.LogWarning("Gemini returned an empty structured response; falling back to deterministic classifier.");
+                return null;
             }
 
             try
             {
                 var deserialized = JsonSerializer.Deserialize<T>(text, JsonOptions);
-                return new AttemptResult<T?>(true, deserialized);
+                return deserialized;
             }
             catch (JsonException)
             {
-                _logger.LogWarning("Gemini {Key} structured output was not valid JSON; falling back to deterministic classifier.", keyLabel);
-                return new AttemptResult<T?>(true, null);
+                _logger.LogWarning("Gemini structured output was not valid JSON; falling back to deterministic classifier.");
+                return null;
             }
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("Gemini {Key} structured request timed out after {Timeout}s; falling back to deterministic classifier.", keyLabel, _settings.TimeoutSeconds);
-            return new AttemptResult<T?>(true, null);
+            _logger.LogWarning("Gemini structured request timed out after {Timeout}s; falling back to deterministic classifier.", _settings.TimeoutSeconds);
+            return null;
         }
         catch (OperationCanceledException)
         {
@@ -376,31 +316,15 @@ public sealed class GeminiService : IGeminiService
         }
         catch (HttpRequestException)
         {
-            _logger.LogWarning("Gemini {Key} structured request failed due to a network error; falling back to deterministic classifier.", keyLabel);
-            return new AttemptResult<T?>(true, null);
+            _logger.LogWarning("Gemini structured request failed due to a network error; falling back to deterministic classifier.");
+            return null;
         }
         catch (JsonException)
         {
-            _logger.LogWarning("Gemini {Key} structured request/response serialization failed; falling back to deterministic classifier.", keyLabel);
-            return new AttemptResult<T?>(true, null);
+            _logger.LogWarning("Gemini structured request/response serialization failed; falling back to deterministic classifier.");
+            return null;
         }
     }
-
-    /// <summary>
-    /// Returns true for statuses where retrying against the (possibly valid) secondary
-    /// key is worthwhile, and false for permanent failures (4xx other than 401/403/429)
-    /// where the request must not be duplicated.
-    /// </summary>
-    private static bool IsRecoverableStatus(HttpStatusCode status)
-        => status is HttpStatusCode.RequestTimeout
-            or HttpStatusCode.Unauthorized
-            or HttpStatusCode.Forbidden
-            or HttpStatusCode.TooManyRequests
-            or HttpStatusCode.InternalServerError
-            or HttpStatusCode.BadGateway
-            or HttpStatusCode.ServiceUnavailable
-            or HttpStatusCode.GatewayTimeout
-            || (int)status >= 500;
 
     private string GetModel(string configured)
         => string.IsNullOrWhiteSpace(configured) ? "gemini-3.6-flash" : configured;
@@ -453,12 +377,4 @@ public sealed class GeminiService : IGeminiService
 
     private sealed record GeminiCandidate(
         [property: JsonPropertyName("content")] GeminiContent? Content);
-
-    /// <summary>
-    /// Outcome of a single Gemini attempt. <see cref="Value"/> is the successful
-    /// result when present. <see cref="ShouldFailOver"/> is true when the failure is
-    /// recoverable (so a secondary key may be tried) and false for permanent failures
-    /// or cancellation where the request must not be duplicated.
-    /// </summary>
-    private readonly record struct AttemptResult<T>(bool ShouldFailOver, T Value);
 }

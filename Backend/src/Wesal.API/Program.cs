@@ -225,16 +225,4 @@ static void ValidateNonDevelopmentConfiguration(IWebHostEnvironment environment,
         throw new InvalidOperationException(
             "GoogleAI:GeminiModel must be a valid Gemini model id (e.g. gemini-2.5-flash) or be left unset outside Development.");
     }
-
-    // The secondary key is optional; when configured, its model must be valid too.
-    var secondaryKey = configuration["GoogleAI:ApiKey_2"] ?? string.Empty;
-    if (!string.IsNullOrWhiteSpace(secondaryKey))
-    {
-        var secondaryModel = configuration["GoogleAI:GeminiModel_2"] ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(secondaryModel) || !secondaryModel.StartsWith("gemini-", StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                "GoogleAI:GeminiModel_2 must be a valid Gemini model id (e.g. gemini-2.5-flash) when a secondary API key is configured.");
-        }
-    }
 }
