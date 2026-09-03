@@ -27,7 +27,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString, npgsql =>
             {
                 npgsql.MigrationsAssembly(typeof(DependencyInjection).Assembly.FullName);
-                npgsql.CommandTimeout(10);
+                npgsql.CommandTimeout(15);
                 npgsql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null!);
             }));
 
