@@ -16,6 +16,13 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
 
+        // Neon cold-start can take 10-30s. Append connection timeout so Npgsql
+        // waits long enough for the DB to wake up instead of failing immediately.
+        if (!connectionString.Contains("Timeout", StringComparison.OrdinalIgnoreCase))
+        {
+            connectionString += ";Timeout=30";
+        }
+
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql =>
             {
