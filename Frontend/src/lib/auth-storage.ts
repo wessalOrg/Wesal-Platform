@@ -5,11 +5,14 @@ import {
 } from "@/lib/booking-intent";
 
 const AUTH_STORAGE_KEY = "wesal_auth";
+export const AUTH_CHANGE_EVENT = "wesal-auth-change";
 
 export type StoredUser = {
   id: string;
   name?: string;
   email?: string;
+  phone?: string;
+  role?: string;
 };
 
 export type StoredAuth = {
@@ -34,19 +37,34 @@ export function getStoredAuth(): StoredAuth | null {
 export function setStoredAuth(auth: StoredAuth): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
-  window.dispatchEvent(new Event("wesal-auth-change"));
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
 export function clearStoredAuth(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(AUTH_STORAGE_KEY);
-  window.dispatchEvent(new Event("wesal-auth-change"));
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
 /** Clears access token + persisted auth payload. Does not touch unrelated storage. */
 export function clearAuthSession(): void {
   clearAccessToken();
   clearStoredAuth();
+}
+
+/** Keeps navbar identity in sync after a Regular User profile save. */
+export function patchStoredUser(patch: Partial<StoredUser>): void {
+  const current = getStoredAuth();
+  if (!current) return;
+
+  const nextUser: StoredUser = { ...current.user };
+  if (patch.id) nextUser.id = patch.id;
+  if (typeof patch.name === "string") nextUser.name = patch.name;
+  if (typeof patch.email === "string") nextUser.email = patch.email;
+  if (typeof patch.phone === "string") nextUser.phone = patch.phone;
+  if (typeof patch.role === "string") nextUser.role = patch.role;
+
+  setStoredAuth({ ...current, user: nextUser });
 }
 
 const BOOKING_HALL_KEY = "wesal_booking_hall";

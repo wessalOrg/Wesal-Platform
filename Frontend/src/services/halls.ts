@@ -8,6 +8,8 @@ import {
   HALL_DETAILS_FALLBACK,
 } from "@/constants/hallDetailsFallback";
 import { getDefaultHallAmenities } from "@/lib/amenities";
+import { parseDateIso } from "@/lib/booking-date";
+import { parseBookingPeriodType } from "@/lib/booking-period";
 import {
   REGION_API_PARAMS,
   type FeaturedHall,
@@ -23,6 +25,7 @@ import {
   type HallSlotPrice,
   type PeriodStatus,
 } from "@/types/hall";
+import type { BookingPeriodType } from "@/types/booking";
 
 const LOCAL_HALL_IMAGES = [
   "/halls/featured-lotus.webp",
@@ -76,6 +79,7 @@ type ApiFeaturedHall = {
   isOwner?: boolean;
   status?: number | string;
   isActive?: boolean;
+  isOwner?: boolean;
   availability?: ApiAvailabilityDay[];
   bookingPeriods?: ApiPeriod[];
 };
@@ -158,31 +162,46 @@ function formatTimeRange(start?: string, end?: string): string | undefined {
 }
 
 function mapPeriodLabel(name?: string, type?: number | string): string {
-  const typeValue = typeof type === "string" ? type.toLowerCase() : type;
-  if (name?.includes("First") || typeValue === 0 || typeValue === "firstperiod") {
+  const mappedType = parseBookingPeriodType(type);
+  if (name?.includes("First") || mappedType === "FirstPeriod") {
     return t("halls.period.first");
   }
-  if (name?.includes("Second") || typeValue === 1 || typeValue === "secondperiod") {
+  if (name?.includes("Second") || mappedType === "SecondPeriod") {
     return t("halls.period.second");
   }
   return name ?? t("halls.period.generic");
 }
 
-function mapAvailabilityDays(
+function mapPeriodType(
+  type?: number | string,
+  name?: string,
+): BookingPeriodType | undefined {
+  return (
+    parseBookingPeriodType(type) ??
+    (name?.includes("First") ? "FirstPeriod" : name?.includes("Second") ? "SecondPeriod" : undefined)
+  );
+}
+
+export function mapAvailabilityDays(
   availability?: ApiAvailabilityDay[],
 ): HallAvailabilityDay[] {
   if (!availability?.length) return [];
 
-  return availability.slice(0, 7).map((day) => ({
-    dateLabel: formatDateLabel(day.date),
-    periods: (day.periods ?? []).map(
-      (period): HallDayPeriod => ({
-        label: mapPeriodLabel(period.periodName, period.periodType),
-        time: formatTimeRange(period.startTime, period.endTime),
-        status: toPeriodStatus(period.status),
-      }),
-    ),
-  }));
+  return availability.slice(0, 7).map((day) => {
+    const dateIso = parseDateIso(day.date) ?? undefined;
+    return {
+      dateLabel: formatDateLabel(day.date) || dateIso || "",
+      dateIso,
+      periods: (day.periods ?? []).map(
+        (period): HallDayPeriod => ({
+          periodType: mapPeriodType(period.periodType, period.periodName),
+          label: mapPeriodLabel(period.periodName, period.periodType),
+          time: formatTimeRange(period.startTime, period.endTime),
+          status: toPeriodStatus(period.status),
+        }),
+      ),
+    };
+  });
 }
 
 function summarizeBooked(days: HallAvailabilityDay[]): string | null {
@@ -379,6 +398,7 @@ function mapApiHallDetail(hall: ApiFeaturedHall, index: number): HallDetail {
     isOwner: Boolean(hall.isOwner),
     rating: hall.rating ?? fallback.rating ?? null,
     reviewCount: hall.reviewCount ?? fallback.reviewCount ?? null,
+    isOwner: hall.isOwner ?? false,
     availabilityDays,
   };
 }
@@ -651,6 +671,7 @@ type ApiHallDetails = {
   isAvailable?: boolean;
   isDeleted?: boolean;
   isOwner?: boolean;
+  availability?: ApiAvailabilityDay[];
 };
 
 type HallDetailsResponse = ApiHallDetails | { data: ApiHallDetails };
@@ -771,7 +792,10 @@ function mapApiHallDetails(raw: ApiHallDetails): HallDetails {
     images: images.length > 0 ? images : (fallback?.images ?? [main]),
     isAvailable: !isHallUnavailable(raw),
     isOwner: raw.isOwner ?? false,
-    availabilityDays: fallback?.availabilityDays ?? [],
+    availabilityDays: (() => {
+      const mapped = mapAvailabilityDays(raw.availability);
+      return mapped.length > 0 ? mapped : (fallback?.availabilityDays ?? []);
+    })(),
   };
 }
 

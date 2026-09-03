@@ -42,7 +42,7 @@ export default function LoginFormCard({
 }: LoginFormCardProps) {
   const t = useT();
   const router = useRouter();
-  const { refreshSession } = useAuth();
+  const { applyLocalSession, refreshSession } = useAuth();
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -177,6 +177,11 @@ export default function LoginFormCard({
         password,
       });
 
+      if (!result.token) {
+        setFormError(t("auth.login.form.error.generic"));
+        return;
+      }
+
       setAccessToken(result.token);
       setStoredAuth({
         token: result.token,
@@ -184,9 +189,16 @@ export default function LoginFormCard({
           id: result.id,
           name: result.fullName,
           email: result.email,
+          phone: result.phoneNumber,
+          role: result.role,
         },
       });
-      await refreshSession();
+      applyLocalSession({
+        isAuthenticated: true,
+        role: result.role || null,
+        userName: result.fullName || null,
+      });
+      void refreshSession();
       clearBookingHallContext();
       navigateAfterAuth(router, resolveAuthRedirect(redirectTo, action));
     } catch (error) {

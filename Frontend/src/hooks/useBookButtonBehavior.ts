@@ -33,6 +33,7 @@ export function useBookButtonBehavior({
 
   return {
     handleBook,
+    canBook,
     returnPath: buildHallDetailsPath(hallId, true),
     loginHref: buildLoginRedirectPath(hallId, true),
     registerHref: buildRegisterRedirectPath(hallId),

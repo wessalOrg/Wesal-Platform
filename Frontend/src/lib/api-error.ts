@@ -2,6 +2,7 @@ export class ApiError extends Error {
   status?: number;
   detail?: string;
   code?: string;
+  details?: unknown;
   /** ASP.NET ValidationProblemDetails field map (e.g. AccountType → messages). */
   fieldErrors: Record<string, string[]>;
 
@@ -9,7 +10,7 @@ export class ApiError extends Error {
     message: string,
     status?: number,
     fieldErrors: Record<string, string[]> = {},
-    options?: { detail?: string; code?: string },
+    options?: { detail?: string; code?: string; details?: unknown },
   ) {
     super(message);
     this.name = "ApiError";
@@ -17,6 +18,7 @@ export class ApiError extends Error {
     this.fieldErrors = fieldErrors;
     this.detail = options?.detail;
     this.code = options?.code;
+    this.details = options?.details;
   }
 }
 

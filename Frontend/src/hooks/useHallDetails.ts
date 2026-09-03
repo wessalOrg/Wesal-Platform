@@ -19,6 +19,16 @@ export function useHallDetails(hallId: string) {
     setReloadKey((key) => key + 1);
   }, []);
 
+  const refreshQuiet = useCallback(() => {
+    void fetchHallDetails(hallId).then((result) => {
+      if (result.status === "not_found") return;
+      setState((current) => {
+        if (current.phase === "fatal") return current;
+        return { phase: "ready", result };
+      });
+    });
+  }, [hallId]);
+
   useEffect(() => {
     if (authStatus !== "ready") {
       setState({ phase: "loading" });
@@ -77,5 +87,6 @@ export function useHallDetails(hallId: string) {
     usingFallback: Boolean(usingFallback),
     errorMessage,
     retry,
+    refreshQuiet,
   };
 }

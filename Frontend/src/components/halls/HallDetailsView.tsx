@@ -19,7 +19,7 @@ import { useT } from "@/i18n";
 import { localizeHallDetails, localizePriceLabel } from "@/lib/localize-hall-display";
 import { fetchHallComments, mapCommentToReview } from "@/services/comments";
 import { fetchHallById } from "@/services/halls";
-import type { BookingSelection, HallAmenity, HallDetails } from "@/types/hall";
+import type { HallAmenity, HallDetails } from "@/types/hall";
 
 type ViewStatus = "loading" | "ready" | "unavailable" | "error";
 
@@ -41,15 +41,11 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   const [warning, setWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [bookingSelection, setBookingSelection] = useState<BookingSelection | null>(
-    null,
-  );
   const { canBook, canContactOwner, isGuest, isOwnHall } = useHallPermissions(hall);
 
   useEffect(() => {
     if (canBook) return;
     setBookingOpen(false);
-    setBookingSelection(null);
   }, [canBook]);
 
   if (loadedId !== hallId) {
@@ -303,15 +299,11 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
           {canBook ? (
             <HallBookingPanel
               open={bookingOpen}
+              hallId={viewHall.id}
               hallName={viewHall.name}
               days={viewHall.availabilityDays ?? []}
-              selection={bookingSelection}
-              onSelect={setBookingSelection}
+              canSubmit={canBook}
               onClose={() => setBookingOpen(false)}
-              onConfirm={() => {
-                if (!bookingSelection) return;
-                setBookingOpen(false);
-              }}
             />
           ) : null}
 
@@ -427,7 +419,6 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                       className="btn-primary min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:!min-h-12 sm:!text-[15px]"
                       data-testid="hall-book-button"
                       onClick={() => {
-                        setBookingSelection(null);
                         setBookingOpen(true);
                       }}
                     >

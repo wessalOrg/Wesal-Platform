@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useProtectedHallError } from "@/hooks/useProtectedHallError";
+import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useT } from "@/i18n";
 import { isUnauthorizedApiError } from "@/lib/api-error";
 import {
@@ -31,6 +32,7 @@ export default function HallContactButton({
   const router = useRouter();
   const { authReady, canContactOwner } = useHallPermissions({ isOwner: isOwnHall });
   const handleProtectedError = useProtectedHallError();
+  const inbox = useOptionalMessagesInbox();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -46,6 +48,10 @@ export default function HallContactButton({
     try {
       const thread = await createHallConversation(hallId);
       onOpened?.();
+      if (inbox?.canUseMessaging) {
+        inbox.openInbox(thread.conversationId);
+        return;
+      }
       router.push(`/messages/${thread.conversationId}`);
     } catch (err) {
       const message = await handleProtectedError(err, conversationErrorMessage);
