@@ -327,7 +327,7 @@ public sealed class GeminiService : IGeminiService
     }
 
     private string GetModel(string configured)
-        => string.IsNullOrWhiteSpace(configured) ? "gemini-3.6-flash" : configured;
+        => string.IsNullOrWhiteSpace(configured) ? "gemini-3.6-flash" : configured.Trim();
 
     private string GetBaseUrl()
         => string.IsNullOrWhiteSpace(_settings.BaseUrl)

@@ -219,8 +219,8 @@ static void ValidateNonDevelopmentConfiguration(IWebHostEnvironment environment,
             "ConnectionStrings:DefaultConnection must be overridden via the ConnectionStrings__DefaultConnection environment variable outside Development.");
     }
 
-    var geminiModel = configuration["GoogleAI:GeminiModel"] ?? string.Empty;
-    if (string.IsNullOrWhiteSpace(geminiModel) || !geminiModel.StartsWith("gemini-", StringComparison.Ordinal))
+    var geminiModel = configuration["GoogleAI:GeminiModel"]?.Trim() ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(geminiModel) || !geminiModel.StartsWith("gemini-", StringComparison.OrdinalIgnoreCase))
     {
         throw new InvalidOperationException(
             "GoogleAI:GeminiModel must be a valid Gemini model id (e.g. gemini-2.5-flash) or be left unset outside Development.");
