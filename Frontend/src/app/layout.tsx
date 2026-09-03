@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Cairo } from "next/font/google";
 import { AiAssistantProvider } from "@/components/assistant/AiAssistantProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { MessagesInboxProvider } from "@/components/messages/MessagesInboxProvider";
+import MessagesInboxPanel from "@/components/messages/MessagesInboxPanel";
+import { UserProfileProvider } from "@/components/profile/UserProfileProvider";
 import { LanguageProvider } from "@/components/layout/LanguageProvider";
 import { translate } from "@/i18n";
 import { FAB_POSITION_BOOT_SCRIPT } from "@/lib/fab-position";
@@ -34,9 +37,14 @@ export default function RootLayout({
       </head>
       <body className={`${cairo.variable} ${cairo.className} min-h-svh overflow-x-hidden font-sans`}>
         <AuthProvider>
-          <LanguageProvider>
-            <AiAssistantProvider>{children}</AiAssistantProvider>
-          </LanguageProvider>
+          <UserProfileProvider>
+            <LanguageProvider>
+              <MessagesInboxProvider>
+                <AiAssistantProvider>{children}</AiAssistantProvider>
+                <MessagesInboxPanel />
+              </MessagesInboxProvider>
+            </LanguageProvider>
+          </UserProfileProvider>
         </AuthProvider>
       </body>
     </html>

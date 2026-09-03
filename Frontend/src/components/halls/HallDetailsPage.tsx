@@ -18,6 +18,7 @@ import HallRatingPanel from "@/components/halls/HallRatingPanel";
 import HallUnavailableBanner from "@/components/halls/HallUnavailableBanner";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useBookButtonBehavior } from "@/hooks/useBookButtonBehavior";
+import { useHallAvailabilityInvalidation } from "@/hooks/useHallAvailabilityInvalidation";
 import { useHallDetails } from "@/hooks/useHallDetails";
 import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useT } from "@/i18n";
@@ -29,7 +30,7 @@ import {
   fetchHallComments,
   mapCommentToReview,
 } from "@/services/comments";
-import type { BookingSelection, HallReview } from "@/types/hall";
+import type { HallReview } from "@/types/hall";
 
 type HallDetailsPageProps = {
   hallId: string;
@@ -40,14 +41,13 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   const lang = useUiLang();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { state, hall, unavailable, usingFallback, errorMessage, retry } =
+  const { state, hall, unavailable, usingFallback, errorMessage, retry, refreshQuiet } =
     useHallDetails(hallId);
   const permissions = useHallPermissions(hall);
 
+  useHallAvailabilityInvalidation(hallId, refreshQuiet);
+
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [bookingSelection, setBookingSelection] = useState<BookingSelection | null>(
-    null,
-  );
   const [reviews, setReviews] = useState<HallReview[]>([]);
   const bookIntentHandled = useRef(false);
 
@@ -58,7 +58,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   useEffect(() => {
     if (canBook) return;
     setBookingOpen(false);
-    setBookingSelection(null);
   }, [canBook]);
 
   useEffect(() => {
@@ -82,7 +81,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   }, [hallId]);
 
   const openBookingFlow = useCallback(() => {
-    setBookingSelection(null);
     setBookingOpen(true);
   }, []);
 
@@ -120,11 +118,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     hallId,
     router,
   ]);
-
-  const handleBookingConfirm = useCallback(() => {
-    if (!bookingSelection) return;
-    setBookingOpen(false);
-  }, [bookingSelection]);
 
   if (state.phase === "loading") {
     return <HallDetailsSkeleton />;
@@ -273,12 +266,11 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
       {canBook && !unavailable ? (
         <HallBookingPanel
           open={bookingOpen}
+          hallId={viewHall.id}
           hallName={viewHall.name}
           days={viewHall.availabilityDays ?? []}
-          selection={bookingSelection}
-          onSelect={setBookingSelection}
+          canSubmit={canBook}
           onClose={() => setBookingOpen(false)}
-          onConfirm={handleBookingConfirm}
         />
       ) : null}
     </div>

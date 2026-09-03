@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
+import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 
 type AuthNavIconsProps = {
   profileLabel: string;
@@ -18,6 +19,17 @@ export default function AuthNavIcons({
   stacked = false,
 }: AuthNavIconsProps) {
   const pathname = usePathname();
+  const inbox = useOptionalMessagesInbox();
+
+  const openMessages = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!inbox?.canUseMessaging) {
+      onNavigate?.();
+      return;
+    }
+    event.preventDefault();
+    inbox.openInbox();
+    onNavigate?.();
+  };
 
   if (stacked) {
     return (
@@ -25,7 +37,7 @@ export default function AuthNavIcons({
         <Link
           href="/messages"
           className="flex min-h-11 items-center gap-2 py-2 text-sm font-medium text-[var(--wesal-text)]"
-          onClick={onNavigate}
+          onClick={openMessages}
         >
           <MessageIcon className="h-5 w-5 shrink-0 text-[var(--wesal-maroon)]" />
           {messagesLabel}
@@ -52,7 +64,7 @@ export default function AuthNavIcons({
         href="/messages"
         label={messagesLabel}
         active={pathname === "/messages" || pathname.startsWith("/messages/")}
-        onNavigate={onNavigate}
+        onNavigate={openMessages}
       >
         <MessageIcon className="h-5 w-5" />
       </IconLink>
@@ -78,7 +90,7 @@ function IconLink({
   href: string;
   label: string;
   active: boolean;
-  onNavigate?: () => void;
+  onNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
   children: ReactNode;
 }) {
   return (

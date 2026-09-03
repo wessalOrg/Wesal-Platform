@@ -1,3 +1,5 @@
+import type { BookingPeriodType } from "@/types/booking";
+
 export type HallRegion =
   | "all"
   | "north"
@@ -7,7 +9,10 @@ export type HallRegion =
 
 export type PeriodStatus = "available" | "booked";
 
+export type { BookingPeriodType };
+
 export type HallDayPeriod = {
+  periodType?: BookingPeriodType;
   label: string;
   time?: string;
   status: PeriodStatus;
@@ -96,8 +101,9 @@ export type HallSlotPrice = {
 };
 
 export type BookingSelection = {
+  dateIso: string;
   dateLabel: string;
-  periodLabel: string;
+  periods: BookingPeriodType[];
 };
 
 export type HallDetail = {

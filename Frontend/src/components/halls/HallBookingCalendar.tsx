@@ -1,21 +1,15 @@
 "use client";
 
 import { useT } from "@/i18n";
-import type { HallAvailabilityDay, PeriodStatus, BookingSelection } from "@/types/hall";
+import type { HallAvailabilityDay, PeriodStatus } from "@/types/hall";
 
 type HallBookingCalendarProps = {
   days: HallAvailabilityDay[];
-  interactive?: boolean;
-  selection?: BookingSelection | null;
-  onSelect?: (selection: BookingSelection) => void;
   compact?: boolean;
 };
 
 export default function HallBookingCalendar({
   days,
-  interactive = false,
-  selection = null,
-  onSelect,
   compact = false,
 }: HallBookingCalendarProps) {
   const t = useT();
@@ -26,9 +20,7 @@ export default function HallBookingCalendar({
         className="rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] p-5"
         data-testid="hall-booking-calendar-empty"
       >
-        <p className="text-sm text-[var(--wesal-muted)]">
-          {t("halls.booking.emptyDays")}
-        </p>
+        <p className="text-sm text-[var(--wesal-muted)]">{t("halls.booking.emptyDays")}</p>
       </section>
     );
   }
@@ -46,62 +38,34 @@ export default function HallBookingCalendar({
           >
             {t("halls.booking.availability")}
           </h2>
-          <p className="mt-1 text-sm text-[var(--wesal-muted)]">
-            {t("halls.booking.pickHint")}
-          </p>
+          <p className="mt-1 text-sm text-[var(--wesal-muted)]">{t("halls.booking.pickHint")}</p>
         </>
       ) : null}
 
       <div className={`space-y-3 ${compact ? "" : "mt-4"}`}>
         {days.map((day) => (
           <div
-            key={day.dateLabel}
+            key={day.dateIso ?? day.dateLabel}
             className="overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-white"
           >
             <div className="border-b border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-3">
-              <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--wesal-maroon)]">
-                <CalendarIcon />
-                {day.dateLabel}
-              </p>
+              <p className="text-sm font-semibold text-[var(--wesal-maroon)]">{day.dateLabel}</p>
             </div>
             <ul className="divide-y divide-[var(--wesal-border)]">
-              {day.periods.map((period) => {
-                const booked = period.status === "booked";
-                const isSelected =
-                  selection?.dateLabel === day.dateLabel &&
-                  selection?.periodLabel === period.label;
-                const canSelect = interactive && !booked;
-
-                return (
-                  <li key={`${day.dateLabel}-${period.label}`}>
-                    {canSelect ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onSelect?.({
-                            dateLabel: day.dateLabel,
-                            periodLabel: period.label,
-                          })
-                        }
-                        className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-start transition ${
-                          isSelected
-                            ? "bg-[rgba(193,123,127,0.12)] ring-2 ring-inset ring-[var(--wesal-maroon)]"
-                            : "hover:bg-[var(--wesal-pink-soft)]"
-                        }`}
-                        aria-pressed={isSelected}
-                      >
-                        <PeriodContent label={period.label} time={period.time} />
-                        <PeriodBadge status={period.status} selected={isSelected} />
-                      </button>
-                    ) : (
-                      <div className="flex items-center justify-between gap-3 px-4 py-3">
-                        <PeriodContent label={period.label} time={period.time} />
-                        <PeriodBadge status={period.status} />
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
+              {day.periods.map((period) => (
+                <li
+                  key={`${day.dateIso ?? day.dateLabel}-${period.periodType ?? period.label}`}
+                  className="flex items-center justify-between gap-3 px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--wesal-text)]">{period.label}</p>
+                    {period.time ? (
+                      <p className="mt-0.5 text-xs text-[var(--wesal-muted)]">{period.time}</p>
+                    ) : null}
+                  </div>
+                  <PeriodBadge status={period.status} />
+                </li>
+              ))}
             </ul>
           </div>
         ))}
@@ -110,34 +74,9 @@ export default function HallBookingCalendar({
   );
 }
 
-function PeriodContent({ label, time }: { label: string; time?: string }) {
-  return (
-    <div>
-      <p className="text-sm font-semibold text-[var(--wesal-text)]">{label}</p>
-      {time ? (
-        <p className="mt-0.5 text-xs text-[var(--wesal-muted)]">{time}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function PeriodBadge({
-  status,
-  selected = false,
-}: {
-  status: PeriodStatus;
-  selected?: boolean;
-}) {
+function PeriodBadge({ status }: { status: PeriodStatus }) {
   const t = useT();
   const booked = status === "booked";
-
-  if (selected) {
-    return (
-      <span className="rounded-full bg-[var(--wesal-maroon)] px-2.5 py-1 text-[0.7rem] font-bold text-white">
-        {t("halls.booking.selectedBadge")}
-      </span>
-    );
-  }
 
   return (
     <span
@@ -149,21 +88,5 @@ function PeriodBadge({
     >
       {booked ? t("halls.booking.bookedBadge") : t("halls.booking.availableBadge")}
     </span>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M4 9h16M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
   );
 }

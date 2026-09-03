@@ -16,17 +16,6 @@ const NAV_HREFS = [
   { href: "/about", key: "nav.about" },
 ] as const;
 
-function roleLabel(
-  role: string | null,
-  t: (key: string) => string,
-): string | null {
-  if (!role) return null;
-  if (role === "HallOwner") return t("nav.role.hallOwner");
-  if (role === "Admin") return t("nav.role.admin");
-  if (role === "RegisteredUser") return t("nav.role.member");
-  return null;
-}
-
 export default function Navbar({
   variant = "default",
 }: {
@@ -40,7 +29,6 @@ export default function Navbar({
   const { session, status, logout, isLoggingOut } = useAuth();
   const authenticated = session.isAuthenticated;
   const displayName = session.userName?.trim() || t("nav.account");
-  const role = roleLabel(session.role, t);
   const separator = lang === "en" ? "," : "،";
   const overlay = variant === "overlay";
   const profileLabel = t("nav.profile");
@@ -137,7 +125,6 @@ export default function Navbar({
                 <AuthAccount
                   hello={t("nav.hello")}
                   name={displayName}
-                  role={role}
                   logoutLabel={t("nav.logout")}
                   separator={separator}
                   loggingOut={isLoggingOut}
@@ -209,7 +196,6 @@ export default function Navbar({
               <AuthAccount
                 hello={t("nav.hello")}
                 name={displayName}
-                role={role}
                 logoutLabel={t("nav.logout")}
                 separator={separator}
                 stacked
@@ -275,7 +261,6 @@ function GuestActions({
 function AuthAccount({
   hello,
   name,
-  role,
   logoutLabel,
   separator,
   stacked = false,
@@ -284,7 +269,6 @@ function AuthAccount({
 }: {
   hello: string;
   name: string;
-  role: string | null;
   logoutLabel: string;
   separator: string;
   stacked?: boolean;
@@ -303,11 +287,6 @@ function AuthAccount({
       >
         {hello}
         {separator} {name}
-        {role ? (
-          <span className="mt-0.5 block truncate text-xs font-medium text-[var(--wesal-muted)]">
-            {role}
-          </span>
-        ) : null}
       </p>
       <button
         type="button"

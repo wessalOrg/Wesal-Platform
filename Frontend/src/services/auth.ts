@@ -39,9 +39,37 @@ export type LoginResult = {
   token: string;
 };
 
+type LoginResultDto = LoginResult & {
+  userId?: string;
+  name?: string;
+  phone?: string;
+  accessToken?: string;
+  Token?: string;
+  AccessToken?: string;
+  Role?: string;
+  FullName?: string;
+  Id?: string;
+};
+
+function asText(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function mapLoginResult(data: LoginResultDto): LoginResult {
+  return {
+    id: asText(data.id || data.Id || data.userId),
+    fullName: asText(data.fullName || data.FullName || data.name),
+    email: asText(data.email),
+    phoneNumber: asText(data.phoneNumber || data.phone),
+    accountType: asText(data.accountType),
+    role: asText(data.role || data.Role),
+    token: asText(data.token || data.Token || data.accessToken || data.AccessToken),
+  };
+}
+
 export async function loginAccount(payload: LoginPayload): Promise<LoginResult> {
-  const { data } = await api.post<LoginResult>("/auth/login", payload);
-  return data;
+  const { data } = await api.post<LoginResultDto>("/auth/login", payload);
+  return mapLoginResult(data);
 }
 
 /** Revokes the current session on the server. Callers own local cleanup. */

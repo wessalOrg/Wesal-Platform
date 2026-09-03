@@ -44,7 +44,7 @@ api.interceptors.response.use(
         ? error.response.status
         : undefined;
     return Promise.reject(
-      new ApiError(message, status, fieldErrors, { detail, code }),
+      new ApiError(message, status, fieldErrors, { detail, code, details: data }),
     );
   },
 );
