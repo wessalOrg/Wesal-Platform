@@ -37,10 +37,6 @@ export default function OwnerCtaSection() {
               {t("home.owner.ctaSecondary")}
             </Link>
           </div>
-
-          <p className="owner-cta-line mt-4 whitespace-pre-line text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm">
-            {t("home.owner.priceNote")}
-          </p>
         </LangDir>
 
         {/* UX/UI device scene: angled silver laptop + white phone on beige pedestal */}

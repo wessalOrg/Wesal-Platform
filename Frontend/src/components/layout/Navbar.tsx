@@ -37,7 +37,7 @@ export default function Navbar({
   const [menuPath, setMenuPath] = useState(pathname);
   const router = useRouter();
   const { lang, t } = useTranslateLang();
-  const { session, status, logout } = useAuth();
+  const { session, status, logout, isLoggingOut } = useAuth();
   const authenticated = session.isAuthenticated;
   const displayName = session.userName?.trim() || t("nav.account");
   const role = roleLabel(session.role, t);
@@ -140,6 +140,7 @@ export default function Navbar({
                   role={role}
                   logoutLabel={t("nav.logout")}
                   separator={separator}
+                  loggingOut={isLoggingOut}
                   onLogout={() => void logout()}
                 />
               ) : (
@@ -151,7 +152,7 @@ export default function Navbar({
             </div>
 
             {/* Far-left (visual) cluster in RTL: icons sit at the outer edge with the menu */}
-            {authenticated ? (
+            {status === "ready" && authenticated ? (
               <AuthNavIcons
                 profileLabel={profileLabel}
                 messagesLabel={messagesLabel}
@@ -190,7 +191,7 @@ export default function Navbar({
                 {t(link.key)}
               </Link>
             ))}
-            {authenticated ? (
+            {status === "ready" && authenticated ? (
               <AuthNavIcons
                 profileLabel={profileLabel}
                 messagesLabel={messagesLabel}
@@ -199,7 +200,12 @@ export default function Navbar({
               />
             ) : null}
             <LanguageSwitcher compact />
-            {authenticated ? (
+            {status === "loading" ? (
+              <div
+                className="h-11 w-full animate-pulse rounded-xl bg-[var(--wesal-pink)]"
+                aria-hidden="true"
+              />
+            ) : authenticated ? (
               <AuthAccount
                 hello={t("nav.hello")}
                 name={displayName}
@@ -207,6 +213,7 @@ export default function Navbar({
                 logoutLabel={t("nav.logout")}
                 separator={separator}
                 stacked
+                loggingOut={isLoggingOut}
                 onLogout={() => {
                   setOpen(false);
                   void logout();
@@ -272,6 +279,7 @@ function AuthAccount({
   logoutLabel,
   separator,
   stacked = false,
+  loggingOut = false,
   onLogout,
 }: {
   hello: string;
@@ -280,6 +288,7 @@ function AuthAccount({
   logoutLabel: string;
   separator: string;
   stacked?: boolean;
+  loggingOut?: boolean;
   onLogout: () => void;
 }) {
   return (
@@ -303,6 +312,8 @@ function AuthAccount({
       <button
         type="button"
         className={`btn-outline min-h-11 whitespace-nowrap ${stacked ? "w-full" : "shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
+        disabled={loggingOut}
+        aria-busy={loggingOut || undefined}
         onClick={onLogout}
       >
         {logoutLabel}

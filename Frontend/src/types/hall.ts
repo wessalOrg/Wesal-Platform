@@ -114,6 +114,8 @@ export type HallDetail = {
   slotPrices: HallSlotPrice[];
   ownerPhone?: string | null;
   isActive: boolean;
+  /** Server-side ownership for the current token (`HallDetailsDto.IsOwner`). */
+  isOwner?: boolean;
   rating?: number | null;
   reviewCount?: number | null;
   availabilityDays?: HallAvailabilityDay[];

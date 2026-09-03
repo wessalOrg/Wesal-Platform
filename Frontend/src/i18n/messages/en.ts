@@ -130,8 +130,6 @@ const en: MessageCatalog = {
     "List your hall on Wesal and get closer to guests looking for the right venue. Manage details, schedules, and booking requests easily — and use tools that boost your presence and customer chat in one place.",
   "home.owner.ctaPrimary": "Add your hall now",
   "home.owner.ctaSecondary": "Explore benefits",
-  "home.owner.priceNote":
-    "Invest in your hall’s presence for 120 ₪ / month\nThat’s about 4 ₪ per day.",
 
   "halls.catalog.title": "Halls",
   "halls.catalog.loading": "Loading halls…",

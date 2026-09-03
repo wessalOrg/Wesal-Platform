@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { GoldStar } from "@/components/ui/GoldStar";
+import { useHallPermissions } from "@/hooks/useHallPermissions";
+import { useProtectedHallError } from "@/hooks/useProtectedHallError";
 import { useT } from "@/i18n";
 import {
   fetchHallRatingSummary,
@@ -22,14 +23,8 @@ export default function HallRatingPanel({
   onRated,
 }: HallRatingPanelProps) {
   const t = useT();
-  const { session, status: authStatus } = useAuth();
-  const role = session.role ?? "";
-  const isOwnerRole = role.toLowerCase() === "hallowner" || isHallOwner;
-  const canRate =
-    session.isAuthenticated &&
-    !isOwnerRole &&
-    (role.toLowerCase() === "registereduser" || role.toLowerCase() === "admin");
-  const isGuest = authStatus === "ready" && !session.isAuthenticated;
+  const { authReady, canRate } = useHallPermissions({ isOwner: isHallOwner });
+  const handleProtectedError = useProtectedHallError();
 
   const [value, setValue] = useState(0);
   const [hover, setHover] = useState(0);
@@ -51,7 +46,7 @@ export default function HallRatingPanel({
     };
   }, [canRate, hallId]);
 
-  if (authStatus === "loading") {
+  if (!authReady) {
     return (
       <div
         className="mt-5 h-24 animate-pulse rounded-2xl bg-[var(--wesal-pink-soft)]"
@@ -61,23 +56,8 @@ export default function HallRatingPanel({
     );
   }
 
-  if (isOwnerRole) {
+  if (!canRate) {
     return null;
-  }
-
-  if (isGuest) {
-    return null;
-  }
-
-  if (session.isAuthenticated && !canRate) {
-    return (
-      <p
-        className="mt-4 text-center text-sm leading-7 text-[#8a7a70]"
-        data-testid="hall-rating-restricted"
-      >
-        {t("errors.rating.forbidden")}
-      </p>
-    );
   }
 
   const submit = async () => {
@@ -94,7 +74,7 @@ export default function HallRatingPanel({
         totalRatings: result.totalRatings,
       });
     } catch (err) {
-      setError(ratingErrorMessage(err));
+      setError(await handleProtectedError(err, ratingErrorMessage));
     } finally {
       setSubmitting(false);
     }

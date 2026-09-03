@@ -331,5 +331,6 @@ export function localizeHallDetail(hall: HallDetail, lang: UiLang): HallDetail {
     amenities: hall.amenities.map((tag) => localizeTag(tag, lang)),
     slotPrices: localizeSlotPrices(hall.slotPrices, lang),
     availabilityDays: localizeAvailabilityDays(hall.availabilityDays, lang),
+    isOwner: hall.isOwner,
   };
 }

@@ -43,3 +43,8 @@ export async function loginAccount(payload: LoginPayload): Promise<LoginResult> 
   const { data } = await api.post<LoginResult>("/auth/login", payload);
   return data;
 }
+
+/** Revokes the current session on the server. Callers own local cleanup. */
+export async function logoutAccount(): Promise<void> {
+  await api.post("/auth/logout");
+}

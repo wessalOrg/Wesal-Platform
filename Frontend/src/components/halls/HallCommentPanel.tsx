@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useHallPermissions } from "@/hooks/useHallPermissions";
+import { useProtectedHallError } from "@/hooks/useProtectedHallError";
 import { useT } from "@/i18n";
 import {
   COMMENT_MAX_LENGTH,
@@ -24,21 +25,15 @@ export default function HallCommentPanel({
   onSubmitted,
 }: HallCommentPanelProps) {
   const t = useT();
-  const { session, status: authStatus } = useAuth();
-  const role = session.role ?? "";
-  const isOwnerRole = role.toLowerCase() === "hallowner" || isHallOwner;
-  const canComment =
-    session.isAuthenticated &&
-    !isOwnerRole &&
-    (role.toLowerCase() === "registereduser" || role.toLowerCase() === "admin");
-  const isGuest = authStatus === "ready" && !session.isAuthenticated;
+  const { authReady, canComment } = useHallPermissions({ isOwner: isHallOwner });
+  const handleProtectedError = useProtectedHallError();
 
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  if (authStatus === "loading") {
+  if (!authReady) {
     return (
       <div
         className="mt-4 h-20 animate-pulse rounded-2xl bg-[var(--wesal-pink-soft)]"
@@ -48,23 +43,8 @@ export default function HallCommentPanel({
     );
   }
 
-  if (isOwnerRole) {
+  if (!canComment) {
     return null;
-  }
-
-  if (isGuest) {
-    return null;
-  }
-
-  if (session.isAuthenticated && !canComment) {
-    return (
-      <p
-        className="mt-4 text-center text-sm leading-7 text-[#8a7a70]"
-        data-testid="hall-comment-restricted"
-      >
-        {t("errors.comment.forbidden")}
-      </p>
-    );
   }
 
   const submit = async () => {
@@ -86,7 +66,7 @@ export default function HallCommentPanel({
       setSuccess(true);
       onSubmitted?.(mapCommentToReview(saved));
     } catch (err) {
-      setError(commentErrorMessage(err));
+      setError(await handleProtectedError(err, commentErrorMessage));
     } finally {
       setSubmitting(false);
     }

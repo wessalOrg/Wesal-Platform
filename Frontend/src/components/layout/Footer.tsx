@@ -3,7 +3,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import WesalLogo from "@/components/brand/WesalLogo";
-import Reveal from "@/components/ui/Reveal";
 import { useT } from "@/i18n";
 
 const QUICK_LINKS = [
@@ -39,45 +38,39 @@ export default function Footer() {
           decoding="async"
         />
         <div className="footer-marble-wash" />
-        <div className="footer-shine" />
-        <span className="footer-twinkle footer-twinkle--1" />
-        <span className="footer-twinkle footer-twinkle--2" />
-        <span className="footer-twinkle footer-twinkle--3" />
-        <span className="footer-twinkle footer-twinkle--4" />
       </div>
 
-      <Reveal>
-      <div className="container-wesal relative z-10 py-12 sm:py-14">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+      <div className="container-wesal relative z-10 py-7 sm:py-8">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
           <div className="sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-2.5">
-              <WesalLogo className="h-11 w-11" variant="brand" />
-              <span className="text-xl font-extrabold text-[var(--wesal-maroon)]">
+            <div className="flex items-center gap-2">
+              <WesalLogo className="h-8 w-8" variant="brand" />
+              <span className="text-lg font-extrabold text-[var(--wesal-maroon)]">
                 {t("brand.name")}
               </span>
             </div>
-            <p className="mt-4 max-w-xs text-sm leading-8 text-[var(--wesal-muted)]">
+            <p className="mt-2.5 max-w-xs text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm sm:leading-7">
               {t("brand.tagline")}
             </p>
 
-            <div className="mt-5 flex items-center gap-2">
+            <div className="mt-3.5 flex items-center gap-1.5">
               <SocialLink href="https://www.facebook.com" label={t("footer.facebook")}>
                 <FacebookIcon />
               </SocialLink>
               <SocialLink href="https://www.instagram.com" label={t("footer.instagram")}>
                 <InstagramIcon />
               </SocialLink>
-              <SocialLink href="https://wa.me/970599000000" label={t("footer.whatsapp")}>
+              <SocialLink href="https://wa.me/970595988398" label={t("footer.whatsapp")}>
                 <WhatsAppIcon />
               </SocialLink>
             </div>
           </div>
 
           <div>
-            <h3 className="text-sm font-extrabold text-[var(--wesal-maroon)]">
+            <h3 className="text-xs font-extrabold text-[var(--wesal-maroon)] sm:text-sm">
               {t("footer.quickLinks")}
             </h3>
-            <ul className="mt-4 space-y-2.5 text-sm text-[var(--wesal-muted)]">
+            <ul className="mt-2.5 space-y-1.5 text-xs text-[var(--wesal-muted)] sm:text-sm">
               {QUICK_LINKS.map((item) => (
                 <li key={item.href + item.labelKey}>
                   <Link
@@ -92,10 +85,10 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="text-sm font-extrabold text-[var(--wesal-maroon)]">
+            <h3 className="text-xs font-extrabold text-[var(--wesal-maroon)] sm:text-sm">
               {t("footer.account")}
             </h3>
-            <ul className="mt-4 space-y-2.5 text-sm text-[var(--wesal-muted)]">
+            <ul className="mt-2.5 space-y-1.5 text-xs text-[var(--wesal-muted)] sm:text-sm">
               {ACCOUNT_LINKS.map((item) => (
                 <li key={item.href + item.labelKey}>
                   <Link
@@ -108,10 +101,10 @@ export default function Footer() {
               ))}
             </ul>
 
-            <h3 className="mt-7 text-sm font-extrabold text-[var(--wesal-maroon)]">
+            <h3 className="mt-4 text-xs font-extrabold text-[var(--wesal-maroon)] sm:text-sm">
               {t("footer.help")}
             </h3>
-            <ul className="mt-4 space-y-2.5 text-sm text-[var(--wesal-muted)]">
+            <ul className="mt-2.5 space-y-1.5 text-xs text-[var(--wesal-muted)] sm:text-sm">
               {SUPPORT_LINKS.map((item) => (
                 <li key={item.href + item.labelKey}>
                   <Link
@@ -126,10 +119,10 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="text-sm font-extrabold text-[var(--wesal-maroon)]">
+            <h3 className="text-xs font-extrabold text-[var(--wesal-maroon)] sm:text-sm">
               {t("footer.contact")}
             </h3>
-            <ul className="mt-4 space-y-3 text-sm text-[var(--wesal-muted)]">
+            <ul className="mt-2.5 space-y-2 text-xs text-[var(--wesal-muted)] sm:text-sm">
               <li>
                 <ContactRow icon={<PinIcon />}>
                   <span className="whitespace-pre-line">
@@ -139,21 +132,21 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:info@wesal.ps"
+                  href="mailto:wesalplatform.gaza@gmail.com"
                   className="transition-colors hover:text-[var(--wesal-maroon)]"
                 >
                   <ContactRow icon={<MailIcon />}>
-                    <span dir="ltr">info@wesal.ps</span>
+                    <span dir="ltr">wesalplatform.gaza@gmail.com</span>
                   </ContactRow>
                 </a>
               </li>
               <li>
                 <a
-                  href="tel:+970599000000"
+                  href="tel:0595988398"
                   className="transition-colors hover:text-[var(--wesal-maroon)]"
                 >
                   <ContactRow icon={<PhoneIcon />}>
-                    <span dir="ltr">+970 599 000 000</span>
+                    <span dir="ltr">0595988398</span>
                   </ContactRow>
                 </a>
               </li>
@@ -167,22 +160,18 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="relative z-10 border-t border-white/50 bg-white/80">
-        <div className="container-wesal flex flex-col items-center justify-center gap-2 py-4 text-center text-xs text-[var(--wesal-muted)]">
+      <div className="container-wesal relative z-10 pb-3.5 pt-1">
+        <div className="mb-2 h-px w-full bg-[#e6d5c8]" />
+        <div className="flex items-center justify-between gap-3 text-[11px] text-[var(--wesal-muted)] sm:text-xs">
           <p>
             © {new Date().getFullYear()} {t("brand.name")} — {t("footer.rights")}
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link href="/about" className="transition-colors hover:text-[var(--wesal-maroon)]">
-              {t("footer.privacy")}
-            </Link>
-            <Link href="/faq" className="transition-colors hover:text-[var(--wesal-maroon)]">
-              {t("footer.terms")}
-            </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <span>{t("footer.privacy")}</span>
+            <span>{t("footer.terms")}</span>
           </div>
         </div>
       </div>
-      </Reveal>
     </footer>
   );
 }
@@ -195,11 +184,11 @@ function ContactRow({
   children: ReactNode;
 }) {
   return (
-    <span className="flex items-start gap-2.5">
-      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center text-[var(--wesal-maroon)]">
+    <span className="flex items-start gap-2">
+      <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[var(--wesal-maroon)]">
         {icon}
       </span>
-      <span className="min-w-0 leading-6">{children}</span>
+      <span className="min-w-0 leading-5">{children}</span>
     </span>
   );
 }
@@ -219,7 +208,7 @@ function SocialLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-footer)] text-[var(--wesal-maroon)] transition-colors hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--wesal-border)] bg-[var(--wesal-footer)] text-[var(--wesal-maroon)] transition-colors hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
     >
       {children}
     </a>

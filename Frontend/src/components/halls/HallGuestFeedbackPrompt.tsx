@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useT } from "@/i18n";
 
 type HallGuestFeedbackPromptProps = {
@@ -14,10 +14,9 @@ export default function HallGuestFeedbackPrompt({
   isHallOwner,
 }: HallGuestFeedbackPromptProps) {
   const t = useT();
-  const { session, status } = useAuth();
-  const isGuest = status === "ready" && !session.isAuthenticated;
+  const { isGuest, isOwnHall } = useHallPermissions({ isOwner: isHallOwner });
 
-  if (!isGuest || isHallOwner) {
+  if (!isGuest || isOwnHall) {
     return null;
   }
 
