@@ -100,12 +100,25 @@ public static class DependencyInjection
                             return;
                         }
 
-                        var tokenRevocationRepository = context.HttpContext.RequestServices
-                            .GetRequiredService<ITokenRevocationRepository>();
-
-                        if (await tokenRevocationRepository.IsRevokedAsync(jti, context.HttpContext.RequestAborted))
+                        try
                         {
-                            context.Fail("The authentication token has been invalidated by logout.");
+                            var tokenRevocationRepository = context.HttpContext.RequestServices
+                                .GetRequiredService<ITokenRevocationRepository>();
+
+                            if (await tokenRevocationRepository.IsRevokedAsync(jti, context.HttpContext.RequestAborted))
+                            {
+                                context.Fail("The authentication token has been invalidated by logout.");
+                            }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // Transient DB failure during cold-start — allow the request through
+                            // rather than killing every authenticated request.
+                        }
+                        catch (Exception)
+                        {
+                            // Transient DB failure — fail open to avoid blocking all authenticated
+                            // requests when the database is temporarily unreachable.
                         }
                     },
                     OnChallenge = context =>

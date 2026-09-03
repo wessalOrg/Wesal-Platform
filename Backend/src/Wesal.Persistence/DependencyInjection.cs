@@ -18,7 +18,11 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql =>
-                npgsql.MigrationsAssembly(typeof(DependencyInjection).Assembly.FullName)));
+            {
+                npgsql.MigrationsAssembly(typeof(DependencyInjection).Assembly.FullName);
+                npgsql.CommandTimeout(10);
+                npgsql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null!);
+            }));
 
         services.AddMemoryCache();
 
