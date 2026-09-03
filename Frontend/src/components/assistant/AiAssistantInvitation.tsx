@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
-import AiAssistantSparkIcon from "@/components/assistant/AiAssistantSparkIcon";
 import { useT } from "@/i18n";
 import { INVITATION_POLICY } from "@/lib/ai-invitation";
 import { placeBubble, type Rect } from "@/lib/bubble-placement";
@@ -191,17 +190,14 @@ export default function AiAssistantInvitation({
       aria-live="polite"
       data-state="pending"
       data-testid="ai-assistant-invitation"
-      className="wesal-ai-invite fixed z-[104] flex items-start gap-2 rounded-2xl border border-[var(--wesal-border)] bg-white px-3 py-2.5 shadow-[0_16px_40px_rgba(60,35,30,0.18)]"
+      className="wesal-ai-invite wesal-ai-invite--msg fixed z-[104] flex items-start gap-2"
     >
       <button
         type="button"
         onClick={onOpen}
-        className="flex items-center gap-2 text-start text-[0.78rem] leading-5 font-semibold text-[var(--wesal-text)] outline-none focus-visible:underline"
+        className="wesal-ai-invite-copy text-start text-[0.78rem] leading-5 font-semibold outline-none focus-visible:underline"
         data-testid="ai-assistant-invitation-open"
       >
-        <span className="wesal-ai-avatar flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white">
-          <AiAssistantSparkIcon className="h-4 w-4" />
-        </span>
         {t(messageKey)}
       </button>
 
@@ -210,7 +206,7 @@ export default function AiAssistantInvitation({
         onClick={onDismiss}
         aria-label={t("assistant.invite.dismiss")}
         title={t("assistant.invite.dismiss")}
-        className="-me-1 -mt-0.5 shrink-0 rounded-full p-1 text-[var(--wesal-muted)] outline-none transition-colors hover:bg-[var(--wesal-pink-soft)] hover:text-[var(--wesal-text)] focus-visible:bg-[var(--wesal-pink-soft)]"
+        className="wesal-ai-invite-dismiss -me-1 -mt-0.5 shrink-0 rounded-full p-1 outline-none"
         data-testid="ai-assistant-invitation-dismiss"
       >
         <svg
