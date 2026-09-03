@@ -222,7 +222,11 @@ static void ValidateNonDevelopmentConfiguration(IWebHostEnvironment environment,
     var geminiModel = configuration["GoogleAI:GeminiModel"]?.Trim() ?? string.Empty;
     if (string.IsNullOrWhiteSpace(geminiModel) || !geminiModel.StartsWith("gemini-", StringComparison.OrdinalIgnoreCase))
     {
-        throw new InvalidOperationException(
-            "GoogleAI:GeminiModel must be a valid Gemini model id (e.g. gemini-2.5-flash) or be left unset outside Development.");
+        // Gemini is optional: a missing/invalid model id must not crash the whole
+        // service (the app falls back to its built-in default and to the
+        // deterministic how-to/search classifiers). Log and continue.
+        Log.Warning(
+            "GoogleAI:GeminiModel is missing or invalid ('{Model}'); using the built-in default and deterministic fallbacks. Set GoogleAI__GeminiModel to a valid id such as gemini-2.5-flash.",
+            geminiModel);
     }
 }
