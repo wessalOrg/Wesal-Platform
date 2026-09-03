@@ -6,9 +6,8 @@ import dynamic from "next/dynamic";
 import CatalogHallCard from "@/components/halls/CatalogHallCard";
 import RegionFilterBar from "@/components/home/RegionFilterBar";
 import Reveal from "@/components/ui/Reveal";
-import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
 import { useT } from "@/i18n";
-import { fetchFeaturedHalls, filterFeaturedByRegion } from "@/services/halls";
+import { fetchFeaturedHalls } from "@/services/halls";
 import type { FeaturedHall, HallRegion } from "@/types/hall";
 
 const HallDetailsView = dynamic(
@@ -21,12 +20,9 @@ type LoadStatus = "loading" | "ready" | "error";
 export default function FeaturedHallsSection() {
   const t = useT();
   const [region, setRegion] = useState<HallRegion>("all");
-  const [halls, setHalls] = useState<FeaturedHall[]>(
-    FEATURED_HALLS_FALLBACK.slice(0, 6),
-  );
-  const [status, setStatus] = useState<LoadStatus>("ready");
+  const [halls, setHalls] = useState<FeaturedHall[]>([]);
+  const [status, setStatus] = useState<LoadStatus>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [usingFallback, setUsingFallback] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [openHallId, setOpenHallId] = useState<string | null>(null);
 
@@ -34,23 +30,23 @@ export default function FeaturedHallsSection() {
 
   useEffect(() => {
     let active = true;
+    setStatus("loading");
+    setErrorMessage(null);
 
     void fetchFeaturedHalls(region).then((result) => {
       if (!active) return;
 
       if (result.source === "api") {
         setHalls(result.halls);
-        setUsingFallback(false);
-        setErrorMessage(null);
         setStatus("ready");
         return;
       }
 
-      // Backend unavailable: keep homepage usable with local fallback + client filter.
-      setHalls(filterFeaturedByRegion(FEATURED_HALLS_FALLBACK, region));
-      setUsingFallback(true);
-      setErrorMessage(result.error ?? null);
+      // Only real user-added halls are shown. If the API is unavailable,
+      // show an empty state (never demo/fallback halls).
+      setHalls([]);
       setStatus("error");
+      setErrorMessage(result.error ?? null);
     });
 
     return () => {
@@ -62,8 +58,7 @@ export default function FeaturedHallsSection() {
     if (next === region) return;
     setErrorMessage(null);
     setRegion(next);
-    setHalls(filterFeaturedByRegion(FEATURED_HALLS_FALLBACK, next));
-    setStatus("ready");
+    setStatus("loading");
   };
 
   const handleRetry = () => {
@@ -109,15 +104,14 @@ export default function FeaturedHallsSection() {
           </div>
         ) : null}
 
-        {status === "error" && usingFallback ? (
+        {status === "error" ? (
           <div
             className="mt-6 rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-3 text-center sm:text-start"
             data-testid="featured-halls-api-fallback"
             role="status"
           >
             <p className="text-sm text-[var(--wesal-text)]">
-              {t("home.featured.offline")}
-              {errorMessage ? ` (${errorMessage})` : ""}
+              {errorMessage ? `${t("home.featured.offline")} (${errorMessage})` : t("home.featured.offline")}
             </p>
             <button
               type="button"
