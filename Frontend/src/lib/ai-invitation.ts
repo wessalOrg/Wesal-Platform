@@ -10,20 +10,36 @@ const DAY = 24 * HOUR;
  * a reminder, and a reminder that repeats is an interruption.
  */
 export const INVITATION_POLICY = {
-  /** Dwell time before the first invitation, so it never greets a landing page. */
-  firstDelayMs: 20 * 1000,
+  /**
+   * Dwell time before the first invitation. Kept short enough that the feature is
+   * actually noticed, but after the page has settled so it never greets a loading screen.
+   */
+  firstDelayMs: 8 * 1000,
   /** A blocked moment is retried rather than spent, then withdrawn if it never clears. */
   retryDelayMs: 4 * 1000,
   giveUpMs: 20 * 1000,
-  /** How long the bubble waits for an answer before withdrawing itself. */
-  autoHideMs: 12 * 1000,
-  maxPerVisit: 1,
-  maxPerDay: 2,
-  minGapMs: 4 * HOUR,
+  /**
+   * How long the bubble stays up. Long enough that a rotating copy is seen more
+   * than once during a single appearance, then it politely withdraws itself.
+   */
+  autoHideMs: 15 * 1000,
+  /** How often the visible copy switches to the next message (no immediate repeat). */
+  rotateMs: 6 * 1000,
+  maxPerVisit: 3,
+  maxPerDay: 4,
+  /**
+   * Shortest pause between separate appearances, so rotation is observable within
+   * one session without the bubble ever nagging back-to-back.
+   */
+  minGapMs: 60 * 1000,
   /** Dismissal is an explicit "not now", so stay quiet noticeably longer. */
   dismissCooldownMs: 3 * DAY,
-  /** The user already found the assistant; it no longer needs advertising. */
-  engagedCooldownMs: 14 * DAY,
+  /**
+   * The user just opened the assistant; it does not need advertising for a moment,
+   * but hiding it for two weeks (as before) made it impossible to ever see again in
+   * normal use, so the pause is now brief rather than permanent.
+   */
+  engagedCooldownMs: 5 * MINUTE,
 } as const;
 
 /** Ceiling for any stored cooldown, so a clock change can never mute the bubble forever. */
