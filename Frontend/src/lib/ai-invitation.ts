@@ -10,80 +10,40 @@ const DAY = 24 * HOUR;
  * a reminder, and a reminder that repeats is an interruption.
  */
 export const INVITATION_POLICY = {
-  /**
-   * Dwell time before the first invitation. Kept short enough that the feature is
-   * actually noticed, but after the page has settled so it never greets a loading screen.
-   */
-  firstDelayMs: 8 * 1000,
+  /** Dwell time before the first invitation, so it never greets a landing page. */
+  firstDelayMs: 20 * 1000,
   /** A blocked moment is retried rather than spent, then withdrawn if it never clears. */
   retryDelayMs: 4 * 1000,
   giveUpMs: 20 * 1000,
-  /**
-   * How long the bubble stays up. Long enough that a rotating copy is seen more
-   * than once during a single appearance, then it politely withdraws itself.
-   */
-  autoHideMs: 15 * 1000,
-  /** How often the visible copy switches to the next message (no immediate repeat). */
-  rotateMs: 6 * 1000,
-  maxPerVisit: 3,
-  maxPerDay: 4,
-  /**
-   * Shortest pause between separate appearances, so rotation is observable within
-   * one session without the bubble ever nagging back-to-back.
-   */
-  minGapMs: 60 * 1000,
+  /** How long the bubble waits for an answer before withdrawing itself. */
+  autoHideMs: 12 * 1000,
+  maxPerVisit: 1,
+  maxPerDay: 2,
+  minGapMs: 4 * HOUR,
   /** Dismissal is an explicit "not now", so stay quiet noticeably longer. */
   dismissCooldownMs: 3 * DAY,
-  /**
-   * The user just opened the assistant; it does not need advertising for a moment,
-   * but hiding it for two weeks (as before) made it impossible to ever see again in
-   * normal use, so the pause is now brief rather than permanent.
-   */
-  engagedCooldownMs: 5 * MINUTE,
+  /** The user already found the assistant; it no longer needs advertising. */
+  engagedCooldownMs: 14 * DAY,
 } as const;
 
 /** Ceiling for any stored cooldown, so a clock change can never mute the bubble forever. */
 const MAX_QUIET_MS = 30 * DAY;
 
 /**
- * The rotating invitation copy, one short, on-brand line per appearance. Keys are
- * resolved through the i18n catalogs (same key → natural Arabic or English), so the
- * language follows the site automatically. The list is meant to be walked through
- * over time: each appearance advances a cursor and never repeats the previous line,
- * so users periodically meet a fresh message without this ever being aggressive.
+ * One message per slot in the daily allowance, so the second invitation of a day
+ * never repeats the first word for word.
  */
 export const INVITATION_MESSAGE_KEYS = [
-  "assistant.invite.m01",
-  "assistant.invite.m02",
-  "assistant.invite.m03",
-  "assistant.invite.m04",
-  "assistant.invite.m05",
-  "assistant.invite.m06",
-  "assistant.invite.m07",
-  "assistant.invite.m08",
-  "assistant.invite.m09",
-  "assistant.invite.m10",
-  "assistant.invite.m11",
-  "assistant.invite.m12",
-  "assistant.invite.m13",
-  "assistant.invite.m14",
-  "assistant.invite.m15",
-  "assistant.invite.m16",
-  "assistant.invite.m17",
-  "assistant.invite.m18",
-  "assistant.invite.m19",
-  "assistant.invite.m20",
+  "assistant.invite.help",
+  "assistant.invite.halls",
 ] as const;
 
-/**
- * Deterministic, O(1) rotation: the slot is the cumulative count of invitations
- * actually shown (persisted as `messageCursor`), so the next appearance is always a
- * different message than the last and the whole pool is slowly walked through across
- * days — never a random repeat and never a network/back-end call.
- */
-export function invitationMessageKey(cursor: number): string {
-  const slot = Number.isFinite(cursor) && cursor > 0 ? Math.floor(cursor) : 0;
-  return INVITATION_MESSAGE_KEYS[slot % INVITATION_MESSAGE_KEYS.length];
+/** Deterministic, so the copy shown is a function of the day's invitation count. */
+export function invitationMessageKey(shownToday: number): string {
+  const slot = Number.isFinite(shownToday) && shownToday > 0 ? shownToday : 0;
+  return INVITATION_MESSAGE_KEYS[
+    Math.floor(slot) % INVITATION_MESSAGE_KEYS.length
+  ];
 }
 
 export type InvitationRecord = {
@@ -93,12 +53,6 @@ export type InvitationRecord = {
   lastShownAt: number;
   /** Epoch ms until which invitations stay silent. */
   quietUntil: number;
-  /**
-   * Cumulative count of invitations really shown, driving the rotating copy across
-   * days. Optional so older stored records (before this field) stay valid; absent
-   * values are treated as `0` and persist from the next show onward.
-   */
-  messageCursor?: number;
 };
 
 export const FRESH_INVITATION_RECORD: InvitationRecord = {
@@ -106,7 +60,6 @@ export const FRESH_INVITATION_RECORD: InvitationRecord = {
   shownToday: 0,
   lastShownAt: 0,
   quietUntil: 0,
-  messageCursor: 0,
 };
 
 /**
@@ -216,7 +169,6 @@ export function recordInvitationShown(now: number): void {
     shownToday: record.day === today ? record.shownToday + 1 : 1,
     lastShownAt: now,
     quietUntil: record.quietUntil,
-    messageCursor: (record.messageCursor ?? 0) + 1,
   });
 }
 

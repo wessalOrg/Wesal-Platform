@@ -717,45 +717,6 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
   transform: rotate(135deg);
 }
 
-/*
- * The welcoming variant the user asked for: a short colored line, no logo, spoken
- * straight from the character. The fill rises from the panel's maroon so the tail
- * and the bubble read as one piece, with just enough shadow to lift off the page.
- */
-.wesal-ai-invite--msg {
-  padding: 0.5rem 0.75rem;
-  border-radius: 1rem;
-  background: linear-gradient(
-    135deg,
-    var(--wesal-maroon-soft) 0%,
-    var(--wesal-maroon) 55%,
-    var(--wesal-maroon-dark) 100%
-  );
-  box-shadow: 0 8px 20px rgba(80, 42, 45, 0.22);
-}
-
-.wesal-ai-invite--msg .wesal-ai-invite-copy {
-  color: #fff;
-}
-
-.wesal-ai-invite--msg .wesal-ai-invite-dismiss {
-  color: rgba(255, 255, 255, 0.82);
-  transition:
-    background-color 120ms ease,
-    color 120ms ease;
-}
-
-.wesal-ai-invite--msg .wesal-ai-invite-dismiss:hover,
-.wesal-ai-invite--msg .wesal-ai-invite-dismiss:focus-visible {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.16);
-}
-
-.wesal-ai-invite--msg .wesal-ai-invite-tail {
-  background: var(--wesal-maroon);
-  border: 0;
-}
-
 /* Retry affordance inside the unavailable notice. */
 .wesal-ai-spinner {
   display: inline-block;

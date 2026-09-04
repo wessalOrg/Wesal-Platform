@@ -8,7 +8,6 @@ import {
   type RefObject,
 } from "react";
 import {
-  INVITATION_MESSAGE_KEYS,
   INVITATION_POLICY,
   canShowInvitation,
   invitationDayKey,
@@ -93,8 +92,6 @@ export function useAiInvitation({
   const [resumeKey, setResumeKey] = useState(0);
   const shownThisVisitRef = useRef(0);
   const blockedByRef = useRef<BlockedBy>(null);
-  /** Index into the copy pool of the message currently on screen, for rotation. */
-  const rotationIndexRef = useRef(-1);
 
   useEffect(() => {
     blockedByRef.current = isOpen ? "open" : isDragging ? "drag" : null;
@@ -130,13 +127,11 @@ export function useAiInvitation({
         return;
       }
 
-      // Rotate through the copy pool deterministically. Newer records carry a
-      // cumulative `messageCursor`; older ones fall back to today's count so the
-      // first two slots still don't repeat each other immediately.
-      const cursor = record.messageCursor ?? (record.day === invitationDayKey(now) ? record.shownToday : 0);
-      const index = cursor % INVITATION_MESSAGE_KEYS.length;
-      rotationIndexRef.current = index;
-      setMessageKey(INVITATION_MESSAGE_KEYS[index]);
+      setMessageKey(
+        invitationMessageKey(
+          record.day === invitationDayKey(now) ? record.shownToday : 0,
+        ),
+      );
       setIsVisible(true);
     };
 
@@ -151,24 +146,6 @@ export function useAiInvitation({
     };
     // `anchorRef` is stable; `resumeKey` re-arms after a postpone, never after navigation.
   }, [anchorRef, resumeKey]);
-
-  /**
-   * While the bubble is on screen, walk forward through the copy pool so the user
-   * sees the messages switch. One interval, cleared the moment the bubble hides or
-   * the hook unmounts; the index lives in a ref so the closure never goes stale and
-   * a re-render can never spawn a second timer.
-   */
-  useEffect(() => {
-    if (!isVisible) return;
-
-    const timer = window.setInterval(() => {
-      const next = (rotationIndexRef.current + 1) % INVITATION_MESSAGE_KEYS.length;
-      rotationIndexRef.current = next;
-      setMessageKey(INVITATION_MESSAGE_KEYS[next]);
-    }, INVITATION_POLICY.rotateMs);
-
-    return () => window.clearInterval(timer);
-  }, [isVisible]);
 
   /**
    * Conditions can turn hostile *after* the bubble appears — the user opens the
