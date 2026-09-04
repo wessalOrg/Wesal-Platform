@@ -7,7 +7,14 @@ namespace Wesal.Tests.Infrastructure;
 public class HowToServiceCreatorShould
 {
     private const string ExpectedEnglish =
-        "Wesal Platform was developed by the Wesal team, which includes backend and frontend developers, UX/UI designers, and a QA engineer, led by Mohammed Shamaa as the Team Leader and Backend Developer.";
+        "I’m Wesal’s smart assistant 😄🇵🇸\n" +
+        "I was specially created to help you find the perfect wedding hall and answer your questions about halls, bookings, and the Wesal platform.\n\n" +
+        "In short… the Wesal team built me to make your search easier and save you the headache of looking around 😂.";
+
+    private const string ExpectedArabic =
+        "أنا مساعد وصال الذكي 😄🇵🇸\n" +
+        "انعملت خصيصًا عشان أساعدك تلاقي صالة أفراح مناسبة، وأجاوبك عن الصالات والحجز والمنصة.\n" +
+        "يعني باختصار… فريق وصال صنعني، وأنا هون أخفف عنك وجعة راس البحث 😂.";
 
     private static ISubscriptionPaymentService CreatePaymentService()
         => new SubscriptionPaymentService(Options.Create(new SubscriptionPaymentOptions()));
@@ -42,10 +49,7 @@ public class HowToServiceCreatorShould
 
         var result = await service.AskHowToAsync(question, "ar", CancellationToken.None);
 
-        Assert.Contains("فريق وصال", result.Answer);
-        Assert.Contains("محمد شمعة", result.Answer);
-        Assert.Contains("قائد الفريق", result.Answer);
-        Assert.Contains("مطور", result.Answer);
+        Assert.Equal(ExpectedArabic, result.Answer);
     }
 
     [Fact]

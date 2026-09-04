@@ -51,8 +51,12 @@ public sealed partial class HowToService : IHowToService
         if (IsCreatorQuestion(question))
         {
             var creatorAnswer = effectiveLanguage == "en"
-                ? "Wesal Platform was developed by the Wesal team, which includes backend and frontend developers, UX/UI designers, and a QA engineer, led by Mohammed Shamaa as the Team Leader and Backend Developer."
-                : "تم تطوير منصة وصال بواسطة فريق وصال، الذي يضم مطوري نظام خلفي وواجهات أمامية، ومصممي واجهة وتجربة المستخدم، ومهندس ضمان الجودة، بقيادة محمد شمعة كقائد الفريق ومطور النظام الخلفي.";
+                ? "I’m Wesal’s smart assistant 😄🇵🇸\n" +
+                  "I was specially created to help you find the perfect wedding hall and answer your questions about halls, bookings, and the Wesal platform.\n\n" +
+                  "In short… the Wesal team built me to make your search easier and save you the headache of looking around 😂."
+                : "أنا مساعد وصال الذكي 😄🇵🇸\n" +
+                  "انعملت خصيصًا عشان أساعدك تلاقي صالة أفراح مناسبة، وأجاوبك عن الصالات والحجز والمنصة.\n" +
+                  "يعني باختصار… فريق وصال صنعني، وأنا هون أخفف عنك وجعة راس البحث 😂.";
             return new HowToResponse(creatorAnswer, "general", effectiveLanguage, DateTime.UtcNow);
         }
 
@@ -202,6 +206,7 @@ public sealed partial class HowToService : IHowToService
                 "creator", "who created", "who made", "who built", "who developed", "who developed wesal",
                 "who is the creator", "who is the developer", "who is behind", "developer of wesal",
                 "made wesal", "built wesal", "developed wesal", "created wesal", "team leader",
+                "create wesal", "make wesal", "build wesal",
                 "mohammed shamaa", "mohammad shamaa", "shamaa"))
             return true;
 
