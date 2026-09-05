@@ -6,8 +6,9 @@ import dynamic from "next/dynamic";
 import CatalogHallCard from "@/components/halls/CatalogHallCard";
 import RegionFilterBar from "@/components/home/RegionFilterBar";
 import Reveal from "@/components/ui/Reveal";
+import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
 import { useT } from "@/i18n";
-import { fetchFeaturedHalls } from "@/services/halls";
+import { fetchFeaturedHalls, filterFeaturedByRegion } from "@/services/halls";
 import type { FeaturedHall, HallRegion } from "@/types/hall";
 
 const HallDetailsView = dynamic(
@@ -42,9 +43,9 @@ export default function FeaturedHallsSection() {
         return;
       }
 
-      // Only real user-added halls are shown. If the API is unavailable,
-      // show an empty state (never demo/fallback halls).
-      setHalls([]);
+      // Backend unavailable: keep the homepage usable by showing the local
+      // demo halls (region-filtered) alongside the offline notice.
+      setHalls(filterFeaturedByRegion(FEATURED_HALLS_FALLBACK, region));
       setStatus("error");
       setErrorMessage(result.error ?? null);
     });
