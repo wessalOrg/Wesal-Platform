@@ -32,7 +32,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   const { redirect, action, intent, type, accountType, previewSuccess } = await searchParams;
   const resolvedAction = resolveAuthAction(action, intent);
   const loginHref = buildLoginHref(redirect, resolvedAction);
-  const initialAccountType: AccountType | null = resolveInitialAccountType({
+  const initialAccountType: AccountType = resolveInitialAccountType({
     accountType,
     type,
   });

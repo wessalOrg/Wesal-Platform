@@ -13,6 +13,7 @@ import {
 import { useRouter } from "next/navigation";
 import { AUTH_CHANGE_EVENT, clearAuthSession } from "@/lib/auth-storage";
 import { getAccessToken } from "@/lib/auth-token";
+import { clearStoredAccountType } from "@/lib/account-type";
 import { readLocalSession } from "@/lib/local-session";
 import { logoutAccount } from "@/services/auth";
 import { fetchSession } from "@/services/session";
@@ -119,11 +120,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetToGuest = useCallback(() => {
     clearAuthSession();
+    clearStoredAccountType();
     setNameOverride(null);
     setSession(GUEST_SESSION);
     setStatus("ready");
   }, []);
 
+  /**
+   * Any authenticated role (RegisteredUser / HallOwner / Admin) becomes Guest:
+   * clear tokens, wipe local identity, then optionally revoke the server session.
+   */
   const logout = useCallback(
     async (options?: LogoutOptions) => {
       if (loggingOutRef.current) return;
@@ -132,14 +138,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoggingOut(true);
       sessionEpochRef.current += 1;
 
+      const token = getAccessToken();
+      // Flip UI to Guest immediately so navbar/actions never keep owner/user state.
+      resetToGuest();
+
       try {
-        if (getAccessToken()) {
-          await logoutAccount();
+        if (token) {
+          await logoutAccount(token);
         }
       } catch {
-        // Remote logout can fail or 401; local session must still become Guest.
+        // Remote logout can fail or 401; local session is already Guest.
       } finally {
-        resetToGuest();
         loggingOutRef.current = false;
         setIsLoggingOut(false);
         if (options?.redirect !== false) {

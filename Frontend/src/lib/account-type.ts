@@ -3,6 +3,9 @@ export const ACCOUNT_TYPES = ["RegularUser", "HallOwner"] as const;
 
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
+/** Default selection on the register type toggle (hall seeker). */
+export const DEFAULT_ACCOUNT_TYPE: AccountType = "RegularUser";
+
 const STORAGE_KEY = "wesal_register_account_type";
 
 export function isAccountType(value: unknown): value is AccountType {
@@ -57,16 +60,17 @@ export function clearStoredAccountType(): void {
 
 /**
  * Resolve the account type for the registration flow.
- * Priority: explicit accountType param → type=owner shortcut → sessionStorage.
+ * Priority: explicit accountType param → type=owner shortcut → sessionStorage → default.
  */
 export function resolveInitialAccountType(params: {
   accountType?: string | null;
   type?: string | null;
-}): AccountType | null {
+}): AccountType {
   return (
     parseAccountType(params.accountType) ??
     accountTypeFromQueryType(params.type) ??
-    readStoredAccountType()
+    readStoredAccountType() ??
+    DEFAULT_ACCOUNT_TYPE
   );
 }
 

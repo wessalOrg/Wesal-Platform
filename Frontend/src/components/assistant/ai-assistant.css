@@ -385,53 +385,34 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
 }
 
 .wesal-ai-panel-resize {
-  position: absolute;
-  z-index: 3;
-  top: 0;
-  inset-inline-start: 0;
-  width: 1.35rem;
-  height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
   padding: 0;
   border: 0;
-  border-radius: 0 0 0.65rem 0;
-  background:
-    linear-gradient(
-      135deg,
-      transparent 42%,
-      rgba(154, 92, 96, 0.45) 42%,
-      rgba(154, 92, 96, 0.45) 48%,
-      transparent 48%,
-      transparent 58%,
-      rgba(154, 92, 96, 0.55) 58%,
-      rgba(154, 92, 96, 0.55) 64%,
-      transparent 64%
-    );
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wesal-text);
   cursor: nwse-resize;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease;
 }
 
 :dir(rtl) .wesal-ai-panel-resize {
-  border-radius: 0 0 0 0.65rem;
   cursor: nesw-resize;
-  background:
-    linear-gradient(
-      -135deg,
-      transparent 42%,
-      rgba(154, 92, 96, 0.45) 42%,
-      rgba(154, 92, 96, 0.45) 48%,
-      transparent 48%,
-      transparent 58%,
-      rgba(154, 92, 96, 0.55) 58%,
-      rgba(154, 92, 96, 0.55) 64%,
-      transparent 64%
-    );
+}
+
+:dir(rtl) .wesal-ai-panel-resize svg {
+  transform: scaleX(-1);
 }
 
 .wesal-ai-panel-resize:hover,
 .wesal-ai-panel-resize:focus-visible,
 .wesal-ai-panel[data-resizing="true"] .wesal-ai-panel-resize {
-  background-color: rgba(251, 238, 240, 0.9);
+  background-color: rgba(255, 255, 255, 0.7);
 }
 
 .wesal-ai-panel-resize:focus-visible {
@@ -446,8 +427,8 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
 
 @media (pointer: coarse) {
   .wesal-ai-panel-resize {
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 2.25rem;
+    height: 2.25rem;
   }
 }
 

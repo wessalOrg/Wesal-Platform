@@ -11,7 +11,7 @@ import {
 } from "@/lib/account-type";
 
 type RegisterAccountTypeScreenProps = {
-  initialAccountType: AccountType | null;
+  initialAccountType: AccountType;
   loginHref: string;
   previewSuccess?: boolean;
 };
@@ -25,21 +25,23 @@ export default function RegisterAccountTypeScreen({
 }: RegisterAccountTypeScreenProps) {
   const t = useT();
   const groupId = useId();
-  const [selected, setSelected] = useState<AccountType | null>(() => {
-    if (typeof window === "undefined") return initialAccountType;
-    return initialAccountType ?? readStoredAccountType();
+  const [selected, setSelected] = useState<AccountType>(() => {
+    const resolved =
+      initialAccountType ??
+      (typeof window !== "undefined" ? readStoredAccountType() : null) ??
+      "RegularUser";
+    if (typeof window !== "undefined") storeAccountType(resolved);
+    return resolved;
   });
   const [prevInitialAccountType, setPrevInitialAccountType] =
-    useState<AccountType | null>(initialAccountType);
+    useState<AccountType>(initialAccountType);
   const [showTypeError, setShowTypeError] = useState(false);
   const [accountTypeError, setAccountTypeError] = useState<string | null>(null);
 
   if (initialAccountType !== prevInitialAccountType) {
     setPrevInitialAccountType(initialAccountType);
-    if (initialAccountType) {
-      storeAccountType(initialAccountType);
-      setSelected(initialAccountType);
-    }
+    storeAccountType(initialAccountType);
+    setSelected(initialAccountType);
   }
   return (
     <div

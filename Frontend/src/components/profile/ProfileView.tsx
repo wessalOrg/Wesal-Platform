@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import { useT } from "@/i18n";
 import { getStoredAuth } from "@/lib/auth-storage";
 
@@ -12,6 +13,7 @@ export default function ProfileView() {
   const router = useRouter();
   const { session, status, logout, isLoggingOut } = useAuth();
   const hadSessionRef = useRef(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   useEffect(() => {
     if (status === "loading" || isLoggingOut) return;
@@ -85,13 +87,23 @@ export default function ProfileView() {
           className="btn-outline min-h-11"
           disabled={isLoggingOut}
           aria-busy={isLoggingOut || undefined}
-          onClick={() => {
-            void logout();
-          }}
+          onClick={() => setConfirmLogout(true)}
         >
           {t("nav.logout")}
         </button>
       </div>
+
+      <LogoutConfirmDialog
+        open={confirmLogout}
+        busy={isLoggingOut}
+        onClose={() => {
+          if (!isLoggingOut) setConfirmLogout(false);
+        }}
+        onConfirm={() => {
+          setConfirmLogout(false);
+          void logout();
+        }}
+      />
     </section>
   );
 }

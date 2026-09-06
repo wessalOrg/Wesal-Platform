@@ -73,6 +73,12 @@ export async function loginAccount(payload: LoginPayload): Promise<LoginResult> 
 }
 
 /** Revokes the current session on the server. Callers own local cleanup. */
-export async function logoutAccount(): Promise<void> {
-  await api.post("/auth/logout");
+export async function logoutAccount(accessToken?: string | null): Promise<void> {
+  await api.post(
+    "/auth/logout",
+    null,
+    accessToken
+      ? { headers: { Authorization: `Bearer ${accessToken}` } }
+      : undefined,
+  );
 }

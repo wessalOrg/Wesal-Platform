@@ -53,12 +53,45 @@ const CRITICAL_UI_SELECTOR = "header.wesal-navbar, [data-wesal-critical]";
 const PANEL_MIN_WIDTH_PX = 280;
 const PANEL_MIN_HEIGHT_PX = 320;
 const PANEL_EDGE_GAP_PX = 12;
+const PANEL_SIZE_STORAGE_KEY = "wesal_ai_panel_size";
 
 type PanelMotion = "closed" | "in" | "open" | "out";
 type PanelSize = { width: number; height: number };
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function readStoredPanelSize(): PanelSize | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(PANEL_SIZE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PanelSize>;
+    if (
+      typeof parsed.width !== "number" ||
+      typeof parsed.height !== "number" ||
+      !Number.isFinite(parsed.width) ||
+      !Number.isFinite(parsed.height)
+    ) {
+      return null;
+    }
+    return {
+      width: clamp(parsed.width, PANEL_MIN_WIDTH_PX, 1200),
+      height: clamp(parsed.height, PANEL_MIN_HEIGHT_PX, 1200),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function storePanelSize(size: PanelSize): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(PANEL_SIZE_STORAGE_KEY, JSON.stringify(size));
+  } catch {
+    /* ignore quota / private mode */
+  }
 }
 
 function prefersReducedMotion(): boolean {
@@ -151,7 +184,7 @@ export default function AiAssistantPanel({
   const t = useT();
   const panelRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef(0);
-  const userSizeRef = useRef<PanelSize | null>(null);
+  const userSizeRef = useRef<PanelSize | null>(readStoredPanelSize());
   const resizingRef = useRef(false);
   const failed = phase === "error" || phase === "unavailable";
   // Keep the failure on screen while retrying instead of flashing back to a spinner.
@@ -260,9 +293,14 @@ export default function AiAssistantPanel({
     const handle = event.currentTarget;
     const startX = event.clientX;
     const startY = event.clientY;
-    const startWidth = panel.offsetWidth;
-    const startHeight = panel.offsetHeight;
+    const startRect = panel.getBoundingClientRect();
+    const startWidth = startRect.width;
+    const startHeight = startRect.height;
     const isRtl = document.documentElement.dir === "rtl";
+    // Handle sits beside the close button (top-inline-end). Pin the opposite
+    // bottom-inline-start corner so drag grows/shrinks under the cursor.
+    const pinnedBottom = startRect.bottom;
+    const pinnedInlineStart = isRtl ? startRect.right : startRect.left;
     const maxWidth = () =>
       Math.max(PANEL_MIN_WIDTH_PX, window.innerWidth - PANEL_EDGE_GAP_PX * 2);
     const maxHeight = () =>
@@ -270,26 +308,48 @@ export default function AiAssistantPanel({
 
     resizingRef.current = true;
     panel.dataset.resizing = "true";
+    document.body.style.cursor = isRtl ? "nesw-resize" : "nwse-resize";
+    document.body.style.userSelect = "none";
     handle.setPointerCapture(event.pointerId);
 
     const onMove = (moveEvent: PointerEvent) => {
-      // Handle sits at top-inline-start: grow when dragging away from the FAB side.
-      const widthDelta = isRtl ? moveEvent.clientX - startX : startX - moveEvent.clientX;
+      const widthDelta = isRtl ? startX - moveEvent.clientX : moveEvent.clientX - startX;
       const heightDelta = startY - moveEvent.clientY;
       const nextSize: PanelSize = {
         width: clamp(startWidth + widthDelta, PANEL_MIN_WIDTH_PX, maxWidth()),
         height: clamp(startHeight + heightDelta, PANEL_MIN_HEIGHT_PX, maxHeight()),
       };
+      const nextTop = clamp(
+        pinnedBottom - nextSize.height,
+        PANEL_EDGE_GAP_PX,
+        window.innerHeight - PANEL_MIN_HEIGHT_PX - PANEL_EDGE_GAP_PX,
+      );
+      const nextLeft = isRtl
+        ? clamp(
+            pinnedInlineStart - nextSize.width,
+            PANEL_EDGE_GAP_PX,
+            window.innerWidth - PANEL_MIN_WIDTH_PX - PANEL_EDGE_GAP_PX,
+          )
+        : clamp(
+            pinnedInlineStart,
+            PANEL_EDGE_GAP_PX,
+            window.innerWidth - PANEL_MIN_WIDTH_PX - PANEL_EDGE_GAP_PX,
+          );
+
       userSizeRef.current = nextSize;
       panel.style.width = `${nextSize.width}px`;
       panel.style.height = `${nextSize.height}px`;
       panel.style.maxHeight = `${nextSize.height}px`;
-      place();
+      panel.style.left = `${nextLeft}px`;
+      panel.style.top = `${nextTop}px`;
     };
 
     const onUp = (upEvent: PointerEvent) => {
       resizingRef.current = false;
       panel.dataset.resizing = "false";
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      if (userSizeRef.current) storePanelSize(userSizeRef.current);
       try {
         handle.releasePointerCapture(upEvent.pointerId);
       } catch {
@@ -445,13 +505,6 @@ export default function AiAssistantPanel({
       onAnimationEnd={handleAnimationEnd}
       className="wesal-ai-panel wesal-ai-panel--anchored fixed z-[105] flex min-w-0 flex-col overflow-hidden rounded-3xl border border-[var(--wesal-border)] bg-white shadow-[0_24px_60px_rgba(60,35,30,0.22)] outline-none"
     >
-      <button
-        type="button"
-        aria-label={t("assistant.panel.resize")}
-        data-testid="ai-assistant-resize"
-        onPointerDown={onResizePointerDown}
-        className="wesal-ai-panel-resize"
-      />
       <div className="wesal-ai-panel-header flex shrink-0 items-center gap-3 px-4 py-3.5">
         <span className="wesal-ai-avatar flex h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#f3e4e2] ring-2 ring-white/80">
           <AiAssistantAvatar />
@@ -480,25 +533,49 @@ export default function AiAssistantPanel({
             {t(STATUS_KEY[phase])}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("common.close")}
-          data-testid="ai-assistant-close"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--wesal-text)] transition hover:bg-white/70"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            aria-hidden="true"
-            className="h-4 w-4"
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button
+            type="button"
+            aria-label={t("assistant.panel.resize")}
+            title={t("assistant.panel.resize")}
+            data-testid="ai-assistant-resize"
+            onPointerDown={onResizePointerDown}
+            className="wesal-ai-panel-resize"
           >
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+              className="h-4 w-4"
+            >
+              <path d="M14 6h4v4" />
+              <path d="M10 14h4v4" />
+              <path d="M18 6l-8 8" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.close")}
+            data-testid="ai-assistant-close"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--wesal-text)] transition hover:bg-white/70"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+              className="h-4 w-4"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <AiChatErrorBoundary>

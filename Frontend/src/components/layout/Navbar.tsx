@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import WesalLogo from "@/components/brand/WesalLogo";
-import AuthNavIcons from "@/components/layout/AuthNavIcons";
+import AuthAccountMenu from "@/components/layout/AuthAccountMenu";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import { useTranslateLang } from "@/i18n";
 import { markAuthNavigation } from "@/lib/auth-nav";
@@ -25,14 +25,10 @@ export default function Navbar({
   const [open, setOpen] = useState(false);
   const [menuPath, setMenuPath] = useState(pathname);
   const router = useRouter();
-  const { lang, t } = useTranslateLang();
+  const { t } = useTranslateLang();
   const { session, status, logout, isLoggingOut } = useAuth();
   const authenticated = session.isAuthenticated;
-  const displayName = session.userName?.trim() || t("nav.account");
-  const separator = lang === "en" ? "," : "،";
   const overlay = variant === "overlay";
-  const profileLabel = t("nav.profile");
-  const messagesLabel = t("nav.messages");
 
   if (menuPath !== pathname) {
     setMenuPath(pathname);
@@ -49,6 +45,7 @@ export default function Navbar({
     if (!authenticated) return;
     router.prefetch("/profile");
     router.prefetch("/messages");
+    router.prefetch("/notifications");
   }, [authenticated, router]);
 
   useEffect(() => {
@@ -117,34 +114,24 @@ export default function Navbar({
           </nav>
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:gap-3">
-            <div className="hidden min-w-0 items-center gap-2 lg:flex lg:gap-3">
+            <div className="hidden shrink-0 lg:block">
               <LanguageSwitcher />
-              {status === "loading" ? (
-                <span className="h-11 w-40 shrink-0 animate-pulse rounded-xl bg-[var(--wesal-pink)]" />
-              ) : authenticated ? (
-                <AuthAccount
-                  hello={t("nav.hello")}
-                  name={displayName}
-                  logoutLabel={t("nav.logout")}
-                  separator={separator}
-                  loggingOut={isLoggingOut}
-                  onLogout={() => void logout()}
-                />
-              ) : (
+            </div>
+            {status === "loading" ? (
+              <span className="h-10 w-28 shrink-0 animate-pulse rounded-xl bg-[var(--wesal-pink)] sm:w-40" />
+            ) : authenticated ? (
+              <AuthAccountMenu
+                loggingOut={isLoggingOut}
+                onLogout={() => void logout()}
+              />
+            ) : (
+              <div className="hidden min-w-0 items-center gap-2 lg:flex lg:gap-3">
                 <GuestActions
                   login={t("nav.login")}
                   register={t("nav.register")}
                 />
-              )}
-            </div>
-
-            {/* Far-left (visual) cluster in RTL: icons sit at the outer edge with the menu */}
-            {status === "ready" && authenticated ? (
-              <AuthNavIcons
-                profileLabel={profileLabel}
-                messagesLabel={messagesLabel}
-              />
-            ) : null}
+              </div>
+            )}
 
             <button
               type="button"
@@ -178,14 +165,6 @@ export default function Navbar({
                 {t(link.key)}
               </Link>
             ))}
-            {status === "ready" && authenticated ? (
-              <AuthNavIcons
-                profileLabel={profileLabel}
-                messagesLabel={messagesLabel}
-                stacked
-                onNavigate={() => setOpen(false)}
-              />
-            ) : null}
             <LanguageSwitcher compact />
             {status === "loading" ? (
               <div
@@ -193,17 +172,11 @@ export default function Navbar({
                 aria-hidden="true"
               />
             ) : authenticated ? (
-              <AuthAccount
-                hello={t("nav.hello")}
-                name={displayName}
-                logoutLabel={t("nav.logout")}
-                separator={separator}
+              <AuthAccountMenu
                 stacked
                 loggingOut={isLoggingOut}
-                onLogout={() => {
-                  setOpen(false);
-                  void logout();
-                }}
+                onLogout={() => void logout()}
+                onNavigate={() => setOpen(false)}
               />
             ) : (
               <GuestActions
@@ -255,48 +228,5 @@ function GuestActions({
         {register}
       </Link>
     </>
-  );
-}
-
-function AuthAccount({
-  hello,
-  name,
-  logoutLabel,
-  separator,
-  stacked = false,
-  loggingOut = false,
-  onLogout,
-}: {
-  hello: string;
-  name: string;
-  logoutLabel: string;
-  separator: string;
-  stacked?: boolean;
-  loggingOut?: boolean;
-  onLogout: () => void;
-}) {
-  return (
-    <div
-      className={`flex min-w-0 items-center gap-2.5 ${stacked ? "w-full flex-col" : ""}`}
-      data-testid="navbar-authenticated"
-    >
-      <p
-        className={`min-w-0 text-sm font-semibold text-[var(--wesal-maroon)] ${
-          stacked ? "w-full text-start" : "max-w-[8.5rem] truncate lg:max-w-[10rem]"
-        }`}
-      >
-        {hello}
-        {separator} {name}
-      </p>
-      <button
-        type="button"
-        className={`btn-outline min-h-11 whitespace-nowrap ${stacked ? "w-full" : "shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
-        disabled={loggingOut}
-        aria-busy={loggingOut || undefined}
-        onClick={onLogout}
-      >
-        {logoutLabel}
-      </button>
-    </div>
   );
 }
