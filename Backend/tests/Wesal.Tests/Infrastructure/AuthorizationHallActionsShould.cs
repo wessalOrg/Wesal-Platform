@@ -37,7 +37,11 @@ public class AuthorizationHallActionsShould
         public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, CancellationToken cancellationToken = default) => Task.FromResult(Halls.Count);
         public Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(HallRegion region, int count, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Where(h => h.Region == region).Take(count).ToList());
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallImage>>([]);
-        public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(IReadOnlyCollection<Guid> hallIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallBookingPeriod>>([]);
+        public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(IReadOnlyCollection<Guid> hallIds, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<HallBookingPeriod>>(hallIds.SelectMany(id => new[] {
+                new HallBookingPeriod { HallId = id, Type = BookingPeriodType.FirstPeriod, StartTime = new TimeOnly(8,0), EndTime = new TimeOnly(14,0) },
+                new HallBookingPeriod { HallId = id, Type = BookingPeriodType.SecondPeriod, StartTime = new TimeOnly(15,0), EndTime = new TimeOnly(22,0) }
+            }).ToList());
         public Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(IReadOnlyCollection<Guid> hallIds, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallAvailability>>([]);
     }
 
