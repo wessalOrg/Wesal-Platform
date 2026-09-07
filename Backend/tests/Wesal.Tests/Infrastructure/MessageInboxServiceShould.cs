@@ -462,6 +462,8 @@ public class MessageInboxServiceShould
                 .ToList();
             return Task.FromResult<IReadOnlyList<Message>>(messages);
         }
+
+        public Task<Message?> GetByIdempotencyKeyAsync(Guid conversationId, string senderUserId, string idempotencyKey, CancellationToken cancellationToken = default) => Task.FromResult<Message?>(null);
     }
 
     private sealed class FakeBookingRejectionService : IBookingRejectionService

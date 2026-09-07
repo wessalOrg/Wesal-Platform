@@ -51,3 +51,10 @@ public sealed class UserDisplayInfo
 
     public string FullName { get; init; } = string.Empty;
 }
+
+public sealed class SendMessageRequest
+{
+    public string Content { get; init; } = string.Empty;
+
+    public string? IdempotencyKey { get; init; }
+}

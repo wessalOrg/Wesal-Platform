@@ -48,4 +48,15 @@ public sealed class MessageRepository : IMessageRepository
             .ThenBy(message => message.Id)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<Message?> GetByIdempotencyKeyAsync(
+        Guid conversationId,
+        string senderUserId,
+        string idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Messages
+            .AsNoTracking()
+            .FirstOrDefaultAsync(message => message.ConversationId == conversationId && message.SenderUserId == senderUserId && message.IdempotencyKey == idempotencyKey, cancellationToken);
+    }
 }

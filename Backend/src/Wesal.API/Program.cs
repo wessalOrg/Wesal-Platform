@@ -9,6 +9,7 @@ using Wesal.Application;
 using Wesal.Infrastructure;
 using Wesal.Infrastructure.Logging;
 using Wesal.Infrastructure.Middleware;
+using Wesal.Infrastructure.Realtime;
 using Wesal.Persistence;
 using Wesal.Persistence.Data;
 
@@ -136,6 +137,7 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+    app.MapHub<ConversationHub>("/hubs/conversations");
     app.MapHealthChecks("/health");
 
     app.MapGet("/", () => Results.Ok(new { service = "Wesal API", status = "running", version = "v1" }));

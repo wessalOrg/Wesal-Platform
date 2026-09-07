@@ -12,10 +12,12 @@ namespace Wesal.API.Controllers;
 public class ConversationsController : ControllerBase
 {
     private readonly IConversationService _conversationService;
+    private readonly IMessageService _messageService;
 
-    public ConversationsController(IConversationService conversationService)
+    public ConversationsController(IConversationService conversationService, IMessageService messageService)
     {
         _conversationService = conversationService;
+        _messageService = messageService;
     }
 
     [HttpPost("api/v{version:apiVersion}/halls/{hallId:guid}/conversations")]
@@ -70,5 +72,21 @@ public class ConversationsController : ControllerBase
     {
         var response = await _conversationService.GetConversationThreadAsync(conversationId, cancellationToken);
         return Ok(response);
+    }
+
+    [HttpPost("api/v{version:apiVersion}/conversations/{conversationId:guid}/messages")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(MessageDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<MessageDto>> SendMessage(
+        Guid conversationId,
+        [FromBody] SendMessageRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _messageService.SendMessageAsync(conversationId, request, cancellationToken);
+        return CreatedAtAction(nameof(GetConversationMessages), new { version = "1", conversationId }, response);
     }
 }

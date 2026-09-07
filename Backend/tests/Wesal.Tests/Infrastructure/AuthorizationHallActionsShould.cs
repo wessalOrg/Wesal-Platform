@@ -74,6 +74,8 @@ public class AuthorizationHallActionsShould
         public Task<IReadOnlyList<Message>> GetByConversationAsync(Guid conversationId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Message>>([]);
         public Task<IReadOnlyList<Message>> GetByConversationIdsAsync(IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Message>>([]);
         public Task AddAsync(Message message, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<Message?> GetByIdempotencyKeyAsync(Guid conversationId, string senderUserId, string idempotencyKey, CancellationToken cancellationToken = default) => Task.FromResult<Message?>(null);
     }
 
     private sealed class FakeBookingRejectionService : IBookingRejectionService

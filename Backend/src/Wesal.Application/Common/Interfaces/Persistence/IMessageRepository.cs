@@ -13,4 +13,10 @@ public interface IMessageRepository
     Task<IReadOnlyList<Message>> GetByConversationIdsAsync(
         IReadOnlyCollection<Guid> conversationIds,
         CancellationToken cancellationToken = default);
+
+    Task<Message?> GetByIdempotencyKeyAsync(
+        Guid conversationId,
+        string senderUserId,
+        string idempotencyKey,
+        CancellationToken cancellationToken = default);
 }

@@ -11,4 +11,6 @@ public class Message : BaseAuditableEntity
     public string SenderUserId { get; set; } = string.Empty;
 
     public string Content { get; set; } = string.Empty;
+
+    public string? IdempotencyKey { get; set; }
 }

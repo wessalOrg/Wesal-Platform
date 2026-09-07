@@ -544,6 +544,8 @@ public class BookingCancellationServiceShould
             => Task.FromResult<IReadOnlyList<Message>>(_committed
                 .Where(m => conversationIds.Contains(m.ConversationId))
                 .ToList());
+
+        public Task<Message?> GetByIdempotencyKeyAsync(Guid conversationId, string senderUserId, string idempotencyKey, CancellationToken cancellationToken = default) => Task.FromResult<Message?>(null);
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

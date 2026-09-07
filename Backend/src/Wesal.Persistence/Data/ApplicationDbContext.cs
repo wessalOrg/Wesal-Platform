@@ -180,8 +180,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.Property(message => message.SenderUserId).IsRequired().HasMaxLength(450);
             entity.Property(message => message.Content).IsRequired().HasMaxLength(1000);
+            entity.Property(message => message.IdempotencyKey).HasMaxLength(100);
 
             entity.HasIndex(message => new { message.ConversationId, message.CreatedAt });
+            entity.HasIndex(message => new { message.ConversationId, message.SenderUserId, message.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
 
             entity.HasOne(message => message.Conversation)
                 .WithMany(conversation => conversation.Messages)
@@ -238,6 +240,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasIndex(booking => new { booking.HallId, booking.RequesterUserId });
 
             entity.HasIndex(booking => booking.RejectionMessageId).IsUnique();
+
+            entity.HasIndex(booking => new { booking.HallId, booking.Date, booking.Period }).IsUnique().HasFilter("\"Status\" IN (0, 2)");
 
             entity.HasOne(booking => booking.Hall)
                 .WithMany()

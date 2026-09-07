@@ -22,6 +22,7 @@ using Wesal.Infrastructure.AiAssistant;
 using Wesal.Infrastructure.Languages;
 using Wesal.Infrastructure.Localization;
 using Wesal.Infrastructure.Profile;
+using Wesal.Infrastructure.Realtime;
 using Wesal.Infrastructure.Registration;
 using Wesal.Infrastructure.Time;
 
@@ -75,6 +76,9 @@ public static class DependencyInjection
         services.AddScoped<ILoginService, LoginService>();
         services.AddScoped<ILogoutService, LogoutService>();
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IMessageService, Conversations.MessageService>();
+        services.AddScoped<IMessageNotifier, SignalRMessageNotifier>();
+        services.AddSignalR();
         services.AddScoped<ILanguageService, LanguageService>();
         services.AddScoped<ITranslationService, TranslationService>();
         services.AddSingleton<IChatSessionService, ChatSessionService>();
@@ -91,6 +95,16 @@ public static class DependencyInjection
                 options.MapInboundClaims = false;
                 options.Events = new JwtBearerEvents
                 {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    },
                     OnTokenValidated = async context =>
                     {
                         var jti = context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Jti);
