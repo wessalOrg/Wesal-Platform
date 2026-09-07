@@ -49,6 +49,11 @@ const nextConfig: NextConfig = {
         hostname: "wesal-platform.onrender.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "*.apps.taqat.academy",
+        pathname: "/**",
+      },
     ],
   },
 };
