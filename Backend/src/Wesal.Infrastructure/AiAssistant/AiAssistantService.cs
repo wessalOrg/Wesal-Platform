@@ -12,13 +12,14 @@ using Wesal.Infrastructure.Halls;
 namespace Wesal.Infrastructure.AiAssistant;
 
 /// <summary>
-/// Unified AI assistant orchestrator. A single Gemini call (inside the intent
-/// extractor) classifies the message into a structured intent; this service then
-/// resolves every intent against existing, verified platform services and
-/// repositories (recommendations, hall details, featured halls, how-to guidance).
-/// Gemini never performs actions or touches the database, and no second Gemini
-/// call is made unless a future phase opts into natural-language response
-/// generation. All outgoing text is deterministic, bilingual (ar/en) and safe.
+/// Unified AI assistant orchestrator. The Gemini Tool Calling orchestrator
+/// (<see cref="IGeminiToolOrchestrator"/>) is the primary path: it grounds
+/// responses in live tool data and official KB knowledge, and falls back
+/// internally to <see cref="IHowToService"/> when Gemini is unavailable.
+/// When the orchestrator itself throws (should be rare), the existing
+/// deterministic intent-classifier + dispatcher path runs as an ultimate
+/// safety net so the assistant always answers. All outgoing text is
+/// deterministic, bilingual (ar/en) and safe.
 /// </summary>
 public sealed class AiAssistantService : IAiAssistantService
 {
@@ -35,6 +36,7 @@ public sealed class AiAssistantService : IAiAssistantService
     private readonly IHallAvailabilityService _hallAvailabilityService;
     private readonly IAiLanguageDetector _languageDetector;
     private readonly IDateTime _dateTime;
+    private readonly IGeminiToolOrchestrator _toolOrchestrator;
 
     public AiAssistantService(
         IAiIntentExtractor intentExtractor,
@@ -46,6 +48,7 @@ public sealed class AiAssistantService : IAiAssistantService
         IHallAvailabilityService hallAvailabilityService,
         IAiLanguageDetector? languageDetector,
         IDateTime dateTime,
+        IGeminiToolOrchestrator toolOrchestrator,
         ILogger<AiAssistantService> logger)
     {
         _intentExtractor = intentExtractor;
@@ -57,6 +60,7 @@ public sealed class AiAssistantService : IAiAssistantService
         _hallAvailabilityService = hallAvailabilityService;
         _languageDetector = languageDetector ?? new AiLanguageDetector();
         _dateTime = dateTime;
+        _toolOrchestrator = toolOrchestrator;
     }
 
     public async Task<AiAssistantResponse> ProcessMessageAsync(
@@ -76,6 +80,42 @@ public sealed class AiAssistantService : IAiAssistantService
         var detected = _languageDetector.Detect(text);
         var effectiveLanguage = detected ?? (string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language);
 
+        // Primary path: the Gemini Tool Calling orchestrator grounds the answer
+        // in live tool data and official KB knowledge. It falls back internally
+        // to IHowToService when Gemini is unavailable, so it almost always
+        // produces a usable answer. When it does throw (rare), the deterministic
+        // intent-classifier path below runs as an ultimate safety net.
+        try
+        {
+            var orchestratorResult = await _toolOrchestrator.ExecuteAsync(
+                text, effectiveLanguage, cancellationToken, context);
+
+            if (orchestratorResult is { Success: true } && !string.IsNullOrWhiteSpace(orchestratorResult.Answer))
+            {
+                return Build(
+                    orchestratorResult.ResponseLanguage,
+                    AiAssistantResponseKind.Answer,
+                    orchestratorResult.Answer,
+                    null);
+            }
+        }
+        catch (ArgumentException)
+        {
+            // Re-throw message validation errors so the controller returns 400.
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // The orchestrator threw unexpectedly — fall through to the
+            // deterministic intent-classifier path as an ultimate safety net.
+        }
+
+        // Ultimate safety net: deterministic intent-classifier + dispatcher.
+        // This path is only reached when the orchestrator itself fails.
         cancellationToken.ThrowIfCancellationRequested();
 
         var intent = await _intentExtractor.ExtractAsync(text, effectiveLanguage, cancellationToken, context);
@@ -375,7 +415,7 @@ public sealed class AiAssistantService : IAiAssistantService
         string language,
         AiAssistantResponseKind kind,
         string message,
-        AiAssistantIntentDto intention,
+        AiAssistantIntentDto? intention,
         IReadOnlyList<HallRecommendationDto>? halls = null,
         HallDetailsDto? hallDetails = null,
         AiAssistantAvailabilityDayDto? availability = null)

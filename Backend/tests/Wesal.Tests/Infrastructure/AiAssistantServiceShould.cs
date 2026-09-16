@@ -20,6 +20,7 @@ public class AiAssistantServiceShould
     private readonly FakeHallAvailabilityService _availability = new();
     private readonly FakeHallRepository _repository = new();
     private readonly FakeDateTime _dateTime = new();
+    private readonly FakeGeminiToolOrchestrator _orchestrator = new();
 
     private AiAssistantService CreateService()
         => new(
@@ -32,6 +33,7 @@ public class AiAssistantServiceShould
             _availability,
             new AiLanguageDetector(),
             _dateTime,
+            _orchestrator,
             NullLogger<AiAssistantService>.Instance);
 
     [Fact]
@@ -319,6 +321,145 @@ public class AiAssistantServiceShould
         Assert.Equal("ar", result.ResponseLanguage);
     }
 
+    [Fact]
+    public async Task Orchestrator_ReturnsLargeResponseKind()
+    {
+        _extractor.Result = With(AiIntentType.HowTo);
+        _orchestrator.Result = new WesalToolOrchestrationResult(
+            true,
+            "Grand Hall is available on Saturday from 6 PM to 10 PM.",
+            "en",
+            [],
+            DateTime.UtcNow);
+
+        var result = await CreateService().ProcessMessageAsync("when is Grand Hall available?", "en", CancellationToken.None);
+
+        Assert.Equal(AiAssistantResponseKind.Answer, result.Kind);
+        Assert.Equal("Grand Hall is available on Saturday from 6 PM to 10 PM.", result.Message);
+        Assert.Empty(result.Halls);
+        Assert.Null(result.HallDetails);
+        Assert.Null(result.Availability);
+        Assert.Null(result.Intent);
+        Assert.Equal(1, _orchestrator.Invocations);
+    }
+
+    [Fact]
+    public async Task OrchestratorWinsOverIntentExtractor()
+    {
+        _extractor.Result = With(AiIntentType.Unsupported);
+        _orchestrator.Result = new WesalToolOrchestrationResult(
+            true,
+            "Here are 3 matching halls in Gaza.",
+            "en",
+            [],
+            DateTime.UtcNow);
+
+        var result = await CreateService().ProcessMessageAsync("find me a hall in Gaza", "en", CancellationToken.None);
+
+        // The orchestrator is the primary path: the deterministic intent
+        // extractor must never run when the orchestrator succeeds.
+        Assert.Equal(AiAssistantResponseKind.Answer, result.Kind);
+        Assert.Equal("Here are 3 matching halls in Gaza.", result.Message);
+        Assert.Equal(0, _extractor.CallCount);
+    }
+
+    [Fact]
+    public async Task Orchestrator_ReturnsArabicAnswer_FlowsArabicResponseLanguage()
+    {
+        _orchestrator.Result = new WesalToolOrchestrationResult(
+            true,
+            "قاعة السلام متاحة يوم السبت.",
+            "ar",
+            [],
+            DateTime.UtcNow);
+
+        var result = await CreateService().ProcessMessageAsync("هل قاعة السلام متاحة؟", "ar", CancellationToken.None);
+
+        Assert.Equal(AiAssistantResponseKind.Answer, result.Kind);
+        Assert.Equal("ar", result.ResponseLanguage);
+        Assert.Equal("قاعة السلام متاحة يوم السبت.", result.Message);
+    }
+
+    [Fact]
+    public async Task OrchestratorThrows_FallsBackToDeterministicPath()
+    {
+        _extractor.Result = With(AiIntentType.HowTo);
+        _howTo.Answer = "Open the search page to find halls.";
+        _orchestrator.Exception = new InvalidOperationException("orchestrator exploded");
+
+        var result = await CreateService().ProcessMessageAsync("how do I search?", "en", CancellationToken.None);
+
+        Assert.Equal(AiAssistantResponseKind.Answer, result.Kind);
+        Assert.Equal("Open the search page to find halls.", result.Message);
+        Assert.NotNull(result.Intent);
+        Assert.Equal(AiIntentType.HowTo, result.Intent!.Intent);
+    }
+
+    [Fact]
+    public async Task Orchestrator_SuccessFalse_FallsBackToDeterministicPath()
+    {
+        _extractor.Result = With(AiIntentType.GetFeaturedHalls, region: "Gaza");
+        _featured.Result = new List<FeaturedHallDto>
+        {
+            new FeaturedHallDto { HallId = Guid.NewGuid(), HallName = "Gaza Grand Hall", Region = "Gaza", Address = "Center", Capacity = 300, Price = 1500, MainImage = "img.jpg" }
+        };
+        _orchestrator.Result = new WesalToolOrchestrationResult(
+            false,
+            "",
+            "en",
+            [],
+            DateTime.UtcNow);
+
+        var result = await CreateService().ProcessMessageAsync("show me featured halls in Gaza", "en", CancellationToken.None);
+
+        Assert.Equal(AiAssistantResponseKind.Halls, result.Kind);
+        Assert.Single(result.Halls);
+        Assert.NotNull(result.Intent);
+    }
+
+    [Fact]
+    public async Task Orchestrator_BlankAnswer_FallsBackToDeterministicPath()
+    {
+        _extractor.Result = With(AiIntentType.HowTo);
+        _howTo.Answer = "Deterministic fallback answer.";
+        _orchestrator.Result = new WesalToolOrchestrationResult(
+            true,
+            "   ",
+            "en",
+            [],
+            DateTime.UtcNow);
+
+        var result = await CreateService().ProcessMessageAsync("how do I search?", "en", CancellationToken.None);
+
+        Assert.Equal(AiAssistantResponseKind.Answer, result.Kind);
+        Assert.Equal("Deterministic fallback answer.", result.Message);
+    }
+
+    [Fact]
+    public async Task Orchestrator_ReceivesNormalizedMessageAndLanguage()
+    {
+        string? capturedMessage = null;
+        string? capturedLanguage = null;
+        _orchestrator.OnExecute = (message, language, ct, context) =>
+        {
+            capturedMessage = message;
+            capturedLanguage = language;
+        };
+        _orchestrator.Result = new WesalToolOrchestrationResult(
+            true,
+            "ok",
+            "ar",
+            [],
+            DateTime.UtcNow);
+
+        await CreateService().ProcessMessageAsync("  كيف أبحث عن قاعة؟  ", "en", CancellationToken.None);
+
+        Assert.Equal("كيف أبحث عن قاعة؟", capturedMessage);
+        // Arabic message overrides the fallback en language, matching the
+        // deterministic path behavior.
+        Assert.Equal("ar", capturedLanguage);
+    }
+
     private Guid HallId { get; } = Guid.NewGuid();
 
     [Fact]
@@ -394,10 +535,33 @@ public class AiAssistantServiceShould
     {
         public AiAssistantIntentDto Result { get; set; } = new(AiIntentType.Unknown, null, null, null, null, null, null);
         public Action<string?>? OnExtract { get; set; }
+        public int CallCount { get; private set; }
 
         public Task<AiAssistantIntentDto> ExtractAsync(string message, string? language, CancellationToken cancellationToken = default, AiConversationContext? context = null)
         {
+            CallCount++;
             OnExtract?.Invoke(message);
+            return Task.FromResult(Result);
+        }
+    }
+
+    private sealed class FakeGeminiToolOrchestrator : IGeminiToolOrchestrator
+    {
+        public WesalToolOrchestrationResult Result { get; set; } = new(false, string.Empty, "ar", [], DateTime.UtcNow);
+        public Exception? Exception { get; set; }
+        public int Invocations { get; private set; }
+        public Action<string?, string?, CancellationToken, AiConversationContext?>? OnExecute { get; set; }
+
+        public Task<WesalToolOrchestrationResult> ExecuteAsync(string message, string? language, CancellationToken cancellationToken = default, AiConversationContext? context = null)
+        {
+            Invocations++;
+            OnExecute?.Invoke(message, language, cancellationToken, context);
+
+            if (Exception is not null)
+            {
+                throw Exception;
+            }
+
             return Task.FromResult(Result);
         }
     }
