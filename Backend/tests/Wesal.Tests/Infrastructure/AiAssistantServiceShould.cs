@@ -17,6 +17,7 @@ public class AiAssistantServiceShould
     private readonly FakeRecommendationService _recommendation = new();
     private readonly FakeFeaturedHallsService _featured = new();
     private readonly FakeHallDetailsService _details = new();
+    private readonly FakeHallAvailabilityService _availability = new();
     private readonly FakeHallRepository _repository = new();
     private readonly FakeDateTime _dateTime = new();
 
@@ -28,6 +29,7 @@ public class AiAssistantServiceShould
             _featured,
             _details,
             _repository,
+            _availability,
             new AiLanguageDetector(),
             _dateTime,
             NullLogger<AiAssistantService>.Instance);
@@ -203,15 +205,15 @@ public class AiAssistantServiceShould
     {
         _extractor.Result = With(AiIntentType.CheckHallAvailability, hallName: "Grand Hall", date: FutureDate);
         _repository.ApprovedHallResults = [new Hall { Id = HallId, Name = "Grand Hall", Status = HallStatus.Approved, IsDeleted = false }];
-        _repository.Periods =
-        [
-            new HallBookingPeriod { HallId = HallId, Type = BookingPeriodType.FirstPeriod, StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(14, 0) },
-            new HallBookingPeriod { HallId = HallId, Type = BookingPeriodType.SecondPeriod, StartTime = new TimeOnly(18, 0), EndTime = new TimeOnly(23, 0) }
-        ];
-        _repository.Availability =
-        [
-            new HallAvailability { HallId = HallId, Date = FutureDate, PeriodType = BookingPeriodType.SecondPeriod, Status = AvailabilityStatus.Booked }
-        ];
+        _availability.Result = new HallAvailabilityDto
+        {
+            Date = FutureDate,
+            Periods =
+            [
+                new HallBookingPeriodStatusDto { PeriodType = BookingPeriodType.FirstPeriod, PeriodName = "First Period", StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(14, 0), Status = AvailabilityStatus.Available },
+                new HallBookingPeriodStatusDto { PeriodType = BookingPeriodType.SecondPeriod, PeriodName = "Second Period", StartTime = new TimeOnly(18, 0), EndTime = new TimeOnly(23, 0), Status = AvailabilityStatus.Booked }
+            ]
+        };
 
         var result = await CreateService().ProcessMessageAsync("is Grand Hall available on 2026-12-01 in the evening?", "en", CancellationToken.None);
 
@@ -444,6 +446,14 @@ public class AiAssistantServiceShould
 
             return Task.FromResult(Result!);
         }
+    }
+
+    private sealed class FakeHallAvailabilityService : IHallAvailabilityService
+    {
+        public HallAvailabilityDto Result { get; set; } = new();
+
+        public Task<HallAvailabilityDto> GetHallAvailabilityAsync(Guid hallId, DateOnly date, CancellationToken cancellationToken = default)
+            => Task.FromResult(Result);
     }
 
     private sealed class FakeHallRepository : IHallRepository

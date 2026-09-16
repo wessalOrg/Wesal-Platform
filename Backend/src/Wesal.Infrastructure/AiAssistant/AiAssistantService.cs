@@ -32,6 +32,7 @@ public sealed class AiAssistantService : IAiAssistantService
     private readonly IFeaturedHallsService _featuredHallsService;
     private readonly IHallDetailsService _hallDetailsService;
     private readonly IHallRepository _hallRepository;
+    private readonly IHallAvailabilityService _hallAvailabilityService;
     private readonly IAiLanguageDetector _languageDetector;
     private readonly IDateTime _dateTime;
 
@@ -42,6 +43,7 @@ public sealed class AiAssistantService : IAiAssistantService
         IFeaturedHallsService featuredHallsService,
         IHallDetailsService hallDetailsService,
         IHallRepository hallRepository,
+        IHallAvailabilityService hallAvailabilityService,
         IAiLanguageDetector? languageDetector,
         IDateTime dateTime,
         ILogger<AiAssistantService> logger)
@@ -52,6 +54,7 @@ public sealed class AiAssistantService : IAiAssistantService
         _featuredHallsService = featuredHallsService;
         _hallDetailsService = hallDetailsService;
         _hallRepository = hallRepository;
+        _hallAvailabilityService = hallAvailabilityService;
         _languageDetector = languageDetector ?? new AiLanguageDetector();
         _dateTime = dateTime;
     }
@@ -275,21 +278,8 @@ public sealed class AiAssistantService : IAiAssistantService
             return Build(language, AiAssistantResponseKind.Clarification, HallNotFoundMessage(language, hallName), intention);
         }
 
-        var periods = await _hallRepository.GetBookingPeriodsAsync([hall.Id], cancellationToken);
-        var availability = await _hallRepository.GetAvailabilityAsync([hall.Id], date, date, cancellationToken);
-
-        var statusByPeriod = availability.ToDictionary(item => item.PeriodType, item => item.Status);
-
-        var periodStatuses = periods
-            .Select(period => new HallBookingPeriodStatusDto
-            {
-                PeriodType = period.Type,
-                PeriodName = HallDisplayNames.GetPeriodName(period.Type),
-                StartTime = period.StartTime,
-                EndTime = period.EndTime,
-                Status = statusByPeriod.TryGetValue(period.Type, out var status) ? status : AvailabilityStatus.Available
-            })
-            .ToList();
+        var availability = await _hallAvailabilityService.GetHallAvailabilityAsync(hall.Id, date, cancellationToken);
+        var periodStatuses = availability.Periods;
 
         var message = BuildAvailabilityMessage(language, hall.Name, date, periodStatuses);
 

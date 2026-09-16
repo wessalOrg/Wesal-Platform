@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using ModelContextProtocol.AspNetCore;
 using Serilog;
 using Wesal.API;
 using Wesal.API.Filters;
@@ -45,6 +46,12 @@ try
         {
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
+
+    // Streamable HTTP MCP endpoint. The registered tools expose only the same
+    // public hall information already available through the REST API.
+    services.AddMcpServer()
+        .WithHttpTransport()
+        .WithToolsFromAssembly();
 
     services.AddApiVersioning(options =>
         {
@@ -191,6 +198,7 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+    app.MapMcp("/mcp");
     app.MapHub<ConversationHub>("/hubs/conversation");
     app.MapHub<OwnerDashboardHub>("/hubs/owner-dashboard");
     app.MapHealthChecks("/health");

@@ -66,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<IHomepageIntroductionService, HomepageIntroductionService>();
         services.AddScoped<IFeaturedHallsService, FeaturedHallsService>();
         services.AddScoped<IHallDetailsService, HallDetailsService>();
+        services.AddScoped<IHallAvailabilityService, HallAvailabilityService>();
         services.AddScoped<IAllHallsService, AllHallsService>();
         services.AddScoped<IHallSearchService, HallSearchService>();
         services.AddScoped<IBookingRequestService, BookingRequestService>();
