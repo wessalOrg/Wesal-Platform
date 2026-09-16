@@ -109,6 +109,7 @@ public static class DependencyInjection
         services.AddScoped<IOwnerBookingRequestsService, OwnerBookingRequestsService>();
         services.AddScoped<ILanguageService, LanguageService>();
         services.AddSingleton<IChatSessionService, ChatSessionService>();
+        services.AddSingleton<IWesalKnowledgeService, WesalKnowledgeService>();
         services.AddSingleton<IHowToService, HowToService>();
         services.AddScoped<IRecommendationService, RecommendationService>();
         services.AddSingleton<ISubscriptionPaymentService, SubscriptionPaymentService>();

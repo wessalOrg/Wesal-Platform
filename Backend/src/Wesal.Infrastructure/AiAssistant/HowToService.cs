@@ -10,21 +10,39 @@ public sealed partial class HowToService : IHowToService
     private const string DefaultLanguage = "ar";
     private const string FallbackCategory = "general";
 
+    /// <summary>
+    /// Official-fact knowledge categories that win over the deterministic feature
+    /// matcher: platform/about, FAQ/price and policies. Feature how-tos
+    /// (user-guide, hall-owner) stay with the tailored deterministic answers.
+    /// </summary>
+    private static readonly HashSet<string> OfficialFactCategories = new(
+        ["platform", "faq", "policies"],
+        StringComparer.OrdinalIgnoreCase);
+
+    private static readonly string[] SupportContactMarkers =
+    [
+        "wesal", "وصال", "support", "دعم", "whatsapp", "واتساب", "phone", "هاتف",
+        "email", "بريد", "tel", "رقم", "تواصل مع وصال"
+    ];
+
     private readonly ISubscriptionPaymentService _subscriptionPaymentService;
     private readonly IAiLanguageDetector _languageDetector;
     private readonly ISubscriptionPaymentIntentDetector _paymentIntentDetector;
     private readonly IGeminiService? _geminiService;
+    private readonly IWesalKnowledgeService? _knowledgeService;
 
     public HowToService(
         ISubscriptionPaymentService subscriptionPaymentService,
         IAiLanguageDetector? languageDetector = null,
         ISubscriptionPaymentIntentDetector? paymentIntentDetector = null,
-        IGeminiService? geminiService = null)
+        IGeminiService? geminiService = null,
+        IWesalKnowledgeService? knowledgeService = null)
     {
         _subscriptionPaymentService = subscriptionPaymentService;
         _languageDetector = languageDetector ?? new AiLanguageDetector();
         _paymentIntentDetector = paymentIntentDetector ?? new SubscriptionPaymentIntentDetector();
         _geminiService = geminiService;
+        _knowledgeService = knowledgeService;
     }
 
     public async Task<HowToResponse> AskHowToAsync(
@@ -43,6 +61,32 @@ public sealed partial class HowToService : IHowToService
                 ? $"To pay your subscription as a Hall Owner: contact the Admin via WhatsApp at {details.AdminWhatsAppContact} to arrange payment. The subscription is {details.SubscriptionPriceIls:F0} ILS per {details.SubscriptionCycleDays}-day cycle per hall. Once the Admin confirms your payment, your hall's management features unlock."
                 : $"لدفع اشتراكك كصاحب قاعة: تواصل مع المدير عبر واتساب على الرقم {details.AdminWhatsAppContact} لترتيب الدفع. الاشتراك {details.SubscriptionPriceIls:F0} شيكل لكل {details.SubscriptionCycleDays} يوم لكل قاعة. بمجرد تأكيد المدير للدفع، يتم فتح ميزات إدارة قاعدتك.";
             return new HowToResponse(paymentAnswer, "payment", effectiveLanguage, DateTime.UtcNow);
+        }
+
+        // Official knowledge first (platform/faq/policies): the Knowledge Base is
+        // the authoritative source for static Wesal facts (about, team, contact,
+        // support hours, FAQ/price, privacy). It is checked before Gemini so the
+        // exact official answer always wins without depending on model availability.
+        // The contact guard prevents support contact info from hijacking questions
+        // about messaging a hall owner (a feature how-to).
+        if (_knowledgeService is not null)
+        {
+            var articles = await _knowledgeService.SearchAsync(
+                question,
+                effectiveLanguage,
+                maxResults: 3,
+                cancellationToken);
+
+            var official = articles.FirstOrDefault(a => OfficialFactCategories.Contains(a.Category));
+            if (official is not null
+                && !IsContactInterference(official, question))
+            {
+                return new HowToResponse(
+                    ComposeAnswer(official, effectiveLanguage),
+                    official.Category,
+                    effectiveLanguage,
+                    DateTime.UtcNow);
+            }
         }
 
         // Creator-intent returns the exact, verified attribution in the user's
@@ -87,6 +131,38 @@ public sealed partial class HowToService : IHowToService
 
     private static string Normalize(string input) =>
         WhitespaceRegex().Replace(input.Trim().ToLowerInvariant(), " ");
+
+    /// <summary>
+    /// When the top knowledge hit is the official support-contact article and the
+    /// user is actually asking about messaging a Hall Owner, skip the KB answer so
+    /// the tailored deterministic messaging guidance wins.
+    /// </summary>
+    private static bool IsContactInterference(WesalKnowledgeArticle article, string question)
+    {
+        if (!string.Equals(article.Category, "platform", StringComparison.OrdinalIgnoreCase)
+            || !article.Title.Contains("contact", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var normalized = Normalize(question);
+        return !ContainsAny(normalized, SupportContactMarkers);
+    }
+
+    private static string ComposeAnswer(WesalKnowledgeArticle article, string language)
+    {
+        var content = article.Content;
+
+        if (article.Status != WesalKnowledgeStatus.Verified)
+        {
+            var caveat = language == "en"
+                ? "\n\nNote: some details in this answer are pending verification; please contact the Wesal team to confirm before relying on them."
+                : "\n\nملاحظة: بعض التفاصيل في هذه الإجابة قيد التحقق؛ يُنصح بالتواصل مع فريق وصال للتأكيد قبل الاعتماد عليها.";
+            content += caveat;
+        }
+
+        return content;
+    }
 
     private (string Answer, string Category) MatchEnglish(string question)
     {
