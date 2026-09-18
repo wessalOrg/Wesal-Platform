@@ -194,6 +194,9 @@ namespace Wesal.Persistence.Migrations
                     b.Property<Guid>("HallId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Period")
                         .HasColumnType("integer");
 
@@ -336,8 +339,17 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<bool>("IsAdminLocked")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LockedByAdminUserId")
+                        .HasColumnType("text");
 
                     b.Property<string>("MainImageUrl")
                         .HasMaxLength(500)
@@ -350,6 +362,9 @@ namespace Wesal.Persistence.Migrations
 
                     b.Property<string>("OwnerId")
                         .HasColumnType("text");
+
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer");
 
                     b.Property<decimal?>("Price")
                         .HasPrecision(12, 2)
@@ -364,11 +379,32 @@ namespace Wesal.Persistence.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<DateOnly?>("SubscriptionCycleEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("SubscriptionCycleStart")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("SystemLocked")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("UnlockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UnlockedByAdminUserId")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("text");
+
+                    b.Property<int>("WarningSentAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("WarningSentForCycleEnd")
+                        .HasColumnType("date");
 
                     b.HasKey("Id");
 
@@ -377,6 +413,8 @@ namespace Wesal.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("Status", "IsDeleted");
+
+                    b.HasIndex("Status", "PaymentStatus", "SystemLocked", "SubscriptionCycleEnd");
 
                     b.ToTable("Halls", "wesal");
                 });

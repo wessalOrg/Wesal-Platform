@@ -7,16 +7,19 @@ namespace Wesal.Infrastructure.Halls;
 public class HallSearchService : IHallSearchService
 {
     private readonly IHallRepository _hallRepository;
+    private readonly IHallAvailabilityCleanupService? _cleanupService;
 
-    public HallSearchService(IHallRepository hallRepository)
+    public HallSearchService(IHallRepository hallRepository, IHallAvailabilityCleanupService? cleanupService = null)
     {
         _hallRepository = hallRepository;
+        _cleanupService = cleanupService;
     }
 
     public async Task<PagedResult<HallListItemDto>> SearchHallsAsync(
         HallSearchRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (_cleanupService != null) try { await _cleanupService.CleanupExpiredAsync(cancellationToken); } catch { }
         var pageNumber = Math.Max(1, request.PageNumber);
         var pageSize = Math.Clamp(request.PageSize, 1, 50);
         var skip = (pageNumber - 1) * pageSize;

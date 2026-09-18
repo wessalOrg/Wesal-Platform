@@ -44,7 +44,7 @@ export default function Footer() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
           <div className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2">
-              <WesalLogo className="h-8 w-8" variant="brand" />
+              <WesalLogo className="h-10 w-auto" variant="brand" />
               <span className="text-lg font-extrabold text-[var(--wesal-maroon)]">
                 {t("brand.name")}
               </span>

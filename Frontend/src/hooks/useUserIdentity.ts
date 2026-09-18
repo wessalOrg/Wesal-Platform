@@ -18,6 +18,7 @@ export function useUserIdentity() {
     authenticated: account.authenticated,
     role: account.role,
     isHallOwner: account.isHallOwner,
+    isAdmin: account.isAdmin,
     canOpenRegularProfile: account.canOpenRegularProfile,
     displayName: profile?.fullName ?? account.displayName,
     email: profile?.email ?? account.email,

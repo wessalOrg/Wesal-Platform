@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import FieldSelect from "@/components/ui/FieldSelect";
 import CatalogHallCard, { isHallOpen } from "@/components/halls/CatalogHallCard";
+import { usePublicHallsRevalidation } from "@/hooks/usePublicHallsRevalidation";
 import { useT } from "@/i18n";
 import {
   fetchCatalogHalls,
@@ -155,6 +156,12 @@ export default function HallsCatalogView() {
   const isFirstLoad = useRef(true);
 
   const queryString = searchParams.toString();
+
+  const requestRevalidate = useCallback(() => {
+    setReloadKey((key) => key + 1);
+  }, []);
+
+  usePublicHallsRevalidation(requestRevalidate);
 
   useEffect(() => {
     const fromUrl = parseFiltersFromQuery(new URLSearchParams(queryString));

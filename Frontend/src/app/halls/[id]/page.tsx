@@ -14,10 +14,12 @@ export default async function HallDetailsRoute({ params }: HallDetailsRouteProps
   return (
     <>
       <Navbar />
-      <main className="container-wesal w-full min-h-[60svh] overflow-x-hidden py-8 sm:py-12">
-        <Suspense fallback={<HallDetailsSkeleton />}>
-          <HallDetailsPage hallId={id} />
-        </Suspense>
+      <main className="w-full min-h-[60svh] overflow-x-hidden bg-[var(--wesal-pink-soft)] py-6 sm:py-10">
+        <div className="container-wesal">
+          <Suspense fallback={<HallDetailsSkeleton />}>
+            <HallDetailsPage hallId={id} />
+          </Suspense>
+        </div>
       </main>
       <Footer />
     </>

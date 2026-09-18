@@ -1,12 +1,15 @@
 "use client";
 
+import type { ReactNode } from "react";
 import MessageComposer from "@/components/messages/MessageComposer";
 import ThreadMessageItem from "@/components/messages/ThreadMessageItem";
+import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useRejectionArrival } from "@/hooks/useRejectionArrival";
 import { useRetryingMessages } from "@/hooks/useRetryingMessages";
 import { useThreadScroll } from "@/hooks/useThreadScroll";
 import { useT } from "@/i18n";
 import { isBookingRejectionContent } from "@/lib/booking-rejection-message";
+import { conversationHallLabel } from "@/lib/conversation-display";
 import { isSameUserId } from "@/lib/current-user";
 import type { MessageThread, ThreadStatus } from "@/types/messages";
 
@@ -27,6 +30,7 @@ type MessageThreadViewProps = {
   composerId?: string;
   conversationId?: string | null;
   variant?: "page" | "widget";
+  notice?: ReactNode;
 };
 
 export default function MessageThreadView({
@@ -46,8 +50,11 @@ export default function MessageThreadView({
   composerId = "inbox-message-draft",
   conversationId,
   variant = "page",
+  notice,
 }: MessageThreadViewProps) {
   const t = useT();
+  const lang = useUiLang();
+  const localizedHallName = thread ? conversationHallLabel(thread, lang) : "";
   const messages = thread?.messages ?? [];
   const lastMessage = messages[messages.length - 1];
   const { scrollerRef, unseenCount, unseenRejection, onScroll, scrollToLatest } = useThreadScroll(
@@ -93,6 +100,8 @@ export default function MessageThreadView({
           ) : null}
         </div>
       </header>
+
+      {notice ? <div className="shrink-0 px-3 pt-2 sm:px-4">{notice}</div> : null}
 
       <div className="relative min-h-0 flex-1">
         <div
@@ -142,7 +151,7 @@ export default function MessageThreadView({
                   message={message}
                   own={isSameUserId(message.senderUserId, currentUserId)}
                   retrying={isRetrying(message)}
-                  hallName={thread?.hallName ?? ""}
+                  hallName={localizedHallName}
                   arriving={arrivingId === message.id}
                   onRetrySend={(id) => {
                     markRetrying(id);

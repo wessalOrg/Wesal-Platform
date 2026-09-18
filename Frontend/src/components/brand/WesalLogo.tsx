@@ -1,29 +1,34 @@
 type WesalLogoProps = {
   className?: string;
-  /** brand = animated colors inside mark, white = light version */
+  /** brand = original dusty-rose mark, white = inverted for dark surfaces */
   variant?: "brand" | "white";
+  /** Kept for API compatibility; new artwork is static. */
+  animated?: boolean;
   title?: string;
 };
 
 /**
- * Exact Wesal logo — animated gradient INSIDE the silhouette.
- * Keeps the original artwork (clef + rings).
+ * Wesal wordmark — calligraphy + interlocking rings (exact brand artwork).
  */
 export default function WesalLogo({
-  className = "h-10 w-10",
+  className = "h-11 w-auto",
   variant = "brand",
+  animated = false,
   title = "وصال",
 }: WesalLogoProps) {
   return (
     <span
-      className={`relative inline-block shrink-0 overflow-hidden ${className}`}
+      className={`relative inline-block shrink-0 ${className}`}
       role="img"
       aria-label={title}
       title={title}
     >
-      <span
-        className={`wesal-logo-mark wesal-logo-${variant}`}
-        aria-hidden="true"
+      {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset */}
+      <img
+        src="/logo-wesal.png?v=2"
+        alt=""
+        draggable={false}
+        className={`wesal-logo-img wesal-logo-img--${variant}${animated ? " wesal-logo-img--pulse" : ""}`}
       />
     </span>
   );

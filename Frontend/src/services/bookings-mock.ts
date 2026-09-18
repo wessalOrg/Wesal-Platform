@@ -22,13 +22,23 @@ function reservationKey(hallId: string, date: string, period: BookingPeriodType)
 const reserved = new Set<string>();
 const mockBookings = new Map<string, UserBooking>();
 
+const MOCK_HALL_NAMES: Record<string, string> = {
+  "1": "قاعة رويال",
+  "2": "قاعة الأندلس",
+  "3": "قاعة النخيل الذهبية",
+};
+
+function mockHallName(hallId: string): string {
+  return MOCK_HALL_NAMES[hallId] ?? "قاعة";
+}
+
 function seedMockBookings() {
   if (mockBookings.size > 0) return;
   const samples: UserBooking[] = [
     {
       bookingId: "mock-pending-1",
       hallId: "1",
-      hallName: t("common.hall"),
+      hallName: mockHallName("1"),
       date: "2026-09-20",
       period: "FirstPeriod",
       status: "Pending",
@@ -36,7 +46,7 @@ function seedMockBookings() {
     {
       bookingId: "mock-race-1",
       hallId: "1",
-      hallName: t("common.hall"),
+      hallName: mockHallName("1"),
       date: "2026-09-21",
       period: "SecondPeriod",
       status: "Pending",
@@ -44,7 +54,7 @@ function seedMockBookings() {
     {
       bookingId: "mock-accepted-1",
       hallId: "2",
-      hallName: t("common.hall"),
+      hallName: mockHallName("2"),
       date: "2026-09-18",
       period: "FirstPeriod",
       status: "Accepted",
@@ -52,7 +62,7 @@ function seedMockBookings() {
     {
       bookingId: "mock-rejected-1",
       hallId: "2",
-      hallName: t("common.hall"),
+      hallName: mockHallName("2"),
       date: "2026-09-12",
       period: "SecondPeriod",
       status: "Rejected",
@@ -60,7 +70,7 @@ function seedMockBookings() {
     {
       bookingId: "mock-cancelled-1",
       hallId: "3",
-      hallName: t("common.hall"),
+      hallName: mockHallName("3"),
       date: "2026-09-10",
       period: "FirstPeriod",
       status: "Cancelled",
@@ -133,7 +143,7 @@ export async function mockSubmitBookingRequest(
 
   const created: BookingRequestResult = {
     hallId: input.hallId,
-    hallName: t("common.hall"),
+    hallName: mockHallName(input.hallId),
     date: input.date,
     requesterUserId: "demo-user",
     status: "Pending",

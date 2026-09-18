@@ -8,6 +8,7 @@ import WesalLogo from "@/components/brand/WesalLogo";
 import AuthAccountMenu from "@/components/layout/AuthAccountMenu";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import { useTranslateLang } from "@/i18n";
+import { getAccountProfilePath } from "@/lib/account-profile-path";
 import { markAuthNavigation } from "@/lib/auth-nav";
 
 const NAV_HREFS = [
@@ -43,10 +44,10 @@ export default function Navbar({
 
   useEffect(() => {
     if (!authenticated) return;
-    router.prefetch("/profile");
+    router.prefetch(getAccountProfilePath(session.role));
     router.prefetch("/messages");
     router.prefetch("/notifications");
-  }, [authenticated, router]);
+  }, [authenticated, router, session.role]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -83,7 +84,7 @@ export default function Navbar({
             className="flex min-w-0 shrink-0 items-center gap-2"
             aria-label={t("brand.name")}
           >
-            <span className="relative h-10 w-10 shrink-0 sm:h-11 sm:w-11">
+            <span className="relative h-11 w-9 shrink-0 sm:h-12 sm:w-10">
               <WesalLogo className="h-full w-full" variant="brand" />
             </span>
             <span className="truncate text-xl font-bold text-[var(--wesal-maroon)] sm:text-2xl">

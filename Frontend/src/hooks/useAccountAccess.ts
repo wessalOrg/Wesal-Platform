@@ -1,7 +1,12 @@
 "use client";
 
 import { useAuth } from "@/components/auth/AuthProvider";
-import { canAccessRegularProfile, isHallOwnerRole } from "@/lib/account-role";
+import {
+  canAccessRegularProfile,
+  isHallOwnerRole,
+  isAdminRole,
+  resolveSessionRole,
+} from "@/lib/account-role";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { getAccessToken } from "@/lib/auth-token";
 
@@ -23,8 +28,13 @@ export function useAccountAccess() {
   const displayName = session.userName?.trim() || stored?.user?.name?.trim() || null;
   const email = stored?.user?.email?.trim() || null;
   const phoneNumber = stored?.user?.phone?.trim() || null;
-  const role = session.role;
+  const role = resolveSessionRole(
+    session.role,
+    stored?.user?.role,
+    stored?.user?.accountType,
+  );
   const isHallOwner = isHallOwnerRole(role);
+  const isAdmin = isAdminRole(role);
   const canOpenRegularProfile = canAccessRegularProfile(authenticated, role);
 
   const logout = async () => {
@@ -41,6 +51,7 @@ export function useAccountAccess() {
     phoneNumber,
     role,
     isHallOwner,
+    isAdmin,
     canOpenRegularProfile,
     logout,
   };

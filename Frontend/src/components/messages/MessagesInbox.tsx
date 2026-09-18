@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 import { ApiError } from "@/lib/api-error";
+import { conversationHallLabel } from "@/lib/conversation-display";
 import {
   conversationErrorMessage,
   fetchMyConversations,
@@ -15,6 +17,7 @@ type FetchStatus = "idle" | "loading" | "ready" | "error";
 
 export default function MessagesInbox() {
   const t = useT();
+  const lang = useUiLang();
   const { session, status: authStatus } = useAuth();
   const [fetchStatus, setFetchStatus] = useState<FetchStatus>("idle");
   const [items, setItems] = useState<ConversationSummary[]>([]);
@@ -119,7 +122,9 @@ export default function MessagesInbox() {
                 href={`/messages/${item.conversationId}`}
                 className="flex flex-col gap-1 py-4 transition hover:text-[var(--wesal-maroon)]"
               >
-                <span className="font-semibold text-[var(--wesal-text)]">{item.hallName}</span>
+                <span className="font-semibold text-[var(--wesal-text)]">
+                  {conversationHallLabel(item, lang)}
+                </span>
                 <span className="text-sm text-[var(--wesal-muted)]">
                   {item.lastMessagePreview || item.otherParticipantName}
                 </span>

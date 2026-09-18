@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useUserProfileStore } from "@/components/profile/UserProfileProvider";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import type { ProfileFieldErrors, UpdateProfileInput, UserProfile } from "@/types/profile";
@@ -20,14 +19,10 @@ export type UseUserProfile = {
   clearFormFeedback: () => void;
 };
 
+/** Reads the shared profile store — UserProfileProvider owns fetching. */
 export function useUserProfile(): UseUserProfile {
   const { ready, authenticated, canOpenRegularProfile } = useAccountAccess();
   const store = useUserProfileStore();
-
-  useEffect(() => {
-    if (!ready || !canOpenRegularProfile) return;
-    void store.refetch();
-  }, [ready, canOpenRegularProfile, store.refetch]);
 
   const status: ProfileStatus = !ready
     ? "loading"

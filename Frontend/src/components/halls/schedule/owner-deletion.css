@@ -1,0 +1,100 @@
+.owner-deletion-backdrop {
+  animation: hall-notifications-fade-in 180ms ease;
+}
+
+.owner-deletion-sheet {
+  display: flex;
+  max-height: min(92dvh, 40rem);
+  flex-direction: column;
+  animation: hall-notifications-rise 240ms ease;
+}
+
+@media (min-width: 640px) {
+  .owner-deletion-sheet {
+    animation: hall-notifications-scale-in 220ms ease;
+  }
+}
+
+.owner-deletion-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.owner-card-deleting,
+.owner-card-exiting,
+.owner-card-conflict,
+.owner-card-failed {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+.owner-card-exiting {
+  pointer-events: none;
+  animation: owner-schedule-card-exit 220ms ease forwards;
+}
+
+@keyframes owner-schedule-card-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+}
+
+.booking-row-actions {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.booking-row-actions .hall-delete-btn,
+.booking-row-actions .hall-publish-btn {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .booking-row-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+  }
+
+  .booking-row-actions .hall-delete-btn,
+  .booking-row-actions .hall-publish-btn {
+    width: auto;
+    min-width: 10rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .booking-row-actions .hall-delete-btn,
+  .booking-row-actions .hall-publish-btn {
+    min-width: 11rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-deletion-backdrop,
+  .owner-deletion-sheet,
+  .owner-card-exiting,
+  .owner-card-deleting,
+  .owner-card-conflict,
+  .owner-card-failed {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+
+  .owner-card-exiting {
+    opacity: 0.55;
+  }
+}

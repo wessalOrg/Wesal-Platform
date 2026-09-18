@@ -10,8 +10,11 @@ import {
 import { getDefaultHallAmenities } from "@/lib/amenities";
 import { parseDateIso } from "@/lib/booking-date";
 import { parseBookingPeriodType } from "@/lib/booking-period";
+import { toDeleteHallError } from "@/lib/delete-hall-errors";
+import { mapDeleteHallResult } from "@/lib/owner-delete-hall";
 import {
   REGION_API_PARAMS,
+  type DeleteHallResult,
   type FeaturedHall,
   type HallAmenity,
   type HallAvailabilityDay,
@@ -849,5 +852,22 @@ export async function fetchHallById(id: string): Promise<HallByIdLoadResult> {
     }
 
     return { status: "error", message };
+  }
+}
+
+/** Soft-delete an owned hall (wesal-api US-OWNER-16). */
+export async function deleteOwnedHall(hallId: string): Promise<DeleteHallResult> {
+  const id = hallId.trim();
+  if (!id) {
+    throw toDeleteHallError(new ApiError("errors.owner.hall.notFound", 404));
+  }
+
+  try {
+    const { data } = await api.delete<unknown>(`/owner/halls/${id}`, {
+      timeout: 10000,
+    });
+    return mapDeleteHallResult(data, id);
+  } catch (err) {
+    throw toDeleteHallError(err);
   }
 }

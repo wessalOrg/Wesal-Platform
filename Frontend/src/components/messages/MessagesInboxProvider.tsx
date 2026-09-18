@@ -70,7 +70,10 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   }
 
   const sessionReady = ownerKey === seenOwnerKey;
-  const inbox = useInboxConversations(ownerKey, Boolean(sessionReady && ownerKey && isOpen));
+  const isEmbeddedInbox =
+    pathname === "/profile/messages" || pathname.startsWith("/profile/messages/");
+  const inboxActive = Boolean(sessionReady && ownerKey && (isOpen || isEmbeddedInbox));
+  const inbox = useInboxConversations(ownerKey, inboxActive);
   const threadState = useConversationThread(
     sessionReady && ownerKey ? selectedId : null,
     ownerKey,

@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, type ReactNode } from "react";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
-
-const PROFILE_HREF = "/profile";
-const LOGIN_HREF = "/login?redirect=/profile";
+import {
+  getAccountProfilePath,
+  REGULAR_PROFILE_PATH,
+} from "@/lib/account-profile-path";
 
 type RegularProfileLinkProps = {
   children: ReactNode;
@@ -17,8 +18,8 @@ type RegularProfileLinkProps = {
 };
 
 /**
- * Navigates to the Regular User profile only after auth + role checks.
- * Hall Owners are never sent here.
+ * Navigates to the role-aware Profile destination after auth checks.
+ * Hall Owners go to the management interface; Regular Users keep `/profile`.
  */
 export default function RegularProfileLink({
   children,
@@ -28,9 +29,11 @@ export default function RegularProfileLink({
   "data-testid": testId,
 }: RegularProfileLinkProps) {
   const router = useRouter();
-  const { ready, authenticated, canOpenRegularProfile } = useUserIdentity();
+  const { ready, authenticated, role } = useUserIdentity();
 
-  const href = authenticated && canOpenRegularProfile ? PROFILE_HREF : LOGIN_HREF;
+  const href = authenticated
+    ? getAccountProfilePath(role)
+    : `/login?redirect=${encodeURIComponent(REGULAR_PROFILE_PATH)}`;
 
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (!ready) {
@@ -40,12 +43,7 @@ export default function RegularProfileLink({
 
     if (!authenticated) {
       event.preventDefault();
-      router.push(LOGIN_HREF);
-      return;
-    }
-
-    if (!canOpenRegularProfile) {
-      event.preventDefault();
+      router.push(`/login?redirect=${encodeURIComponent(REGULAR_PROFILE_PATH)}`);
     }
   };
 

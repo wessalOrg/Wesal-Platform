@@ -77,6 +77,11 @@ export type HallDetails = {
   availabilityDays?: HallAvailabilityDay[];
 };
 
+export type DeleteHallResult = {
+  hallId: string;
+  alreadyDeleted: boolean;
+};
+
 export const REGION_OPTIONS: { id: HallRegion; labelKey: string }[] = [
   { id: "all", labelKey: "region.all" },
   { id: "north", labelKey: "region.north" },

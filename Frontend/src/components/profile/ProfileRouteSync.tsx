@@ -1,15 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
-import { useUserProfileStore } from "@/components/profile/UserProfileProvider";
-
-/** Refetch once when entering the Regular User portal so back-navigation is fresh. */
+/**
+ * Kept as a layout marker for the Regular User portal.
+ * Profile fetching is owned solely by UserProfileProvider (no duplicate refetch).
+ */
 export default function ProfileRouteSync() {
-  const { refetch } = useUserProfileStore();
-
-  useEffect(() => {
-    void refetch();
-  }, [refetch]);
-
   return null;
 }

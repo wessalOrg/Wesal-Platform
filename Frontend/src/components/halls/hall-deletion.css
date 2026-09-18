@@ -1,0 +1,127 @@
+.hall-delete-sheet-backdrop {
+  animation: hall-notifications-fade-in 180ms ease;
+}
+
+.hall-delete-sheet {
+  display: flex;
+  max-height: min(92dvh, 40rem);
+  flex-direction: column;
+  animation: hall-notifications-rise 240ms ease;
+}
+
+@media (min-width: 640px) {
+  .hall-delete-sheet {
+    max-height: min(86dvh, 36rem);
+    animation: hall-notifications-scale-in 220ms ease;
+  }
+}
+
+.hall-delete-sheet-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.hall-destructive-btn {
+  border-color: rgba(155, 28, 28, 0.38) !important;
+  color: #9b1c1c !important;
+  background: #fff !important;
+}
+
+.hall-destructive-btn:hover:not(:disabled) {
+  background: #fef2f2 !important;
+  border-color: #9b1c1c !important;
+}
+
+.hall-destructive-confirm {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  border: 1.5px solid #9b1c1c;
+  background: #9b1c1c;
+  padding-inline: 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+}
+
+.hall-destructive-confirm:hover:not(:disabled) {
+  background: #7f1d1d;
+  border-color: #7f1d1d;
+}
+
+.hall-destructive-confirm:disabled,
+.hall-destructive-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.hall-delete-wrap {
+  min-width: 0;
+}
+
+.hall-delete-idle,
+.hall-delete-deleting,
+.hall-delete-exiting,
+.hall-delete-failed,
+.hall-delete-blocked,
+.hall-delete-unavailable {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+.hall-delete-deleting {
+  opacity: 0.78;
+}
+
+.hall-delete-exiting {
+  pointer-events: none;
+  animation: hall-delete-exit 220ms ease forwards;
+}
+
+.hall-delete-failed .hall-destructive-btn {
+  box-shadow: 0 0 0 1px rgba(185, 28, 28, 0.28);
+}
+
+.hall-delete-blocked .hall-destructive-btn,
+.hall-delete-unavailable .hall-destructive-btn {
+  box-shadow: 0 0 0 1px rgba(168, 98, 103, 0.35);
+}
+
+.hall-delete-card-exit {
+  min-width: 0;
+}
+
+@keyframes hall-delete-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hall-delete-sheet-backdrop,
+  .hall-delete-sheet,
+  .hall-delete-exiting,
+  .hall-delete-deleting,
+  .hall-delete-failed,
+  .hall-delete-blocked,
+  .hall-delete-unavailable {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+
+  .hall-delete-exiting {
+    opacity: 0.55;
+  }
+}

@@ -8,6 +8,7 @@ using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Bookings;
 using Wesal.Infrastructure.Comments;
 using Wesal.Infrastructure.Conversations;
+using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Infrastructure.Ratings;
 
 namespace Wesal.Tests.Infrastructure;
@@ -111,10 +112,29 @@ public class AuthorizationHallActionsShould
 
     private sealed class FakeBookingRepository : IBookingRepository
     {
-        public Task AddAsync(Booking booking, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<Booking?> GetByIdWithHallAsync(Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult<Booking?>(null);
+        public List<Booking> Bookings { get; } = [];
+
+        public Task AddAsync(Booking booking, CancellationToken cancellationToken = default)
+        {
+            Bookings.Add(booking);
+            return Task.CompletedTask;
+        }
+
+        public Task<Booking?> GetByIdWithHallAsync(Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult(Bookings.FirstOrDefault(b => b.Id == bookingId));
         public Task<IReadOnlyList<Booking>> GetPendingRejectionNotificationsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Booking>>([]);
         public Task<int> CancelPendingAsync(Guid bookingId, string requesterUserId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> AcceptPendingAsync(Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> PublishAcceptedAsync(Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> DeleteAsync(Guid bookingId, CancellationToken cancellationToken = default)
+        {
+            var booking = Bookings.FirstOrDefault(b => b.Id == bookingId);
+            if (booking is null)
+            {
+                return Task.FromResult(0);
+            }
+            Bookings.Remove(booking);
+            return Task.FromResult(1);
+        }
         public Task<bool> HasOtherActiveBookingsAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<int> ReleasePeriodAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task<int> ReservePeriodAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, CancellationToken cancellationToken = default) => Task.FromResult(1);
@@ -137,7 +157,16 @@ public class AuthorizationHallActionsShould
     private static BookingRequestService CreateBookingService(
         FakeHallRepository repo,
         FakeCurrentUserService user)
-        => new(repo, user, new FakeBookingRepository(), new FakeUnitOfWork());
+        => new(repo, user, new FakeBookingRepository(), new FakeUnitOfWork(), new FakeOwnerBookingRequestNotifier());
+
+    private sealed class FakeOwnerBookingRequestNotifier : IOwnerBookingRequestNotifier
+    {
+        public Task NotifyBookingRequestReceivedAsync(
+            string ownerUserId,
+            OwnerBookingRequestNotificationEvent notification,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
 
     // Guest attempts → 401
     [Fact]
@@ -147,6 +176,18 @@ public class AuthorizationHallActionsShould
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
         var service = CreateBookingService(repo, new FakeCurrentUserService(null, false));
         await Assert.ThrowsAsync<UnauthorizedException>(() => service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] }));
+    }
+
+    [Fact]
+    public async Task BookingDeletion_Guest_ThrowsUnauthorized()
+    {
+        var service = new BookingDeletionService(
+            new FakeBookingRepository(),
+            new FakeUnitOfWork(),
+            new FakeCurrentUserService(null, false));
+
+        await Assert.ThrowsAsync<UnauthorizedException>(() =>
+            service.DeleteBookingAsync(Guid.NewGuid(), Guid.NewGuid()));
     }
 
     [Fact]
@@ -232,6 +273,48 @@ public class AuthorizationHallActionsShould
         var ex = await Assert.ThrowsAsync<ForbiddenException>(() => service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] }));
         Assert.Contains("Hall owners", ex.Message);
         // No booking side effect already ensured by service not storing
+    }
+
+    [Fact]
+    public async Task BookingDeletion_RegisteredUser_ThrowsForbidden()
+    {
+        var service = new BookingDeletionService(
+            new FakeBookingRepository(),
+            new FakeUnitOfWork(),
+            new FakeCurrentUserService("user-1", true, ApplicationRoles.RegisteredUser));
+
+        var exception = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.DeleteBookingAsync(Guid.NewGuid(), Guid.NewGuid()));
+
+        Assert.Contains("Only the hall owner", exception.Message);
+    }
+
+    [Fact]
+    public async Task BookingDeletion_HallOwner_AnotherOwnersBooking_ThrowsForbidden()
+    {
+        var hall = CreateHall(Guid.NewGuid(), "owner-1");
+        var bookingRepository = new FakeBookingRepository();
+        bookingRepository.Bookings.Add(new Booking
+        {
+            Id = Guid.NewGuid(),
+            HallId = hall.Id,
+            Hall = hall,
+            RequesterUserId = "user-1",
+            Date = new DateOnly(2035, 6, 1),
+            Period = BookingPeriodType.FirstPeriod,
+            Status = BookingStatus.Pending
+        });
+
+        var service = new BookingDeletionService(
+            bookingRepository,
+            new FakeUnitOfWork(),
+            new FakeCurrentUserService("intruder-owner", true, ApplicationRoles.HallOwner));
+
+        var exception = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.DeleteBookingAsync(hall.Id, bookingRepository.Bookings[0].Id));
+
+        Assert.Contains("delete this booking", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(bookingRepository.Bookings);
     }
 
     [Fact]

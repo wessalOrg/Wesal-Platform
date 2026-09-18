@@ -13,6 +13,7 @@ using Wesal.Infrastructure;
 using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Logging;
 using Wesal.Infrastructure.Middleware;
+using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence;
 using Wesal.Persistence.Data;
 
@@ -129,6 +130,18 @@ try
 
     var app = builder.Build();
 
+    if (args.Contains("--migrate", StringComparer.OrdinalIgnoreCase))
+    {
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Database.Migrate();
+        }
+
+        Log.Information("Database migrations applied successfully via the deployment release task.");
+        return;
+    }
+
     ValidateNonDevelopmentConfiguration(app.Environment, configuration);
 
     using (var scope = app.Services.CreateScope())
@@ -179,7 +192,10 @@ try
 
     app.MapControllers();
     app.MapHub<ConversationHub>("/hubs/conversation");
+    app.MapHub<OwnerDashboardHub>("/hubs/owner-dashboard");
     app.MapHealthChecks("/health");
+
+    app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" }));
 
     app.MapGet("/", () => Results.Ok(new { service = "Wesal API", status = "running", version = "v1" }));
 
@@ -188,6 +204,7 @@ try
 catch (Exception exception)
 {
     Log.Fatal(exception, "Wesal API terminated unexpectedly.");
+    Environment.ExitCode = 1;
 }
 finally
 {

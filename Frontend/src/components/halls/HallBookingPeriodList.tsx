@@ -16,6 +16,7 @@ type HallBookingPeriodListProps = {
   error?: string | null;
   phase?: BookingUiPhase;
   availabilityKind?: PeriodAvailabilityKind;
+  selectedDateLabel?: string | null;
 };
 
 export default function HallBookingPeriodList({
@@ -27,9 +28,9 @@ export default function HallBookingPeriodList({
   error = null,
   phase = "period_selection",
   availabilityKind = "both",
+  selectedDateLabel = null,
 }: HallBookingPeriodListProps) {
   const t = useT();
-
   const showSkeleton = loading && periods.length === 0;
 
   return (
@@ -40,11 +41,10 @@ export default function HallBookingPeriodList({
       data-availability={availabilityKind}
       aria-busy={loading}
     >
-      <p className="mb-2 text-sm font-semibold text-[var(--wesal-maroon)]">
-        {t("halls.booking.pickPeriods")}
-      </p>
-      <p className="mb-3 text-xs leading-6 text-[var(--wesal-muted)]">
-        {t("halls.booking.periodsHint")}
+      <p className="mb-3 text-sm font-semibold text-[var(--wesal-maroon)]">
+        {selectedDateLabel
+          ? t("halls.booking.pickPeriodsFor", { date: selectedDateLabel })
+          : t("halls.booking.pickPeriods")}
       </p>
 
       {showSkeleton ? <PeriodSkeleton /> : null}
@@ -73,7 +73,7 @@ export default function HallBookingPeriodList({
 
       {!showSkeleton && !error && periods.length > 0 ? (
         <ul
-          className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3"
+          className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3"
           data-testid="hall-booking-periods"
         >
           {periods.map((period, index) => {
@@ -86,6 +86,10 @@ export default function HallBookingPeriodList({
               : isSelected
                 ? "selected"
                 : "unselected";
+            const iconKind =
+              type === "SecondPeriod" || /ثاني|evening|ليل|مساء/i.test(period.label)
+                ? "moon"
+                : "sun";
 
             return (
               <li key={`${type ?? period.label}-${index}`} className="min-w-0">
@@ -98,7 +102,11 @@ export default function HallBookingPeriodList({
                     data-period-state={visual}
                     className={periodCardClass(visual)}
                   >
-                    <PeriodContent label={period.label} time={period.time} />
+                    <PeriodContent
+                      label={period.label}
+                      time={period.time}
+                      iconKind={iconKind}
+                    />
                     <PeriodBadge status={period.status} selected={isSelected} />
                   </button>
                 ) : (
@@ -109,7 +117,11 @@ export default function HallBookingPeriodList({
                     data-period-state="unavailable"
                     className={periodCardClass("unavailable")}
                   >
-                    <PeriodContent label={period.label} time={period.time} />
+                    <PeriodContent
+                      label={period.label}
+                      time={period.time}
+                      iconKind={iconKind}
+                    />
                     <PeriodBadge status={booked ? "booked" : period.status} />
                   </div>
                 )}
@@ -126,13 +138,13 @@ type PeriodVisual = "selected" | "unselected" | "unavailable";
 
 function periodCardClass(visual: PeriodVisual): string {
   const base =
-    "flex min-h-[4.75rem] w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-start transition";
+    "flex min-h-[5rem] w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3.5 text-start transition";
 
   if (visual === "selected") {
-    return `${base} border-[var(--wesal-maroon)] bg-[rgba(193,123,127,0.12)] ring-2 ring-inset ring-[var(--wesal-maroon)]`;
+    return `${base} border-[var(--wesal-maroon)] bg-[var(--wesal-pink)] shadow-[0_8px_18px_rgba(193,123,127,0.18)]`;
   }
   if (visual === "unavailable") {
-    return `${base} pointer-events-none cursor-not-allowed border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] opacity-70`;
+    return `${base} pointer-events-none cursor-not-allowed border-[#e5ddd7] bg-[#f3eeea] opacity-80`;
   }
   return `${base} border-[var(--wesal-border)] bg-white hover:bg-[var(--wesal-pink-soft)]`;
 }
@@ -146,19 +158,35 @@ function PeriodSkeleton() {
       data-testid="hall-booking-periods-loading"
     >
       <span className="sr-only">{t("halls.booking.loadingPeriods")}</span>
-      <div className="h-[4.75rem] animate-pulse rounded-2xl bg-[var(--wesal-pink-soft)]" />
-      <div className="h-[4.75rem] animate-pulse rounded-2xl bg-[var(--wesal-pink-soft)]" />
+      <div className="h-[5rem] animate-pulse rounded-2xl bg-[var(--wesal-pink-soft)]" />
+      <div className="h-[5rem] animate-pulse rounded-2xl bg-[var(--wesal-pink-soft)]" />
     </div>
   );
 }
 
-function PeriodContent({ label, time }: { label: string; time?: string }) {
+function PeriodContent({
+  label,
+  time,
+  iconKind,
+}: {
+  label: string;
+  time?: string;
+  iconKind: "sun" | "moon";
+}) {
   return (
-    <div className="min-w-0">
-      <p className="truncate text-sm font-semibold text-[var(--wesal-text)]">{label}</p>
-      {time ? (
-        <p className="mt-0.5 truncate text-xs text-[var(--wesal-muted)]">{time}</p>
-      ) : null}
+    <div className="flex min-w-0 items-center gap-3">
+      <span
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[var(--wesal-maroon)] shadow-sm"
+        aria-hidden="true"
+      >
+        {iconKind === "moon" ? <MoonIcon /> : <SunIcon />}
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold text-[var(--wesal-text)]">{label}</p>
+        {time ? (
+          <p className="mt-0.5 truncate text-xs text-[var(--wesal-muted)]">{time}</p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -175,8 +203,11 @@ function PeriodBadge({
 
   if (selected) {
     return (
-      <span className="shrink-0 rounded-full bg-[var(--wesal-maroon)] px-2.5 py-1 text-[0.7rem] font-bold text-white">
-        {t("halls.booking.selectedBadge")}
+      <span
+        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-maroon)] text-white"
+        aria-hidden="true"
+      >
+        <CheckIcon />
       </span>
     );
   }
@@ -185,11 +216,36 @@ function PeriodBadge({
     <span
       className={`shrink-0 rounded-full px-2.5 py-1 text-[0.7rem] font-bold ${
         booked
-          ? "bg-[rgba(193,123,127,0.16)] text-[var(--wesal-maroon-dark)]"
+          ? "bg-[#ddd5cf] text-[#6f6460]"
           : "bg-emerald-50 text-emerald-700"
       }`}
     >
       {booked ? t("halls.booking.bookedBadge") : t("halls.booking.availableBadge")}
     </span>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+      <path d="M19 13.5A7.5 7.5 0 1 1 10.5 5 6 6 0 0 0 19 13.5Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="h-3.5 w-3.5">
+      <path d="m5 12.5 4 4 10-10" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

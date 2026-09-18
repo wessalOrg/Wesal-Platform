@@ -4,8 +4,10 @@ import { useEffect } from "react";
 import Link from "next/link";
 import MessageThreadView from "@/components/messages/MessageThreadView";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
+import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useT } from "@/i18n";
+import { conversationHallLabel } from "@/lib/conversation-display";
 
 type MessagesViewProps = {
   conversationId: string;
@@ -13,6 +15,7 @@ type MessagesViewProps = {
 
 export default function MessagesView({ conversationId }: MessagesViewProps) {
   const t = useT();
+  const lang = useUiLang();
   const { ready, authenticated } = useAccountAccess();
   const {
     selectConversation,
@@ -65,7 +68,7 @@ export default function MessagesView({ conversationId }: MessagesViewProps) {
         status={threadStatus}
         thread={thread}
         error={threadError}
-        title={thread?.hallName || t("messages.title")}
+        title={thread ? conversationHallLabel(thread, lang) : t("messages.title")}
         currentUserId={currentUserId}
         onRetryLoad={retryThread}
         onRetrySend={retrySend}

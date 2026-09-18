@@ -7,6 +7,7 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Bookings;
+using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
 
@@ -194,7 +195,17 @@ public class BookingRequestFlowShould
             new HallRepository(context),
             new FakeCurrentUserService(userId, roles),
             new BookingRepository(context),
-            new UnitOfWork(context));
+            new UnitOfWork(context),
+            new FakeOwnerBookingRequestNotifier());
+
+    private sealed class FakeOwnerBookingRequestNotifier : IOwnerBookingRequestNotifier
+    {
+        public Task NotifyBookingRequestReceivedAsync(
+            string ownerUserId,
+            OwnerBookingRequestNotificationEvent notification,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
 
     private static BookingRequestDto CreateRequest(Guid hallId, IReadOnlyList<BookingPeriodType> periods)
         => new()

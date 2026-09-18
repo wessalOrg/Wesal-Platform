@@ -16,12 +16,14 @@ import type { HallReview } from "@/types/hall";
 type HallCommentPanelProps = {
   hallId: string;
   isHallOwner: boolean;
+  embedded?: boolean;
   onSubmitted?: (review: HallReview) => void;
 };
 
 export default function HallCommentPanel({
   hallId,
   isHallOwner,
+  embedded = false,
   onSubmitted,
 }: HallCommentPanelProps) {
   const t = useT();
@@ -74,22 +76,28 @@ export default function HallCommentPanel({
 
   return (
     <form
-      className="mt-4 rounded-2xl bg-[#f7f1ec] px-4 py-5 shadow-[0_12px_30px_rgba(110,60,55,0.08)] sm:px-6 sm:py-6"
+      className={
+        embedded
+          ? "mt-3"
+          : "mt-4 rounded-2xl bg-[#f7f1ec] px-4 py-5 shadow-[0_12px_30px_rgba(110,60,55,0.08)] sm:px-6 sm:py-6"
+      }
       data-testid="hall-comment-form"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
     >
-      <label
-        htmlFor="hall-comment-body"
-        className="block text-center text-base font-bold text-[var(--wesal-maroon)] sm:text-start"
-      >
-        {t("halls.comment.title")}
-      </label>
+      {embedded ? null : (
+        <label
+          htmlFor="hall-comment-body"
+          className="block text-center text-base font-bold text-[var(--wesal-maroon)] sm:text-start"
+        >
+          {t("halls.comment.title")}
+        </label>
+      )}
       <textarea
         id="hall-comment-body"
-        className="mt-3 min-h-28 w-full resize-y rounded-xl border border-[#eadfd6] bg-white px-3 py-3 text-sm leading-7 text-[#4a403c] outline-none transition focus:border-[var(--wesal-maroon)] focus:ring-2 focus:ring-[var(--wesal-maroon)]/15 disabled:opacity-60"
+        className="mt-2 min-h-28 w-full resize-y rounded-xl border border-[#eadfd6] bg-white px-3 py-3 text-sm leading-7 text-[#4a403c] outline-none transition focus:border-[var(--wesal-maroon)] focus:ring-2 focus:ring-[var(--wesal-maroon)]/15 disabled:opacity-60"
         placeholder={t("halls.comment.placeholder")}
         maxLength={COMMENT_MAX_LENGTH}
         disabled={submitting}
@@ -107,10 +115,10 @@ export default function HallCommentPanel({
           {body.trim().length}/{COMMENT_MAX_LENGTH}
         </span>
       </div>
-      <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:items-center">
+      <div className="mt-4 flex justify-start">
         <button
           type="submit"
-          className="btn-primary min-h-11 w-full !rounded-xl !px-4 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:w-auto sm:min-h-12"
+          className="btn-primary min-h-11 !rounded-xl !px-5 !text-sm !font-bold"
           disabled={submitting}
           aria-busy={submitting}
         >
@@ -120,7 +128,7 @@ export default function HallCommentPanel({
               {t("halls.comment.submitting")}
             </span>
           ) : (
-            t("halls.comment.submit")
+            t("halls.details.sendReview")
           )}
         </button>
       </div>

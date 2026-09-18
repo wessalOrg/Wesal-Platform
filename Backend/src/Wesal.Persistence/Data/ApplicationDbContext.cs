@@ -66,10 +66,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(hall => hall.Address).IsRequired().HasMaxLength(500);
             entity.Property(hall => hall.Description).HasMaxLength(2000);
             entity.Property(hall => hall.Price).HasPrecision(12, 2);
+            entity.Property(hall => hall.SubscriptionCycleEnd).HasColumnType("date");
+            entity.Property(hall => hall.SubscriptionCycleStart).HasColumnType("date");
+            entity.Property(hall => hall.LockedAt).HasColumnType("timestamp with time zone");
 
             entity.HasIndex(hall => hall.Status);
             entity.HasIndex(hall => new { hall.Status, hall.IsDeleted });
             entity.HasIndex(hall => hall.Region);
+            entity.HasIndex(hall => new { hall.Status, hall.PaymentStatus, hall.SystemLocked, hall.SubscriptionCycleEnd });
         });
 
         builder.Entity<HallImage>(entity =>

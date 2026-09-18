@@ -1,6 +1,7 @@
 "use client";
 
 import { useT } from "@/i18n";
+import { useUiLang } from "@/components/layout/LanguageProvider";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { conversationListPreview, conversationPreviewSubtitle, conversationPreviewTitle } from "@/lib/conversation-display";
 import type { ConversationSummary } from "@/types/messages";
@@ -19,8 +20,9 @@ export default function ConversationListItem({
   onSelect,
 }: ConversationListItemProps) {
   const t = useT();
-  const title = conversationPreviewTitle(conversation);
-  const subtitle = conversationPreviewSubtitle(conversation);
+  const lang = useUiLang();
+  const title = conversationPreviewTitle(conversation, lang);
+  const subtitle = conversationPreviewSubtitle(conversation, lang);
   const preview = conversationListPreview(conversation.lastMessagePreview);
   const time = formatRelativeTime(conversation.lastMessageAt ?? conversation.createdAt);
 

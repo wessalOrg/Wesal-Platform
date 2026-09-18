@@ -16,15 +16,18 @@ public class FeaturedHallsService : IFeaturedHallsService
     private readonly IHallRepository _hallRepository;
     private readonly IDateTime _dateTime;
     private readonly ILogger<FeaturedHallsService> _logger;
+    private readonly IHallAvailabilityCleanupService? _cleanupService;
 
     public FeaturedHallsService(
         IHallRepository hallRepository,
         IDateTime dateTime,
-        ILogger<FeaturedHallsService> logger)
+        ILogger<FeaturedHallsService> logger,
+        IHallAvailabilityCleanupService? cleanupService = null)
     {
         _hallRepository = hallRepository;
         _dateTime = dateTime;
         _logger = logger;
+        _cleanupService = cleanupService;
     }
 
     public Task<IReadOnlyList<FeaturedHallDto>> GetFeaturedHallsAsync(
@@ -38,6 +41,7 @@ public class FeaturedHallsService : IFeaturedHallsService
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (_cleanupService != null) try { await _cleanupService.CleanupExpiredAsync(cancellationToken); } catch { }
 
         var limit = take ?? int.MaxValue;
         var halls = region is null

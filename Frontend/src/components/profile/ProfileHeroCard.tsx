@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { UserProfile } from "@/types/profile";
 import { useT } from "@/i18n";
+import { readProfileAvatar } from "@/lib/profile-avatar";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
@@ -11,46 +13,51 @@ function initials(name: string) {
 
 export default function ProfileHeroCard({
   profile,
-  onEdit,
 }: {
   profile: UserProfile;
-  onEdit: () => void;
 }) {
   const t = useT();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAvatarUrl(readProfileAvatar(profile.id));
+    const onAvatar = (event: Event) => {
+      const detail = (event as CustomEvent<{ userId?: string; dataUrl?: string | null }>).detail;
+      if (!detail || detail.userId !== profile.id) return;
+      setAvatarUrl(detail.dataUrl ?? null);
+    };
+    window.addEventListener("wesal:profile-avatar", onAvatar);
+    return () => window.removeEventListener("wesal:profile-avatar", onAvatar);
+  }, [profile.id]);
 
   return (
-    <section
-      className="rounded-3xl border border-[var(--wesal-maroon)]/25 bg-white p-5 shadow-[0_12px_30px_rgba(90,55,45,0.06)] sm:p-6"
-      data-testid="profile-page"
-    >
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-4">
-          <div
-            className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-[var(--wesal-maroon)]/35 bg-[var(--wesal-pink)] text-2xl font-bold text-[var(--wesal-maroon)] sm:h-28 sm:w-28"
-            aria-hidden="true"
-          >
-            {initials(profile.fullName)}
+    <section className="seeker-profile-card" data-testid="profile-page">
+      <div className="seeker-profile-card-top">
+        <div className="seeker-profile-card-avatar-wrap">
+          <div className="seeker-profile-card-avatar" aria-hidden="true">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- local data URL
+              <img src={avatarUrl} alt="" className="seeker-profile-card-avatar-img" />
+            ) : (
+              <span>{initials(profile.fullName)}</span>
+            )}
           </div>
-          <div className="min-w-0">
-            <div className="flex items-start gap-2">
-              <h1 className="truncate text-2xl font-extrabold text-[var(--wesal-maroon)] sm:text-3xl">
-                {profile.fullName}
-              </h1>
-              <button
-                type="button"
-                className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink)]"
-                aria-label={t("profile.edit")}
-                data-testid="profile-edit-open"
-                onClick={onEdit}
-              >
-                <PencilIcon />
-              </button>
-            </div>
+        </div>
+
+        <div className="seeker-profile-card-meta">
+          <div className="seeker-profile-card-name-row">
+            <h2 className="seeker-profile-card-name">{profile.fullName}</h2>
           </div>
+          <p className="seeker-profile-card-member">
+            <span className="seeker-profile-card-member-icon" aria-hidden="true">
+              <ShieldIcon />
+            </span>
+            <span>{t("profile.memberSince", { year: "2023" })}</span>
+          </p>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 border-t border-[var(--wesal-border)] pt-5 text-sm sm:grid-cols-2">
+      <div className="seeker-profile-card-facts">
         <ProfileFact label={t("profile.phone")} value={profile.phoneNumber} dir="ltr" />
         <ProfileFact label={t("profile.email")} value={profile.email} dir="ltr" />
       </div>
@@ -68,24 +75,25 @@ function ProfileFact({
   dir?: "ltr" | "rtl";
 }) {
   return (
-    <div className="min-w-0">
-      <p className="text-xs font-medium text-[var(--wesal-muted)]">{label}</p>
-      <p className="mt-1 truncate font-semibold text-[var(--wesal-text)]" dir={dir}>
+    <div className="seeker-profile-fact">
+      <p className="seeker-profile-fact-label">{label}</p>
+      <p className="seeker-profile-fact-value" dir={dir || "auto"}>
         {value || "—"}
       </p>
     </div>
   );
 }
 
-function PencilIcon() {
+function ShieldIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
       <path
-        d="M4 16.8V20h3.2L18.7 8.5a1.8 1.8 0 0 0 0-2.5L17 4.3a1.8 1.8 0 0 0-2.5 0L4 14.8"
+        d="M12 3.5 5.5 6v5.2c0 4.2 2.8 7.4 6.5 8.8 3.7-1.4 6.5-4.6 6.5-8.8V6L12 3.5Z"
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinejoin="round"
       />
+      <path d="m9.2 12.1 1.8 1.8 3.8-3.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

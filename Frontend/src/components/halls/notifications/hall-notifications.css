@@ -1,0 +1,157 @@
+.hall-notifications-backdrop {
+  animation: hall-notifications-fade-in 180ms ease;
+}
+
+.hall-notifications-sheet {
+  animation: hall-notifications-rise 240ms ease;
+}
+
+@media (min-width: 640px) {
+  .hall-notifications-sheet {
+    animation: hall-notifications-scale-in 220ms ease;
+  }
+}
+
+.hall-notifications-switch {
+  animation: hall-notifications-fade-in 160ms ease;
+}
+
+.hall-request-actions {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hall-reject-btn,
+.hall-accept-btn {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .hall-request-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .hall-reject-btn,
+  .hall-accept-btn {
+    width: auto;
+    min-width: 10rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hall-reject-btn,
+  .hall-accept-btn {
+    min-width: 11rem;
+  }
+}
+
+.hall-publish-actions,
+.hall-schedule-actions {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hall-publish-btn,
+.hall-delete-btn {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .hall-publish-actions,
+  .hall-schedule-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .hall-publish-btn,
+  .hall-delete-btn {
+    width: auto;
+    min-width: 10rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hall-publish-btn,
+  .hall-delete-btn {
+    min-width: 11rem;
+  }
+}
+
+.owner-schedule-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 1280px) {
+  .owner-schedule-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+}
+
+.owner-schedule-periods {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.owner-slot-published {
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+.owner-slot-deposit {
+  background-color: rgba(196, 160, 92, 0.1);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(196, 160, 92, 0.18),
+    rgba(196, 160, 92, 0.18) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+@keyframes hall-notifications-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hall-notifications-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hall-notifications-scale-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hall-notifications-backdrop,
+  .hall-notifications-sheet,
+  .hall-notifications-switch {
+    animation: none;
+  }
+}

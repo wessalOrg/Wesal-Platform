@@ -1,6 +1,7 @@
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Common;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
@@ -97,6 +98,8 @@ public sealed class ConversationService : IConversationService
             throw new ForbiddenException("You do not have access to this conversation.");
         }
 
+        EnsureOwnerMessagingAccess(conversation);
+
         return MapToResponse(conversation, conversation.Hall?.Name ?? string.Empty, isExisting: true);
     }
 
@@ -188,6 +191,8 @@ public sealed class ConversationService : IConversationService
             throw new ForbiddenException("You do not have access to this conversation.");
         }
 
+        EnsureOwnerMessagingAccess(conversation);
+
         var messages = await _messageRepository.GetByConversationAsync(conversationId, cancellationToken);
 
         var senderIds = messages
@@ -243,6 +248,8 @@ public sealed class ConversationService : IConversationService
         {
             throw new ForbiddenException("You do not have access to this conversation.");
         }
+
+        EnsureOwnerMessagingAccess(conversation);
 
         if (!string.IsNullOrWhiteSpace(request.ClientRequestId))
         {
@@ -431,5 +438,44 @@ public sealed class ConversationService : IConversationService
         {
             throw new ForbiddenException("You cannot start a conversation with your own hall.");
         }
+    }
+
+    /// <summary>
+    /// Hall-management messaging gate (US-ADMIN-05/07, FR-SUB-01/05): when the current
+    /// user is the OWNER of the conversation's hall, an Approved hall's messaging is
+    /// subject to <see cref="HallManagementAccess"/> (Admin lock, payment required,
+    /// system lock). PendingReview/Rejected hall threads stay open so the owner can
+    /// read and reply to review/rejection messages (US-ADMIN-03). Seekers and Admins
+    /// are never blocked by this gate.
+    /// </summary>
+    private void EnsureOwnerMessagingAccess(Conversation conversation)
+    {
+        if (_currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var hall = conversation.Hall;
+
+        if (hall is null || hall.IsDeleted)
+        {
+            return;
+        }
+
+        var userId = _currentUser.UserId;
+
+        var isOwner = string.Equals(userId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase);
+
+        if (!isOwner)
+        {
+            return;
+        }
+
+        if (hall.Status != HallStatus.Approved)
+        {
+            return;
+        }
+
+        HallManagementAccess.EnsureAllowed(hall);
     }
 }

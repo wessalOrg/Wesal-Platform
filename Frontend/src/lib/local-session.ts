@@ -1,3 +1,4 @@
+import { roleFromAccountSignals } from "@/lib/account-role";
 import { getAccessToken } from "@/lib/auth-token";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { GUEST_SESSION, type SessionState, type WesalRole } from "@/types/session";
@@ -47,7 +48,11 @@ export function readLocalSession(): SessionState | null {
   if (!token) return null;
 
   const claims = decodeJwtPayload(token);
-  const role = roleFromClaims(claims) ?? stored?.user.role ?? null;
+  const role =
+    roleFromAccountSignals(
+      roleFromClaims(claims) ?? stored?.user.role,
+      stored?.user.accountType,
+    );
   const userName =
     stored?.user.name ?? asString(claims?.name) ?? stored?.user.email ?? null;
 

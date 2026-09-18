@@ -1,0 +1,59 @@
+.hall-subscription-card {
+  isolation: isolate;
+  contain: layout;
+}
+
+.hall-subscription-body {
+  min-height: 8.25rem;
+}
+
+.hall-sub-tone-active {
+  border-inline-start-width: 0.28rem;
+  border-inline-start-color: #059669;
+}
+
+.hall-sub-tone-unpaid {
+  border-inline-start-width: 0.28rem;
+  border-inline-start-color: var(--wesal-gold);
+}
+
+.hall-sub-tone-expired {
+  border-inline-start-width: 0.28rem;
+  border-inline-start-color: #b45309;
+}
+
+.hall-sub-tone-locked {
+  border-inline-start-width: 0.28rem;
+  border-inline-start-color: var(--wesal-maroon-dark);
+}
+
+.hall-sub-tone-error {
+  border-inline-start-width: 0.28rem;
+  border-inline-start-color: var(--wesal-maroon);
+}
+
+.hall-sub-tone-loading {
+  border-inline-start-width: 0.28rem;
+  border-inline-start-color: var(--wesal-border);
+}
+
+.hall-sub-date {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.hall-sub-expiry-banner {
+  isolation: isolate;
+}
+
+@media (min-width: 640px) {
+  .hall-subscription-body {
+    min-height: 7.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hall-subscription-card [class*="animate-pulse"] {
+    animation: none;
+  }
+}

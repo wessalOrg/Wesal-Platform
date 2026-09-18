@@ -2,10 +2,12 @@ using System.Globalization;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Common;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Infrastructure.OwnerDashboard;
 
 namespace Wesal.Infrastructure.Bookings;
 
@@ -15,17 +17,20 @@ public class BookingRequestService : IBookingRequestService
     private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IOwnerBookingRequestNotifier _ownerNotifier;
 
     public BookingRequestService(
         IHallRepository hallRepository,
         ICurrentUserService currentUser,
         IBookingRepository bookingRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IOwnerBookingRequestNotifier ownerNotifier)
     {
         _hallRepository = hallRepository;
         _currentUser = currentUser;
         _bookingRepository = bookingRepository;
         _unitOfWork = unitOfWork;
+        _ownerNotifier = ownerNotifier;
     }
 
     public async Task<BookingRequestValidationResultDto> ValidateBookingRequestAsync(
@@ -93,6 +98,8 @@ public class BookingRequestService : IBookingRequestService
 
             await transaction.CommitAsync(cancellationToken);
 
+            await NotifyOwnerAsync(hall, request.Date, requesterUserId, bookings, cancellationToken);
+
             return MapToResult(hall, request.Date, requesterUserId, bookings);
         }
         catch
@@ -141,6 +148,11 @@ public class BookingRequestService : IBookingRequestService
         {
             throw new NotFoundException(nameof(Hall), hallId);
         }
+
+        // A locked hall (Admin lock, FR-SUB-05/US-ADMIN-05, or the automatic system
+        // lock, FR-SUB-03/US-ADMIN-09) must not accept new booking requests, with a
+        // clear 'hall locked' error surfaced to the requester.
+        HallManagementAccess.EnsureAcceptingBookings(hall);
 
         return hall;
     }
@@ -259,4 +271,46 @@ public class BookingRequestService : IBookingRequestService
                 })
                 .ToList()
         };
+
+    private async Task NotifyOwnerAsync(
+        Hall hall,
+        DateOnly date,
+        string requesterUserId,
+        IReadOnlyList<Booking> bookings,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(hall.OwnerId))
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var booking in bookings)
+            {
+                await _ownerNotifier.NotifyBookingRequestReceivedAsync(
+                    hall.OwnerId,
+                    new OwnerBookingRequestNotificationEvent
+                    {
+                        BookingRequestId = booking.Id,
+                        HallId = hall.Id,
+                        HallName = hall.Name,
+                        RequestedDate = date,
+                        RequestedPeriod = booking.Period,
+                        RequesterUserId = requesterUserId,
+                        RequesterName = _currentUser.UserName ?? string.Empty,
+                        OccurredAt = booking.CreatedAt
+                    },
+                    cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // Best-effort delivery: booking is already persisted and accessible via US-OWNER-09.
+        }
+    }
 }

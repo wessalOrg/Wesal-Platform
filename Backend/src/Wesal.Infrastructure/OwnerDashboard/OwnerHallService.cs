@@ -1,0 +1,327 @@
+using Microsoft.AspNetCore.Identity;
+using Wesal.Application.Common.Interfaces;
+using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Application.Common.Models;
+using Wesal.Domain.Common;
+using Wesal.Domain.Entities;
+using Wesal.Domain.Enums;
+using Wesal.Domain.Exceptions;
+using Wesal.Infrastructure.Halls;
+using Wesal.Infrastructure.Identity;
+
+namespace Wesal.Infrastructure.OwnerDashboard;
+
+/// <summary>
+/// Retrieves and updates a hall owned by the authenticated Hall Owner (US-OWNER-07,
+/// FR-HALL-02). The owner is resolved exclusively from the authenticated session;
+/// ownership is enforced by the repository so a caller can never read or update
+/// another owner's hall. Management access is gated by <see cref="HallManagementAccess"/>
+/// (US-ADMIN-05/07/09) and editing is blocked while the hall is under Admin review
+/// (PendingReview). The update is applied atomically in a single transaction and
+/// never touches the hall's approval status or owner identity — except for the
+/// resubmission rule (FR-ADM-01): editing a Rejected hall re-queues it to
+/// PendingReview.
+/// </summary>
+public sealed class OwnerHallService : IOwnerHallService
+{
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IOwnerDashboardRepository _ownerDashboardRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IHallAvailabilityCleanupService? _cleanupService;
+
+    public OwnerHallService(
+        UserManager<ApplicationUser> userManager,
+        ICurrentUserService currentUser,
+        IOwnerDashboardRepository ownerDashboardRepository,
+        IUnitOfWork unitOfWork,
+        IHallAvailabilityCleanupService? cleanupService = null)
+    {
+        _userManager = userManager;
+        _currentUser = currentUser;
+        _ownerDashboardRepository = ownerDashboardRepository;
+        _unitOfWork = unitOfWork;
+        _cleanupService = cleanupService;
+    }
+
+    public async Task<OwnerHallDetailsDto> GetOwnedHallDetailsAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var ownerId = await ResolveOwnerAsync(cancellationToken);
+
+        var hall = await _ownerDashboardRepository.GetOwnedHallWithDetailsAsync(hallId, ownerId, cancellationToken);
+
+        if (hall is null)
+        {
+            throw new NotFoundException(nameof(Hall), hallId);
+        }
+
+        return MapToDetails(hall);
+    }
+
+    public async Task<OwnerHallDetailsDto> UpdateOwnedHallAsync(
+        Guid hallId,
+        UpdateOwnerHallRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var ownerId = await ResolveOwnerAsync(cancellationToken);
+
+        var hall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken);
+
+        if (hall is null)
+        {
+            throw new NotFoundException(nameof(Hall), hallId);
+        }
+
+        HallManagementAccess.EnsureAllowed(hall);
+        EnsureEditable(hall);
+
+        IWesalTransaction? transaction = null;
+
+        try
+        {
+            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+
+            ApplyHallDetails(hall, request);
+
+            // Resubmission (FR-ADM-01, US-ADMIN-03): editing a Rejected hall re-queues
+            // it for review. Editing an Approved or PendingReview hall never changes
+            // its approval state.
+            if (hall.Status == HallStatus.Rejected)
+            {
+                hall.Status = HallStatus.PendingReview;
+            }
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
+            throw;
+        }
+        finally
+        {
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync();
+            }
+        }
+
+        return MapToDetails(hall);
+    }
+
+    public async Task DeleteOwnedHallAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var ownerId = await ResolveOwnerAsync(cancellationToken);
+
+        var hall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken);
+
+        if (hall is null)
+        {
+            throw new NotFoundException(nameof(Hall), hallId);
+        }
+
+        HallManagementAccess.EnsureAllowed(hall);
+
+        hall.IsDeleted = true;
+        hall.UpdatedAt = DateTimeOffset.UtcNow;
+
+        IWesalTransaction? transaction = null;
+
+        try
+        {
+            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (_cleanupService is not null)
+            {
+                try
+                {
+                    await _cleanupService.CleanupForHallAsync(hallId, cancellationToken);
+                }
+                catch
+                {
+                    // Cleanup is best-effort here; Hall remains deleted and
+                    // background/fallback cleanup will retry. Do not rollback deletion.
+                }
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
+            throw;
+        }
+        finally
+        {
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync();
+            }
+        }
+    }
+
+    private async Task<string> ResolveOwnerAsync(CancellationToken cancellationToken)
+    {
+        if (!_currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            throw new UnauthorizedException("You must be logged in to manage your hall.");
+        }
+
+        // Validate the account still exists; a token for a deleted account is not a valid owner session.
+        var user = await _userManager.FindByIdAsync(_currentUser.UserId);
+        if (user is null)
+        {
+            throw new NotFoundException("User", _currentUser.UserId);
+        }
+
+        return _currentUser.UserId;
+    }
+
+    private static void EnsureEditable(Hall hall)
+    {
+        // Editing is blocked while the hall is under Admin review (PendingReview).
+        // The management-access gate (HallManagementAccess, US-ADMIN-05/07/09) is
+        // enforced before this check so a locked hall surfaces the correct lock code.
+        if (hall.Status == HallStatus.PendingReview)
+        {
+            throw new BusinessRuleException(
+                "HallNotEditable",
+                "This hall is under review and cannot be edited right now.");
+        }
+    }
+
+    private void ApplyHallDetails(Hall hall, UpdateOwnerHallRequest request)
+    {
+        hall.Name = request.Name.Trim();
+        hall.MainImageUrl = NormalizeOptional(request.MainImageUrl);
+        hall.ContactPhone = NormalizeOptional(request.ContactPhone);
+        hall.Region = request.Region;
+        hall.Address = request.Address.Trim();
+        hall.Description = NormalizeOptional(request.Description);
+        hall.Capacity = request.Capacity;
+        hall.Price = request.Price;
+        hall.ShowPrice = request.ShowPrice;
+
+        ApplyPhotos(hall, request.Photos);
+        ApplyBookingPeriods(hall, request.BookingPeriods);
+    }
+
+    private void ApplyPhotos(Hall hall, IReadOnlyList<UpdateOwnerHallPhotoDto> photos)
+    {
+        // Replace the gallery: previous photos are soft-deleted (HallImage.IsDeleted)
+        // so reads return exactly the new set while the history is preserved.
+        foreach (var existing in hall.Images.Where(image => !image.IsDeleted))
+        {
+            existing.IsDeleted = true;
+        }
+
+        // New photos are registered through the repository (EF relationship fixup
+        // attaches them to the aggregate for the response mapping).
+        _ownerDashboardRepository.AddHallImages(photos
+            .Select(photo => new HallImage
+            {
+                HallId = hall.Id,
+                Url = photo.Url.Trim(),
+                DisplayOrder = photo.DisplayOrder
+            })
+            .ToList());
+    }
+
+    private void ApplyBookingPeriods(Hall hall, IReadOnlyList<UpdateOwnerHallBookingPeriodDto> periods)
+    {
+        // In-place update by period type avoids delete-then-insert against the unique
+        // (HallId, Type) index; the validator guarantees both daily periods are present.
+        var existing = hall.BookingPeriods.ToDictionary(period => period.Type);
+        var incoming = periods.ToDictionary(period => period.Type);
+
+        foreach (var (type, period) in incoming)
+        {
+            if (existing.TryGetValue(type, out var current))
+            {
+                current.StartTime = period.StartTime;
+                current.EndTime = period.EndTime;
+            }
+            else
+            {
+                _ownerDashboardRepository.AddHallBookingPeriod(new HallBookingPeriod
+                {
+                    HallId = hall.Id,
+                    Type = type,
+                    StartTime = period.StartTime,
+                    EndTime = period.EndTime
+                });
+            }
+        }
+
+        foreach (var (type, period) in existing)
+        {
+            if (!incoming.ContainsKey(type))
+            {
+                hall.BookingPeriods.Remove(period);
+            }
+        }
+    }
+
+    private static OwnerHallDetailsDto MapToDetails(Hall hall)
+        => new()
+        {
+            HallId = hall.Id,
+            HallName = hall.Name,
+            MainImageUrl = hall.MainImageUrl,
+            ContactPhone = hall.ContactPhone,
+            Region = hall.Region,
+            RegionDisplayName = HallDisplayNames.GetRegionDisplayName(hall.Region),
+            Address = hall.Address,
+            Description = hall.Description,
+            Capacity = hall.Capacity,
+            Price = hall.Price,
+            ShowPrice = hall.ShowPrice,
+            Status = hall.Status,
+            IsEditable = hall.Status != HallStatus.PendingReview,
+            Photos = hall.Images
+                .Where(image => !image.IsDeleted)
+                .OrderBy(image => image.DisplayOrder)
+                .ThenBy(image => image.CreatedAt)
+                .Select(image => new OwnerHallPhotoDto
+                {
+                    Id = image.Id,
+                    Url = image.Url,
+                    DisplayOrder = image.DisplayOrder
+                })
+                .ToList(),
+            BookingPeriods = hall.BookingPeriods
+                .OrderBy(period => period.Type)
+                .Select(period => new OwnerHallBookingPeriodDto
+                {
+                    Type = period.Type,
+                    StartTime = period.StartTime,
+                    EndTime = period.EndTime
+                })
+                .ToList()
+        };
+
+    private static string? NormalizeOptional(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

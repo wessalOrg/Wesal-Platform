@@ -5,7 +5,7 @@ import type { ChangeEvent, ReactNode } from "react";
 type ProfileFieldProps = {
   id: string;
   label: string;
-  type?: "text" | "email" | "tel";
+  type?: "text" | "email" | "tel" | "password";
   value: string;
   error?: string;
   disabled?: boolean;

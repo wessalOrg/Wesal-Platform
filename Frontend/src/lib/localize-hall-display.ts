@@ -90,6 +90,9 @@ const HALL_NAME_EN: Record<string, string> = {
   "22": "Carmel Hall",
   "23": "Bustan Hall",
   "24": "Fayrouz Hall",
+  "demo-hall-approved": "Noor Hall",
+  "demo-hall-pending": "Amal Hall",
+  "demo-hall-rejected": "Yasmin Hall",
   "قاعة رويال": "Royal Hall",
   "قاعة رويال الفاخرة": "Royal Luxury Hall",
   "قاعة الأندلس": "Andalus Hall",
@@ -115,6 +118,7 @@ const HALL_NAME_EN: Record<string, string> = {
   "قاعة الكرمل": "Carmel Hall",
   "قاعة البستان": "Bustan Hall",
   "قاعة الفيروز": "Fayrouz Hall",
+  "قاعة تجريبية": "Demo Hall",
   "قصر الزهراء": "Zahra Palace",
 };
 
@@ -145,24 +149,28 @@ const DESCRIPTION_EN: Record<string, string> = {
 
 const REVIEW_EN: Record<string, { author: string; comment: string; timeAgo: string }> = {
   r1: {
-    author: "Ahmad Mohammad",
-    comment: "A wonderful experience — the hall is extremely luxurious and the service was excellent.",
-    timeAgo: "1 week ago",
+    author: "Sara Ahmad",
+    comment:
+      "The hall is wonderful and the service was outstanding. The organization exceeded expectations and the décor was luxurious in every detail.",
+    timeAgo: "2 days ago",
   },
   r2: {
-    author: "Sara Khaled",
-    comment: "The venue was perfect and the organization was truly professional.",
-    timeAgo: "2 weeks ago",
-  },
-  "تجربة رائعة والقاعة غاية في الفخامة والخدمة ممتازة.": {
-    author: "Ahmad Mohammad",
-    comment: "A wonderful experience — the hall is extremely luxurious and the service was excellent.",
+    author: "Mohammad Khaled",
+    comment:
+      "An excellent experience from the first contact until the end of the event. Sound and lighting were professional, and the space was comfortable for guests.",
     timeAgo: "1 week ago",
   },
-  "المكان مثالي جداً والتنظيم كان احترافياً.": {
-    author: "Sara Khaled",
-    comment: "The venue was perfect and the organization was truly professional.",
+  r3: {
+    author: "Noor Al-Huda",
+    comment:
+      "I loved the cleanliness and attention to detail. I recommend it for large events — the team was very helpful.",
     timeAgo: "2 weeks ago",
+  },
+  r4: {
+    author: "Ahmad Mahmoud",
+    comment:
+      "One of the nicest halls we worked with. Entry was smooth, parking was enough, and the celebration looked elegant.",
+    timeAgo: "1 month ago",
   },
 };
 
@@ -181,7 +189,21 @@ export function localizePriceLabel(label: string | null | undefined, lang: UiLan
 
 export function localizeHallName(id: string, name: string, lang: UiLang): string {
   if (lang !== "en") return name;
-  return HALL_NAME_EN[id] ?? HALL_NAME_EN[name] ?? name;
+  const mapped = HALL_NAME_EN[id] ?? HALL_NAME_EN[name.trim()];
+  if (mapped) return mapped;
+
+  const trimmed = name.trim();
+  if (!trimmed) return trimmed;
+
+  // Generic fallback so booking/message rows don't stay on Arabic «قاعة».
+  if (trimmed === "قاعة" || trimmed === "القاعة") return "Hall";
+  if (trimmed.startsWith("قاعة ")) {
+    return `${trimmed.slice("قاعة ".length)} Hall`;
+  }
+  if (trimmed.startsWith("القاعة ")) {
+    return `${trimmed.slice("القاعة ".length)} Hall`;
+  }
+  return trimmed;
 }
 
 export function localizeLocation(location: string, lang: UiLang): string {

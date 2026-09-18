@@ -8,13 +8,19 @@ export { useUiLang };
 type Props = {
   className?: string;
   compact?: boolean;
+  /** Circular icon control (dashboard topbars). */
+  iconOnly?: boolean;
 };
 
 /**
  * Top-bar language toggle: Arabic (default) ↔ English.
  * Persists locally and syncs with GET/PUT /language when authenticated.
  */
-export default function LanguageSwitcher({ className = "", compact = false }: Props) {
+export default function LanguageSwitcher({
+  className = "",
+  compact = false,
+  iconOnly = false,
+}: Props) {
   const { lang, toggleLanguage, status } = useLanguage();
   const t = useT();
   const nextLabel = lang === "ar" ? t("lang.shortEn") : t("lang.shortAr");
@@ -25,8 +31,9 @@ export default function LanguageSwitcher({ className = "", compact = false }: Pr
       type="button"
       className={`lang-switch-trigger inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-medium text-[#8f6f2e] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--wesal-pink-soft)] hover:text-[var(--wesal-gold)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wesal-gold)]/35 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 ${
         compact ? "w-full justify-between px-4 py-2.5" : ""
-      } ${className}`}
+      } ${iconOnly ? "lang-switch-trigger--icon" : ""} ${className}`}
       aria-label={ariaLabel}
+      title={ariaLabel}
       data-testid="language-toggle"
       data-lang={lang}
       disabled={status === "loading"}
@@ -36,9 +43,9 @@ export default function LanguageSwitcher({ className = "", compact = false }: Pr
     >
       <span className="inline-flex items-center gap-1.5">
         <ChatIcon />
-        <span className="font-semibold">{nextLabel}</span>
+        {iconOnly ? null : <span className="font-semibold">{nextLabel}</span>}
       </span>
-      {compact ? (
+      {compact && !iconOnly ? (
         <span className="text-xs text-[var(--wesal-muted)]">
           {lang === "ar" ? t("lang.currentAr") : t("lang.currentEn")}
         </span>
@@ -50,7 +57,14 @@ export default function LanguageSwitcher({ className = "", compact = false }: Pr
 /** Overlapping chat bubbles — language switch without the translate glyph. */
 function ChatIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      className="lang-switch-icon"
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M5.2 4.8h9.2c1.3 0 2.3 1 2.3 2.3v4.6c0 1.3-1 2.3-2.3 2.3H10.4L7.2 16.4v-2.4H5.2c-1.3 0-2.3-1-2.3-2.3V7.1c0-1.3 1-2.3 2.3-2.3Z"
         stroke="currentColor"

@@ -10,6 +10,17 @@ export function utcTodayIso(): string {
   return `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}`;
 }
 
+export function utcDaysRemaining(cycleEndIso: string, todayIso = utcTodayIso()): number | null {
+  const end = parseDateIso(cycleEndIso);
+  const today = parseDateIso(todayIso);
+  if (!end || !today) return null;
+  const [endY, endM, endD] = end.split("-").map(Number);
+  const [todayY, todayM, todayD] = today.split("-").map(Number);
+  const endUtc = Date.UTC(endY, endM - 1, endD);
+  const todayUtc = Date.UTC(todayY, todayM - 1, todayD);
+  return Math.round((endUtc - todayUtc) / 86_400_000);
+}
+
 export function addUtcDays(iso: string, amount: number): string {
   const parsed = parseDateIso(iso);
   if (!parsed) return iso;

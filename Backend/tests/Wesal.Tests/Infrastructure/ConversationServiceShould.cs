@@ -430,6 +430,7 @@ public class ConversationServiceShould
             Id = Guid.NewGuid(),
             Name = name,
             Status = HallStatus.Approved,
+            PaymentStatus = HallPaymentStatus.Paid,
             OwnerId = ownerId
         };
 

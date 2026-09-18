@@ -13,6 +13,7 @@ export type StoredUser = {
   email?: string;
   phone?: string;
   role?: string;
+  accountType?: string;
 };
 
 export type StoredAuth = {
@@ -63,6 +64,7 @@ export function patchStoredUser(patch: Partial<StoredUser>): void {
   if (typeof patch.email === "string") nextUser.email = patch.email;
   if (typeof patch.phone === "string") nextUser.phone = patch.phone;
   if (typeof patch.role === "string") nextUser.role = patch.role;
+  if (typeof patch.accountType === "string") nextUser.accountType = patch.accountType;
 
   setStoredAuth({ ...current, user: nextUser });
 }

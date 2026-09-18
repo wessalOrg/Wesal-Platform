@@ -1,7 +1,9 @@
 "use client";
 
 import BookingRejectionCard from "@/components/messages/BookingRejectionCard";
+import SubscriptionExpiryWarningCard from "@/components/messages/SubscriptionExpiryWarningCard";
 import { useBookingRejectionMessage } from "@/hooks/useBookingRejectionMessage";
+import { useSubscriptionExpiryWarningMessage } from "@/hooks/useSubscriptionExpiryWarningMessage";
 import { useT } from "@/i18n";
 import { formatRelativeTime } from "@/lib/relative-time";
 import type { ThreadMessage } from "@/types/messages";
@@ -24,6 +26,18 @@ export default function ThreadMessageItem({
   onRetrySend,
 }: ThreadMessageItemProps) {
   const classified = useBookingRejectionMessage(message.content, hallName);
+  const expiryWarning = useSubscriptionExpiryWarningMessage(message.content, hallName);
+
+  if (expiryWarning.kind === "subscription_expiry_warning") {
+    return (
+      <SubscriptionExpiryWarningCard
+        details={expiryWarning.details}
+        sentAt={message.sentAt}
+        originalContent={message.content}
+        arriving={arriving}
+      />
+    );
+  }
 
   if (classified.kind === "booking_rejection") {
     return (

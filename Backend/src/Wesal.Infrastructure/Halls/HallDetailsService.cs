@@ -14,22 +14,27 @@ public class HallDetailsService : IHallDetailsService
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _dateTime;
     private readonly ILogger<HallDetailsService> _logger;
+    private readonly IHallAvailabilityCleanupService? _cleanupService;
 
     public HallDetailsService(
         IHallRepository hallRepository,
         ICurrentUserService currentUser,
         IDateTime dateTime,
-        ILogger<HallDetailsService> logger)
+        ILogger<HallDetailsService> logger,
+        IHallAvailabilityCleanupService? cleanupService = null)
     {
         _hallRepository = hallRepository;
         _currentUser = currentUser;
         _dateTime = dateTime;
         _logger = logger;
+        _cleanupService = cleanupService;
     }
 
     public async Task<HallDetailsDto> GetHallDetailsAsync(Guid hallId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        if (_cleanupService != null) try { await _cleanupService.CleanupExpiredAsync(cancellationToken); } catch { }
 
         var hall = await _hallRepository.GetHallByIdAsync(hallId, cancellationToken);
 

@@ -5,16 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import HallActionCard from "@/components/halls/HallActionCard";
 import HallAmenitiesGrid from "@/components/halls/HallAmenitiesGrid";
-import HallBookingPanel from "@/components/halls/HallBookingPanel";
-import HallCommentList from "@/components/halls/HallCommentList";
-import HallCommentPanel from "@/components/halls/HallCommentPanel";
 import HallContactButton from "@/components/halls/HallContactButton";
 import HallDetailsError from "@/components/halls/HallDetailsError";
 import HallDetailsSkeleton from "@/components/halls/HallDetailsSkeleton";
-import HallGalleryContainer from "@/components/halls/HallGalleryContainer";
-import HallGuestFeedbackPrompt from "@/components/halls/HallGuestFeedbackPrompt";
-import HallHeader from "@/components/halls/HallHeader";
-import HallRatingPanel from "@/components/halls/HallRatingPanel";
+import HallHeroGallery from "@/components/halls/HallHeroGallery";
+import HallInlineBookingSection, {
+  type HallInlineBookingSelection,
+} from "@/components/halls/HallInlineBookingSection";
+import HallQuickInfo from "@/components/halls/HallQuickInfo";
+import HallReviewsSection from "@/components/halls/HallReviewsSection";
 import HallUnavailableBanner from "@/components/halls/HallUnavailableBanner";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useBookButtonBehavior } from "@/hooks/useBookButtonBehavior";
@@ -25,15 +24,27 @@ import { useT } from "@/i18n";
 import { buildHallDetailsPath, hasBookingIntent } from "@/lib/booking-intent";
 import { saveBookingHallContext } from "@/lib/auth-storage";
 import { resetBodyScrollLock } from "@/lib/body-scroll-lock";
-import { localizeHallDetail } from "@/lib/localize-hall-display";
+import { localizeHallDetail, localizeReviews } from "@/lib/localize-hall-display";
 import {
   fetchHallComments,
   mapCommentToReview,
 } from "@/services/comments";
+import { DEMO_HALL_REVIEWS } from "@/constants/hallDetailsFallback";
 import type { HallReview } from "@/types/hall";
 
 type HallDetailsPageProps = {
   hallId: string;
+};
+
+const EMPTY_SELECTION: HallInlineBookingSelection = {
+  dateIso: null,
+  dateLabel: "",
+  periodLabels: [],
+  submitting: false,
+  success: false,
+  canConfirm: false,
+  submit: () => undefined,
+  errorText: null,
 };
 
 export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
@@ -47,18 +58,15 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
   useHallAvailabilityInvalidation(hallId, refreshQuiet);
 
-  const [bookingOpen, setBookingOpen] = useState(false);
   const [reviews, setReviews] = useState<HallReview[]>([]);
+  const [bookingSelection, setBookingSelection] =
+    useState<HallInlineBookingSelection>(EMPTY_SELECTION);
   const bookIntentHandled = useRef(false);
 
   const isOwnHall = permissions.isOwnHall;
   const { canBook, canContactOwner, isGuest, authReady } = permissions;
   const shouldOpenBooking = hasBookingIntent(searchParams);
-
-  useEffect(() => {
-    if (canBook) return;
-    setBookingOpen(false);
-  }, [canBook]);
+  const showBookingUi = Boolean(canBook && !unavailable && !isOwnHall);
 
   useEffect(() => {
     return () => resetBodyScrollLock();
@@ -66,22 +74,28 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
   useEffect(() => {
     bookIntentHandled.current = false;
+    setBookingSelection(EMPTY_SELECTION);
   }, [hallId]);
 
   useEffect(() => {
     let active = true;
     setReviews([]);
     void fetchHallComments(hallId).then((comments) => {
-      if (!active || comments == null) return;
-      setReviews(comments.map(mapCommentToReview));
+      if (!active) return;
+      if (comments != null && comments.length > 0) {
+        setReviews(comments.map(mapCommentToReview));
+        return;
+      }
+      setReviews(localizeReviews(DEMO_HALL_REVIEWS, lang));
     });
     return () => {
       active = false;
     };
-  }, [hallId]);
+  }, [hallId, lang]);
 
-  const openBookingFlow = useCallback(() => {
-    setBookingOpen(true);
+  const focusBookingSection = useCallback(() => {
+    const node = document.getElementById("hall-booking-section");
+    node?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
   const { handleBook, loginHref, registerHref } = useBookButtonBehavior({
@@ -89,7 +103,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     hydrated: authReady,
     canBook,
     unavailable,
-    onOpenBooking: openBookingFlow,
+    onOpenBooking: focusBookingSection,
   });
 
   const preserveGuestBookingContext = useCallback(() => {
@@ -104,7 +118,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
     bookIntentHandled.current = true;
     queueMicrotask(() => {
-      openBookingFlow();
+      focusBookingSection();
       router.replace(buildHallDetailsPath(hallId), { scroll: false });
     });
   }, [
@@ -114,7 +128,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     state.phase,
     unavailable,
     hall,
-    openBookingFlow,
+    focusBookingSection,
     hallId,
     router,
   ]);
@@ -159,7 +173,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   const showActions = !unavailable && !isOwnHall;
 
   return (
-    <div className="hall-details-page min-w-0 space-y-6 pb-10 sm:space-y-8 sm:pb-14">
+    <div className="hall-details-page min-w-0 space-y-6 pb-12 sm:space-y-8 sm:pb-16">
       {usingFallback ? (
         <div
           className="rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-3 text-center sm:text-start"
@@ -178,23 +192,25 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
       {unavailable ? <HallUnavailableBanner hallName={viewHall.name} /> : null}
 
-      <HallGalleryContainer images={viewHall.gallery} hallName={viewHall.name} />
+      <HallHeroGallery
+        images={viewHall.gallery}
+        hallName={viewHall.name}
+        description={viewHall.description}
+      />
 
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(17.5rem,22rem)] lg:items-start lg:gap-8">
-        <div className="order-2 min-w-0 space-y-8 lg:order-1">
-          <HallHeader hall={viewHall} />
+      <HallQuickInfo hall={viewHall} />
 
-          <section aria-labelledby="hall-description-heading">
-            <h2
-              id="hall-description-heading"
-              className="text-lg font-bold text-[var(--wesal-maroon)] sm:text-xl"
-            >
-              {t("halls.details.about")}
-            </h2>
-            <p className="mt-3 text-sm leading-8 text-[var(--wesal-text)] sm:text-base">
-              {viewHall.description}
-            </p>
-          </section>
+      <div className="hall-details-body grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] lg:items-start lg:gap-6">
+        <div className="hall-details-main order-2 min-w-0 space-y-5 lg:order-1 lg:space-y-6">
+          {showBookingUi ? (
+            <HallInlineBookingSection
+              hallId={viewHall.id}
+              days={viewHall.availabilityDays ?? []}
+              canSubmit={canBook}
+              active={showBookingUi}
+              onSelectionChange={setBookingSelection}
+            />
+          ) : null}
 
           <HallAmenitiesGrid amenities={viewHall.amenities} />
 
@@ -208,45 +224,46 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
             </p>
           ) : null}
 
-          <section aria-labelledby="hall-reviews-heading">
-            <h2
-              id="hall-reviews-heading"
-              className="text-lg font-bold text-[var(--wesal-maroon)] sm:text-xl"
-            >
-              {t("halls.details.reviews")}
-            </h2>
-
-            <HallRatingPanel
-              hallId={viewHall.id}
-              isHallOwner={isOwnHall}
-            />
-
-            <HallCommentPanel
-              hallId={viewHall.id}
-              isHallOwner={isOwnHall}
-              onSubmitted={(review) => {
-                setReviews((current) => [review, ...current]);
-              }}
-            />
-
-            <HallCommentList comments={reviews} />
-
-            <HallGuestFeedbackPrompt
-              hallId={viewHall.id}
-              isHallOwner={isOwnHall}
-            />
-          </section>
+          <HallReviewsSection
+            hallId={viewHall.id}
+            isHallOwner={isOwnHall}
+            rating={viewHall.rating}
+            reviewCount={viewHall.reviewCount}
+            comments={reviews}
+            onCommentSubmitted={(review) => {
+              setReviews((current) => [review, ...current]);
+            }}
+          />
         </div>
 
         <div className="order-1 min-w-0 lg:order-2 lg:sticky lg:top-[4.75rem] lg:z-[1] lg:self-start">
           <HallActionCard
+            hallName={viewHall.name}
+            capacityLabel={
+              viewHall.capacityMax && viewHall.capacityMax !== viewHall.capacity
+                ? `${viewHall.capacity}-${viewHall.capacityMax} ${t("halls.details.people")}`
+                : `${viewHall.capacity} ${t("halls.details.people")}`
+            }
             slotPrices={viewHall.slotPrices}
-            onBook={handleBook}
+            selectedDateLabel={bookingSelection.dateLabel || null}
+            selectedPeriodLabels={bookingSelection.periodLabels}
+            onConfirm={() => {
+              if (bookingSelection.canConfirm) {
+                bookingSelection.submit();
+                return;
+              }
+              handleBook();
+            }}
+            confirmDisabled={!bookingSelection.canConfirm}
+            confirmPending={bookingSelection.submitting}
+            confirmSuccess={bookingSelection.success}
+            confirmError={bookingSelection.errorText}
             disabled={unavailable}
             bookPending={!authReady}
             isGuest={isGuest}
             canBook={canBook}
             showContact={showActions && canContactOwner}
+            ownerPhone={viewHall.ownerPhone}
             loginHref={loginHref}
             registerHref={registerHref}
             onGuestAuthNavigate={preserveGuestBookingContext}
@@ -262,17 +279,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           />
         </div>
       </div>
-
-      {canBook && !unavailable ? (
-        <HallBookingPanel
-          open={bookingOpen}
-          hallId={viewHall.id}
-          hallName={viewHall.name}
-          days={viewHall.availabilityDays ?? []}
-          canSubmit={canBook}
-          onClose={() => setBookingOpen(false)}
-        />
-      ) : null}
     </div>
   );
 }

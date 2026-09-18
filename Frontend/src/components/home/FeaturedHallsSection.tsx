@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import CatalogHallCard from "@/components/halls/CatalogHallCard";
 import RegionFilterBar from "@/components/home/RegionFilterBar";
 import Reveal from "@/components/ui/Reveal";
 import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
+import { usePublicHallsRevalidation } from "@/hooks/usePublicHallsRevalidation";
 import { useT } from "@/i18n";
 import { fetchFeaturedHalls, filterFeaturedByRegion } from "@/services/halls";
 import type { FeaturedHall, HallRegion } from "@/types/hall";
@@ -24,14 +25,33 @@ export default function FeaturedHallsSection() {
   const [halls, setHalls] = useState<FeaturedHall[]>([]);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [openHallId, setOpenHallId] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
+  const regionRef = useRef(region);
 
-  const regionEmpty = status === "ready" && halls.length === 0;
+  const regionEmpty = status === "ready" && halls.length === 0 && !isRefreshing;
+
+  const requestRevalidate = useCallback(() => {
+    setReloadKey((key) => key + 1);
+  }, []);
+
+  usePublicHallsRevalidation(requestRevalidate);
 
   useEffect(() => {
     let active = true;
-    setStatus("loading");
+    const regionChanged = regionRef.current !== region;
+    regionRef.current = region;
+
+    // Soft refresh keeps cards visible; region changes use full loading.
+    const soft = hasLoadedRef.current && !regionChanged;
+    if (soft) {
+      setIsRefreshing(true);
+    } else {
+      setStatus("loading");
+      setIsRefreshing(false);
+    }
     setErrorMessage(null);
 
     void fetchFeaturedHalls(region).then((result) => {
@@ -40,6 +60,8 @@ export default function FeaturedHallsSection() {
       if (result.source === "api") {
         setHalls(result.halls);
         setStatus("ready");
+        setIsRefreshing(false);
+        hasLoadedRef.current = true;
         return;
       }
 
@@ -48,6 +70,8 @@ export default function FeaturedHallsSection() {
       setHalls(filterFeaturedByRegion(FEATURED_HALLS_FALLBACK, region));
       setStatus("error");
       setErrorMessage(result.error ?? null);
+      setIsRefreshing(false);
+      hasLoadedRef.current = true;
     });
 
     return () => {
@@ -59,11 +83,11 @@ export default function FeaturedHallsSection() {
     if (next === region) return;
     setErrorMessage(null);
     setRegion(next);
-    setStatus("loading");
   };
 
   const handleRetry = () => {
     setErrorMessage(null);
+    hasLoadedRef.current = false;
     setStatus("loading");
     setReloadKey((key) => key + 1);
   };
@@ -89,8 +113,13 @@ export default function FeaturedHallsSection() {
           disabled={status === "loading"}
         />
 
-        <div className="mt-4">
+        <div className="mt-4 flex min-w-0 flex-wrap items-baseline gap-2">
           <p className="text-sm text-[var(--wesal-muted)]">{t("home.featured.subtitle")}</p>
+          {isRefreshing ? (
+            <span className="text-xs font-semibold text-[var(--wesal-muted)]" role="status">
+              {t("home.featured.refreshing")}
+            </span>
+          ) : null}
         </div>
 
         {status === "loading" ? (
@@ -145,9 +174,12 @@ export default function FeaturedHallsSection() {
 
         {status !== "loading" && halls.length > 0 ? (
           <div
-            className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            className={`mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3${
+              isRefreshing ? " pointer-events-none opacity-60" : ""
+            }`}
             role="tabpanel"
             data-testid="featured-halls-grid"
+            aria-busy={isRefreshing || undefined}
           >
             {halls.map((hall, index) => (
               <CatalogHallCard

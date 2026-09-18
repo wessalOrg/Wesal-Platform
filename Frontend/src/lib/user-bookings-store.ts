@@ -60,6 +60,11 @@ export function rememberUserBookings(next: UserBooking[]) {
   writeAll(merged);
 }
 
+/** Replace the remembered list after a full API fetch. */
+export function replaceRememberedBookings(next: UserBooking[]) {
+  writeAll(next);
+}
+
 export function rememberBookingsFromResult(result: BookingRequestResult) {
   rememberUserBookings(
     result.periods

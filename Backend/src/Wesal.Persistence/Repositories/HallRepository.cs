@@ -15,6 +15,14 @@ public class HallRepository : IHallRepository
         _context = context;
     }
 
+    public async Task AddAsync(Hall hall, CancellationToken cancellationToken = default)
+    {
+        await _context.Halls.AddAsync(hall, cancellationToken);
+    }
+
+    public Task<Hall?> GetHallByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+        => _context.Halls.FirstOrDefaultAsync(hall => hall.Id == id, cancellationToken);
+
     public Task<Hall?> GetHallByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => _context.Halls
             .AsNoTracking()

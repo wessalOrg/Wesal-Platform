@@ -3,6 +3,7 @@
 import { useExpandableText } from "@/hooks/useExpandableText";
 import { useT, useTranslateLang } from "@/i18n";
 import { formatRelativeTime } from "@/lib/relative-time";
+import { localizeHallName } from "@/lib/localize-hall-display";
 import {
   bookingPeriodI18nKey,
   formatRejectionDate,
@@ -29,7 +30,9 @@ export default function BookingRejectionCard({
   const dateLabel = details.date
     ? formatRejectionDate(details.date, lang)
     : t("messages.rejection.valueMissing");
-  const hallName = details.hallName.trim() || t("messages.rejection.valueMissing");
+  const hallName =
+    localizeHallName("", details.hallName, lang).trim() ||
+    t("messages.rejection.valueMissing");
   const reason = details.reason.trim() || t("messages.rejection.reasonMissing");
 
   return (

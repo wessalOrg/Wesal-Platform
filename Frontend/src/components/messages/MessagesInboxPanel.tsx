@@ -12,8 +12,13 @@ import Link from "next/link";
 import ConversationList from "@/components/messages/ConversationList";
 import MessageThreadView from "@/components/messages/MessageThreadView";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
+import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
-import { conversationPreviewSubtitle, conversationPreviewTitle } from "@/lib/conversation-display";
+import {
+  conversationHallLabel,
+  conversationPreviewSubtitle,
+  conversationPreviewTitle,
+} from "@/lib/conversation-display";
 
 const PANEL_MIN_WIDTH_PX = 280;
 const PANEL_MIN_HEIGHT_PX = 320;
@@ -62,6 +67,7 @@ function storePanelSize(size: PanelSize): void {
 
 export default function MessagesInboxPanel() {
   const t = useT();
+  const lang = useUiLang();
   const {
     isOpen,
     selectedId,
@@ -232,12 +238,14 @@ export default function MessagesInboxPanel() {
   if (!isOpen) return null;
 
   const threadTitle = selected
-    ? conversationPreviewTitle(selected)
-    : thread?.hallName || t("messages.title");
+    ? conversationPreviewTitle(selected, lang)
+    : thread
+      ? conversationHallLabel(thread, lang)
+      : t("messages.title");
   const threadSubtitle = selected
-    ? conversationPreviewSubtitle(selected)
-    : thread?.hallName && thread.hallName !== threadTitle
-      ? thread.hallName
+    ? conversationPreviewSubtitle(selected, lang)
+    : thread && conversationHallLabel(thread, lang) !== threadTitle
+      ? conversationHallLabel(thread, lang)
       : null;
 
   const iconBtnClass =

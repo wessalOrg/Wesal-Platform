@@ -1,3 +1,4 @@
+import { asWesalRole } from "@/lib/account-role";
 import api from "@/lib/api";
 import { readLocalSession } from "@/lib/local-session";
 import { GUEST_SESSION, type SessionState, type WesalRole } from "@/types/session";
@@ -16,7 +17,7 @@ function mapSession(data: SessionResponse | null | undefined): SessionState {
 
   return {
     isAuthenticated: Boolean(data.isAuthenticated ?? data.IsAuthenticated),
-    role: data.role ?? data.Role ?? null,
+    role: asWesalRole(data.role ?? data.Role),
     userName: data.userName ?? data.UserName ?? null,
   };
 }
@@ -32,7 +33,7 @@ export async function fetchSession(): Promise<SessionState> {
       return {
         ...remote,
         userName: remote.userName ?? local?.userName ?? null,
-        role: remote.role ?? local?.role ?? null,
+        role: remote.role || local?.role || null,
       };
     }
     return local ?? GUEST_SESSION;

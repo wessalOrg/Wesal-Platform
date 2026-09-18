@@ -7,6 +7,7 @@ import { bookingStatusMessageKey } from "@/lib/booking-status";
 import { useCancelInteraction } from "@/hooks/useCancelInteraction";
 import type { BookingViewport } from "@/hooks/useBookingViewport";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import { localizeHallName } from "@/lib/localize-hall-display";
 import type { BookingStatus, UserBooking } from "@/types/booking";
 
 type BookingRequestRowProps = {
@@ -48,6 +49,8 @@ export default function BookingRequestRow({
   });
   const periodKey = bookingPeriodI18nKey(booking.period);
   const compact = viewport === "mobile";
+  const hallName =
+    localizeHallName(booking.hallId, booking.hallName, lang) || t("common.hall");
 
   const message =
     ui.errorKey && (ui.errorKey.startsWith("errors.") || ui.errorKey.startsWith("bookings."))
@@ -71,7 +74,7 @@ export default function BookingRequestRow({
       >
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-[var(--wesal-maroon)] sm:text-base">
-            {booking.hallName || t("common.hall")}
+            {hallName}
           </p>
           <p className="mt-1 text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm">
             {formatBookingDateLabel(booking.date, locale)}

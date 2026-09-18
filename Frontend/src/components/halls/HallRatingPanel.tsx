@@ -14,12 +14,14 @@ import {
 type HallRatingPanelProps = {
   hallId: string;
   isHallOwner: boolean;
+  embedded?: boolean;
   onRated?: (result: { averageRating: number; totalRatings: number }) => void;
 };
 
 export default function HallRatingPanel({
   hallId,
   isHallOwner,
+  embedded = false,
   onRated,
 }: HallRatingPanelProps) {
   const t = useT();
@@ -82,14 +84,20 @@ export default function HallRatingPanel({
 
   return (
     <div
-      className="mt-4 rounded-2xl bg-[#f7f1ec] px-4 py-5 shadow-[0_12px_30px_rgba(110,60,55,0.08)] sm:px-6 sm:py-6"
+      className={
+        embedded
+          ? "mt-3"
+          : "mt-4 rounded-2xl bg-[#f7f1ec] px-4 py-5 shadow-[0_12px_30px_rgba(110,60,55,0.08)] sm:px-6 sm:py-6"
+      }
       data-testid="hall-rating-control"
     >
-      <p className="text-center text-base font-bold text-[var(--wesal-maroon)] sm:text-start">
-        {existing ? t("halls.rating.edit") : t("halls.rating.title")}
-      </p>
+      {embedded ? null : (
+        <p className="text-center text-base font-bold text-[var(--wesal-maroon)] sm:text-start">
+          {existing ? t("halls.rating.edit") : t("halls.rating.title")}
+        </p>
+      )}
       <div
-        className="mt-3 flex flex-wrap items-center justify-center gap-1 sm:justify-start"
+        className="mt-1 flex flex-wrap items-center justify-center gap-1 sm:justify-start"
         role="radiogroup"
         aria-label={t("halls.rating.title")}
       >
@@ -110,6 +118,33 @@ export default function HallRatingPanel({
                 setValue(star);
                 setSuccess(false);
                 setError(null);
+                if (embedded) {
+                  queueMicrotask(() => {
+                    void (async () => {
+                      if (star < 1 || submitting) return;
+                      setSubmitting(true);
+                      setError(null);
+                      setSuccess(false);
+                      try {
+                        const result = await submitHallRating(
+                          hallId,
+                          star,
+                          existing != null,
+                        );
+                        setExisting(result.value);
+                        setSuccess(true);
+                        onRated?.({
+                          averageRating: result.averageRating,
+                          totalRatings: result.totalRatings,
+                        });
+                      } catch (err) {
+                        setError(await handleProtectedError(err, ratingErrorMessage));
+                      } finally {
+                        setSubmitting(false);
+                      }
+                    })();
+                  });
+                }
               }}
             >
               <span className={active ? "opacity-100" : "opacity-30"}>
@@ -119,20 +154,22 @@ export default function HallRatingPanel({
           );
         })}
       </div>
-      <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:items-center">
-        <button
-          type="button"
-          className="btn-primary min-h-11 w-full !rounded-xl !px-4 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:w-auto sm:min-h-12"
-          disabled={submitting || value < 1}
-          onClick={() => void submit()}
-        >
-          {submitting
-            ? t("common.loading")
-            : existing
-              ? t("halls.rating.edit")
-              : t("halls.rating.submit")}
-        </button>
-        {value > 0 ? (
+      <div className={`mt-3 flex flex-col gap-2 ${embedded ? "" : "items-center sm:flex-row sm:items-center"}`}>
+        {embedded ? null : (
+          <button
+            type="button"
+            className="btn-primary min-h-11 w-full !rounded-xl !px-4 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:w-auto sm:min-h-12"
+            disabled={submitting || value < 1}
+            onClick={() => void submit()}
+          >
+            {submitting
+              ? t("common.loading")
+              : existing
+                ? t("halls.rating.edit")
+                : t("halls.rating.submit")}
+          </button>
+        )}
+        {value > 0 && !embedded ? (
           <p className="text-sm text-[var(--wesal-muted)]">{value}</p>
         ) : null}
       </div>

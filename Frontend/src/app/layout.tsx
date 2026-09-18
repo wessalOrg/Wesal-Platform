@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Cairo } from "next/font/google";
 import { AiAssistantProvider } from "@/components/assistant/AiAssistantProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import HallOwnerAudioAlerts from "@/components/halls/notifications/HallOwnerAudioAlerts";
+import { AudioPermissionProvider } from "@/hooks/useAudioPermission";
+import MessagesInboxPanelHost from "@/components/messages/MessagesInboxPanelHost";
 import { MessagesInboxProvider } from "@/components/messages/MessagesInboxProvider";
-import MessagesInboxPanel from "@/components/messages/MessagesInboxPanel";
 import { UserProfileProvider } from "@/components/profile/UserProfileProvider";
 import { LanguageProvider } from "@/components/layout/LanguageProvider";
 import { translate } from "@/i18n";
@@ -22,6 +24,10 @@ const cairo = Cairo({
 export const metadata: Metadata = {
   title: translate("meta.siteTitle", "ar"),
   description: translate("meta.siteDescription", "ar"),
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png" }, { url: "/favicon.ico" }],
+    apple: [{ url: "/apple-icon.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
@@ -37,14 +43,17 @@ export default function RootLayout({
       </head>
       <body className={`${cairo.variable} ${cairo.className} min-h-svh overflow-x-hidden font-sans`}>
         <AuthProvider>
-          <UserProfileProvider>
-            <LanguageProvider>
-              <MessagesInboxProvider>
-                <AiAssistantProvider>{children}</AiAssistantProvider>
-                <MessagesInboxPanel />
-              </MessagesInboxProvider>
-            </LanguageProvider>
-          </UserProfileProvider>
+          <AudioPermissionProvider>
+            <HallOwnerAudioAlerts />
+            <UserProfileProvider>
+              <LanguageProvider>
+                <MessagesInboxProvider>
+                  <AiAssistantProvider>{children}</AiAssistantProvider>
+                  <MessagesInboxPanelHost />
+                </MessagesInboxProvider>
+              </LanguageProvider>
+            </UserProfileProvider>
+          </AudioPermissionProvider>
         </AuthProvider>
       </body>
     </html>
