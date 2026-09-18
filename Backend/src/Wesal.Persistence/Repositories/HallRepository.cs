@@ -100,7 +100,10 @@ public class HallRepository : IHallRepository
     private IQueryable<Hall> ApprovedHallsQuery()
         => _context.Halls
             .AsNoTracking()
-            .Where(hall => hall.Status == HallStatus.Approved && !hall.IsDeleted);
+            .Where(hall => hall.Status == HallStatus.Approved
+                && !hall.IsDeleted
+                && !hall.IsAdminLocked
+                && !hall.SystemLocked);
 
     private IQueryable<Hall> ApplySearchFilters(
         IQueryable<Hall> query,

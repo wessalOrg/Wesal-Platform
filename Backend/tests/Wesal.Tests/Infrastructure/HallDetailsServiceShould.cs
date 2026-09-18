@@ -242,6 +242,32 @@ public class HallDetailsServiceShould
         Assert.Equal(AvailabilityStatus.Available, day.Periods[1].Status);
     }
 
+    [Fact]
+    public async Task GetHallDetailsAsync_AdminLockedHall_ThrowsNotFound()
+    {
+        var hall = CreateHall(name: "Admin Locked Hall");
+        hall.IsAdminLocked = true;
+        var fakeRepository = new FakeHallRepository();
+        fakeRepository.Halls.Add(hall);
+
+        var service = CreateService(fakeRepository);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetHallDetailsAsync(hall.Id));
+    }
+
+    [Fact]
+    public async Task GetHallDetailsAsync_SystemLockedHall_ThrowsNotFound()
+    {
+        var hall = CreateHall(name: "System Locked Hall");
+        hall.SystemLocked = true;
+        var fakeRepository = new FakeHallRepository();
+        fakeRepository.Halls.Add(hall);
+
+        var service = CreateService(fakeRepository);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetHallDetailsAsync(hall.Id));
+    }
+
     private static HallDetailsService CreateService(
         FakeHallRepository repository,
         FakeCurrentUserService? currentUser = null)

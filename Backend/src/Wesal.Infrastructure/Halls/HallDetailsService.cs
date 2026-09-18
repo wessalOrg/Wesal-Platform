@@ -38,13 +38,19 @@ public class HallDetailsService : IHallDetailsService
 
         var hall = await _hallRepository.GetHallByIdAsync(hallId, cancellationToken);
 
-        if (hall is null || hall.IsDeleted || hall.Status != HallStatus.Approved)
+        if (hall is null
+            || hall.IsDeleted
+            || hall.Status != HallStatus.Approved
+            || hall.IsAdminLocked
+            || hall.SystemLocked)
         {
             _logger.LogInformation(
-                "Hall {HallId} is not available for public details (status {Status}, deleted {IsDeleted}).",
+                "Hall {HallId} is not available for public details (status {Status}, deleted {IsDeleted}, adminLocked {IsAdminLocked}, systemLocked {SystemLocked}).",
                 hallId,
                 hall?.Status.ToString() ?? "Unknown",
-                hall?.IsDeleted ?? true);
+                hall?.IsDeleted ?? true,
+                hall?.IsAdminLocked ?? false,
+                hall?.SystemLocked ?? false);
 
             throw new NotFoundException(nameof(Hall), hallId);
         }

@@ -98,6 +98,7 @@ public static class DependencyInjection
         services.AddHostedService<SubscriptionExpiryLockBackgroundService>();
         services.AddScoped<IEmailService, EmailService>();
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+        services.Configure<PasswordResetOptions>(configuration.GetSection(PasswordResetOptions.SectionName));
         services.AddScoped<ISubscriptionExpiryWarningService, SubscriptionExpiryWarningService>();
         services.Configure<SubscriptionExpiryWarningOptions>(configuration.GetSection(SubscriptionExpiryWarningOptions.SectionName));
         services.AddHostedService<SubscriptionExpiryWarningBackgroundService>();

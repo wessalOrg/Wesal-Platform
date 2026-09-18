@@ -65,10 +65,51 @@ public sealed class BookingRejectionService : IBookingRejectionService
             return MapToResult(booking, isAlreadyRejected: true);
         }
 
-        booking.Status = BookingStatus.Rejected;
-        booking.RejectionReason = request.Reason.Trim();
+        IWesalTransaction? transaction = null;
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+
+            booking.Status = BookingStatus.Rejected;
+            booking.RejectionReason = request.Reason.Trim();
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var hasOtherActiveBooking = await _bookingRepository.HasOtherActiveBookingsAsync(
+                booking.HallId,
+                booking.Date,
+                booking.Period,
+                booking.Id,
+                cancellationToken);
+
+            if (!hasOtherActiveBooking)
+            {
+                await _bookingRepository.ReleasePeriodAsync(
+                    booking.HallId,
+                    booking.Date,
+                    booking.Period,
+                    cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
+            throw;
+        }
+        finally
+        {
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync();
+            }
+        }
 
         var notificationStatus = BookingRejectionNotificationStatus.Deferred;
 

@@ -325,6 +325,46 @@ const ar: MessageCatalog = {
   "auth.login.form.error.generic": "تعذر تسجيل الدخول. يرجى التحقق من البيانات ثم المحاولة مرة أخرى.",
   "auth.login.noAccount": "ليس لديك حساب ؟",
   "auth.login.registerLink": "إنشاء حساب",
+  "auth.login.forgotPassword": "هل نسيت كلمة المرور؟",
+  "auth.forgotPassword.title": "إعادة تعيين كلمة المرور",
+  "auth.forgotPassword.subtitle":
+    "أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطًا لإنشاء كلمة مرور جديدة.",
+  "auth.forgotPassword.form.email": "البريد الإلكتروني",
+  "auth.forgotPassword.form.emailPlaceholder": "أدخل بريدك الإلكتروني",
+  "auth.forgotPassword.form.submit": "إرسال رابط إعادة التعيين",
+  "auth.forgotPassword.form.submitting": "جارٍ الإرسال…",
+  "auth.forgotPassword.form.error.email": "يرجى إدخال البريد الإلكتروني",
+  "auth.forgotPassword.form.error.emailInvalid": "يرجى إدخال بريد إلكتروني صالح",
+  "auth.forgotPassword.form.error.network":
+    "تعذر الوصول إلى الخادم. تحقق من اتصالك ثم حاول مرة أخرى.",
+  "auth.forgotPassword.form.error.generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+  "auth.forgotPassword.success.title": "تحقق من بريدك الإلكتروني",
+  "auth.forgotPassword.success.message":
+    "إذا كان هناك حساب مسجل على {email}، فقد أرسلنا لك رابط إعادة تعيين كلمة المرور.",
+  "auth.forgotPassword.backToLogin": "العودة إلى تسجيل الدخول",
+  "auth.resetPassword.title": "اختر كلمة مرور جديدة",
+  "auth.resetPassword.subtitle": "أدخل كلمة مرور جديدة لحسابك.",
+  "auth.resetPassword.form.newPassword": "كلمة المرور الجديدة",
+  "auth.resetPassword.form.newPasswordPlaceholder": "أدخل كلمة المرور الجديدة",
+  "auth.resetPassword.form.confirmPassword": "تأكيد كلمة المرور الجديدة",
+  "auth.resetPassword.form.confirmPasswordPlaceholder": "أعد إدخال كلمة المرور الجديدة",
+  "auth.resetPassword.form.submit": "إعادة تعيين كلمة المرور",
+  "auth.resetPassword.form.submitting": "جارٍ إعادة التعيين…",
+  "auth.resetPassword.form.error.newPassword": "يرجى إدخال كلمة مرور جديدة",
+  "auth.resetPassword.form.error.confirmPassword": "يرجى تأكيد كلمة المرور الجديدة",
+  "auth.resetPassword.form.error.invalidLink":
+    "رابط إعادة تعيين كلمة المرور غير صالح أو منتهي الصلاحية.",
+  "auth.resetPassword.form.error.network":
+    "تعذر الوصول إلى الخادم. تحقق من اتصالك ثم حاول مرة أخرى.",
+  "auth.resetPassword.form.error.generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+  "auth.resetPassword.success.title": "تمت إعادة تعيين كلمة المرور",
+  "auth.resetPassword.success.message":
+    "تم تغيير كلمة المرور. يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.",
+  "auth.resetPassword.success.backToLogin": "تسجيل الدخول",
+  "auth.resetPassword.invalidLink.title": "رابط غير صالح أو منتهي",
+  "auth.resetPassword.invalidLink.message":
+    "رابط إعادة تعيين كلمة المرور لم يعد صالحًا. اطلب رابطًا جديدًا للمتابعة.",
+  "auth.resetPassword.invalidLink.requestNew": "طلب رابط جديد",
   "auth.register.title": "إنشاء حساب جديد",
   "auth.register.subtitle":
     "انضم إلينا، ابحث عن قاعة مناسبة أو أدر قاعتك وحجوزاتك بكل سهولة.",

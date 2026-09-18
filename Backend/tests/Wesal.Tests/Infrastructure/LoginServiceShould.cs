@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
@@ -67,7 +68,7 @@ public class LoginServiceShould
         }));
 
         var loginService = new LoginService(userManager, tokenService, new DateTimeService());
-        var registrationService = new AuthService(userManager, roleManager, tokenService);
+        var registrationService = new AuthService(userManager, roleManager, tokenService, NullEmailService.Instance, Options.Create(new PasswordResetOptions()), NullLogger<AuthService>.Instance);
 
         return (loginService, registrationService, context);
     }

@@ -282,12 +282,34 @@ public class HallSearchRepositoryShould
         Assert.Equal(0, totalCount);
     }
 
+    [Fact]
+    public async Task SearchApprovedHallsAsync_ExcludesLockedHalls()
+    {
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            CreateHall("Visible Hall"),
+            CreateHall("Admin Locked", isAdminLocked: true),
+            CreateHall("System Locked", systemLocked: true));
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.SearchApprovedHallsAsync(null, null, null, null, null, 0, 20);
+        var totalCount = await repository.SearchApprovedHallsCountAsync(null, null, null, null, null);
+
+        Assert.Single(result);
+        Assert.Equal("Visible Hall", result[0].Name);
+        Assert.Equal(1, totalCount);
+    }
+
     private static Hall CreateHall(
         string name,
         HallRegion region = HallRegion.Gaza,
         string address = "Gaza City",
         HallStatus status = HallStatus.Approved,
         bool isDeleted = false,
+        bool isAdminLocked = false,
+        bool systemLocked = false,
         DateTimeOffset? createdAt = null)
         => new()
         {
@@ -297,6 +319,8 @@ public class HallSearchRepositoryShould
             Address = address,
             Status = status,
             IsDeleted = isDeleted,
+            IsAdminLocked = isAdminLocked,
+            SystemLocked = systemLocked,
             CreatedAt = createdAt ?? FixedNow
         };
 

@@ -275,6 +275,16 @@ export default function LoginFormCard({
           }
         />
 
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            onClick={markAuthNavigation}
+            className="text-sm font-medium text-[var(--wesal-maroon)] underline-offset-2 hover:underline"
+          >
+            {t("auth.login.forgotPassword")}
+          </Link>
+        </div>
+
         <button
           type="submit"
           disabled={!canSubmit}

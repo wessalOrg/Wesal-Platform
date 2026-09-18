@@ -72,6 +72,33 @@ export async function loginAccount(payload: LoginPayload): Promise<LoginResult> 
   return mapLoginResult(data);
 }
 
+export type ForgotPasswordResult = {
+  message: string;
+};
+
+/** Requests a password reset link for the given email (US-LOGIN-06). */
+export async function forgotPassword(email: string): Promise<ForgotPasswordResult> {
+  const { data } = await api.post<ForgotPasswordResult>("/auth/forgot-password", { email });
+  return data;
+}
+
+export type ResetPasswordPayload = {
+  email: string;
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
+export type ResetPasswordResult = {
+  message: string;
+};
+
+/** Validates the reset token and sets a new password (US-LOGIN-06). */
+export async function resetPassword(payload: ResetPasswordPayload): Promise<ResetPasswordResult> {
+  const { data } = await api.post<ResetPasswordResult>("/auth/reset-password", payload);
+  return data;
+}
+
 /** Revokes the current session on the server. Callers own local cleanup. */
 export async function logoutAccount(accessToken?: string | null): Promise<void> {
   await api.post(

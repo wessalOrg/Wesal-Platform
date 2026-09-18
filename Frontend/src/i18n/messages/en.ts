@@ -328,6 +328,48 @@ const en: MessageCatalog = {
   "auth.login.form.error.generic": "Could not sign in. Check your details and try again.",
   "auth.login.noAccount": "Don't have an account?",
   "auth.login.registerLink": "Create an account",
+  "auth.login.forgotPassword": "Forgot your password?",
+  "auth.forgotPassword.title": "Reset your password",
+  "auth.forgotPassword.subtitle":
+    "Enter your registered email and we'll email you a link to create a new password.",
+  "auth.forgotPassword.form.email": "Email",
+  "auth.forgotPassword.form.emailPlaceholder": "Enter your email",
+  "auth.forgotPassword.form.submit": "Send reset link",
+  "auth.forgotPassword.form.submitting": "Sending…",
+  "auth.forgotPassword.form.error.email": "Please enter your email",
+  "auth.forgotPassword.form.error.emailInvalid": "Please enter a valid email address",
+  "auth.forgotPassword.form.error.network":
+    "Could not reach the server. Check your connection and try again.",
+  "auth.forgotPassword.form.error.generic":
+    "Something went wrong. Please try again.",
+  "auth.forgotPassword.success.title": "Check your email",
+  "auth.forgotPassword.success.message":
+    "If an account exists for {email}, we've sent a password reset link.",
+  "auth.forgotPassword.backToLogin": "Back to login",
+  "auth.resetPassword.title": "Choose a new password",
+  "auth.resetPassword.subtitle": "Enter a new password for your account.",
+  "auth.resetPassword.form.newPassword": "New password",
+  "auth.resetPassword.form.newPasswordPlaceholder": "Enter a new password",
+  "auth.resetPassword.form.confirmPassword": "Confirm new password",
+  "auth.resetPassword.form.confirmPasswordPlaceholder": "Re-enter the new password",
+  "auth.resetPassword.form.submit": "Reset password",
+  "auth.resetPassword.form.submitting": "Resetting…",
+  "auth.resetPassword.form.error.newPassword": "Please enter a new password",
+  "auth.resetPassword.form.error.confirmPassword": "Please confirm your new password",
+  "auth.resetPassword.form.error.invalidLink":
+    "This password reset link is invalid or has expired.",
+  "auth.resetPassword.form.error.network":
+    "Could not reach the server. Check your connection and try again.",
+  "auth.resetPassword.form.error.generic":
+    "Something went wrong. Please try again.",
+  "auth.resetPassword.success.title": "Password reset",
+  "auth.resetPassword.success.message":
+    "Your password has been changed. You can now sign in with your new password.",
+  "auth.resetPassword.success.backToLogin": "Sign in",
+  "auth.resetPassword.invalidLink.title": "Invalid or expired link",
+  "auth.resetPassword.invalidLink.message":
+    "This password reset link is no longer valid. Request a new one to continue.",
+  "auth.resetPassword.invalidLink.requestNew": "Request a new link",
   "auth.register.title": "Create new account",
   "auth.register.subtitle":
     "Join us, find a suitable hall or manage your hall and bookings with ease.",

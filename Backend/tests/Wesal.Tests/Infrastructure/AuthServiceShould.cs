@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
@@ -13,8 +15,11 @@ namespace Wesal.Tests.Infrastructure;
 
 public class AuthServiceShould : IDisposable
 {
+    private const string TestFrontendUrl = "https://wesal.test";
+
     private readonly ServiceProvider _serviceProvider;
     private readonly AuthService _authService;
+    private readonly FakeEmailService _emailService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _context;
 
@@ -33,9 +38,11 @@ public class AuthServiceShould : IDisposable
                 options.User.RequireUniqueEmail = true;
             })
             .AddRoles<ApplicationRole>()
-            .AddEntityFrameworkStores<ApplicationDbContext>();
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
         services.AddLogging();
+        services.AddDataProtection();
         services.AddScoped<ITokenService, TokenService>();
         services.Configure<JwtSettings>(options =>
         {
@@ -57,7 +64,14 @@ public class AuthServiceShould : IDisposable
 
         _userManager = _serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var tokenService = _serviceProvider.GetRequiredService<ITokenService>();
-        _authService = new AuthService(_userManager, roleManager, tokenService);
+        _emailService = new FakeEmailService();
+        _authService = new AuthService(
+            _userManager,
+            roleManager,
+            tokenService,
+            _emailService,
+            Options.Create(new PasswordResetOptions { FrontendBaseUrl = TestFrontendUrl }),
+            NullLogger<AuthService>.Instance);
     }
 
     [Fact]
@@ -180,10 +194,221 @@ public class AuthServiceShould : IDisposable
         Assert.Equal("+972599000001", user.PhoneNumber);
     }
 
+    [Fact]
+    public async Task ForgotPassword_RegisteredEmail_SendsResetLinkWithToken()
+    {
+        await RegisterUserAsync("reset-me@example.com");
+        _emailService.Clear();
+
+        var response = await _authService.ForgotPasswordAsync(
+            new ForgotPasswordRequest { Email = "reset-me@example.com" });
+
+        Assert.Equal("If an account exists for that email, a password reset link has been sent.", response.Message);
+
+        var sent = Assert.Single(_emailService.Sent);
+        Assert.Equal("reset-me@example.com", sent.To);
+        Assert.Contains(TestFrontendUrl + "/reset-password", sent.Body);
+        Assert.Contains("token=", sent.Body);
+        Assert.NotEmpty(ExtractResetToken(sent.Body));
+    }
+
+    [Fact]
+    public async Task ForgotPassword_UnknownEmail_DoesNotRevealAccountExistence()
+    {
+        var response = await _authService.ForgotPasswordAsync(
+            new ForgotPasswordRequest { Email = "nobody@example.com" });
+
+        Assert.Equal("If an account exists for that email, a password reset link has been sent.", response.Message);
+        Assert.Empty(_emailService.Sent);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_SmtpUnavailable_StillReturnsGenericSuccess()
+    {
+        await RegisterUserAsync("smtp-down@example.com");
+        _emailService.FailSends = true;
+
+        var response = await _authService.ForgotPasswordAsync(
+            new ForgotPasswordRequest { Email = "smtp-down@example.com" });
+
+        Assert.Equal("If an account exists for that email, a password reset link has been sent.", response.Message);
+    }
+
+    [Fact]
+    public async Task ResetPassword_ValidToken_ChangesPassword()
+    {
+        await RegisterUserAsync("reset-ok@example.com");
+        var token = await RequestResetTokenAsync("reset-ok@example.com");
+
+        var response = await _authService.ResetPasswordAsync(new ResetPasswordRequest
+        {
+            Email = "reset-ok@example.com",
+            Token = token,
+            NewPassword = "NewPassword456!",
+            ConfirmPassword = "NewPassword456!"
+        });
+
+        Assert.Contains("reset", response.Message, StringComparison.OrdinalIgnoreCase);
+
+        var user = await _userManager.FindByEmailAsync("reset-ok@example.com");
+        Assert.NotNull(user);
+        Assert.True(await _userManager.CheckPasswordAsync(user, "NewPassword456!"));
+        Assert.False(await _userManager.CheckPasswordAsync(user, "Password123!"));
+    }
+
+    [Fact]
+    public async Task ResetPassword_InvalidToken_Fails()
+    {
+        await RegisterUserAsync("reset-badtoken@example.com");
+
+        var exception = await Assert.ThrowsAsync<ValidationException>(() =>
+            _authService.ResetPasswordAsync(new ResetPasswordRequest
+            {
+                Email = "reset-badtoken@example.com",
+                Token = "not-a-valid-token",
+                NewPassword = "NewPassword456!",
+                ConfirmPassword = "NewPassword456!"
+            }));
+
+        Assert.Contains("Token", exception.Errors.Keys);
+    }
+
+    [Fact]
+    public async Task ResetPassword_UnknownEmail_Fails()
+    {
+        var exception = await Assert.ThrowsAsync<ValidationException>(() =>
+            _authService.ResetPasswordAsync(new ResetPasswordRequest
+            {
+                Email = "missing@example.com",
+                Token = "token",
+                NewPassword = "NewPassword456!",
+                ConfirmPassword = "NewPassword456!"
+            }));
+
+        Assert.Contains("Token", exception.Errors.Keys);
+    }
+
+    [Fact]
+    public async Task ResetPassword_PasswordMismatch_Rejected()
+    {
+        await RegisterUserAsync("reset-mismatch@example.com");
+        var token = await RequestResetTokenAsync("reset-mismatch@example.com");
+
+        var exception = await Assert.ThrowsAsync<ValidationException>(() =>
+            _authService.ResetPasswordAsync(new ResetPasswordRequest
+            {
+                Email = "reset-mismatch@example.com",
+                Token = token,
+                NewPassword = "NewPassword456!",
+                ConfirmPassword = "Different456!"
+            }));
+
+        Assert.Contains("ConfirmPassword", exception.Errors.Keys);
+    }
+
+    [Fact]
+    public async Task ResetPassword_WeakPassword_Rejected()
+    {
+        await RegisterUserAsync("reset-weak@example.com");
+        var token = await RequestResetTokenAsync("reset-weak@example.com");
+
+        var exception = await Assert.ThrowsAsync<ValidationException>(() =>
+            _authService.ResetPasswordAsync(new ResetPasswordRequest
+            {
+                Email = "reset-weak@example.com",
+                Token = token,
+                NewPassword = "weakpass",
+                ConfirmPassword = "weakpass"
+            }));
+
+        Assert.Contains("NewPassword", exception.Errors.Keys);
+    }
+
+    [Fact]
+    public async Task ResetPassword_TokenCannotBeReused()
+    {
+        await RegisterUserAsync("reset-once@example.com");
+        var token = await RequestResetTokenAsync("reset-once@example.com");
+
+        await _authService.ResetPasswordAsync(new ResetPasswordRequest
+        {
+            Email = "reset-once@example.com",
+            Token = token,
+            NewPassword = "NewPassword456!",
+            ConfirmPassword = "NewPassword456!"
+        });
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            _authService.ResetPasswordAsync(new ResetPasswordRequest
+            {
+                Email = "reset-once@example.com",
+                Token = token,
+                NewPassword = "AnotherPass789!",
+                ConfirmPassword = "AnotherPass789!"
+            }));
+    }
+
     public void Dispose()
     {
         _context.Database.EnsureDeleted();
         _context.Dispose();
         _serviceProvider.Dispose();
+    }
+
+    private async Task RegisterUserAsync(string email)
+    {
+        await _authService.RegisterAsync(new RegisterRequest(
+            "Reset Tester",
+            email,
+            "+972599000099",
+            "Password123!",
+            "Password123!",
+            ApplicationRoles.RegisteredUser));
+    }
+
+    private async Task<string> RequestResetTokenAsync(string email)
+    {
+        _emailService.Clear();
+        await _authService.ForgotPasswordAsync(new ForgotPasswordRequest { Email = email });
+        var sent = Assert.Single(_emailService.Sent);
+        return ExtractResetToken(sent.Body);
+    }
+
+    private static string ExtractResetToken(string body)
+    {
+        var marker = "token=";
+        var start = body.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        Assert.True(start >= 0, "Reset email body must contain the token.");
+        var valueStart = start + marker.Length;
+        var lineEnd = body.IndexOf('\n', valueStart);
+        var encoded = lineEnd < 0
+            ? body[valueStart..]
+            : body[valueStart..lineEnd];
+        return Uri.UnescapeDataString(encoded.Trim());
+    }
+
+    private sealed class FakeEmailService : IEmailService
+    {
+        public List<EmailRecord> Sent { get; } = [];
+
+        public bool FailSends { get; set; }
+
+        public void Clear() => Sent.Clear();
+
+        public Task<bool> TrySendAsync(
+            string to,
+            string subject,
+            string body,
+            CancellationToken cancellationToken = default)
+        {
+            if (!FailSends)
+            {
+                Sent.Add(new EmailRecord(to, subject, body));
+            }
+
+            return Task.FromResult(!FailSends);
+        }
+
+        public sealed record EmailRecord(string To, string Subject, string Body);
     }
 }

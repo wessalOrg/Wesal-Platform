@@ -427,6 +427,59 @@ public class HallRepositoryShould
         Assert.Equal(0, result);
     }
 
+    [Fact]
+    public async Task GetApprovedHallsAsync_ExcludesAdminLockedAndSystemLockedHalls()
+    {
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            new Hall { Id = Guid.NewGuid(), Name = "Visible", Status = HallStatus.Approved, CreatedAt = FixedNow.AddDays(-1) },
+            new Hall { Id = Guid.NewGuid(), Name = "Admin Locked", Status = HallStatus.Approved, IsAdminLocked = true, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "System Locked", Status = HallStatus.Approved, SystemLocked = true, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsAsync(10);
+
+        Assert.Single(result);
+        Assert.Equal("Visible", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsByRegionAsync_ExcludesLockedHalls()
+    {
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            new Hall { Id = Guid.NewGuid(), Name = "Visible", Status = HallStatus.Approved, Region = HallRegion.Gaza, CreatedAt = FixedNow.AddDays(-1) },
+            new Hall { Id = Guid.NewGuid(), Name = "Admin Locked", Status = HallStatus.Approved, Region = HallRegion.Gaza, IsAdminLocked = true, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "System Locked", Status = HallStatus.Approved, Region = HallRegion.Gaza, SystemLocked = true, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsByRegionAsync(HallRegion.Gaza, 10);
+
+        Assert.Single(result);
+        Assert.Equal("Visible", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsCountAsync_ExcludesLockedHalls()
+    {
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            new Hall { Id = Guid.NewGuid(), Name = "Visible", Status = HallStatus.Approved, CreatedAt = FixedNow.AddDays(-1) },
+            new Hall { Id = Guid.NewGuid(), Name = "Admin Locked", Status = HallStatus.Approved, IsAdminLocked = true, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "System Locked", Status = HallStatus.Approved, SystemLocked = true, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsCountAsync();
+
+        Assert.Equal(1, result);
+    }
+
     private static ApplicationDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()

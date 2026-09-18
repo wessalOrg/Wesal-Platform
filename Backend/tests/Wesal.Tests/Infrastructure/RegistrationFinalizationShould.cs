@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
@@ -50,7 +52,7 @@ public class RegistrationFinalizationShould : IDisposable
         _userManager = _provider.GetRequiredService<UserManager<ApplicationUser>>();
         var tokenService = _provider.GetRequiredService<ITokenService>();
         var roleManager2 = _provider.GetRequiredService<RoleManager<ApplicationRole>>();
-        _authService = new AuthService(_userManager, roleManager2, tokenService);
+        _authService = new AuthService(_userManager, roleManager2, tokenService, NullEmailService.Instance, Options.Create(new PasswordResetOptions()), NullLogger<AuthService>.Instance);
     }
 
     [Fact]

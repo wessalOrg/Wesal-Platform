@@ -156,6 +156,45 @@ public class BookingRejectionServiceShould
     }
 
     [Fact]
+    public async Task RejectBooking_ReleasesReservedPeriod_WhenNoOtherActiveBookings()
+    {
+        var scenario = Scenario();
+
+        await scenario.Service.RejectBookingAsync(
+            scenario.Hall.Id,
+            scenario.Booking.Id,
+            new RejectBookingRequestDto { Reason = "Not available" });
+
+        var released = Assert.Single(scenario.BookingRepository.ReleasedPeriods);
+        Assert.Equal(scenario.Hall.Id, released.HallId);
+        Assert.Equal(scenario.Booking.Date, released.Date);
+        Assert.Equal(scenario.Booking.Period, released.Period);
+    }
+
+    [Fact]
+    public async Task RejectBooking_KeepsReservedPeriod_WhenAnotherActiveBookingHoldsIt()
+    {
+        var scenario = Scenario();
+        scenario.BookingRepository.AddAnother(new Booking
+        {
+            Id = Guid.NewGuid(),
+            HallId = scenario.Hall.Id,
+            Hall = scenario.Hall,
+            RequesterUserId = "user-2",
+            Date = scenario.Booking.Date,
+            Period = scenario.Booking.Period,
+            Status = BookingStatus.Pending
+        });
+
+        await scenario.Service.RejectBookingAsync(
+            scenario.Hall.Id,
+            scenario.Booking.Id,
+            new RejectBookingRequestDto { Reason = "Not available" });
+
+        Assert.Empty(scenario.BookingRepository.ReleasedPeriods);
+    }
+
+    [Fact]
     public async Task RejectBooking_AlreadyRejected_ReturnsExistingWithoutDuplicateMessage()
     {
         var scenario = Scenario();
@@ -389,10 +428,12 @@ public class BookingRejectionServiceShould
             BookingRepository = new FakeBookingRepository([.. bookingsList]),
             ConversationRepository = new FakeConversationRepository(),
             MessageRepository = new FakeMessageRepository(),
-            UnitOfWork = new FakeUnitOfWork(),
+            UnitOfWork = null!,
             CurrentUser = currentUser,
             Service = null!
         };
+
+        context.UnitOfWork = new FakeUnitOfWork(context.BookingRepository.Bookings.ToList());
 
         context.UnitOfWork.WireTransactions(context.MessageRepository.CommitPending, context.MessageRepository.RollbackPending);
 
@@ -439,7 +480,7 @@ public class BookingRejectionServiceShould
 
         public required FakeMessageRepository MessageRepository { get; init; }
 
-        public required FakeUnitOfWork UnitOfWork { get; init; }
+        public required FakeUnitOfWork UnitOfWork { get; set; }
 
         public required FakeCurrentUserService CurrentUser { get; init; }
 
@@ -464,6 +505,13 @@ public class BookingRejectionServiceShould
         }
 
         public IReadOnlyList<Booking> Bookings => _bookings;
+
+        public List<(Guid HallId, DateOnly Date, BookingPeriodType Period)> ReleasedPeriods { get; } = [];
+
+        public void AddAnother(Booking booking)
+        {
+            _bookings.Add(booking);
+        }
 
         public Task AddAsync(Booking booking, CancellationToken cancellationToken = default)
         {
@@ -500,21 +548,33 @@ public class BookingRejectionServiceShould
             BookingPeriodType periodType,
             Guid bookingId,
             CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
+        {
+            var hasOther = _bookings.Any(booking =>
+                booking.HallId == hallId
+                && booking.Date == date
+                && booking.Period == periodType
+                && booking.Id != bookingId
+                && (booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Accepted));
+
+            return Task.FromResult(hasOther);
+        }
 
         public Task<int> ReleasePeriodAsync(
             Guid hallId,
             DateOnly date,
             BookingPeriodType periodType,
             CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
+        {
+            ReleasedPeriods.Add((hallId, date, periodType));
+            return Task.FromResult(1);
+        }
 
         public Task<int> ReservePeriodAsync(
             Guid hallId,
             DateOnly date,
             BookingPeriodType periodType,
             CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
+            => Task.FromResult(1);
     }
 
     private sealed class FakeConversationRepository : IConversationRepository
@@ -582,9 +642,15 @@ public class BookingRejectionServiceShould
 
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
+        private readonly List<Booking> _bookings;
         private int _saveCount;
         private Action? _onCommit;
         private Action? _onRollback;
+
+        public FakeUnitOfWork(IEnumerable<Booking> bookings)
+        {
+            _bookings = [.. bookings];
+        }
 
         public bool ThrowOnEverySecondSave { get; set; }
 
@@ -603,7 +669,13 @@ public class BookingRejectionServiceShould
         }
 
         public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
+        {
+            var snapshot = _bookings
+                .Select(b => new BookingStatusSnapshot(b.Id, b.Status))
+                .ToList();
+
+            return Task.FromResult<IWesalTransaction>(new FakeTransaction(snapshot, _bookings, _onCommit, _onRollback));
+        }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -627,6 +699,67 @@ public class BookingRejectionServiceShould
             return Task.FromResult(1);
         }
     }
+
+    private sealed class FakeTransaction : IWesalTransaction
+    {
+        private readonly IReadOnlyList<BookingStatusSnapshot> _snapshot;
+        private readonly List<Booking> _bookings;
+        private readonly Action? _onCommit;
+        private readonly Action? _onRollback;
+        private bool _completed;
+
+        public FakeTransaction(
+            IReadOnlyList<BookingStatusSnapshot> snapshot,
+            List<Booking> bookings,
+            Action? onCommit,
+            Action? onRollback)
+        {
+            _snapshot = snapshot;
+            _bookings = bookings;
+            _onCommit = onCommit;
+            _onRollback = onRollback;
+        }
+
+        public Task CommitAsync(CancellationToken cancellationToken = default)
+        {
+            _onCommit?.Invoke();
+            _completed = true;
+            return Task.CompletedTask;
+        }
+
+        public Task RollbackAsync(CancellationToken cancellationToken = default)
+        {
+            Restore();
+            _onRollback?.Invoke();
+            return Task.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            if (!_completed)
+            {
+                Restore();
+                _onRollback?.Invoke();
+            }
+
+            return ValueTask.CompletedTask;
+        }
+
+        private void Restore()
+        {
+            foreach (var snapshot in _snapshot)
+            {
+                var booking = _bookings.FirstOrDefault(b => b.Id == snapshot.Id);
+
+                if (booking is not null)
+                {
+                    booking.Status = snapshot.Status;
+                }
+            }
+        }
+    }
+
+    private sealed record BookingStatusSnapshot(Guid Id, BookingStatus Status);
 
     private sealed class FakeCurrentUserService : ICurrentUserService
     {
