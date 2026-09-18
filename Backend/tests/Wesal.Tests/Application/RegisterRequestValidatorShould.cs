@@ -11,7 +11,6 @@ public class RegisterRequestValidatorShould
     private static RegisterRequest CreateValidRequest(
         string? fullName = "Test User",
         string? email = "test@example.com",
-        string? phone = "+972599123456",
         string? password = "Password123!",
         string? confirmPassword = "Password123!",
         string? accountType = null)
@@ -22,7 +21,6 @@ public class RegisterRequestValidatorShould
         {
             FullName = fullName!,
             Email = email!,
-            PhoneNumber = phone!,
             Password = password!,
             ConfirmPassword = confirmPassword!,
             AccountType = accountType
@@ -32,14 +30,12 @@ public class RegisterRequestValidatorShould
     private static RegisterRequest CreateRequest(
         string? fullName = "Omar Khaled",
         string? email = "omar.khaled@example.com",
-        string? phoneNumber = "+970599123456",
         string? password = "Password123!",
         string? confirmPassword = "Password123!",
         string? accountType = "RegularUser") => new()
     {
         FullName = fullName ?? string.Empty,
         Email = email ?? string.Empty,
-        PhoneNumber = phoneNumber ?? string.Empty,
         Password = password ?? string.Empty,
         ConfirmPassword = confirmPassword ?? string.Empty,
         AccountType = accountType
@@ -146,33 +142,13 @@ public class RegisterRequestValidatorShould
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterRequest.Email));
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("123")]
-    [InlineData("abc")]
-    [InlineData("1234567")]
-    public async Task Invalid_Phone_Fails(string phone)
+    [Fact]
+    public async Task RegisterRequest_WithoutPhone_IsAccepted()
     {
-        var request = CreateValidRequest(phone: phone);
+        var request = CreateValidRequest();
         var result = await _validator.ValidateAsync(request);
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == "PhoneNumber");
-    }
-
-    [Fact]
-    public async Task Validate_MissingPhoneNumber_Fails()
-    {
-        var result = await _validator.ValidateAsync(CreateRequest(phoneNumber: null));
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterRequest.PhoneNumber));
-    }
-
-    [Fact]
-    public async Task Validate_InvalidPhoneNumber_Fails()
-    {
-        var result = await _validator.ValidateAsync(CreateRequest(phoneNumber: "abc"));
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterRequest.PhoneNumber));
+        Assert.True(result.IsValid);
+        Assert.DoesNotContain(result.Errors, error => error.PropertyName == "PhoneNumber");
     }
 
     [Fact]
@@ -259,7 +235,6 @@ public class RegisterRequestValidatorShould
         {
             FullName = "Omar Khaled",
             Email = "omar.khaled@example.com",
-            PhoneNumber = "+970599123456",
             Password = null!,
             ConfirmPassword = "Password123!",
             AccountType = AccountTypes.RegularUser

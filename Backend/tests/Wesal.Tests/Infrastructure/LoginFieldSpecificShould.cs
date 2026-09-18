@@ -43,11 +43,10 @@ public class LoginFieldSpecificShould
         return (login, registration, context);
     }
 
-    private static RegisterRequest CreateRegister(string email, string phone, string type) => new()
+    private static RegisterRequest CreateRegister(string email, string type) => new()
     {
         FullName = "Test User",
         Email = email,
-        PhoneNumber = phone,
         Password = Password,
         ConfirmPassword = Password,
         AccountType = type
@@ -57,53 +56,44 @@ public class LoginFieldSpecificShould
     public async Task UnregisteredEmail_MapsToEmailField()
     {
         var (login, _, _) = CreateService();
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Identifier = "unknown@example.com", Password = Password }));
-        Assert.True(ex.Errors.ContainsKey("Identifier") || ex.Errors.ContainsKey("Email"));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Email = "unknown@example.com", Password = Password }));
+        Assert.True(ex.Errors.ContainsKey("Email"));
         Assert.DoesNotContain("PasswordHash", ex.Message);
     }
 
     [Fact]
-    public async Task UnregisteredPhone_MapsToPhoneField()
+    public async Task UnregisteredPhoneIdentifier_MapsToEmailField()
     {
         var (login, _, _) = CreateService();
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Identifier = "+970599000000", Password = Password }));
-        Assert.True(ex.Errors.ContainsKey("Identifier") || ex.Errors.ContainsKey("PhoneNumber"));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Email = "+970599000000", Password = Password }));
+        Assert.True(ex.Errors.ContainsKey("Email"));
     }
 
     [Fact]
     public async Task CorrectEmail_WrongPassword_MapsToPasswordField()
     {
         var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(CreateRegister("test@example.com", "+970599111111", AccountTypes.RegularUser));
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Identifier = "test@example.com", Password = "WrongPassword1!" }));
+        await registration.RegisterAsync(CreateRegister("test@example.com", AccountTypes.RegularUser));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Email = "test@example.com", Password = "WrongPassword1!" }));
         Assert.True(ex.Errors.ContainsKey("Password"));
         Assert.False(ex.Errors.ContainsKey("Email"));
     }
 
     [Fact]
-    public async Task CorrectPhone_WrongPassword_MapsToPasswordField()
-    {
-        var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(CreateRegister("p2@example.com", "+970599222222", AccountTypes.RegularUser));
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Identifier = "+970599222222", Password = "WrongPassword1!" }));
-        Assert.True(ex.Errors.ContainsKey("Password"));
-    }
-
-    [Fact]
-    public async Task InvalidEmailIdentifier_Handled()
+    public async Task InvalidEmail_Handled()
     {
         var (login, _, _) = CreateService();
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Identifier = "invalid-email@", Password = Password }));
-        // Should be treated as email not found, maps to Identifier/Email
-        Assert.True(ex.Errors.ContainsKey("Identifier") || ex.Errors.ContainsKey("Email"));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Email = "invalid-email@", Password = Password }));
+        // Should be treated as email not found, maps to Email
+        Assert.True(ex.Errors.ContainsKey("Email"));
     }
 
     [Fact]
     public async Task FieldSpecific_ResponseFollowsValidationProblemDetailsContract()
     {
         var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(CreateRegister("fieldtest@example.com", "+970599333333", AccountTypes.RegularUser));
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Identifier = "fieldtest@example.com", Password = "WrongPassword1!" }));
+        await registration.RegisterAsync(CreateRegister("fieldtest@example.com", AccountTypes.RegularUser));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Email = "fieldtest@example.com", Password = "WrongPassword1!" }));
         // Ensure errors are structured as ValidationException with field keys
         Assert.NotEmpty(ex.Errors);
         Assert.True(ex.Errors.ContainsKey("Password"));
@@ -117,18 +107,19 @@ public class LoginFieldSpecificShould
     public async Task SuccessfulLogin_StillWorks_WithFieldSpecific()
     {
         var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(CreateRegister("success@example.com", "+970599444444", AccountTypes.RegularUser));
-        var response = await login.LoginAsync(new LoginRequest { Identifier = "success@example.com", Password = Password });
+        await registration.RegisterAsync(CreateRegister("success@example.com", AccountTypes.RegularUser));
+        var response = await login.LoginAsync(new LoginRequest { Email = "success@example.com", Password = Password });
         Assert.False(string.IsNullOrWhiteSpace(response.Token));
         Assert.Equal("success@example.com", response.Email);
     }
 
     [Fact]
-    public async Task SuccessfulPhoneLogin_StillWorks()
+    public async Task RegisterWithoutPhone_LoginByEmail_StillWorks()
     {
         var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(CreateRegister("phoneok@example.com", "+970599555555", AccountTypes.RegularUser));
-        var response = await login.LoginAsync(new LoginRequest { Identifier = "+970599555555", Password = Password });
+        await registration.RegisterAsync(CreateRegister("nophone@example.com", AccountTypes.RegularUser));
+        var response = await login.LoginAsync(new LoginRequest { Email = "nophone@example.com", Password = Password });
         Assert.False(string.IsNullOrWhiteSpace(response.Token));
+        Assert.Equal("nophone@example.com", response.Email);
     }
 }

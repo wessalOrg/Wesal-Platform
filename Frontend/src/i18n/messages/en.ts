@@ -1345,18 +1345,6 @@ const en: MessageCatalog = {
   "errors.booking.cancel.notFound": "This booking request was not found.",
   "errors.booking.cancel.generic": "Could not cancel the booking request. Please try again.",
 
-  "auth.login.form.username": "Email or phone number",
-  "auth.login.form.usernamePlaceholder": "Enter your email or phone number",
-  "auth.login.form.error.identifier": "Please enter your email or phone number",
-  "auth.login.form.error.identifierInvalid":
-    "Please enter a valid email address or phone number",
-  "auth.login.form.error.identifierEmail": "Please enter a valid email address",
-  "auth.login.form.error.identifierPhone": "Please enter a valid phone number",
-  "auth.register.form.phone": "Phone number",
-  "auth.register.form.phonePlaceholder": "05x xxx xxxx",
-  "auth.register.form.error.phone": "Please enter your phone number",
-  "auth.register.form.error.phoneInvalid": "Please enter a valid phone number",
-  "auth.register.form.error.phoneDuplicate": "This phone number is already in use.",
   "assistant.invite.help": "How can I help you?",
   "assistant.invite.halls": "Looking for a hall? Ask me about an area or a date.",
   "assistant.invite.dismiss": "Dismiss invitation",

@@ -31,18 +31,15 @@ public sealed class LoginService : ILoginService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var identifier = request.Identifier.Trim();
+        var email = request.Email.Trim();
 
-        var user = await FindUserByIdentifierAsync(identifier);
+        var user = await _userManager.FindByEmailAsync(email);
         if (user is null)
         {
-            var isEmailIdentifier = identifier.Contains('@');
-            var field = isEmailIdentifier ? "Email" : "PhoneNumber";
-            var message = isEmailIdentifier ? "Email is not registered." : "Phone number is not registered.";
+            var message = "Email is not registered.";
             throw new ValidationException(new Dictionary<string, string[]>
             {
-                ["Identifier"] = new[] { message },
-                [field] = new[] { message }
+                ["Email"] = new[] { message }
             });
         }
 
@@ -85,20 +82,9 @@ public sealed class LoginService : ILoginService
             Id = user.Id,
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
-            PhoneNumber = user.PhoneNumber ?? string.Empty,
             AccountType = AccountTypes.FromRole(primaryRole) ?? string.Empty,
             Role = primaryRole
         };
-    }
-
-    private async Task<ApplicationUser?> FindUserByIdentifierAsync(string identifier)
-    {
-        if (identifier.Contains('@'))
-        {
-            return await _userManager.FindByEmailAsync(identifier);
-        }
-
-        return _userManager.Users.FirstOrDefault(user => user.PhoneNumber == identifier);
     }
 
     private async Task ThrowForBlockedAccountAsync(ApplicationUser user)

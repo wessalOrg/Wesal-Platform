@@ -1291,18 +1291,6 @@ const ar: MessageCatalog = {
   "errors.booking.cancel.notFound": "طلب الحجز غير موجود.",
   "errors.booking.cancel.generic": "تعذر إلغاء طلب الحجز. حاول مرة أخرى.",
 
-  "auth.login.form.username": "البريد الالكتروني او رقم الهاتف",
-  "auth.login.form.usernamePlaceholder": "البريد الالكتروني او رقم الهاتف",
-  "auth.login.form.error.identifier": "يرجى إدخال البريد الالكتروني او رقم الهاتف",
-  "auth.login.form.error.identifierInvalid":
-    "يرجى إدخال بريد إلكتروني صالح أو رقم هاتف صالح",
-  "auth.login.form.error.identifierEmail": "يرجى إدخال بريد إلكتروني صالح",
-  "auth.login.form.error.identifierPhone": "يرجى إدخال رقم هاتف صالح",
-  "auth.register.form.phone": "رقم الهاتف",
-  "auth.register.form.phonePlaceholder": "05x xxx xxxx",
-  "auth.register.form.error.phone": "يرجى إدخال رقم الهاتف",
-  "auth.register.form.error.phoneInvalid": "يرجى إدخال رقم هاتف صالح",
-  "auth.register.form.error.phoneDuplicate": "رقم الهاتف مستخدم بالفعل.",
   "assistant.invite.help": "كيف أقدر أساعدك؟",
   "assistant.invite.halls": "البحث عن قاعة؟ يمكن السؤال عن منطقة أو تاريخ.",
   "assistant.invite.dismiss": "إخفاء الدعوة",

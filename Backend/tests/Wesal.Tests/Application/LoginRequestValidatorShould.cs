@@ -5,57 +5,71 @@ namespace Wesal.Tests.Application;
 
 public class LoginRequestValidatorShould
 {
-    private static LoginRequest CreateRequest(string? identifier = "omar.khaled@example.com", string? password = "Password123!")
+    private static LoginRequest CreateRequest(string? email = "omar.khaled@example.com", string? password = "Password123!")
         => new()
         {
-            Identifier = identifier ?? string.Empty,
+            Email = email ?? string.Empty,
             Password = password ?? string.Empty
         };
 
     [Theory]
     [InlineData("omar.khaled@example.com", "Password123!")]
-    [InlineData("+970599123456", "Password123!")]
-    [InlineData("970599123456", "Pass@123")]
-    public async Task Validate_ValidIdentifierAndPassword_Passes(string identifier, string password)
+    [InlineData("owner@example.com", "Pass@123")]
+    public async Task Validate_ValidEmailAndPassword_Passes(string email, string password)
     {
         var validator = new LoginRequestValidator();
 
-        var result = await validator.ValidateAsync(CreateRequest(identifier, password));
+        var result = await validator.ValidateAsync(CreateRequest(email, password));
 
         Assert.True(result.IsValid);
     }
 
-    [Fact]
-    public async Task Validate_EmptyIdentifier_Fails()
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-an-email")]
+    [InlineData("test@")]
+    [InlineData("+970599123456")]
+    public async Task Validate_InvalidEmail_Fails(string email)
     {
         var validator = new LoginRequestValidator();
 
-        var result = await validator.ValidateAsync(CreateRequest(identifier: string.Empty));
+        var result = await validator.ValidateAsync(CreateRequest(email: email));
 
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.PropertyName == nameof(LoginRequest.Identifier));
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(LoginRequest.Email));
     }
 
     [Fact]
-    public async Task Validate_NullIdentifier_Fails()
+    public async Task Validate_EmptyEmail_Fails()
     {
         var validator = new LoginRequestValidator();
 
-        var result = await validator.ValidateAsync(CreateRequest(identifier: null));
+        var result = await validator.ValidateAsync(CreateRequest(email: string.Empty));
 
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.PropertyName == nameof(LoginRequest.Identifier));
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(LoginRequest.Email));
     }
 
     [Fact]
-    public async Task Validate_WhitespaceOnlyIdentifier_Fails()
+    public async Task Validate_NullEmail_Fails()
     {
         var validator = new LoginRequestValidator();
 
-        var result = await validator.ValidateAsync(CreateRequest(identifier: "   "));
+        var result = await validator.ValidateAsync(CreateRequest(email: null));
 
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.PropertyName == nameof(LoginRequest.Identifier));
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(LoginRequest.Email));
+    }
+
+    [Fact]
+    public async Task Validate_WhitespaceOnlyEmail_Fails()
+    {
+        var validator = new LoginRequestValidator();
+
+        var result = await validator.ValidateAsync(CreateRequest(email: "   "));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(LoginRequest.Email));
     }
 
     [Fact]

@@ -18,8 +18,6 @@ import {
 } from "@/lib/account-type";
 import {
   getRegisterPasswordIssue,
-  isValidRegisterPhone,
-  normalizeRegisterPhone,
   REGISTER_LIMITS,
 } from "@/lib/register-validation";
 import { registerAccount } from "@/services/auth";
@@ -32,13 +30,12 @@ type RegisterFormCardProps = {
   previewSuccess?: boolean;
 };
 
-type FieldKey = "fullName" | "email" | "phoneNumber" | "password" | "confirmPassword";
+type FieldKey = "fullName" | "email" | "password" | "confirmPassword";
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 type FieldValues = {
   fullName: string;
   email: string;
-  phoneNumber: string;
   password: string;
   confirmPassword: string;
 };
@@ -54,7 +51,6 @@ export default function RegisterFormCard({
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -69,7 +65,6 @@ export default function RegisterFormCard({
     Boolean(accountType) &&
     fullName.trim().length > 0 &&
     email.trim().length > 0 &&
-    phoneNumber.trim().length > 0 &&
     password.length > 0 &&
     confirmPassword.length > 0 &&
     !pending &&
@@ -78,7 +73,6 @@ export default function RegisterFormCard({
   const fieldValues: FieldValues = {
     fullName,
     email,
-    phoneNumber,
     password,
     confirmPassword,
   };
@@ -137,11 +131,6 @@ export default function RegisterFormCard({
       return t("auth.register.form.error.emailInvalid");
     }
 
-    if (field === "phoneNumber") {
-      if (lower.includes("required")) return t("auth.register.form.error.phone");
-      return t("auth.register.form.error.phoneInvalid");
-    }
-
     if (field === "fullName") {
       if (lower.includes("exceed") || lower.includes("maximum") || lower.includes("long")) {
         return t("auth.register.form.error.fullNameMax");
@@ -172,12 +161,6 @@ export default function RegisterFormCard({
         }
         return undefined;
       }
-      case "phoneNumber":
-        if (!values.phoneNumber.trim()) return t("auth.register.form.error.phone");
-        if (!isValidRegisterPhone(values.phoneNumber)) {
-          return t("auth.register.form.error.phoneInvalid");
-        }
-        return undefined;
       case "password":
         return passwordIssueMessage(getRegisterPasswordIssue(values.password));
       case "confirmPassword":
@@ -193,7 +176,7 @@ export default function RegisterFormCard({
 
   const validateAll = (): FieldErrors => {
     const errors: FieldErrors = {};
-    (["fullName", "email", "phoneNumber", "password", "confirmPassword"] as FieldKey[]).forEach(
+    (["fullName", "email", "password", "confirmPassword"] as FieldKey[]).forEach(
       (field) => {
         const message = validateField(field, fieldValues);
         if (message) errors[field] = message;
@@ -223,9 +206,6 @@ export default function RegisterFormCard({
         break;
       case "email":
         setEmail(value);
-        break;
-      case "phoneNumber":
-        setPhoneNumber(value);
         break;
       case "password":
         setPassword(value);
@@ -271,7 +251,6 @@ export default function RegisterFormCard({
       await registerAccount({
         fullName: fullName.trim(),
         email: email.trim(),
-        phoneNumber: normalizeRegisterPhone(phoneNumber),
         password,
         confirmPassword,
         accountType: resolvedAccountType,
@@ -298,10 +277,6 @@ export default function RegisterFormCard({
         if (conflictKind === "email") {
           const message = t("auth.register.form.error.emailDuplicate");
           setFieldError("email", message);
-          setFormError(message);
-        } else if (conflictKind === "phone") {
-          const message = t("auth.register.form.error.phoneDuplicate");
-          setFieldError("phoneNumber", message);
           setFormError(message);
         } else {
           setFormError(t("auth.register.form.error.conflict"));
@@ -376,76 +351,61 @@ export default function RegisterFormCard({
           autoComplete="name"
           maxLength={REGISTER_LIMITS.maxFullNameLength}
         />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <RegisterField
-            label={t("auth.register.form.email")}
-            type="email"
-            value={email}
-            onChange={(value) => updateField("email", value)}
-            onBlur={() => blurField("email")}
-            placeholder={t("auth.register.form.emailPlaceholder")}
-            error={fieldErrors.email}
-            autoComplete="email"
-            maxLength={REGISTER_LIMITS.maxEmailLength}
-          />
-          <RegisterField
-            label={t("auth.register.form.phone")}
-            type="tel"
-            value={phoneNumber}
-            onChange={(value) => updateField("phoneNumber", value)}
-            onBlur={() => blurField("phoneNumber")}
-            placeholder={t("auth.register.form.phonePlaceholder")}
-            error={fieldErrors.phoneNumber}
-            autoComplete="tel"
-            maxLength={REGISTER_LIMITS.maxPhoneLength}
-          />
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <RegisterField
-            label={t("auth.register.form.password")}
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(value) => updateField("password", value)}
-            onBlur={() => blurField("password")}
-            placeholder={t("auth.register.form.passwordPlaceholder")}
-            error={fieldErrors.password}
-            autoComplete="new-password"
-            maxLength={REGISTER_LIMITS.maxPasswordLength}
-            trailing={
-              <PasswordToggle
-                visible={showPassword}
-                onToggle={() => setShowPassword((value) => !value)}
-                label={
-                  showPassword
-                    ? t("auth.register.form.hidePassword")
-                    : t("auth.register.form.showPassword")
-                }
-              />
-            }
-          />
-          <RegisterField
-            label={t("auth.register.form.confirmPassword")}
-            type={showConfirmPassword ? "text" : "password"}
-            value={confirmPassword}
-            onChange={(value) => updateField("confirmPassword", value)}
-            onBlur={() => blurField("confirmPassword")}
-            placeholder={t("auth.register.form.confirmPasswordPlaceholder")}
-            error={fieldErrors.confirmPassword}
-            autoComplete="new-password"
-            maxLength={REGISTER_LIMITS.maxPasswordLength}
-            trailing={
-              <PasswordToggle
-                visible={showConfirmPassword}
-                onToggle={() => setShowConfirmPassword((value) => !value)}
-                label={
-                  showConfirmPassword
-                    ? t("auth.register.form.hidePassword")
-                    : t("auth.register.form.showPassword")
-                }
-              />
-            }
-          />
-        </div>
+        <RegisterField
+          label={t("auth.register.form.email")}
+          type="email"
+          value={email}
+          onChange={(value) => updateField("email", value)}
+          onBlur={() => blurField("email")}
+          placeholder={t("auth.register.form.emailPlaceholder")}
+          error={fieldErrors.email}
+          autoComplete="email"
+          maxLength={REGISTER_LIMITS.maxEmailLength}
+        />
+        <RegisterField
+          label={t("auth.register.form.password")}
+          type={showPassword ? "text" : "password"}
+          value={password}
+          onChange={(value) => updateField("password", value)}
+          onBlur={() => blurField("password")}
+          placeholder={t("auth.register.form.passwordPlaceholder")}
+          error={fieldErrors.password}
+          autoComplete="new-password"
+          maxLength={REGISTER_LIMITS.maxPasswordLength}
+          trailing={
+            <PasswordToggle
+              visible={showPassword}
+              onToggle={() => setShowPassword((value) => !value)}
+              label={
+                showPassword
+                  ? t("auth.register.form.hidePassword")
+                  : t("auth.register.form.showPassword")
+              }
+            />
+          }
+        />
+        <RegisterField
+          label={t("auth.register.form.confirmPassword")}
+          type={showConfirmPassword ? "text" : "password"}
+          value={confirmPassword}
+          onChange={(value) => updateField("confirmPassword", value)}
+          onBlur={() => blurField("confirmPassword")}
+          placeholder={t("auth.register.form.confirmPasswordPlaceholder")}
+          error={fieldErrors.confirmPassword}
+          autoComplete="new-password"
+          maxLength={REGISTER_LIMITS.maxPasswordLength}
+          trailing={
+            <PasswordToggle
+              visible={showConfirmPassword}
+              onToggle={() => setShowConfirmPassword((value) => !value)}
+              label={
+                showConfirmPassword
+                  ? t("auth.register.form.hidePassword")
+                  : t("auth.register.form.showPassword")
+              }
+            />
+          }
+        />
 
         <button
           type="submit"

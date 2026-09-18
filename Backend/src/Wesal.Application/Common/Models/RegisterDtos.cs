@@ -4,11 +4,10 @@ public class RegisterRequest
 {
     public RegisterRequest() { }
 
-    public RegisterRequest(string fullName, string email, string phoneNumber, string password, string confirmPassword, string? accountType)
+    public RegisterRequest(string fullName, string email, string password, string confirmPassword, string? accountType)
     {
         FullName = fullName;
         Email = email;
-        PhoneNumber = phoneNumber;
         Password = password;
         ConfirmPassword = confirmPassword;
         AccountType = accountType;
@@ -17,8 +16,6 @@ public class RegisterRequest
     public string FullName { get; init; } = string.Empty;
 
     public string Email { get; init; } = string.Empty;
-
-    public string PhoneNumber { get; init; } = string.Empty;
 
     public string Password { get; init; } = string.Empty;
 
@@ -36,8 +33,6 @@ public class RegisterResponse
     public string FullName { get; init; } = string.Empty;
 
     public string Email { get; init; } = string.Empty;
-
-    public string PhoneNumber { get; init; } = string.Empty;
 
     public string AccountType { get; init; } = string.Empty;
 

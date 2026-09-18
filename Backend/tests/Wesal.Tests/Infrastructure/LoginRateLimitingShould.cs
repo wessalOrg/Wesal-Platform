@@ -47,10 +47,10 @@ public class LoginRateLimitingShould
     public async Task RepeatedFailures_Threshold_Blocks()
     {
         var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(new RegisterRequest { FullName = "User", Email = "rate@example.com", PhoneNumber = "+970599000001", Password = Password, ConfirmPassword = Password, AccountType = AccountTypes.RegularUser });
+        await registration.RegisterAsync(new RegisterRequest { FullName = "User", Email = "rate@example.com", Password = Password, ConfirmPassword = Password, AccountType = AccountTypes.RegularUser });
         for (int i = 0; i < 4; i++)
-            await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Identifier = "rate@example.com", Password = "WrongPassword1!" }));
-        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => login.LoginAsync(new LoginRequest { Identifier = "rate@example.com", Password = "WrongPassword1!" }));
+            await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Email = "rate@example.com", Password = "WrongPassword1!" }));
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => login.LoginAsync(new LoginRequest { Email = "rate@example.com", Password = "WrongPassword1!" }));
         Assert.Equal("AccountBlocked", ex.Code);
         Assert.Contains("blocked", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -59,11 +59,11 @@ public class LoginRateLimitingShould
     public async Task BlockedResponse_FollowsExistingErrorStructure()
     {
         var (login, registration, context) = CreateService();
-        await registration.RegisterAsync(new RegisterRequest { FullName = "User", Email = "blocked2@example.com", PhoneNumber = "+970599000002", Password = Password, ConfirmPassword = Password, AccountType = AccountTypes.RegularUser });
+        await registration.RegisterAsync(new RegisterRequest { FullName = "User", Email = "blocked2@example.com", Password = Password, ConfirmPassword = Password, AccountType = AccountTypes.RegularUser });
         var user = await context.Users.SingleAsync(u => u.Email == "blocked2@example.com");
         user.LockoutEnd = DateTimeOffset.UtcNow.AddMinutes(15);
         await context.SaveChangesAsync();
-        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => login.LoginAsync(new LoginRequest { Identifier = "blocked2@example.com", Password = Password }));
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => login.LoginAsync(new LoginRequest { Email = "blocked2@example.com", Password = Password }));
         Assert.Equal("AccountBlocked", ex.Code);
         Assert.DoesNotContain("PasswordHash", ex.Message);
         Assert.DoesNotContain("stack", ex.Message, StringComparison.OrdinalIgnoreCase);
@@ -73,11 +73,11 @@ public class LoginRateLimitingShould
     public async Task AfterLockoutExpires_SuccessfulLoginPossible()
     {
         var (login, registration, context) = CreateService();
-        await registration.RegisterAsync(new RegisterRequest { FullName = "User", Email = "expire@example.com", PhoneNumber = "+970599000003", Password = Password, ConfirmPassword = Password, AccountType = AccountTypes.RegularUser });
+        await registration.RegisterAsync(new RegisterRequest { FullName = "User", Email = "expire@example.com", Password = Password, ConfirmPassword = Password, AccountType = AccountTypes.RegularUser });
         var user = await context.Users.SingleAsync(u => u.Email == "expire@example.com");
         user.LockoutEnd = DateTimeOffset.UtcNow.AddMinutes(-1);
         await context.SaveChangesAsync();
-        var response = await login.LoginAsync(new LoginRequest { Identifier = "expire@example.com", Password = Password });
+        var response = await login.LoginAsync(new LoginRequest { Email = "expire@example.com", Password = Password });
         Assert.False(string.IsNullOrWhiteSpace(response.Token));
     }
 
@@ -85,10 +85,10 @@ public class LoginRateLimitingShould
     public async Task SuccessfulLogin_RemainsPossible_AfterLegitimateRecovery()
     {
         var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(new RegisterRequest { FullName = "User", Email = "recovery2@example.com", PhoneNumber = "+970599000004", Password = Password, ConfirmPassword = Password, AccountType = AccountTypes.RegularUser });
+        await registration.RegisterAsync(new RegisterRequest { FullName = "User", Email = "recovery2@example.com", Password = Password, ConfirmPassword = Password, AccountType = AccountTypes.RegularUser });
         for (int i = 0; i < 4; i++)
-            await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Identifier = "recovery2@example.com", Password = "WrongPassword1!" }));
-        var response = await login.LoginAsync(new LoginRequest { Identifier = "recovery2@example.com", Password = Password });
+            await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest { Email = "recovery2@example.com", Password = "WrongPassword1!" }));
+        var response = await login.LoginAsync(new LoginRequest { Email = "recovery2@example.com", Password = Password });
         Assert.False(string.IsNullOrWhiteSpace(response.Token));
     }
 
@@ -96,10 +96,10 @@ public class LoginRateLimitingShould
     public async Task RateLimit_DoesNotExposeSensitiveInfo()
     {
         var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(new RegisterRequest { FullName = "User", Email = "sensitive@example.com", PhoneNumber = "+970599000005", Password = Password, ConfirmPassword = Password, AccountType = AccountTypes.RegularUser });
+        await registration.RegisterAsync(new RegisterRequest { FullName = "User", Email = "sensitive@example.com", Password = Password, ConfirmPassword = Password, AccountType = AccountTypes.RegularUser });
         for (int i = 0; i < 5; i++)
-            try { await login.LoginAsync(new LoginRequest { Identifier = "sensitive@example.com", Password = "WrongPassword1!" }); } catch { }
-        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => login.LoginAsync(new LoginRequest { Identifier = "sensitive@example.com", Password = "WrongPassword1!" }));
+            try { await login.LoginAsync(new LoginRequest { Email = "sensitive@example.com", Password = "WrongPassword1!" }); } catch { }
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => login.LoginAsync(new LoginRequest { Email = "sensitive@example.com", Password = "WrongPassword1!" }));
         var msg = ex.Message;
         Assert.DoesNotContain("PasswordHash", msg);
         Assert.DoesNotContain("stack", msg, StringComparison.OrdinalIgnoreCase);

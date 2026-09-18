@@ -8,7 +8,6 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 {
     public const int MaxFullNameLength = 150;
     public const int MaxEmailLength = 256;
-    public const int MaxPhoneLength = 30;
     public const int MinPasswordLength = 8;
     public const int MaxPasswordLength = 128;
 
@@ -33,23 +32,6 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .WithMessage("A valid email address is required.")
             .MaximumLength(MaxEmailLength)
             .WithMessage($"Email cannot exceed {MaxEmailLength} characters.");
-
-        RuleFor(request => request.PhoneNumber)
-            .NotEmpty()
-            .WithMessage("Phone number is required.");
-
-        RuleFor(request => request.PhoneNumber)
-            .MaximumLength(MaxPhoneLength)
-            .WithMessage($"Phone number cannot exceed {MaxPhoneLength} characters.");
-
-        RuleFor(request => request.PhoneNumber)
-            .Matches(@"^\+?[0-9][0-9\s\-]{6,19}$")
-            .WithMessage("A valid phone number is required.");
-
-        RuleFor(request => request.PhoneNumber)
-            .Matches(@"^\+?[1-9]\d{7,14}$")
-            .When(phone => !string.IsNullOrWhiteSpace(phone.PhoneNumber) && !phone.PhoneNumber.Contains(' ') && !phone.PhoneNumber.Contains('-'))
-            .WithMessage("Phone number is not valid.");
 
         RuleFor(request => request.Password)
             .NotEmpty()

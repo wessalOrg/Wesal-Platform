@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
@@ -46,14 +45,6 @@ public sealed class AuthService : IAuthService
         if (existingByEmail is not null)
             throw new ConflictException("Email already exists.");
 
-        // Duplicate Phone check
-        var normalizedPhone = request.PhoneNumber.Trim();
-        var existingByPhone = await _userManager.Users
-            .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.PhoneNumber == normalizedPhone, cancellationToken);
-        if (existingByPhone is not null)
-            throw new ConflictException("Phone number already exists.");
-
         // Validate AccountType is supported (reuse Mohammed's logic via AccountTypes)
         if (!AccountTypes.IsValid(request.AccountType) && request.AccountType != ApplicationRoles.RegisteredUser)
             throw new ValidationException(new Dictionary<string, string[]> { ["AccountType"] = new[] { $"Account type must be one of: {string.Join(", ", AccountTypes.All)}." } });
@@ -69,19 +60,10 @@ public sealed class AuthService : IAuthService
         {
             FullName = request.FullName.Trim(),
             Email = request.Email.Trim(),
-            UserName = request.Email.Trim(),
-            PhoneNumber = normalizedPhone
+            UserName = request.Email.Trim()
         };
 
-        IdentityResult createResult;
-        try
-        {
-            createResult = await _userManager.CreateAsync(user, request.Password);
-        }
-        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("PhoneNumber") == true || ex.Message.Contains("PhoneNumber"))
-        {
-            throw new ConflictException("Phone number already exists.");
-        }
+        var createResult = await _userManager.CreateAsync(user, request.Password);
 
         if (!createResult.Succeeded)
         {
@@ -116,7 +98,6 @@ public sealed class AuthService : IAuthService
             Id = user.Id,
             FullName = user.FullName,
             Email = user.Email!,
-            PhoneNumber = user.PhoneNumber!,
             AccountType = normalizedAccountType,
             Role = role,
             Token = token

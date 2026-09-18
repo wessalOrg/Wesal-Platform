@@ -34,12 +34,10 @@ public class LoginPostAuthenticationStateShould
 
     private static RegisterRequest CreateRegisterRequest(
         string email,
-        string phoneNumber,
         string accountType) => new()
     {
         FullName = "Omar Khaled",
         Email = email,
-        PhoneNumber = phoneNumber,
         Password = Password,
         ConfirmPassword = Password,
         AccountType = accountType
@@ -84,20 +82,19 @@ public class LoginPostAuthenticationStateShould
             .ValidateToken(token, JwtTokenValidationParametersFactory.Create(Settings), out _);
 
     [Theory]
-    [InlineData(AccountTypes.RegularUser, "regular@example.com", "+970599111111", ApplicationRoles.RegisteredUser)]
-    [InlineData(AccountTypes.HallOwner, "owner@example.com", "+970599222222", ApplicationRoles.HallOwner)]
+    [InlineData(AccountTypes.RegularUser, "regular@example.com", ApplicationRoles.RegisteredUser)]
+    [InlineData(AccountTypes.HallOwner, "owner@example.com", ApplicationRoles.HallOwner)]
     public async Task Login_TokenAcceptedByMiddlewareParametersExposesAuthenticatedIdentityAndRoleClaims(
         string accountType,
         string email,
-        string phoneNumber,
         string expectedRole)
     {
         var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(CreateRegisterRequest(email, phoneNumber, accountType));
+        await registration.RegisterAsync(CreateRegisterRequest(email, accountType));
 
         var response = await login.LoginAsync(new LoginRequest
         {
-            Identifier = email,
+            Email = email,
             Password = Password
         });
 
@@ -116,47 +113,19 @@ public class LoginPostAuthenticationStateShould
     }
 
     [Theory]
-    [InlineData(AccountTypes.RegularUser, "regularphone@example.com", "+970599333333", ApplicationRoles.RegisteredUser)]
-    [InlineData(AccountTypes.HallOwner, "ownerphone@example.com", "+970599444444", ApplicationRoles.HallOwner)]
-    public async Task LoginByPhone_ProducesTokenAcceptedByMiddlewareParameters(
-        string accountType,
-        string email,
-        string phoneNumber,
-        string expectedRole)
-    {
-        var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(CreateRegisterRequest(email, phoneNumber, accountType));
-
-        var response = await login.LoginAsync(new LoginRequest
-        {
-            Identifier = phoneNumber,
-            Password = Password
-        });
-
-        var principal = ValidateAsMiddleware(response.Token);
-
-        Assert.True(principal.Identity?.IsAuthenticated);
-        Assert.Equal(email, principal.Identity?.Name);
-        Assert.Equal(response.Id, principal.FindFirstValue(ApplicationClaimTypes.UserId));
-        Assert.Equal(accountType, response.AccountType);
-        Assert.Equal(expectedRole, Assert.Single(principal.FindAll(ApplicationClaimTypes.Role).Select(claim => claim.Value)));
-    }
-
-    [Theory]
-    [InlineData(AccountTypes.RegularUser, "regular@example.com", "+970599555555", false)]
-    [InlineData(AccountTypes.HallOwner, "ownerauthz@example.com", "+970599666666", true)]
+    [InlineData(AccountTypes.RegularUser, "regular@example.com", false)]
+    [InlineData(AccountTypes.HallOwner, "ownerauthz@example.com", true)]
     public async Task Login_TokenSatisfiesProtectedEndpointAuthorizationPolicies(
         string accountType,
         string email,
-        string phoneNumber,
         bool expectsHallOwnerAccess)
     {
         var (login, registration, _) = CreateService();
-        await registration.RegisterAsync(CreateRegisterRequest(email, phoneNumber, accountType));
+        await registration.RegisterAsync(CreateRegisterRequest(email, accountType));
 
         var response = await login.LoginAsync(new LoginRequest
         {
-            Identifier = email,
+            Email = email,
             Password = Password
         });
 
@@ -179,11 +148,11 @@ public class LoginPostAuthenticationStateShould
     {
         var (login, registration, _) = CreateService();
         await registration.RegisterAsync(
-            CreateRegisterRequest("owner@example.com", "+970599777777", AccountTypes.HallOwner));
+            CreateRegisterRequest("owner@example.com", AccountTypes.HallOwner));
 
         var response = await login.LoginAsync(new LoginRequest
         {
-            Identifier = "owner@example.com",
+            Email = "owner@example.com",
             Password = Password
         });
 
@@ -205,12 +174,12 @@ public class LoginPostAuthenticationStateShould
     {
         var (login, registration, context) = CreateService();
         await registration.RegisterAsync(
-            CreateRegisterRequest("regular@example.com", "+970599888888", AccountTypes.RegularUser));
+            CreateRegisterRequest("regular@example.com", AccountTypes.RegularUser));
 
         await Assert.ThrowsAsync<ValidationException>(() =>
             login.LoginAsync(new LoginRequest
             {
-                Identifier = "regular@example.com",
+                Email = "regular@example.com",
                 Password = "WrongPassword1!"
             }));
 
@@ -225,11 +194,11 @@ public class LoginPostAuthenticationStateShould
     {
         var (login, registration, _) = CreateService();
         await registration.RegisterAsync(
-            CreateRegisterRequest("regular@example.com", "+970599000001", AccountTypes.RegularUser));
+            CreateRegisterRequest("regular@example.com", AccountTypes.RegularUser));
 
         var response = await login.LoginAsync(new LoginRequest
         {
-            Identifier = "regular@example.com",
+            Email = "regular@example.com",
             Password = Password
         });
 
@@ -244,11 +213,11 @@ public class LoginPostAuthenticationStateShould
     {
         var (login, registration, _) = CreateService();
         await registration.RegisterAsync(
-            CreateRegisterRequest("regular@example.com", "+970599000002", AccountTypes.RegularUser));
+            CreateRegisterRequest("regular@example.com", AccountTypes.RegularUser));
 
         var response = await login.LoginAsync(new LoginRequest
         {
-            Identifier = "regular@example.com",
+            Email = "regular@example.com",
             Password = Password
         });
 

@@ -19,11 +19,7 @@ import {
   setStoredAuth,
 } from "@/lib/auth-storage";
 import { setAccessToken } from "@/lib/auth-token";
-import {
-  detectLoginIdentifierKind,
-  isValidLoginIdentifier,
-  normalizeLoginIdentifier,
-} from "@/lib/login-validation";
+import { isValidLoginEmail } from "@/lib/login-validation";
 import { loginAccount } from "@/services/auth";
 
 type LoginFormCardProps = {
@@ -32,7 +28,7 @@ type LoginFormCardProps = {
   action?: string;
 };
 
-type FieldKey = "identifier" | "password";
+type FieldKey = "email" | "password";
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 export default function LoginFormCard({
@@ -44,7 +40,7 @@ export default function LoginFormCard({
   const router = useRouter();
   const { applyLocalSession, refreshSession } = useAuth();
 
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -52,21 +48,18 @@ export default function LoginFormCard({
   const [pending, setPending] = useState(false);
 
   const canSubmit =
-    identifier.trim().length > 0 && password.length > 0 && !pending;
+    email.trim().length > 0 && password.length > 0 && !pending;
 
   const localizeApiFieldMessage = (field: FieldKey, message: string): string => {
     const lower = message.toLowerCase();
-    if (field === "identifier") {
+    if (field === "email") {
       if (lower.includes("required") || lower.includes("whitespace")) {
-        return t("auth.login.form.error.identifier");
+        return t("auth.login.form.error.email");
       }
       if (lower.includes("email")) {
-        return t("auth.login.form.error.identifierEmail");
+        return t("auth.login.form.error.emailInvalid");
       }
-      if (lower.includes("phone")) {
-        return t("auth.login.form.error.identifierPhone");
-      }
-      return t("auth.login.form.error.identifierInvalid");
+      return t("auth.login.form.error.emailInvalid");
     }
     if (lower.includes("required")) {
       return t("auth.login.form.error.password");
@@ -74,11 +67,11 @@ export default function LoginFormCard({
     return t("auth.login.form.error.passwordInvalid");
   };
 
-  const validateField = (field: FieldKey, values: { identifier: string; password: string }) => {
-    if (field === "identifier") {
-      const value = values.identifier.trim();
-      if (!value) return t("auth.login.form.error.identifier");
-      if (!isValidLoginIdentifier(value)) return t("auth.login.form.error.identifierInvalid");
+  const validateField = (field: FieldKey, values: { email: string; password: string }) => {
+    if (field === "email") {
+      const value = values.email.trim();
+      if (!value) return t("auth.login.form.error.email");
+      if (!isValidLoginEmail(value)) return t("auth.login.form.error.emailInvalid");
       return undefined;
     }
     if (!values.password) return t("auth.login.form.error.password");
@@ -86,9 +79,9 @@ export default function LoginFormCard({
   };
 
   const validateAll = (): FieldErrors => {
-    const values = { identifier, password };
+    const values = { email, password };
     const errors: FieldErrors = {};
-    (["identifier", "password"] as FieldKey[]).forEach((field) => {
+    (["email", "password"] as FieldKey[]).forEach((field) => {
       const message = validateField(field, values);
       if (message) errors[field] = message;
     });
@@ -108,24 +101,15 @@ export default function LoginFormCard({
   };
 
   const updateField = (field: FieldKey, value: string) => {
-    const previousIdentifier = identifier;
     const nextValues = {
-      identifier: field === "identifier" ? value : identifier,
+      email: field === "email" ? value : email,
       password: field === "password" ? value : password,
     };
 
-    if (field === "identifier") setIdentifier(value);
+    if (field === "email") setEmail(value);
     else setPassword(value);
 
     if (formError) setFormError(null);
-
-    if (
-      field === "identifier" &&
-      detectLoginIdentifierKind(previousIdentifier) !== detectLoginIdentifierKind(value)
-    ) {
-      setFieldError("identifier", validateField("identifier", nextValues));
-      return;
-    }
 
     if (value.length > 0 || fieldErrors[field]) {
       setFieldError(field, validateField(field, nextValues));
@@ -133,7 +117,7 @@ export default function LoginFormCard({
   };
 
   const blurField = (field: FieldKey) => {
-    setFieldError(field, validateField(field, { identifier, password }));
+    setFieldError(field, validateField(field, { email, password }));
   };
 
   const resolveLoginErrorMessage = (error: ApiError): string => {
@@ -173,7 +157,7 @@ export default function LoginFormCard({
     setPending(true);
     try {
       const result = await loginAccount({
-        identifier: normalizeLoginIdentifier(identifier),
+        email: email.trim(),
         password,
       });
 
@@ -189,7 +173,6 @@ export default function LoginFormCard({
           id: result.id,
           name: result.fullName,
           email: result.email,
-          phone: result.phoneNumber,
           role: result.role,
         },
       });
@@ -245,13 +228,14 @@ export default function LoginFormCard({
 
       <form onSubmit={(event) => void onSubmit(event)} className="space-y-3.5" noValidate>
         <LoginField
-          label={t("auth.login.form.username")}
-          value={identifier}
-          onChange={(value) => updateField("identifier", value)}
-          onBlur={() => blurField("identifier")}
-          placeholder={t("auth.login.form.usernamePlaceholder")}
-          error={fieldErrors.identifier}
-          autoComplete="username"
+          label={t("auth.login.form.email")}
+          type="email"
+          value={email}
+          onChange={(value) => updateField("email", value)}
+          onBlur={() => blurField("email")}
+          placeholder={t("auth.login.form.emailPlaceholder")}
+          error={fieldErrors.email}
+          autoComplete="email"
         />
         <LoginField
           label={t("auth.login.form.password")}

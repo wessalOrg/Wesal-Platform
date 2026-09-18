@@ -77,7 +77,7 @@ public class AuthServiceShould : IDisposable
     [Fact]
     public async Task Register_Valid_RegularUser_Succeeds()
     {
-        var request = new RegisterRequest("John Doe", "john@example.com", "+972599111111", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
+        var request = new RegisterRequest("John Doe", "john@example.com", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
         var response = await _authService.RegisterAsync(request);
 
         Assert.NotNull(response);
@@ -95,7 +95,7 @@ public class AuthServiceShould : IDisposable
     [Fact]
     public async Task Register_Valid_HallOwner_Succeeds()
     {
-        var request = new RegisterRequest("Owner Name", "owner@example.com", "+972599222222", "Password123!", "Password123!", ApplicationRoles.HallOwner);
+        var request = new RegisterRequest("Owner Name", "owner@example.com", "Password123!", "Password123!", ApplicationRoles.HallOwner);
         var response = await _authService.RegisterAsync(request);
 
         Assert.Equal(ApplicationRoles.HallOwner, response.AccountType);
@@ -108,10 +108,10 @@ public class AuthServiceShould : IDisposable
     [Fact]
     public async Task Register_Duplicate_Email_Rejected()
     {
-        var request1 = new RegisterRequest("User One", "dup@example.com", "+972599333333", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
+        var request1 = new RegisterRequest("User One", "dup@example.com", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
         await _authService.RegisterAsync(request1);
 
-        var request2 = new RegisterRequest("User Two", "dup@example.com", "+972599444444", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
+        var request2 = new RegisterRequest("User Two", "dup@example.com", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
         await Assert.ThrowsAsync<ConflictException>(() => _authService.RegisterAsync(request2));
 
         var count = await _context.Users.CountAsync(u => u.Email == "dup@example.com");
@@ -119,22 +119,23 @@ public class AuthServiceShould : IDisposable
     }
 
     [Fact]
-    public async Task Register_Duplicate_Phone_Rejected()
+    public async Task Register_WithoutPhone_StoresNullPhone()
     {
-        var request1 = new RegisterRequest("User One", "user1@example.com", "+972599555555", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
+        var request1 = new RegisterRequest("User One", "nophone1@example.com", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
         await _authService.RegisterAsync(request1);
 
-        var request2 = new RegisterRequest("User Two", "user2@example.com", "+972599555555", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
-        await Assert.ThrowsAsync<ConflictException>(() => _authService.RegisterAsync(request2));
+        var request2 = new RegisterRequest("User Two", "nophone2@example.com", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
+        await _authService.RegisterAsync(request2);
 
-        var count = await _context.Users.CountAsync(u => u.PhoneNumber == "+972599555555");
-        Assert.Equal(1, count);
+        var user = await _userManager.FindByEmailAsync("nophone1@example.com");
+        Assert.NotNull(user);
+        Assert.Null(user.PhoneNumber);
     }
 
     [Fact]
     public async Task Register_Password_Mismatch_Rejected()
     {
-        var request = new RegisterRequest("Test User", "mismatch@example.com", "+972599666666", "Password123!", "Different123!", ApplicationRoles.RegisteredUser);
+        var request = new RegisterRequest("Test User", "mismatch@example.com", "Password123!", "Different123!", ApplicationRoles.RegisteredUser);
         await Assert.ThrowsAsync<ValidationException>(() => _authService.RegisterAsync(request));
 
         var user = await _userManager.FindByEmailAsync("mismatch@example.com");
@@ -144,7 +145,7 @@ public class AuthServiceShould : IDisposable
     [Fact]
     public async Task Register_Invalid_AccountType_Rejected()
     {
-        var request = new RegisterRequest("Test User", "invalidtype@example.com", "+972599777777", "Password123!", "Password123!", "InvalidRole");
+        var request = new RegisterRequest("Test User", "invalidtype@example.com", "Password123!", "Password123!", "InvalidRole");
         await Assert.ThrowsAsync<ValidationException>(() => _authService.RegisterAsync(request));
 
         var user = await _userManager.FindByEmailAsync("invalidtype@example.com");
@@ -155,10 +156,10 @@ public class AuthServiceShould : IDisposable
     public async Task Register_Invalid_DoesNotCreateUser()
     {
         var countBefore = await _context.Users.CountAsync();
-        var request = new RegisterRequest("", "bademail", "+972599888888", "short", "short", ApplicationRoles.RegisteredUser);
+        var request = new RegisterRequest("", "bademail", "short", "short", ApplicationRoles.RegisteredUser);
         // This will be caught by validator in controller, but service also should handle CreateAsync failure
         // We test service's handling of weak password
-        var weakRequest = new RegisterRequest("Test", "testweak@example.com", "+972599888888", "weak", "weak", ApplicationRoles.RegisteredUser);
+        var weakRequest = new RegisterRequest("Test", "testweak@example.com", "weak", "weak", ApplicationRoles.RegisteredUser);
         await Assert.ThrowsAsync<ValidationException>(() => _authService.RegisterAsync(weakRequest));
         var countAfter = await _context.Users.CountAsync();
         Assert.Equal(countBefore, countAfter);
@@ -167,7 +168,7 @@ public class AuthServiceShould : IDisposable
     [Fact]
     public async Task Register_Password_NotStoredAsPlainText()
     {
-        var request = new RegisterRequest("Secure User", "secure@example.com", "+972599999999", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
+        var request = new RegisterRequest("Secure User", "secure@example.com", "Password123!", "Password123!", ApplicationRoles.RegisteredUser);
         await _authService.RegisterAsync(request);
 
         var user = await _userManager.FindByEmailAsync("secure@example.com");
@@ -178,20 +179,19 @@ public class AuthServiceShould : IDisposable
     }
 
     [Fact]
-    public async Task Register_Persists_FullName_Email_Phone_AccountType()
+    public async Task Register_Persists_FullName_Email_AccountType()
     {
-        var request = new RegisterRequest("Persist Test", "persist@example.com", "+972599000001", "Password123!", "Password123!", ApplicationRoles.HallOwner);
+        var request = new RegisterRequest("Persist Test", "persist@example.com", "Password123!", "Password123!", ApplicationRoles.HallOwner);
         var response = await _authService.RegisterAsync(request);
 
         Assert.Equal("Persist Test", response.FullName);
         Assert.Equal("persist@example.com", response.Email);
-        Assert.Equal("+972599000001", response.PhoneNumber);
         Assert.Equal(ApplicationRoles.HallOwner, response.AccountType);
 
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == "persist@example.com");
         Assert.NotNull(user);
         Assert.Equal("Persist Test", user.FullName);
-        Assert.Equal("+972599000001", user.PhoneNumber);
+        Assert.Null(user.PhoneNumber);
     }
 
     [Fact]
@@ -360,7 +360,6 @@ public class AuthServiceShould : IDisposable
         await _authService.RegisterAsync(new RegisterRequest(
             "Reset Tester",
             email,
-            "+972599000099",
             "Password123!",
             "Password123!",
             ApplicationRoles.RegisteredUser));
