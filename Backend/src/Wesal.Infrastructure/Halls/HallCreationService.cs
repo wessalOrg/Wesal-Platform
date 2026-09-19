@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Hosting;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -14,18 +13,18 @@ public class HallCreationService : IHallCreationService
     private readonly ICurrentUserService _currentUser;
     private readonly IHallRepository _hallRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IWebHostEnvironment _env;
+    private readonly IHallMediaStorage _mediaStorage;
 
     private static readonly string[] PermittedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
     private static readonly string[] PermittedMimeTypes = new[] { "image/jpeg", "image/png", "image/webp" };
     private const long MaxFileSize = 5 * 1024 * 1024; // 5MB
 
-    public HallCreationService(ICurrentUserService currentUser, IHallRepository hallRepository, IUnitOfWork unitOfWork, IWebHostEnvironment env)
+    public HallCreationService(ICurrentUserService currentUser, IHallRepository hallRepository, IUnitOfWork unitOfWork, IHallMediaStorage mediaStorage)
     {
         _currentUser = currentUser;
         _hallRepository = hallRepository;
         _unitOfWork = unitOfWork;
-        _env = env;
+        _mediaStorage = mediaStorage;
     }
 
     public async Task<CreateHallResponse> CreateHallAsync(CreateHallRequest request, CancellationToken cancellationToken = default)
@@ -110,7 +109,7 @@ public class HallCreationService : IHallCreationService
             };
 
             var images = new List<HallImage>();
-            var uploadsRoot = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "halls", hall.Id.ToString());
+            var uploadsRoot = _mediaStorage.HallsUploadDirectory(hall.Id);
             Directory.CreateDirectory(uploadsRoot);
 
             int order = 0;
@@ -153,7 +152,7 @@ public class HallCreationService : IHallCreationService
             // Clean up any files written
             try
             {
-                var uploadsRoot = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "halls", hall.Id.ToString());
+                var uploadsRoot = _mediaStorage.HallsUploadDirectory(hall.Id);
                 if (Directory.Exists(uploadsRoot))
                     Directory.Delete(uploadsRoot, true);
             }
@@ -165,7 +164,7 @@ public class HallCreationService : IHallCreationService
             await transaction.RollbackAsync(cancellationToken);
             try
             {
-                var uploadsRoot = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "halls", hall.Id.ToString());
+                var uploadsRoot = _mediaStorage.HallsUploadDirectory(hall.Id);
                 if (Directory.Exists(uploadsRoot))
                     Directory.Delete(uploadsRoot, true);
             }

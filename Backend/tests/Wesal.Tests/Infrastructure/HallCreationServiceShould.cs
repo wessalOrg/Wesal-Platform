@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,12 +21,12 @@ public class HallCreationServiceShould : IDisposable
         var services = new ServiceCollection();
         services.AddDbContext<ApplicationDbContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString()));
         services.AddLogging();
-        services.AddSingleton<IWebHostEnvironment>(new FakeWebHostEnvironment());
+        services.AddSingleton<IHallMediaStorage>(new FakeHallMediaStorage());
         _provider = services.BuildServiceProvider();
         _context = _provider.GetRequiredService<ApplicationDbContext>();
         _context.Database.EnsureCreated();
         _currentUser = new FakeCurrentUser("owner-1", true, Wesal.Domain.Constants.ApplicationRoles.HallOwner);
-        _service = new HallCreationService(_currentUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IWebHostEnvironment>());
+        _service = new HallCreationService(_currentUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>());
     }
 
     private class FakeCurrentUser : Wesal.Application.Common.Interfaces.ICurrentUserService
@@ -40,14 +39,11 @@ public class HallCreationServiceShould : IDisposable
         public IReadOnlyList<string> Roles { get; }
     }
 
-    private class FakeWebHostEnvironment : IWebHostEnvironment
+    private class FakeHallMediaStorage : IHallMediaStorage
     {
-        public string WebRootPath { get; set; } = Path.Combine(Path.GetTempPath(), "wesal-test-" + Guid.NewGuid());
-        public string EnvironmentName { get; set; } = "Development";
-        public string ApplicationName { get; set; } = "Test";
-        public string ContentRootPath { get; set; } = Directory.GetCurrentDirectory();
-        public Microsoft.Extensions.FileProviders.IFileProvider WebRootFileProvider { get; set; } = null!;
-        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = null!;
+        private readonly string _root = Path.Combine(Path.GetTempPath(), "wesal-media-test-" + Guid.NewGuid());
+        public string Root => _root;
+        public string HallsUploadDirectory(Guid hallId) => Path.Combine(_root, "halls", hallId.ToString());
     }
 
     private class TestHallRepository : Wesal.Application.Common.Interfaces.Persistence.IHallRepository
@@ -188,7 +184,7 @@ public class HallCreationServiceShould : IDisposable
     [Fact]
     public async Task Unauthenticated_Rejected()
     {
-        var unauthService = new HallCreationService(new FakeCurrentUser(null, false, ""), new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IWebHostEnvironment>());
+        var unauthService = new HallCreationService(new FakeCurrentUser(null, false, ""), new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>());
         var request = CreateValidRequest();
         await Assert.ThrowsAsync<UnauthorizedException>(() => unauthService.CreateHallAsync(request));
     }
@@ -197,7 +193,7 @@ public class HallCreationServiceShould : IDisposable
     public async Task RegularUser_Rejected()
     {
         var regUser = new FakeCurrentUser("user-2", true, Wesal.Domain.Constants.ApplicationRoles.RegisteredUser);
-        var service = new HallCreationService(regUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IWebHostEnvironment>());
+        var service = new HallCreationService(regUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>());
         var request = CreateValidRequest();
         await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateHallAsync(request));
     }

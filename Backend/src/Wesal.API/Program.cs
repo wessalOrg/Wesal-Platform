@@ -4,6 +4,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
 using ModelContextProtocol.AspNetCore;
 using Serilog;
@@ -12,6 +13,7 @@ using Wesal.API.Filters;
 using Wesal.Application;
 using Wesal.Infrastructure;
 using Wesal.Infrastructure.Conversations;
+using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Logging;
 using Wesal.Infrastructure.Middleware;
 using Wesal.Infrastructure.OwnerDashboard;
@@ -186,6 +188,15 @@ try
 
     app.UseDefaultFiles();
     app.UseStaticFiles();
+
+    // Serve hall media uploads from the writable media storage root (e.g. /tmp/wesal-media),
+    // keeping the public URL scheme /uploads/halls/{hallId}/{fileName}.
+    var mediaStorage = app.Services.GetRequiredService<IHallMediaStorage>();
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        RequestPath = "/uploads",
+        FileProvider = new PhysicalFileProvider(mediaStorage.Root)
+    });
 
     app.UseCors(CorsPolicyName);
 

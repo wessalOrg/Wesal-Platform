@@ -86,6 +86,8 @@ public static class DependencyInjection
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IOwnerSidebarService, OwnerSidebarService>();
         services.AddScoped<IHallCreationService, HallCreationService>();
+        services.AddOptions<HallMediaOptions>().Bind(configuration.GetSection(HallMediaOptions.SectionName));
+        services.AddSingleton<IHallMediaStorage, HallMediaStorage>();
         services.AddScoped<IHallInitiationService, HallInitiationService>();
         services.AddScoped<IHallStatusTrackingService, HallStatusTrackingService>();
         services.AddScoped<IOwnerHallService, OwnerHallService>();
