@@ -134,6 +134,63 @@ public sealed class ProfileService : IProfileService
         };
     }
 
+    public async Task<ChangePasswordResponse> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await GetCurrentUserAsync(cancellationToken);
+
+        if (request.NewPassword != request.ConfirmPassword)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["ConfirmPassword"] = new[] { "New password and confirm password do not match." }
+            });
+        }
+
+        if (request.CurrentPassword == request.NewPassword)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["NewPassword"] = new[] { "New password must be different from the current password." }
+            });
+        }
+
+        var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            var passwordMismatch = result.Errors
+                .FirstOrDefault(e => string.Equals(e.Code, "PasswordMismatch", StringComparison.OrdinalIgnoreCase));
+            if (passwordMismatch is not null)
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    ["CurrentPassword"] = new[] { "The current password is incorrect." }
+                });
+            }
+
+            var policyErrors = result.Errors
+                .Where(e => IsPasswordPolicyError(e.Code))
+                .Select(e => e.Description)
+                .ToArray();
+            if (policyErrors.Length > 0)
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    ["NewPassword"] = policyErrors
+                });
+            }
+
+            var errors = result.Errors.GroupBy(e => e.Code)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray());
+            throw new ValidationException(errors);
+        }
+
+        return new ChangePasswordResponse { Message = "Password changed successfully." };
+    }
+
+    private static bool IsPasswordPolicyError(string code)
+        => code.StartsWith("PasswordRequires", StringComparison.OrdinalIgnoreCase)
+            || code.Equals("PasswordTooShort", StringComparison.OrdinalIgnoreCase);
+
     private async Task<ApplicationUser> GetCurrentUserAsync(CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUser.UserId))

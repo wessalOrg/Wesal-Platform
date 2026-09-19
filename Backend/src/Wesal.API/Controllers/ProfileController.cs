@@ -39,4 +39,14 @@ public class ProfileController : ControllerBase
         var response = await _profileService.UpdateProfileAsync(request, cancellationToken);
         return Ok(response);
     }
+
+    [HttpPost("change-password")]
+    [ProducesResponseType(typeof(ChangePasswordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ChangePasswordResponse>> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        var response = await _profileService.ChangePasswordAsync(request, cancellationToken);
+        return Ok(response);
+    }
 }

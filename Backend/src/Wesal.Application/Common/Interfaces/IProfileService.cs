@@ -6,4 +6,5 @@ public interface IProfileService
 {
     Task<ProfileResponse> GetProfileAsync(CancellationToken cancellationToken = default);
     Task<ProfileResponse> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default);
+    Task<ChangePasswordResponse> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default);
 }

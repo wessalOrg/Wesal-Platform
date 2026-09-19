@@ -1,5 +1,5 @@
 import api from "@/lib/api";
-import { ApiError } from "@/lib/api-error";
+import { ApiError, getApiFieldMessages } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
 import { getRegisterPasswordIssue } from "@/lib/register-validation";
 import { profileUsesMock } from "@/services/profile";
@@ -86,6 +86,47 @@ async function mockChangePassword(input: ChangePasswordInput): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 350));
 }
 
+const CHANGE_PASSWORD_FIELDS: ChangePasswordField[] = [
+  "currentPassword",
+  "newPassword",
+  "confirmPassword",
+];
+
+function localizeChangePasswordField(
+  field: ChangePasswordField,
+  message: string,
+): string | null {
+  const lower = message.toLowerCase();
+
+  if (field === "currentPassword") {
+    return "seeker.settings.password.errors.currentInvalid";
+  }
+
+  if (field === "confirmPassword") {
+    return lower.includes("match")
+      ? "auth.register.form.error.passwordMismatch"
+      : "auth.register.form.error.confirmPassword";
+  }
+
+  if (field === "newPassword") {
+    if (lower.includes("different")) return "seeker.settings.password.errors.sameAsCurrent";
+    if (lower.includes("uppercase")) return "auth.register.form.error.passwordUpper";
+    if (lower.includes("lowercase")) return "auth.register.form.error.passwordLower";
+    if (lower.includes("digit") || lower.includes("number")) {
+      return "auth.register.form.error.passwordDigit";
+    }
+    if (lower.includes("special") || lower.includes("alphanumeric")) {
+      return "auth.register.form.error.passwordSpecial";
+    }
+    if (lower.includes("at least") || lower.includes("minimum") || lower.includes("too short")) {
+      return "auth.register.form.error.passwordMin";
+    }
+    return "auth.register.form.error.password";
+  }
+
+  return null;
+}
+
 async function apiChangePassword(input: ChangePasswordInput): Promise<void> {
   const fields = validateChangePassword(input);
   if (Object.keys(fields).length) {
@@ -105,17 +146,22 @@ async function apiChangePassword(input: ChangePasswordInput): Promise<void> {
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.status === 400 || err.status === 422) {
+        const fieldErrors: ChangePasswordFieldErrors = {};
+        for (const field of CHANGE_PASSWORD_FIELDS) {
+          const message = getApiFieldMessages(err, field)[0];
+          if (!message) continue;
+          const key = localizeChangePasswordField(field, message);
+          if (key) fieldErrors[field] = key;
+        }
+        if (Object.keys(fieldErrors).length > 0) {
+          throw new ChangePasswordError("seeker.settings.password.errors.invalid", fieldErrors);
+        }
         throw new ChangePasswordError("seeker.settings.password.errors.invalid", {
           currentPassword: "seeker.settings.password.errors.currentInvalid",
         });
       }
       if (err.status === 401) {
         throw new ChangePasswordError("seeker.settings.password.errors.unauthorized");
-      }
-      if (err.status === 404) {
-        // Endpoint not shipped yet — keep UX usable for demos with a live token.
-        await mockChangePassword(input);
-        return;
       }
     }
     throw new ChangePasswordError("seeker.settings.password.errors.generic");

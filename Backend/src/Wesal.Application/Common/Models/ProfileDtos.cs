@@ -15,3 +15,15 @@ public class UpdateProfileRequest
     public string PhoneNumber { get; init; } = string.Empty;
     public string? ConcurrencyStamp { get; init; }
 }
+
+public class ChangePasswordRequest
+{
+    public string CurrentPassword { get; init; } = string.Empty;
+    public string NewPassword { get; init; } = string.Empty;
+    public string ConfirmPassword { get; init; } = string.Empty;
+}
+
+public class ChangePasswordResponse
+{
+    public string Message { get; init; } = string.Empty;
+}
