@@ -84,40 +84,20 @@ public class BookingRequestService : IBookingRequestService
 
         var configuredPeriods = await EnsureConfiguredBookingPeriodsAsync(hall.Id, request.Periods, cancellationToken);
 
-        IWesalTransaction? transaction = null;
-
-        try
+        var bookings = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
             await ReservePeriodsAsync(hall, request.Date, request.Periods, cancellationToken);
 
-            var bookings = await PersistRequestedBookingsAsync(hall, request.Date, requesterUserId, request.Periods, cancellationToken);
+            var createdBookings = await PersistRequestedBookingsAsync(hall, request.Date, requesterUserId, request.Periods, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await transaction.CommitAsync(cancellationToken);
+            return createdBookings;
+        }, cancellationToken);
 
-            await NotifyOwnerAsync(hall, request.Date, requesterUserId, bookings, cancellationToken);
+        await NotifyOwnerAsync(hall, request.Date, requesterUserId, bookings, cancellationToken);
 
-            return MapToResult(hall, request.Date, requesterUserId, bookings);
-        }
-        catch
-        {
-            if (transaction is not null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-            }
-
-            throw;
-        }
-        finally
-        {
-            if (transaction is not null)
-            {
-                await transaction.DisposeAsync();
-            }
-        }
+        return MapToResult(hall, request.Date, requesterUserId, bookings);
     }
 
     private string EnsureAuthenticatedRequester()

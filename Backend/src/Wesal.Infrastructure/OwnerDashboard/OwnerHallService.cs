@@ -81,12 +81,8 @@ public sealed class OwnerHallService : IOwnerHallService
         HallManagementAccess.EnsureAllowed(hall);
         EnsureEditable(hall);
 
-        IWesalTransaction? transaction = null;
-
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
             ApplyHallDetails(hall, request);
 
             // Resubmission (FR-ADM-01, US-ADMIN-03): editing a Rejected hall re-queues
@@ -98,25 +94,7 @@ public sealed class OwnerHallService : IOwnerHallService
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            if (transaction is not null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-            }
-
-            throw;
-        }
-        finally
-        {
-            if (transaction is not null)
-            {
-                await transaction.DisposeAsync();
-            }
-        }
+        }, cancellationToken);
 
         return MapToDetails(hall);
     }
@@ -141,12 +119,8 @@ public sealed class OwnerHallService : IOwnerHallService
         hall.IsDeleted = true;
         hall.UpdatedAt = DateTimeOffset.UtcNow;
 
-        IWesalTransaction? transaction = null;
-
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             if (_cleanupService is not null)
@@ -161,25 +135,7 @@ public sealed class OwnerHallService : IOwnerHallService
                     // background/fallback cleanup will retry. Do not rollback deletion.
                 }
             }
-
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            if (transaction is not null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-            }
-
-            throw;
-        }
-        finally
-        {
-            if (transaction is not null)
-            {
-                await transaction.DisposeAsync();
-            }
-        }
+        }, cancellationToken);
     }
 
     private async Task<string> ResolveOwnerAsync(CancellationToken cancellationToken)

@@ -68,12 +68,8 @@ public sealed class BookingPublishingService : IBookingPublishingService
 
         EnsurePublishable(booking);
 
-        IWesalTransaction? transaction = null;
-
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
             // Mandatory final server-side availability re-check: the requested
             // hall/date/period must still be claimable by this booking alone.
             var hasCompetingClaim = await _bookingRepository.HasOtherActiveBookingsAsync(
@@ -108,25 +104,7 @@ public sealed class BookingPublishingService : IBookingPublishingService
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            if (transaction is not null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-            }
-
-            throw;
-        }
-        finally
-        {
-            if (transaction is not null)
-            {
-                await transaction.DisposeAsync();
-            }
-        }
+        }, cancellationToken);
 
         return MapToResult(booking);
     }

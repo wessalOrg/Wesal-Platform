@@ -65,12 +65,8 @@ public sealed class BookingRejectionService : IBookingRejectionService
             return MapToResult(booking, isAlreadyRejected: true);
         }
 
-        IWesalTransaction? transaction = null;
-
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
             booking.Status = BookingStatus.Rejected;
             booking.RejectionReason = request.Reason.Trim();
 
@@ -91,25 +87,7 @@ public sealed class BookingRejectionService : IBookingRejectionService
                     booking.Period,
                     cancellationToken);
             }
-
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            if (transaction is not null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-            }
-
-            throw;
-        }
-        finally
-        {
-            if (transaction is not null)
-            {
-                await transaction.DisposeAsync();
-            }
-        }
+        }, cancellationToken);
 
         var notificationStatus = BookingRejectionNotificationStatus.Deferred;
 

@@ -352,19 +352,14 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
 
         public TestInMemoryUnitOfWork(ApplicationDbContext ctx) => _ctx = ctx;
 
-        public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IWesalTransaction>(new FakeTransaction());
+        public Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> operation, CancellationToken cancellationToken = default)
+            => operation();
+
+        public Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default)
+            => operation();
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
             => _ctx.SaveChangesAsync(cancellationToken);
-
-        private sealed class FakeTransaction : IWesalTransaction
-        {
-            public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-            public Task RollbackAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-            public void Dispose() { }
-        }
     }
 
     private sealed class StubOwnerSidebarService : IOwnerSidebarService

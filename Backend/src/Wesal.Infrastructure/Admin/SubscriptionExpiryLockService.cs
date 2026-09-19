@@ -63,32 +63,38 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
 
         foreach (var candidate in candidates)
         {
-            await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
             try
             {
                 // Atomic payment-state check + lock-set: re-read the freshest committed
                 // state inside the transaction and re-validate every predicate so a
                 // payment that landed since the candidate scan is never locked.
-                var hall = await _hallRepository.GetHallByIdForUpdateAsync(candidate.Id, cancellationToken);
-
-                if (hall is null
-                    || hall.IsDeleted
-                    || hall.Status != HallStatus.Approved
-                    || hall.PaymentStatus != HallPaymentStatus.Paid
-                    || hall.SystemLocked
-                    || hall.SubscriptionCycleEnd is null
-                    || hall.SubscriptionCycleEnd >= today)
+                var hall = await _unitOfWork.ExecuteInTransactionAsync<Hall?>(async () =>
                 {
-                    await transaction.RollbackAsync(cancellationToken);
+                    var current = await _hallRepository.GetHallByIdForUpdateAsync(candidate.Id, cancellationToken);
+
+                    if (current is null
+                        || current.IsDeleted
+                        || current.Status != HallStatus.Approved
+                        || current.PaymentStatus != HallPaymentStatus.Paid
+                        || current.SystemLocked
+                        || current.SubscriptionCycleEnd is null
+                        || current.SubscriptionCycleEnd >= today)
+                    {
+                        return null;
+                    }
+
+                    current.SystemLocked = true;
+                    current.UpdatedAt = _dateTime.Now;
+
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                    return current;
+                }, cancellationToken);
+
+                if (hall is null)
+                {
                     continue;
                 }
-
-                hall.SystemLocked = true;
-                hall.UpdatedAt = _dateTime.Now;
-
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
 
                 locked++;
 
@@ -102,7 +108,6 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync(cancellationToken);
                 _logger.LogWarning(ex, "Failed to automatically lock hall {HallId} for an expired subscription cycle", candidate.Id);
             }
         }

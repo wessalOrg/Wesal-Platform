@@ -668,13 +668,40 @@ public class BookingRejectionServiceShould
             ThrowOnNextSave = false;
         }
 
-        public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> operation, CancellationToken cancellationToken = default)
         {
             var snapshot = _bookings
                 .Select(b => new BookingStatusSnapshot(b.Id, b.Status))
                 .ToList();
 
-            return Task.FromResult<IWesalTransaction>(new FakeTransaction(snapshot, _bookings, _onCommit, _onRollback));
+            try
+            {
+                var result = await operation();
+                _onCommit?.Invoke();
+                return result;
+            }
+            catch
+            {
+                Restore(snapshot);
+                _onRollback?.Invoke();
+                throw;
+            }
+        }
+
+        public Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default)
+            => ExecuteInTransactionAsync<byte>(async () => { await operation(); return 0; }, cancellationToken);
+
+        private void Restore(IReadOnlyList<BookingStatusSnapshot> snapshot)
+        {
+            foreach (var item in snapshot)
+            {
+                var booking = _bookings.FirstOrDefault(b => b.Id == item.Id);
+
+                if (booking is not null)
+                {
+                    booking.Status = item.Status;
+                }
+            }
         }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -697,65 +724,6 @@ public class BookingRejectionServiceShould
             _onCommit?.Invoke();
 
             return Task.FromResult(1);
-        }
-    }
-
-    private sealed class FakeTransaction : IWesalTransaction
-    {
-        private readonly IReadOnlyList<BookingStatusSnapshot> _snapshot;
-        private readonly List<Booking> _bookings;
-        private readonly Action? _onCommit;
-        private readonly Action? _onRollback;
-        private bool _completed;
-
-        public FakeTransaction(
-            IReadOnlyList<BookingStatusSnapshot> snapshot,
-            List<Booking> bookings,
-            Action? onCommit,
-            Action? onRollback)
-        {
-            _snapshot = snapshot;
-            _bookings = bookings;
-            _onCommit = onCommit;
-            _onRollback = onRollback;
-        }
-
-        public Task CommitAsync(CancellationToken cancellationToken = default)
-        {
-            _onCommit?.Invoke();
-            _completed = true;
-            return Task.CompletedTask;
-        }
-
-        public Task RollbackAsync(CancellationToken cancellationToken = default)
-        {
-            Restore();
-            _onRollback?.Invoke();
-            return Task.CompletedTask;
-        }
-
-        public ValueTask DisposeAsync()
-        {
-            if (!_completed)
-            {
-                Restore();
-                _onRollback?.Invoke();
-            }
-
-            return ValueTask.CompletedTask;
-        }
-
-        private void Restore()
-        {
-            foreach (var snapshot in _snapshot)
-            {
-                var booking = _bookings.FirstOrDefault(b => b.Id == snapshot.Id);
-
-                if (booking is not null)
-                {
-                    booking.Status = snapshot.Status;
-                }
-            }
         }
     }
 

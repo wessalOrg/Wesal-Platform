@@ -56,12 +56,8 @@ public sealed class BookingCancellationService : IBookingCancellationService
             throw new ConflictException(BuildFinalizedMessage(booking.Status));
         }
 
-        IWesalTransaction? transaction = null;
-
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
             var updatedRows = await _bookingRepository.CancelPendingAsync(
                 booking.Id,
                 booking.RequesterUserId,
@@ -92,25 +88,7 @@ public sealed class BookingCancellationService : IBookingCancellationService
             await DeliverCancellationMessageAsync(booking, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            if (transaction is not null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-            }
-
-            throw;
-        }
-        finally
-        {
-            if (transaction is not null)
-            {
-                await transaction.DisposeAsync();
-            }
-        }
+        }, cancellationToken);
 
         return MapToResult(booking);
     }

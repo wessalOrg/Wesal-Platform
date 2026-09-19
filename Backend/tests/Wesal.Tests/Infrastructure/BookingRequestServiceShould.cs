@@ -767,8 +767,23 @@ public class BookingRequestServiceShould
 
         public int SaveCount { get; private set; }
 
-        public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IWesalTransaction>(Transaction);
+        public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> operation, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await operation();
+                await Transaction.CommitAsync(cancellationToken);
+                return result;
+            }
+            catch
+            {
+                await Transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        }
+
+        public Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default)
+            => ExecuteInTransactionAsync<byte>(async () => { await operation(); return 0; }, cancellationToken);
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -777,7 +792,7 @@ public class BookingRequestServiceShould
         }
     }
 
-    private sealed class FakeWesalTransaction : IWesalTransaction
+    private sealed class FakeWesalTransaction
     {
         public bool Committed { get; private set; }
 
@@ -794,8 +809,6 @@ public class BookingRequestServiceShould
             RolledBack = true;
             return Task.CompletedTask;
         }
-
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     internal sealed class FakeOwnerBookingRequestNotifier : IOwnerBookingRequestNotifier

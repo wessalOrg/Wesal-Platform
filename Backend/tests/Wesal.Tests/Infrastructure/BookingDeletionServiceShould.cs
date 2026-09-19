@@ -294,14 +294,29 @@ public class BookingDeletionServiceShould
     {
         public FakeWesalTransaction Transaction { get; } = new();
 
-        public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IWesalTransaction>(Transaction);
+        public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> operation, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await operation();
+                await Transaction.CommitAsync(cancellationToken);
+                return result;
+            }
+            catch
+            {
+                await Transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        }
+
+        public Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default)
+            => ExecuteInTransactionAsync<byte>(async () => { await operation(); return 0; }, cancellationToken);
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(1);
     }
 
-    private sealed class FakeWesalTransaction : IWesalTransaction
+    private sealed class FakeWesalTransaction
     {
         public bool Committed { get; private set; }
 
@@ -317,16 +332,6 @@ public class BookingDeletionServiceShould
         {
             RolledBack = true;
             return Task.CompletedTask;
-        }
-
-        public ValueTask DisposeAsync()
-        {
-            if (!Committed && !RolledBack)
-            {
-                RolledBack = true;
-            }
-
-            return ValueTask.CompletedTask;
         }
     }
 

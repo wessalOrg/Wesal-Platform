@@ -142,16 +142,11 @@ public class AuthorizationHallActionsShould
 
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
-        public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IWesalTransaction>(new FakeWesalTransaction());
+        public Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> operation, CancellationToken cancellationToken = default)
+            => operation();
+        public Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default)
+            => operation();
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
-    }
-
-    private sealed class FakeWesalTransaction : IWesalTransaction
-    {
-        public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task RollbackAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private static BookingRequestService CreateBookingService(

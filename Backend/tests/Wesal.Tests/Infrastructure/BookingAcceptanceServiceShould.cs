@@ -425,13 +425,39 @@ public class BookingAcceptanceServiceShould
 
         public bool RolledBack { get; set; }
 
-        public Task<IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> operation, CancellationToken cancellationToken = default)
         {
             var snapshot = _bookings
                 .Select(b => new BookingStatusSnapshot(b.Id, b.Status))
                 .ToList();
 
-            return Task.FromResult<IWesalTransaction>(new FakeWesalTransaction(this, snapshot, _bookings));
+            try
+            {
+                var result = await operation();
+                return result;
+            }
+            catch
+            {
+                Restore(snapshot);
+                RolledBack = true;
+                throw;
+            }
+        }
+
+        public Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default)
+            => ExecuteInTransactionAsync<byte>(async () => { await operation(); return 0; }, cancellationToken);
+
+        private void Restore(IReadOnlyList<BookingStatusSnapshot> snapshot)
+        {
+            foreach (var item in snapshot)
+            {
+                var booking = _bookings.FirstOrDefault(b => b.Id == item.Id);
+
+                if (booking is not null)
+                {
+                    booking.Status = item.Status;
+                }
+            }
         }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -442,61 +468,6 @@ public class BookingAcceptanceServiceShould
             }
 
             return Task.FromResult(1);
-        }
-    }
-
-    private sealed class FakeWesalTransaction : IWesalTransaction
-    {
-        private readonly FakeUnitOfWork _unitOfWork;
-        private readonly IReadOnlyList<BookingStatusSnapshot> _snapshot;
-        private readonly List<Booking> _bookings;
-        private bool _completed;
-
-        public FakeWesalTransaction(
-            FakeUnitOfWork unitOfWork,
-            IReadOnlyList<BookingStatusSnapshot> snapshot,
-            List<Booking> bookings)
-        {
-            _unitOfWork = unitOfWork;
-            _snapshot = snapshot;
-            _bookings = bookings;
-        }
-
-        public Task CommitAsync(CancellationToken cancellationToken = default)
-        {
-            _completed = true;
-            return Task.CompletedTask;
-        }
-
-        public Task RollbackAsync(CancellationToken cancellationToken = default)
-        {
-            Restore();
-            _unitOfWork.RolledBack = true;
-            return Task.CompletedTask;
-        }
-
-        public ValueTask DisposeAsync()
-        {
-            if (!_completed)
-            {
-                Restore();
-                _unitOfWork.RolledBack = true;
-            }
-
-            return ValueTask.CompletedTask;
-        }
-
-        private void Restore()
-        {
-            foreach (var snapshot in _snapshot)
-            {
-                var booking = _bookings.FirstOrDefault(b => b.Id == snapshot.Id);
-
-                if (booking is not null)
-                {
-                    booking.Status = snapshot.Status;
-                }
-            }
         }
     }
 

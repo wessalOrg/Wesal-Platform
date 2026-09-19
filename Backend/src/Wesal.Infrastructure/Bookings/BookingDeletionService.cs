@@ -72,12 +72,8 @@ public sealed class BookingDeletionService : IBookingDeletionService
 
         HallManagementAccess.EnsureAllowed(booking.Hall!);
 
-        IWesalTransaction? transaction = null;
-
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
             var deletedRows = await _bookingRepository.DeleteAsync(
                 booking.Id,
                 cancellationToken);
@@ -107,25 +103,7 @@ public sealed class BookingDeletionService : IBookingDeletionService
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            if (transaction is not null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-            }
-
-            throw;
-        }
-        finally
-        {
-            if (transaction is not null)
-            {
-                await transaction.DisposeAsync();
-            }
-        }
+        }, cancellationToken);
 
         return MapToResult(booking);
     }

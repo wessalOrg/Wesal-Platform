@@ -89,11 +89,8 @@ public sealed class OwnerAvailabilityService : IOwnerAvailabilityService
         if (template is null)
             throw new ValidationException(new Dictionary<string, string[]> { ["PeriodType"] = new[] { "Booking period does not belong to this hall." } });
 
-        IWesalTransaction? transaction = null;
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
             if (request.Status == AvailabilityStatus.Booked)
             {
                 var reserved = await _bookingRepository.ReservePeriodAsync(hallId, request.Date, request.PeriodType, cancellationToken);
@@ -113,19 +110,7 @@ public sealed class OwnerAvailabilityService : IOwnerAvailabilityService
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            if (transaction is not null)
-                await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
-        finally
-        {
-            if (transaction is not null)
-                await transaction.DisposeAsync();
-        }
+        }, cancellationToken);
 
         // Return authoritative persisted state
         var availability = await _hallRepository.GetAvailabilityAsync([hallId], request.Date, request.Date, cancellationToken);

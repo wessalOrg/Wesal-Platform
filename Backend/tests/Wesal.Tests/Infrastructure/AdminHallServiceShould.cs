@@ -65,9 +65,9 @@ public class AdminHallServiceShould : IDisposable
     {
         private readonly ApplicationDbContext _ctx;
         public TestUnitOfWork(ApplicationDbContext ctx) => _ctx = ctx;
-        public Task<Wesal.Application.Common.Interfaces.Persistence.IWesalTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) => Task.FromResult<Wesal.Application.Common.Interfaces.Persistence.IWesalTransaction>(new FakeTransaction());
+        public Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> operation, CancellationToken cancellationToken = default) => operation();
+        public Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default) => operation();
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => _ctx.SaveChangesAsync(cancellationToken);
-        private class FakeTransaction : Wesal.Application.Common.Interfaces.Persistence.IWesalTransaction { public Task CommitAsync(CancellationToken ct = default) => Task.CompletedTask; public Task RollbackAsync(CancellationToken ct = default) => Task.CompletedTask; public ValueTask DisposeAsync() => ValueTask.CompletedTask; public void Dispose() {} }
     }
 
     private Hall CreateHall(HallStatus status = HallStatus.PendingReview)

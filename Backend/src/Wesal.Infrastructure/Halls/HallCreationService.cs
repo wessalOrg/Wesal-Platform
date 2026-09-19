@@ -99,72 +99,59 @@ public class HallCreationService : IHallCreationService
             IsDeleted = false
         };
 
-        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        var uploadsRoot = _mediaStorage.HallsUploadDirectory(hall.Id);
+
         try
         {
-            hall.BookingPeriods = new List<HallBookingPeriod>
+            return await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
-                new HallBookingPeriod { HallId = hall.Id, Type = BookingPeriodType.FirstPeriod, StartTime = request.FirstPeriodStart, EndTime = request.FirstPeriodEnd },
-                new HallBookingPeriod { HallId = hall.Id, Type = BookingPeriodType.SecondPeriod, StartTime = request.SecondPeriodStart, EndTime = request.SecondPeriodEnd }
-            };
+                hall.BookingPeriods = new List<HallBookingPeriod>
+                {
+                    new HallBookingPeriod { HallId = hall.Id, Type = BookingPeriodType.FirstPeriod, StartTime = request.FirstPeriodStart, EndTime = request.FirstPeriodEnd },
+                    new HallBookingPeriod { HallId = hall.Id, Type = BookingPeriodType.SecondPeriod, StartTime = request.SecondPeriodStart, EndTime = request.SecondPeriodEnd }
+                };
 
-            var images = new List<HallImage>();
-            var uploadsRoot = _mediaStorage.HallsUploadDirectory(hall.Id);
-            Directory.CreateDirectory(uploadsRoot);
+                var images = new List<HallImage>();
+                Directory.CreateDirectory(uploadsRoot);
 
-            int order = 0;
-            foreach (var photo in validatedPhotos)
-            {
-                var fileName = $"{Guid.NewGuid()}{photo.Extension}";
-                var filePath = Path.Combine(uploadsRoot, fileName);
-                await File.WriteAllBytesAsync(filePath, photo.Content, cancellationToken);
-                var url = $"/uploads/halls/{hall.Id}/{fileName}";
-                var image = new HallImage { HallId = hall.Id, Url = url, DisplayOrder = order++, IsDeleted = false };
-                images.Add(image);
-            }
-            hall.Images = images;
-            if (images.Count > 0)
-                hall.MainImageUrl = images[0].Url;
+                int order = 0;
+                foreach (var photo in validatedPhotos)
+                {
+                    var fileName = $"{Guid.NewGuid()}{photo.Extension}";
+                    var filePath = Path.Combine(uploadsRoot, fileName);
+                    await File.WriteAllBytesAsync(filePath, photo.Content, cancellationToken);
+                    var url = $"/uploads/halls/{hall.Id}/{fileName}";
+                    var image = new HallImage { HallId = hall.Id, Url = url, DisplayOrder = order++, IsDeleted = false };
+                    images.Add(image);
+                }
+                hall.Images = images;
+                if (images.Count > 0)
+                    hall.MainImageUrl = images[0].Url;
 
-            await _hallRepository.AddAsync(hall, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _hallRepository.AddAsync(hall, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await transaction.CommitAsync(cancellationToken);
-
-            return new CreateHallResponse
-            {
-                HallId = hall.Id,
-                Name = hall.Name,
-                ContactPhone = hall.ContactPhone!,
-                Region = hall.Region,
-                Address = hall.Address,
-                Description = hall.Description!,
-                Capacity = hall.Capacity,
-                Price = hall.Price,
-                Status = hall.Status,
-                BookingPeriods = hall.BookingPeriods.Select(p => new HallBookingPeriodDto { Type = p.Type, StartTime = p.StartTime, EndTime = p.EndTime }).ToList(),
-                Images = images.Select(i => new HallImageDto { Id = i.Id, Url = i.Url }).ToList()
-            };
-        }
-        catch (ValidationException)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            // Clean up any files written
-            try
-            {
-                var uploadsRoot = _mediaStorage.HallsUploadDirectory(hall.Id);
-                if (Directory.Exists(uploadsRoot))
-                    Directory.Delete(uploadsRoot, true);
-            }
-            catch { }
-            throw;
+                return new CreateHallResponse
+                {
+                    HallId = hall.Id,
+                    Name = hall.Name,
+                    ContactPhone = hall.ContactPhone!,
+                    Region = hall.Region,
+                    Address = hall.Address,
+                    Description = hall.Description!,
+                    Capacity = hall.Capacity,
+                    Price = hall.Price,
+                    Status = hall.Status,
+                    BookingPeriods = hall.BookingPeriods.Select(p => new HallBookingPeriodDto { Type = p.Type, StartTime = p.StartTime, EndTime = p.EndTime }).ToList(),
+                    Images = images.Select(i => new HallImageDto { Id = i.Id, Url = i.Url }).ToList()
+                };
+            }, cancellationToken);
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            // Rollback already happened inside the unit of work; clean up any files written.
             try
             {
-                var uploadsRoot = _mediaStorage.HallsUploadDirectory(hall.Id);
                 if (Directory.Exists(uploadsRoot))
                     Directory.Delete(uploadsRoot, true);
             }
