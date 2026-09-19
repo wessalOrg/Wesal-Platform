@@ -39,7 +39,7 @@ export default function ProfileView() {
   }
 
   const email = getStoredAuth()?.user.email?.trim() || null;
-  const name = session.userName?.trim() || t("nav.account");
+  const name = getStoredAuth()?.user.name?.trim() || t("nav.account");
   const role =
     session.role === "HallOwner"
       ? t("nav.role.hallOwner")

@@ -25,7 +25,7 @@ export function useAccountAccess() {
     ready && authenticated
       ? stored?.user?.id?.trim() || accessToken || stored?.token || "session"
       : null;
-  const displayName = session.userName?.trim() || stored?.user?.name?.trim() || null;
+  const displayName = stored?.user?.name?.trim() || null;
   const email = stored?.user?.email?.trim() || null;
   const phoneNumber = stored?.user?.phone?.trim() || null;
   const role = resolveSessionRole(
