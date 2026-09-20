@@ -1,0 +1,54 @@
+# Frontend CI only (Next.js in Frontend/). Backend will ship its own workflow.
+
+name: Frontend CI
+
+on:
+  push:
+    paths:
+      - "Frontend/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "Frontend/**"
+      - ".github/workflows/ci.yml"
+
+defaults:
+  run:
+    # All npm commands run inside the frontend app, not Backend/.
+    working-directory: Frontend
+
+jobs:
+  build:
+    name: Frontend install, lint, and build
+    runs-on: ubuntu-latest
+
+    env:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:5298/api/v1
+
+    steps:
+      # Pull the commit that triggered the workflow.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Node 20 matches @types/node and Next.js 16. Cache uses Frontend/package-lock.json.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      # Clean install from the lockfile. legacy-peer-deps avoids common React 19 peer clashes.
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      # Lint exists (npm run lint → eslint). continue-on-error keeps warnings from failing CI.
+      - name: Lint
+        continue-on-error: true
+        run: npm run lint
+
+      # Production build is the real gate. CI=false so compiler warnings do not fail the job.
+      - name: Build
+        run: npm run build
+        env:
+          CI: false
