@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Catalogs;
+using Wesal.Domain.Constants;
 using Wesal.Domain.Enums;
 
 namespace Wesal.API.Controllers;
@@ -119,5 +121,38 @@ public class HallsController : ControllerBase
         {
             return Ok(Array.Empty<FeaturedHallDto>());
         }
+    }
+
+    /// <summary>
+    /// Returns the dependent Region → detailed-address lists used by the Add/Edit Hall
+    /// flow (US-HALL). The owner first selects a region and then picks a detailed address
+    /// from that region's predefined list; the detailed address is never free-text typed.
+    /// </summary>
+    [HttpGet("catalog/addresses")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(IReadOnlyList<RegionAddressCatalogDto>), StatusCodes.Status200OK)]
+    public ActionResult<IReadOnlyList<RegionAddressCatalogDto>> GetRegionAddressCatalog()
+    {
+        return Ok(Enum.GetValues<HallRegion>().Select(region => new RegionAddressCatalogDto
+        {
+            Region = region,
+            RegionDisplayName = region.ToString(),
+            Addresses = RegionAddressCatalog.GetAddresses(region)
+        }).ToList());
+    }
+
+    /// <summary>
+    /// Returns the predefined hall features with their canonical Arabic names used by the
+    /// Add/Edit Hall flow (US-HALL).
+    /// </summary>
+    [HttpGet("catalog/features")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(HallFeatureCatalogDto), StatusCodes.Status200OK)]
+    public ActionResult<HallFeatureCatalogDto> GetFeatureCatalog()
+    {
+        return Ok(new HallFeatureCatalogDto
+        {
+            Features = HallFeatureCatalog.PredefinedFeatures
+        });
     }
 }

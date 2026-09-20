@@ -16,6 +16,17 @@ public class OwnerHallDto
     public string HallName { get; init; } = string.Empty;
 
     public HallStatus Status { get; init; }
+
+    /// <summary>
+    /// Live subscription payment state (US-ADMIN-07/10): Unpaid means the hall is
+    /// approved/pending but payment is still required; ReceiptUploaded means the owner
+    /// uploaded a payment receipt that the Admin has not yet confirmed; Paid means the
+    /// Admin confirmed the payment (and the hall is public when also Approved).
+    /// </summary>
+    public HallPaymentStatus PaymentStatus { get; init; }
+
+    /// <summary>When the owner last uploaded a payment receipt (UTC), if any.</summary>
+    public DateTimeOffset? PaymentReceiptUploadedAt { get; init; }
 }
 
 /// <summary>
@@ -42,6 +53,8 @@ public class OwnerHallDetailsDto
 
     public string Address { get; init; } = string.Empty;
 
+    public string? DetailedAddress { get; init; }
+
     public string? Description { get; init; }
 
     public int Capacity { get; init; }
@@ -50,9 +63,26 @@ public class OwnerHallDetailsDto
 
     public bool ShowPrice { get; init; }
 
+    public string? YouTubeVideoUrl { get; init; }
+
+    public IReadOnlyList<string> Features { get; init; } = [];
+
+    public string? OtherFeatures { get; init; }
+
     public HallStatus Status { get; init; }
 
     public bool IsEditable { get; init; }
+
+    /// <summary>
+    /// Live subscription payment state of the hall (see <see cref="OwnerHallDto.PaymentStatus"/>).
+    /// </summary>
+    public HallPaymentStatus PaymentStatus { get; init; }
+
+    /// <summary>When the owner last uploaded a payment receipt (UTC), if any.</summary>
+    public DateTimeOffset? PaymentReceiptUploadedAt { get; init; }
+
+    /// <summary>True when the owner uploaded a payment receipt that is pending Admin confirmation.</summary>
+    public bool HasPaymentReceipt { get; init; }
 
     public IReadOnlyList<OwnerHallPhotoDto> Photos { get; init; } = [];
 
@@ -95,6 +125,8 @@ public class UpdateOwnerHallRequest
 
     public string Address { get; init; } = string.Empty;
 
+    public string? DetailedAddress { get; init; }
+
     public string? Description { get; init; }
 
     public int Capacity { get; init; }
@@ -102,6 +134,14 @@ public class UpdateOwnerHallRequest
     public decimal? Price { get; init; }
 
     public bool ShowPrice { get; init; }
+
+    public string? YouTubeVideoUrl { get; init; }
+
+    /// <summary>Feature names selected from the predefined catalog (canonical Arabic strings).</summary>
+    public IReadOnlyList<string> Features { get; init; } = [];
+
+    /// <summary>Additional owner-typed custom features, length-limited.</summary>
+    public string? OtherFeatures { get; init; }
 
     public IReadOnlyList<UpdateOwnerHallPhotoDto> Photos { get; init; } = [];
 

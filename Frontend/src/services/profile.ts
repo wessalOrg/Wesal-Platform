@@ -15,6 +15,7 @@ type ProfileDto = {
   phone?: string | null;
   concurrencyStamp?: string | null;
   version?: number;
+  isIdentityDocumentUploaded?: boolean | null;
 };
 
 function mapProfile(data: ProfileDto): UserProfile {
@@ -27,6 +28,7 @@ function mapProfile(data: ProfileDto): UserProfile {
     email: (data.email ?? "").trim(),
     phoneNumber: (data.phoneNumber ?? data.phone ?? "").trim(),
     concurrencyStamp: stamp,
+    isIdentityDocumentUploaded: Boolean(data.isIdentityDocumentUploaded),
   };
 }
 

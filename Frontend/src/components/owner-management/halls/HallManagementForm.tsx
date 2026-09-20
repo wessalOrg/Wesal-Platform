@@ -4,8 +4,10 @@ import { type FormEvent } from "react";
 import BookingPeriodsSection from "@/components/owner-management/add-hall/BookingPeriodsSection";
 import HallBasicInfoSection from "@/components/owner-management/add-hall/HallBasicInfoSection";
 import HallDescriptionSection from "@/components/owner-management/add-hall/HallDescriptionSection";
+import HallFeaturesSection from "@/components/owner-management/add-hall/HallFeaturesSection";
 import HallFormActions from "@/components/owner-management/add-hall/HallFormActions";
 import HallLocationSection from "@/components/owner-management/add-hall/HallLocationSection";
+import HallMediaSection from "@/components/owner-management/add-hall/HallMediaSection";
 import HallEditabilityNotice from "@/components/owner-management/halls/HallEditabilityNotice";
 import HallManagementPhotosSection from "@/components/owner-management/halls/HallManagementPhotosSection";
 import { useT } from "@/i18n";
@@ -48,13 +50,18 @@ function toSectionValues(values: HallEditFormValues): HallRegistrationFormValues
     hallName: values.hallName,
     ownerPhone: values.ownerPhone,
     region: values.region,
+    address: values.address,
     detailedAddress: values.detailedAddress,
     description: values.description,
     guestCapacity: values.guestCapacity,
     rentalPrice: values.rentalPrice,
+    youtubeVideoUrl: values.youtubeVideoUrl,
+    features: values.features,
+    otherFeatures: values.otherFeatures,
     firstPeriod: values.firstPeriod,
     secondPeriod: values.secondPeriod,
     photos: [],
+    mainPhoto: null,
   };
 }
 
@@ -145,6 +152,23 @@ export default function HallManagementForm({
           disabled={controlsDisabled}
           onChange={(patch) => onPatch(patch)}
           resolveError={resolveError}
+        />
+
+        <HallFeaturesSection
+          values={sectionValues}
+          fieldErrors={fieldErrors}
+          disabled={controlsDisabled}
+          onChange={(patch) => onPatch(patch)}
+          resolveError={resolveError}
+        />
+
+        <HallMediaSection
+          values={sectionValues}
+          fieldErrors={fieldErrors}
+          disabled={controlsDisabled}
+          onChange={(patch) => onPatch(patch)}
+          resolveError={resolveError}
+          hideMainPhoto
         />
 
         <HallManagementPhotosSection

@@ -10,5 +10,12 @@ namespace Wesal.Domain.Enums;
 public enum HallPaymentStatus
 {
     Unpaid = 0,
-    Paid = 1
+    Paid = 1,
+
+    /// <summary>
+    /// The owner uploaded a payment receipt and the hall is waiting for the Admin to
+    /// explicitly confirm the payment (US-ADMIN-10). A hall in this state is still NOT
+    /// public: public visibility requires <see cref="Paid"/>.
+    /// </summary>
+    ReceiptUploaded = 2
 }

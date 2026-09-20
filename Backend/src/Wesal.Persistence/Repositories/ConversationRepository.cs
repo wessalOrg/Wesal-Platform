@@ -27,6 +27,12 @@ public sealed class ConversationRepository : IConversationRepository
             .FirstOrDefaultAsync(c => c.HallId == hallId && c.SenderUserId == userId, cancellationToken);
     }
 
+    public async Task<Conversation?> GetByHallForOwnerAsync(Guid hallId, string ownerId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Conversations
+            .FirstOrDefaultAsync(c => c.HallId == hallId && c.HallOwnerId == ownerId, cancellationToken);
+    }
+
     public async Task<Conversation?> GetByIdWithHallAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
         return await _context.Conversations

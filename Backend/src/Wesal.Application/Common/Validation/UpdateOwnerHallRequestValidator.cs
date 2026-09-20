@@ -1,5 +1,6 @@
 using FluentValidation;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Catalogs;
 using Wesal.Domain.Enums;
 
 namespace Wesal.Application.Common.Validation;
@@ -50,6 +51,28 @@ public class UpdateOwnerHallRequestValidator : AbstractValidator<UpdateOwnerHall
         RuleFor(request => request.Region)
             .IsInEnum()
             .WithMessage("An unknown hall region was provided.");
+
+        RuleFor(request => request.DetailedAddress)
+            .MaximumLength(RegionAddressCatalog.DetailedAddressMaxLength)
+            .WithMessage($"Detailed address must not exceed {RegionAddressCatalog.DetailedAddressMaxLength} characters.");
+
+        RuleFor(request => request.DetailedAddress)
+            .Must((request, value) =>
+                string.IsNullOrWhiteSpace(value)
+                || RegionAddressCatalog.Contains(request.Region, value))
+            .WithMessage("The detailed address does not belong to the selected region's address list.");
+
+        RuleFor(request => request.YouTubeVideoUrl)
+            .Must(value => string.IsNullOrWhiteSpace(value) || YoutubeUrlValidator.IsValid(value))
+            .WithMessage("Enter a valid YouTube link (youtube.com or youtu.be).");
+
+        RuleFor(request => request.Features)
+            .Must(features => features.All(HallFeatureCatalog.IsPredefined))
+            .WithMessage("One or more selected features are not in the predefined feature list.");
+
+        RuleFor(request => request.OtherFeatures)
+            .MaximumLength(HallFeatureCatalog.OtherFeaturesMaxLength)
+            .WithMessage($"Additional features must not exceed {HallFeatureCatalog.OtherFeaturesMaxLength} characters.");
 
         RuleFor(request => request.Photos)
             .NotEmpty()

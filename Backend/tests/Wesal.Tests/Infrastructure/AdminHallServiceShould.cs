@@ -2,9 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Wesal.Application.Common.Interfaces;
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Infrastructure.Admin;
+using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Search;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
@@ -39,9 +41,16 @@ public class AdminHallServiceShould : IDisposable
             indexer,
             new ConversationRepository(_context),
             new MessageRepository(_context),
+            new FakeConversationNotifier(),
             new FakeCurrentUser("admin-1", true, "Admin"),
             new FakeDateTime(),
             NullLogger<AdminHallService>.Instance);
+
+    private sealed class FakeConversationNotifier : IConversationNotifier
+    {
+        public Task NotifyMessageSentAsync(MessageSentEvent message, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
 
     private class TestHallRepository : Wesal.Application.Common.Interfaces.Persistence.IHallRepository
     {
@@ -145,7 +154,7 @@ public class AdminHallServiceShould : IDisposable
             .Select(x => x.m.Content)
             .ToList();
         Assert.Single(messagesAfterFirst);
-        Assert.Contains("approved", messagesAfterFirst[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("تم اعتماد قاعتك", messagesAfterFirst[0], StringComparison.Ordinal);
 
         var second = await _service.ApproveHallAsync(hall.Id);
         Assert.Equal(HallStatus.Approved, second.Status);

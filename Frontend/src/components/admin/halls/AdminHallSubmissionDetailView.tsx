@@ -8,6 +8,7 @@ import AdminHallPaidControls from "@/components/admin/halls/AdminHallPaidControl
 import AdminHallRejectControls from "@/components/admin/halls/AdminHallRejectControls";
 import AdminHallUnlockControls from "@/components/admin/halls/AdminHallUnlockControls";
 import AdminPaymentStatusBadge from "@/components/admin/halls/AdminPaymentStatusBadge";
+import AdminSecureDocumentViewer from "@/components/admin/halls/AdminSecureDocumentViewer";
 import ApproveHallActionButton from "@/components/admin/halls/ApproveHallActionButton";
 import MessageHallOwnerButton from "@/components/admin/halls/MessageHallOwnerButton";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
@@ -18,6 +19,11 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import { ADMIN_MANAGEMENT_PATH } from "@/lib/account-profile-path";
 import { canApproveHallStatus } from "@/lib/admin-halls-mapper";
 import { formatBookingDateLabel } from "@/lib/booking-date";
+import {
+  fetchAdminOwnerIdentityUrl,
+  fetchAdminPaymentReceiptUrl,
+} from "@/services/admin-documents";
+import { toYouTubeEmbedUrl } from "@/lib/youtube-embed";
 import { useT } from "@/i18n";
 
 type AdminHallSubmissionDetailViewProps = {
@@ -88,6 +94,7 @@ export default function AdminHallSubmissionDetailView({
     { label: t("admin.halls.detail.phone"), value: hall.ownerPhoneNumber, dir: "ltr" },
     { label: t("admin.halls.detail.region"), value: hall.regionDisplayName },
     { label: t("admin.halls.detail.address"), value: hall.address },
+    { label: t("admin.halls.detail.detailedAddress"), value: hall.detailedAddress },
     {
       label: t("admin.halls.detail.capacity"),
       value: hall.capacity ? String(hall.capacity) : null,
@@ -164,12 +171,76 @@ export default function AdminHallSubmissionDetailView({
         {hall.description ? (
           <p className="admin-ops-description">{hall.description}</p>
         ) : null}
-      </section>
 
-      {hall.photoUrls.length > 0 ? (
-        <section className="admin-ops-section" data-testid="admin-hall-detail-media">
-          <h2 className="admin-ops-section-title">{t("admin.halls.detail.mediaTitle")}</h2>
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {hall.features.length > 0 ? (
+          <div className="mt-4">
+            <p className="text-xs font-semibold text-[var(--wesal-muted)]">
+              {t("admin.halls.detail.features")}
+            </p>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {hall.features.map((feature) => (
+                <li
+                  key={feature}
+                  className="rounded-full bg-[var(--wesal-pink)] px-3 py-1 text-xs font-semibold text-[var(--wesal-maroon)]"
+                >
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {hall.otherFeatures ? (
+          <p className="mt-4 text-sm leading-7 text-[var(--wesal-text)]">
+            {t("admin.halls.detail.otherFeatures")}: {hall.otherFeatures}
+          </p>
+        ) : null}
+
+        {(() => {
+          const embedUrl = toYouTubeEmbedUrl(hall.youtubeVideoUrl);
+          return embedUrl ? (
+            <div className="mt-5">
+              <p className="mb-2 text-xs font-semibold text-[var(--wesal-muted)]">
+                {t("admin.halls.detail.youtube")}
+              </p>
+              <div className="aspect-video overflow-hidden rounded-xl border border-[var(--wesal-border)]">
+                <iframe
+                  src={embedUrl}
+                  title={t("admin.halls.detail.youtube")}
+                  className="h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          ) : null;
+        })()}
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2" data-testid="admin-documents">
+          <AdminSecureDocumentViewer
+            available={hall.ownerHasIdentityDocument}
+            labelKey="admin.halls.details.identity.view"
+            hintKey="admin.halls.details.identity.hint"
+            missingHintKey="admin.halls.details.identity.missing"
+            errorKey="admin.halls.details.identity.errors.loadFailed"
+            loadDocument={() =>
+              hall.ownerId ? fetchAdminOwnerIdentityUrl(hall.ownerId) : Promise.resolve(null)
+            }
+            testId="admin-owner-identity-document"
+          />
+          <AdminSecureDocumentViewer
+            available={hall.hasPaymentReceipt || hall.paymentStatus === "ReceiptUploaded"}
+            labelKey="admin.halls.details.receipt.view"
+            hintKey="admin.halls.details.receipt.hint"
+            missingHintKey="admin.halls.details.receipt.missing"
+            errorKey="admin.halls.details.receipt.errors.loadFailed"
+            loadDocument={() => fetchAdminPaymentReceiptUrl(hall.hallId)}
+            testId="admin-payment-receipt-document"
+          />
+        </div>
+
+        {hall.photoUrls.length > 0 ? (
+          <ul className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {hall.photoUrls.map((url) => (
               <li key={url} className="overflow-hidden rounded-xl bg-[var(--wesal-pink)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -177,8 +248,8 @@ export default function AdminHallSubmissionDetailView({
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
+        ) : null}
+      </section>
 
       <section className="admin-ops-section" data-testid="admin-hall-detail-actions">
         <h2 className="admin-ops-section-title">{t("admin.halls.detail.actionsTitle")}</h2>

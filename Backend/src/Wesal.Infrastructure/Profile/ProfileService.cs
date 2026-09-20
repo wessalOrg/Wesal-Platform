@@ -26,7 +26,8 @@ public sealed class ProfileService : IProfileService
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
             PhoneNumber = user.PhoneNumber ?? string.Empty,
-            ConcurrencyStamp = user.ConcurrencyStamp ?? string.Empty
+            ConcurrencyStamp = user.ConcurrencyStamp ?? string.Empty,
+            IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(user.IdentityDocumentUrl)
         };
     }
 
@@ -130,7 +131,8 @@ public sealed class ProfileService : IProfileService
             FullName = updated.FullName,
             Email = updated.Email ?? string.Empty,
             PhoneNumber = updated.PhoneNumber ?? string.Empty,
-            ConcurrencyStamp = updated.ConcurrencyStamp ?? string.Empty
+            ConcurrencyStamp = updated.ConcurrencyStamp ?? string.Empty,
+            IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(updated.IdentityDocumentUrl)
         };
     }
 

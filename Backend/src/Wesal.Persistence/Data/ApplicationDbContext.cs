@@ -17,6 +17,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<HallImage> HallImages => Set<HallImage>();
 
+    public DbSet<HallFeature> HallFeatures => Set<HallFeature>();
+
     public DbSet<HallBookingPeriod> HallBookingPeriods => Set<HallBookingPeriod>();
 
     public DbSet<HallAvailability> HallAvailabilities => Set<HallAvailability>();
@@ -53,6 +55,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
         builder.Entity<ApplicationUser>(entity =>
         {
             entity.Property(user => user.FullName).HasMaxLength(150);
+            entity.Property(user => user.IdentityDocumentUrl).HasMaxLength(500);
+            entity.Property(user => user.IdentityDocumentUploadedAt).HasColumnType("timestamp with time zone");
             entity.HasIndex(user => user.PhoneNumber).IsUnique().HasFilter("\"PhoneNumber\" IS NOT NULL");
         });
 
@@ -64,7 +68,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(hall => hall.MainImageUrl).HasMaxLength(500);
             entity.Property(hall => hall.ContactPhone).HasMaxLength(30);
             entity.Property(hall => hall.Address).IsRequired().HasMaxLength(500);
+            entity.Property(hall => hall.DetailedAddress).HasMaxLength(150);
             entity.Property(hall => hall.Description).HasMaxLength(2000);
+            entity.Property(hall => hall.YouTubeVideoUrl).HasMaxLength(500);
+            entity.Property(hall => hall.OtherFeatures).HasMaxLength(200);
+            entity.Property(hall => hall.PaymentReceiptUrl).HasMaxLength(500);
+            entity.Property(hall => hall.PaymentReceiptUploadedAt).HasColumnType("timestamp with time zone");
             entity.Property(hall => hall.Price).HasPrecision(12, 2);
             entity.Property(hall => hall.SubscriptionCycleEnd).HasColumnType("date");
             entity.Property(hall => hall.SubscriptionCycleStart).HasColumnType("date");
@@ -88,6 +97,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(image => image.Hall)
                 .WithMany(hall => hall.Images)
                 .HasForeignKey(image => image.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<HallFeature>(entity =>
+        {
+            entity.ToTable("HallFeatures");
+
+            entity.Property(feature => feature.Name).IsRequired().HasMaxLength(100);
+
+            entity.HasIndex(feature => new { feature.HallId, feature.Name }).IsUnique();
+
+            entity.HasOne(feature => feature.Hall)
+                .WithMany(hall => hall.Features)
+                .HasForeignKey(feature => feature.HallId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

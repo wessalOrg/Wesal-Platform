@@ -63,6 +63,10 @@ type ApiFeaturedHall = {
   region?: string;
   address?: string;
   location?: string;
+  detailedAddress?: string | null;
+  youtubeVideoUrl?: string | null;
+  features?: string[];
+  otherFeatures?: string | null;
   capacity?: number;
   capacityMax?: number | null;
   price?: number | null;
@@ -388,10 +392,14 @@ function mapApiHallDetail(hall: ApiFeaturedHall, index: number): HallDetail {
       hall.shortDescription ??
       fallback.description,
     location: hall.address ?? hall.location ?? fallback.location,
+    detailedAddress: hall.detailedAddress ?? fallback.detailedAddress ?? null,
     region: hall.region ? mapApiRegion(hall.region) : fallback.region,
     capacity: hall.capacity ?? fallback.capacity,
     capacityMax: hall.capacityMax ?? fallback.capacityMax ?? null,
     amenities: hall.amenities ?? hall.tags ?? fallback.amenities,
+    features: hall.features?.filter(Boolean) ?? [],
+    otherFeatures: hall.otherFeatures ?? fallback.otherFeatures ?? null,
+    youtubeVideoUrl: hall.youtubeVideoUrl ?? fallback.youtubeVideoUrl ?? null,
     gallery: resolveGalleryImages(hall, mainImageUrl, index),
     mainImageUrl,
     slotPrices: mapSlotPrices(hall, index),

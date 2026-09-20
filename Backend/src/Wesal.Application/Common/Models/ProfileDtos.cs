@@ -6,6 +6,13 @@ public class ProfileResponse
     public string Email { get; init; } = string.Empty;
     public string PhoneNumber { get; init; } = string.Empty;
     public string ConcurrencyStamp { get; init; } = string.Empty;
+
+    /// <summary>
+    /// True when the Hall Owner has uploaded an identity document. The document is
+    /// mandatory before the owner can create a hall, so the profile UI can show the
+    /// completion state (US-OWNER-30).
+    /// </summary>
+    public bool IsIdentityDocumentUploaded { get; init; }
 }
 
 public class UpdateProfileRequest

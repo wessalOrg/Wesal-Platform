@@ -38,6 +38,7 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
         => OwnedHallsQuery(ownerId)
             .Include(hall => hall.BookingPeriods)
             .Include(hall => hall.Images)
+            .Include(hall => hall.Features)
             .FirstOrDefaultAsync(hall => hall.Id == hallId, cancellationToken);
 
     public Task<Hall?> GetOwnedHallForUpdateAsync(
@@ -47,6 +48,7 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
         => _context.Halls
             .Include(hall => hall.BookingPeriods)
             .Include(hall => hall.Images)
+            .Include(hall => hall.Features)
             .FirstOrDefaultAsync(
                 hall => hall.Id == hallId && hall.OwnerId == ownerId && !hall.IsDeleted,
                 cancellationToken);

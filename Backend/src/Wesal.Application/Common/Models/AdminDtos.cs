@@ -19,15 +19,33 @@ public class AdminHallDetailDto
     public HallRegion Region { get; init; }
     public string RegionDisplayName { get; init; } = string.Empty;
     public string Address { get; init; } = string.Empty;
+    public string? DetailedAddress { get; init; }
     public string? Description { get; init; }
     public int Capacity { get; init; }
     public decimal? Price { get; init; }
     public DateTimeOffset SubmittedAt { get; init; }
     public HallStatus Status { get; init; }
+    public string? OwnerId { get; init; }
     public string? OwnerFullName { get; init; }
     public string? OwnerPhoneNumber { get; init; }
     public string? OwnerEmail { get; init; }
+    public string? MainImageUrl { get; init; }
+    public string? YouTubeVideoUrl { get; init; }
+    public IReadOnlyList<string> Features { get; init; } = [];
+    public string? OtherFeatures { get; init; }
     public IReadOnlyList<string> PhotoUrls { get; init; } = [];
+
+    /// <summary>Live subscription payment state (US-ADMIN-07/10).</summary>
+    public HallPaymentStatus PaymentStatus { get; init; }
+
+    /// <summary>When the owner uploaded a payment receipt (UTC), if any.</summary>
+    public DateTimeOffset? PaymentReceiptUploadedAt { get; init; }
+
+    /// <summary>True when the owner uploaded a payment receipt awaiting Admin confirmation.</summary>
+    public bool HasPaymentReceipt { get; init; }
+
+    /// <summary>True when the owner has uploaded an identity document required to reach the Add Hall flow.</summary>
+    public bool OwnerHasIdentityDocument { get; init; }
 }
 
 /// <summary>Repository projection for the full submission drill-down; assembled by
@@ -39,15 +57,33 @@ public class AdminHallDetailRow
     public string Name { get; init; } = string.Empty;
     public HallRegion Region { get; init; }
     public string Address { get; init; } = string.Empty;
+    public string? DetailedAddress { get; init; }
     public string? Description { get; init; }
     public int Capacity { get; init; }
     public decimal? Price { get; init; }
     public DateTimeOffset SubmittedAt { get; init; }
     public HallStatus Status { get; init; }
+    public string? OwnerId { get; init; }
     public string? OwnerFullName { get; init; }
     public string? OwnerPhoneNumber { get; init; }
     public string? OwnerEmail { get; init; }
+    public string? MainImageUrl { get; init; }
+    public string? YouTubeVideoUrl { get; init; }
+    public IReadOnlyList<string> Features { get; init; } = [];
+    public string? OtherFeatures { get; init; }
     public IReadOnlyList<string> PhotoUrls { get; init; } = [];
+
+    /// <summary>Live subscription payment state (US-ADMIN-07/10).</summary>
+    public HallPaymentStatus PaymentStatus { get; init; }
+
+    /// <summary>When the owner uploaded a payment receipt (UTC), if any.</summary>
+    public DateTimeOffset? PaymentReceiptUploadedAt { get; init; }
+
+    /// <summary>True when the owner uploaded a payment receipt awaiting Admin confirmation.</summary>
+    public bool HasPaymentReceipt { get; init; }
+
+    /// <summary>True when the owner has uploaded an identity document required to reach the Add Hall flow.</summary>
+    public bool OwnerHasIdentityDocument { get; init; }
 }
 
 // --- US-ADMIN-03: rejection ---

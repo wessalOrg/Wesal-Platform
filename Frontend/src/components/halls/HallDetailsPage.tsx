@@ -28,6 +28,7 @@ import {
   fetchHallComments,
   mapCommentToReview,
 } from "@/services/comments";
+import { toYouTubeEmbedUrl } from "@/lib/youtube-embed";
 import { DEMO_HALL_REVIEWS } from "@/constants/hallDetailsFallback";
 import type { HallReview } from "@/types/hall";
 
@@ -196,6 +197,65 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
       />
 
       <HallQuickInfo hall={viewHall} />
+
+      {viewHall.detailedAddress ? (
+        <div
+          className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-3 text-sm leading-6 text-[var(--wesal-text)]"
+          data-testid="hall-detailed-address"
+        >
+          {t("halls.details.detailedAddress")}:{" "}
+          <span className="font-semibold">{viewHall.detailedAddress}</span>
+        </div>
+      ) : null}
+
+      {viewHall.features && viewHall.features.length > 0 ? (
+        <div
+          className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-5"
+          data-testid="hall-features"
+        >
+          <p className="text-xs font-semibold text-[var(--wesal-muted)]">
+            {t("halls.details.features")}
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {viewHall.features.map((feature) => (
+              <li
+                key={feature}
+                className="rounded-full bg-[var(--wesal-pink)] px-3 py-1 text-xs font-semibold text-[var(--wesal-maroon)]"
+              >
+                {feature}
+              </li>
+            ))}
+          </ul>
+          {viewHall.otherFeatures ? (
+            <p className="mt-3 text-sm leading-6 text-[var(--wesal-text)]">
+              {t("halls.details.otherFeatures")}: {viewHall.otherFeatures}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {(() => {
+        const embedUrl = toYouTubeEmbedUrl(viewHall.youtubeVideoUrl);
+        return embedUrl ? (
+          <div
+            className="overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-5"
+            data-testid="hall-youtube"
+          >
+            <p className="mb-2 text-xs font-semibold text-[var(--wesal-muted)]">
+              {t("halls.details.youtube")}
+            </p>
+            <div className="aspect-video overflow-hidden rounded-xl border border-[var(--wesal-border)]">
+              <iframe
+                src={embedUrl}
+                title={t("halls.details.youtube")}
+                className="h-full w-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        ) : null;
+      })()}
 
       <div className="hall-details-body min-w-0 space-y-5 lg:space-y-6">
         {showBookingUi ? (

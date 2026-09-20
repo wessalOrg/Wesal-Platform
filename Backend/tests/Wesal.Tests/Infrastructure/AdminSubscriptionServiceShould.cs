@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
@@ -11,6 +12,7 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Admin;
 using Wesal.Infrastructure.AiAssistant;
+using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
@@ -100,7 +102,18 @@ public class AdminSubscriptionServiceShould : IDisposable
                 AdminWhatsAppContact = SubscriptionPaymentOptions.DefaultAdminWhatsApp
             }),
             new UnitOfWork(_context),
-            new FakeDateTime());
+            new ConversationRepository(_context),
+            new MessageRepository(_context),
+            new FakeConversationNotifier(),
+            new FakeCurrentUser("admin-1", true, ApplicationRoles.Admin),
+            new FakeDateTime(),
+            NullLogger<AdminSubscriptionService>.Instance);
+
+    private sealed class FakeConversationNotifier : IConversationNotifier
+    {
+        public Task NotifyMessageSentAsync(MessageSentEvent message, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
 
     // --- US-ADMIN-11: subscription overview ---
 
@@ -309,5 +322,21 @@ public class AdminSubscriptionServiceShould : IDisposable
     private sealed class FakeDateTime : IDateTime
     {
         public DateTimeOffset Now => FixedNow;
+    }
+
+    private sealed class FakeCurrentUser : ICurrentUserService
+    {
+        public FakeCurrentUser(string? userId, bool auth, string role)
+        {
+            UserId = userId;
+            IsAuthenticated = auth;
+            Roles = new[] { role };
+        }
+
+        public string? UserId { get; }
+        public string? UserName => "admin";
+        public string? Email => "admin@example.com";
+        public bool IsAuthenticated { get; }
+        public IReadOnlyList<string> Roles { get; }
     }
 }

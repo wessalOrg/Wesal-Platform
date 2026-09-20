@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { HallOwnerProfileBanner } from "@/components/owner-management/HallOwnerProfileBanner";
 import { OWNER_HALLS_PATH } from "@/constants/hallOwnerManagementNav";
 import { useT } from "@/i18n";
 
@@ -54,6 +55,8 @@ export default function OwnerAddHallPageContent() {
           {t("owner.nav.halls")}
         </Link>
       </header>
+
+      <HallOwnerProfileBanner />
 
       <HallRegistrationForm />
     </div>

@@ -268,6 +268,34 @@ public class HallDetailsServiceShould
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetHallDetailsAsync(hall.Id));
     }
 
+    // --- US-ADMIN-10 / US-OWNER-31: public details require Approved AND Paid ---
+
+    [Fact]
+    public async Task GetHallDetailsAsync_ApprovedButUnpaidHall_ThrowsNotFound()
+    {
+        var hall = CreateHall(name: "Unpaid Hall");
+        hall.PaymentStatus = HallPaymentStatus.Unpaid;
+        var fakeRepository = new FakeHallRepository();
+        fakeRepository.Halls.Add(hall);
+
+        var service = CreateService(fakeRepository);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetHallDetailsAsync(hall.Id));
+    }
+
+    [Fact]
+    public async Task GetHallDetailsAsync_ApprovedAndPaidHall_ReturnsDetails()
+    {
+        var hall = CreateHall(name: "Visible Hall");
+        var fakeRepository = new FakeHallRepository();
+        fakeRepository.Halls.Add(hall);
+
+        var service = CreateService(fakeRepository);
+        var details = await service.GetHallDetailsAsync(hall.Id);
+
+        Assert.Equal("Visible Hall", details.HallName);
+    }
+
     private static HallDetailsService CreateService(
         FakeHallRepository repository,
         FakeCurrentUserService? currentUser = null)
@@ -295,6 +323,7 @@ public class HallDetailsServiceShould
             ShowPrice = true,
             Description = description,
             Status = HallStatus.Approved,
+            PaymentStatus = HallPaymentStatus.Paid,
             CreatedAt = FixedNow
         };
 

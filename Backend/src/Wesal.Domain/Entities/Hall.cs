@@ -15,6 +15,25 @@ public class Hall : BaseAuditableEntity
 
     public string Address { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Owner-selected address-area name from the dependent address list for the hall's
+    /// <see cref="Region"/>. Selected from the predefined catalog, never free-text typed
+    /// by the owner.
+    /// </summary>
+    public string? DetailedAddress { get; set; }
+
+    /// <summary>
+    /// Optional YouTube video URL for the hall (US-HALL). Validated to be a real YouTube
+    /// link; never mandatory.
+    /// </summary>
+    public string? YouTubeVideoUrl { get; set; }
+
+    /// <summary>
+    /// Additional owner-typed custom features beyond the predefined feature list
+    /// (free text, strictly length-limited).
+    /// </summary>
+    public string? OtherFeatures { get; set; }
+
     public int Capacity { get; set; }
 
     public decimal? Price { get; set; }
@@ -53,6 +72,16 @@ public class Hall : BaseAuditableEntity
     /// a confirmed cycle exists).
     /// </summary>
     public HallPaymentStatus PaymentStatus { get; set; } = HallPaymentStatus.Unpaid;
+
+    /// <summary>
+    /// Relative storage URL of the owner-uploaded subscription payment receipt, stored
+    /// OUTSIDE the public static-file area; it can only be read through the protected
+    /// Admin (and owner) receipt endpoints.
+    /// </summary>
+    public string? PaymentReceiptUrl { get; set; }
+
+    /// <summary>When the owner uploaded the payment receipt (UTC).</summary>
+    public DateTimeOffset? PaymentReceiptUploadedAt { get; set; }
 
     /// <summary>
     /// Manual Admin lock for this hall (FR-SUB-05, US-ADMIN-05). Independent of the
@@ -114,4 +143,6 @@ public class Hall : BaseAuditableEntity
     public ICollection<HallAvailability> Availability { get; set; } = [];
 
     public ICollection<HallImage> Images { get; set; } = [];
+
+    public ICollection<HallFeature> Features { get; set; } = [];
 }

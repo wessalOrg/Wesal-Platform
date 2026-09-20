@@ -8,20 +8,28 @@ export type AdminHallDetail = {
   name: string;
   regionDisplayName: string;
   address: string;
+  detailedAddress: string | null;
   description: string | null;
   capacity: number;
   price: number | null;
   submittedAt: string | null;
   status: AdminHallStatus;
   approvalBadge: HallApprovalStatus;
+  ownerId: string | null;
   ownerFullName: string | null;
   ownerPhoneNumber: string | null;
   ownerEmail: string | null;
   photoUrls: string[];
+  youtubeVideoUrl: string | null;
+  features: string[];
+  otherFeatures: string | null;
   adminLocked: boolean;
   systemLocked: boolean;
   lockBadgeVisible?: boolean;
   paymentStatus: AdminPaymentStatus;
+  paymentReceiptUploadedAt: string | null;
+  hasPaymentReceipt: boolean;
+  ownerHasIdentityDocument: boolean;
   cycleStart: string | null;
   cycleEnd: string | null;
   daysRemaining: number | null;
@@ -98,7 +106,7 @@ export type AdminHallUnlockResult = {
 export type AdminHallLockAccess = "adminLocked" | "unpaidLocked" | "unlocked";
 
 /** Backend HallPaymentStatus (JsonStringEnumConverter). */
-export type AdminPaymentStatus = "Paid" | "Unpaid";
+export type AdminPaymentStatus = "Paid" | "ReceiptUploaded" | "Unpaid";
 
 /** PUT /admin/halls/{hallId}/subscription/paid (US-ADMIN-10 / FR-SUB-04). */
 export type AdminMarkPaidResult = {

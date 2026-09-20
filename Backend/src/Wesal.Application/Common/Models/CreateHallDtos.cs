@@ -16,13 +16,21 @@ public class CreateHallRequest
     public string ContactPhone { get; init; } = string.Empty;
     public string Region { get; init; } = string.Empty;
     public string Address { get; init; } = string.Empty;
+    public string? DetailedAddress { get; init; }
     public string Description { get; init; } = string.Empty;
     public int Capacity { get; init; }
     public decimal? Price { get; init; }
+    public string? YouTubeVideoUrl { get; init; }
+    public IReadOnlyList<string>? Features { get; init; }
+    public string? OtherFeatures { get; init; }
     public TimeOnly FirstPeriodStart { get; init; }
     public TimeOnly FirstPeriodEnd { get; init; }
     public TimeOnly SecondPeriodStart { get; init; }
     public TimeOnly SecondPeriodEnd { get; init; }
+
+    /// <summary>Optional cover photo promoted to <see cref="Hall.MainImageUrl"/>.</summary>
+    public HallPhotoUpload? MainPhoto { get; init; }
+
     public IReadOnlyList<HallPhotoUpload>? Photos { get; init; }
 }
 
@@ -33,6 +41,11 @@ public class CreateHallResponse
     public string ContactPhone { get; init; } = string.Empty;
     public HallRegion Region { get; init; }
     public string Address { get; init; } = string.Empty;
+    public string? DetailedAddress { get; init; }
+    public string? MainImageUrl { get; init; }
+    public string? YouTubeVideoUrl { get; init; }
+    public string? OtherFeatures { get; init; }
+    public IReadOnlyList<string> Features { get; init; } = [];
     public string Description { get; init; } = string.Empty;
     public int Capacity { get; init; }
     public decimal? Price { get; init; }

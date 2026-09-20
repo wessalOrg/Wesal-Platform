@@ -1,10 +1,13 @@
+using Microsoft.AspNetCore.Identity;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Catalogs;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Infrastructure.Identity;
 
 namespace Wesal.Infrastructure.Halls;
 
@@ -14,17 +17,19 @@ public class HallCreationService : IHallCreationService
     private readonly IHallRepository _hallRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHallMediaStorage _mediaStorage;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     private static readonly string[] PermittedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
     private static readonly string[] PermittedMimeTypes = new[] { "image/jpeg", "image/png", "image/webp" };
     private const long MaxFileSize = 5 * 1024 * 1024; // 5MB
 
-    public HallCreationService(ICurrentUserService currentUser, IHallRepository hallRepository, IUnitOfWork unitOfWork, IHallMediaStorage mediaStorage)
+    public HallCreationService(ICurrentUserService currentUser, IHallRepository hallRepository, IUnitOfWork unitOfWork, IHallMediaStorage mediaStorage, UserManager<ApplicationUser> userManager)
     {
         _currentUser = currentUser;
         _hallRepository = hallRepository;
         _unitOfWork = unitOfWork;
         _mediaStorage = mediaStorage;
+        _userManager = userManager;
     }
 
     public async Task<CreateHallResponse> CreateHallAsync(CreateHallRequest request, CancellationToken cancellationToken = default)
@@ -36,6 +41,11 @@ public class HallCreationService : IHallCreationService
             throw new ForbiddenException("Only Hall Owners can create halls.");
 
         var ownerId = _currentUser.UserId!;
+
+        // Identity document is mandatory before creating a hall (US-OWNER-30):
+        // a Hall Owner without the uploaded identity document cannot add halls.
+        await EnsureIdentityDocumentUploadedAsync(ownerId);
+
         // Basic required field validation (service-level, before persistence)
         if (string.IsNullOrWhiteSpace(request.Name))
             throw new ValidationException(new Dictionary<string, string[]> { ["Name"] = new[] { "Hall name is required." } });
@@ -50,6 +60,27 @@ public class HallCreationService : IHallCreationService
         // Region validation
         if (!TryParseRegion(request.Region, out var region))
             throw new ValidationException(new Dictionary<string, string[]> { ["Region"] = new[] { "Region must be one of: North Gaza, Gaza, Middle Area, South Gaza." } });
+
+        // Dependent Region → DetailedAddress rule (US-HALL): the detailed address is
+        // selected from the region's predefined list and must belong to it.
+        if (!string.IsNullOrWhiteSpace(request.DetailedAddress))
+        {
+            if (!RegionAddressCatalog.Contains(region, request.DetailedAddress))
+                throw new ValidationException(new Dictionary<string, string[]> { ["DetailedAddress"] = new[] { "The detailed address does not belong to the selected region's address list." } });
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.YouTubeVideoUrl) && !YoutubeUrlValidator.IsValid(request.YouTubeVideoUrl))
+            throw new ValidationException(new Dictionary<string, string[]> { ["YouTubeVideoUrl"] = new[] { "Enter a valid YouTube link (youtube.com or youtu.be)." } });
+
+        if (!string.IsNullOrWhiteSpace(request.OtherFeatures) && request.OtherFeatures.Trim().Length > HallFeatureCatalog.OtherFeaturesMaxLength)
+            throw new ValidationException(new Dictionary<string, string[]> { ["OtherFeatures"] = new[] { $"Additional features must not exceed {HallFeatureCatalog.OtherFeaturesMaxLength} characters." } });
+
+        var features = HallFeatureCatalog.Normalize(request.Features);
+        foreach (var feature in features)
+        {
+            if (!HallFeatureCatalog.IsPredefined(feature))
+                throw new ValidationException(new Dictionary<string, string[]> { ["Features"] = new[] { $"The feature \"{feature}\" is not in the predefined feature list." } });
+        }
 
         // Period validation already done via validator, but double-check
         if (request.FirstPeriodEnd <= request.FirstPeriodStart)
@@ -84,16 +115,34 @@ public class HallCreationService : IHallCreationService
             }
         }
 
+        // The cover photo is validated with the same rules as the gallery.
+        if (request.MainPhoto != null && request.MainPhoto.Content.Length > 0)
+        {
+            if (request.MainPhoto.Content.Length > MaxFileSize)
+                throw new ValidationException(new Dictionary<string, string[]> { ["MainPhoto"] = new[] { "Photo size must not exceed 5MB." } });
+
+            var ext = Path.GetExtension(request.MainPhoto.FileName).ToLowerInvariant();
+            if (!PermittedExtensions.Contains(ext))
+                throw new ValidationException(new Dictionary<string, string[]> { ["MainPhoto"] = new[] { $"Photo extension '{ext}' is not permitted." } });
+            if (!PermittedMimeTypes.Contains(request.MainPhoto.ContentType.ToLowerInvariant()))
+                throw new ValidationException(new Dictionary<string, string[]> { ["MainPhoto"] = new[] { $"Photo MIME type '{request.MainPhoto.ContentType}' is not permitted." } });
+            if (!IsValidImageSignature(request.MainPhoto.Content, request.MainPhoto.ContentType))
+                throw new ValidationException(new Dictionary<string, string[]> { ["MainPhoto"] = new[] { "Invalid image file." } });
+        }
+
         var hall = new Hall
         {
             Name = request.Name.Trim(),
             ContactPhone = request.ContactPhone.Trim(),
             Region = region,
             Address = request.Address.Trim(),
+            DetailedAddress = string.IsNullOrWhiteSpace(request.DetailedAddress) ? null : request.DetailedAddress.Trim(),
             Description = request.Description.Trim(),
             Capacity = request.Capacity,
             Price = request.Price,
             ShowPrice = request.Price.HasValue,
+            YouTubeVideoUrl = string.IsNullOrWhiteSpace(request.YouTubeVideoUrl) ? null : request.YouTubeVideoUrl.Trim(),
+            OtherFeatures = string.IsNullOrWhiteSpace(request.OtherFeatures) ? null : request.OtherFeatures.Trim(),
             OwnerId = ownerId,
             Status = HallStatus.PendingReview,
             IsDeleted = false
@@ -111,6 +160,10 @@ public class HallCreationService : IHallCreationService
                     new HallBookingPeriod { HallId = hall.Id, Type = BookingPeriodType.SecondPeriod, StartTime = request.SecondPeriodStart, EndTime = request.SecondPeriodEnd }
                 };
 
+                hall.Features = features
+                    .Select(name => new HallFeature { HallId = hall.Id, Name = name })
+                    .ToList();
+
                 var images = new List<HallImage>();
                 Directory.CreateDirectory(uploadsRoot);
 
@@ -125,8 +178,19 @@ public class HallCreationService : IHallCreationService
                     images.Add(image);
                 }
                 hall.Images = images;
-                if (images.Count > 0)
+
+                // Cover photo (MainImageUrl) wins over the first gallery photo; it is not
+                // duplicated into the gallery list.
+                if (request.MainPhoto != null && request.MainPhoto.Content.Length > 0)
+                {
+                    var mainFileName = $"{Guid.NewGuid()}{Path.GetExtension(request.MainPhoto.FileName).ToLowerInvariant()}";
+                    await File.WriteAllBytesAsync(Path.Combine(uploadsRoot, mainFileName), request.MainPhoto.Content, cancellationToken);
+                    hall.MainImageUrl = $"/uploads/halls/{hall.Id}/{mainFileName}";
+                }
+                else if (images.Count > 0)
+                {
                     hall.MainImageUrl = images[0].Url;
+                }
 
                 await _hallRepository.AddAsync(hall, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -138,6 +202,11 @@ public class HallCreationService : IHallCreationService
                     ContactPhone = hall.ContactPhone!,
                     Region = hall.Region,
                     Address = hall.Address,
+                    DetailedAddress = hall.DetailedAddress,
+                    MainImageUrl = hall.MainImageUrl,
+                    YouTubeVideoUrl = hall.YouTubeVideoUrl,
+                    OtherFeatures = hall.OtherFeatures,
+                    Features = hall.Features.Select(feature => feature.Name).ToList(),
                     Description = hall.Description!,
                     Capacity = hall.Capacity,
                     Price = hall.Price,
@@ -158,6 +227,16 @@ public class HallCreationService : IHallCreationService
             catch { }
             throw;
         }
+    }
+
+    private async Task EnsureIdentityDocumentUploadedAsync(string ownerId)
+    {
+        var user = await _userManager.FindByIdAsync(ownerId);
+        if (user is null)
+            throw new NotFoundException("User", ownerId);
+
+        if (string.IsNullOrWhiteSpace(user.IdentityDocumentUrl))
+            throw new ForbiddenException("You must upload your identity document in your profile before you can create a hall.");
     }
 
     private static bool TryParseRegion(string input, out HallRegion region)

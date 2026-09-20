@@ -7,6 +7,7 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Conversations;
+using Wesal.Infrastructure.Documents;
 using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Identity;
 
@@ -42,6 +43,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
     private readonly IDateTime _dateTime;
     private readonly IConversationNotifier _notifier;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IDocumentStorage _documentStorage;
     private readonly ILogger<AdminHallReviewService> _logger;
 
     public AdminHallReviewService(
@@ -54,6 +56,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         IDateTime dateTime,
         IConversationNotifier notifier,
         UserManager<ApplicationUser> userManager,
+        IDocumentStorage documentStorage,
         ILogger<AdminHallReviewService> logger)
     {
         _adminDashboardRepository = adminDashboardRepository;
@@ -65,6 +68,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         _dateTime = dateTime;
         _notifier = notifier;
         _userManager = userManager;
+        _documentStorage = documentStorage;
         _logger = logger;
     }
 
@@ -104,15 +108,103 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
             Region = row.Region,
             RegionDisplayName = HallDisplayNames.GetRegionDisplayName(row.Region),
             Address = row.Address,
+            DetailedAddress = row.DetailedAddress,
             Description = row.Description,
             Capacity = row.Capacity,
             Price = row.Price,
             SubmittedAt = row.SubmittedAt,
             Status = row.Status,
+            OwnerId = row.OwnerId,
             OwnerFullName = row.OwnerFullName,
             OwnerPhoneNumber = row.OwnerPhoneNumber,
             OwnerEmail = row.OwnerEmail,
+            MainImageUrl = row.MainImageUrl,
+            YouTubeVideoUrl = row.YouTubeVideoUrl,
+            Features = row.Features,
+            OtherFeatures = row.OtherFeatures,
+            PaymentStatus = row.PaymentStatus,
+            PaymentReceiptUploadedAt = row.PaymentReceiptUploadedAt,
+            HasPaymentReceipt = row.HasPaymentReceipt,
+            OwnerHasIdentityDocument = row.OwnerHasIdentityDocument,
             PhotoUrls = row.PhotoUrls
+        };
+    }
+
+    public async Task<StoredDocument> GetOwnerIdentityDocumentAsync(
+        string ownerId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var owner = await _userManager.FindByIdAsync(ownerId);
+        if (owner is null)
+        {
+            throw new NotFoundException("User", ownerId);
+        }
+
+        if (string.IsNullOrWhiteSpace(owner.IdentityDocumentUrl))
+        {
+            throw new NotFoundException("The owner has not uploaded an identity document yet.");
+        }
+
+        var fullPath = DocumentPath.ResolveFullPath(_documentStorage.Root, owner.IdentityDocumentUrl);
+
+        if (fullPath is null || !File.Exists(fullPath))
+        {
+            throw new NotFoundException("The owner identity document was not found.");
+        }
+
+        return new StoredDocument
+        {
+            RelativeUrl = owner.IdentityDocumentUrl,
+            FullPath = fullPath,
+            ContentType = InferContentType(fullPath),
+            FileName = DocumentPath.FileNameFromUrl(owner.IdentityDocumentUrl) ?? Path.GetFileName(fullPath)
+        };
+    }
+
+    public async Task<StoredDocument> GetPaymentReceiptAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var hall = await _hallRepository.GetHallByIdAsync(hallId, cancellationToken);
+
+        if (hall is null || hall.IsDeleted)
+        {
+            throw new NotFoundException(nameof(Hall), hallId);
+        }
+
+        if (string.IsNullOrWhiteSpace(hall.PaymentReceiptUrl))
+        {
+            throw new NotFoundException("No payment receipt has been uploaded for this hall.");
+        }
+
+        var fullPath = DocumentPath.ResolveFullPath(_documentStorage.Root, hall.PaymentReceiptUrl);
+
+        if (fullPath is null || !File.Exists(fullPath))
+        {
+            throw new NotFoundException("The payment receipt was not found.");
+        }
+
+        return new StoredDocument
+        {
+            RelativeUrl = hall.PaymentReceiptUrl,
+            FullPath = fullPath,
+            ContentType = InferContentType(fullPath),
+            FileName = DocumentPath.FileNameFromUrl(hall.PaymentReceiptUrl) ?? Path.GetFileName(fullPath)
+        };
+    }
+
+    private static string InferContentType(string fullPath)
+    {
+        return Path.GetExtension(fullPath).ToLowerInvariant() switch
+        {
+            ".pdf" => "application/pdf",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => "image/jpeg"
         };
     }
 

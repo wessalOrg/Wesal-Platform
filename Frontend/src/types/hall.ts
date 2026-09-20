@@ -116,10 +116,14 @@ export type HallDetail = {
   name: string;
   description: string;
   location: string;
+  detailedAddress?: string | null;
   region: Exclude<HallRegion, "all">;
   capacity: number;
   capacityMax?: number | null;
   amenities: string[];
+  features?: string[];
+  otherFeatures?: string | null;
+  youtubeVideoUrl?: string | null;
   gallery: string[];
   mainImageUrl: string;
   slotPrices: HallSlotPrice[];

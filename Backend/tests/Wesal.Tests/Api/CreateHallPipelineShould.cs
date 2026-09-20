@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Infrastructure.Halls;
+using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
 
 namespace Wesal.Tests.Api;
@@ -75,11 +77,22 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
 
         var inMemoryRoot = new Microsoft.EntityFrameworkCore.Storage.InMemoryDatabaseRoot();
         builder.Services.AddDbContext<ApplicationDbContext>(o => o.UseInMemoryDatabase(nameof(CreateHallPipelineShould), inMemoryRoot));
+        builder.Services.AddIdentityCore<ApplicationUser>(o =>
+        {
+            o.Password.RequireDigit = true;
+            o.Password.RequireLowercase = true;
+            o.Password.RequireUppercase = true;
+            o.Password.RequireNonAlphanumeric = true;
+            o.Password.RequiredLength = 8;
+            o.User.RequireUniqueEmail = true;
+        }).AddRoles<ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>();
         builder.Services.AddScoped<ICurrentUserService>(_ => new FakeCurrentUser());
         builder.Services.AddScoped<IHallRepository, TestInMemoryHallRepository>();
         builder.Services.AddScoped<IUnitOfWork, TestInMemoryUnitOfWork>();
         builder.Services.AddSingleton<IHallMediaStorage>(new FakeHallMediaStorage());
         builder.Services.AddScoped<IHallCreationService, HallCreationService>();
+        builder.Services.AddScoped<IOwnerIdentityService, StubOwnerIdentityService>();
+        builder.Services.AddScoped<IPaymentReceiptService, StubPaymentReceiptService>();
         builder.Services.AddScoped<IOwnerSidebarService, StubOwnerSidebarService>();
         builder.Services.AddScoped<IHallInitiationService, StubHallInitiationService>();
         builder.Services.AddScoped<IHallStatusTrackingService, StubHallStatusTrackingService>();
@@ -99,6 +112,29 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         _client.DefaultRequestHeaders.Add(TestAuthHandler.HeaderName, "test-token");
         _context = _app.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
         _mediaStorage = _app.Services.GetRequiredService<IHallMediaStorage>();
+        SeedOwnerWithIdentityDocument();
+    }
+
+    /// <summary>
+    /// HallCreationService requires the authenticated owner to have uploaded an identity
+    /// document (US-OWNER-30); seed the test user so the happy-path pipeline succeeds.
+    /// </summary>
+    private void SeedOwnerWithIdentityDocument()
+    {
+        var userManager = _app.Services.CreateScope().ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = _app.Services.CreateScope().ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+        roleManager.CreateAsync(new ApplicationRole(ApplicationRoles.HallOwner)).GetAwaiter().GetResult();
+        userManager.CreateAsync(new ApplicationUser
+        {
+            Id = "owner-1",
+            FullName = "Test Owner",
+            Email = "owner@example.com",
+            UserName = "owner@example.com",
+            PhoneNumber = "+970599000000",
+            IdentityDocumentUrl = "/documents/owners/owner-1/id.jpg"
+
+        }, "Password123!").GetAwaiter().GetResult();
+        userManager.AddToRoleAsync(userManager.FindByIdAsync("owner-1").GetAwaiter().GetResult()!, ApplicationRoles.HallOwner).GetAwaiter().GetResult();
     }
 
     [Fact]
@@ -366,6 +402,24 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
     {
         public Task<OwnerSidebarResponse> GetSidebarAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(new OwnerSidebarResponse());
+    }
+
+    private sealed class StubOwnerIdentityService : IOwnerIdentityService
+    {
+        public Task<IdentityDocumentUploadResult> UploadIdentityDocumentAsync(OwnerDocumentUpload upload, CancellationToken cancellationToken = default)
+            => Task.FromResult(new IdentityDocumentUploadResult { UploadedAt = DateTimeOffset.UtcNow, HasDocument = true });
+
+        public Task<StoredDocument> GetIdentityDocumentAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new StoredDocument { RelativeUrl = "/documents/owners/owner-1/id.jpg", FullPath = "n/a", ContentType = "image/jpeg", FileName = "id.jpg" });
+    }
+
+    private sealed class StubPaymentReceiptService : IPaymentReceiptService
+    {
+        public Task<PaymentReceiptUploadResult> UploadPaymentReceiptAsync(Guid hallId, OwnerDocumentUpload upload, CancellationToken cancellationToken = default)
+            => Task.FromResult(new PaymentReceiptUploadResult { HallId = hallId, HasReceipt = true });
+
+        public Task<StoredDocument> GetPaymentReceiptAsync(Guid hallId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new StoredDocument { RelativeUrl = "/documents/halls/receipt.pdf", FullPath = "n/a", ContentType = "application/pdf", FileName = "receipt.pdf" });
     }
 
     private sealed class StubHallInitiationService : IHallInitiationService

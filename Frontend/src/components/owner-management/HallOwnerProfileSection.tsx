@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import HallIdentityDocumentSection from "@/components/owner-management/HallIdentityDocumentSection";
 import ManagementSectionError from "@/components/owner-management/ManagementSectionError";
 import ProfileField from "@/components/profile/ProfileField";
 import ProfileHeroCard from "@/components/profile/ProfileHeroCard";
@@ -345,6 +346,11 @@ export default function HallOwnerProfileSection() {
             </div>
           </form>
         </section>
+
+        <HallIdentityDocumentSection
+          profile={profile}
+          reload={profileState.reload}
+        />
 
         <section className="seeker-settings-card" data-testid="owner-settings-password">
           <h2 className="seeker-settings-section-title">{t("seeker.settings.password.title")}</h2>

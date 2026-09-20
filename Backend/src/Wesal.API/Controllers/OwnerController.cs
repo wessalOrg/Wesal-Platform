@@ -27,6 +27,8 @@ public class OwnerController : ControllerBase
     private readonly IOwnerBookingRequestsService _ownerBookingRequestsService;
     private readonly IOwnerAvailabilityService _ownerAvailabilityService;
     private readonly IHallSubscriptionService _hallSubscriptionService;
+    private readonly IOwnerIdentityService _ownerIdentityService;
+    private readonly IPaymentReceiptService _paymentReceiptService;
 
     public OwnerController(
         IOwnerSidebarService sidebarService,
@@ -36,7 +38,9 @@ public class OwnerController : ControllerBase
         IOwnerHallService ownerHallService,
         IOwnerBookingRequestsService ownerBookingRequestsService,
         IOwnerAvailabilityService ownerAvailabilityService,
-        IHallSubscriptionService hallSubscriptionService)
+        IHallSubscriptionService hallSubscriptionService,
+        IOwnerIdentityService ownerIdentityService,
+        IPaymentReceiptService paymentReceiptService)
     {
         _sidebarService = sidebarService;
         _hallCreationService = hallCreationService;
@@ -46,6 +50,8 @@ public class OwnerController : ControllerBase
         _ownerBookingRequestsService = ownerBookingRequestsService;
         _ownerAvailabilityService = ownerAvailabilityService;
         _hallSubscriptionService = hallSubscriptionService;
+        _ownerIdentityService = ownerIdentityService;
+        _paymentReceiptService = paymentReceiptService;
     }
 
     /// <summary>
@@ -266,13 +272,18 @@ public class OwnerController : ControllerBase
         [FromForm] string ContactPhone,
         [FromForm] string Region,
         [FromForm] string Address,
+        [FromForm] string? DetailedAddress,
         [FromForm] string Description,
         [FromForm] int Capacity,
         [FromForm] decimal? Price,
+        [FromForm] string? YouTubeVideoUrl,
+        [FromForm] string? Features,
+        [FromForm] string? OtherFeatures,
         [FromForm] TimeOnly FirstPeriodStart,
         [FromForm] TimeOnly FirstPeriodEnd,
         [FromForm] TimeOnly SecondPeriodStart,
         [FromForm] TimeOnly SecondPeriodEnd,
+        [FromForm] IFormFile? MainPhoto,
         [FromForm] IFormFile[]? Photos,
         CancellationToken cancellationToken)
     {
@@ -283,23 +294,149 @@ public class OwnerController : ControllerBase
             return new HallPhotoUpload { FileName = p.FileName, ContentType = p.ContentType, Content = ms.ToArray() };
         }));
 
+        HallPhotoUpload? mainPhotoUpload = null;
+        if (MainPhoto is not null)
+        {
+            using var mainStream = new MemoryStream();
+            await MainPhoto.CopyToAsync(mainStream, cancellationToken);
+            mainPhotoUpload = new HallPhotoUpload { FileName = MainPhoto.FileName, ContentType = MainPhoto.ContentType, Content = mainStream.ToArray() };
+        }
+
         var request = new CreateHallRequest
         {
             Name = Name,
             ContactPhone = ContactPhone,
             Region = Region,
             Address = Address,
+            DetailedAddress = DetailedAddress,
             Description = Description,
             Capacity = Capacity,
             Price = Price,
+            YouTubeVideoUrl = YouTubeVideoUrl,
+            Features = SplitFeatures(Features),
+            OtherFeatures = OtherFeatures,
             FirstPeriodStart = FirstPeriodStart,
             FirstPeriodEnd = FirstPeriodEnd,
             SecondPeriodStart = SecondPeriodStart,
             SecondPeriodEnd = SecondPeriodEnd,
+            MainPhoto = mainPhotoUpload,
             Photos = photoUploads
         };
 
         var response = await _hallCreationService.CreateHallAsync(request, cancellationToken);
         return CreatedAtAction(nameof(GetSidebar), response);
+    }
+
+    private static IReadOnlyList<string>? SplitFeatures(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        // Features arrive as a JSON serialized string[] from the multipart form
+        // (the frontend posts them as a single field). Tolerate plain comma lists too.
+        var trimmed = raw.Trim();
+        if (trimmed.StartsWith("[", StringComparison.Ordinal) && trimmed.EndsWith("]", StringComparison.Ordinal))
+        {
+            try
+            {
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<string[]>(trimmed);
+                return parsed is null ? null : parsed.ToList();
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // Fall through to comma-splitting below.
+            }
+        }
+
+        return trimmed.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+    }
+
+    /// <summary>
+    /// Uploads the authenticated Hall Owner's identity document (US-OWNER-30). The
+    /// document is mandatory before the owner can create a hall and is stored outside
+    /// the public media area; only the owner and the Admin can read it.
+    /// </summary>
+    [HttpPost("profile/identity-document")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(IdentityDocumentUploadResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IdentityDocumentUploadResult>> UploadIdentityDocument(
+        [FromForm] IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, cancellationToken);
+
+        var upload = new OwnerDocumentUpload
+        {
+            FileName = file.FileName,
+            ContentType = file.ContentType,
+            Content = ms.ToArray()
+        };
+
+        var result = await _ownerIdentityService.UploadIdentityDocumentAsync(upload, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Streams the authenticated Hall Owner's own identity document (US-OWNER-30).
+    /// Only the owner (and the Admin) can read it; the response is not public.
+    /// </summary>
+    [HttpGet("profile/identity-document")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetIdentityDocument(CancellationToken cancellationToken)
+    {
+        var document = await _ownerIdentityService.GetIdentityDocumentAsync(cancellationToken);
+        return PhysicalFile(document.FullPath, document.ContentType);
+    }
+
+    /// <summary>
+    /// Uploads the payment receipt for one of the authenticated Hall Owner's own halls
+    /// (US-OWNER-31). Only valid for an Approved, not-yet-paid hall; the hall moves to
+    /// ReceiptUploaded and stays private until the Admin confirms the payment.
+    /// </summary>
+    [HttpPost("halls/{hallId:guid}/payment-receipt")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(PaymentReceiptUploadResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<PaymentReceiptUploadResult>> UploadPaymentReceipt(
+        Guid hallId,
+        [FromForm] IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, cancellationToken);
+
+        var upload = new OwnerDocumentUpload
+        {
+            FileName = file.FileName,
+            ContentType = file.ContentType,
+            Content = ms.ToArray()
+        };
+
+        var result = await _paymentReceiptService.UploadPaymentReceiptAsync(hallId, upload, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Streams the payment receipt of one of the authenticated Hall Owner's own halls
+    /// (US-OWNER-31). Only the owner (and the Admin) can read it.
+    /// </summary>
+    [HttpGet("halls/{hallId:guid}/payment-receipt")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPaymentReceipt(Guid hallId, CancellationToken cancellationToken)
+    {
+        var document = await _paymentReceiptService.GetPaymentReceiptAsync(hallId, cancellationToken);
+        return PhysicalFile(document.FullPath, document.ContentType);
     }
 }

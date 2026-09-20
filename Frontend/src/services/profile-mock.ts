@@ -33,6 +33,7 @@ function readStore(): UserProfile | null {
       email: parsed.email,
       phoneNumber: parsed.phoneNumber,
       concurrencyStamp: stamp,
+      isIdentityDocumentUploaded: Boolean(parsed.isIdentityDocumentUploaded),
     };
   } catch {
     return null;
@@ -51,6 +52,7 @@ function seedProfile(displayName: string | null): UserProfile {
     email: "layan@wesal.ps",
     phoneNumber: "+970599111222",
     concurrencyStamp: "1",
+    isIdentityDocumentUploaded: false,
   };
 }
 

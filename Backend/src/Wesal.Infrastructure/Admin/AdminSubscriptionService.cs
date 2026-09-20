@@ -7,6 +7,7 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.AiAssistant;
+using Wesal.Infrastructure.Conversations;
 
 namespace Wesal.Infrastructure.Admin;
 
@@ -31,20 +32,35 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
     private readonly IHallRepository _hallRepository;
     private readonly IOptions<SubscriptionPaymentOptions> _subscriptionPaymentOptions;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IConversationRepository _conversationRepository;
+    private readonly IMessageRepository _messageRepository;
+    private readonly IConversationNotifier _notifier;
+    private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _dateTime;
+    private readonly ILogger<AdminSubscriptionService> _logger;
 
     public AdminSubscriptionService(
         IAdminDashboardRepository adminDashboardRepository,
         IHallRepository hallRepository,
         IOptions<SubscriptionPaymentOptions> subscriptionPaymentOptions,
         IUnitOfWork unitOfWork,
-        IDateTime dateTime)
+        IConversationRepository conversationRepository,
+        IMessageRepository messageRepository,
+        IConversationNotifier notifier,
+        ICurrentUserService currentUser,
+        IDateTime dateTime,
+        ILogger<AdminSubscriptionService> logger)
     {
         _adminDashboardRepository = adminDashboardRepository;
         _hallRepository = hallRepository;
         _subscriptionPaymentOptions = subscriptionPaymentOptions;
         _unitOfWork = unitOfWork;
+        _conversationRepository = conversationRepository;
+        _messageRepository = messageRepository;
+        _notifier = notifier;
+        _currentUser = currentUser;
         _dateTime = dateTime;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<AdminSubscriptionOwnerGroupDto>> GetSubscriptionOverviewAsync(
@@ -135,6 +151,11 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // Notify the owner through the hall's conversation inbox that their payment was
+        // confirmed and the hall is now live (US-ADMIN-10). Best-effort: never fails the
+        // payment confirmation.
+        await TryNotifyOwnerAsync(hall, cancellationToken);
+
         return new AdminMarkPaidResultDto
         {
             HallId = hall.Id,
@@ -147,6 +168,78 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
             AmountIls = _subscriptionPaymentOptions.Value.SubscriptionPriceIls,
             AlreadyPaidWithActiveCycle = false
         };
+    }
+
+    private async Task TryNotifyOwnerAsync(Hall hall, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(hall.OwnerId))
+        {
+            return;
+        }
+
+        try
+        {
+            var conversation = await _conversationRepository.GetByHallForOwnerAsync(hall.Id, hall.OwnerId, cancellationToken);
+
+            var adminUserId = _currentUser.IsAuthenticated && !string.IsNullOrWhiteSpace(_currentUser.UserId)
+                ? _currentUser.UserId!
+                : "admin";
+
+            if (conversation is null)
+            {
+                conversation = new Conversation
+                {
+                    HallId = hall.Id,
+                    SenderUserId = adminUserId,
+                    HallOwnerId = hall.OwnerId!
+                };
+
+                await _conversationRepository.AddAsync(conversation, cancellationToken);
+            }
+
+            var message = new Message
+            {
+                ConversationId = conversation.Id,
+                SenderUserId = adminUserId,
+                Content = $"تم تأكيد دفع اشتراك قاعتك «{hall.Name}»، وتم تفعيلها ونشرها للمهتمين. اشتراكك ساري حتى {hall.SubscriptionCycleEnd:yyyy-MM-dd}."
+            };
+
+            await _messageRepository.AddAsync(message, cancellationToken);
+            await _messageRepository.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                var senderName = string.Empty;
+                var users = await _conversationRepository.GetUserDisplayNamesAsync([adminUserId], cancellationToken);
+                senderName = users.FirstOrDefault(info => info.UserId == adminUserId)?.FullName ?? string.Empty;
+
+                await _notifier.NotifyMessageSentAsync(new MessageSentEvent
+                {
+                    MessageId = message.Id,
+                    ConversationId = conversation.Id,
+                    SenderUserId = message.SenderUserId,
+                    SenderName = senderName,
+                    Content = message.Content,
+                    SentAt = message.CreatedAt
+                }, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to push the payment-confirmed message for hall {HallId}", hall.Id);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to notify the owner of confirmed payment for hall {HallId}", hall.Id);
+        }
     }
 
     private static List<AdminSubscriptionHallDto> OrderHalls(

@@ -5,8 +5,10 @@ import { useSearchParams } from "next/navigation";
 import BookingPeriodsSection from "@/components/owner-management/add-hall/BookingPeriodsSection";
 import HallBasicInfoSection from "@/components/owner-management/add-hall/HallBasicInfoSection";
 import HallDescriptionSection from "@/components/owner-management/add-hall/HallDescriptionSection";
+import HallFeaturesSection from "@/components/owner-management/add-hall/HallFeaturesSection";
 import HallFormActions from "@/components/owner-management/add-hall/HallFormActions";
 import HallLocationSection from "@/components/owner-management/add-hall/HallLocationSection";
+import HallMediaSection from "@/components/owner-management/add-hall/HallMediaSection";
 import HallPhotosSection from "@/components/owner-management/add-hall/HallPhotosSection";
 import { useHallRegistrationForm } from "@/hooks/useHallRegistrationForm";
 import { useT } from "@/i18n";
@@ -97,6 +99,22 @@ export default function HallRegistrationForm() {
         />
 
         <HallDescriptionSection
+          values={values}
+          fieldErrors={fieldErrors}
+          disabled={isSubmitting}
+          onChange={patchValues}
+          resolveError={resolveError}
+        />
+
+        <HallFeaturesSection
+          values={values}
+          fieldErrors={fieldErrors}
+          disabled={isSubmitting}
+          onChange={patchValues}
+          resolveError={resolveError}
+        />
+
+        <HallMediaSection
           values={values}
           fieldErrors={fieldErrors}
           disabled={isSubmitting}

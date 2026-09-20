@@ -32,10 +32,10 @@ public class RecommendationServiceShould : IDisposable
     private void SeedHalls()
     {
         _context.Halls.AddRange(
-            new Hall { Id = Guid.NewGuid(), Name = "Gaza Grand Hall", Region = HallRegion.Gaza, Address = "Gaza City Center", Capacity = 300, Status = HallStatus.Approved, IsDeleted = false, Price = 1500, ShowPrice = true },
-            new Hall { Id = Guid.NewGuid(), Name = "North Celebration Hall", Region = HallRegion.NorthGaza, Address = "Jabalia", Capacity = 200, Status = HallStatus.Approved, IsDeleted = false, Price = 800, ShowPrice = true },
-            new Hall { Id = Guid.NewGuid(), Name = "South Hall", Region = HallRegion.SouthGaza, Address = "Khan Yunis", Capacity = 400, Status = HallStatus.Approved, IsDeleted = false, Price = 1200, ShowPrice = true },
-            new Hall { Id = Guid.NewGuid(), Name = "Deleted Hall", Region = HallRegion.Gaza, Address = "Gaza", Capacity = 500, Status = HallStatus.Approved, IsDeleted = true, Price = 1000 },
+            new Hall { Id = Guid.NewGuid(), Name = "Gaza Grand Hall", Region = HallRegion.Gaza, Address = "Gaza City Center", Capacity = 300, Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = false, Price = 1500, ShowPrice = true },
+            new Hall { Id = Guid.NewGuid(), Name = "North Celebration Hall", Region = HallRegion.NorthGaza, Address = "Jabalia", Capacity = 200, Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = false, Price = 800, ShowPrice = true },
+            new Hall { Id = Guid.NewGuid(), Name = "South Hall", Region = HallRegion.SouthGaza, Address = "Khan Yunis", Capacity = 400, Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = false, Price = 1200, ShowPrice = true },
+            new Hall { Id = Guid.NewGuid(), Name = "Deleted Hall", Region = HallRegion.Gaza, Address = "Gaza", Capacity = 500, Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = true, Price = 1000 },
             new Hall { Id = Guid.NewGuid(), Name = "Pending Hall", Region = HallRegion.Gaza, Address = "Gaza", Capacity = 350, Status = HallStatus.PendingReview, IsDeleted = false, Price = 900 }
         );
         _context.SaveChanges();

@@ -135,4 +135,34 @@ public class AdminController : ControllerBase
         var response = await _adminSubscriptionService.MarkSubscriptionPaidAsync(hallId, cancellationToken);
         return Ok(response);
     }
+
+    /// <summary>
+    /// Streams the payment receipt the owner uploaded for a hall (US-ADMIN-07/10).
+    /// Only the Admin can read it; the document is stored outside the public media area.
+    /// </summary>
+    [HttpGet("{hallId:guid}/payment-receipt")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetHallPaymentReceipt(Guid hallId, CancellationToken cancellationToken)
+    {
+        var document = await _adminHallReviewService.GetPaymentReceiptAsync(hallId, cancellationToken);
+        return PhysicalFile(document.FullPath, document.ContentType);
+    }
+
+    /// <summary>
+    /// Streams a Hall Owner's identity document, needed to verify the owner before
+    /// payment confirmation (US-ADMIN-07). Only the Admin can read it.
+    /// </summary>
+    [HttpGet("owners/{ownerId}/identity-document")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetOwnerIdentityDocument(string ownerId, CancellationToken cancellationToken)
+    {
+        var document = await _adminHallReviewService.GetOwnerIdentityDocumentAsync(ownerId, cancellationToken);
+        return PhysicalFile(document.FullPath, document.ContentType);
+    }
 }

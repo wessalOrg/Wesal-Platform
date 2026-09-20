@@ -23,6 +23,9 @@ function isTimeValue(raw: string): boolean {
   return /^\d{2}:\d{2}$/.test(raw.trim());
 }
 
+const YOUTUBE_URL_PATTERN =
+  /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|embed\/|shorts\/|live\/|@[\w-]+(\/[\w-]+)*\/|[a-zA-Z0-9_-]{11})(&[^#\s]*)?$/i;
+
 /** Client-side checks for edit form — backend remains authoritative. */
 export function validateHallEditForm(
   values: HallEditFormValues,
@@ -44,8 +47,14 @@ export function validateHallEditForm(
     errors.region = "owner.management.addHall.errors.regionRequired";
   }
 
-  if (!values.detailedAddress.trim()) {
-    errors.detailedAddress = "owner.management.addHall.errors.addressRequired";
+  if (!values.address.trim()) {
+    errors.address = "owner.management.addHall.errors.addressRequired";
+  } else if (values.address.trim().length > 100) {
+    errors.address = "owner.management.addHall.errors.addressTooLong";
+  }
+
+  if (values.detailedAddress.trim().length > 150) {
+    errors.detailedAddress = "owner.management.addHall.errors.detailedAddressTooLong";
   }
 
   if (!values.description.trim()) {
@@ -60,6 +69,19 @@ export function validateHallEditForm(
 
   if (!isOptionalNonNegativeNumber(values.rentalPrice)) {
     errors.rentalPrice = "owner.management.addHall.errors.priceInvalid";
+  }
+
+  const youtube = values.youtubeVideoUrl.trim();
+  if (youtube && !YOUTUBE_URL_PATTERN.test(youtube)) {
+    errors.youtubeVideoUrl = "owner.management.addHall.errors.youtubeUrlInvalid";
+  }
+
+  if (values.features.some((feature) => !feature.trim())) {
+    errors.features = "owner.management.addHall.errors.featuresInvalid";
+  }
+
+  if (values.otherFeatures.trim().length > 200) {
+    errors.otherFeatures = "owner.management.addHall.errors.otherFeaturesTooLong";
   }
 
   if (!isTimeValue(values.firstPeriod.startTime)) {

@@ -52,7 +52,9 @@ public sealed class HallStatusTrackingService : IHallStatusTrackingService
             {
                 HallId = hall.Id,
                 HallName = hall.Name,
-                Status = hall.Status
+                Status = hall.Status,
+                PaymentStatus = hall.PaymentStatus,
+                PaymentReceiptUploadedAt = hall.PaymentReceiptUploadedAt
             })
             .ToList();
     }

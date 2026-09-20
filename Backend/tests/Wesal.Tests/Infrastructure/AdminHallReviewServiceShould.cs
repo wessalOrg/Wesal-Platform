@@ -104,7 +104,17 @@ public class AdminHallReviewServiceShould : IDisposable
             dateTime ?? new FakeDateTime(new DateTimeOffset(2026, 8, 15, 10, 0, 0, TimeSpan.Zero)),
             new FakeNotifier(),
             _userManager,
+            new FakeDocumentStorage(),
             NullLogger<AdminHallReviewService>.Instance);
+
+    private sealed class FakeDocumentStorage : IDocumentStorage
+    {
+        public string Root => Path.Combine(Path.GetTempPath(), "wesal-test-documents");
+
+        public string OwnerDocumentsDirectory(string ownerId) => Path.Combine(Root, "documents", "owners", ownerId);
+
+        public string HallReceiptsDirectory(Guid hallId) => Path.Combine(Root, "documents", "halls", hallId.ToString(), "receipts");
+    }
 
     // --- US-ADMIN-01: Pending queue ---
 

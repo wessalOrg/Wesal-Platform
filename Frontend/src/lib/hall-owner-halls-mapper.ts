@@ -1,5 +1,6 @@
 import { hallAccessFromUnknown } from "@/lib/hall-access";
 import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
+import { toHallPaymentStatus } from "@/constants/hallPaymentStatus";
 import { parseDateIso, utcDaysRemaining, utcTodayIso } from "@/lib/booking-date";
 import { isActiveExpiryWarning } from "@/lib/subscription-expiry-warning-message";
 import type { HallExpiryWarning, HallOwnerHall } from "@/types/hall-owner-halls";
@@ -37,9 +38,10 @@ export type HallOwnerHallDto = {
   subscriptionCycleEnd?: string | null;
   daysRemaining?: number | string | null;
   expiryWarningDispatched?: boolean | string | null;
-  paymentStatus?: string | boolean | null;
+  paymentStatus?: string | number | boolean | null;
   isPaid?: boolean | null;
   paid?: boolean | null;
+  paymentReceiptUploadedAt?: string | null;
   adminLocked?: boolean | null;
   isAdminLocked?: boolean | null;
   systemLocked?: boolean | null;
@@ -109,8 +111,10 @@ export function mapHallOwnerHallDto(dto: HallOwnerHallDto): HallOwnerHall | null
     id,
     name: readName(dto),
     status,
+    paymentStatus: toHallPaymentStatus(dto.paymentStatus) ?? "Unpaid",
+    paymentReceiptUploadedAt:
+      String(dto.paymentReceiptUploadedAt ?? "").trim() || null,
     expiryWarning: mapExpiryWarning(dto),
-    paymentStatus: access.paymentStatus,
     adminLocked: access.adminLocked,
     systemLocked: access.systemLocked,
   };

@@ -103,7 +103,8 @@ public class HallRepository : IHallRepository
             .Where(hall => hall.Status == HallStatus.Approved
                 && !hall.IsDeleted
                 && !hall.IsAdminLocked
-                && !hall.SystemLocked);
+                && !hall.SystemLocked
+                && hall.PaymentStatus == HallPaymentStatus.Paid);
 
     private IQueryable<Hall> ApplySearchFilters(
         IQueryable<Hall> query,
@@ -157,6 +158,23 @@ public class HallRepository : IHallRepository
             .Where(period => hallIds.Contains(period.HallId))
             .OrderBy(period => period.HallId)
             .ThenBy(period => period.Type)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<HallFeature>> GetHallFeaturesAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (hallIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await _context.HallFeatures
+            .AsNoTracking()
+            .Where(feature => hallIds.Contains(feature.HallId))
+            .OrderBy(feature => feature.HallId)
+            .ThenBy(feature => feature.Name)
             .ToListAsync(cancellationToken);
     }
 

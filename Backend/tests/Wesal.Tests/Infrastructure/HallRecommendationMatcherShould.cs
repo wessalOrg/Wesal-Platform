@@ -28,8 +28,8 @@ public class HallRecommendationMatcherShould : IDisposable
 
     private void SeedHalls()
     {
-        var h1 = new Hall { Id = Guid.NewGuid(), Name = "Gaza Hall", Region = HallRegion.Gaza, Address = "Gaza City", Capacity = 300, Status = HallStatus.Approved, IsDeleted = false, Price = 1000 };
-        var h2 = new Hall { Id = Guid.NewGuid(), Name = "North Hall", Region = HallRegion.NorthGaza, Address = "North Gaza", Capacity = 200, Status = HallStatus.Approved, IsDeleted = false, Price = 800 };
+        var h1 = new Hall { Id = Guid.NewGuid(), Name = "Gaza Hall", Region = HallRegion.Gaza, Address = "Gaza City", Capacity = 300, Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = false, Price = 1000 };
+        var h2 = new Hall { Id = Guid.NewGuid(), Name = "North Hall", Region = HallRegion.NorthGaza, Address = "North Gaza", Capacity = 200, Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = false, Price = 800 };
         var h3 = new Hall { Id = Guid.NewGuid(), Name = "Deleted Hall", Region = HallRegion.Gaza, Address = "Gaza", Capacity = 500, Status = HallStatus.Approved, IsDeleted = true, Price = 1200 };
         var h4 = new Hall { Id = Guid.NewGuid(), Name = "Pending Hall", Region = HallRegion.Gaza, Address = "Gaza", Capacity = 400, Status = HallStatus.PendingReview, IsDeleted = false, Price = 900 };
         _context.Halls.AddRange(h1, h2, h3, h4);

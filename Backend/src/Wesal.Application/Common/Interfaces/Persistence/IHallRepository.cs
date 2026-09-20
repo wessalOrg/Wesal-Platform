@@ -41,6 +41,13 @@ public interface IHallRepository
 
     Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<HallFeature>> GetHallFeaturesAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyList<HallFeature>>(Array.Empty<HallFeature>());
+    }
+
     Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
         IReadOnlyCollection<Guid> hallIds,
         CancellationToken cancellationToken = default);

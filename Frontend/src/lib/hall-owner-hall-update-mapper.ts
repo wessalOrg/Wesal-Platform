@@ -24,10 +24,14 @@ export type UpdateOwnerHallRequest = {
   contactPhone: string | null;
   region: string;
   address: string;
+  detailedAddress: string | null;
   description: string | null;
   capacity: number;
   price: number | null;
   showPrice: boolean;
+  youtubeVideoUrl: string | null;
+  features: string[];
+  otherFeatures: string | null;
   photos: UpdateOwnerHallPhotoDto[];
   bookingPeriods: UpdateOwnerHallBookingPeriodDto[];
 };
@@ -58,11 +62,15 @@ export function mapHallFormToUpdateHallRequest(
     mainImageUrl: photos[0]?.url ?? null,
     contactPhone: normalizeRegisterPhone(values.ownerPhone) || null,
     region,
-    address: values.detailedAddress.trim(),
+    address: values.address.trim(),
+    detailedAddress: values.detailedAddress.trim() || null,
     description: values.description.trim() || null,
     capacity: Number.parseInt(values.guestCapacity.trim(), 10),
     price: Number.isFinite(price as number) ? (price as number) : null,
     showPrice: priceRaw !== "",
+    youtubeVideoUrl: values.youtubeVideoUrl.trim() || null,
+    features: values.features,
+    otherFeatures: values.otherFeatures.trim() || null,
     photos,
     bookingPeriods: [
       {

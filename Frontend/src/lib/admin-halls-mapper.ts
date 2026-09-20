@@ -62,6 +62,7 @@ function asInt(value: unknown): number | null {
 function mapPaymentStatus(raw: unknown): AdminPaymentStatus {
   const token = asText(raw).replace(/[\s_-]/g, "").toLowerCase();
   if (token === "paid" || token === "1") return "Paid";
+  if (token === "receiptuploaded" || token === "2") return "ReceiptUploaded";
   return "Unpaid";
 }
 
@@ -85,6 +86,11 @@ export function mapAdminHallDetail(payload: unknown): AdminHallDetail | null {
     ? photosRaw.map((item) => asText(item)).filter(Boolean)
     : [];
 
+  const featuresRaw = dto.features ?? dto.Features;
+  const features = Array.isArray(featuresRaw)
+    ? featuresRaw.map((item) => asText(item)).filter(Boolean)
+    : [];
+
   const badge = mapBackendHallStatus(status) ?? "Pending";
   const cycleEnd = readCycleDate(dto, [
     "subscriptionCycleEnd",
@@ -100,19 +106,30 @@ export function mapAdminHallDetail(payload: unknown): AdminHallDetail | null {
     name: asText(dto.name ?? dto.Name) || "—",
     regionDisplayName: asText(dto.regionDisplayName ?? dto.RegionDisplayName),
     address: asText(dto.address ?? dto.Address),
+    detailedAddress: asText(dto.detailedAddress ?? dto.DetailedAddress) || null,
     description: asText(dto.description ?? dto.Description) || null,
     capacity: asNumber(dto.capacity ?? dto.Capacity) ?? 0,
     price: asNumber(dto.price ?? dto.Price),
     submittedAt: asText(dto.submittedAt ?? dto.SubmittedAt) || null,
     status,
     approvalBadge: badge,
+    ownerId: asId(dto.ownerId ?? dto.OwnerId),
     ownerFullName: asText(dto.ownerFullName ?? dto.OwnerFullName) || null,
     ownerPhoneNumber: asText(dto.ownerPhoneNumber ?? dto.OwnerPhoneNumber) || null,
     ownerEmail: asText(dto.ownerEmail ?? dto.OwnerEmail) || null,
     photoUrls,
+    youtubeVideoUrl: asText(dto.youtubeVideoUrl ?? dto.YouTubeVideoUrl) || null,
+    features,
+    otherFeatures: asText(dto.otherFeatures ?? dto.OtherFeatures) || null,
     adminLocked: asBool(dto.adminLocked ?? dto.AdminLocked ?? dto.isLocked ?? dto.IsLocked),
     systemLocked: asBool(dto.systemLocked ?? dto.SystemLocked),
     paymentStatus: mapPaymentStatus(dto.paymentStatus ?? dto.PaymentStatus),
+    paymentReceiptUploadedAt:
+      asText(dto.paymentReceiptUploadedAt ?? dto.PaymentReceiptUploadedAt) || null,
+    hasPaymentReceipt: asBool(dto.hasPaymentReceipt ?? dto.HasPaymentReceipt),
+    ownerHasIdentityDocument: asBool(
+      dto.ownerHasIdentityDocument ?? dto.OwnerHasIdentityDocument,
+    ),
     cycleStart: readCycleDate(dto, [
       "subscriptionCycleStart",
       "SubscriptionCycleStart",

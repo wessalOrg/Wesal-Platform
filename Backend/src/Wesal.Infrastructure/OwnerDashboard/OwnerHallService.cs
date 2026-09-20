@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Catalogs;
 using Wesal.Domain.Common;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
@@ -180,8 +181,63 @@ public sealed class OwnerHallService : IOwnerHallService
         hall.Price = request.Price;
         hall.ShowPrice = request.ShowPrice;
 
+        ApplyDetailedAddress(hall, request);
+        hall.YouTubeVideoUrl = NormalizeOptional(request.YouTubeVideoUrl);
+        hall.OtherFeatures = NormalizeOptional(request.OtherFeatures);
+        ApplyFeatures(hall, request.Features);
+
         ApplyPhotos(hall, request.Photos);
         ApplyBookingPeriods(hall, request.BookingPeriods);
+    }
+
+    /// <summary>
+    /// The detailed address is a dependent selection: it must belong to the hall's
+    /// region list. It is only re-validated on an actual change so existing halls whose
+    /// address predates the catalog can keep editing the rest of their details.
+    /// </summary>
+    private static void ApplyDetailedAddress(Hall hall, UpdateOwnerHallRequest request)
+    {
+        var incoming = string.IsNullOrWhiteSpace(request.DetailedAddress) ? null : request.DetailedAddress.Trim();
+
+        if (string.Equals(incoming, hall.DetailedAddress, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (incoming is not null && !RegionAddressCatalog.Contains(request.Region, incoming))
+        {
+            throw new BusinessRuleException(
+                "DetailedAddressNotInRegion",
+                "The detailed address must be selected from the selected region's address list.");
+        }
+
+        hall.DetailedAddress = incoming;
+    }
+
+    private static void ApplyFeatures(Hall hall, IReadOnlyList<string> features)
+    {
+        var normalized = HallFeatureCatalog.Normalize(features);
+
+        foreach (var feature in normalized)
+        {
+            if (!HallFeatureCatalog.IsPredefined(feature))
+            {
+                throw new BusinessRuleException(
+                    "FeatureNotPredefined",
+                    $"The feature \"{feature}\" is not in the predefined feature list.");
+            }
+        }
+
+        var existing = hall.Features.ToList();
+        foreach (var item in existing)
+        {
+            hall.Features.Remove(item);
+        }
+
+        foreach (var name in normalized)
+        {
+            hall.Features.Add(new HallFeature { HallId = hall.Id, Name = name });
+        }
     }
 
     private void ApplyPhotos(Hall hall, IReadOnlyList<UpdateOwnerHallPhotoDto> photos)
@@ -250,12 +306,22 @@ public sealed class OwnerHallService : IOwnerHallService
             Region = hall.Region,
             RegionDisplayName = HallDisplayNames.GetRegionDisplayName(hall.Region),
             Address = hall.Address,
+            DetailedAddress = hall.DetailedAddress,
             Description = hall.Description,
             Capacity = hall.Capacity,
             Price = hall.Price,
             ShowPrice = hall.ShowPrice,
+            YouTubeVideoUrl = hall.YouTubeVideoUrl,
+            Features = hall.Features
+                .Select(feature => feature.Name)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToList(),
+            OtherFeatures = hall.OtherFeatures,
             Status = hall.Status,
             IsEditable = hall.Status != HallStatus.PendingReview,
+            PaymentStatus = hall.PaymentStatus,
+            PaymentReceiptUploadedAt = hall.PaymentReceiptUploadedAt,
+            HasPaymentReceipt = !string.IsNullOrWhiteSpace(hall.PaymentReceiptUrl),
             Photos = hall.Images
                 .Where(image => !image.IsDeleted)
                 .OrderBy(image => image.DisplayOrder)

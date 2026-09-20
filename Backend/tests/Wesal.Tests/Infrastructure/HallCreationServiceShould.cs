@@ -1,10 +1,14 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Catalogs;
+using Wesal.Domain.Constants;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Halls;
+using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
 
 namespace Wesal.Tests.Infrastructure;
@@ -13,6 +17,7 @@ public class HallCreationServiceShould : IDisposable
 {
     private readonly ServiceProvider _provider;
     private readonly ApplicationDbContext _context;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly HallCreationService _service;
     private readonly FakeCurrentUser _currentUser;
 
@@ -20,14 +25,51 @@ public class HallCreationServiceShould : IDisposable
     {
         var services = new ServiceCollection();
         services.AddDbContext<ApplicationDbContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+        services.AddIdentityCore<ApplicationUser>(o =>
+        {
+            o.Password.RequireDigit = true;
+            o.Password.RequireLowercase = true;
+            o.Password.RequireUppercase = true;
+            o.Password.RequireNonAlphanumeric = true;
+            o.Password.RequiredLength = 8;
+            o.User.RequireUniqueEmail = true;
+        }).AddRoles<ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>();
         services.AddLogging();
         services.AddSingleton<IHallMediaStorage>(new FakeHallMediaStorage());
         _provider = services.BuildServiceProvider();
         _context = _provider.GetRequiredService<ApplicationDbContext>();
         _context.Database.EnsureCreated();
-        _currentUser = new FakeCurrentUser("owner-1", true, Wesal.Domain.Constants.ApplicationRoles.HallOwner);
-        _service = new HallCreationService(_currentUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>());
+        _userManager = _provider.GetRequiredService<UserManager<ApplicationUser>>();
+        SeedOwnerAsync("owner-1", withIdentityDocument: true).GetAwaiter().GetResult();
+        _currentUser = new FakeCurrentUser("owner-1", true, ApplicationRoles.HallOwner);
+        _service = new HallCreationService(_currentUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager);
     }
+
+    /// <summary>
+    /// The current HallCreationService requires the authenticated owner to have uploaded
+    /// an identity document (US-OWNER-30). Seed an owner, optionally without the
+    /// document so the missing-identity rule can be exercised.
+    /// </summary>
+    private async Task SeedOwnerAsync(string id, bool withIdentityDocument)
+    {
+        var roleManager = _provider.GetRequiredService<RoleManager<ApplicationRole>>();
+        await roleManager.CreateAsync(new ApplicationRole(ApplicationRoles.HallOwner));
+
+        var owner = new ApplicationUser
+        {
+            Id = id,
+            FullName = "Test Owner",
+            Email = $"{id}@example.com",
+            UserName = $"{id}@example.com",
+            PhoneNumber = $"+97259{_seedCounter:D5}",
+            IdentityDocumentUrl = withIdentityDocument ? $"/documents/owners/{id}/id.jpg" : null
+        };
+        _seedCounter++;
+        await _userManager.CreateAsync(owner, "Password123!");
+        await _userManager.AddToRoleAsync(owner, ApplicationRoles.HallOwner);
+    }
+
+    private static int _seedCounter = 100000;
 
     private class FakeCurrentUser : Wesal.Application.Common.Interfaces.ICurrentUserService
     {
@@ -72,19 +114,32 @@ public class HallCreationServiceShould : IDisposable
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => _ctx.SaveChangesAsync(cancellationToken);
     }
 
-    private static CreateHallRequest CreateValidRequest(string region = "Gaza", decimal? price = 1000, IReadOnlyList<HallPhotoUpload>? photos = null) => new()
+    private static CreateHallRequest CreateValidRequest(
+        string region = "Gaza",
+        decimal? price = 1000,
+        IReadOnlyList<HallPhotoUpload>? photos = null,
+        string? detailedAddress = null,
+        string? youtubeUrl = null,
+        IReadOnlyList<string>? features = null,
+        string? otherFeatures = null,
+        HallPhotoUpload? mainPhoto = null) => new()
     {
         Name = "Test Hall",
         ContactPhone = "+972599123456",
         Region = region,
         Address = "Gaza City, Test Street",
+        DetailedAddress = detailedAddress,
         Description = "Beautiful hall for weddings",
         Capacity = 300,
         Price = price,
+        YouTubeVideoUrl = youtubeUrl,
+        Features = features,
+        OtherFeatures = otherFeatures,
         FirstPeriodStart = new TimeOnly(8, 0),
         FirstPeriodEnd = new TimeOnly(14, 0),
         SecondPeriodStart = new TimeOnly(15, 0),
         SecondPeriodEnd = new TimeOnly(22, 0),
+        MainPhoto = mainPhoto,
         Photos = photos
     };
 
@@ -178,7 +233,7 @@ public class HallCreationServiceShould : IDisposable
     [Fact]
     public async Task Unauthenticated_Rejected()
     {
-        var unauthService = new HallCreationService(new FakeCurrentUser(null, false, ""), new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>());
+        var unauthService = new HallCreationService(new FakeCurrentUser(null, false, ""), new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager);
         var request = CreateValidRequest();
         await Assert.ThrowsAsync<UnauthorizedException>(() => unauthService.CreateHallAsync(request));
     }
@@ -186,8 +241,8 @@ public class HallCreationServiceShould : IDisposable
     [Fact]
     public async Task RegularUser_Rejected()
     {
-        var regUser = new FakeCurrentUser("user-2", true, Wesal.Domain.Constants.ApplicationRoles.RegisteredUser);
-        var service = new HallCreationService(regUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>());
+        var regUser = new FakeCurrentUser("user-2", true, ApplicationRoles.RegisteredUser);
+        var service = new HallCreationService(regUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager);
         var request = CreateValidRequest();
         await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateHallAsync(request));
     }
@@ -200,6 +255,92 @@ public class HallCreationServiceShould : IDisposable
         request = new CreateHallRequest { Name = "", ContactPhone = request.ContactPhone, Region = request.Region, Address = request.Address, Description = request.Description, Capacity = request.Capacity, Price = request.Price, FirstPeriodStart = request.FirstPeriodStart, FirstPeriodEnd = request.FirstPeriodEnd, SecondPeriodStart = request.SecondPeriodStart, SecondPeriodEnd = request.SecondPeriodEnd };
         await Assert.ThrowsAsync<ValidationException>(() => _service.CreateHallAsync(request));
         Assert.Equal(countBefore, await _context.Halls.CountAsync());
+    }
+
+    [Fact]
+    public async Task MissingIdentityDocument_Rejected()
+    {
+        await SeedOwnerAsync("owner-no-doc", withIdentityDocument: false);
+        var noDocUser = new FakeCurrentUser("owner-no-doc", true, ApplicationRoles.HallOwner);
+        var service = new HallCreationService(noDocUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateHallAsync(CreateValidRequest()));
+        Assert.Equal(0, await _context.Halls.CountAsync());
+    }
+
+    [Fact]
+    public async Task DetailedAddress_NotInRegion_Rejected()
+    {
+        var request = CreateValidRequest(region: "Gaza", detailedAddress: "جباليا"); // a North Gaza area, not a Gaza one
+        await Assert.ThrowsAsync<ValidationException>(() => _service.CreateHallAsync(request));
+        Assert.Equal(0, await _context.Halls.CountAsync());
+    }
+
+    [Fact]
+    public async Task DetailedAddress_InRegion_AcceptedAndPersisted()
+    {
+        var request = CreateValidRequest(region: "Gaza", detailedAddress: "الرمال");
+        var result = await _service.CreateHallAsync(request);
+        var hall = await _context.Halls.FindAsync(result.HallId);
+        Assert.Equal("الرمال", hall!.DetailedAddress);
+    }
+
+    [Fact]
+    public async Task InvalidYouTubeUrl_Rejected()
+    {
+        var request = CreateValidRequest(youtubeUrl: "https://example.com/not-youtube");
+        await Assert.ThrowsAsync<ValidationException>(() => _service.CreateHallAsync(request));
+        Assert.Equal(0, await _context.Halls.CountAsync());
+    }
+
+    [Fact]
+    public async Task ValidYouTubeUrl_Accepted()
+    {
+        const string url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+        var request = CreateValidRequest(youtubeUrl: url);
+        var result = await _service.CreateHallAsync(request);
+        var hall = await _context.Halls.FindAsync(result.HallId);
+        Assert.Equal(url, hall!.YouTubeVideoUrl);
+    }
+
+    [Fact]
+    public async Task Feature_NotPredefined_Rejected()
+    {
+        var request = CreateValidRequest(features: new[] { "مطبخ مجهز" }); // not in the catalog
+        await Assert.ThrowsAsync<ValidationException>(() => _service.CreateHallAsync(request));
+        Assert.Equal(0, await _context.Halls.CountAsync());
+    }
+
+    [Fact]
+    public async Task Features_Predefined_PersistedAsCanonicalNames()
+    {
+        var request = CreateValidRequest(features: new[] { "مولد كهرباء", "تكييف", " مولد كهرباء " });
+        var result = await _service.CreateHallAsync(request);
+        var hall = await _context.Halls.Include(h => h.Features).FirstAsync(h => h.Id == result.HallId);
+        Assert.Equal(2, hall.Features.Count);
+        Assert.Contains("مولد كهرباء", hall.Features.Select(f => f.Name));
+        Assert.Contains("تكييف", hall.Features.Select(f => f.Name));
+        Assert.Equal(2, result.Features.Count);
+    }
+
+    [Fact]
+    public async Task OtherFeatures_TooLong_Rejected()
+    {
+        var request = CreateValidRequest(otherFeatures: new string('x', HallFeatureCatalog.OtherFeaturesMaxLength + 1));
+        await Assert.ThrowsAsync<ValidationException>(() => _service.CreateHallAsync(request));
+        Assert.Equal(0, await _context.Halls.CountAsync());
+    }
+
+    [Fact]
+    public async Task MainPhoto_BecomesCoverImage_AndNotDuplicatedInGallery()
+    {
+        var request = CreateValidRequest(photos: new[] { CreateValidPhoto("gallery.jpg") }, mainPhoto: CreateValidPhoto("cover.jpg"));
+        var result = await _service.CreateHallAsync(request);
+        var hall = await _context.Halls.Include(h => h.Images).FirstAsync(h => h.Id == result.HallId);
+        Assert.NotNull(hall.MainImageUrl);
+        Assert.Equal(result.MainImageUrl, hall.MainImageUrl);
+        Assert.Single(hall.Images); // gallery keeps only the explicit photos
+        Assert.DoesNotContain(hall.Images, i => i.Url == hall.MainImageUrl); // cover is not duplicated
     }
 
     public void Dispose()

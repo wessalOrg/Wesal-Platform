@@ -318,6 +318,7 @@ public class HallSearchRepositoryShould
             Region = region,
             Address = address,
             Status = status,
+            PaymentStatus = HallPaymentStatus.Paid,
             IsDeleted = isDeleted,
             IsAdminLocked = isAdminLocked,
             SystemLocked = systemLocked,

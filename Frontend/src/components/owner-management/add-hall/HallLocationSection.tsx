@@ -1,10 +1,12 @@
 "use client";
 
+import HallDetailedAddressSelect from "@/components/owner-management/add-hall/HallDetailedAddressSelect";
 import HallFormField, {
   hallFieldClassName,
 } from "@/components/owner-management/add-hall/HallFormField";
 import HallFormSection from "@/components/owner-management/add-hall/HallFormSection";
 import HallRegionSelect from "@/components/owner-management/add-hall/HallRegionSelect";
+import { useHallCatalogs } from "@/hooks/useHallCatalogs";
 import { useT } from "@/i18n";
 import type {
   HallRegistrationFieldErrors,
@@ -27,8 +29,11 @@ export default function HallLocationSection({
   resolveError,
 }: HallLocationSectionProps) {
   const t = useT();
+  const { addressesFor } = useHallCatalogs();
   const regionError = resolveError(fieldErrors.region);
-  const addressError = resolveError(fieldErrors.detailedAddress);
+  const addressError = resolveError(fieldErrors.address);
+  const detailedAddressError = resolveError(fieldErrors.detailedAddress);
+  const detailedAddresses = addressesFor(values.region);
 
   return (
     <HallFormSection
@@ -49,28 +54,56 @@ export default function HallLocationSection({
             hasError={Boolean(regionError)}
             aria-invalid={regionError ? true : undefined}
             aria-describedby={regionError ? "hall-region-error" : undefined}
-            onChange={(region) => onChange({ region })}
+            onChange={(region) =>
+              onChange({ region, detailedAddress: "" })
+            }
           />
         </HallFormField>
 
-        <div className="md:col-span-2">
+        <div className="md:col-span-1">
           <HallFormField
             id="hall-address"
-            label={t("owner.management.addHall.fields.detailedAddress")}
+            label={t("owner.management.addHall.fields.address")}
             required
             error={addressError}
+            hint={t("owner.management.addHall.fields.addressHint")}
           >
-            <textarea
+            <input
               id="hall-address"
-              rows={3}
-              value={values.detailedAddress}
+              type="text"
+              autoComplete="street-address"
+              value={values.address}
               disabled={disabled}
               aria-invalid={addressError ? true : undefined}
-              aria-describedby={addressError ? "hall-address-error" : undefined}
-              onChange={(event) =>
-                onChange({ detailedAddress: event.target.value })
+              aria-describedby={
+                addressError ? "hall-address-error" : "hall-address-hint"
               }
-              className={`${hallFieldClassName(Boolean(addressError))} min-h-[5.5rem] max-w-full resize-y break-words`}
+              onChange={(event) => onChange({ address: event.target.value })}
+              className={hallFieldClassName(Boolean(addressError))}
+            />
+          </HallFormField>
+        </div>
+
+        <div className="md:col-span-2">
+          <HallFormField
+            id="hall-detailed-address"
+            label={t("owner.management.addHall.fields.detailedAddress")}
+            error={detailedAddressError}
+            hint={t("owner.management.addHall.fields.detailedAddressHint")}
+          >
+            <HallDetailedAddressSelect
+              id="hall-detailed-address"
+              value={values.detailedAddress}
+              addresses={detailedAddresses}
+              disabled={disabled || !values.region}
+              hasError={Boolean(detailedAddressError)}
+              aria-invalid={detailedAddressError ? true : undefined}
+              aria-describedby={
+                detailedAddressError
+                  ? "hall-detailed-address-error"
+                  : "hall-detailed-address-hint"
+              }
+              onChange={(detailedAddress) => onChange({ detailedAddress })}
             />
           </HallFormField>
         </div>

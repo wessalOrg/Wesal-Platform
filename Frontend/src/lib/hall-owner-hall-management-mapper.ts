@@ -1,4 +1,5 @@
 import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
+import { toHallPaymentStatus } from "@/constants/hallPaymentStatus";
 import {
   fromHallRegionApi,
   resolveOwnerMediaUrl,
@@ -43,13 +44,19 @@ export type OwnerHallDetailsDto = {
   region?: string | number | null;
   regionDisplayName?: string | null;
   address?: string | null;
+  detailedAddress?: string | null;
   description?: string | null;
   capacity?: number | null;
   price?: number | null;
   showPrice?: boolean | null;
+  youtubeVideoUrl?: string | null;
+  features?: unknown;
+  otherFeatures?: string | null;
   status?: string | number | null;
+  paymentStatus?: string | number | boolean | null;
+  paymentReceiptUploadedAt?: string | null;
+  hasPaymentReceipt?: boolean | null;
   isEditable?: boolean | null;
-  paymentStatus?: string | boolean | null;
   isPaid?: boolean | null;
   paid?: boolean | null;
   adminLocked?: boolean | null;
@@ -151,6 +158,24 @@ export function resolveHallEditability(
   return "editable";
 }
 
+function readStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function readPaymentReceiptUploadedAt(raw: string | null | undefined): string | null {
+  const value = String(raw ?? "").trim();
+  return value || null;
+}
+
 export function mapOwnerHallDetailsDto(
   data: unknown,
   fallbackId?: string,
@@ -176,6 +201,7 @@ export function mapOwnerHallDetailsDto(
     contactPhone: String(dto.contactPhone ?? "").trim(),
     region,
     address: String(dto.address ?? "").trim(),
+    detailedAddress: String(dto.detailedAddress ?? "").trim(),
     description: String(dto.description ?? "").trim(),
     capacity: typeof dto.capacity === "number" ? dto.capacity : 0,
     price:
@@ -183,13 +209,20 @@ export function mapOwnerHallDetailsDto(
         ? null
         : Number(dto.price),
     showPrice: Boolean(dto.showPrice),
+    youtubeVideoUrl: String(dto.youtubeVideoUrl ?? "").trim(),
+    features: readStringList(dto.features),
+    otherFeatures: String(dto.otherFeatures ?? "").trim(),
+    paymentStatus: toHallPaymentStatus(dto.paymentStatus) ?? "Unpaid",
+    paymentReceiptUploadedAt: readPaymentReceiptUploadedAt(
+      dto.paymentReceiptUploadedAt,
+    ),
+    hasPaymentReceipt: Boolean(dto.hasPaymentReceipt),
     mainImageUrl: dto.mainImageUrl
       ? resolveOwnerMediaUrl(String(dto.mainImageUrl))
       : null,
     photos: mapPhotos(dto),
     firstPeriod: periods.firstPeriod,
     secondPeriod: periods.secondPeriod,
-    paymentStatus: access.paymentStatus,
     adminLocked: access.adminLocked,
     systemLocked: access.systemLocked,
   };
@@ -202,13 +235,17 @@ export function mapHallDetailsToEditForm(
     hallName: details.name === "—" ? "" : details.name,
     ownerPhone: details.contactPhone,
     region: details.region,
-    detailedAddress: details.address,
+    address: details.address,
+    detailedAddress: details.detailedAddress,
     description: details.description,
     guestCapacity: details.capacity > 0 ? String(details.capacity) : "",
     rentalPrice:
       details.price === null || details.price === undefined
         ? ""
         : String(details.price),
+    youtubeVideoUrl: details.youtubeVideoUrl,
+    features: [...details.features],
+    otherFeatures: details.otherFeatures,
     firstPeriod: {
       startTime: details.firstPeriod.startTime || EMPTY_BOOKING_PERIOD.startTime,
       endTime: details.firstPeriod.endTime || EMPTY_BOOKING_PERIOD.endTime,

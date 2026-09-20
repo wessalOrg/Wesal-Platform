@@ -29,6 +29,7 @@ using Wesal.Infrastructure.Search;
 using Wesal.Infrastructure.Time;
 using Wesal.Infrastructure.Email;
 using Wesal.Infrastructure.Warnings;
+using Wesal.Infrastructure.Documents;
 
 namespace Wesal.Infrastructure;
 
@@ -94,6 +95,10 @@ public static class DependencyInjection
         services.AddScoped<IHallCreationService, HallCreationService>();
         services.AddOptions<HallMediaOptions>().Bind(configuration.GetSection(HallMediaOptions.SectionName));
         services.AddSingleton<IHallMediaStorage, HallMediaStorage>();
+        services.AddOptions<DocumentStorageOptions>().Bind(configuration.GetSection(DocumentStorageOptions.SectionName));
+        services.AddSingleton<IDocumentStorage, DocumentStorage>();
+        services.AddScoped<IOwnerIdentityService, OwnerIdentityService>();
+        services.AddScoped<IPaymentReceiptService, PaymentReceiptService>();
         services.AddScoped<IHallInitiationService, HallInitiationService>();
         services.AddScoped<IHallStatusTrackingService, HallStatusTrackingService>();
         services.AddScoped<IOwnerHallService, OwnerHallService>();

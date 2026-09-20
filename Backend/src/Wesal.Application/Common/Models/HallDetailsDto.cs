@@ -12,6 +12,8 @@ public class HallDetailsDto
 
     public string Address { get; init; } = string.Empty;
 
+    public string? DetailedAddress { get; init; }
+
     public string? Description { get; init; }
 
     public int Capacity { get; init; }
@@ -19,6 +21,14 @@ public class HallDetailsDto
     public decimal? Price { get; init; }
 
     public string? ContactPhone { get; init; }
+
+    public string? MainImageUrl { get; init; }
+
+    public string? YouTubeVideoUrl { get; init; }
+
+    public IReadOnlyList<string> Features { get; init; } = [];
+
+    public string? OtherFeatures { get; init; }
 
     public HallStatus Status { get; init; }
 

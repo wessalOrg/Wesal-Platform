@@ -11,6 +11,7 @@ import OwnerSubscriptionStatus from "@/components/halls/subscription/OwnerSubscr
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
 import HallManagementForm from "@/components/owner-management/halls/HallManagementForm";
 import HallManagementSectionNav from "@/components/owner-management/halls/HallManagementSectionNav";
+import HallPaymentReceiptSection from "@/components/owner-management/halls/HallPaymentReceiptSection";
 import { useHallOwnerHallManagement } from "@/hooks/useHallOwnerHallManagement";
 import { useSelectedOwnerHall } from "@/hooks/useSelectedOwnerHall";
 import {
@@ -245,6 +246,16 @@ export default function HallOwnerHallManagementView({
       </div>
 
       <OwnerSubscriptionStatus hallId={hallId} hallName={headerName} />
+      <HallPaymentReceiptSection
+        hallId={hallId}
+        hallName={headerName}
+        approvalStatus={details.status}
+        paymentStatus={details.paymentStatus}
+        hasPaymentReceipt={details.hasPaymentReceipt}
+        onUploaded={() => {
+          void reload();
+        }}
+      />
       <HallBookingDataGate access={access} flagsReady={flagsReady}>
         <OwnerAvailabilityCalendar hallId={hallId} enabled={calendarEnabled} />
       </HallBookingDataGate>

@@ -42,12 +42,14 @@ public class HallDetailsService : IHallDetailsService
             || hall.IsDeleted
             || hall.Status != HallStatus.Approved
             || hall.IsAdminLocked
-            || hall.SystemLocked)
+            || hall.SystemLocked
+            || hall.PaymentStatus != HallPaymentStatus.Paid)
         {
             _logger.LogInformation(
-                "Hall {HallId} is not available for public details (status {Status}, deleted {IsDeleted}, adminLocked {IsAdminLocked}, systemLocked {SystemLocked}).",
+                "Hall {HallId} is not available for public details (status {Status}, payment {Payment}, deleted {IsDeleted}, adminLocked {IsAdminLocked}, systemLocked {SystemLocked}).",
                 hallId,
                 hall?.Status.ToString() ?? "Unknown",
+                hall?.PaymentStatus.ToString() ?? "Unknown",
                 hall?.IsDeleted ?? true,
                 hall?.IsAdminLocked ?? false,
                 hall?.SystemLocked ?? false);
@@ -56,13 +58,14 @@ public class HallDetailsService : IHallDetailsService
         }
 
         var imagesTask = _hallRepository.GetHallImagesAsync(hallId, cancellationToken);
+        var featuresTask = _hallRepository.GetHallFeaturesAsync([hallId], cancellationToken);
         var fromDate = DateOnly.FromDateTime(_dateTime.Now.UtcDateTime);
         var toDate = fromDate.AddDays(FeaturedHallsService.AvailabilityDays - 1);
 
         var periodsTask = _hallRepository.GetBookingPeriodsAsync([hallId], cancellationToken);
         var availabilityTask = _hallRepository.GetAvailabilityAsync([hallId], fromDate, toDate, cancellationToken);
 
-        await Task.WhenAll(imagesTask, periodsTask, availabilityTask);
+        await Task.WhenAll(imagesTask, featuresTask, periodsTask, availabilityTask);
 
         var photos = imagesTask.Result
             .Where(image => !string.IsNullOrWhiteSpace(image.Url))
@@ -78,10 +81,18 @@ public class HallDetailsService : IHallDetailsService
             HallName = hall.Name,
             Region = HallDisplayNames.GetRegionDisplayName(hall.Region),
             Address = hall.Address,
+            DetailedAddress = hall.DetailedAddress,
             Description = hall.Description,
             Capacity = hall.Capacity,
             Price = hall.ShowPrice ? hall.Price : null,
             ContactPhone = hall.ContactPhone,
+            MainImageUrl = hall.MainImageUrl,
+            YouTubeVideoUrl = hall.YouTubeVideoUrl,
+            Features = featuresTask.Result
+                .Where(feature => !string.IsNullOrWhiteSpace(feature.Name))
+                .Select(feature => feature.Name)
+                .ToList(),
+            OtherFeatures = hall.OtherFeatures,
             Status = hall.Status,
             IsOwner = IsHallOwner(hall),
             Photos = photos,

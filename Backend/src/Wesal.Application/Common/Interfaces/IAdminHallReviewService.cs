@@ -34,4 +34,14 @@ public interface IAdminHallReviewService
         Guid hallId,
         string content,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Streams the owner's identity document (US-ADMIN-01); NotFound when the owner has none.</summary>
+    Task<StoredDocument> GetOwnerIdentityDocumentAsync(
+        string ownerId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Streams the hall's uploaded payment receipt (US-ADMIN-10); NotFound when none exists.</summary>
+    Task<StoredDocument> GetPaymentReceiptAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default);
 }

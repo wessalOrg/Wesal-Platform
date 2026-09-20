@@ -20,6 +20,10 @@ public class UpdateOwnerHallRequestValidatorShould
         int capacity = 200,
         decimal? price = 1500,
         bool showPrice = true,
+        string? detailedAddress = null,
+        string? youtubeUrl = null,
+        IReadOnlyList<string>? features = null,
+        string? otherFeatures = null,
         IReadOnlyList<UpdateOwnerHallPhotoDto>? photos = null,
         IReadOnlyList<UpdateOwnerHallBookingPeriodDto>? periods = null)
         => new()
@@ -30,6 +34,10 @@ public class UpdateOwnerHallRequestValidatorShould
             Capacity = capacity,
             Price = price,
             ShowPrice = showPrice,
+            DetailedAddress = detailedAddress,
+            YouTubeVideoUrl = youtubeUrl,
+            Features = features ?? [],
+            OtherFeatures = otherFeatures,
             Photos = photos ??
             [
                 new UpdateOwnerHallPhotoDto { Url = "https://cdn.example.com/hall-1.jpg", DisplayOrder = 0 },
@@ -198,5 +206,72 @@ public class UpdateOwnerHallRequestValidatorShould
         var result = await _validator.ValidateAsync(CreateRequest(region: (HallRegion)99));
 
         Assert.False(result.IsValid);
+    }
+
+    // --- US-HALL: dependent Region -> DetailedAddress selection ---
+
+    [Fact]
+    public async Task Validate_DetailedAddressOutsideRegion_Fails()
+    {
+        var result = await _validator.ValidateAsync(
+            CreateRequest(region: HallRegion.Gaza, detailedAddress: "جباليا")); // North Gaza area
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(UpdateOwnerHallRequest.DetailedAddress));
+    }
+
+    [Fact]
+    public async Task Validate_DetailedAddressInsideRegion_Passes()
+    {
+        var result = await _validator.ValidateAsync(
+            CreateRequest(region: HallRegion.Gaza, detailedAddress: "الرمال"));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task Validate_DetailedAddressEmpty_Passes()
+    {
+        var result = await _validator.ValidateAsync(CreateRequest(detailedAddress: null));
+
+        Assert.True(result.IsValid);
+    }
+
+    // --- US-HALL: YouTube link + feature catalog ---
+
+    [Fact]
+    public async Task Validate_InvalidYouTubeUrl_Fails()
+    {
+        var result = await _validator.ValidateAsync(
+            CreateRequest(youtubeUrl: "https://example.com/not-youtube"));
+
+        Assert.False(result.IsValid);
+    }
+
+    [Fact]
+    public async Task Validate_ValidYouTubeUrl_Passes()
+    {
+        var result = await _validator.ValidateAsync(
+            CreateRequest(youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task Validate_FeatureOutsideCatalog_Fails()
+    {
+        var result = await _validator.ValidateAsync(
+            CreateRequest(features: new[] { "مطبخ مجهز" }));
+
+        Assert.False(result.IsValid);
+    }
+
+    [Fact]
+    public async Task Validate_FeatureInsideCatalog_Passes()
+    {
+        var result = await _validator.ValidateAsync(
+            CreateRequest(features: new[] { "مولد كهرباء", "تكييف" }));
+
+        Assert.True(result.IsValid);
     }
 }

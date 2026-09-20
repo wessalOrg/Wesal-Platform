@@ -2,8 +2,10 @@ using Microsoft.Extensions.Logging;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Infrastructure.Conversations;
 
 namespace Wesal.Infrastructure.Admin;
 
@@ -25,6 +27,7 @@ public class AdminHallService : IAdminHallService
     private readonly IHallSearchIndexer _indexer;
     private readonly IConversationRepository _conversationRepository;
     private readonly IMessageRepository _messageRepository;
+    private readonly IConversationNotifier _notifier;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _dateTime;
     private readonly ILogger<AdminHallService> _logger;
@@ -35,6 +38,7 @@ public class AdminHallService : IAdminHallService
         IHallSearchIndexer indexer,
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository,
+        IConversationNotifier notifier,
         ICurrentUserService currentUser,
         IDateTime dateTime,
         ILogger<AdminHallService> logger)
@@ -44,6 +48,7 @@ public class AdminHallService : IAdminHallService
         _indexer = indexer;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
+        _notifier = notifier;
         _currentUser = currentUser;
         _dateTime = dateTime;
         _logger = logger;
@@ -147,12 +152,45 @@ public class AdminHallService : IAdminHallService
         {
             ConversationId = conversation.Id,
             SenderUserId = adminUserId,
-            Content = $"Congratulations! Your hall \"{hall.Name}\" has been approved and is now visible to visitors. "
-                + "Management features (calendar, bookings, messaging and dashboard) remain locked until your subscription payment is confirmed."
+            Content = $"تم اعتماد قاعتك «{hall.Name}»، ولكن يجب دفع الاشتراك وإرفاق إشعار الدفع لإكمال التفعيل."
         };
 
         await _messageRepository.AddAsync(message, cancellationToken);
         await _messageRepository.SaveChangesAsync(cancellationToken);
+
+        await TryNotifyRealTimeAsync(conversation.Id, message, adminUserId, cancellationToken);
+    }
+
+    private async Task TryNotifyRealTimeAsync(
+        Guid conversationId,
+        Wesal.Domain.Entities.Message message,
+        string adminUserId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var senderName = string.Empty;
+            var users = await _conversationRepository.GetUserDisplayNamesAsync([adminUserId], cancellationToken);
+            senderName = users.FirstOrDefault(info => info.UserId == adminUserId)?.FullName ?? string.Empty;
+
+            await _notifier.NotifyMessageSentAsync(new MessageSentEvent
+            {
+                MessageId = message.Id,
+                ConversationId = conversationId,
+                SenderUserId = message.SenderUserId,
+                SenderName = senderName,
+                Content = message.Content,
+                SentAt = message.CreatedAt
+            }, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to push the approval message for conversation {ConversationId}", conversationId);
+        }
     }
 
     private string ResolveAdminUserId()

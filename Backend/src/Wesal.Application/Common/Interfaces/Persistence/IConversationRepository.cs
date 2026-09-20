@@ -9,6 +9,11 @@ public interface IConversationRepository
 
     Task<Conversation?> GetByHallAndUserAsync(Guid hallId, string userId, CancellationToken cancellationToken = default);
 
+    Task<Conversation?> GetByHallForOwnerAsync(Guid hallId, string ownerId, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<Conversation?>(null);
+    }
+
     Task<Conversation?> GetByIdWithHallAsync(Guid conversationId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(

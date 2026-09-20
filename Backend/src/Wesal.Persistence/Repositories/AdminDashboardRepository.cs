@@ -51,6 +51,7 @@ public class AdminDashboardRepository : IAdminDashboardRepository
         var hall = await _context.Halls
             .AsNoTracking()
             .Include(hall => hall.Images)
+            .Include(hall => hall.Features)
             .FirstOrDefaultAsync(hall => hall.Id == hallId && !hall.IsDeleted, cancellationToken);
 
         if (hall is null)
@@ -70,14 +71,28 @@ public class AdminDashboardRepository : IAdminDashboardRepository
             Name = hall.Name,
             Region = hall.Region,
             Address = hall.Address,
+            DetailedAddress = hall.DetailedAddress,
             Description = hall.Description,
             Capacity = hall.Capacity,
             Price = hall.Price,
             SubmittedAt = hall.CreatedAt,
             Status = hall.Status,
+            OwnerId = hall.OwnerId,
             OwnerFullName = owner?.FullName,
             OwnerPhoneNumber = owner?.PhoneNumber,
             OwnerEmail = owner?.Email,
+            MainImageUrl = hall.MainImageUrl,
+            YouTubeVideoUrl = hall.YouTubeVideoUrl,
+            OtherFeatures = hall.OtherFeatures,
+            Features = hall.Features
+                .Where(feature => !string.IsNullOrWhiteSpace(feature.Name))
+                .Select(feature => feature.Name)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToList(),
+            PaymentStatus = hall.PaymentStatus,
+            PaymentReceiptUploadedAt = hall.PaymentReceiptUploadedAt,
+            HasPaymentReceipt = !string.IsNullOrWhiteSpace(hall.PaymentReceiptUrl),
+            OwnerHasIdentityDocument = !string.IsNullOrWhiteSpace(owner?.IdentityDocumentUrl),
             PhotoUrls = hall.Images
                 .Where(image => !image.IsDeleted)
                 .OrderBy(image => image.DisplayOrder)

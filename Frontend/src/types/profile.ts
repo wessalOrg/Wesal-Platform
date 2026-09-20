@@ -7,6 +7,8 @@ export type UserProfile = {
   phoneNumber: string;
   /** Server concurrency token (`ConcurrencyStamp`). */
   concurrencyStamp: string;
+  /** True when the Hall Owner has uploaded an identity document (US-OWNER-30). */
+  isIdentityDocumentUploaded: boolean;
 };
 
 export type UpdateProfileInput = {

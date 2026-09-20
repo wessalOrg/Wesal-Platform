@@ -14,10 +14,10 @@ public class HallRepositoryShould
     public async Task GetApprovedHallsAsync_ReturnsOnlyApprovedAndNotDeletedHalls()
     {
         await using var context = CreateContext();
-        var approved = new Hall { Id = Guid.NewGuid(), Name = "Approved", Status = HallStatus.Approved, CreatedAt = FixedNow.AddDays(-1) };
+        var approved = new Hall { Id = Guid.NewGuid(), Name = "Approved", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, CreatedAt = FixedNow.AddDays(-1) };
         var pending = new Hall { Id = Guid.NewGuid(), Name = "Pending", Status = HallStatus.PendingReview, CreatedAt = FixedNow };
         var rejected = new Hall { Id = Guid.NewGuid(), Name = "Rejected", Status = HallStatus.Rejected, CreatedAt = FixedNow };
-        var deleted = new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, IsDeleted = true, CreatedAt = FixedNow };
+        var deleted = new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = true, CreatedAt = FixedNow };
         context.Halls.AddRange(approved, pending, rejected, deleted);
         await context.SaveChangesAsync();
 
@@ -27,6 +27,48 @@ public class HallRepositoryShould
 
         Assert.Single(result);
         Assert.Equal(approved.Id, result[0].Id);
+    }
+
+    // --- US-ADMIN-10 / US-OWNER-31: a hall is publicly visible only when it is
+    // Approved AND Paid; an Approved hall awaiting its payment receipt stays hidden. ---
+
+    [Fact]
+    public async Task GetApprovedHallsAsync_ApprovedButUnpaidHall_IsHiddenFromPublicList()
+    {
+        await using var context = CreateContext();
+        var paid = new Hall { Id = Guid.NewGuid(), Name = "Paid Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, CreatedAt = FixedNow.AddDays(-1) };
+        var unpaid = new Hall { Id = Guid.NewGuid(), Name = "Unpaid Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Unpaid, CreatedAt = FixedNow };
+        context.Halls.AddRange(paid, unpaid);
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsAsync(10);
+        var searchResult = await repository.SearchApprovedHallsAsync(null, null, null, null, null, 0, 10);
+        var searchCount = await repository.SearchApprovedHallsCountAsync(null, null, null, null, null);
+
+        Assert.Single(result);
+        Assert.Equal(paid.Id, result[0].Id);
+        Assert.Single(searchResult);
+        Assert.Equal(paid.Id, searchResult[0].Id);
+        Assert.Equal(1, searchCount);
+    }
+
+    [Fact]
+    public async Task GetApprovedHallsByRegionAsync_ApprovedButUnpaidHall_IsHidden()
+    {
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            new Hall { Id = Guid.NewGuid(), Name = "Paid Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.Gaza, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "Unpaid Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Unpaid, Region = HallRegion.Gaza, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var result = await repository.GetApprovedHallsByRegionAsync(HallRegion.Gaza, 10);
+
+        var item = Assert.Single(result);
+        Assert.Equal("Paid Hall", item.Name);
     }
 
     [Fact]
@@ -39,7 +81,7 @@ public class HallRepositoryShould
             {
                 Id = Guid.NewGuid(),
                 Name = $"Hall {index}",
-                Status = HallStatus.Approved,
+                Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid,
                 CreatedAt = FixedNow.AddMinutes(-index)
             });
         }
@@ -58,10 +100,10 @@ public class HallRepositoryShould
     {
         await using var context = CreateContext();
         context.Halls.AddRange(
-            new Hall { Id = Guid.NewGuid(), Name = "Gaza Hall", Status = HallStatus.Approved, Region = HallRegion.Gaza, CreatedAt = FixedNow },
-            new Hall { Id = Guid.NewGuid(), Name = "North Hall", Status = HallStatus.Approved, Region = HallRegion.NorthGaza, CreatedAt = FixedNow },
-            new Hall { Id = Guid.NewGuid(), Name = "Middle Hall", Status = HallStatus.Approved, Region = HallRegion.MiddleArea, CreatedAt = FixedNow },
-            new Hall { Id = Guid.NewGuid(), Name = "South Hall", Status = HallStatus.Approved, Region = HallRegion.SouthGaza, CreatedAt = FixedNow });
+            new Hall { Id = Guid.NewGuid(), Name = "Gaza Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.Gaza, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "North Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.NorthGaza, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "Middle Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.MiddleArea, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "South Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.SouthGaza, CreatedAt = FixedNow });
         await context.SaveChangesAsync();
 
         var repository = new HallRepository(context);
@@ -80,7 +122,7 @@ public class HallRepositoryShould
         {
             Id = Guid.NewGuid(),
             Name = "Gaza Hall",
-            Status = HallStatus.Approved,
+            Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid,
             Region = HallRegion.Gaza,
             CreatedAt = FixedNow
         });
@@ -98,10 +140,10 @@ public class HallRepositoryShould
     {
         await using var context = CreateContext();
         context.Halls.AddRange(
-            new Hall { Id = Guid.NewGuid(), Name = "Approved", Status = HallStatus.Approved, Region = HallRegion.Gaza, CreatedAt = FixedNow.AddDays(-1) },
+            new Hall { Id = Guid.NewGuid(), Name = "Approved", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.Gaza, CreatedAt = FixedNow.AddDays(-1) },
             new Hall { Id = Guid.NewGuid(), Name = "Pending", Status = HallStatus.PendingReview, Region = HallRegion.Gaza, CreatedAt = FixedNow },
             new Hall { Id = Guid.NewGuid(), Name = "Rejected", Status = HallStatus.Rejected, Region = HallRegion.Gaza, CreatedAt = FixedNow },
-            new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, IsDeleted = true, Region = HallRegion.Gaza, CreatedAt = FixedNow });
+            new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = true, Region = HallRegion.Gaza, CreatedAt = FixedNow });
         await context.SaveChangesAsync();
 
         var repository = new HallRepository(context);
@@ -122,7 +164,7 @@ public class HallRepositoryShould
             {
                 Id = Guid.NewGuid(),
                 Name = $"Hall {index}",
-                Status = HallStatus.Approved,
+                Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid,
                 Region = HallRegion.Gaza,
                 CreatedAt = FixedNow.AddMinutes(-index)
             });
@@ -142,8 +184,8 @@ public class HallRepositoryShould
     {
         await using var context = CreateContext();
         context.Halls.AddRange(
-            new Hall { Id = Guid.NewGuid(), Name = "Gaza Hall", Status = HallStatus.Approved, Region = HallRegion.Gaza, CreatedAt = FixedNow },
-            new Hall { Id = Guid.NewGuid(), Name = "North Hall", Status = HallStatus.Approved, Region = HallRegion.NorthGaza, CreatedAt = FixedNow });
+            new Hall { Id = Guid.NewGuid(), Name = "Gaza Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.Gaza, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "North Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.NorthGaza, CreatedAt = FixedNow });
         await context.SaveChangesAsync();
 
         var query = context.Halls
@@ -164,8 +206,8 @@ public class HallRepositoryShould
     public async Task GetBookingPeriodsAsync_FiltersByHallIds()
     {
         await using var context = CreateContext();
-        var firstHall = new Hall { Id = Guid.NewGuid(), Name = "First", Status = HallStatus.Approved };
-        var secondHall = new Hall { Id = Guid.NewGuid(), Name = "Second", Status = HallStatus.Approved };
+        var firstHall = new Hall { Id = Guid.NewGuid(), Name = "First", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
+        var secondHall = new Hall { Id = Guid.NewGuid(), Name = "Second", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
         context.Halls.AddRange(firstHall, secondHall);
         context.HallBookingPeriods.AddRange(
             new HallBookingPeriod { HallId = firstHall.Id, Type = BookingPeriodType.FirstPeriod, StartTime = new TimeOnly(12, 0), EndTime = new TimeOnly(15, 0) },
@@ -184,8 +226,8 @@ public class HallRepositoryShould
     public async Task GetAvailabilityAsync_FiltersByHallIdsAndDateRange()
     {
         await using var context = CreateContext();
-        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved };
-        var otherHall = new Hall { Id = Guid.NewGuid(), Name = "Other", Status = HallStatus.Approved };
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
+        var otherHall = new Hall { Id = Guid.NewGuid(), Name = "Other", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
         context.Halls.AddRange(hall, otherHall);
         context.HallAvailabilities.AddRange(
             new HallAvailability { HallId = hall.Id, Date = new DateOnly(2026, 8, 6), PeriodType = BookingPeriodType.FirstPeriod, Status = AvailabilityStatus.Booked },
@@ -221,7 +263,7 @@ public class HallRepositoryShould
     public async Task GetHallByIdAsync_ReturnsHallById()
     {
         await using var context = CreateContext();
-        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved };
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
         context.Halls.Add(hall);
         await context.SaveChangesAsync();
 
@@ -249,8 +291,8 @@ public class HallRepositoryShould
     public async Task GetHallImagesAsync_ReturnsOnlyImagesForHall()
     {
         await using var context = CreateContext();
-        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved };
-        var otherHall = new Hall { Id = Guid.NewGuid(), Name = "Other", Status = HallStatus.Approved };
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
+        var otherHall = new Hall { Id = Guid.NewGuid(), Name = "Other", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
         context.Halls.AddRange(hall, otherHall);
         context.HallImages.AddRange(
             new HallImage { HallId = hall.Id, Url = "hall.jpg", DisplayOrder = 1 },
@@ -269,7 +311,7 @@ public class HallRepositoryShould
     public async Task GetHallImagesAsync_OrdersByDisplayOrder()
     {
         await using var context = CreateContext();
-        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved };
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
         context.Halls.Add(hall);
         context.HallImages.AddRange(
             new HallImage { HallId = hall.Id, Url = "second.jpg", DisplayOrder = 2, CreatedAt = FixedNow.AddMinutes(-1) },
@@ -290,7 +332,7 @@ public class HallRepositoryShould
     public async Task GetHallImagesAsync_ExcludesDeletedImages()
     {
         await using var context = CreateContext();
-        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved };
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
         context.Halls.Add(hall);
         context.HallImages.AddRange(
             new HallImage { HallId = hall.Id, Url = "visible.jpg", DisplayOrder = 1 },
@@ -315,7 +357,7 @@ public class HallRepositoryShould
             {
                 Id = Guid.NewGuid(),
                 Name = $"Hall {index}",
-                Status = HallStatus.Approved,
+                Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid,
                 CreatedAt = FixedNow.AddMinutes(-index)
             });
         }
@@ -342,7 +384,7 @@ public class HallRepositoryShould
             {
                 Id = Guid.NewGuid(),
                 Name = $"Hall {index}",
-                Status = HallStatus.Approved,
+                Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid,
                 CreatedAt = FixedNow.AddMinutes(-index)
             });
         }
@@ -363,10 +405,10 @@ public class HallRepositoryShould
     {
         await using var context = CreateContext();
         context.Halls.AddRange(
-            new Hall { Id = Guid.NewGuid(), Name = "Approved 1", Status = HallStatus.Approved, CreatedAt = FixedNow.AddMinutes(-1) },
-            new Hall { Id = Guid.NewGuid(), Name = "Approved 2", Status = HallStatus.Approved, CreatedAt = FixedNow.AddMinutes(-2) },
+            new Hall { Id = Guid.NewGuid(), Name = "Approved 1", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, CreatedAt = FixedNow.AddMinutes(-1) },
+            new Hall { Id = Guid.NewGuid(), Name = "Approved 2", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, CreatedAt = FixedNow.AddMinutes(-2) },
             new Hall { Id = Guid.NewGuid(), Name = "Pending", Status = HallStatus.PendingReview, CreatedAt = FixedNow },
-            new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, IsDeleted = true, CreatedAt = FixedNow });
+            new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = true, CreatedAt = FixedNow });
         await context.SaveChangesAsync();
 
         var repository = new HallRepository(context);
@@ -386,7 +428,7 @@ public class HallRepositoryShould
         {
             Id = Guid.NewGuid(),
             Name = "Only Hall",
-            Status = HallStatus.Approved,
+            Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid,
             CreatedAt = FixedNow
         });
         await context.SaveChangesAsync();
@@ -403,9 +445,9 @@ public class HallRepositoryShould
     {
         await using var context = CreateContext();
         context.Halls.AddRange(
-            new Hall { Id = Guid.NewGuid(), Name = "Approved", Status = HallStatus.Approved, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "Approved", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, CreatedAt = FixedNow },
             new Hall { Id = Guid.NewGuid(), Name = "Pending", Status = HallStatus.PendingReview, CreatedAt = FixedNow },
-            new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, IsDeleted = true, CreatedAt = FixedNow });
+            new Hall { Id = Guid.NewGuid(), Name = "Deleted", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = true, CreatedAt = FixedNow });
         await context.SaveChangesAsync();
 
         var repository = new HallRepository(context);
@@ -432,9 +474,9 @@ public class HallRepositoryShould
     {
         await using var context = CreateContext();
         context.Halls.AddRange(
-            new Hall { Id = Guid.NewGuid(), Name = "Visible", Status = HallStatus.Approved, CreatedAt = FixedNow.AddDays(-1) },
-            new Hall { Id = Guid.NewGuid(), Name = "Admin Locked", Status = HallStatus.Approved, IsAdminLocked = true, CreatedAt = FixedNow },
-            new Hall { Id = Guid.NewGuid(), Name = "System Locked", Status = HallStatus.Approved, SystemLocked = true, CreatedAt = FixedNow });
+            new Hall { Id = Guid.NewGuid(), Name = "Visible", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, CreatedAt = FixedNow.AddDays(-1) },
+            new Hall { Id = Guid.NewGuid(), Name = "Admin Locked", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsAdminLocked = true, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "System Locked", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, SystemLocked = true, CreatedAt = FixedNow });
         await context.SaveChangesAsync();
 
         var repository = new HallRepository(context);
@@ -450,9 +492,9 @@ public class HallRepositoryShould
     {
         await using var context = CreateContext();
         context.Halls.AddRange(
-            new Hall { Id = Guid.NewGuid(), Name = "Visible", Status = HallStatus.Approved, Region = HallRegion.Gaza, CreatedAt = FixedNow.AddDays(-1) },
-            new Hall { Id = Guid.NewGuid(), Name = "Admin Locked", Status = HallStatus.Approved, Region = HallRegion.Gaza, IsAdminLocked = true, CreatedAt = FixedNow },
-            new Hall { Id = Guid.NewGuid(), Name = "System Locked", Status = HallStatus.Approved, Region = HallRegion.Gaza, SystemLocked = true, CreatedAt = FixedNow });
+            new Hall { Id = Guid.NewGuid(), Name = "Visible", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.Gaza, CreatedAt = FixedNow.AddDays(-1) },
+            new Hall { Id = Guid.NewGuid(), Name = "Admin Locked", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.Gaza, IsAdminLocked = true, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "System Locked", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, Region = HallRegion.Gaza, SystemLocked = true, CreatedAt = FixedNow });
         await context.SaveChangesAsync();
 
         var repository = new HallRepository(context);
@@ -468,9 +510,9 @@ public class HallRepositoryShould
     {
         await using var context = CreateContext();
         context.Halls.AddRange(
-            new Hall { Id = Guid.NewGuid(), Name = "Visible", Status = HallStatus.Approved, CreatedAt = FixedNow.AddDays(-1) },
-            new Hall { Id = Guid.NewGuid(), Name = "Admin Locked", Status = HallStatus.Approved, IsAdminLocked = true, CreatedAt = FixedNow },
-            new Hall { Id = Guid.NewGuid(), Name = "System Locked", Status = HallStatus.Approved, SystemLocked = true, CreatedAt = FixedNow });
+            new Hall { Id = Guid.NewGuid(), Name = "Visible", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, CreatedAt = FixedNow.AddDays(-1) },
+            new Hall { Id = Guid.NewGuid(), Name = "Admin Locked", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsAdminLocked = true, CreatedAt = FixedNow },
+            new Hall { Id = Guid.NewGuid(), Name = "System Locked", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, SystemLocked = true, CreatedAt = FixedNow });
         await context.SaveChangesAsync();
 
         var repository = new HallRepository(context);

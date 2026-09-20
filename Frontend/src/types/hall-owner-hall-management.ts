@@ -1,6 +1,6 @@
 import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
+import type { HallPaymentStatus } from "@/constants/hallPaymentStatus";
 import type { HallRegion } from "@/constants/hallRegions";
-import type { PaymentStatus } from "@/lib/hall-payment-status";
 import type {
   BookingPeriodFormValues,
   HallRegistrationFieldErrors,
@@ -26,15 +26,21 @@ export type HallOwnerHallDetails = {
   contactPhone: string;
   region: HallRegion | "";
   address: string;
+  detailedAddress: string;
   description: string;
   capacity: number;
   price: number | null;
   showPrice: boolean;
+  youtubeVideoUrl: string;
+  features: string[];
+  otherFeatures: string;
+  paymentStatus: HallPaymentStatus;
+  paymentReceiptUploadedAt: string | null;
+  hasPaymentReceipt: boolean;
   mainImageUrl: string | null;
   photos: ExistingHallPhoto[];
   firstPeriod: BookingPeriodFormValues;
   secondPeriod: BookingPeriodFormValues;
-  paymentStatus: PaymentStatus;
   adminLocked: boolean;
   systemLocked: boolean;
 };
@@ -43,11 +49,15 @@ export type HallEditFormValues = {
   hallName: string;
   ownerPhone: string;
   region: HallRegion | "";
+  address: string;
   detailedAddress: string;
   description: string;
   guestCapacity: string;
   /** Empty string when unused — never coerce to "0". */
   rentalPrice: string;
+  youtubeVideoUrl: string;
+  features: string[];
+  otherFeatures: string;
   firstPeriod: BookingPeriodFormValues;
   secondPeriod: BookingPeriodFormValues;
   existingPhotos: ExistingHallPhoto[];

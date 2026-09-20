@@ -339,6 +339,10 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<string>("DetailedAddress")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
                     b.Property<bool>("IsAdminLocked")
                         .HasColumnType("boolean");
 
@@ -360,8 +364,19 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("OtherFeatures")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("OwnerId")
                         .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("PaymentReceiptUploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentReceiptUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<int>("PaymentStatus")
                         .HasColumnType("integer");
@@ -405,6 +420,10 @@ namespace Wesal.Persistence.Migrations
 
                     b.Property<DateOnly?>("WarningSentForCycleEnd")
                         .HasColumnType("date");
+
+                    b.Property<string>("YouTubeVideoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.HasKey("Id");
 
@@ -481,6 +500,28 @@ namespace Wesal.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("HallBookingPeriods", "wesal");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.HallFeature", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HallId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HallId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("HallFeatures", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.HallImage", b =>
@@ -688,6 +729,13 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<DateTimeOffset?>("IdentityDocumentUploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IdentityDocumentUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
@@ -852,6 +900,17 @@ namespace Wesal.Persistence.Migrations
                     b.Navigation("Hall");
                 });
 
+            modelBuilder.Entity("Wesal.Domain.Entities.HallFeature", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
+                        .WithMany("Features")
+                        .HasForeignKey("HallId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hall");
+                });
+
             modelBuilder.Entity("Wesal.Domain.Entities.HallImage", b =>
                 {
                     b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
@@ -901,6 +960,8 @@ namespace Wesal.Persistence.Migrations
                     b.Navigation("Availability");
 
                     b.Navigation("BookingPeriods");
+
+                    b.Navigation("Features");
 
                     b.Navigation("Images");
                 });
