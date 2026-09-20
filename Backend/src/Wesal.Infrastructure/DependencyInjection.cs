@@ -23,6 +23,7 @@ using Wesal.Infrastructure.Languages;
 using Wesal.Infrastructure.Admin;
 using Wesal.Infrastructure.Background;
 using Wesal.Infrastructure.OwnerDashboard;
+using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Profile;
 using Wesal.Infrastructure.Search;
 using Wesal.Infrastructure.Time;
@@ -52,6 +53,11 @@ public static class DependencyInjection
 
         services.AddOptions<GoogleAiSettings>()
             .Bind(configuration.GetSection(GoogleAiSettings.SectionName));
+
+        services.AddOptions<AdminProvisioningOptions>()
+            .Bind(configuration.GetSection(AdminProvisioningOptions.SectionName));
+
+        services.AddScoped<AdminProvisioningService>();
 
         services.AddHttpClient(GeminiService.HttpClientName, (sp, client) =>
         {

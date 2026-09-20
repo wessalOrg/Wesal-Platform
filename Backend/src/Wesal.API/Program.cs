@@ -14,6 +14,7 @@ using Wesal.Application;
 using Wesal.Infrastructure;
 using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Halls;
+using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Logging;
 using Wesal.Infrastructure.Middleware;
 using Wesal.Infrastructure.OwnerDashboard;
@@ -164,6 +165,16 @@ try
         else
         {
             Log.Information("Skipping startup migration - apply migrations via the deployment pipeline.");
+        }
+
+        var provisioningOptions = configuration
+            .GetSection(AdminProvisioningOptions.SectionName)
+            .Get<AdminProvisioningOptions>();
+
+        if (provisioningOptions is { Enabled: true, Admins.Count: > 0 })
+        {
+            var adminProvisioning = scope.ServiceProvider.GetRequiredService<AdminProvisioningService>();
+            await adminProvisioning.RunAsync(provisioningOptions.Admins, CancellationToken.None);
         }
     }
 
