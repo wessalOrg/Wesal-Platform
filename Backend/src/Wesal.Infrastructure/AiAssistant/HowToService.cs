@@ -212,7 +212,7 @@ public sealed partial class HowToService : IHowToService
             return ("Wesal is a wedding hall booking platform for Gaza. You can browse approved wedding halls, search by region and date, view hall details and availability, book halls, rate and comment on halls, and message hall owners directly. Register for free to access booking, commenting, rating, and messaging features.", "general");
 
         if (ContainsAny(question, "cancel", "cancellation"))
-            return ("To cancel a pending booking request: go to your bookings and select the pending request you want to cancel. Note that once a hall owner approves your request, the deposit confirmation workflow begins. Contact the hall owner through the conversation to discuss any changes.", "booking");
+            return ("To cancel a booking request while it is still pending: go to your bookings and select the pending request you want to cancel. Once the hall owner accepts or rejects your request, it can no longer be cancelled. Contact the hall owner through the conversation to discuss any changes.", "booking");
 
         return ("I can help you with how to use Wesal. You can ask about: searching for halls, booking a hall, viewing hall details, rating and commenting on halls, contacting hall owners, registration, login, language switching, and more. What would you like to know?", "general");
     }
@@ -265,7 +265,7 @@ public sealed partial class HowToService : IHowToService
             return ("وصال هو منصة حجز قاعات أفراح في غزة. يمكنك تصفح القاعات المعتمدة، البحث حسب المنطقة والتاريخ، عرض تفاصيل القاعات والتوفر، حجز القاعات، تقييم وتعليق على القاعات، والتواصل مع أصحاب القاعات مباشرة. سجل مجاناً للوصول إلى ميزات الحجز والتعليق والتقييم والمراسلة.", "general");
 
         if (ContainsAny(question, "إلغاء", "الغاء", "about cancel", "about cancellation"))
-            return ("لإلغاء طلب حجز معلق: اذهب إلى حجوزاتك واختر الطلب المعلق الذي تريد إلغائه. ملاحظة: بمجرد موافقة صاحب القاعة على طلبك، تبدأ عملية تأكيد الدفع. تواصل مع صاحب القاعة عبر المحادثة لمناقشة أي تغييرات.", "booking");
+            return ("لإلغاء طلب حجز ما دام معلقاً: اذهب إلى حجوزاتك واختر الطلب المعلق الذي تريد إلغائه. بمجرد قبول صاحب القاعة طلبك أو رفضه، لا يمكن إلغاؤه بعد ذلك. تواصل مع صاحب القاعة عبر المحادثة لمناقشة أي تغييرات.", "booking");
 
         return ("يمكنني مساعدتك في كيفية استخدام وصال. يمكنك السؤال عن: البحث عن قاعات، حجز قاعة، عرض تفاصيل القاعة، تقييم وتعليق على القاعات، التواصل مع أصحاب القاعات، التسجيل، تسجيل الدخول، تبديل اللغة، والمزيد. ماذا تريد أن تعرف؟", "general");
     }
