@@ -23,7 +23,7 @@ export default function ResetPasswordScreen({
       data-testid="reset-password-screen"
     >
       <div className="flex flex-col items-center text-center">
-        <WesalLogo className="h-9 w-9 sm:h-10 sm:w-10" variant="brand" />
+        <WesalLogo className="h-8 w-auto sm:h-9" variant="brand" />
         <h2 className="mt-2.5 text-lg font-extrabold text-[var(--wesal-maroon-dark)] sm:text-xl">
           {invalidLink ? t("auth.resetPassword.invalidLink.title") : t("auth.resetPassword.title")}
         </h2>

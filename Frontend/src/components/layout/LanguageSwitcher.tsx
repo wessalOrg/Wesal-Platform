@@ -42,7 +42,7 @@ export default function LanguageSwitcher({
       }}
     >
       <span className="inline-flex items-center gap-1.5">
-        <ChatIcon />
+        <GlobeIcon />
         {iconOnly ? null : <span className="font-semibold">{nextLabel}</span>}
       </span>
       {compact && !iconOnly ? (
@@ -54,8 +54,8 @@ export default function LanguageSwitcher({
   );
 }
 
-/** Overlapping chat bubbles — language switch without the translate glyph. */
-function ChatIcon() {
+/** Globe — standard language switcher icon. */
+function GlobeIcon() {
   return (
     <svg
       className="lang-switch-icon"
@@ -65,17 +65,18 @@ function ChatIcon() {
       fill="none"
       aria-hidden="true"
     >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.55" />
       <path
-        d="M5.2 4.8h9.2c1.3 0 2.3 1 2.3 2.3v4.6c0 1.3-1 2.3-2.3 2.3H10.4L7.2 16.4v-2.4H5.2c-1.3 0-2.3-1-2.3-2.3V7.1c0-1.3 1-2.3 2.3-2.3Z"
+        d="M3.5 12h17M12 3.5c2.4 2.6 3.6 5.5 3.6 8.5s-1.2 5.9-3.6 8.5M12 3.5C9.6 6.1 8.4 9 8.4 12s1.2 5.9 3.6 8.5"
         stroke="currentColor"
         strokeWidth="1.55"
-        strokeLinejoin="round"
+        strokeLinecap="round"
       />
       <path
-        d="M10.8 10.6h8c1.1 0 2 .9 2 2v4c0 1.1-.9 2-2 2h-1.6l-2.6 2v-2H10.8c-1.1 0-2-.9-2-2v-4c0-1.1.9-2 2-2Z"
+        d="M5.2 7.2h13.6M5.2 16.8h13.6"
         stroke="currentColor"
         strokeWidth="1.55"
-        strokeLinejoin="round"
+        strokeLinecap="round"
       />
     </svg>
   );

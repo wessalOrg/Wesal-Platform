@@ -3,12 +3,23 @@
 import { useEffect, useState } from "react";
 import type { UserProfile } from "@/types/profile";
 import { useT } from "@/i18n";
-import { readProfileAvatar } from "@/lib/profile-avatar";
+import {
+  readProfileAvatar,
+  resolveProfileAvatarUserIds,
+} from "@/lib/profile-avatar";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
   const letters = parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
   return letters || "و";
+}
+
+function readFirstAvatar(profileId: string): string | null {
+  for (const id of resolveProfileAvatarUserIds(profileId)) {
+    const value = readProfileAvatar(id);
+    if (value) return value;
+  }
+  return null;
 }
 
 export default function ProfileHeroCard({
@@ -20,11 +31,14 @@ export default function ProfileHeroCard({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    setAvatarUrl(readProfileAvatar(profile.id));
+    const ids = new Set(resolveProfileAvatarUserIds(profile.id));
+    const refresh = () => setAvatarUrl(readFirstAvatar(profile.id));
+    refresh();
+
     const onAvatar = (event: Event) => {
       const detail = (event as CustomEvent<{ userId?: string; dataUrl?: string | null }>).detail;
-      if (!detail || detail.userId !== profile.id) return;
-      setAvatarUrl(detail.dataUrl ?? null);
+      if (!detail?.userId || !ids.has(detail.userId)) return;
+      refresh();
     };
     window.addEventListener("wesal:profile-avatar", onAvatar);
     return () => window.removeEventListener("wesal:profile-avatar", onAvatar);

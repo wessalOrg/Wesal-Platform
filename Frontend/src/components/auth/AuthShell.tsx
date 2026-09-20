@@ -2,7 +2,6 @@
 
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import AuthMarketingPanel from "@/components/auth/AuthMarketingPanel";
 import AuthMinimalHeader from "@/components/auth/AuthMinimalHeader";
 import { consumeAuthNavigation } from "@/lib/auth-nav";
 
@@ -29,12 +28,13 @@ export default function AuthShell({ children, testId = "auth-shell" }: AuthShell
 
   return (
     <div
-      className="wesal-register-screen relative min-h-svh overflow-x-hidden font-sans subpixel-antialiased"
+      className="wesal-register-screen relative min-h-svh overflow-hidden font-sans subpixel-antialiased"
       data-auth-shell
       data-testid={testId}
     >
       <div
-        className="wesal-register-bg absolute inset-0 bg-cover bg-center will-change-auto"
+        key={pathname}
+        className="wesal-register-bg absolute bg-cover bg-center"
         style={{ backgroundImage: 'url("/auth/register-hero.jpg")' }}
         aria-hidden="true"
       />
@@ -42,15 +42,11 @@ export default function AuthShell({ children, testId = "auth-shell" }: AuthShell
 
       <AuthMinimalHeader />
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-3.5rem)] w-full max-w-[92rem] flex-col justify-center px-4 py-6 sm:min-h-[calc(100svh-4rem)] sm:px-6 lg:px-6 lg:py-8 xl:px-10">
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-10 rtl:lg:flex-row-reverse">
-          <AuthMarketingPanel variant="desktop" />
-          <section className="w-full shrink-0 lg:w-[min(100%,32rem)] lg:-translate-y-8 lg:translate-x-1 xl:w-[34rem] xl:-translate-y-10 xl:translate-x-3 rtl:lg:translate-x-2 rtl:xl:translate-x-5">
-            {children}
-          </section>
-        </div>
-
-        <AuthMarketingPanel variant="mobile" />
+      {/* Physical right in both RTL (items-start) and LTR (items-end) */}
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-3.5rem)] w-full max-w-[92rem] flex-col items-start justify-start px-4 pb-8 pt-6 sm:min-h-[calc(100svh-4rem)] sm:px-6 sm:pt-8 ltr:items-end lg:justify-center lg:px-6 lg:pb-10 lg:pt-8 xl:px-10">
+        <section className="w-full max-w-[32rem] -translate-y-1 sm:-translate-y-2 lg:-translate-y-5 xl:-translate-y-6 xl:max-w-[34rem]">
+          {children}
+        </section>
       </div>
     </div>
   );

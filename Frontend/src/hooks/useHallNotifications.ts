@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { notificationErrorKind } from "@/lib/hall-notifications";
 import { parseBookingPeriodType } from "@/lib/booking-period";
 import {
@@ -11,6 +11,13 @@ import {
 } from "@/lib/booking-events";
 import { subscribeOwnerBookingRequestEvents } from "@/services/booking-notification-realtime";
 import { fetchHallBookingNotifications } from "@/services/hall-notifications";
+import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
+import { isPaymentRequiredApiError } from "@/lib/payment-required-error";
+import { isSystemLockedApiError } from "@/lib/system-locked-error";
+import {
+  reportOwnedHallPaymentRequired,
+  reportOwnedHallSystemLocked,
+} from "@/hooks/useHallOwnerHalls";
 import type {
   AcceptBookingResult,
   HallBookingNotification,
@@ -41,6 +48,11 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
   const [status, setStatus] = useState<HallNotificationStatus>(scopedId ? "loading" : "idle");
   const [items, setItems] = useState<HallBookingNotification[]>([]);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const statusRef = useRef(status);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   if (scopedId !== seenId) {
     setSeenId(scopedId);
@@ -68,6 +80,20 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
       .catch((err: unknown) => {
         if (cancelled || controller.signal.aborted) return;
         const kind = notificationErrorKind(err);
+        if (isPaymentRequiredApiError(err)) {
+          setItems([]);
+          setErrorKey(null);
+          setStatus("forbidden");
+          reportOwnedHallPaymentRequired(scopedId);
+          return;
+        }
+        if (isSystemLockedApiError(err)) {
+          setItems([]);
+          setErrorKey(null);
+          setStatus("forbidden");
+          reportOwnedHallSystemLocked(scopedId);
+          return;
+        }
         setItems([]);
         setErrorKey(
           kind === "unauthorized"
@@ -78,7 +104,12 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
                 ? "errors.owner.notifications.notFound"
                 : "errors.owner.notifications.load",
         );
-        setStatus(statusFromKind(kind));
+        const nextStatus = statusFromKind(kind);
+        statusRef.current = nextStatus;
+        setStatus(nextStatus);
+        if (kind === "forbidden") {
+          notifyHallOwnerHallsChanged();
+        }
       });
 
     return () => {
@@ -94,6 +125,7 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
       const detail = (event as CustomEvent<BookingDeletedDetail>).detail;
       if (!detail?.bookingId) return;
       if (detail.hallId && detail.hallId !== scopedId) return;
+      if (statusRef.current === "forbidden" || statusRef.current === "unauthorized") return;
       setItems((current) => current.filter((item) => item.id !== detail.bookingId));
     };
 
@@ -108,6 +140,7 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
       const detail = (event as CustomEvent<BookingAcceptedDetail>).detail;
       if (!detail?.bookingId) return;
       if (detail.hallId && detail.hallId !== scopedId) return;
+      if (statusRef.current === "forbidden" || statusRef.current === "unauthorized") return;
       setItems((current) => {
         const nextItem: HallBookingNotification = {
           id: detail.bookingId,
@@ -151,6 +184,7 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
     return subscribeOwnerBookingRequestEvents((event) => {
       if (event.replay) return;
       if (event.hallId && event.hallId !== scopedId) return;
+      if (statusRef.current === "forbidden" || statusRef.current === "unauthorized") return;
 
       const period = parseBookingPeriodType(event.period);
       setItems((current) => {

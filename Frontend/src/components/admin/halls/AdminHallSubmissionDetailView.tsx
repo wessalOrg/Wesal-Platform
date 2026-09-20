@@ -3,7 +3,9 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import AdminHallLockBadge from "@/components/admin/halls/AdminHallLockBadge";
+import AdminHallLockControls from "@/components/admin/halls/AdminHallLockControls";
 import AdminHallPaidControls from "@/components/admin/halls/AdminHallPaidControls";
+import AdminHallRejectControls from "@/components/admin/halls/AdminHallRejectControls";
 import AdminHallUnlockControls from "@/components/admin/halls/AdminHallUnlockControls";
 import AdminPaymentStatusBadge from "@/components/admin/halls/AdminPaymentStatusBadge";
 import ApproveHallActionButton from "@/components/admin/halls/ApproveHallActionButton";
@@ -43,7 +45,7 @@ export default function AdminHallSubmissionDetailView({
   if (detail.status === "loading" || detail.status === "idle") {
     return (
       <section
-        className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6"
+        className="admin-ops-section"
         aria-busy="true"
         data-testid="admin-hall-detail-loading"
       >
@@ -55,14 +57,14 @@ export default function AdminHallSubmissionDetailView({
   if (detail.status === "error" || !detail.hall) {
     return (
       <section
-        className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6"
+        className="admin-ops-section"
         role="alert"
         data-testid="admin-hall-detail-error"
       >
         <p className="text-sm text-[var(--wesal-muted)]">
           {t(detail.errorKey ?? "admin.halls.detail.errors.loadFailed")}
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="admin-ops-toolbar mt-4">
           <button type="button" className="btn-outline" onClick={() => void detail.reload()}>
             {t("common.retry")}
           </button>
@@ -77,8 +79,38 @@ export default function AdminHallSubmissionDetailView({
   const hall = detail.hall;
   const canApprove = canApproveHallStatus(hall.status);
   const submitted = hall.submittedAt
-    ? new Date(hall.submittedAt).toLocaleDateString("ar")
-    : "—";
+    ? new Date(hall.submittedAt).toLocaleDateString(locale)
+    : null;
+
+  const facts: Array<{ label: string; value: string | null; dir?: "ltr" }> = [
+    { label: t("admin.halls.detail.owner"), value: hall.ownerFullName },
+    { label: t("admin.halls.detail.email"), value: hall.ownerEmail, dir: "ltr" },
+    { label: t("admin.halls.detail.phone"), value: hall.ownerPhoneNumber, dir: "ltr" },
+    { label: t("admin.halls.detail.region"), value: hall.regionDisplayName },
+    { label: t("admin.halls.detail.address"), value: hall.address },
+    {
+      label: t("admin.halls.detail.capacity"),
+      value: hall.capacity ? String(hall.capacity) : null,
+    },
+    {
+      label: t("admin.halls.detail.price"),
+      value: hall.price != null ? String(hall.price) : null,
+    },
+    { label: t("admin.halls.detail.submitted"), value: submitted },
+  ];
+
+  if (hall.cycleEnd) {
+    facts.push({
+      label: t("admin.halls.paid.nextBilling"),
+      value: formatBookingDateLabel(hall.cycleEnd, locale),
+    });
+  }
+  if (hall.daysRemaining != null) {
+    facts.push({
+      label: t("admin.halls.paid.remainingLabel"),
+      value: t("admin.halls.paid.daysRemaining", { count: hall.daysRemaining }),
+    });
+  }
 
   return (
     <div className="seeker-home" data-testid="admin-hall-detail">
@@ -88,75 +120,56 @@ export default function AdminHallSubmissionDetailView({
         onClose={closeToast}
       />
 
-      <section className="seeker-welcome">
+      <section className="seeker-welcome seeker-welcome--compact">
         <div className="seeker-welcome-copy">
-          <p className="mb-2">
-            <Link
-              href={ADMIN_MANAGEMENT_PATH}
-              className="text-sm font-semibold text-[var(--wesal-maroon)]"
-            >
-              {t("admin.halls.detail.back")}
-            </Link>
-          </p>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <h1 className="seeker-welcome-title">{hall.name}</h1>
-            <div className="flex flex-wrap items-center gap-2">
-              <HallApprovalStatusBadge status={hall.approvalBadge} />
-              <AdminPaymentStatusBadge status={hall.paymentStatus} />
-              {hall.adminLocked || hall.systemLocked || hall.lockBadgeVisible ? (
-                <AdminHallLockBadge
-                  adminLocked={hall.adminLocked}
-                  systemLocked={hall.systemLocked}
-                />
-              ) : null}
-            </div>
+          <Link href={ADMIN_MANAGEMENT_PATH} className="admin-ops-back">
+            {t("admin.halls.detail.back")}
+          </Link>
+          <h1 className="seeker-welcome-title">{hall.name}</h1>
+          <div className="admin-ops-badges">
+            <HallApprovalStatusBadge status={hall.approvalBadge} />
+            <AdminPaymentStatusBadge status={hall.paymentStatus} />
+            {hall.adminLocked || hall.systemLocked || hall.lockBadgeVisible ? (
+              <AdminHallLockBadge
+                adminLocked={hall.adminLocked}
+                systemLocked={hall.systemLocked}
+              />
+            ) : null}
           </div>
           <p className="seeker-welcome-body">{t("admin.halls.detail.subtitle")}</p>
         </div>
       </section>
 
       {approval.errorKey ? (
-        <p className="mb-4 rounded-xl bg-[#fdecea] px-3 py-2 text-sm text-[#b42318]" role="alert">
+        <p className="rounded-xl bg-[#fdecea] px-3 py-2 text-sm text-[#b42318]" role="alert">
           {t(approval.errorKey)}
         </p>
       ) : null}
 
-      <section className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
-        <dl className="grid gap-3 text-sm sm:grid-cols-2">
-          <DetailRow label={t("admin.halls.detail.owner")} value={hall.ownerFullName} />
-          <DetailRow label={t("admin.halls.detail.email")} value={hall.ownerEmail} />
-          <DetailRow label={t("admin.halls.detail.phone")} value={hall.ownerPhoneNumber} />
-          <DetailRow label={t("admin.halls.detail.region")} value={hall.regionDisplayName} />
-          <DetailRow label={t("admin.halls.detail.address")} value={hall.address} />
-          <DetailRow
-            label={t("admin.halls.detail.capacity")}
-            value={hall.capacity ? String(hall.capacity) : null}
-          />
-          <DetailRow
-            label={t("admin.halls.detail.price")}
-            value={hall.price != null ? String(hall.price) : null}
-          />
-          <DetailRow label={t("admin.halls.detail.submitted")} value={submitted} />
-          <DetailRow
-            label={t("admin.halls.paid.nextBilling")}
-            value={hall.cycleEnd ? formatBookingDateLabel(hall.cycleEnd, locale) : null}
-          />
-          <DetailRow
-            label={t("admin.halls.paid.remainingLabel")}
-            value={
-              hall.daysRemaining == null
-                ? null
-                : t("admin.halls.paid.daysRemaining", { count: hall.daysRemaining })
-            }
-          />
+      <section className="admin-ops-section" data-testid="admin-hall-detail-summary">
+        <h2 className="admin-ops-section-title admin-ops-section-title--center">
+          {t("admin.halls.detail.summaryTitle")}
+        </h2>
+        <dl className="admin-ops-facts">
+          {facts.map((fact) => (
+            <DetailFact
+              key={fact.label}
+              label={fact.label}
+              value={fact.value}
+              dir={fact.dir}
+            />
+          ))}
         </dl>
 
         {hall.description ? (
-          <p className="mt-4 text-sm leading-7 text-[var(--wesal-text)]">{hall.description}</p>
+          <p className="admin-ops-description">{hall.description}</p>
         ) : null}
+      </section>
 
-        {hall.photoUrls.length > 0 ? (
-          <ul className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {hall.photoUrls.length > 0 ? (
+        <section className="admin-ops-section" data-testid="admin-hall-detail-media">
+          <h2 className="admin-ops-section-title">{t("admin.halls.detail.mediaTitle")}</h2>
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {hall.photoUrls.map((url) => (
               <li key={url} className="overflow-hidden rounded-xl bg-[var(--wesal-pink)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -164,9 +177,12 @@ export default function AdminHallSubmissionDetailView({
               </li>
             ))}
           </ul>
-        ) : null}
+        </section>
+      ) : null}
 
-        <div className="mt-6 flex flex-wrap items-start gap-2">
+      <section className="admin-ops-section" data-testid="admin-hall-detail-actions">
+        <h2 className="admin-ops-section-title">{t("admin.halls.detail.actionsTitle")}</h2>
+        <div className="admin-ops-toolbar">
           <MessageHallOwnerButton
             hallId={hall.hallId}
             hallName={hall.name}
@@ -183,16 +199,6 @@ export default function AdminHallSubmissionDetailView({
               }}
             />
           ) : null}
-          <AdminHallUnlockControls
-            hallId={hall.hallId}
-            adminLocked={hall.adminLocked}
-            systemLocked={hall.systemLocked}
-            lockBadgeVisible={hall.lockBadgeVisible}
-            showBadge={false}
-            onUnlocked={(result) => {
-              detail.applyLockState(result.adminLocked, result.systemLocked);
-            }}
-          />
           <AdminHallPaidControls
             hallId={hall.hallId}
             status={hall.status}
@@ -209,18 +215,61 @@ export default function AdminHallSubmissionDetailView({
               );
             }}
           />
+          <AdminHallUnlockControls
+            hallId={hall.hallId}
+            adminLocked={hall.adminLocked}
+            systemLocked={hall.systemLocked}
+            lockBadgeVisible={hall.lockBadgeVisible}
+            showBadge={false}
+            variant="soft"
+            onUnlocked={(result) => {
+              detail.applyLockState(result.adminLocked, result.systemLocked);
+            }}
+          />
+          <AdminHallLockControls
+            hallId={hall.hallId}
+            adminLocked={hall.adminLocked}
+            variant="soft"
+            onLocked={(result) => {
+              detail.applyLockState(result.adminLocked, hall.systemLocked);
+              setToastKey("admin.lock.success");
+            }}
+          />
         </div>
       </section>
+
+      <AdminHallRejectControls
+        hallId={hall.hallId}
+        status={hall.status}
+        onRejected={() => {
+          detail.applyStatus("Rejected");
+          setToastKey("admin.reject.success");
+        }}
+      />
     </div>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null;
+function DetailFact({
+  label,
+  value,
+  dir,
+}: {
+  label: string;
+  value: string | null;
+  dir?: "ltr";
+}) {
+  const text = value?.trim() || "—";
   return (
-    <div>
-      <dt className="text-[var(--wesal-muted)]">{label}</dt>
-      <dd className="mt-0.5 font-semibold text-[var(--wesal-text)]">{value}</dd>
+    <div className="admin-ops-fact">
+      <dt className="admin-ops-fact-label">{label}</dt>
+      <dd className="admin-ops-fact-value">
+        {dir === "ltr" ? (
+          <span className="admin-ops-fact-value-ltr">{text}</span>
+        ) : (
+          text
+        )}
+      </dd>
     </div>
   );
 }

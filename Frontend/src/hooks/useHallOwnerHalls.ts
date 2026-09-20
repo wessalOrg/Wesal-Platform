@@ -4,7 +4,10 @@ import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { ApiError, isUnauthorizedApiError } from "@/lib/api-error";
-import { subscribeHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
+import {
+  notifyHallOwnerHallsChanged,
+  subscribeHallOwnerHallsChanged,
+} from "@/lib/hall-owner-halls-events";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
 import { fetchHallOwnerHalls } from "@/services/hall-owner-halls";
 import type {
@@ -12,6 +15,7 @@ import type {
   HallOwnerHallsLoadStatus,
 } from "@/types/hall-owner-halls";
 import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
+import type { PaymentStatus } from "@/lib/hall-payment-status";
 
 type HallOwnerHallsSnapshot = {
   halls: HallOwnerHall[];
@@ -55,6 +59,39 @@ function subscribe(listener: () => void): () => void {
 
 function getSnapshot(): HallOwnerHallsSnapshot {
   return snapshot;
+}
+
+export function applyOwnedHallPaymentStatus(
+  hallId: string,
+  paymentStatus: PaymentStatus,
+): void {
+  const id = hallId.trim();
+  if (!id) return;
+  setSnapshot({
+    halls: snapshot.halls.map((hall) =>
+      hall.id === id ? { ...hall, paymentStatus } : hall,
+    ),
+  });
+}
+
+export function applyOwnedHallSystemLocked(hallId: string): void {
+  const id = hallId.trim();
+  if (!id) return;
+  setSnapshot({
+    halls: snapshot.halls.map((hall) =>
+      hall.id === id ? { ...hall, systemLocked: true } : hall,
+    ),
+  });
+}
+
+export function reportOwnedHallPaymentRequired(hallId: string): void {
+  applyOwnedHallPaymentStatus(hallId, "Unpaid");
+  notifyHallOwnerHallsChanged();
+}
+
+export function reportOwnedHallSystemLocked(hallId: string): void {
+  applyOwnedHallSystemLocked(hallId);
+  notifyHallOwnerHallsChanged();
 }
 
 function detectNewlyApproved(next: HallOwnerHall[]): boolean {

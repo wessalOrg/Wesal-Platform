@@ -14,10 +14,10 @@ import {
   OWNER_ACCOUNT_PATH,
 } from "@/constants/hallOwnerManagementNav";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
+import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 import { HALL_OWNER_ADD_HALL_PATH } from "@/lib/account-profile-path";
 import { warmAddHallInitiation } from "@/lib/add-hall-initiation-cache";
-import { readProfileAvatar } from "@/lib/profile-avatar";
 import { useT } from "@/i18n";
 
 const SIDEBAR_ID = "owner-dash-sidebar";
@@ -42,8 +42,8 @@ export default function HallOwnerManagementShell({
   const router = useRouter();
   const identity = useUserIdentity();
   const profileStore = useOptionalUserProfileStore();
+  const avatarUrl = useProfileAvatarUrl([profileStore?.profile?.id]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const openSidebar = () => setIsSidebarOpen(true);
   const closeSidebar = () => setIsSidebarOpen(false);
@@ -74,25 +74,6 @@ export default function HallOwnerManagementShell({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [isSidebarOpen]);
-
-  useEffect(() => {
-    const userId = profileStore?.profile?.id;
-    if (!userId) {
-      setAvatarUrl(null);
-      return;
-    }
-    setAvatarUrl(readProfileAvatar(userId));
-
-    const onAvatar = (event: Event) => {
-      const detail = (
-        event as CustomEvent<{ userId?: string; dataUrl?: string | null }>
-      ).detail;
-      if (!detail || detail.userId !== userId) return;
-      setAvatarUrl(detail.dataUrl ?? null);
-    };
-    window.addEventListener("wesal:profile-avatar", onAvatar);
-    return () => window.removeEventListener("wesal:profile-avatar", onAvatar);
-  }, [profileStore?.profile?.id]);
 
   const displayName =
     profileStore?.profile?.fullName ||

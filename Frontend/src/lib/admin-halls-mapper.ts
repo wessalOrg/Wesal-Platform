@@ -4,6 +4,8 @@ import type {
   AdminHallApprovalResult,
   AdminHallDetail,
   AdminHallLockAccess,
+  AdminHallLockResult,
+  AdminHallRejectResult,
   AdminHallStatus,
   AdminHallUnlockResult,
   AdminMarkPaidResult,
@@ -173,6 +175,11 @@ export function canApproveHallStatus(status: AdminHallStatus): boolean {
   return status === "PendingReview";
 }
 
+/** PendingReview or live Approved (needs confirmLiveApproved). */
+export function canRejectHallStatus(status: AdminHallStatus): boolean {
+  return status === "PendingReview" || status === "Approved";
+}
+
 export function resolveAdminHallLockAccess(
   adminLocked: boolean,
   systemLocked: boolean,
@@ -182,8 +189,43 @@ export function resolveAdminHallLockAccess(
   return "unlocked";
 }
 
+export function canLockAdminHall(adminLocked: boolean): boolean {
+  return !adminLocked;
+}
+
 export function canUnlockAdminHall(adminLocked: boolean): boolean {
   return adminLocked;
+}
+
+export function mapAdminHallReject(payload: unknown): AdminHallRejectResult | null {
+  if (!payload || typeof payload !== "object") return null;
+  const dto = payload as Record<string, unknown>;
+  const hallId = asId(dto.hallId ?? dto.HallId);
+  const status = mapStatus(dto.status ?? dto.Status);
+  if (!hallId || !status) return null;
+
+  return {
+    hallId,
+    hallName: asText(dto.name ?? dto.Name ?? dto.hallName ?? dto.HallName),
+    status,
+    isAlreadyRejected: asBool(dto.isAlreadyRejected ?? dto.IsAlreadyRejected) || status === "Rejected",
+    notificationDelivered: asBool(dto.notificationDelivered ?? dto.NotificationDelivered),
+  };
+}
+
+export function mapAdminHallLock(payload: unknown): AdminHallLockResult | null {
+  if (!payload || typeof payload !== "object") return null;
+  const dto = payload as Record<string, unknown>;
+  const hallId = asId(dto.hallId ?? dto.HallId);
+  if (!hallId) return null;
+
+  return {
+    hallId,
+    hallName: asText(dto.name ?? dto.Name ?? dto.hallName ?? dto.HallName),
+    adminLocked: asBool(dto.isLocked ?? dto.IsLocked ?? dto.adminLocked ?? dto.AdminLocked),
+    lockedAt: asText(dto.lockedAt ?? dto.LockedAt) || null,
+    lockedByAdminUserId: asText(dto.lockedByAdminUserId ?? dto.LockedByAdminUserId) || null,
+  };
 }
 
 export function canMarkHallPaid(

@@ -20,17 +20,19 @@ import "@/components/halls/notifications/hall-notifications.css";
 type OwnerAvailabilityScheduleProps = {
   hallId: string;
   hallName?: string;
+  enabled?: boolean;
 };
 
 export default function OwnerAvailabilitySchedule({
   hallId,
   hallName,
+  enabled = true,
 }: OwnerAvailabilityScheduleProps) {
   const t = useT();
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
-  const enabled = Boolean(hallId);
-  const bookings = useHallNotifications(hallId, enabled);
+  const fetchEnabled = enabled && Boolean(hallId);
+  const bookings = useHallNotifications(hallId, fetchEnabled);
   const [publishedIds, setPublishedIds] = useState<Set<string>>(() => new Set());
   const [deleteTarget, setDeleteTarget] = useState<HallBookingNotification | null>(null);
   const [exitingIds, setExitingIds] = useState<Set<string>>(() => new Set());
@@ -108,11 +110,11 @@ export default function OwnerAvailabilitySchedule({
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!fetchEnabled) return;
     if (bookings.status !== "ready" && bookings.status !== "empty") return;
     publishOwnerDepositSlotsFromItems(hallId, bookings.items);
     publishOwnerPublishedSlotsFromItems(hallId, bookings.items);
-  }, [bookings.items, bookings.status, enabled, hallId]);
+  }, [bookings.items, bookings.status, fetchEnabled, hallId]);
 
   const listed = visibleScheduleBookings(
     bookings.items,

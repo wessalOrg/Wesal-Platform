@@ -12,11 +12,17 @@ import { validateHallEditForm } from "@/lib/hall-owner-hall-edit-validation";
 import { mapHallDetailsToEditForm } from "@/lib/hall-owner-hall-management-mapper";
 import { mapHallFormToUpdateHallRequest } from "@/lib/hall-owner-hall-update-mapper";
 import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
+import { isPaymentRequiredApiError } from "@/lib/payment-required-error";
+import { isSystemLockedApiError } from "@/lib/system-locked-error";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
 import {
   fetchOwnerHallDetails,
   updateOwnerHall,
 } from "@/services/hall-owner-hall-management";
+import {
+  reportOwnedHallPaymentRequired,
+  reportOwnedHallSystemLocked,
+} from "@/hooks/useHallOwnerHalls";
 import type {
   HallDetailsLoadStatus,
   HallEditFieldErrors,
@@ -29,12 +35,15 @@ import type {
  * Hall-ID-scoped details + edit state (US-OWNER-07 / US-OWNER-08).
  * Switching hallId clears previous Hall data before the next fetch settles.
  */
-export function useHallOwnerHallManagement(hallId: string) {
+export function useHallOwnerHallManagement(hallId: string, enabled = true) {
   const { logout } = useAuth();
 
   const [boundHallId, setBoundHallId] = useState(hallId);
+  const [boundEnabled, setBoundEnabled] = useState(enabled);
   const [details, setDetails] = useState<HallOwnerHallDetails | null>(null);
-  const [loadStatus, setLoadStatus] = useState<HallDetailsLoadStatus>("loading");
+  const [loadStatus, setLoadStatus] = useState<HallDetailsLoadStatus>(
+    enabled ? "loading" : "idle",
+  );
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
 
   const [values, setValues] = useState<HallEditFormValues | null>(null);
@@ -47,16 +56,16 @@ export function useHallOwnerHallManagement(hallId: string) {
   const loadGenerationRef = useRef(0);
 
   // Reset synchronously when selected Hall changes — prevents Hall A draft/UI on Hall B.
-  if (hallId !== boundHallId) {
+  if (hallId !== boundHallId || enabled !== boundEnabled) {
     setBoundHallId(hallId);
+    setBoundEnabled(enabled);
     setDetails(null);
     setValues(null);
     setFieldErrors({});
     setFormError(null);
     setSubmitStatus("idle");
     setLoadErrorKey(null);
-    setLoadStatus("loading");
-    submittingRef.current = false;
+    setLoadStatus(enabled ? "loading" : "idle");
   }
 
   const hydrateFromDetails = useCallback((next: HallOwnerHallDetails) => {
@@ -68,6 +77,7 @@ export function useHallOwnerHallManagement(hallId: string) {
   }, []);
 
   const load = useCallback(async () => {
+    if (!enabled) return;
     const generation = ++loadGenerationRef.current;
     const requestHallId = hallId;
     setLoadStatus("loading");
@@ -89,6 +99,22 @@ export function useHallOwnerHallManagement(hallId: string) {
         setLoadStatus("idle");
         return;
       }
+      if (isPaymentRequiredApiError(err)) {
+        setDetails(null);
+        setValues(null);
+        setLoadErrorKey(null);
+        setLoadStatus("payment_required");
+        reportOwnedHallPaymentRequired(requestHallId);
+        return;
+      }
+      if (isSystemLockedApiError(err)) {
+        setDetails(null);
+        setValues(null);
+        setLoadErrorKey(null);
+        setLoadStatus("system_locked");
+        reportOwnedHallSystemLocked(requestHallId);
+        return;
+      }
       setDetails(null);
       setValues(null);
       setLoadErrorKey(
@@ -100,14 +126,24 @@ export function useHallOwnerHallManagement(hallId: string) {
       );
       setLoadStatus("error");
     }
-  }, [hallId, hydrateFromDetails, logout]);
+  }, [enabled, hallId, hydrateFromDetails, logout]);
 
   useEffect(() => {
+    submittingRef.current = false;
+  }, [hallId, enabled]);
+
+  useEffect(() => {
+    if (!enabled) {
+      loadGenerationRef.current += 1;
+      return;
+    }
+    // Existing hall-details fetch-on-mount; `load` is a memoized callback.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- gated fetch, not derived render state
     void load();
     return () => {
       loadGenerationRef.current += 1;
     };
-  }, [load]);
+  }, [enabled, load]);
 
   const detailsMatchSelection = details?.id === hallId;
   const canEdit =
@@ -235,6 +271,20 @@ export function useHallOwnerHallManagement(hallId: string) {
         return false;
       }
 
+      if (isPaymentRequiredApiError(err)) {
+        reportOwnedHallPaymentRequired(targetHallId);
+        setFormError(null);
+        setSubmitStatus("idle");
+        return false;
+      }
+
+      if (isSystemLockedApiError(err)) {
+        reportOwnedHallSystemLocked(targetHallId);
+        setFormError(null);
+        setSubmitStatus("idle");
+        return false;
+      }
+
       if (isHallNotEditableApiError(err)) {
         setFormError("owner.management.hallEdit.errors.notEditable");
         try {
@@ -275,6 +325,8 @@ export function useHallOwnerHallManagement(hallId: string) {
     submitStatus,
     isLoading: loadStatus === "loading" || isStaleSelection,
     isLoadError: loadStatus === "error" && !isStaleSelection,
+    isPaymentRequired: loadStatus === "payment_required",
+    isSystemLocked: loadStatus === "system_locked",
     isSubmitting: submitStatus === "submitting",
     isSuccess: submitStatus === "success" && detailsMatchSelection,
     canEdit,

@@ -76,6 +76,42 @@
   animation: wesal-ai-tab 4.2s ease-in-out;
 }
 
+.wesal-ai-fab-name {
+  pointer-events: none;
+  position: absolute;
+  z-index: 6;
+  bottom: 0;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: max-content;
+  max-width: calc(100% + 1.25rem);
+  padding: 0.28rem 0.72rem;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--wesal-maroon) 35%, white);
+  background: color-mix(in srgb, var(--wesal-maroon) 92%, #5a2a30);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 8px 16px rgba(80, 42, 45, 0.22);
+}
+
+.wesal-ai-fab[data-open="true"] .wesal-ai-fab-name {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Keep the figure above the name so shoes stay visible. */
+.wesal-ai-fab--figure .wesal-ai-fab-figure {
+  padding-bottom: 1.65rem;
+}
+
+.wesal-ai-fab--figure .wesal-ai-fab-figure img {
+  object-position: bottom center;
+}
+
 .wesal-ai-fab-tab::after {
   content: "";
   position: absolute;
@@ -330,6 +366,7 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
 .wesal-ai-fab-dragging .wesal-ai-fab-aura,
 .wesal-ai-fab-dragging .wesal-ai-fab-ring,
 .wesal-ai-fab-dragging .wesal-ai-fab-tab,
+.wesal-ai-fab-dragging .wesal-ai-fab-name,
 .wesal-ai-fab-dragging .wesal-ai-fab-scan,
 .wesal-ai-fab-dragging .wesal-ai-fab-orbit-item,
 .wesal-ai-fab-dragging .wesal-ai-fab-sparkle,
@@ -391,18 +428,22 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
   width: 2rem;
   height: 2rem;
   padding: 0;
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 45%, white);
   border-radius: 999px;
-  background: transparent;
-  color: var(--wesal-text);
-  cursor: nwse-resize;
+  background: #ffffff;
+  color: var(--wesal-maroon);
+  box-shadow: 0 4px 12px rgba(193, 123, 127, 0.16);
+  cursor: pointer;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 :dir(rtl) .wesal-ai-panel-resize {
-  cursor: nesw-resize;
+  cursor: pointer;
 }
 
 :dir(rtl) .wesal-ai-panel-resize svg {
@@ -412,7 +453,9 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
 .wesal-ai-panel-resize:hover,
 .wesal-ai-panel-resize:focus-visible,
 .wesal-ai-panel[data-resizing="true"] .wesal-ai-panel-resize {
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: var(--wesal-maroon);
+  border-color: var(--wesal-maroon);
+  color: #ffffff;
 }
 
 .wesal-ai-panel-resize:focus-visible {
@@ -457,6 +500,11 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
 
 .wesal-ai-panel--anchored[data-placement="right"] {
   transform-origin: center left;
+}
+
+.wesal-ai-panel[data-size="expanded"] .wesal-ai-avatar img {
+  object-fit: cover;
+  object-position: top center;
 }
 
 @media (min-width: 640px) {
@@ -937,6 +985,7 @@ html[data-wesal-fab-placed="true"] .wesal-ai-fab {
   .wesal-ai-fab-aura,
   .wesal-ai-fab-ring,
   .wesal-ai-fab-tab,
+  .wesal-ai-fab-name,
   .wesal-ai-fab-scan,
   .wesal-ai-fab-orbit-item,
   .wesal-ai-fab-sparkle,

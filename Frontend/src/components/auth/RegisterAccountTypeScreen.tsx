@@ -49,11 +49,11 @@ export default function RegisterAccountTypeScreen({
       data-testid="register-account-type-screen"
     >
       <div className="flex flex-col items-center text-center">
-        <WesalLogo className="h-9 w-9 sm:h-10 sm:w-10" variant="brand" />
-        <h2 className="mt-2.5 text-lg font-extrabold text-[var(--wesal-maroon-dark)] sm:text-xl">
+        <WesalLogo className="h-9 w-auto sm:h-10" variant="brand" />
+        <h2 className="mt-3 text-base font-bold text-[var(--wesal-maroon-dark)] sm:text-lg">
           {t("auth.register.title")}
         </h2>
-        <p className="mt-2 max-w-[21rem] text-sm font-normal leading-5 text-[#525252] sm:max-w-[24rem]">
+        <p className="mt-1.5 max-w-[20rem] text-xs font-normal leading-4 text-[#525252] sm:max-w-[22rem] sm:text-[0.8rem] sm:leading-[1.15rem]">
           {t("auth.register.subtitle")}
         </p>
       </div>

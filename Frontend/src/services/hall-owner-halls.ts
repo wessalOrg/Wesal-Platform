@@ -11,9 +11,33 @@ import type { HallOwnerHall } from "@/types/hall-owner-halls";
 export const OWNER_HALLS_PATH = "/owner/halls";
 
 const DEMO_OWNER_HALLS: HallOwnerHall[] = [
-  { id: "demo-hall-approved", name: "قاعة النور", status: "Approved", expiryWarning: null },
-  { id: "demo-hall-pending", name: "قاعة الأمل", status: "Pending", expiryWarning: null },
-  { id: "demo-hall-rejected", name: "قاعة الياسمين", status: "Rejected", expiryWarning: null },
+  {
+    id: "demo-hall-approved",
+    name: "قاعة النور",
+    status: "Approved",
+    expiryWarning: null,
+    paymentStatus: "Paid",
+    adminLocked: false,
+    systemLocked: false,
+  },
+  {
+    id: "demo-hall-pending",
+    name: "قاعة الأمل",
+    status: "Pending",
+    expiryWarning: null,
+    paymentStatus: "Unpaid",
+    adminLocked: false,
+    systemLocked: false,
+  },
+  {
+    id: "demo-hall-rejected",
+    name: "قاعة الياسمين",
+    status: "Rejected",
+    expiryWarning: null,
+    paymentStatus: "Unpaid",
+    adminLocked: false,
+    systemLocked: false,
+  },
 ];
 
 function ownerHallsUsesMock(): boolean {
@@ -31,9 +55,7 @@ export async function fetchHallOwnerHalls(): Promise<HallOwnerHall[]> {
   }
 
   try {
-    const { data } = await api.get<unknown>(OWNER_HALLS_PATH, {
-      timeout: 10000,
-    });
+    const { data } = await api.get<unknown>(OWNER_HALLS_PATH, { timeout: 10000 });
     return mapHallOwnerHallsResponse(data);
   } catch (err) {
     if (err instanceof ApiError) throw err;

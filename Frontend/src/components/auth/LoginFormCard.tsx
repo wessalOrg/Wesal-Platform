@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { markAuthNavigation, navigateAfterAuth } from "@/lib/auth-nav";
 import { useT } from "@/i18n";
@@ -13,6 +13,13 @@ import {
   isInvalidLoginCredentialsError,
   mapLoginApiFieldErrors,
 } from "@/lib/api-error";
+import {
+  clearRememberedEmail,
+  getRememberedEmail,
+  isRememberMeEnabled,
+  setRememberedEmail,
+  setRememberMeEnabled,
+} from "@/lib/auth-persist";
 import {
   clearBookingHallContext,
   resolveAuthRedirect,
@@ -42,13 +49,26 @@ export default function LoginFormCard({
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const canSubmit =
-    email.trim().length > 0 && password.length > 0 && !pending;
+  useEffect(() => {
+    const remembered = getRememberedEmail();
+    const preferRemember = isRememberMeEnabled() || Boolean(remembered);
+    setRememberMe(preferRemember);
+    if (remembered) setEmail(remembered);
+  }, []);
+
+  const canSubmit = email.trim().length > 0 && password.length > 0 && !pending;
+
+  const persistRememberPreference = (enabled: boolean, nextEmail: string) => {
+    setRememberMeEnabled(enabled);
+    if (enabled) setRememberedEmail(nextEmail);
+    else clearRememberedEmail();
+  };
 
   const localizeApiFieldMessage = (field: FieldKey, message: string): string => {
     const lower = message.toLowerCase();
@@ -166,6 +186,7 @@ export default function LoginFormCard({
         return;
       }
 
+      persistRememberPreference(rememberMe, email.trim());
       setAccessToken(result.token);
       setStoredAuth({
         token: result.token,
@@ -259,11 +280,21 @@ export default function LoginFormCard({
           }
         />
 
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-3">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-[var(--wesal-maroon-dark)]">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+              className="h-4 w-4 accent-[var(--wesal-maroon)]"
+              data-testid="login-remember-me"
+            />
+            <span>{t("auth.login.form.rememberMe")}</span>
+          </label>
           <Link
             href="/forgot-password"
             onClick={markAuthNavigation}
-            className="text-sm font-medium text-[var(--wesal-maroon)] underline-offset-2 hover:underline"
+            className="shrink-0 text-sm font-medium text-[var(--wesal-maroon)] underline-offset-2 hover:underline"
           >
             {t("auth.login.forgotPassword")}
           </Link>

@@ -16,6 +16,7 @@ import type { OwnerAvailabilityDay } from "@/types/owner-availability";
 
 type OwnerAvailabilityCalendarProps = {
   hallId: string;
+  enabled?: boolean;
 };
 
 type OwnerAvailabilityMonthSessionProps = {
@@ -27,12 +28,15 @@ type OwnerAvailabilityMonthSessionProps = {
   applyPeriod: ReturnType<typeof useHallAvailability>["applyPeriod"];
 };
 
-export default function OwnerAvailabilityCalendar({ hallId }: OwnerAvailabilityCalendarProps) {
+export default function OwnerAvailabilityCalendar({
+  hallId,
+  enabled = true,
+}: OwnerAvailabilityCalendarProps) {
   const t = useT();
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const [month, setMonth] = useState(currentUtcMonth);
-  const availability = useHallAvailability(hallId, month, true);
+  const availability = useHallAvailability(hallId, month, enabled);
 
   const monthLabel = useMemo(() => {
     const [year, monthIndex] = month.split("-").map(Number);

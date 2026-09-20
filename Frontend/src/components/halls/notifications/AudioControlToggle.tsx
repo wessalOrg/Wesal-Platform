@@ -4,7 +4,7 @@ import { useAudioPermission } from "@/hooks/useAudioPermission";
 import { useT } from "@/i18n";
 
 type AudioControlToggleProps = {
-  variant?: "icon" | "nav" | "stacked";
+  variant?: "icon" | "nav" | "stacked" | "menu";
 };
 
 export default function AudioControlToggle({ variant = "icon" }: AudioControlToggleProps) {
@@ -13,11 +13,36 @@ export default function AudioControlToggle({ variant = "icon" }: AudioControlTog
   const label = audio.soundOn
     ? t("owner.audio.mute")
     : t("owner.audio.enable");
+  const hint = audio.soundOn
+    ? t("owner.audio.muteHint")
+    : t("owner.audio.enableHint");
   const state = audio.soundOn ? "on" : audio.status;
 
   const onToggle = () => {
     void audio.toggleMute();
   };
+
+  if (variant === "menu") {
+    return (
+      <button
+        type="button"
+        role="menuitem"
+        className="wesal-account-menu-item wesal-account-menu-audio"
+        aria-pressed={audio.soundOn}
+        data-testid="owner-audio-toggle"
+        data-state={state}
+        onClick={onToggle}
+      >
+        <span className="wesal-account-menu-icon" aria-hidden="true">
+          <SpeakerIcon on={audio.soundOn} className="h-4 w-4" />
+        </span>
+        <span className="wesal-account-menu-copy">
+          <span className="wesal-account-menu-title">{label}</span>
+          <span className="wesal-account-menu-desc">{hint}</span>
+        </span>
+      </button>
+    );
+  }
 
   if (variant === "stacked") {
     return (
@@ -79,10 +104,16 @@ export default function AudioControlToggle({ variant = "icon" }: AudioControlTog
   );
 }
 
-function SpeakerIcon({ on }: { on: boolean }) {
+function SpeakerIcon({
+  on,
+  className = "h-5 w-5",
+}: {
+  on: boolean;
+  className?: string;
+}) {
   return (
     <svg
-      className="h-5 w-5"
+      className={className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

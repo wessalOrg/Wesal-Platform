@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import MessageThreadView from "@/components/messages/MessageThreadView";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
+import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useT } from "@/i18n";
@@ -28,7 +29,10 @@ export default function MessagesView({ conversationId }: MessagesViewProps) {
     setDraft,
     sendMessage,
     retrySend,
+    conversations,
   } = useMessagesInbox();
+  const selectedConversation =
+    conversations.find((item) => item.conversationId === conversationId) ?? null;
 
   useEffect(() => {
     if (!authenticated) return;
@@ -64,6 +68,7 @@ export default function MessagesView({ conversationId }: MessagesViewProps) {
       className="flex min-h-[min(36rem,calc(100svh-8rem))] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_12px_30px_rgba(90,55,45,0.08)]"
       data-testid="messages-thread"
     >
+      <ProtectedHallMessageThread hallId={selectedConversation?.hallId ?? thread?.hallId}>
       <MessageThreadView
         status={threadStatus}
         thread={thread}
@@ -81,6 +86,7 @@ export default function MessagesView({ conversationId }: MessagesViewProps) {
         composerId="message-draft"
         conversationId={conversationId}
       />
+      </ProtectedHallMessageThread>
     </section>
   );
 }

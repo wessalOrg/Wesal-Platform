@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import WesalLogo from "@/components/brand/WesalLogo";
+import WesalBrandLockup from "@/components/brand/WesalBrandLockup";
 import { useT } from "@/i18n";
 
 const QUICK_LINKS = [
@@ -42,13 +42,8 @@ export default function Footer() {
 
       <div className="container-wesal relative z-10 py-7 sm:py-8">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
-          <div className="sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-2">
-              <WesalLogo className="h-10 w-auto" variant="brand" />
-              <span className="text-lg font-extrabold text-[var(--wesal-maroon)]">
-                {t("brand.name")}
-              </span>
-            </div>
+          <div className="sm:col-span-2 lg:col-span-1 -ms-5 sm:-ms-7 lg:-ms-10">
+            <WesalBrandLockup logoClassName="h-8 w-auto" nameClassName="text-base" />
             <p className="mt-2.5 max-w-xs text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm sm:leading-7">
               {t("brand.tagline")}
             </p>
@@ -125,9 +120,7 @@ export default function Footer() {
             <ul className="mt-2.5 space-y-2 text-xs text-[var(--wesal-muted)] sm:text-sm">
               <li>
                 <ContactRow icon={<PinIcon />}>
-                  <span className="whitespace-pre-line">
-                    {t("footer.location").replace(" / ", "\n")}
-                  </span>
+                  <span>{t("footer.location")}</span>
                 </ContactRow>
               </li>
               <li>

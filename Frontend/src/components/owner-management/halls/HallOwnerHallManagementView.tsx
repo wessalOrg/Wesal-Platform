@@ -3,13 +3,23 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import OwnerAvailabilityCalendar from "@/components/halls/owner-availability/OwnerAvailabilityCalendar";
+import HallBookingDataGate from "@/components/halls/HallBookingDataGate";
 import OwnerDeleteHallAction from "@/components/halls/OwnerDeleteHallAction";
+import ManagementAccessBlockedState from "@/components/halls/ManagementAccessBlockedState";
+import PaymentStatusBadge from "@/components/halls/PaymentStatusBadge";
 import OwnerSubscriptionStatus from "@/components/halls/subscription/OwnerSubscriptionStatus";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
 import HallManagementForm from "@/components/owner-management/halls/HallManagementForm";
 import HallManagementSectionNav from "@/components/owner-management/halls/HallManagementSectionNav";
 import { useHallOwnerHallManagement } from "@/hooks/useHallOwnerHallManagement";
 import { useSelectedOwnerHall } from "@/hooks/useSelectedOwnerHall";
+import {
+  canAccessCalendar,
+  getManagementAccess,
+  hallAccessFromHall,
+  mergeHallAccess,
+  UNLOCKED_HALL_ACCESS,
+} from "@/lib/hall-access";
 import {
   HALL_OWNER_HALLS_PATH,
   HALL_OWNER_PROFILE_PATH,
@@ -32,6 +42,14 @@ export default function HallOwnerHallManagementView({
   const { isListReady, isListLoading, isKnownOwnedHall, selectedHall } =
     useSelectedOwnerHall();
 
+  const listAccess = selectedHall ? hallAccessFromHall(selectedHall) : UNLOCKED_HALL_ACCESS;
+  const listManagement = getManagementAccess(listAccess);
+  const listBlocksProtected =
+    isListReady &&
+    listManagement.allowed === false &&
+    listManagement.reason !== "ADMIN_LOCKED";
+  const detailsEnabled = !listBlocksProtected && (isKnownOwnedHall || !isListReady);
+
   const {
     details,
     values,
@@ -39,6 +57,8 @@ export default function HallOwnerHallManagementView({
     formError,
     isLoading,
     isLoadError,
+    isPaymentRequired,
+    isSystemLocked,
     loadErrorKey,
     isSubmitting,
     isSuccess,
@@ -49,9 +69,22 @@ export default function HallOwnerHallManagementView({
     setPeriod,
     removeExistingPhoto,
     submit,
-  } = useHallOwnerHallManagement(hallId);
+  } = useHallOwnerHallManagement(hallId, detailsEnabled);
 
-  // List finished and this ID is not among the owner's halls → safe fallback.
+  const access = mergeHallAccess(
+    details ? hallAccessFromHall(details) : undefined,
+    selectedHall ? hallAccessFromHall(selectedHall) : undefined,
+  );
+  const management = getManagementAccess(access);
+  const blockedReason =
+    isPaymentRequired
+      ? "PAYMENT_REQUIRED"
+      : isSystemLocked
+        ? "SYSTEM_LOCKED"
+        : !management.allowed && management.reason !== "ADMIN_LOCKED"
+          ? management.reason
+          : null;
+
   if (isListReady && !isKnownOwnedHall) {
     return (
       <section
@@ -67,6 +100,41 @@ export default function HallOwnerHallManagementView({
         >
           {t("owner.management.nav.profile")}
         </Link>
+      </section>
+    );
+  }
+
+  if (blockedReason) {
+    const headerName = selectedHall?.name || details?.name || "—";
+    const hallStatus = selectedHall?.status ?? details?.status ?? "Approved";
+    const paymentStatus = selectedHall?.paymentStatus ?? details?.paymentStatus ?? "Unpaid";
+    return (
+      <section
+        className="owner-hall-mgmt-panel min-w-0 space-y-5 sm:space-y-6"
+        data-testid={
+          blockedReason === "PAYMENT_REQUIRED"
+            ? "owner-hall-management-payment-pending"
+            : "owner-hall-management-system-locked"
+        }
+        data-hall-id={hallId}
+      >
+        <header className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
+          <div className="min-w-0 space-y-4">
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="break-words text-xl font-extrabold text-[var(--wesal-maroon)] sm:text-2xl">
+                  {headerName}
+                </h2>
+              </div>
+              <div className="flex flex-wrap gap-2 self-start">
+                <HallApprovalStatusBadge status={hallStatus} />
+                <PaymentStatusBadge status={paymentStatus} />
+              </div>
+            </div>
+            <HallManagementSectionNav hallId={hallId} />
+          </div>
+        </header>
+        <ManagementAccessBlockedState reason={blockedReason} />
       </section>
     );
   }
@@ -126,6 +194,8 @@ export default function HallOwnerHallManagementView({
   }
 
   const headerName = details.name || selectedHall?.name || "—";
+  const flagsReady = Boolean(details) || isListReady;
+  const calendarEnabled = flagsReady && canAccessCalendar(access);
 
   return (
     <section
@@ -147,10 +217,10 @@ export default function HallOwnerHallManagementView({
                   : t("owner.management.hallEdit.subtitleReadOnly")}
               </p>
             </div>
-            <HallApprovalStatusBadge
-              status={details.status}
-              className="self-start"
-            />
+            <div className="flex flex-wrap gap-2 self-start">
+              <HallApprovalStatusBadge status={details.status} />
+              <PaymentStatusBadge status={details.paymentStatus} />
+            </div>
           </div>
           <HallManagementSectionNav hallId={hallId} />
         </div>
@@ -175,7 +245,9 @@ export default function HallOwnerHallManagementView({
       </div>
 
       <OwnerSubscriptionStatus hallId={hallId} hallName={headerName} />
-      <OwnerAvailabilityCalendar hallId={hallId} />
+      <HallBookingDataGate access={access} flagsReady={flagsReady}>
+        <OwnerAvailabilityCalendar hallId={hallId} enabled={calendarEnabled} />
+      </HallBookingDataGate>
       <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
         <OwnerDeleteHallAction
           hallId={hallId}

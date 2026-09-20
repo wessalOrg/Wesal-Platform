@@ -41,7 +41,7 @@ export default function OwnerSidebar({
         data-testid="owner-management-sidebar"
       >
         <div className="seeker-dash-sidebar-brand">
-          <WesalLogo className="h-11 w-auto" variant="brand" animated={false} />
+          <WesalLogo className="h-11 w-auto" variant="brand" />
           <div className="min-w-0">
             <p className="seeker-dash-sidebar-brand-name">{t("brand.name")}</p>
             <p className="seeker-dash-sidebar-brand-sub">{t("owner.role")}</p>
@@ -49,7 +49,7 @@ export default function OwnerSidebar({
         </div>
 
         <nav className="seeker-dash-sidebar-nav">
-          <ul className="seeker-dash-sidebar-list !flex-none !overflow-visible">
+          <ul className="seeker-dash-sidebar-list seeker-dash-sidebar-list--static">
             {HALL_OWNER_DASHBOARD_NAV.map((item) => {
               const active = isOwnerNavActive(pathname, item.href, item.match);
               return (
@@ -79,25 +79,39 @@ export default function OwnerSidebar({
             </li>
           </ul>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="seeker-dash-sidebar-scroll">
             <HallOwnerHallsSection onNavigate={onNavigate} />
           </div>
-
-          <div className="seeker-dash-sidebar-footer">
-            <button
-              type="button"
-              className="seeker-dash-sidebar-logout"
-              data-testid="owner-nav-logout"
-              disabled={isLoggingOut}
-              onClick={() => setConfirmLogout(true)}
-            >
-              <span className="seeker-dash-sidebar-icon" aria-hidden="true">
-                <LogoutIcon />
-              </span>
-              <span>{t("owner.nav.logout")}</span>
-            </button>
-          </div>
         </nav>
+
+        <div className="seeker-dash-sidebar-footer">
+          <Link
+            href="/halls"
+            prefetch
+            className="seeker-dash-sidebar-browse"
+            data-testid="owner-nav-browse-halls"
+            onClick={onNavigate}
+            onMouseEnter={() => router.prefetch("/halls")}
+            onFocus={() => router.prefetch("/halls")}
+          >
+            <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+              <HomeSiteIcon />
+            </span>
+            <span>{t("owner.nav.browseHalls")}</span>
+          </Link>
+          <button
+            type="button"
+            className="seeker-dash-sidebar-logout"
+            data-testid="owner-nav-logout"
+            disabled={isLoggingOut}
+            onClick={() => setConfirmLogout(true)}
+          >
+            <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+              <LogoutIcon />
+            </span>
+            <span>{t("owner.nav.logout")}</span>
+          </button>
+        </div>
       </aside>
 
       <LogoutConfirmDialog
@@ -172,6 +186,19 @@ function LogoutIcon() {
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function HomeSiteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <path
+        d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
         strokeLinejoin="round"
       />
     </svg>

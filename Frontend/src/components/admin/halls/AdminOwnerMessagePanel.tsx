@@ -19,8 +19,11 @@ import { useT } from "@/i18n";
 const PANEL_MIN_WIDTH_PX = 280;
 const PANEL_MIN_HEIGHT_PX = 320;
 const PANEL_EDGE_GAP_PX = 12;
+const PANEL_WIDE_BREAKPOINT_PX = 480;
 const PANEL_SIZE_STORAGE_KEY = "wesal_admin_owner_message_size";
 const DEFAULT_SIZE = { width: 352, height: 512 };
+const EXPANDED_SIZE = { width: 720, height: 640 };
+const DRAG_THRESHOLD_PX = 5;
 
 type PanelSize = { width: number; height: number };
 
@@ -72,17 +75,19 @@ export default function AdminOwnerMessagePanel() {
   const [localDraft, setLocalDraft] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
   const userSizeRef = useRef<PanelSize | null>(readStoredPanelSize());
+  const compactBeforeExpandRef = useRef<PanelSize>(DEFAULT_SIZE);
   const resizingRef = useRef(false);
+  const dragMovedRef = useRef(false);
   const [size, setSize] = useState<PanelSize>(() => readStoredPanelSize() ?? DEFAULT_SIZE);
   const isOpen = Boolean(target);
+  const isWide = size.width >= PANEL_WIDE_BREAKPOINT_PX;
 
-  const place = useCallback(() => {
+  const applySize = useCallback((next: PanelSize) => {
     const panel = panelRef.current;
     if (!panel || typeof window === "undefined") return;
 
     const maxWidth = Math.max(PANEL_MIN_WIDTH_PX, window.innerWidth - PANEL_EDGE_GAP_PX * 2);
     const maxHeight = Math.max(PANEL_MIN_HEIGHT_PX, window.innerHeight - PANEL_EDGE_GAP_PX * 2);
-    const next = userSizeRef.current ?? DEFAULT_SIZE;
     const width = clamp(next.width, PANEL_MIN_WIDTH_PX, maxWidth);
     const height = clamp(next.height, PANEL_MIN_HEIGHT_PX, maxHeight);
     const left = PANEL_EDGE_GAP_PX;
@@ -91,15 +96,39 @@ export default function AdminOwnerMessagePanel() {
       PANEL_EDGE_GAP_PX,
       window.innerHeight - PANEL_MIN_HEIGHT_PX - PANEL_EDGE_GAP_PX,
     );
+    const applied = { width, height };
 
-    userSizeRef.current = { width, height };
+    userSizeRef.current = applied;
     panel.style.width = `${width}px`;
     panel.style.height = `${height}px`;
     panel.style.left = `${left}px`;
     panel.style.top = `${top}px`;
     panel.style.bottom = "auto";
-    setSize({ width, height });
+    setSize(applied);
+    storePanelSize(applied);
   }, []);
+
+  const place = useCallback(() => {
+    applySize(userSizeRef.current ?? DEFAULT_SIZE);
+  }, [applySize]);
+
+  const toggleExpand = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const maxWidth = Math.max(PANEL_MIN_WIDTH_PX, window.innerWidth - PANEL_EDGE_GAP_PX * 2);
+    const maxHeight = Math.max(PANEL_MIN_HEIGHT_PX, window.innerHeight - PANEL_EDGE_GAP_PX * 2);
+    const expandedTarget: PanelSize = {
+      width: clamp(EXPANDED_SIZE.width, PANEL_MIN_WIDTH_PX, maxWidth),
+      height: clamp(EXPANDED_SIZE.height, PANEL_MIN_HEIGHT_PX, maxHeight),
+    };
+
+    if (isWide) {
+      applySize(compactBeforeExpandRef.current);
+      return;
+    }
+
+    compactBeforeExpandRef.current = userSizeRef.current ?? size;
+    applySize(expandedTarget);
+  }, [applySize, isWide, size]);
 
   useLayoutEffect(() => {
     if (!isOpen) return;
@@ -155,13 +184,21 @@ export default function AdminOwnerMessagePanel() {
     const maxHeight = () =>
       Math.max(PANEL_MIN_HEIGHT_PX, window.innerHeight - PANEL_EDGE_GAP_PX * 2);
 
+    dragMovedRef.current = false;
     resizingRef.current = true;
     panel.dataset.resizing = "true";
-    document.body.style.cursor = isRtl ? "nesw-resize" : "nwse-resize";
-    document.body.style.userSelect = "none";
     handle.setPointerCapture(event.pointerId);
 
     const onMove = (moveEvent: PointerEvent) => {
+      const absX = Math.abs(moveEvent.clientX - startX);
+      const absY = Math.abs(moveEvent.clientY - startY);
+      if (!dragMovedRef.current) {
+        if (absX < DRAG_THRESHOLD_PX && absY < DRAG_THRESHOLD_PX) return;
+        dragMovedRef.current = true;
+        document.body.style.cursor = isRtl ? "nesw-resize" : "nwse-resize";
+        document.body.style.userSelect = "none";
+      }
+
       const widthDelta = isRtl ? startX - moveEvent.clientX : moveEvent.clientX - startX;
       const heightDelta = startY - moveEvent.clientY;
       const nextSize: PanelSize = {
@@ -199,7 +236,6 @@ export default function AdminOwnerMessagePanel() {
       panel.dataset.resizing = "false";
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
-      if (userSizeRef.current) storePanelSize(userSizeRef.current);
       try {
         handle.releasePointerCapture(upEvent.pointerId);
       } catch {
@@ -208,6 +244,13 @@ export default function AdminOwnerMessagePanel() {
       handle.removeEventListener("pointermove", onMove);
       handle.removeEventListener("pointerup", onUp);
       handle.removeEventListener("pointercancel", onUp);
+
+      if (!dragMovedRef.current) {
+        toggleExpand();
+        return;
+      }
+
+      if (userSizeRef.current) storePanelSize(userSizeRef.current);
       place();
     };
 
@@ -274,6 +317,7 @@ export default function AdminOwnerMessagePanel() {
         aria-modal="true"
         aria-labelledby="admin-owner-message-title"
         data-testid="admin-owner-message-panel"
+        data-inbox-size={isWide ? "expanded" : "compact"}
         data-resizing="false"
         className="wesal-messages-inbox-panel absolute flex flex-col overflow-hidden rounded-2xl border border-[var(--wesal-maroon)]/25 bg-[var(--wesal-pink)] shadow-[0_18px_44px_rgba(90,55,45,0.22)]"
         style={{
@@ -294,9 +338,10 @@ export default function AdminOwnerMessagePanel() {
             <button
               type="button"
               className={`${iconBtnClass} wesal-messages-inbox-resize`}
-              aria-label={t("admin.halls.message.resize")}
-              title={t("admin.halls.message.resize")}
+              aria-label={t(isWide ? "messages.collapseInbox" : "messages.expandInbox")}
+              title={t(isWide ? "messages.collapseInbox" : "messages.expandInbox")}
               data-testid="admin-owner-message-resize"
+              data-expanded={isWide ? "true" : "false"}
               onPointerDown={onResizePointerDown}
             >
               <ResizeIcon />
@@ -354,12 +399,12 @@ function ResizeIcon() {
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
       className="h-3.5 w-3.5"
     >
-      <path d="M14 6h4v4" />
-      <path d="M10 14h4v4" />
-      <path d="M18 6l-8 8" />
+      <path d="M15 3h6v6" />
+      <path d="M9 21H3v-6" />
     </svg>
   );
 }

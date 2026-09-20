@@ -62,6 +62,29 @@ export type AdminOwnerMessageTarget = {
   ownerName?: string | null;
 };
 
+/** PUT /admin/halls/{hallId}/reject (US-ADMIN-03). */
+export type AdminRejectHallRequest = {
+  reason?: string;
+  confirmLiveApproved?: boolean;
+};
+
+export type AdminHallRejectResult = {
+  hallId: string;
+  hallName: string;
+  status: AdminHallStatus;
+  isAlreadyRejected: boolean;
+  notificationDelivered: boolean;
+};
+
+/** PUT /admin/halls/{hallId}/lock (US-ADMIN-05). */
+export type AdminHallLockResult = {
+  hallId: string;
+  hallName: string;
+  adminLocked: boolean;
+  lockedAt: string | null;
+  lockedByAdminUserId: string | null;
+};
+
 /** PUT /admin/halls/{hallId}/unlock (US-ADMIN-06 / FR-SUB-05). */
 export type AdminHallUnlockResult = {
   hallId: string;

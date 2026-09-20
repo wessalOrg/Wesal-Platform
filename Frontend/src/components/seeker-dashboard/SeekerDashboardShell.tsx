@@ -8,10 +8,10 @@ import MobileSidebarTrigger from "@/components/owner-management/MobileSidebarTri
 import { useOptionalUserProfileStore } from "@/components/profile/UserProfileProvider";
 import SeekerNotificationsPopover from "@/components/seeker-dashboard/SeekerNotificationsPopover";
 import SeekerSidebar from "@/components/seeker-dashboard/SeekerSidebar";
+import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { warmUserBookings } from "@/hooks/useUserBookings";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
-import { readProfileAvatar } from "@/lib/profile-avatar";
 import {
   SEEKER_ACCOUNT_PATH,
   SEEKER_DASHBOARD_NAV,
@@ -52,7 +52,7 @@ export default function SeekerDashboardShell({
   const identity = useUserIdentity();
   const profileStore = useOptionalUserProfileStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const avatarUrl = useProfileAvatarUrl([profileStore?.profile?.id]);
 
   const openSidebar = () => setIsSidebarOpen(true);
   const closeSidebar = () => setIsSidebarOpen(false);
@@ -87,24 +87,6 @@ export default function SeekerDashboardShell({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [isSidebarOpen]);
-
-  useEffect(() => {
-    const userId = profileStore?.profile?.id;
-    if (!userId) {
-      setAvatarUrl(null);
-      return;
-    }
-    setAvatarUrl(readProfileAvatar(userId));
-
-    const onAvatar = (event: Event) => {
-      const detail = (event as CustomEvent<{ userId?: string; dataUrl?: string | null }>)
-        .detail;
-      if (!detail || detail.userId !== userId) return;
-      setAvatarUrl(detail.dataUrl ?? null);
-    };
-    window.addEventListener("wesal:profile-avatar", onAvatar);
-    return () => window.removeEventListener("wesal:profile-avatar", onAvatar);
-  }, [profileStore?.profile?.id]);
 
   const displayName =
     profileStore?.profile?.fullName ||
@@ -153,7 +135,12 @@ export default function SeekerDashboardShell({
           <div className="seeker-dash-topbar-end">
             <LanguageSwitcher iconOnly className="seeker-dash-lang" />
             <SeekerNotificationsPopover />
-            <Link href={SEEKER_ACCOUNT_PATH} className="seeker-dash-userchip" prefetch>
+            <Link
+              href={SEEKER_ACCOUNT_PATH}
+              className="seeker-dash-userchip"
+              prefetch
+              data-testid="seeker-dashboard-profile-chip"
+            >
               <span className="seeker-dash-userchip-avatar" aria-hidden="true">
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- local data URL

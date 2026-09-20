@@ -1,5 +1,6 @@
 import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
 import type { HallRegion } from "@/constants/hallRegions";
+import type { PaymentStatus } from "@/lib/hall-payment-status";
 import type {
   BookingPeriodFormValues,
   HallRegistrationFieldErrors,
@@ -33,6 +34,9 @@ export type HallOwnerHallDetails = {
   photos: ExistingHallPhoto[];
   firstPeriod: BookingPeriodFormValues;
   secondPeriod: BookingPeriodFormValues;
+  paymentStatus: PaymentStatus;
+  adminLocked: boolean;
+  systemLocked: boolean;
 };
 
 export type HallEditFormValues = {
@@ -62,4 +66,6 @@ export type HallDetailsLoadStatus =
   | "idle"
   | "loading"
   | "ready"
-  | "error";
+  | "error"
+  | "payment_required"
+  | "system_locked";

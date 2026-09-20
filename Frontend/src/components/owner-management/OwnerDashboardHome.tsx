@@ -12,6 +12,7 @@ import {
 import { useAddHallInitiation } from "@/hooks/useAddHallInitiation";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useHallOwnerManagementProfile } from "@/hooks/useHallOwnerManagementProfile";
+import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { ownerHallPath } from "@/lib/hall-owner-query-keys";
 import { localizeHallName } from "@/lib/localize-hall-display";
 import { useT } from "@/i18n";
@@ -28,6 +29,7 @@ export default function OwnerDashboardHome() {
   const profileState = useHallOwnerManagementProfile();
   const hallsState = useHallOwnerHalls();
   const { startAddHall, isInitiating } = useAddHallInitiation();
+  const avatarUrl = useProfileAvatarUrl([profileState.profile?.id]);
 
   const stats = useMemo(() => {
     const list = hallsState.halls;
@@ -112,7 +114,12 @@ export default function OwnerDashboardHome() {
 
         <div className="seeker-welcome-visual" aria-hidden="true">
           <div className="seeker-welcome-orb">
-            <span>{initials(name)}</span>
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- local data URL
+              <img src={avatarUrl} alt="" className="seeker-welcome-orb-img" />
+            ) : (
+              <span>{initials(name)}</span>
+            )}
           </div>
           <Link href={OWNER_ACCOUNT_PATH} className="seeker-welcome-badge" prefetch>
             {t("owner.myAccount")}

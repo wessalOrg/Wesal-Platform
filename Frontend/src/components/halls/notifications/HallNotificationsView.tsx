@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import HallLockedState from "@/components/halls/HallLockedState";
 import HallNotificationEmptyState from "@/components/halls/notifications/HallNotificationEmptyState";
 import HallNotificationErrorState from "@/components/halls/notifications/HallNotificationErrorState";
 import HallNotificationList from "@/components/halls/notifications/HallNotificationList";
@@ -158,14 +159,11 @@ export default function HallNotificationsView({
         />
       ) : null}
 
-      {notifications.status === "forbidden" || notifications.status === "not_found" ? (
+      {notifications.status === "forbidden" ? <HallLockedState reason="both" /> : null}
+
+      {notifications.status === "not_found" ? (
         <HallNotificationErrorState
-          message={t(
-            notifications.errorKey ??
-              (notifications.status === "forbidden"
-                ? "errors.owner.notifications.forbidden"
-                : "errors.owner.notifications.notFound"),
-          )}
+          message={t(notifications.errorKey ?? "errors.owner.notifications.notFound")}
         />
       ) : null}
 

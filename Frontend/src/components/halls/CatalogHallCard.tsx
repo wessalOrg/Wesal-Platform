@@ -40,7 +40,10 @@ export default function CatalogHallCard({
   const priceLabel = localizePriceLabel(hall.priceLabel, lang);
   const bookedSummary = localizeBookedSummary(hall.bookedPeriodsSummary, lang);
   const capacityLabel = hall.capacityMax
-    ? t("common.peopleRange", { min: hall.capacity, max: hall.capacityMax })
+    ? t("common.peopleRange", {
+        min: Math.min(hall.capacity, hall.capacityMax),
+        max: Math.max(hall.capacity, hall.capacityMax),
+      })
     : t("common.peopleCount", { count: hall.capacity });
   const openTag = isHallOpen(hall);
   const statusTags = new Set([
@@ -76,13 +79,6 @@ export default function CatalogHallCard({
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             priority={index < 2}
           />
-        </button>
-        <button
-          type="button"
-          className="absolute top-3 end-3 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/95 text-[var(--wesal-maroon)] shadow"
-          aria-label={t("halls.catalog.favorite")}
-        >
-          <HeartIcon />
         </button>
         {priceLabel ? (
           <span className="hall-price-badge absolute bottom-3 start-3 z-10">
@@ -185,19 +181,6 @@ export function isHallOpen(hall: FeaturedHall) {
 function formatPriceLabel(label: string) {
   if (label.includes("₪")) return label;
   return label.replace(/^([\d,.]+)\s*/, "$1 ₪ ");
-}
-
-function HeartIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 function PinIcon() {

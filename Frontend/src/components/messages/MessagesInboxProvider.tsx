@@ -13,6 +13,8 @@ import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useConversationRealtime } from "@/hooks/useConversationRealtime";
 import { useConversationThread } from "@/hooks/useConversationThread";
 import { useInboxConversations } from "@/hooks/useInboxConversations";
+import { useOwnedHallAccess } from "@/hooks/useOwnedHallAccess";
+import { canAccessMessaging } from "@/lib/hall-access";
 import { useMessageDrafts } from "@/hooks/useMessageDrafts";
 import { useThreadDeliverySync } from "@/hooks/useThreadDeliverySync";
 import { getCurrentUserId } from "@/lib/current-user";
@@ -45,7 +47,7 @@ const MessagesInboxContext = createContext<MessagesInboxContextValue | null>(nul
 
 export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { ready, authenticated, sessionKey, userId, displayName } = useAccountAccess();
+  const { ready, authenticated, sessionKey, userId, displayName, isHallOwner } = useAccountAccess();
   const ownerKey = ready && authenticated ? sessionKey : null;
   const canUseMessaging = Boolean(ownerKey);
   const currentUserId = userId || getCurrentUserId();
@@ -72,25 +74,39 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   const sessionReady = ownerKey === seenOwnerKey;
   const isEmbeddedInbox =
     pathname === "/profile/messages" || pathname.startsWith("/profile/messages/");
-  const inboxActive = Boolean(sessionReady && ownerKey && (isOpen || isEmbeddedInbox));
+  const isMessagesRoute = pathname === "/messages" || pathname.startsWith("/messages/");
+  const inboxActive = Boolean(sessionReady && ownerKey && (isOpen || isEmbeddedInbox || isMessagesRoute));
   const inbox = useInboxConversations(ownerKey, inboxActive);
+  const selectedConversation =
+    inbox.conversations.find((item) => item.conversationId === selectedId) ?? null;
+  const { access: selectedHallAccess, flagsReady: selectedHallFlagsReady } = useOwnedHallAccess(
+    selectedConversation?.hallId ?? null,
+  );
+  const threadFetchEnabled =
+    !isHallOwner ||
+    (selectedHallFlagsReady && canAccessMessaging(selectedHallAccess));
   const threadState = useConversationThread(
     sessionReady && ownerKey ? selectedId : null,
     ownerKey,
     refreshEpoch,
+    threadFetchEnabled,
   );
   const applyIncoming = threadState.applyIncoming;
   const sendThreadMessage = threadState.send;
   const retryThreadSend = threadState.retrySend;
   const applyPreview = inbox.applyPreview;
 
-  useConversationRealtime(sessionReady && ownerKey ? selectedId : null, ownerKey, (payload) => {
-    applyIncoming(payload.message, payload.conversationId);
-    applyPreview(payload.conversationId, payload.message.content, payload.message.sentAt);
-  });
+  useConversationRealtime(
+    sessionReady && ownerKey && threadFetchEnabled ? selectedId : null,
+    ownerKey,
+    (payload) => {
+      applyIncoming(payload.message, payload.conversationId);
+      applyPreview(payload.conversationId, payload.message.content, payload.message.sentAt);
+    },
+  );
 
   useThreadDeliverySync(
-    sessionReady && ownerKey ? selectedId : null,
+    sessionReady && ownerKey && threadFetchEnabled ? selectedId : null,
     ownerKey,
     threadState.status === "ready" || threadState.status === "empty",
     (message, conversationId) => {
@@ -138,6 +154,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   const sendMessage = useCallback(
     async (text: string) => {
       if (!selectedId) return false;
+      if (isHallOwner && !canAccessMessaging(selectedHallAccess)) return false;
       persistDraft(selectedId, "");
       const sent = await sendThreadMessage(text, currentUserId, displayName || "");
       if (sent) {
@@ -147,7 +164,17 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       }
       return sent;
     },
-    [applyPreview, currentUserId, displayName, persistDraft, restoreDraft, selectedId, sendThreadMessage],
+    [
+      applyPreview,
+      currentUserId,
+      displayName,
+      isHallOwner,
+      persistDraft,
+      restoreDraft,
+      selectedHallAccess,
+      selectedId,
+      sendThreadMessage,
+    ],
   );
 
   const retrySend = useCallback(

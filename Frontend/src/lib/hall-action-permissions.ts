@@ -43,6 +43,8 @@ function isAdminRole(role: string | null | undefined): boolean {
  *
  * Ownership only applies while authenticated — a Guest must never inherit
  * a stale `isOwner` flag from a previous hall fetch.
+ *
+ * Hall owners may browse and book other halls, but never their own.
  */
 export function getHallActionPermissions({
   session,
@@ -55,14 +57,15 @@ export function getHallActionPermissions({
   const registered = isRegisteredUserRole(session.role);
   const hallOwner = isHallOwnerRole(session.role);
   const admin = isAdminRole(session.role);
+  const canActAsBooker = registered || hallOwner;
 
   return {
     authReady,
     isGuest,
     isOwnHall: ownsHall,
-    canBook: authenticated && !ownsHall && registered && !hallOwner,
-    canComment: authenticated && !hallOwner && (registered || admin),
-    canRate: authenticated && !hallOwner && (registered || admin),
-    canContactOwner: authenticated && !ownsHall && (registered || hallOwner),
+    canBook: authenticated && !ownsHall && canActAsBooker,
+    canComment: authenticated && !ownsHall && (canActAsBooker || admin),
+    canRate: authenticated && !ownsHall && (canActAsBooker || admin),
+    canContactOwner: authenticated && !ownsHall && canActAsBooker,
   };
 }

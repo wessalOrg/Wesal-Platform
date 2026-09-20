@@ -1,3 +1,4 @@
+import { getAuthPersistenceStore } from "@/lib/auth-persist";
 import { clearAccessToken } from "@/lib/auth-token";
 import {
   buildHallDetailsPath,
@@ -21,12 +22,9 @@ export type StoredAuth = {
   user: StoredUser;
 };
 
-export function getStoredAuth(): StoredAuth | null {
-  if (typeof window === "undefined") return null;
-
+function parseStoredAuth(raw: string | null): StoredAuth | null {
+  if (!raw) return null;
   try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredAuth;
     if (!parsed?.token) return null;
     return parsed;
@@ -35,15 +33,40 @@ export function getStoredAuth(): StoredAuth | null {
   }
 }
 
+export function getStoredAuth(): StoredAuth | null {
+  if (typeof window === "undefined") return null;
+
+  const preferred = parseStoredAuth(getAuthPersistenceStore().getItem(AUTH_STORAGE_KEY));
+  if (preferred) return preferred;
+
+  const local = parseStoredAuth(window.localStorage.getItem(AUTH_STORAGE_KEY));
+  if (local) return local;
+
+  return parseStoredAuth(window.sessionStorage.getItem(AUTH_STORAGE_KEY));
+}
+
 export function setStoredAuth(auth: StoredAuth): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+  const store = getAuthPersistenceStore();
+  const other =
+    store === window.localStorage ? window.sessionStorage : window.localStorage;
+  try {
+    store.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+    other.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    /* ignore quota / private mode */
+  }
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
 export function clearStoredAuth(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  try {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 

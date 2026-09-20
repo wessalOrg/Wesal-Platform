@@ -56,6 +56,7 @@ function AiAssistantFab({
 }: AiAssistantFabProps) {
   const t = useT();
   const label = open ? t("assistant.fab.close") : t("assistant.fab.open");
+  const name = t("assistant.title");
   const [greetIndex, setGreetIndex] = useState(0);
 
   useEffect(() => {
@@ -84,16 +85,23 @@ function AiAssistantFab({
       data-testid="ai-assistant-fab"
       data-open={open ? "true" : undefined}
       data-dragging={isDragging ? "true" : undefined}
-      className={`wesal-ai-fab wesal-ai-fab--figure fixed bottom-2 end-3 z-[105] flex h-[10.75rem] w-[6.5rem] touch-none flex-col items-center justify-end outline-none focus-visible:ring-4 focus-visible:ring-[rgba(193,123,127,0.35)] sm:bottom-3 sm:end-4 sm:h-[13.5rem] sm:w-[8rem]${
+      className={`wesal-ai-fab wesal-ai-fab--figure fixed bottom-2 end-3 z-[105] flex h-[12rem] w-[6.5rem] touch-none flex-col items-center justify-end outline-none focus-visible:ring-4 focus-visible:ring-[rgba(193,123,127,0.35)] sm:bottom-3 sm:end-4 sm:h-[14.75rem] sm:w-[8rem]${
         isDragging ? " wesal-ai-fab-dragging" : ""
       }`}
     >
       <span className="wesal-ai-fab-aura" aria-hidden="true" />
       <span className="wesal-ai-fab-ring" aria-hidden="true" />
-      <span className="wesal-ai-fab-tab" aria-hidden="true" key={greetIndex}>
-        {t(GREET_KEYS[greetIndex])}
-      </span>
-      <span className="relative z-[1] flex h-full w-full items-end justify-center">
+      {!open ? (
+        <>
+          <span className="wesal-ai-fab-name" aria-hidden="true">
+            {name}
+          </span>
+          <span className="wesal-ai-fab-tab" aria-hidden="true" key={greetIndex}>
+            {t(GREET_KEYS[greetIndex])}
+          </span>
+        </>
+      ) : null}
+      <span className="wesal-ai-fab-figure relative z-[1] flex h-full w-full items-end justify-center">
         <AiAssistantAvatar pose="full" />
         <span className="wesal-ai-fab-scan" aria-hidden="true" />
         <span className="wesal-ai-fab-orbit" aria-hidden="true">

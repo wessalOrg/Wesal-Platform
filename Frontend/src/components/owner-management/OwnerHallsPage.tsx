@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
+import PaymentStatusBadge from "@/components/halls/PaymentStatusBadge";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
 import { useAddHallInitiation } from "@/hooks/useAddHallInitiation";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
@@ -115,8 +116,9 @@ export default function OwnerHallsPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-semibold text-[var(--wesal-text)]">{name}</p>
-                  <div className="mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     <HallApprovalStatusBadge status={hall.status} />
+                    <PaymentStatusBadge status={hall.paymentStatus} />
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">

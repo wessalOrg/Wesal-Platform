@@ -1,4 +1,5 @@
 import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
+import type { PaymentStatus } from "@/lib/hall-payment-status";
 
 export type HallExpiryWarning = {
   cycleEnd: string;
@@ -10,6 +11,9 @@ export type HallOwnerHall = {
   name: string;
   status: HallApprovalStatus;
   expiryWarning: HallExpiryWarning | null;
+  paymentStatus: PaymentStatus;
+  adminLocked: boolean;
+  systemLocked: boolean;
 };
 
 export type HallOwnerHallsLoadStatus = "idle" | "loading" | "ready" | "error";

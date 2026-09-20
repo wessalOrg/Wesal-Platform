@@ -8,10 +8,10 @@ import SuccessToast from "@/components/ui/SuccessToast";
 import { useHallOwnerManagementProfile } from "@/hooks/useHallOwnerManagementProfile";
 import { useT } from "@/i18n";
 import {
-  clearProfileAvatar,
   readImageFileAsDataUrl,
   readProfileAvatar,
-  writeProfileAvatar,
+  resolveProfileAvatarUserIds,
+  syncProfileAvatar,
 } from "@/lib/profile-avatar";
 import {
   changePassword,
@@ -51,6 +51,14 @@ function resolveMessage(
   return value.includes(".") ? t(value) : value;
 }
 
+function readCommittedAvatar(profileId: string): string | null {
+  for (const id of resolveProfileAvatarUserIds(profileId)) {
+    const value = readProfileAvatar(id);
+    if (value) return value;
+  }
+  return null;
+}
+
 const EMPTY_PASSWORD: ChangePasswordInput = {
   currentPassword: "",
   newPassword: "",
@@ -69,9 +77,9 @@ export default function HallOwnerProfileSection() {
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarDraft, setAvatarDraft] = useState<string | null>(null);
+  const [committedAvatar, setCommittedAvatar] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
-  const [avatarSuccess, setAvatarSuccess] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
 
   const [passwordDraft, setPasswordDraft] = useState<ChangePasswordInput>(EMPTY_PASSWORD);
@@ -83,11 +91,13 @@ export default function HallOwnerProfileSection() {
   useEffect(() => {
     if (profileState.profile) {
       setDraft(toDraft(profileState.profile));
-      setAvatarUrl(readProfileAvatar(profileState.profile.id));
+      const saved = readCommittedAvatar(profileState.profile.id);
+      setCommittedAvatar(saved);
+      setAvatarDraft(saved);
     }
   }, [profileState.profile]);
 
-  const dirty = useMemo(() => {
+  const profileDirty = useMemo(() => {
     if (!draft || !profileState.profile) return false;
     return (
       draft.fullName.trim() !== profileState.profile.fullName ||
@@ -95,6 +105,9 @@ export default function HallOwnerProfileSection() {
       draft.phoneNumber.trim() !== profileState.profile.phoneNumber
     );
   }, [draft, profileState.profile]);
+
+  const avatarDirty = avatarDraft !== committedAvatar;
+  const dirty = profileDirty || avatarDirty;
 
   const dismissToast = useCallback(() => {
     setToastMessage(null);
@@ -130,8 +143,16 @@ export default function HallOwnerProfileSection() {
   const onSaveProfile = async (event: FormEvent) => {
     event.preventDefault();
     if (!dirty || profileState.saving) return;
-    const saved = await profileState.save(draft);
-    if (saved) {
+
+    let ok = true;
+    if (profileDirty) {
+      ok = Boolean(await profileState.save(draft));
+    }
+    if (ok && avatarDirty) {
+      syncProfileAvatar(profile.id, avatarDraft);
+      setCommittedAvatar(avatarDraft);
+    }
+    if (ok) {
       setProfileSuccess(true);
       setToastMessage(t("common.changesSaved"));
     }
@@ -141,25 +162,20 @@ export default function HallOwnerProfileSection() {
     if (!file) return;
     setAvatarBusy(true);
     setAvatarError(null);
-    setAvatarSuccess(false);
+    setProfileSuccess(false);
     const result = await readImageFileAsDataUrl(file);
     setAvatarBusy(false);
     if (!result.ok) {
       setAvatarError(`seeker.settings.avatar.errors.${result.issue}`);
       return;
     }
-    writeProfileAvatar(profile.id, result.dataUrl);
-    setAvatarUrl(result.dataUrl);
-    setAvatarSuccess(true);
-    setToastMessage(t("common.changesSaved"));
+    setAvatarDraft(result.dataUrl);
   };
 
   const onRemoveAvatar = () => {
-    clearProfileAvatar(profile.id);
-    setAvatarUrl(null);
+    setAvatarDraft(null);
     setAvatarError(null);
-    setAvatarSuccess(true);
-    setToastMessage(t("common.changesSaved"));
+    setProfileSuccess(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -209,9 +225,9 @@ export default function HallOwnerProfileSection() {
 
           <div className="seeker-settings-avatar-row" data-testid="owner-settings-avatar">
             <div className="seeker-settings-avatar" aria-hidden="true">
-              {avatarUrl ? (
+              {avatarDraft ? (
                 // eslint-disable-next-line @next/next/no-img-element -- local data URL preview
-                <img src={avatarUrl} alt="" className="seeker-settings-avatar-img" />
+                <img src={avatarDraft} alt="" className="seeker-settings-avatar-img" />
               ) : (
                 <span>{initials(draft.fullName || profile.fullName)}</span>
               )}
@@ -237,7 +253,7 @@ export default function HallOwnerProfileSection() {
               >
                 {avatarBusy ? t("seeker.settings.avatar.uploading") : t("seeker.settings.avatar.change")}
               </button>
-              {avatarUrl ? (
+              {avatarDraft ? (
                 <button
                   type="button"
                   className="btn-outline min-h-11"
@@ -256,9 +272,9 @@ export default function HallOwnerProfileSection() {
               {resolveMessage(t, avatarError)}
             </p>
           ) : null}
-          {avatarSuccess && !avatarError ? (
-            <p role="status" className="seeker-settings-success" data-testid="owner-settings-avatar-success">
-              {t("seeker.settings.avatar.saved")}
+          {avatarDirty && !avatarError ? (
+            <p role="status" className="seeker-settings-section-lead" data-testid="owner-settings-avatar-pending">
+              {t("seeker.settings.avatar.pendingSave")}
             </p>
           ) : null}
 
@@ -359,6 +375,7 @@ export default function HallOwnerProfileSection() {
                 id="owner-settings-current-password"
                 label={t("seeker.settings.password.current")}
                 type="password"
+                revealable
                 value={passwordDraft.currentPassword}
                 error={resolveMessage(t, passwordErrors.currentPassword)}
                 disabled={passwordSaving}
@@ -375,6 +392,7 @@ export default function HallOwnerProfileSection() {
                 id="owner-settings-new-password"
                 label={t("seeker.settings.password.new")}
                 type="password"
+                revealable
                 value={passwordDraft.newPassword}
                 error={resolveMessage(t, passwordErrors.newPassword)}
                 disabled={passwordSaving}
@@ -391,6 +409,7 @@ export default function HallOwnerProfileSection() {
                 id="owner-settings-confirm-password"
                 label={t("seeker.settings.password.confirm")}
                 type="password"
+                revealable
                 value={passwordDraft.confirmPassword}
                 error={resolveMessage(t, passwordErrors.confirmPassword)}
                 disabled={passwordSaving}
