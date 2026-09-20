@@ -5,7 +5,7 @@ language: ar,en
 source: official-project-team
 lastUpdated: 2026-09-16
 status: verified
-keywords: developer|developers|team|technical team|مطور|المطورين|فريق|الفريق التقني
+keywords: developer|developers|team|technical team|مطور|المطورين|فريق|الفريق التقني|طور|تطوير
 ---
 
 ## العربية

@@ -82,6 +82,36 @@ public class HowToServiceFaqRegressionShould
     }
 
     [Fact]
+    public async Task ReportedQuestion_ManMtwrynWesal_ReturnsOfficialPrimaryDevelopers()
+    {
+        var result = await CreateService().AskHowToAsync("من مطورين وصال؟", "ar", CancellationToken.None);
+
+        Assert.Equal("ar", result.ResponseLanguage);
+        Assert.Equal("platform", result.Category);
+        Assert.Contains("عبد العزيز الخزندار", result.Answer);
+        Assert.Contains("محمد شمعة", result.Answer);
+        Assert.DoesNotContain("انعملت خصيصًا", result.Answer);
+    }
+
+    [Theory]
+    [InlineData("مين اللي طور وصال؟")]
+    [InlineData("مين طور منصة وصال؟")]
+    [InlineData("من قام بتطوير وصال؟")]
+    [InlineData("مين أصحاب تطوير منصة وصال؟")]
+    public async Task ArabicDevelopRootVariants_ReturnOfficialPrimaryDevelopers(string question)
+    {
+        // The ط-و-ر root (طور/تطوير/يطور) shares no affix-strippable stem with
+        // مطور, so these rely on the team article's root-form keywords.
+        var result = await CreateService().AskHowToAsync(question, "ar", CancellationToken.None);
+
+        Assert.Equal("ar", result.ResponseLanguage);
+        Assert.Equal("platform", result.Category);
+        Assert.Contains("عبد العزيز الخزندار", result.Answer);
+        Assert.Contains("محمد شمعة", result.Answer);
+        Assert.DoesNotContain("انعملت خصيصًا", result.Answer);
+    }
+
+    [Fact]
     public async Task Retrieval_EnglishDeveloped_ReturnsTeamArticleFirst()
     {
         var service = new WesalKnowledgeService();
