@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import PaymentStatusBadge from "@/components/halls/PaymentStatusBadge";
 import { ownerHallPath } from "@/lib/hall-owner-query-keys";
 import { localizeHallName } from "@/lib/localize-hall-display";
 import type { HallOwnerHall } from "@/types/hall-owner-halls";
@@ -31,7 +32,12 @@ export default function HallSidebarItem({
       title={name}
       onClick={onNavigate}
     >
-      <span className="owner-hall-sidebar-item-name">{name}</span>
+      <span className="flex min-w-0 flex-col items-start">
+        <span className="owner-hall-sidebar-item-name">{name}</span>
+        {hall.paymentStatus === "Unpaid" ? (
+          <PaymentStatusBadge status={hall.paymentStatus} className="mt-1" />
+        ) : null}
+      </span>
     </Link>
   );
 }

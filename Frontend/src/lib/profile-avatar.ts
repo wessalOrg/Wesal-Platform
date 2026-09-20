@@ -1,3 +1,6 @@
+import { getStoredAuth } from "@/lib/auth-storage";
+import { getCurrentUserId } from "@/lib/current-user";
+
 const AVATAR_PREFIX = "wesal_profile_avatar:";
 const MAX_BYTES = 2 * 1024 * 1024;
 const STORE_MAX_EDGE = 256;
@@ -6,6 +9,23 @@ const ACCEPTED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"])
 
 function storageKey(userId: string) {
   return `${AVATAR_PREFIX}${userId}`;
+}
+
+/** All ids that may own the current session avatar (profile + session). */
+export function resolveProfileAvatarUserIds(profileId?: string | null): string[] {
+  const ids = [
+    profileId?.trim(),
+    getCurrentUserId(),
+    typeof window !== "undefined" ? getStoredAuth()?.user?.id?.trim() : null,
+  ];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const id of ids) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    result.push(id);
+  }
+  return result;
 }
 
 export function readProfileAvatar(userId: string): string | null {
@@ -32,6 +52,19 @@ export function clearProfileAvatar(userId: string): void {
   window.dispatchEvent(
     new CustomEvent("wesal:profile-avatar", { detail: { userId, dataUrl: null } }),
   );
+}
+
+/** Persist (or clear) the avatar for every known session/profile id. */
+export function syncProfileAvatar(
+  profileId: string | null | undefined,
+  dataUrl: string | null,
+): void {
+  const ids = resolveProfileAvatarUserIds(profileId);
+  if (ids.length === 0) return;
+  for (const id of ids) {
+    if (dataUrl) writeProfileAvatar(id, dataUrl);
+    else clearProfileAvatar(id);
+  }
 }
 
 export type ProfileAvatarReadIssue = "type" | "size" | "read";

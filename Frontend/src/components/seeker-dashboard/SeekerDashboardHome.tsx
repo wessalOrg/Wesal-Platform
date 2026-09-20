@@ -6,6 +6,7 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserBookings } from "@/hooks/useUserBookings";
+import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import {
   SEEKER_ACCOUNT_PATH,
   SEEKER_BOOKINGS_PATH,
@@ -26,6 +27,7 @@ export default function SeekerDashboardHome() {
   const identity = useUserIdentity();
   const profileState = useUserProfile();
   const bookingsState = useUserBookings();
+  const avatarUrl = useProfileAvatarUrl([profileState.profile?.id]);
 
   const stats = useMemo(() => {
     const list = bookingsState.bookings;
@@ -99,7 +101,12 @@ export default function SeekerDashboardHome() {
 
         <div className="seeker-welcome-visual" aria-hidden="true">
           <div className="seeker-welcome-orb">
-            <span>{initials(name)}</span>
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- local data URL
+              <img src={avatarUrl} alt="" className="seeker-welcome-orb-img" />
+            ) : (
+              <span>{initials(name)}</span>
+            )}
           </div>
           <Link href={SEEKER_ACCOUNT_PATH} className="seeker-welcome-badge" prefetch>
             {t("seeker.myAccount")}

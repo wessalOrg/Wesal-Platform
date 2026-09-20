@@ -2,17 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import AudioControlToggle from "@/components/halls/notifications/AudioControlToggle";
+import { useDismissibleOverlay } from "@/hooks/useDismissibleOverlay";
+import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { useT } from "@/i18n";
 import {
@@ -51,13 +46,13 @@ export default function AuthAccountMenu({
 }: AuthAccountMenuProps) {
   const t = useT();
   const pathname = usePathname();
-  const menuId = useId();
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, close, toggle, rootRef, panelId: menuId } =
+    useDismissibleOverlay();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const identity = useUserIdentity();
   const inbox = useOptionalMessagesInbox();
   const showAudio = identity.isHallOwner;
+  const avatarUrl = useProfileAvatarUrl([identity.profile?.id]);
 
   const displayName = formatGreetingName(
     identity.displayName,
@@ -66,50 +61,25 @@ export default function AuthAccountMenu({
   const hello = t("nav.hello");
   const profileLabel = t("nav.profile");
   const messagesLabel = t("nav.messages");
-  const notificationsLabel = t("nav.notifications");
   const logoutLabel = t("nav.logout");
   const menuLabel = t("nav.accountMenu");
   const profileHref = getAccountProfilePath(identity.role);
   const profileActive = isAccountProfileActive(pathname, identity.role);
 
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      const root = rootRef.current;
-      if (!root || root.contains(event.target as Node)) return;
-      setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
   const openMessages = (event: MouseEvent<HTMLAnchorElement>) => {
     if (!inbox?.canUseMessaging) {
-      setOpen(false);
+      close();
       onNavigate?.();
       return;
     }
     event.preventDefault();
     inbox.openInbox();
-    setOpen(false);
+    close();
     onNavigate?.();
   };
 
   const go = () => {
-    setOpen(false);
+    close();
     onNavigate?.();
   };
 
@@ -127,7 +97,12 @@ export default function AuthAccountMenu({
     >
       <div className="wesal-account-menu-head" role="none">
         <span className="wesal-account-menu-head-avatar" aria-hidden="true">
-          {initials(displayName)}
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- local data URL
+            <img src={avatarUrl} alt="" className="wesal-account-menu-head-avatar-img" />
+          ) : (
+            initials(displayName)
+          )}
         </span>
         <div className="wesal-account-menu-head-copy">
           <p className="wesal-account-menu-head-name">{displayName}</p>
@@ -146,18 +121,6 @@ export default function AuthAccountMenu({
           <ProfileIcon />
         </MenuLink>
         <MenuLink
-          href="/notifications"
-          label={notificationsLabel}
-          description={t("nav.notificationsHint")}
-          active={
-            pathname === "/notifications" ||
-            pathname.startsWith("/notifications/")
-          }
-          onClick={go}
-        >
-          <BellIcon />
-        </MenuLink>
-        <MenuLink
           href="/messages"
           label={messagesLabel}
           description={t("nav.messagesHint")}
@@ -166,6 +129,7 @@ export default function AuthAccountMenu({
         >
           <MessageIcon />
         </MenuLink>
+        {showAudio ? <AudioControlToggle variant="menu" /> : null}
       </div>
 
       <div className="wesal-account-menu-footer" role="none">
@@ -194,31 +158,28 @@ export default function AuthAccountMenu({
       className={`relative flex min-w-0 items-center gap-2.5 ${stacked ? "w-full flex-col items-stretch" : ""}`}
       data-testid="navbar-authenticated"
     >
-      <div
-        className={`flex min-w-0 items-center gap-2.5 ${stacked ? "w-full" : ""}`}
+      <button
+        type="button"
+        className={`wesal-account-chip ${stacked ? "w-full" : ""}`}
+        aria-label={menuLabel}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        data-testid="navbar-account-avatar"
+        onClick={toggle}
       >
-        <button
-          type="button"
-          className="wesal-account-avatar shrink-0"
-          aria-label={menuLabel}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          aria-controls={menuId}
-          data-testid="navbar-account-avatar"
-          onClick={() => setOpen((value) => !value)}
-        >
-          <span aria-hidden="true">{initials(displayName)}</span>
-        </button>
-        <p
-          className={`min-w-0 text-sm font-semibold text-[var(--wesal-maroon)] ${
-            stacked ? "flex-1 text-start" : "max-w-[9rem] truncate lg:max-w-[12rem]"
-          }`}
-        >
+        <span className="wesal-account-avatar shrink-0" aria-hidden="true">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- local data URL
+            <img src={avatarUrl} alt="" className="wesal-account-avatar-img" />
+          ) : (
+            initials(displayName)
+          )}
+        </span>
+        <span className={`wesal-account-chip-name ${stacked ? "flex-1" : ""}`}>
           {hello} {displayName}
-        </p>
-        {!stacked && showAudio ? <AudioControlToggle variant="nav" /> : null}
-      </div>
-      {stacked && showAudio ? <AudioControlToggle variant="stacked" /> : null}
+        </span>
+      </button>
 
       {open ? menu : null}
 
@@ -284,24 +245,6 @@ function ProfileIcon() {
     >
       <circle cx="12" cy="8" r="3.1" />
       <path d="M5.6 19c1.6-2.9 3.9-4.2 6.4-4.2s4.8 1.3 6.4 4.2" />
-    </svg>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-      aria-hidden="true"
-    >
-      <path d="M7.2 9.6a4.8 4.8 0 0 1 9.6 0c0 4.2 1.35 5.4 1.35 5.4H5.85S7.2 13.8 7.2 9.6Z" />
-      <path d="M10.35 18.4a1.65 1.65 0 0 0 3.3 0" />
     </svg>
   );
 }

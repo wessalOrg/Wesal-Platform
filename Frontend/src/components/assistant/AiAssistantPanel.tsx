@@ -18,7 +18,7 @@ import AiChatShell from "@/components/assistant/AiChatShell";
 import AiChatThread from "@/components/assistant/AiChatThread";
 import { useAiChat } from "@/hooks/useAiChat";
 import { useT } from "@/i18n";
-import { placeBubble, type Rect } from "@/lib/bubble-placement";
+import { BUBBLE_GAP_PX, placeBubble, type Rect } from "@/lib/bubble-placement";
 import type {
   AiAssistantPhase,
   AiSession,
@@ -49,11 +49,15 @@ type AiAssistantPanelProps = {
 const PANEL_EXIT_FALLBACK_MS = 320;
 /** Prefer rising out of the FAB; fall back to the sides when there is no room above. */
 const PANEL_SIDES = ["above", "left", "right", "below"] as const;
+/** Expanded stays beside Mabrouk — never centered over the figure. */
+const EXPANDED_PANEL_SIDES = ["left", "right", "above", "below"] as const;
 const CRITICAL_UI_SELECTOR = "header.wesal-navbar, [data-wesal-critical]";
 const PANEL_MIN_WIDTH_PX = 280;
 const PANEL_MIN_HEIGHT_PX = 320;
 const PANEL_EDGE_GAP_PX = 12;
 const PANEL_SIZE_STORAGE_KEY = "wesal_ai_panel_size";
+const PANEL_WIDE_BREAKPOINT_PX = 520;
+const DRAG_THRESHOLD_PX = 5;
 
 type PanelMotion = "closed" | "in" | "open" | "out";
 type PanelSize = { width: number; height: number };
@@ -159,6 +163,34 @@ function panelMaxHeightForViewport(
   );
 }
 
+/**
+ * Wide chat that still leaves a lane for the FAB figure beside it.
+ * Centering over Mabrouk is intentionally avoided — the figure stays a side companion.
+ */
+function expandedSizeForViewport(
+  viewportWidth: number,
+  viewportHeight: number,
+  anchorWidth: number,
+): PanelSize {
+  const fabLane = Math.ceil(anchorWidth + BUBBLE_GAP_PX + PANEL_EDGE_GAP_PX);
+  const maxWidth = Math.max(
+    PANEL_MIN_WIDTH_PX,
+    viewportWidth - PANEL_EDGE_GAP_PX * 2 - fabLane,
+  );
+  const maxHeight = Math.max(PANEL_MIN_HEIGHT_PX, viewportHeight - PANEL_EDGE_GAP_PX * 2);
+  const targetWidth =
+    viewportWidth < 640
+      ? maxWidth
+      : Math.round(Math.min(Math.max(viewportWidth * 0.62, 520), 760));
+  const width = clamp(targetWidth, PANEL_MIN_WIDTH_PX, maxWidth);
+  const height = clamp(
+    Math.round(Math.min(viewportHeight * 0.72, viewportWidth < 640 ? 520 : 560)),
+    PANEL_MIN_HEIGHT_PX,
+    maxHeight,
+  );
+  return { width, height };
+}
+
 const STATUS_KEY: Record<AiAssistantPhase, string> = {
   idle: "assistant.status.online",
   loading: "assistant.status.connecting",
@@ -185,7 +217,13 @@ export default function AiAssistantPanel({
   const panelRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef(0);
   const userSizeRef = useRef<PanelSize | null>(readStoredPanelSize());
+  const compactBeforeExpandRef = useRef<PanelSize | null>(null);
   const resizingRef = useRef(false);
+  const dragMovedRef = useRef(false);
+  const [isExpanded, setIsExpanded] = useState(() => {
+    const stored = readStoredPanelSize();
+    return Boolean(stored && stored.width >= PANEL_WIDE_BREAKPOINT_PX);
+  });
   const failed = phase === "error" || phase === "unavailable";
   // Keep the failure on screen while retrying instead of flashing back to a spinner.
   const showFailure = failed || (isRetrying && errorKey !== null);
@@ -215,7 +253,11 @@ export default function AiAssistantPanel({
 
     const viewport = { width: window.innerWidth, height: window.innerHeight };
     const anchorRect = anchor.getBoundingClientRect();
-    const maxWidth = Math.max(PANEL_MIN_WIDTH_PX, viewport.width - PANEL_EDGE_GAP_PX * 2);
+    const fabLane = Math.ceil(anchorRect.width + BUBBLE_GAP_PX + PANEL_EDGE_GAP_PX);
+    const maxWidth = Math.max(
+      PANEL_MIN_WIDTH_PX,
+      viewport.width - PANEL_EDGE_GAP_PX * 2,
+    );
     const maxHeight = Math.max(
       PANEL_MIN_HEIGHT_PX,
       viewport.height - PANEL_EDGE_GAP_PX * 2,
@@ -223,9 +265,16 @@ export default function AiAssistantPanel({
     const defaultWidth = panelWidthForViewport(viewport.width);
     const defaultMaxHeight = panelMaxHeightForViewport(viewport, anchorRect);
     const custom = userSizeRef.current;
+    const expanded = Boolean(
+      custom && custom.width >= PANEL_WIDE_BREAKPOINT_PX,
+    );
+    // Expanded must leave a side lane for Mabrouk so the figure never sits inside the chat.
+    const widthCap = expanded
+      ? Math.max(PANEL_MIN_WIDTH_PX, maxWidth - fabLane)
+      : maxWidth;
 
     const width = custom
-      ? clamp(custom.width, PANEL_MIN_WIDTH_PX, maxWidth)
+      ? clamp(custom.width, PANEL_MIN_WIDTH_PX, widthCap)
       : defaultWidth;
     panel.style.width = `${width}px`;
 
@@ -244,6 +293,16 @@ export default function AiAssistantPanel({
       width: panel.offsetWidth || width,
       height: panel.offsetHeight || (custom?.height ?? defaultMaxHeight),
     };
+
+    panel.dataset.expanded = expanded ? "true" : "false";
+
+    const fabAvoid: Rect = {
+      left: anchorRect.left - BUBBLE_GAP_PX / 2,
+      top: anchorRect.top - BUBBLE_GAP_PX / 2,
+      width: anchorRect.width + BUBBLE_GAP_PX,
+      height: anchorRect.height + BUBBLE_GAP_PX,
+    };
+
     const placement = placeBubble({
       anchor: {
         left: anchorRect.left,
@@ -253,19 +312,34 @@ export default function AiAssistantPanel({
       },
       bubble: size,
       viewport,
-      avoid: readCriticalUiRects(),
-      preferredSides: [...PANEL_SIDES],
+      avoid: [...readCriticalUiRects(), fabAvoid],
+      preferredSides: [...(expanded ? EXPANDED_PANEL_SIDES : PANEL_SIDES)],
     });
 
     if (!placement) {
-      const left = Math.min(
-        Math.max(PANEL_EDGE_GAP_PX, anchorRect.left + anchorRect.width / 2 - width / 2),
-        viewport.width - width - PANEL_EDGE_GAP_PX,
+      // Last resort: sit on the roomier horizontal side of Mabrouk, never centered over him.
+      const roomLeft = anchorRect.left;
+      const roomRight = viewport.width - (anchorRect.left + anchorRect.width);
+      const preferLeft = roomLeft >= roomRight;
+      const left = preferLeft
+        ? clamp(
+            anchorRect.left - BUBBLE_GAP_PX - size.width,
+            PANEL_EDGE_GAP_PX,
+            Math.max(PANEL_EDGE_GAP_PX, viewport.width - size.width - PANEL_EDGE_GAP_PX),
+          )
+        : clamp(
+            anchorRect.left + anchorRect.width + BUBBLE_GAP_PX,
+            PANEL_EDGE_GAP_PX,
+            Math.max(PANEL_EDGE_GAP_PX, viewport.width - size.width - PANEL_EDGE_GAP_PX),
+          );
+      const top = clamp(
+        anchorRect.top + anchorRect.height / 2 - size.height / 2,
+        PANEL_EDGE_GAP_PX,
+        Math.max(PANEL_EDGE_GAP_PX, viewport.height - size.height - PANEL_EDGE_GAP_PX),
       );
-      const top = Math.max(PANEL_EDGE_GAP_PX, anchorRect.top - size.height - PANEL_EDGE_GAP_PX);
       panel.style.left = `${left}px`;
       panel.style.top = `${top}px`;
-      panel.dataset.placement = "above";
+      panel.dataset.placement = preferLeft ? "left" : "right";
       panel.dataset.anchored = "true";
       return;
     }
@@ -281,6 +355,43 @@ export default function AiAssistantPanel({
     window.cancelAnimationFrame(frameRef.current);
     frameRef.current = window.requestAnimationFrame(place);
   }, [place]);
+
+  const toggleExpand = useCallback(() => {
+    const panel = panelRef.current;
+    if (!panel || typeof window === "undefined") return;
+
+    if (isExpanded) {
+      userSizeRef.current = compactBeforeExpandRef.current;
+      if (userSizeRef.current) storePanelSize(userSizeRef.current);
+      else {
+        try {
+          window.sessionStorage.removeItem(PANEL_SIZE_STORAGE_KEY);
+        } catch {
+          /* ignore */
+        }
+      }
+      setIsExpanded(false);
+      place();
+      return;
+    }
+
+    const currentWidth = panel.offsetWidth || PANEL_MIN_WIDTH_PX;
+    const currentHeight = panel.offsetHeight || PANEL_MIN_HEIGHT_PX;
+    compactBeforeExpandRef.current = userSizeRef.current ?? {
+      width: currentWidth,
+      height: currentHeight,
+    };
+    const anchor = anchorRef.current;
+    const expanded = expandedSizeForViewport(
+      window.innerWidth,
+      window.innerHeight,
+      anchor?.offsetWidth || 128,
+    );
+    userSizeRef.current = expanded;
+    storePanelSize(expanded);
+    setIsExpanded(true);
+    place();
+  }, [anchorRef, isExpanded, place]);
 
   const onResizePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
@@ -306,13 +417,21 @@ export default function AiAssistantPanel({
     const maxHeight = () =>
       Math.max(PANEL_MIN_HEIGHT_PX, window.innerHeight - PANEL_EDGE_GAP_PX * 2);
 
+    dragMovedRef.current = false;
     resizingRef.current = true;
     panel.dataset.resizing = "true";
-    document.body.style.cursor = isRtl ? "nesw-resize" : "nwse-resize";
-    document.body.style.userSelect = "none";
     handle.setPointerCapture(event.pointerId);
 
     const onMove = (moveEvent: PointerEvent) => {
+      const absX = Math.abs(moveEvent.clientX - startX);
+      const absY = Math.abs(moveEvent.clientY - startY);
+      if (!dragMovedRef.current) {
+        if (absX < DRAG_THRESHOLD_PX && absY < DRAG_THRESHOLD_PX) return;
+        dragMovedRef.current = true;
+        document.body.style.cursor = isRtl ? "nesw-resize" : "nwse-resize";
+        document.body.style.userSelect = "none";
+      }
+
       const widthDelta = isRtl ? startX - moveEvent.clientX : moveEvent.clientX - startX;
       const heightDelta = startY - moveEvent.clientY;
       const nextSize: PanelSize = {
@@ -349,7 +468,6 @@ export default function AiAssistantPanel({
       panel.dataset.resizing = "false";
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
-      if (userSizeRef.current) storePanelSize(userSizeRef.current);
       try {
         handle.releasePointerCapture(upEvent.pointerId);
       } catch {
@@ -358,6 +476,16 @@ export default function AiAssistantPanel({
       handle.removeEventListener("pointermove", onMove);
       handle.removeEventListener("pointerup", onUp);
       handle.removeEventListener("pointercancel", onUp);
+
+      if (!dragMovedRef.current) {
+        toggleExpand();
+        return;
+      }
+
+      if (userSizeRef.current) {
+        storePanelSize(userSizeRef.current);
+        setIsExpanded(userSizeRef.current.width >= PANEL_WIDE_BREAKPOINT_PX);
+      }
       place();
     };
 
@@ -504,25 +632,42 @@ export default function AiAssistantPanel({
       inert={isExiting}
       onAnimationEnd={handleAnimationEnd}
       className="wesal-ai-panel wesal-ai-panel--anchored fixed z-[105] flex min-w-0 flex-col overflow-hidden rounded-3xl border border-[var(--wesal-border)] bg-white shadow-[0_24px_60px_rgba(60,35,30,0.22)] outline-none"
+      data-size={isExpanded ? "expanded" : "compact"}
     >
-      <div className="wesal-ai-panel-header flex shrink-0 items-center gap-3 px-4 py-3.5">
-        <span className="wesal-ai-avatar flex h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#f3e4e2] ring-2 ring-white/80">
-          <AiAssistantAvatar />
+      <div
+        className={`wesal-ai-panel-header flex shrink-0 items-center gap-3 px-4 ${
+          isExpanded ? "py-4 sm:gap-4 sm:px-5" : "py-3.5"
+        }`}
+      >
+        <span
+          className={`wesal-ai-avatar flex shrink-0 overflow-hidden rounded-full bg-[#f3e4e2] ring-2 ring-white/80 ${
+            isExpanded ? "h-14 w-14 sm:h-16 sm:w-16" : "h-10 w-10"
+          }`}
+        >
+          <AiAssistantAvatar pose="bust" />
         </span>
         <div className="min-w-0 flex-1">
           <h2
             id={`${id}-title`}
-            className="truncate text-sm font-bold text-[var(--wesal-text)]"
+            className={`font-extrabold tracking-wide text-[var(--wesal-maroon-dark)] ${
+              isExpanded
+                ? "text-lg sm:text-xl"
+                : "truncate text-base"
+            }`}
           >
             {t("assistant.title")}
           </h2>
           <p
-            className="mt-0.5 flex items-center gap-1.5 text-[0.7rem] text-[var(--wesal-muted)]"
+            className={`mt-0.5 flex items-center gap-1.5 text-[var(--wesal-muted)] ${
+              isExpanded ? "text-xs sm:text-sm" : "text-[0.7rem]"
+            }`}
             aria-live="polite"
           >
             <span
               aria-hidden="true"
-              className={`h-1.5 w-1.5 rounded-full ${
+              className={`rounded-full ${
+                isExpanded ? "h-2 w-2" : "h-1.5 w-1.5"
+              } ${
                 failed
                   ? "bg-[var(--wesal-muted)]"
                   : phase === "loading"
@@ -536,25 +681,42 @@ export default function AiAssistantPanel({
         <div className="flex shrink-0 items-center gap-0.5">
           <button
             type="button"
-            aria-label={t("assistant.panel.resize")}
-            title={t("assistant.panel.resize")}
+            aria-label={t(isExpanded ? "assistant.panel.collapse" : "assistant.panel.expand")}
+            title={t(isExpanded ? "assistant.panel.collapse" : "assistant.panel.expand")}
             data-testid="ai-assistant-resize"
+            data-expanded={isExpanded ? "true" : "false"}
             onPointerDown={onResizePointerDown}
             className="wesal-ai-panel-resize"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden="true"
-              className="h-4 w-4"
-            >
-              <path d="M14 6h4v4" />
-              <path d="M10 14h4v4" />
-              <path d="M18 6l-8 8" />
-            </svg>
+            {isExpanded ? (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className="h-3.5 w-3.5"
+              >
+                <path d="M21 15v6h-6" />
+                <path d="M3 9V3h6" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className="h-3.5 w-3.5"
+              >
+                <path d="M15 3h6v6" />
+                <path d="M9 21H3v-6" />
+              </svg>
+            )}
           </button>
           <button
             type="button"

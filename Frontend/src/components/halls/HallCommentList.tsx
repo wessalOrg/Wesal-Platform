@@ -1,8 +1,9 @@
-"use client";
-
 import { GoldStars } from "@/components/ui/GoldStar";
 import { useT } from "@/i18n";
 import type { HallReview } from "@/types/hall";
+
+/** Max reviews shown per hall details page. */
+export const HALL_REVIEWS_VISIBLE_LIMIT = 2;
 
 type HallCommentListProps = {
   comments: HallReview[];
@@ -16,8 +17,9 @@ function initials(name: string) {
 
 export default function HallCommentList({ comments }: HallCommentListProps) {
   const t = useT();
+  const visible = comments.slice(0, HALL_REVIEWS_VISIBLE_LIMIT);
 
-  if (comments.length === 0) {
+  if (visible.length === 0) {
     return (
       <p
         className="mt-4 text-center text-sm leading-7 text-[#8a7a70]"
@@ -30,7 +32,7 @@ export default function HallCommentList({ comments }: HallCommentListProps) {
 
   return (
     <ul className="hall-comments-list divide-y divide-[#eee4dc]" data-testid="hall-comments-list">
-      {comments.map((review) => (
+      {visible.map((review) => (
         <li key={review.id} className="py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">

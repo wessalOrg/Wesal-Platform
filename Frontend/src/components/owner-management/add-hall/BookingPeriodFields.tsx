@@ -1,8 +1,7 @@
-"use client";
+﻿"use client";
 
-import HallFormField, {
-  hallFieldClassName,
-} from "@/components/owner-management/add-hall/HallFormField";
+import HallFormField from "@/components/owner-management/add-hall/HallFormField";
+import HallTimePicker from "@/components/owner-management/add-hall/HallTimePicker";
 import { useT } from "@/i18n";
 import type { BookingPeriodFormValues } from "@/types/hall-registration";
 
@@ -62,19 +61,14 @@ export default function BookingPeriodFields({
           required
           error={startError}
         >
-          <input
+          <HallTimePicker
             id={startId}
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder={timePlaceholder}
             value={values.startTime}
             disabled={disabled}
-            aria-invalid={startError ? true : undefined}
-            aria-describedby={startError ? `${startId}-error` : undefined}
-            className={hallFieldClassName(Boolean(startError))}
-            dir="ltr"
-            onChange={(event) => onChange({ startTime: event.target.value })}
+            hasError={Boolean(startError)}
+            placeholder={timePlaceholder}
+            describedBy={startError ? `${startId}-error` : undefined}
+            onChange={(startTime) => onChange({ startTime })}
           />
         </HallFormField>
 
@@ -84,19 +78,14 @@ export default function BookingPeriodFields({
           required
           error={endError}
         >
-          <input
+          <HallTimePicker
             id={endId}
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder={timePlaceholder}
             value={values.endTime}
             disabled={disabled}
-            aria-invalid={endError ? true : undefined}
-            aria-describedby={endError ? `${endId}-error` : undefined}
-            className={hallFieldClassName(Boolean(endError))}
-            dir="ltr"
-            onChange={(event) => onChange({ endTime: event.target.value })}
+            hasError={Boolean(endError)}
+            placeholder={timePlaceholder}
+            describedBy={endError ? `${endId}-error` : undefined}
+            onChange={(endTime) => onChange({ endTime })}
           />
         </HallFormField>
       </div>

@@ -58,6 +58,9 @@ function buildDemoHallDetails(hallId: string): HallOwnerHallDetails {
     photos: [],
     firstPeriod: { startTime: "10:00", endTime: "14:00" },
     secondPeriod: { startTime: "16:00", endTime: "22:00" },
+    paymentStatus: meta.status === "Approved" ? "Paid" : "Unpaid",
+    adminLocked: false,
+    systemLocked: false,
   };
 }
 

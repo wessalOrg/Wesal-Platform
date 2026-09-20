@@ -3,20 +3,14 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import FieldSelect from "@/components/ui/FieldSelect";
-import CatalogHallCard, { isHallOpen } from "@/components/halls/CatalogHallCard";
+import CatalogHallCard from "@/components/halls/CatalogHallCard";
+import RegionFilterBar from "@/components/home/RegionFilterBar";
 import { usePublicHallsRevalidation } from "@/hooks/usePublicHallsRevalidation";
 import { useT } from "@/i18n";
-import {
-  fetchCatalogHalls,
-  fetchSearchHalls,
-  filterCatalogHalls,
-  getPastSearchDateMessage,
-} from "@/services/halls";
+import { fetchCatalogHalls, filterCatalogHalls } from "@/services/halls";
 import {
   REGION_OPTIONS,
   type FeaturedHall,
-  type HallBookingPeriodFilter,
   type HallRegion,
 } from "@/types/hall";
 
@@ -25,55 +19,21 @@ const HallDetailsView = dynamic(
   { ssr: false },
 );
 
-type SortFilter = "all" | "top" | "open" | "closed";
-
 type SearchDraft = {
-  name: string;
-  area: string;
-  date: string;
+  q: string;
   region: HallRegion;
-  period: HallBookingPeriodFilter;
 };
 
 const EMPTY_SEARCH: SearchDraft = {
-  name: "",
-  area: "",
-  date: "",
+  q: "",
   region: "all",
-  period: "all",
 };
-
-const FIELD_CLASS =
-  "mt-1.5 h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-[#faf7f5] px-3 text-sm font-medium text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]";
-
-const PERIOD_IDS: HallBookingPeriodFilter[] = ["all", "first", "second"];
-
-const PERIOD_LABEL_KEYS: Record<HallBookingPeriodFilter, string> = {
-  all: "halls.catalog.periodAll",
-  first: "halls.catalog.periodFirst",
-  second: "halls.catalog.periodSecond",
-};
-
-const REGION_LABEL_KEYS: Record<HallRegion, string> = {
-  all: "region.all",
-  north: "region.north",
-  gaza: "region.gaza",
-  middle: "region.middle",
-  south: "region.south",
-};
-
-const SORT_OPTIONS: { id: SortFilter; labelKey: string }[] = [
-  { id: "all", labelKey: "halls.catalog.sortAll" },
-  { id: "top", labelKey: "halls.catalog.sortTop" },
-  { id: "open", labelKey: "halls.catalog.sortOpen" },
-  { id: "closed", labelKey: "halls.catalog.sortClosed" },
-];
 
 const PAGE_SIZE = 6;
 const PAGE_BTN_CLASS =
-  "flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-gold)]/60 bg-[var(--wesal-maroon)]/25 text-sm font-bold text-[var(--wesal-maroon)] shadow-[0_8px_22px_rgba(193,123,127,0.18)] transition hover:border-[var(--wesal-gold)] hover:bg-[var(--wesal-maroon)] hover:text-white disabled:cursor-not-allowed disabled:border-[var(--wesal-gold)]/25 disabled:bg-white/40 disabled:text-[var(--wesal-maroon)]/35 disabled:shadow-none";
+  "flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-[var(--wesal-gold)]/60 bg-[var(--wesal-maroon)]/25 text-sm font-bold text-[var(--wesal-maroon)] shadow-[0_8px_22px_rgba(193,123,127,0.18)] transition hover:border-[var(--wesal-gold)] hover:bg-[var(--wesal-maroon)] hover:text-white disabled:cursor-not-allowed disabled:border-[var(--wesal-gold)]/25 disabled:bg-white/40 disabled:text-[var(--wesal-maroon)]/35 disabled:shadow-none";
 const PAGE_NUM_ACTIVE_CLASS =
-  "flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-maroon)] bg-[var(--wesal-maroon)] text-sm font-bold text-white shadow-[0_8px_22px_rgba(193,123,127,0.22)]";
+  "flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-[var(--wesal-maroon)] bg-[var(--wesal-maroon)] text-sm font-bold text-white shadow-[0_8px_22px_rgba(193,123,127,0.22)]";
 
 function getPageItems(pageCount: number, current: number): (number | "ellipsis")[] {
   if (pageCount <= 7) {
@@ -96,35 +56,24 @@ function isHallRegion(value: string): value is HallRegion {
 }
 
 function parseFiltersFromQuery(params: URLSearchParams): SearchDraft {
+  const q =
+    params.get("q") ?? params.get("name") ?? params.get("area") ?? "";
   const region = params.get("region") ?? "all";
-  const period = params.get("period") ?? "all";
   return {
-    name: params.get("name") ?? "",
-    area: params.get("area") ?? "",
-    date: params.get("date") ?? "",
+    q,
     region: isHallRegion(region) ? region : "all",
-    period: period === "first" || period === "second" ? period : "all",
   };
 }
 
 function serializeFiltersToQuery(filters: SearchDraft): string {
   const params = new URLSearchParams();
-  if (filters.name.trim()) params.set("name", filters.name.trim());
-  if (filters.area.trim()) params.set("area", filters.area.trim());
-  if (filters.date.trim()) params.set("date", filters.date.trim());
+  if (filters.q.trim()) params.set("q", filters.q.trim());
   if (filters.region !== "all") params.set("region", filters.region);
-  if (filters.period !== "all") params.set("period", filters.period);
   return params.toString();
 }
 
 function isSearchActive(filters: SearchDraft): boolean {
-  return (
-    Boolean(filters.name.trim()) ||
-    Boolean(filters.area.trim()) ||
-    Boolean(filters.date.trim()) ||
-    filters.region !== "all" ||
-    filters.period !== "all"
-  );
+  return Boolean(filters.q.trim()) || filters.region !== "all";
 }
 
 export default function HallsCatalogView() {
@@ -138,11 +87,10 @@ export default function HallsCatalogView() {
   const [halls, setHalls] = useState<FeaturedHall[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
-  const [errorKind, setErrorKind] = useState<"catalog" | "search" | null>(null);
+  const [errorKind, setErrorKind] = useState<"catalog" | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [sort, setSort] = useState<SortFilter>("all");
-  const filterKey = `${serializeFiltersToQuery(filters)}|${sort}`;
+  const filterKey = serializeFiltersToQuery(filters);
   const [paging, setPaging] = useState({ key: filterKey, page: 0 });
   if (paging.key !== filterKey) {
     setPaging({ key: filterKey, page: 0 });
@@ -184,61 +132,38 @@ export default function HallsCatalogView() {
 
   useEffect(() => {
     let active = true;
-    const delay = isFirstLoad.current ? 0 : 400;
-    const timer = window.setTimeout(() => {
-      const searching = isSearchActive(filters);
-      if (isFirstLoad.current) {
-        setStatus("loading");
+    if (isFirstLoad.current) {
+      setStatus("loading");
+    } else {
+      setIsRefreshing(true);
+    }
+
+    void fetchCatalogHalls().then((result) => {
+      if (!active) return;
+      isFirstLoad.current = false;
+
+      setHalls(result.halls);
+      if (result.source === "api") {
+        setError(null);
+        setErrorKind(null);
       } else {
-        setIsRefreshing(true);
+        setError(result.error ?? t("halls.catalog.connectionError"));
+        setErrorKind("catalog");
       }
 
-      const request =
-        searching && !getPastSearchDateMessage(filters.date)
-          ? fetchSearchHalls(filters)
-          : fetchCatalogHalls();
-
-      void request.then((result) => {
-        if (!active) return;
-        isFirstLoad.current = false;
-
-        if (result.source === "api") {
-          setHalls(result.halls);
-          setError(null);
-          setErrorKind(null);
-        } else if (!searching) {
-          setHalls(result.halls);
-          setError(result.error ?? t("halls.catalog.connectionError"));
-          setErrorKind("catalog");
-        } else {
-          setError(result.error ?? t("halls.catalog.searchError"));
-          setErrorKind("search");
-        }
-
-        setStatus("ready");
-        setIsRefreshing(false);
-      });
-    }, delay);
+      setStatus("ready");
+      setIsRefreshing(false);
+    });
 
     return () => {
       active = false;
-      window.clearTimeout(timer);
     };
-  }, [filters, reloadKey, t]);
+  }, [reloadKey, t]);
 
-  const filtered = useMemo(() => {
-    let next = filterCatalogHalls(halls, filters);
-
-    if (sort === "top") {
-      next = [...next].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-    } else if (sort === "open") {
-      next = next.filter(isHallOpen);
-    } else if (sort === "closed") {
-      next = next.filter((hall) => !isHallOpen(hall));
-    }
-
-    return next;
-  }, [halls, filters, sort]);
+  const filtered = useMemo(
+    () => filterCatalogHalls(halls, filters),
+    [halls, filters],
+  );
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
@@ -254,149 +179,63 @@ export default function HallsCatalogView() {
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const updateFilter = <K extends keyof SearchDraft>(
-    key: K,
-    value: SearchDraft[K],
-  ) => {
-    setFilters((current) => ({ ...current, [key]: value }));
+  const updateQuery = (value: string) => {
+    setFilters((current) => ({ ...current, q: value }));
   };
 
   const clearAllFilters = () => {
     setFilters(EMPTY_SEARCH);
-    setSort("all");
-    setReloadKey((key) => key + 1);
   };
 
   const hasActiveFilters = isSearchActive(filters);
 
-  const clearChip = (key: keyof SearchDraft) => {
-    setFilters((current) => ({ ...current, [key]: EMPTY_SEARCH[key] }));
-  };
-
-  const regionLabel =
-    filters.region !== "all" ? t(REGION_LABEL_KEYS[filters.region]) : "";
-  const periodLabel =
-    filters.period !== "all" ? t(PERIOD_LABEL_KEYS[filters.period]) : "";
-  const isPastDate = Boolean(getPastSearchDateMessage(filters.date));
-  const periodOptions = PERIOD_IDS.map((id) => ({
-    id,
-    label: t(PERIOD_LABEL_KEYS[id]),
-  }));
-
   return (
     <div className="container-wesal py-8 sm:py-10" data-testid="halls-catalog">
       <form
-        className="overflow-visible rounded-3xl bg-white p-4 shadow-[0_12px_36px_rgba(90,55,45,0.08)] sm:p-5"
+        className="rounded-xl border border-[var(--wesal-border)] bg-white p-2 shadow-[0_8px_24px_rgba(90,55,45,0.06)]"
         onSubmit={(event) => {
           event.preventDefault();
-          setReloadKey((key) => key + 1);
         }}
+        role="search"
+        aria-label={t("halls.catalog.searchAria")}
       >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_auto]">
-          <label className="block text-sm font-semibold text-[var(--wesal-maroon)]">
-            {t("halls.catalog.name")}
-            <input
-              value={filters.name}
-              onChange={(event) => updateFilter("name", event.target.value)}
-              placeholder={t("halls.catalog.namePlaceholder")}
-              className={FIELD_CLASS}
-            />
+        <div className="flex items-center gap-2">
+          <label className="sr-only" htmlFor="halls-catalog-search">
+            {t("halls.catalog.searchAria")}
           </label>
-          <label className="block text-sm font-semibold text-[var(--wesal-maroon)]">
-            {t("halls.catalog.area")}
-            <input
-              value={filters.area}
-              onChange={(event) => updateFilter("area", event.target.value)}
-              placeholder={t("halls.catalog.areaPlaceholder")}
-              className={FIELD_CLASS}
-            />
-          </label>
-          <label className="block text-sm font-semibold text-[var(--wesal-maroon)]">
-            {t("halls.catalog.date")}
-            <input
-              type="text"
-              inputMode="text"
-              value={filters.date}
-              onChange={(event) => updateFilter("date", event.target.value)}
-              placeholder={t("halls.catalog.datePlaceholder")}
-              className={FIELD_CLASS}
-            />
-          </label>
-          <label className="block text-sm font-semibold text-[var(--wesal-maroon)]">
-            {t("halls.catalog.region")}
-            <FieldSelect
-              aria-label={t("halls.catalog.region")}
-              value={filters.region}
-              options={REGION_OPTIONS.map((option) => ({
-                id: option.id,
-                label:
-                  option.id === "all"
-                    ? t("halls.catalog.regionPick")
-                    : t(option.labelKey),
-              }))}
-              onChange={(region) => updateFilter("region", region)}
-            />
-          </label>
-          <label className="block text-sm font-semibold text-[var(--wesal-maroon)]">
-            {t("halls.catalog.period")}
-            <FieldSelect
-              aria-label={t("halls.catalog.period")}
-              value={filters.period}
-              options={periodOptions}
-              onChange={(period) => updateFilter("period", period)}
-            />
-          </label>
-          <button type="submit" className="btn-primary mt-6 h-11 gap-2 lg:mt-7">
+          <input
+            id="halls-catalog-search"
+            type="search"
+            value={filters.q}
+            onChange={(event) => updateQuery(event.target.value)}
+            placeholder={t("halls.catalog.searchPlaceholder")}
+            autoComplete="off"
+            className="h-11 min-w-0 flex-1 rounded-md border-0 bg-transparent px-3 text-sm font-medium text-[var(--wesal-text)] outline-none placeholder:text-[var(--wesal-muted)]"
+          />
+          {filters.q ? (
+            <button
+              type="button"
+              onClick={() => updateQuery("")}
+              className="shrink-0 rounded-md px-3 py-2 text-sm font-semibold text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)]"
+            >
+              {t("halls.catalog.clearFilters")}
+            </button>
+          ) : null}
+          <button type="submit" className="btn-primary h-11 shrink-0 gap-2 rounded-md px-5">
             <SearchIcon />
             {t("halls.catalog.search")}
           </button>
         </div>
       </form>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {filters.name ? (
-          <Chip label={filters.name} onClear={() => clearChip("name")} />
-        ) : null}
-        {filters.area ? (
-          <Chip label={filters.area} onClear={() => clearChip("area")} />
-        ) : null}
-        {filters.date ? (
-          <Chip label={filters.date} onClear={() => clearChip("date")} />
-        ) : null}
-        {filters.region !== "all" ? (
-          <Chip label={regionLabel} onClear={() => clearChip("region")} />
-        ) : null}
-        {filters.period !== "all" ? (
-          <Chip label={periodLabel} onClear={() => clearChip("period")} />
-        ) : null}
-      </div>
-
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <div
-          className="flex flex-wrap gap-2"
-          role="tablist"
-          aria-label={t("halls.catalog.sortAria")}
-        >
-          {SORT_OPTIONS.map((option) => {
-            const active = sort === option.id;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => {
-                  setSort(option.id);
-                }}
-                className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  active
-                    ? "bg-[var(--wesal-maroon)] text-white"
-                    : "border border-[var(--wesal-maroon)] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
-                }`}
-              >
-                {t(option.labelKey)}
-              </button>
-            );
-          })}
-        </div>
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-4 sm:mt-10">
+        <RegionFilterBar
+          className=""
+          value={filters.region}
+          onChange={(region) =>
+            setFilters((current) => ({ ...current, region }))
+          }
+        />
         <p className="inline-flex items-center gap-2 text-sm font-medium text-[var(--wesal-maroon)]">
           {status === "loading" || isRefreshing ? (
             <>
@@ -411,16 +250,6 @@ export default function HallsCatalogView() {
         </p>
       </div>
 
-      {isPastDate ? (
-        <div
-          className="mt-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-          data-testid="halls-past-date-warning"
-          role="alert"
-        >
-          {t("halls.catalog.pastDate")}
-        </div>
-      ) : null}
-
       {error && errorKind ? (
         <div
           className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-3 text-sm text-[var(--wesal-text)]"
@@ -428,9 +257,7 @@ export default function HallsCatalogView() {
           role="alert"
         >
           <p>
-            {errorKind === "search"
-              ? t("halls.catalog.searchOffline")
-              : t("halls.catalog.offline")}
+            {t("halls.catalog.offline")}
             {error ? ` (${error})` : ""}
           </p>
           <button
@@ -501,34 +328,18 @@ export default function HallsCatalogView() {
 
       {status === "ready" && visible.length === 0 ? (
         <div
-          className={`mt-10 rounded-2xl border px-6 py-10 text-center ${
-            isPastDate
-              ? "border-red-200 bg-red-50"
-              : "border-[var(--wesal-border)] bg-white"
-          }`}
+          className="mt-10 rounded-2xl border border-[var(--wesal-border)] bg-white px-6 py-10 text-center"
           data-testid="halls-search-empty"
         >
-          <p
-            className={`font-semibold ${
-              isPastDate ? "text-red-700" : "text-[var(--wesal-text)]"
-            }`}
-          >
-            {isPastDate
-              ? t("halls.catalog.pastDateShort")
-              : hasActiveFilters
-                ? t("halls.catalog.empty")
-                : t("halls.catalog.emptyApproved")}
+          <p className="font-semibold text-[var(--wesal-text)]">
+            {hasActiveFilters
+              ? t("halls.catalog.empty")
+              : t("halls.catalog.emptyApproved")}
           </p>
-          <p
-            className={`mt-2 text-sm ${
-              isPastDate ? "text-red-600" : "text-[var(--wesal-muted)]"
-            }`}
-          >
-            {isPastDate
-              ? t("halls.catalog.emptyPastHint")
-              : hasActiveFilters
-                ? t("halls.catalog.emptyFilterHint")
-                : t("halls.catalog.emptyLaterHint")}
+          <p className="mt-2 text-sm text-[var(--wesal-muted)]">
+            {hasActiveFilters
+              ? t("halls.catalog.emptyFilterHint")
+              : t("halls.catalog.emptyLaterHint")}
           </p>
           {hasActiveFilters ? (
             <button
@@ -625,19 +436,6 @@ function Spinner() {
         strokeLinecap="round"
       />
     </svg>
-  );
-}
-
-function Chip({ label, onClear }: { label: string; onClear: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClear}
-      className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-[var(--wesal-maroon)] px-3 py-1 text-xs font-semibold text-white"
-    >
-      {label}
-      <span aria-hidden="true">×</span>
-    </button>
   );
 }
 

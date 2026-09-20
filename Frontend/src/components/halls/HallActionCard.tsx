@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { useT } from "@/i18n";
-import { sanitizeWhatsAppHref } from "@/lib/ai-chat-whatsapp";
 import type { HallSlotPrice } from "@/types/hall";
 
 type HallActionCardProps = {
   hallName: string;
+  capacity?: number | null;
+  capacityMax?: number | null;
+  /** @deprecated Prefer capacity + capacityMax for correct RTL range order. */
   capacityLabel?: string | null;
   slotPrices: HallSlotPrice[];
   selectedDateLabel?: string | null;
@@ -22,13 +23,39 @@ type HallActionCardProps = {
   bookPending?: boolean;
   isGuest?: boolean;
   canBook?: boolean;
-  showContact?: boolean;
-  ownerPhone?: string | null;
   loginHref?: string;
   registerHref?: string;
   onGuestAuthNavigate?: () => void;
-  contactSlot?: ReactNode;
 };
+
+function CapacityRangeValue({
+  capacity,
+  capacityMax,
+  peopleWord,
+}: {
+  capacity: number;
+  capacityMax?: number | null;
+  peopleWord: string;
+}) {
+  const hasRange = capacityMax != null && capacityMax !== capacity;
+  const low = hasRange ? Math.min(capacity, capacityMax) : capacity;
+  const high = hasRange ? Math.max(capacity, capacityMax!) : null;
+
+  return (
+    <span className="inline-flex items-baseline gap-1">
+      {high != null ? (
+        <span className="inline-flex items-baseline tabular-nums" dir="rtl">
+          <span>{low}</span>
+          <span>-</span>
+          <span>{high}</span>
+        </span>
+      ) : (
+        <span className="tabular-nums">{low}</span>
+      )}
+      <span>{peopleWord}</span>
+    </span>
+  );
+}
 
 function fallbackPrice(slotPrices: HallSlotPrice[]): string {
   const priced = slotPrices
@@ -42,6 +69,8 @@ function fallbackPrice(slotPrices: HallSlotPrice[]): string {
 
 export default function HallActionCard({
   hallName,
+  capacity = null,
+  capacityMax = null,
   capacityLabel = null,
   slotPrices,
   selectedDateLabel = null,
@@ -56,26 +85,23 @@ export default function HallActionCard({
   bookPending = false,
   isGuest = false,
   canBook = false,
-  showContact = false,
-  ownerPhone = null,
   loginHref = "/login",
   registerHref = "/register",
   onGuestAuthNavigate,
-  contactSlot,
 }: HallActionCardProps) {
   const t = useT();
   const showGuestAuth = isGuest && !disabled;
-  const whatsappHref = ownerPhone ? sanitizeWhatsAppHref(ownerPhone) : null;
   const price = priceSummary?.trim() || fallbackPrice(slotPrices);
   const dateValue = selectedDateLabel?.trim() || t("halls.details.summaryPickDate");
   const periodValue =
     selectedPeriodLabels.length > 0
       ? selectedPeriodLabels.join(" · ")
       : t("halls.details.summaryPickPeriod");
+  const showCapacity = capacity != null || Boolean(capacityLabel);
 
   return (
     <aside
-      className="hall-action-card hall-section-card hall-booking-summary relative w-full"
+      className="hall-action-card hall-section-card hall-booking-summary relative flex h-full w-full flex-col"
       data-testid="hall-action-card"
     >
       <h2 className="hall-section-title">{t("halls.details.bookingSummary")}</h2>
@@ -103,11 +129,19 @@ export default function HallActionCard({
             {periodValue}
           </dd>
         </div>
-        {capacityLabel ? (
+        {showCapacity ? (
           <div className="flex items-start justify-between gap-3 py-2.5">
             <dt className="text-[var(--wesal-muted)]">{t("halls.details.capacity")}</dt>
             <dd className="max-w-[58%] text-end font-semibold text-[var(--wesal-text)]">
-              {capacityLabel}
+              {capacity != null ? (
+                <CapacityRangeValue
+                  capacity={capacity}
+                  capacityMax={capacityMax}
+                  peopleWord={t("halls.details.people")}
+                />
+              ) : (
+                capacityLabel
+              )}
             </dd>
           </div>
         ) : null}
@@ -150,8 +184,8 @@ export default function HallActionCard({
         </p>
       ) : null}
 
-      {canBook || showGuestAuth || showContact || whatsappHref ? (
-        <div className="mt-5 space-y-2.5">
+      {canBook || showGuestAuth ? (
+        <div className="mt-auto space-y-2.5 pt-5">
           {canBook ? (
             <button
               type="button"
@@ -188,20 +222,6 @@ export default function HallActionCard({
                 {t("nav.register")}
               </Link>
             </div>
-          ) : null}
-
-          {showContact && contactSlot ? (
-            <div className="hall-summary-contact">{contactSlot}</div>
-          ) : whatsappHref ? (
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-outline inline-flex w-full items-center justify-center gap-2"
-              data-testid="hall-whatsapp-button"
-            >
-              <span>{t("halls.details.contactOwner")}</span>
-            </a>
           ) : null}
         </div>
       ) : null}

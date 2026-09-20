@@ -2,6 +2,7 @@
 
 import AvailabilityCalendarError from "@/components/halls/owner-availability/AvailabilityCalendarError";
 import AvailabilityCalendarSkeleton from "@/components/halls/owner-availability/AvailabilityCalendarSkeleton";
+import HallLockedState from "@/components/halls/HallLockedState";
 import ResponsiveCalendarGrid from "@/components/halls/owner-availability/ResponsiveCalendarGrid";
 import { useT } from "@/i18n";
 import type { BookingPeriodType } from "@/types/booking";
@@ -32,12 +33,15 @@ export default function AvailabilityCalendar({
   const t = useT();
   const isError =
     loadStatus === "unauthorized" ||
-    loadStatus === "forbidden" ||
     loadStatus === "not_found" ||
     loadStatus === "error";
 
   if (loadStatus === "loading" || loadStatus === "idle") {
     return <AvailabilityCalendarSkeleton />;
+  }
+
+  if (loadStatus === "forbidden") {
+    return <HallLockedState reason="both" />;
   }
 
   if (isError) {

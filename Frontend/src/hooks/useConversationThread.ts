@@ -6,6 +6,10 @@ import {
   fetchConversationThread,
   sendConversationMessage,
 } from "@/services/conversations";
+import { isForbiddenApiError } from "@/lib/api-error";
+import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
+import { isPaymentRequiredApiError } from "@/lib/payment-required-error";
+import { isSystemLockedApiError } from "@/lib/system-locked-error";
 import {
   localsStillOpen,
   mergeServerMessages,
@@ -24,9 +28,11 @@ export function useConversationThread(
   conversationId: string | null,
   ownerKey: string | null,
   refreshEpoch = 0,
+  enabled = true,
 ) {
   const [retryTick, setRetryTick] = useState(0);
-  const requestKey = ownerKey && conversationId ? `${ownerKey}:${conversationId}:${retryTick}` : null;
+  const requestKey =
+    enabled && ownerKey && conversationId ? `${ownerKey}:${conversationId}:${retryTick}` : null;
   const [seenKey, setSeenKey] = useState<string | null>(null);
   const [status, setStatus] = useState<ThreadStatus>("idle");
   const [thread, setThread] = useState<MessageThread | null>(null);
@@ -63,6 +69,13 @@ export function useConversationThread(
         setThread(null);
         setError(conversationErrorMessage(err, "thread"));
         setStatus("error");
+        if (
+          isPaymentRequiredApiError(err) ||
+          isSystemLockedApiError(err) ||
+          isForbiddenApiError(err)
+        ) {
+          notifyHallOwnerHallsChanged();
+        }
       });
 
     return () => {

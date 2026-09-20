@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import WesalLogo from "@/components/brand/WesalLogo";
+import WesalBrandLockup from "@/components/brand/WesalBrandLockup";
 import AuthAccountMenu from "@/components/layout/AuthAccountMenu";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import NavbarNotificationsButton from "@/components/layout/NavbarNotificationsButton";
 import { useTranslateLang } from "@/i18n";
 import { getAccountProfilePath } from "@/lib/account-profile-path";
 import { markAuthNavigation } from "@/lib/auth-nav";
@@ -79,18 +80,7 @@ export default function Navbar({
       <div className="wesal-navbar-bg" aria-hidden="true" />
       <div className="container-wesal relative z-10">
         <div className="flex h-14 min-w-0 items-center justify-between gap-2 sm:h-16 sm:gap-3">
-          <Link
-            href="/"
-            className="flex min-w-0 shrink-0 items-center gap-2"
-            aria-label={t("brand.name")}
-          >
-            <span className="relative h-11 w-9 shrink-0 sm:h-12 sm:w-10">
-              <WesalLogo className="h-full w-full" variant="brand" />
-            </span>
-            <span className="truncate text-xl font-bold text-[var(--wesal-maroon)] sm:text-2xl">
-              {t("brand.name")}
-            </span>
-          </Link>
+          <WesalBrandLockup />
 
           <nav
             className="hidden min-w-0 items-center gap-0.5 text-sm font-medium text-[var(--wesal-text)] md:flex"
@@ -115,8 +105,9 @@ export default function Navbar({
           </nav>
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:gap-3">
-            <div className="hidden shrink-0 lg:block">
+            <div className="hidden shrink-0 items-center gap-1.5 sm:gap-2 lg:flex">
               <LanguageSwitcher />
+              {authenticated ? <NavbarNotificationsButton /> : null}
             </div>
             {status === "loading" ? (
               <span className="h-10 w-28 shrink-0 animate-pulse rounded-xl bg-[var(--wesal-pink)] sm:w-40" />
@@ -166,7 +157,10 @@ export default function Navbar({
                 {t(link.key)}
               </Link>
             ))}
-            <LanguageSwitcher compact />
+            <div className="flex items-center gap-2">
+              <LanguageSwitcher compact />
+              {authenticated ? <NavbarNotificationsButton /> : null}
+            </div>
             {status === "loading" ? (
               <div
                 className="h-11 w-full animate-pulse rounded-xl bg-[var(--wesal-pink)]"

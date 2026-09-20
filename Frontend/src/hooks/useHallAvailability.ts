@@ -4,6 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { hallAvailabilityErrorMessageKey, toOwnerAvailabilityError } from "@/lib/owner-availability-errors";
 import { patchOwnerAvailabilityDay } from "@/lib/owner-availability";
+import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
+import { isPaymentRequiredApiError } from "@/lib/payment-required-error";
+import { isSystemLockedApiError } from "@/lib/system-locked-error";
+import {
+  reportOwnedHallPaymentRequired,
+  reportOwnedHallSystemLocked,
+} from "@/hooks/useHallOwnerHalls";
 import { fetchHallAvailability } from "@/services/owner-availability";
 import type {
   OwnerAvailabilityDay,
@@ -57,9 +64,26 @@ export function useHallAvailability(hallId: string | null, month: string, enable
       .catch((err: unknown) => {
         if (cancelled || controller.signal.aborted) return;
         const mapped = toOwnerAvailabilityError(err);
+        if (isPaymentRequiredApiError(err)) {
+          setDays([]);
+          setErrorKey(null);
+          setStatus("forbidden");
+          reportOwnedHallPaymentRequired(scopedId);
+          return;
+        }
+        if (isSystemLockedApiError(err)) {
+          setDays([]);
+          setErrorKey(null);
+          setStatus("forbidden");
+          reportOwnedHallSystemLocked(scopedId);
+          return;
+        }
         setDays([]);
         setErrorKey(hallAvailabilityErrorMessageKey(mapped.kind));
         setStatus(loadStatusFromError(mapped.kind));
+        if (mapped.kind === "forbidden") {
+          notifyHallOwnerHallsChanged();
+        }
       });
 
     return () => {

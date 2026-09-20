@@ -1,4 +1,4 @@
-import { isHallOwnerRole, normalizeRole } from "@/lib/account-role";
+import { isAdminRole, isHallOwnerRole, normalizeRole } from "@/lib/account-role";
 import type { WesalRole } from "@/types/session";
 
 type BookingAccessInput = {
@@ -9,8 +9,9 @@ type BookingAccessInput = {
 };
 
 /**
- * Who may open the booking form. Stub login has no session role and still
- * qualifies as a regular user. Live Hall Owners cannot book any hall.
+ * Who may open the booking form.
+ * Registered users and hall owners may book other halls; nobody can book their own.
+ * Stub login with no role still qualifies as a regular user.
  */
 export function canRequestHallBooking({
   authenticated,
@@ -19,7 +20,8 @@ export function canRequestHallBooking({
   hallAvailable,
 }: BookingAccessInput): boolean {
   if (!authenticated || !hallAvailable || isOwnHall) return false;
-  if (isHallOwnerRole(role)) return false;
+  if (isAdminRole(role)) return false;
   if (!role) return true;
+  if (isHallOwnerRole(role)) return true;
   return normalizeRole(role) === "registereduser";
 }

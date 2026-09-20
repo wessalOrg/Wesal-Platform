@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import ConversationList from "@/components/messages/ConversationList";
 import MessageThreadView from "@/components/messages/MessageThreadView";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
+import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { SEEKER_MESSAGES_PATH } from "@/constants/seekerDashboardNav";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
@@ -93,6 +94,7 @@ export default function SeekerMessagesPage() {
             className={`seeker-messages-thread${showThread ? " seeker-messages-thread--open" : " seeker-messages-thread--empty"}`}
           >
             {showThread ? (
+              <ProtectedHallMessageThread hallId={selected?.hallId ?? thread?.hallId}>
               <MessageThreadView
                 status={threadStatus}
                 thread={thread}
@@ -117,6 +119,7 @@ export default function SeekerMessagesPage() {
                 conversationId={selectedId}
                 variant="page"
               />
+              </ProtectedHallMessageThread>
             ) : (
               <div className="seeker-messages-placeholder" data-testid="seeker-messages-placeholder">
                 <p>{t("seeker.messages.pickConversation")}</p>

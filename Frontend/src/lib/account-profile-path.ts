@@ -32,7 +32,8 @@ export function adminHallSubmissionPath(hallId: string): string {
 
 /**
  * Role-aware destination for the Profile icon / account Profile link.
- * Hall Owners enter the management workspace; everyone else keeps `/profile`.
+ * Admins enter the admin workspace; Hall Owners enter management;
+ * everyone else keeps `/profile`.
  */
 export function getAccountProfilePath(
   role: WesalRole | null | undefined,
@@ -44,8 +45,8 @@ export function getAccountProfilePath(
 }
 
 /**
- * After login, Hall Owners always enter `/owner`. Seeker booking redirects
- * stay on the public hall path; they are not used for owners.
+ * After login, Admins enter `/admin` and Hall Owners enter `/owner`.
+ * Seeker booking redirects stay on the public hall path.
  */
 export function resolveLoginDestination(
   role: WesalRole | null | undefined,

@@ -1,3 +1,4 @@
+import { hallAccessFromUnknown } from "@/lib/hall-access";
 import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
 import { parseDateIso, utcDaysRemaining, utcTodayIso } from "@/lib/booking-date";
 import { isActiveExpiryWarning } from "@/lib/subscription-expiry-warning-message";
@@ -16,6 +17,10 @@ import type { HallExpiryWarning, HallOwnerHall } from "@/types/hall-owner-halls"
  *   id | hallId
  *   name | hallName
  *   status | approvalStatus | hallStatus
+ *   paymentStatus | isPaid
+ *   adminLocked | isAdminLocked
+ *   systemLocked | isSystemLocked
+ *   subscriptionCycleEnd | daysRemaining | expiryWarningDispatched
  *
  * Backend HallStatus enum (JsonStringEnumConverter):
  *   PendingReview | Approved | Rejected
@@ -32,6 +37,13 @@ export type HallOwnerHallDto = {
   subscriptionCycleEnd?: string | null;
   daysRemaining?: number | string | null;
   expiryWarningDispatched?: boolean | string | null;
+  paymentStatus?: string | boolean | null;
+  isPaid?: boolean | null;
+  paid?: boolean | null;
+  adminLocked?: boolean | null;
+  isAdminLocked?: boolean | null;
+  systemLocked?: boolean | null;
+  isSystemLocked?: boolean | null;
 };
 
 function readId(dto: HallOwnerHallDto): string | null {
@@ -92,11 +104,15 @@ export function mapHallOwnerHallDto(dto: HallOwnerHallDto): HallOwnerHall | null
   if (!id) return null;
   const status = mapBackendHallStatus(readRawStatus(dto));
   if (!status) return null;
+  const access = hallAccessFromUnknown(dto);
   return {
     id,
     name: readName(dto),
     status,
     expiryWarning: mapExpiryWarning(dto),
+    paymentStatus: access.paymentStatus,
+    adminLocked: access.adminLocked,
+    systemLocked: access.systemLocked,
   };
 }
 

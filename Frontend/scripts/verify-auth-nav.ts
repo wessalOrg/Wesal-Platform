@@ -4,6 +4,7 @@
  */
 import assert from "node:assert/strict";
 import { navigateAfterAuth } from "../src/lib/auth-nav";
+import { resolveLoginDestination } from "../src/lib/account-profile-path";
 import {
   resolveAuthRedirect,
   sanitizeInternalPath,
@@ -54,6 +55,18 @@ function testResolveRedirect() {
   assert.equal(resolveAuthRedirect("/messages", undefined), "/messages");
   assert.equal(resolveAuthRedirect("https://evil.com", undefined), "/");
   console.log("ok  resolveAuthRedirect");
+}
+
+function testResolveLoginDestination() {
+  assert.equal(resolveLoginDestination("Admin"), "/admin");
+  assert.equal(resolveLoginDestination("Admin", "/profile"), "/admin");
+  assert.equal(resolveLoginDestination("Admin", "/admin/subscriptions"), "/admin/subscriptions");
+  assert.equal(resolveLoginDestination("HallOwner"), "/owner");
+  assert.equal(resolveLoginDestination("HallOwner", "/profile"), "/owner");
+  assert.equal(resolveLoginDestination("HallOwner", "/owner/halls"), "/owner/halls");
+  assert.equal(resolveLoginDestination("RegisteredUser"), "/");
+  assert.equal(resolveLoginDestination("RegisteredUser", "/profile"), "/profile");
+  console.log("ok  resolveLoginDestination");
 }
 
 function testNavigateHappyPath() {
@@ -162,6 +175,7 @@ function testPushThrowsThenHardTarget() {
 
 testSanitize();
 testResolveRedirect();
+testResolveLoginDestination();
 testNavigateHappyPath();
 testNavigateRetryPrefersTarget();
 testNavigateInvalidFallsBackHome();

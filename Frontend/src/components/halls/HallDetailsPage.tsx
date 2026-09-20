@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import HallActionCard from "@/components/halls/HallActionCard";
 import HallAmenitiesGrid from "@/components/halls/HallAmenitiesGrid";
-import HallContactButton from "@/components/halls/HallContactButton";
 import HallDetailsError from "@/components/halls/HallDetailsError";
 import HallDetailsSkeleton from "@/components/halls/HallDetailsSkeleton";
 import HallHeroGallery from "@/components/halls/HallHeroGallery";
@@ -64,7 +63,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   const bookIntentHandled = useRef(false);
 
   const isOwnHall = permissions.isOwnHall;
-  const { canBook, canContactOwner, isGuest, authReady } = permissions;
+  const { canBook, isGuest, authReady } = permissions;
   const shouldOpenBooking = hasBookingIntent(searchParams);
   const showBookingUi = Boolean(canBook && !unavailable && !isOwnHall);
 
@@ -170,8 +169,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   }
 
   const viewHall = localizeHallDetail(hall, lang);
-  const showActions = !unavailable && !isOwnHall;
-
   return (
     <div className="hall-details-page min-w-0 space-y-6 pb-12 sm:space-y-8 sm:pb-16">
       {usingFallback ? (
@@ -200,84 +197,100 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
       <HallQuickInfo hall={viewHall} />
 
-      <div className="hall-details-body grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] lg:items-start lg:gap-6">
-        <div className="hall-details-main order-2 min-w-0 space-y-5 lg:order-1 lg:space-y-6">
-          {showBookingUi ? (
-            <HallInlineBookingSection
-              hallId={viewHall.id}
-              days={viewHall.availabilityDays ?? []}
-              canSubmit={canBook}
-              active={showBookingUi}
-              onSelectionChange={setBookingSelection}
+      <div className="hall-details-body min-w-0 space-y-5 lg:space-y-6">
+        {showBookingUi ? (
+          <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-stretch lg:gap-5">
+            <div className="order-2 min-w-0 w-full flex-1 lg:order-1">
+              <HallInlineBookingSection
+                hallId={viewHall.id}
+                days={viewHall.availabilityDays ?? []}
+                canSubmit={canBook}
+                active={showBookingUi}
+                onSelectionChange={setBookingSelection}
+              />
+            </div>
+            <div className="order-1 w-full shrink-0 lg:order-2 lg:w-[17.5rem]">
+              <HallActionCard
+                hallName={viewHall.name}
+                capacity={viewHall.capacity}
+                capacityMax={viewHall.capacityMax}
+                slotPrices={viewHall.slotPrices}
+                selectedDateLabel={bookingSelection.dateLabel || null}
+                selectedPeriodLabels={bookingSelection.periodLabels}
+                onConfirm={() => {
+                  if (bookingSelection.canConfirm) {
+                    bookingSelection.submit();
+                    return;
+                  }
+                  handleBook();
+                }}
+                confirmDisabled={!bookingSelection.canConfirm}
+                confirmPending={bookingSelection.submitting}
+                confirmSuccess={bookingSelection.success}
+                confirmError={bookingSelection.errorText}
+                disabled={unavailable}
+                bookPending={!authReady}
+                isGuest={isGuest}
+                canBook={canBook}
+                loginHref={loginHref}
+                registerHref={registerHref}
+                onGuestAuthNavigate={preserveGuestBookingContext}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="max-w-[20rem] lg:ms-auto">
+            <HallActionCard
+              hallName={viewHall.name}
+              capacity={viewHall.capacity}
+              capacityMax={viewHall.capacityMax}
+              slotPrices={viewHall.slotPrices}
+              selectedDateLabel={bookingSelection.dateLabel || null}
+              selectedPeriodLabels={bookingSelection.periodLabels}
+              onConfirm={() => {
+                if (bookingSelection.canConfirm) {
+                  bookingSelection.submit();
+                  return;
+                }
+                handleBook();
+              }}
+              confirmDisabled={!bookingSelection.canConfirm}
+              confirmPending={bookingSelection.submitting}
+              confirmSuccess={bookingSelection.success}
+              confirmError={bookingSelection.errorText}
+              disabled={unavailable}
+              bookPending={!authReady}
+              isGuest={isGuest}
+              canBook={canBook}
+              loginHref={loginHref}
+              registerHref={registerHref}
+              onGuestAuthNavigate={preserveGuestBookingContext}
             />
-          ) : null}
+          </div>
+        )}
 
-          <HallAmenitiesGrid amenities={viewHall.amenities} />
+        <HallAmenitiesGrid amenities={viewHall.amenities} />
 
-          {isOwnHall ? (
-            <p
-              className="rounded-2xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-sm leading-7 text-[var(--wesal-muted)]"
-              data-testid="hall-actions-owner"
-              role="status"
-            >
-              {t("halls.details.ownerBanner")}
-            </p>
-          ) : null}
+        {isOwnHall ? (
+          <p
+            className="rounded-2xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-sm leading-7 text-[var(--wesal-muted)]"
+            data-testid="hall-actions-owner"
+            role="status"
+          >
+            {t("halls.details.ownerBanner")}
+          </p>
+        ) : null}
 
-          <HallReviewsSection
-            hallId={viewHall.id}
-            isHallOwner={isOwnHall}
-            rating={viewHall.rating}
-            reviewCount={viewHall.reviewCount}
-            comments={reviews}
-            onCommentSubmitted={(review) => {
-              setReviews((current) => [review, ...current]);
-            }}
-          />
-        </div>
-
-        <div className="order-1 min-w-0 lg:order-2 lg:sticky lg:top-[4.75rem] lg:z-[1] lg:self-start">
-          <HallActionCard
-            hallName={viewHall.name}
-            capacityLabel={
-              viewHall.capacityMax && viewHall.capacityMax !== viewHall.capacity
-                ? `${viewHall.capacity}-${viewHall.capacityMax} ${t("halls.details.people")}`
-                : `${viewHall.capacity} ${t("halls.details.people")}`
-            }
-            slotPrices={viewHall.slotPrices}
-            selectedDateLabel={bookingSelection.dateLabel || null}
-            selectedPeriodLabels={bookingSelection.periodLabels}
-            onConfirm={() => {
-              if (bookingSelection.canConfirm) {
-                bookingSelection.submit();
-                return;
-              }
-              handleBook();
-            }}
-            confirmDisabled={!bookingSelection.canConfirm}
-            confirmPending={bookingSelection.submitting}
-            confirmSuccess={bookingSelection.success}
-            confirmError={bookingSelection.errorText}
-            disabled={unavailable}
-            bookPending={!authReady}
-            isGuest={isGuest}
-            canBook={canBook}
-            showContact={showActions && canContactOwner}
-            ownerPhone={viewHall.ownerPhone}
-            loginHref={loginHref}
-            registerHref={registerHref}
-            onGuestAuthNavigate={preserveGuestBookingContext}
-            contactSlot={
-              showActions ? (
-                <HallContactButton
-                  hallId={viewHall.id}
-                  isOwnHall={isOwnHall}
-                  isAvailable={!unavailable}
-                />
-              ) : null
-            }
-          />
-        </div>
+        <HallReviewsSection
+          hallId={viewHall.id}
+          isHallOwner={isOwnHall}
+          rating={viewHall.rating}
+          reviewCount={viewHall.reviewCount}
+          comments={reviews}
+          onCommentSubmitted={(review) => {
+            setReviews((current) => [review, ...current]);
+          }}
+        />
       </div>
     </div>
   );

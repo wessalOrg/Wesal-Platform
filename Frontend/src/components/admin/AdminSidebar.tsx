@@ -25,8 +25,10 @@ export default function AdminSidebar({
   const router = useRouter();
   const { logout, isLoggingOut } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
-  const homeActive = pathname === ADMIN_MANAGEMENT_PATH || pathname.startsWith(`${ADMIN_MANAGEMENT_PATH}/halls`);
-  const subscriptionsActive = pathname === ADMIN_SUBSCRIPTIONS_PATH || pathname.startsWith(`${ADMIN_SUBSCRIPTIONS_PATH}/`);
+  const homeActive =
+    pathname === ADMIN_MANAGEMENT_PATH || pathname.startsWith(`${ADMIN_MANAGEMENT_PATH}/halls`);
+  const subscriptionsActive =
+    pathname === ADMIN_SUBSCRIPTIONS_PATH || pathname.startsWith(`${ADMIN_SUBSCRIPTIONS_PATH}/`);
 
   return (
     <>
@@ -37,7 +39,7 @@ export default function AdminSidebar({
         data-testid="admin-management-sidebar"
       >
         <div className="seeker-dash-sidebar-brand">
-          <WesalLogo className="h-11 w-auto" variant="brand" animated={false} />
+          <WesalLogo className="h-11 w-auto" variant="brand" />
           <div className="min-w-0">
             <p className="seeker-dash-sidebar-brand-name">{t("brand.name")}</p>
             <p className="seeker-dash-sidebar-brand-sub">{t("admin.role")}</p>
@@ -45,7 +47,7 @@ export default function AdminSidebar({
         </div>
 
         <nav className="seeker-dash-sidebar-nav">
-          <ul className="seeker-dash-sidebar-list">
+          <ul className="seeker-dash-sidebar-list seeker-dash-sidebar-list--static">
             <li>
               <Link
                 href={ADMIN_MANAGEMENT_PATH}
@@ -58,6 +60,9 @@ export default function AdminSidebar({
                 onClick={onNavigate}
                 onMouseEnter={() => router.prefetch(ADMIN_MANAGEMENT_PATH)}
               >
+                <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+                  <SubmissionsIcon />
+                </span>
                 <span>{t("admin.nav.submissions")}</span>
               </Link>
             </li>
@@ -73,23 +78,29 @@ export default function AdminSidebar({
                 onClick={onNavigate}
                 onMouseEnter={() => router.prefetch(ADMIN_SUBSCRIPTIONS_PATH)}
               >
+                <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+                  <SubscriptionsIcon />
+                </span>
                 <span>{t("admin.nav.subscriptions")}</span>
               </Link>
             </li>
           </ul>
-
-          <div className="seeker-dash-sidebar-footer">
-            <button
-              type="button"
-              className="seeker-dash-sidebar-logout"
-              data-testid="admin-nav-logout"
-              disabled={isLoggingOut}
-              onClick={() => setConfirmLogout(true)}
-            >
-              {t("admin.nav.logout")}
-            </button>
-          </div>
         </nav>
+
+        <div className="seeker-dash-sidebar-footer">
+          <button
+            type="button"
+            className="seeker-dash-sidebar-logout"
+            data-testid="admin-nav-logout"
+            disabled={isLoggingOut}
+            onClick={() => setConfirmLogout(true)}
+          >
+            <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+              <LogoutIcon />
+            </span>
+            <span>{t("admin.nav.logout")}</span>
+          </button>
+        </div>
       </aside>
 
       <LogoutConfirmDialog
@@ -100,9 +111,49 @@ export default function AdminSidebar({
         }}
         onConfirm={() => {
           setConfirmLogout(false);
+          onNavigate?.();
           void logout();
         }}
       />
     </>
+  );
+}
+
+function SubmissionsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SubscriptionsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <rect x="3.5" y="6" width="17" height="12" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M3.5 10h17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M8 14h3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <path
+        d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 16l4-4-4-4M18 12H9"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

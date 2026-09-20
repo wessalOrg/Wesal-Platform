@@ -1,3 +1,4 @@
+import { isPaymentRequiredApiError } from "@/lib/payment-required-error";
 import { ApiError, isUnauthorizedApiError } from "@/lib/api-error";
 
 const BLOCKED_CODE_HINTS = [
@@ -16,8 +17,8 @@ function blob(error: ApiError): string {
 }
 
 export function isAddHallSubscriptionBlockedError(error: unknown): boolean {
+  if (isPaymentRequiredApiError(error)) return true;
   if (!(error instanceof ApiError)) return false;
-  if (error.status === 402) return true;
   if (error.status !== 403) return false;
   const text = blob(error);
   return BLOCKED_CODE_HINTS.some((hint) => text.includes(hint));

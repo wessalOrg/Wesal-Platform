@@ -12,18 +12,12 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import AiAssistantFab from "@/components/assistant/AiAssistantFab";
 import { useAiAssistant, type AiAssistantControls } from "@/hooks/useAiAssistant";
-import { useAiInvitation } from "@/hooks/useAiInvitation";
 import { useDraggableFab } from "@/hooks/useDraggableFab";
 import "@/components/assistant/ai-assistant.css";
 
 const AiAssistantPanel = dynamic(() => import("@/components/assistant/AiAssistantPanel"), {
   ssr: false,
 });
-
-const AiAssistantInvitation = dynamic(
-  () => import("@/components/assistant/AiAssistantInvitation"),
-  { ssr: false },
-);
 
 const PANEL_ID = "wesal-ai-assistant-panel";
 
@@ -59,7 +53,6 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
     errorKey,
     unavailableReason,
     isRetrying,
-    openAssistant,
     closeAssistant,
     toggleAssistant,
     retry,
@@ -69,18 +62,6 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
   const isOpenRef = useRef(isOpen);
   isOpenRef.current = isOpen;
   const drag = useDraggableFab(toggleAssistant, fabRef);
-  const {
-    isVisible: invitationVisible,
-    messageKey: invitationMessage,
-    handleShown: onInvitationShown,
-    handleExpired: onInvitationExpired,
-    dismiss: dismissInvitation,
-    accept: acceptInvitation,
-  } = useAiInvitation({
-    isOpen,
-    isDragging: drag.isDragging,
-    anchorRef: fabRef,
-  });
 
   useEffect(() => {
     mountedProviders += 1;
@@ -104,11 +85,6 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
     closeAssistant();
     fabRef.current?.focus();
   }, [closeAssistant]);
-
-  const handleInvitationOpen = useCallback(() => {
-    acceptInvitation();
-    openAssistant();
-  }, [acceptInvitation, openAssistant]);
 
   return (
     <AiAssistantContext.Provider value={controls}>
@@ -140,20 +116,6 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
         onPointerMove={drag.onPointerMove}
         onPointerUp={drag.onPointerUp}
       />
-      {/*
-        Gated here as well as in the hook so the bubble leaves the screen the
-        instant the panel opens or a drag starts, with no frame of overlap.
-      */}
-      {invitationVisible && !isOpen && !drag.isDragging ? (
-        <AiAssistantInvitation
-          anchorRef={fabRef}
-          messageKey={invitationMessage}
-          onOpen={handleInvitationOpen}
-          onDismiss={dismissInvitation}
-          onShown={onInvitationShown}
-          onExpired={onInvitationExpired}
-        />
-      ) : null}
     </AiAssistantContext.Provider>
   );
 }

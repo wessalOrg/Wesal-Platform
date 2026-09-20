@@ -3,6 +3,7 @@ import {
   fromHallRegionApi,
   resolveOwnerMediaUrl,
 } from "@/lib/hall-owner-api-region";
+import { hallAccessFromUnknown } from "@/lib/hall-access";
 import { mapBackendHallStatus } from "@/lib/hall-owner-halls-mapper";
 import type {
   ExistingHallPhoto,
@@ -48,6 +49,13 @@ export type OwnerHallDetailsDto = {
   showPrice?: boolean | null;
   status?: string | number | null;
   isEditable?: boolean | null;
+  paymentStatus?: string | boolean | null;
+  isPaid?: boolean | null;
+  paid?: boolean | null;
+  adminLocked?: boolean | null;
+  isAdminLocked?: boolean | null;
+  systemLocked?: boolean | null;
+  isSystemLocked?: boolean | null;
   photos?: OwnerHallPhotoDto[] | null;
   bookingPeriods?: OwnerHallBookingPeriodDto[] | null;
 };
@@ -154,6 +162,7 @@ export function mapOwnerHallDetailsDto(
 
   const status =
     mapBackendHallStatus(String(dto.status ?? "")) ?? "Pending";
+  const access = hallAccessFromUnknown(dto);
   const periods = readPeriods(dto);
   const region =
     fromHallRegionApi(dto.regionDisplayName) ||
@@ -180,6 +189,9 @@ export function mapOwnerHallDetailsDto(
     photos: mapPhotos(dto),
     firstPeriod: periods.firstPeriod,
     secondPeriod: periods.secondPeriod,
+    paymentStatus: access.paymentStatus,
+    adminLocked: access.adminLocked,
+    systemLocked: access.systemLocked,
   };
 }
 

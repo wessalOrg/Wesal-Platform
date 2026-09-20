@@ -3,8 +3,8 @@
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   canAccessRegularProfile,
-  isHallOwnerRole,
   isAdminRole,
+  isHallOwnerRole,
   resolveSessionRole,
 } from "@/lib/account-role";
 import { getStoredAuth } from "@/lib/auth-storage";
