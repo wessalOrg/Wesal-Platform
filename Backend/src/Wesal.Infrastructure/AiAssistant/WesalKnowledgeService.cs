@@ -107,8 +107,12 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService
         foreach (var keyword in document.Keywords)
         {
             var normalized = Normalize(keyword);
-            if (normalized.Length > 0
-                && normalizedQuery.Contains(normalized, StringComparison.Ordinal))
+            if (normalized.Length == 0)
+            {
+                continue;
+            }
+
+            if (normalizedQuery.Contains(normalized, StringComparison.Ordinal))
             {
                 // Longer, more descriptive keywords carry more intent signal than
                 // short brand mentions (e.g. "what is wesal" vs "wesal"). Brand
@@ -117,6 +121,19 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService
                 score += BrandKeywords.Contains(normalized)
                     ? 2
                     : Math.Max(normalized.Length, 2);
+                continue;
+            }
+
+            // Morphological tolerance for inflected forms ("developed" vs the
+            // keyword "developer", "cancelled" vs "cancellation"): when a query
+            // word and a keyword share a long stem, count it as a weaker intent
+            // signal instead of zero. Exact substring matches above always win
+            // because they score the full keyword weight. Short words are
+            // excluded so coincidental overlaps ("star"/"start") cannot hijack
+            // ranking.
+            if (SharesStem(queryTokens, normalized))
+            {
+                score += Math.Max(normalized.Length / 2, 2);
             }
         }
 
@@ -130,6 +147,42 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService
         }
 
         return score;
+    }
+
+    /// <summary>
+    /// Returns true when any query word shares a word stem of at least six
+    /// characters with the keyword (e.g. "developed" shares "develope" with
+    /// "developer"). Both inputs are already normalized to lowercase.
+    /// </summary>
+    private static bool SharesStem(IReadOnlySet<string> queryTokens, string keyword)
+    {
+        const int MinStemLength = 6;
+        if (keyword.Length < MinStemLength)
+        {
+            return false;
+        }
+
+        foreach (var token in queryTokens)
+        {
+            if (token.Length < MinStemLength)
+            {
+                continue;
+            }
+
+            var max = Math.Min(token.Length, keyword.Length);
+            var common = 0;
+            while (common < max && token[common] == keyword[common])
+            {
+                common++;
+            }
+
+            if (common >= MinStemLength)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static IReadOnlyList<KnowledgeDocument> LoadDocuments(Assembly assembly)
