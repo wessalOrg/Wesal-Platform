@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toMarkPaidError } from "@/lib/admin-mark-paid-errors";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
 import { markAdminHallSubscriptionPaid } from "@/services/admin-halls";
@@ -15,7 +15,9 @@ export function useMarkHallSubscriptionPaid(options?: UseMarkHallSubscriptionPai
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const inFlightRef = useRef(false);
   const onPaidRef = useRef(options?.onPaid);
-  onPaidRef.current = options?.onPaid;
+  useEffect(() => {
+    onPaidRef.current = options?.onPaid;
+  });
 
   const clearError = useCallback(() => {
     setErrorKey(null);

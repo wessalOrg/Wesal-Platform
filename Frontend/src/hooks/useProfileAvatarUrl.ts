@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import {
   readProfileAvatar,
@@ -32,30 +32,41 @@ function readFirstAvatar(ids: string[]): string | null {
   return null;
 }
 
+const avatarIdsCache = new Map<string, string[]>();
+
+function resolveAvatarIds(
+  extraUserIds: Array<string | null | undefined>,
+  userId: string | null | undefined,
+): string[] {
+  const key = `${extraUserIds.join("|")}\u0000${userId ?? ""}`;
+  const cached = avatarIdsCache.get(key);
+  if (cached) return cached;
+  const next = uniqueIds([
+    ...extraUserIds,
+    userId,
+    ...resolveProfileAvatarUserIds(extraUserIds[0] ?? null),
+  ]);
+  avatarIdsCache.set(key, next);
+  return next;
+}
+
 /**
  * Shared avatar URL for topbars/chips/welcome orbs.
  * Works for seeker + owner by resolving profile id and session ids together.
  */
 export function useProfileAvatarUrl(extraUserIds: Array<string | null | undefined> = []) {
   const { authenticated, userId } = useAccountAccess();
-  const ids = useMemo(
-    () =>
-      uniqueIds([
-        ...extraUserIds,
-        userId,
-        ...resolveProfileAvatarUserIds(extraUserIds[0] ?? null),
-      ]),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- join keeps identity stable
-    [extraUserIds.join("|"), userId],
-  );
+  const ids = resolveAvatarIds(extraUserIds, userId);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [prevAuthenticated, setPrevAuthenticated] = useState(authenticated);
+  if (prevAuthenticated !== authenticated && !authenticated) {
+    setPrevAuthenticated(authenticated);
+    setAvatarUrl(null);
+  }
 
   useEffect(() => {
-    if (!authenticated) {
-      setAvatarUrl(null);
-      return;
-    }
+    if (!authenticated) return;
 
     const refresh = () => setAvatarUrl(readFirstAvatar(ids));
     refresh();

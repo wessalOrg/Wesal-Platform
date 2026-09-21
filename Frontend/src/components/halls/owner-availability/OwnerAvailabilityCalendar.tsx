@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AvailabilityCalendar from "@/components/halls/owner-availability/AvailabilityCalendar";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useHallAvailability } from "@/hooks/useHallAvailability";
@@ -112,7 +112,9 @@ function OwnerAvailabilityMonthSession({
 }: OwnerAvailabilityMonthSessionProps) {
   const t = useT();
   const daysRef = useRef(days);
-  daysRef.current = days;
+  useEffect(() => {
+    daysRef.current = days;
+  });
 
   const { update, savingKeys, errorByKey } = useUpdatePeriodStatus({
     onOptimistic: applyPeriod,

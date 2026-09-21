@@ -35,13 +35,15 @@ export default function RejectionReasonModal({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [reason, setReason] = useState("");
   const [issue, setIssue] = useState<"required" | "tooLong" | null>(null);
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open && !open) {
+    setPrevOpen(open);
+    setReason("");
+    setIssue(null);
+  }
 
   useEffect(() => {
-    if (!open) {
-      setReason("");
-      setIssue(null);
-      return;
-    }
+    if (!open) return;
 
     lockBodyScroll();
     const node = textareaRef.current;

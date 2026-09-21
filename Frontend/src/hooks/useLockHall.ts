@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toLockHallError } from "@/lib/admin-lock-hall-errors";
 import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
@@ -16,7 +16,9 @@ export function useLockHall(options?: UseLockHallOptions) {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const inFlightRef = useRef(false);
   const onLockedRef = useRef(options?.onLocked);
-  onLockedRef.current = options?.onLocked;
+  useEffect(() => {
+    onLockedRef.current = options?.onLocked;
+  });
 
   const clearError = useCallback(() => {
     setErrorKey(null);

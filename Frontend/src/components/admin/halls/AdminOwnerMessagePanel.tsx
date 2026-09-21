@@ -150,7 +150,9 @@ export default function AdminOwnerMessagePanel() {
   }, [isOpen, place]);
 
   useEffect(() => {
-    setLocalDraft(draftKey ? draftFor(draftKey) : "");
+    const draft = draftKey ? draftFor(draftKey) : "";
+    const timer = window.setTimeout(() => setLocalDraft(draft), 0);
+    return () => window.clearTimeout(timer);
   }, [draftFor, draftKey]);
 
   useEffect(() => {

@@ -56,10 +56,13 @@ export default function LoginFormCard({
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    const remembered = getRememberedEmail();
-    const preferRemember = isRememberMeEnabled() || Boolean(remembered);
-    setRememberMe(preferRemember);
-    if (remembered) setEmail(remembered);
+    const timer = window.setTimeout(() => {
+      const remembered = getRememberedEmail();
+      const preferRemember = isRememberMeEnabled() || Boolean(remembered);
+      setRememberMe(preferRemember);
+      if (remembered) setEmail(remembered);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const canSubmit = email.trim().length > 0 && password.length > 0 && !pending;

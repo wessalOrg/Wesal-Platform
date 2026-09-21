@@ -26,9 +26,9 @@ export default function AudioControlToggle({ variant = "icon" }: AudioControlTog
     return (
       <button
         type="button"
-        role="menuitem"
+        role="menuitemcheckbox"
         className="wesal-account-menu-item wesal-account-menu-audio"
-        aria-pressed={audio.soundOn}
+        aria-checked={audio.soundOn}
         data-testid="owner-audio-toggle"
         data-state={state}
         onClick={onToggle}

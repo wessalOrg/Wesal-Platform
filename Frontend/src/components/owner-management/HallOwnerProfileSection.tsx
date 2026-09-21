@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
 import HallIdentityDocumentSection from "@/components/owner-management/HallIdentityDocumentSection";
 import ManagementSectionError from "@/components/owner-management/ManagementSectionError";
 import ProfileField from "@/components/profile/ProfileField";
@@ -89,14 +89,16 @@ export default function HallOwnerProfileSection() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
 
-  useEffect(() => {
+  const [prevProfile, setPrevProfile] = useState(profileState.profile);
+  if (prevProfile !== profileState.profile) {
+    setPrevProfile(profileState.profile);
     if (profileState.profile) {
       setDraft(toDraft(profileState.profile));
       const saved = readCommittedAvatar(profileState.profile.id);
       setCommittedAvatar(saved);
       setAvatarDraft(saved);
     }
-  }, [profileState.profile]);
+  }
 
   const profileDirty = useMemo(() => {
     if (!draft || !profileState.profile) return false;

@@ -114,15 +114,18 @@ export function useDraggableFab(
 
   // Restore the saved spot once the button exists and can be measured.
   useEffect(() => {
-    const stored = readStoredFabPosition();
-    if (!stored) return;
+    const timer = window.setTimeout(() => {
+      const stored = readStoredFabPosition();
+      if (!stored) return;
 
-    const size = measure();
-    // Unmeasurable button: stay in the default corner rather than risk a bad spot.
-    if (!size) return;
+      const size = measure();
+      // Unmeasurable button: stay in the default corner rather than risk a bad spot.
+      if (!size) return;
 
-    ratioRef.current = stored;
-    setPosition(toPosition(stored, size));
+      ratioRef.current = stored;
+      setPosition(toPosition(stored, size));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [measure, toPosition]);
 
   const onPointerDown = useCallback(

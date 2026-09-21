@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toUnlockHallError } from "@/lib/admin-unlock-hall-errors";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
 import { unlockAdminHall } from "@/services/admin-halls";
@@ -15,7 +15,9 @@ export function useUnlockHall(options?: UseUnlockHallOptions) {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const inFlightRef = useRef(false);
   const onUnlockedRef = useRef(options?.onUnlocked);
-  onUnlockedRef.current = options?.onUnlocked;
+  useEffect(() => {
+    onUnlockedRef.current = options?.onUnlocked;
+  });
 
   const clearError = useCallback(() => {
     setErrorKey(null);

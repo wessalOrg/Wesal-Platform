@@ -20,7 +20,9 @@ export function usePeriodAvailability({ hallId, dateIso, seedDays, enabled }: Op
   const requestId = useRef(0);
   const seedRef = useRef(seedDays);
   const loadedDateRef = useRef<string | null>(null);
-  seedRef.current = seedDays;
+  useEffect(() => {
+    seedRef.current = seedDays;
+  });
 
   const reset = useCallback(() => {
     requestId.current += 1;
@@ -64,7 +66,11 @@ export function usePeriodAvailability({ hallId, dateIso, seedDays, enabled }: Op
   }, [enabled, dateIso, hallId]);
 
   useEffect(() => {
-    void reload();
+    requestId.current += 1;
+    const timer = window.setTimeout(() => {
+      void reload();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [reload]);
 
   useEffect(() => {

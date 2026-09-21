@@ -62,6 +62,7 @@ export default function HallRegionSelect({
       <button
         id={id}
         type="button"
+        role="combobox"
         disabled={disabled}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}

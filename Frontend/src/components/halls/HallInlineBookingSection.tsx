@@ -170,20 +170,27 @@ function useSelectionSync(
   selection: HallInlineBookingSelection,
 ) {
   const submitRef = useRef(selection.submit);
-  submitRef.current = selection.submit;
+  useEffect(() => {
+    submitRef.current = selection.submit;
+  });
 
   useEffect(() => {
     if (!onSelectionChange) return;
     onSelectionChange({
-      ...selection,
+      dateIso: selection.dateIso,
+      dateLabel: selection.dateLabel,
+      periodLabels: selection.periodLabels,
+      submitting: selection.submitting,
+      success: selection.success,
+      canConfirm: selection.canConfirm,
+      errorText: selection.errorText,
       submit: () => submitRef.current(),
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     onSelectionChange,
     selection.dateIso,
     selection.dateLabel,
-    selection.periodLabels.join("|"),
+    selection.periodLabels,
     selection.submitting,
     selection.success,
     selection.canConfirm,

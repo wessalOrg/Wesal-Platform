@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toRejectHallError } from "@/lib/admin-reject-hall-errors";
 import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
@@ -18,8 +18,10 @@ export function useRejectHall(options?: UseRejectHallOptions) {
   const inFlightRef = useRef(false);
   const onRejectedRef = useRef(options?.onRejected);
   const onNeedsLiveConfirmRef = useRef(options?.onNeedsLiveConfirm);
-  onRejectedRef.current = options?.onRejected;
-  onNeedsLiveConfirmRef.current = options?.onNeedsLiveConfirm;
+  useEffect(() => {
+    onRejectedRef.current = options?.onRejected;
+    onNeedsLiveConfirmRef.current = options?.onNeedsLiveConfirm;
+  });
 
   const clearError = useCallback(() => {
     setErrorKey(null);

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const PLACEHOLDER = "/halls/featured-lotus.webp";
 
@@ -29,11 +29,12 @@ export default function HallImage({
   onError,
 }: HallImageProps) {
   const [failed, setFailed] = useState(false);
-  const resolved = failed || !src?.trim() ? PLACEHOLDER : src.trim();
-
-  useEffect(() => {
+  const [prevSrc, setPrevSrc] = useState(src);
+  if (prevSrc !== src) {
+    setPrevSrc(src);
     setFailed(false);
-  }, [src]);
+  }
+  const resolved = failed || !src?.trim() ? PLACEHOLDER : src.trim();
 
   const handleError = () => {
     if (!failed) {

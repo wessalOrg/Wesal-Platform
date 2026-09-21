@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AcceptBookingError } from "@/lib/accept-booking-errors";
 import { emitBookingAccepted } from "@/lib/booking-events";
 import { acceptHallBookingRequest } from "@/services/hall-notifications";
@@ -17,8 +17,10 @@ export function useAcceptBookingRequest(options?: UseAcceptBookingRequestOptions
   const inFlightRef = useRef<string | null>(null);
   const onAcceptedRef = useRef(options?.onAccepted);
   const onStatusSyncRef = useRef(options?.onStatusSync);
-  onAcceptedRef.current = options?.onAccepted;
-  onStatusSyncRef.current = options?.onStatusSync;
+  useEffect(() => {
+    onAcceptedRef.current = options?.onAccepted;
+    onStatusSyncRef.current = options?.onStatusSync;
+  });
 
   const clearError = useCallback((bookingId: string) => {
     setErrorById((current) => {

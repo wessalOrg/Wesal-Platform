@@ -9,11 +9,15 @@ export function useRejectionArrival(conversationId: string | null, messages: Thr
   const seenRef = useRef<Set<string>>(new Set());
   const primedRef = useRef(false);
   const [arrivingId, setArrivingId] = useState<string | null>(null);
+  const [prevConversationId, setPrevConversationId] = useState(conversationId);
+  if (prevConversationId !== conversationId) {
+    setPrevConversationId(conversationId);
+    setArrivingId(null);
+  }
 
   useEffect(() => {
     seenRef.current = new Set();
     primedRef.current = false;
-    setArrivingId(null);
   }, [conversationId]);
 
   useEffect(() => {

@@ -60,7 +60,9 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const fabRef = useRef<HTMLButtonElement>(null);
   const isOpenRef = useRef(isOpen);
-  isOpenRef.current = isOpen;
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  });
   const drag = useDraggableFab(toggleAssistant, fabRef);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { emitBookingDeleted } from "@/lib/booking-events";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
 import { DeleteBookingError } from "@/lib/delete-booking-errors";
@@ -16,7 +16,9 @@ export function useDeleteBooking(options?: UseDeleteBookingOptions) {
   const [errorById, setErrorById] = useState<Record<string, string>>({});
   const inFlightRef = useRef<string | null>(null);
   const onDeletedRef = useRef(options?.onDeleted);
-  onDeletedRef.current = options?.onDeleted;
+  useEffect(() => {
+    onDeletedRef.current = options?.onDeleted;
+  });
 
   const clearError = useCallback((bookingId: string) => {
     setErrorById((current) => {

@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   useEffect,
@@ -91,7 +92,7 @@ export default function RegisterSuccessModal({ open, loginHref }: RegisterSucces
           className="wesal-register-success-icon mx-auto h-[6.75rem] w-[6.75rem] overflow-hidden rounded-full sm:h-[7.5rem] sm:w-[7.5rem]"
           aria-hidden="true"
         >
-          <img
+          <Image
             src="/auth/register-success-groom.png"
             alt=""
             width={160}

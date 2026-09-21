@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ownerAvailabilityPeriodKey,
 } from "@/lib/owner-availability";
@@ -27,9 +27,11 @@ export function useUpdatePeriodStatus(options?: UseUpdatePeriodStatusOptions) {
   const onOptimisticRef = useRef(options?.onOptimistic);
   const onUpdatedRef = useRef(options?.onUpdated);
   const onRevertRef = useRef(options?.onRevert);
-  onOptimisticRef.current = options?.onOptimistic;
-  onUpdatedRef.current = options?.onUpdated;
-  onRevertRef.current = options?.onRevert;
+  useEffect(() => {
+    onOptimisticRef.current = options?.onOptimistic;
+    onUpdatedRef.current = options?.onUpdated;
+    onRevertRef.current = options?.onRevert;
+  });
 
   const clearError = useCallback((key: string) => {
     setErrorByKey((current) => {

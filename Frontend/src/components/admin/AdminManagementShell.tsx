@@ -28,10 +28,11 @@ export default function AdminManagementShell({
   const pathname = usePathname();
   const identity = useUserIdentity();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  useEffect(() => {
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setIsSidebarOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     if (!isSidebarOpen) return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { emitBookingPublished } from "@/lib/booking-events";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
 import { PublishBookingError } from "@/lib/publish-booking-errors";
@@ -18,8 +18,10 @@ export function usePublishBooking(options?: UsePublishBookingOptions) {
   const inFlightRef = useRef<string | null>(null);
   const onPublishedRef = useRef(options?.onPublished);
   const onStatusSyncRef = useRef(options?.onStatusSync);
-  onPublishedRef.current = options?.onPublished;
-  onStatusSyncRef.current = options?.onStatusSync;
+  useEffect(() => {
+    onPublishedRef.current = options?.onPublished;
+    onStatusSyncRef.current = options?.onStatusSync;
+  });
 
   const clearError = useCallback((bookingId: string) => {
     setErrorById((current) => {

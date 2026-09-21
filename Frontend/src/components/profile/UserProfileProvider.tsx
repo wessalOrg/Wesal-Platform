@@ -70,19 +70,30 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const seedRef = useRef(seedName);
   const inFlightRef = useRef<Promise<void> | null>(null);
 
-  profileRef.current = profile;
-  seedRef.current = seedName;
+  const scopeKey = `${ready}|${authenticated}|${canOpenRegularProfile}`;
+  const [prevScopeKey, setPrevScopeKey] = useState(scopeKey);
+  if (prevScopeKey !== scopeKey) {
+    setPrevScopeKey(scopeKey);
+    if (!authenticated) {
+      setProfile(null);
+      setSaving(false);
+      setLoadError(null);
+      setFormError(null);
+      setFieldErrors({});
+      setStatus("idle");
+    } else if (!canOpenRegularProfile) {
+      setProfile(null);
+      setLoadError(null);
+      setFormError(null);
+      setFieldErrors({});
+      setStatus("forbidden");
+    }
+  }
 
-  const resetStore = useCallback(() => {
-    generationRef.current += 1;
-    inFlightRef.current = null;
-    setProfile(null);
-    setSaving(false);
-    setLoadError(null);
-    setFormError(null);
-    setFieldErrors({});
-    setStatus("idle");
-  }, []);
+  useEffect(() => {
+    profileRef.current = profile;
+    seedRef.current = seedName;
+  });
 
   const clearFormFeedback = useCallback(() => {
     setFormError(null);
@@ -132,7 +143,8 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     if (!ready) return;
 
     if (!authenticated) {
-      resetStore();
+      generationRef.current += 1;
+      inFlightRef.current = null;
       applyIdentity({ userName: null });
       return;
     }
@@ -140,16 +152,11 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     if (!canOpenRegularProfile) {
       generationRef.current += 1;
       inFlightRef.current = null;
-      setProfile(null);
-      setLoadError(null);
-      setFormError(null);
-      setFieldErrors({});
-      setStatus("forbidden");
       return;
     }
 
     void refetch();
-  }, [ready, authenticated, canOpenRegularProfile, resetStore, applyIdentity, refetch]);
+  }, [ready, authenticated, canOpenRegularProfile, applyIdentity, refetch]);
 
   const save = useCallback(
     async (input: Omit<UpdateProfileInput, "concurrencyStamp">): Promise<boolean> => {

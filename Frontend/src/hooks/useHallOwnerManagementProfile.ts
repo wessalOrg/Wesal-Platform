@@ -37,14 +37,30 @@ export function useHallOwnerManagementProfile() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<ProfileFieldErrors>({});
+  const [prevScope, setPrevScope] = useState("");
+  const scopeKey = `${ready}|${authenticated}|${isHallOwner}`;
+  if (prevScope !== scopeKey) {
+    setPrevScope(scopeKey);
+    if (!ready || !authenticated || !isHallOwner) {
+      setProfile(null);
+      setLoadError(null);
+      setSaving(false);
+      setFormError(null);
+      setFieldErrors({});
+      setSaveSuccess(false);
+      setStatus("idle");
+    }
+  }
 
   const generationRef = useRef(0);
   const profileRef = useRef<UserProfile | null>(null);
   const savingRef = useRef(false);
   const displayNameRef = useRef(displayName);
-  profileRef.current = profile;
-  savingRef.current = saving;
-  displayNameRef.current = displayName;
+  useEffect(() => {
+    profileRef.current = profile;
+    savingRef.current = saving;
+    displayNameRef.current = displayName;
+  });
 
   const clearFormFeedback = useCallback(() => {
     setFormError(null);
@@ -84,19 +100,17 @@ export function useHallOwnerManagementProfile() {
   }, [applyIdentity]);
 
   useEffect(() => {
+    if (!ready || authenticated || isHallOwner) return;
+    generationRef.current += 1;
+  }, [ready, authenticated, isHallOwner]);
+
+  useEffect(() => {
     if (!ready) return;
-    if (!authenticated || !isHallOwner) {
-      generationRef.current += 1;
-      setProfile(null);
-      setLoadError(null);
-      setSaving(false);
-      setFormError(null);
-      setFieldErrors({});
-      setSaveSuccess(false);
-      setStatus("idle");
-      return;
-    }
-    void load();
+    if (!authenticated || !isHallOwner) return;
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [ready, authenticated, isHallOwner, load]);
 
   const save = useCallback(

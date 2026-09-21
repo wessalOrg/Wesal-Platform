@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ThreadMessage } from "@/types/messages";
 
 function messageKey(message: ThreadMessage): string {
@@ -10,8 +10,9 @@ function messageKey(message: ThreadMessage): string {
 /** Local retrying overlay on Lilian's pending delivery — no API changes. */
 export function useRetryingMessages(messages: ThreadMessage[]) {
   const [ids, setIds] = useState<Set<string>>(() => new Set());
-
-  useEffect(() => {
+  const [prevMessages, setPrevMessages] = useState(messages);
+  if (prevMessages !== messages) {
+    setPrevMessages(messages);
     setIds((current) => {
       if (current.size === 0) return current;
       const next = new Set<string>();
@@ -22,7 +23,7 @@ export function useRetryingMessages(messages: ThreadMessage[]) {
       if (next.size === current.size && [...next].every((id) => current.has(id))) return current;
       return next;
     });
-  }, [messages]);
+  }
 
   const markRetrying = useCallback((id: string) => {
     setIds((current) => {

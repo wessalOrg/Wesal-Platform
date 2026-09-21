@@ -42,6 +42,7 @@ export default function HallNotificationsView({
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const notifications = useHallNotifications(hallId, enabled);
+  const { applyPublished, applyStatus } = notifications;
   const [rejectTarget, setRejectTarget] = useState<HallBookingNotification | null>(null);
   const accept = useAcceptBookingRequest({
     onAccepted: notifications.applyAccepted,
@@ -75,14 +76,14 @@ export default function HallNotificationsView({
       const detail = (event as CustomEvent<BookingRejectedDetail>).detail;
       if (!detail?.bookingId) return;
       if (detail.hallId && detail.hallId !== hallId) return;
-      notifications.applyStatus(detail.bookingId, "Rejected");
+      applyStatus(detail.bookingId, "Rejected");
     };
 
     const onPublished = (event: Event) => {
       const detail = (event as CustomEvent<BookingPublishedDetail>).detail;
       if (!detail?.bookingId) return;
       if (detail.hallId && detail.hallId !== hallId) return;
-      notifications.applyPublished({
+      applyPublished({
         bookingId: detail.bookingId,
         hallId: detail.hallId,
         date: detail.date,
@@ -100,7 +101,7 @@ export default function HallNotificationsView({
       window.removeEventListener(OWNER_BOOKING_REJECTION_EVENT, onRejected);
       window.removeEventListener(BOOKING_PUBLISHED_EVENT, onPublished);
     };
-  }, [enabled, hallId, notifications.applyPublished, notifications.applyStatus]);
+  }, [enabled, hallId, applyPublished, applyStatus]);
 
   const loginHref = `/login?redirect=${encodeURIComponent(`/owner/halls/${hallId}/notifications`)}`;
   const rejectDateLabel = rejectTarget?.date

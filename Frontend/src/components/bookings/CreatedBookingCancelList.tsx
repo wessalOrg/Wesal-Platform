@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import BookingRequestRow from "@/components/bookings/BookingRequestRow";
 import CancelBookingDialog from "@/components/bookings/CancelBookingDialog";
 import { useBookingViewport } from "@/hooks/useBookingViewport";
@@ -15,10 +15,11 @@ export default function CreatedBookingCancelList({ result }: { result: BookingRe
   const [items, setItems] = useState<UserBooking[]>(initial);
   const cancellation = useCancelBooking();
   const [pending, setPending] = useState<UserBooking | null>(null);
-
-  useEffect(() => {
+  const [initialSnapshot, setInitialSnapshot] = useState(initial);
+  if (initialSnapshot !== initial) {
+    setInitialSnapshot(initial);
     setItems(initial);
-  }, [initial]);
+  }
 
   const apply = (bookingId: string, status: UserBooking["status"]) => {
     setItems((current) =>

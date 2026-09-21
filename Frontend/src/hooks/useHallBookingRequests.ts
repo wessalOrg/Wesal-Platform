@@ -66,8 +66,11 @@ export function useHallBookingRequests(hallId: string) {
     setErrorKey(null);
     setIsRefreshing(false);
     setStatus("loading");
-    hasLoadedForHallRef.current = null;
   }
+
+  useEffect(() => {
+    hasLoadedForHallRef.current = null;
+  }, [boundHallId]);
 
   const load = useCallback(
     async (mode: "initial" | "refresh" = "initial") => {
@@ -126,8 +129,12 @@ export function useHallBookingRequests(hallId: string) {
   );
 
   useEffect(() => {
-    void load("initial");
+    generationRef.current += 1;
+    const timer = window.setTimeout(() => {
+      void load("initial");
+    }, 0);
     return () => {
+      window.clearTimeout(timer);
       generationRef.current += 1;
     };
   }, [load]);

@@ -33,6 +33,13 @@ export default function FeaturedHallsSection() {
 
   const regionEmpty = status === "ready" && halls.length === 0 && !isRefreshing;
 
+  const fetchScopeKey = `${region}|${reloadKey}`;
+  const [prevFetchScope, setPrevFetchScope] = useState(fetchScopeKey);
+  if (prevFetchScope !== fetchScopeKey) {
+    setPrevFetchScope(fetchScopeKey);
+    setErrorMessage(null);
+  }
+
   const requestRevalidate = useCallback(() => {
     setReloadKey((key) => key + 1);
   }, []);
@@ -52,7 +59,6 @@ export default function FeaturedHallsSection() {
       setStatus("loading");
       setIsRefreshing(false);
     }
-    setErrorMessage(null);
 
     void fetchFeaturedHalls(region).then((result) => {
       if (!active) return;

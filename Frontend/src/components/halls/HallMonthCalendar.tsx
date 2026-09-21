@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useT } from "@/i18n";
 import {
   formatBookingDateLabel,
@@ -89,11 +89,12 @@ export default function HallMonthCalendar({
   }, [days, selectedDateIso]);
 
   const [cursor, setCursor] = useState<Cursor>(() => toCursor(anchorIso));
-
-  useEffect(() => {
+  const [prevAnchorIso, setPrevAnchorIso] = useState(anchorIso);
+  if (prevAnchorIso !== anchorIso) {
+    setPrevAnchorIso(anchorIso);
     const next = toCursor(anchorIso);
     setCursor((current) => (sameCursor(current, next) ? current : next));
-  }, [anchorIso]);
+  }
 
   const weekdays = useMemo(() => {
     // Fixed Sun→Sat order to match the mockup grid.

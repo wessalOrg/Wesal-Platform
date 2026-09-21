@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BookingError } from "@/lib/booking-errors";
 import { executeCancelBooking } from "@/lib/booking-cancel-command";
 import { finalizedStatusFromError } from "@/lib/booking-cancel-errors";
@@ -20,7 +20,9 @@ export function useCancelBooking() {
   const [lockedIds, setLockedIds] = useState<Record<string, true>>({});
   const inFlight = useRef<string | null>(null);
   const lockedRef = useRef(lockedIds);
-  lockedRef.current = lockedIds;
+  useEffect(() => {
+    lockedRef.current = lockedIds;
+  });
 
   const resetFeedback = useCallback(() => {
     setErrorKey(null);

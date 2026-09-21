@@ -9,11 +9,12 @@ export function useExpandableText(text: string, collapsedLines = 4) {
   const textRef = useRef<HTMLParagraphElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [canToggle, setCanToggle] = useState(false);
-
-  useLayoutEffect(() => {
+  const [prevText, setPrevText] = useState(text);
+  if (prevText !== text) {
+    setPrevText(text);
     setExpanded(false);
     setCanToggle(false);
-  }, [text]);
+  }
 
   useLayoutEffect(() => {
     const el = textRef.current;

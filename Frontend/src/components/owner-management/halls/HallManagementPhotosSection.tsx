@@ -1,5 +1,6 @@
 "use client";
 
+import HallImage from "@/components/halls/HallImage";
 import HallFormField from "@/components/owner-management/add-hall/HallFormField";
 import HallFormSection from "@/components/owner-management/add-hall/HallFormSection";
 import { useT } from "@/i18n";
@@ -46,7 +47,6 @@ export default function HallManagementPhotosSection({
           <ul
             id="hall-mgmt-photos"
             className="owner-add-hall-photo-grid grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
-            aria-invalid={photosError ? true : undefined}
             aria-describedby={
               photosError ? "hall-mgmt-photos-error" : "hall-mgmt-photos-hint"
             }
@@ -57,8 +57,8 @@ export default function HallManagementPhotosSection({
                 className="owner-add-hall-photo-card min-w-0 max-w-full overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)]"
               >
                 <div className="aspect-[4/3] w-full min-w-0 overflow-hidden bg-white/40">
-                  {/* Existing server URLs — next/image not required for owner management previews */}
-                  <img
+                  {/* Existing server URLs — HallImage renders a raw img for remote sources */}
+                  <HallImage
                     src={photo.url}
                     alt=""
                     className="h-full w-full max-w-full object-cover"

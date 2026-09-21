@@ -46,13 +46,14 @@ export default function HallOwnerManagementShell({
   const avatarUrl = useProfileAvatarUrl([profileStore?.profile?.id]);
   const ownerProfileState = useHallOwnerManagementProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setIsSidebarOpen(false);
+  }
 
   const openSidebar = () => setIsSidebarOpen(true);
   const closeSidebar = () => setIsSidebarOpen(false);
-
-  useEffect(() => {
-    setIsSidebarOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     for (const item of HALL_OWNER_DASHBOARD_NAV) {

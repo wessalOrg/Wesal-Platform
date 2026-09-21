@@ -63,6 +63,21 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     useState<HallInlineBookingSelection>(EMPTY_SELECTION);
   const bookIntentHandled = useRef(false);
 
+  const [prevHallId, setPrevHallId] = useState(hallId);
+  if (prevHallId !== hallId) {
+    setPrevHallId(hallId);
+    setBookingSelection(EMPTY_SELECTION);
+  }
+
+  const [prevReviewsScope, setPrevReviewsScope] = useState<string>(
+    () => `${hallId}|${lang}`,
+  );
+  const reviewsScope = `${hallId}|${lang}`;
+  if (prevReviewsScope !== reviewsScope) {
+    setPrevReviewsScope(reviewsScope);
+    setReviews([]);
+  }
+
   const isOwnHall = permissions.isOwnHall;
   const { canBook, isGuest, authReady } = permissions;
   const shouldOpenBooking = hasBookingIntent(searchParams);
@@ -74,12 +89,10 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
   useEffect(() => {
     bookIntentHandled.current = false;
-    setBookingSelection(EMPTY_SELECTION);
   }, [hallId]);
 
   useEffect(() => {
     let active = true;
-    setReviews([]);
     void fetchHallComments(hallId).then((comments) => {
       if (!active) return;
       if (comments != null && comments.length > 0) {

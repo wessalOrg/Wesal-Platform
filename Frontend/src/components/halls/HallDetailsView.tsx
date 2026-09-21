@@ -42,11 +42,11 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   const [reloadKey, setReloadKey] = useState(0);
   const [bookingOpen, setBookingOpen] = useState(false);
   const { canBook, canContactOwner, isGuest, isOwnHall } = useHallPermissions(hall);
-
-  useEffect(() => {
-    if (canBook) return;
+  const [prevCanBook, setPrevCanBook] = useState(canBook);
+  if (prevCanBook !== canBook && !canBook) {
+    setPrevCanBook(canBook);
     setBookingOpen(false);
-  }, [canBook]);
+  }
 
   if (loadedId !== hallId) {
     setLoadedId(hallId);

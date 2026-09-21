@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toApproveHallError } from "@/lib/admin-approve-hall-errors";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
 import { approveAdminHall } from "@/services/admin-halls";
@@ -15,7 +15,9 @@ export function useApproveHallSubmission(options?: UseApproveHallSubmissionOptio
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const inFlightRef = useRef(false);
   const onApprovedRef = useRef(options?.onApproved);
-  onApprovedRef.current = options?.onApproved;
+  useEffect(() => {
+    onApprovedRef.current = options?.onApproved;
+  });
 
   const clearError = useCallback(() => {
     setErrorKey(null);

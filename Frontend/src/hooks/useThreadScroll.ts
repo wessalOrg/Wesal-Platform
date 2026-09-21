@@ -18,6 +18,12 @@ export function useThreadScroll(
   const prevCountRef = useRef(0);
   const [unseenCount, setUnseenCount] = useState(0);
   const [unseenRejection, setUnseenRejection] = useState(false);
+  const [prevConversationId, setPrevConversationId] = useState(conversationId);
+  if (prevConversationId !== conversationId) {
+    setPrevConversationId(conversationId);
+    setUnseenCount(0);
+    setUnseenRejection(false);
+  }
 
   const syncPin = useCallback(() => {
     const el = scrollerRef.current;
@@ -49,8 +55,6 @@ export function useThreadScroll(
   useEffect(() => {
     pinnedRef.current = true;
     prevCountRef.current = 0;
-    setUnseenCount(0);
-    setUnseenRejection(false);
   }, [conversationId]);
 
   useEffect(() => {

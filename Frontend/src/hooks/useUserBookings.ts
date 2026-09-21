@@ -79,12 +79,15 @@ export function useUserBookings() {
   }, []);
 
   useEffect(() => {
-    const warm = readWarmBookings();
-    if (warm.length > 0) {
-      setBookings(warm);
-      setStatus("ready");
-    }
-    void reload({ force: !isCacheFresh() });
+    const timer = window.setTimeout(() => {
+      const warm = readWarmBookings();
+      if (warm.length > 0) {
+        setBookings(warm);
+        setStatus("ready");
+      }
+      void reload({ force: !isCacheFresh() });
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [reload]);
 
   const applyStatus = useCallback((bookingId: string, next: BookingStatus) => {

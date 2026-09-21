@@ -17,7 +17,7 @@ import {
   type ChangePasswordFieldErrors,
   type ChangePasswordInput,
 } from "@/services/change-password";
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 
 type ProfileDraft = {
@@ -86,14 +86,16 @@ export default function SeekerSettingsPage() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
 
-  useEffect(() => {
+  const [prevProfile, setPrevProfile] = useState(profileState.profile);
+  if (prevProfile !== profileState.profile) {
+    setPrevProfile(profileState.profile);
     if (profileState.profile) {
       setDraft(toDraft(profileState.profile));
       const saved = readCommittedAvatar(profileState.profile.id);
       setCommittedAvatar(saved);
       setAvatarDraft(saved);
     }
-  }, [profileState.profile]);
+  }
 
   const profileDirty = useMemo(() => {
     if (!draft || !profileState.profile) return false;

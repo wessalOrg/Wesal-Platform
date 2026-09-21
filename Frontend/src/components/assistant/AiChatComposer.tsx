@@ -35,6 +35,11 @@ export default function AiChatComposer({
 }: AiChatComposerProps) {
   const t = useT();
   const [value, setValue] = useState("");
+  const [prevSendState, setPrevSendState] = useState(sendState);
+  if (prevSendState !== sendState && sendState === "success") {
+    setPrevSendState(sendState);
+    setValue("");
+  }
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const composingRef = useRef(false);
   const locked = disabled || sending;
@@ -43,11 +48,6 @@ export default function AiChatComposer({
     if (disabled) return;
     fieldRef.current?.focus();
   }, [disabled]);
-
-  useEffect(() => {
-    if (sendState !== "success") return;
-    setValue("");
-  }, [sendState]);
 
   useLayoutEffect(() => {
     resizeComposerField(fieldRef.current);

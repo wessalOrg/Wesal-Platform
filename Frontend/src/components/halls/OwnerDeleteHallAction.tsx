@@ -30,7 +30,9 @@ export default function OwnerDeleteHallAction({
   const errorId = useId();
   const exitTimerRef = useRef<number | null>(null);
   const onDeletedRef = useRef(onDeleted);
-  onDeletedRef.current = onDeleted;
+  useEffect(() => {
+    onDeletedRef.current = onDeleted;
+  });
 
   const { remove, deleting, error, clearError } = useDeleteHall({
     onDeleted: (result) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toDeleteHallError } from "@/lib/delete-hall-errors";
 import { emitHallDeleted } from "@/lib/hall-events";
 import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
@@ -17,7 +17,9 @@ export function useDeleteHall(options?: UseDeleteHallOptions) {
   const [error, setError] = useState<string | null>(null);
   const inFlightRef = useRef(false);
   const onDeletedRef = useRef(options?.onDeleted);
-  onDeletedRef.current = options?.onDeleted;
+  useEffect(() => {
+    onDeletedRef.current = options?.onDeleted;
+  });
 
   const clearError = useCallback(() => {
     setError(null);

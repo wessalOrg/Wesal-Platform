@@ -43,7 +43,9 @@ export function useAdminOwnerThread(
   const localsRef = useRef<Record<string, ThreadMessage[]>>({});
   const sendingRef = useRef<Set<string>>(new Set());
   const hallIdRef = useRef(hallId);
-  hallIdRef.current = hallId;
+  useEffect(() => {
+    hallIdRef.current = hallId;
+  });
 
   if (requestKey !== seenKey) {
     setSeenKey(requestKey);

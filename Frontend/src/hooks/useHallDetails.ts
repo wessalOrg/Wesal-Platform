@@ -14,6 +14,12 @@ export function useHallDetails(hallId: string) {
   const { session, status: authStatus } = useAuth();
   const [reloadKey, setReloadKey] = useState(0);
   const [state, setState] = useState<LoadState>({ phase: "loading" });
+  const fetchKey = `${hallId}|${reloadKey}|${authStatus}|${session.isAuthenticated}`;
+  const [prevFetchKey, setPrevFetchKey] = useState(fetchKey);
+  if (prevFetchKey !== fetchKey) {
+    setPrevFetchKey(fetchKey);
+    setState({ phase: "loading" });
+  }
 
   const retry = useCallback(() => {
     setReloadKey((key) => key + 1);
@@ -30,13 +36,9 @@ export function useHallDetails(hallId: string) {
   }, [hallId]);
 
   useEffect(() => {
-    if (authStatus !== "ready") {
-      setState({ phase: "loading" });
-      return;
-    }
+    if (authStatus !== "ready") return;
 
     let active = true;
-    setState({ phase: "loading" });
 
     void fetchHallDetails(hallId).then((result) => {
       if (!active) return;

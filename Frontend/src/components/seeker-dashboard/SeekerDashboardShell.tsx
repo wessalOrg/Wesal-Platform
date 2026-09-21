@@ -53,13 +53,14 @@ export default function SeekerDashboardShell({
   const profileStore = useOptionalUserProfileStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const avatarUrl = useProfileAvatarUrl([profileStore?.profile?.id]);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setIsSidebarOpen(false);
+  }
 
   const openSidebar = () => setIsSidebarOpen(true);
   const closeSidebar = () => setIsSidebarOpen(false);
-
-  useEffect(() => {
-    setIsSidebarOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     for (const item of SEEKER_DASHBOARD_NAV) {

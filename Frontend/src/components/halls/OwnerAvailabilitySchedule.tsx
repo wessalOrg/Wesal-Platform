@@ -33,10 +33,19 @@ export default function OwnerAvailabilitySchedule({
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const fetchEnabled = enabled && Boolean(hallId);
   const bookings = useHallNotifications(hallId, fetchEnabled);
+  const applyDeleted = bookings.applyDeleted;
   const [publishedIds, setPublishedIds] = useState<Set<string>>(() => new Set());
   const [deleteTarget, setDeleteTarget] = useState<HallBookingNotification | null>(null);
   const [exitingIds, setExitingIds] = useState<Set<string>>(() => new Set());
   const [exitingCards, setExitingCards] = useState<HallBookingNotification[]>([]);
+  const [prevScheduleHallId, setPrevScheduleHallId] = useState(hallId);
+  if (prevScheduleHallId !== hallId) {
+    setPrevScheduleHallId(hallId);
+    setPublishedIds(new Set());
+    setDeleteTarget(null);
+    setExitingIds(new Set());
+    setExitingCards([]);
+  }
   const exitTimersRef = useRef<number[]>([]);
   const publish = usePublishBooking({
     onPublished: (result) => {
@@ -49,10 +58,11 @@ export default function OwnerAvailabilitySchedule({
     },
     onStatusSync: bookings.applyStatus,
   });
+  const publishBooking = publish.publish;
 
   const finishDeleted = useCallback(
     (result: DeleteBookingResult) => {
-      bookings.applyDeleted(result);
+      applyDeleted(result);
       setPublishedIds((current) => {
         if (!current.has(result.bookingId)) return current;
         const next = new Set(current);
@@ -67,7 +77,7 @@ export default function OwnerAvailabilitySchedule({
       });
       setExitingCards((current) => current.filter((item) => item.id !== result.bookingId));
     },
-    [bookings.applyDeleted],
+    [applyDeleted],
   );
 
   const deletion = useDeleteBooking({
@@ -94,13 +104,7 @@ export default function OwnerAvailabilitySchedule({
       exitTimersRef.current.push(timer);
     },
   });
-
-  useEffect(() => {
-    setPublishedIds(new Set());
-    setDeleteTarget(null);
-    setExitingIds(new Set());
-    setExitingCards([]);
-  }, [hallId]);
+  const clearDeleteError = deletion.clearError;
 
   useEffect(() => {
     return () => {
@@ -129,14 +133,14 @@ export default function OwnerAvailabilitySchedule({
   ];
   const onPublish = useCallback(
     (item: HallBookingNotification) => {
-      void publish.publish(item.hallId || hallId, item.id);
+      void publishBooking(item.hallId || hallId, item.id);
     },
-    [hallId, publish.publish],
+    [hallId, publishBooking],
   );
   const onDelete = useCallback((item: HallBookingNotification) => {
-    deletion.clearError(item.id);
+    clearDeleteError(item.id);
     setDeleteTarget(item);
-  }, [deletion.clearError]);
+  }, [clearDeleteError]);
 
   const deleteDateLabel = deleteTarget?.date
     ? formatBookingDateLabel(deleteTarget.date, locale)

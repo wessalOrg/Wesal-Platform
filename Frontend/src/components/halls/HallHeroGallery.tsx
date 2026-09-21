@@ -23,6 +23,11 @@ export default function HallHeroGallery({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const lightboxTitleId = useId();
+  const [prevImages, setPrevImages] = useState(images);
+  if (prevImages !== images) {
+    setPrevImages(images);
+    setActiveIndex(0);
+  }
 
   const openLightbox = (index: number) => setLightboxIndex(index);
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
@@ -46,10 +51,6 @@ export default function HallHeroGallery({
       current == null ? null : (current + 1) % gallery.length,
     );
   }, [gallery.length]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [images]);
 
   useEffect(() => {
     if (lightboxIndex == null) return;
