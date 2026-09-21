@@ -16,4 +16,8 @@ public interface IConversationService
         Guid conversationId,
         SendMessageRequest request,
         CancellationToken cancellationToken = default);
+
+    Task MarkAsReadAsync(Guid conversationId, CancellationToken cancellationToken = default);
+
+    Task<UnreadCountResponse> GetUnreadCountAsync(CancellationToken cancellationToken = default);
 }

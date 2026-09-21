@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import AdminHallDeleteControls from "@/components/admin/halls/AdminHallDeleteControls";
 import AdminHallLockBadge from "@/components/admin/halls/AdminHallLockBadge";
 import AdminHallLockControls from "@/components/admin/halls/AdminHallLockControls";
 import AdminHallPaidControls from "@/components/admin/halls/AdminHallPaidControls";
@@ -305,6 +306,10 @@ export default function AdminHallSubmissionDetailView({
               detail.applyLockState(result.adminLocked, hall.systemLocked);
               setToastKey("admin.lock.success");
             }}
+          />
+          <AdminHallDeleteControls
+            hallId={hall.hallId}
+            hallName={hall.name}
           />
         </div>
       </section>

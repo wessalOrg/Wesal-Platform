@@ -196,4 +196,18 @@ public class AdminHallService : IAdminHallService
         => _currentUser.IsAuthenticated && !string.IsNullOrWhiteSpace(_currentUser.UserId)
             ? _currentUser.UserId
             : "admin";
+
+    public async Task DeleteHallAsync(Guid hallId, CancellationToken cancellationToken = default)
+    {
+        var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
+        if (hall is null || hall.IsDeleted)
+            throw new NotFoundException("Hall", hallId);
+
+        hall.IsDeleted = true;
+        hall.UpdatedAt = _dateTime.Now;
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Admin deleted hall {HallId}", hallId);
+    }
 }

@@ -90,4 +90,29 @@ public class ConversationsController : ControllerBase
             new { version = "1", conversationId },
             response);
     }
+
+    [HttpPost("api/v{version:apiVersion}/conversations/{conversationId:guid}/read")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> MarkAsRead(
+        Guid conversationId,
+        CancellationToken cancellationToken)
+    {
+        await _conversationService.MarkAsReadAsync(conversationId, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("api/v{version:apiVersion}/conversations/unread-count")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(UnreadCountResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<UnreadCountResponse>> GetUnreadCount(
+        CancellationToken cancellationToken)
+    {
+        var response = await _conversationService.GetUnreadCountAsync(cancellationToken);
+        return Ok(response);
+    }
 }

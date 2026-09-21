@@ -23,4 +23,10 @@ public interface IConversationRepository
     Task<IReadOnlyList<UserDisplayInfo>> GetUserDisplayNamesAsync(
         IReadOnlyCollection<string> userIds,
         CancellationToken cancellationToken = default);
+
+    Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default);
+
+    Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default);
+
+    Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default);
 }

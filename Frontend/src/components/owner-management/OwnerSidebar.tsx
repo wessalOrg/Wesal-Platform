@@ -14,6 +14,7 @@ import {
   type HallOwnerDashboardNavId,
 } from "@/constants/hallOwnerManagementNav";
 import { useT } from "@/i18n";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 
 type OwnerSidebarProps = {
   id?: string;
@@ -31,6 +32,7 @@ export default function OwnerSidebar({
   const router = useRouter();
   const { logout, isLoggingOut } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const { count: unreadCount } = useUnreadCount();
 
   return (
     <>
@@ -69,7 +71,9 @@ export default function OwnerSidebar({
                     <span className="seeker-dash-sidebar-icon" aria-hidden="true">
                       <NavIcon id={item.id} />
                     </span>
-                    <span>{t(item.labelKey)}</span>
+                    <span>{t(item.labelKey)}{item.id === "messages" && unreadCount > 0 ? (
+                      <span className="ml-1 inline-flex h-2 w-2 shrink-0 rounded-full bg-[#c45b55]" aria-label={`${unreadCount}`} />
+                    ) : null}</span>
                   </Link>
                 </li>
               );
@@ -165,6 +169,17 @@ function NavIcon({ id }: { id: HallOwnerDashboardNavId }) {
             strokeLinejoin="round"
           />
           <path d="M9 20v-6h6v6" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        </svg>
+      );
+    case "messages":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+          <path
+            d="M3 7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H8l-5 3V7Z"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     default:

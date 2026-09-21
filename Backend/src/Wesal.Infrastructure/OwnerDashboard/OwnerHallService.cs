@@ -115,7 +115,9 @@ public sealed class OwnerHallService : IOwnerHallService
             throw new NotFoundException(nameof(Hall), hallId);
         }
 
-        HallManagementAccess.EnsureAllowed(hall);
+        // Deletion is allowed regardless of payment status, admin lock, or system
+        // lock — the owner can always remove their own hall. Ownership is already
+        // enforced by the repository (GetOwnedHallForUpdateAsync scopes to ownerId).
 
         hall.IsDeleted = true;
         hall.UpdatedAt = DateTimeOffset.UtcNow;

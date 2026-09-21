@@ -61,6 +61,8 @@ export type HallEditFormValues = {
   firstPeriod: BookingPeriodFormValues;
   secondPeriod: BookingPeriodFormValues;
   existingPhotos: ExistingHallPhoto[];
+  /** URL of the existing photo used as the cover (mainImageUrl on PUT). */
+  coverPhotoUrl: string | null;
 };
 
 export type HallEditFieldErrors = HallRegistrationFieldErrors;

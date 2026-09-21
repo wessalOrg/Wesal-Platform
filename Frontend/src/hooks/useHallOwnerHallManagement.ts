@@ -214,6 +214,18 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     [clearFeedback],
   );
 
+  const setCoverPhoto = useCallback(
+    (url: string) => {
+      setValues((current) =>
+        current
+          ? { ...current, coverPhotoUrl: url }
+          : current,
+      );
+      clearFeedback();
+    },
+    [clearFeedback],
+  );
+
   const submit = useCallback(async (): Promise<boolean> => {
     if (submittingRef.current) return false;
     if (!values || !details) return false;
@@ -335,6 +347,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     patchValues,
     setPeriod,
     removeExistingPhoto,
+    setCoverPhoto,
     submit,
   };
 }

@@ -69,6 +69,7 @@ export default function HallOwnerHallManagementView({
     patchValues,
     setPeriod,
     removeExistingPhoto,
+    setCoverPhoto,
     submit,
   } = useHallOwnerHallManagement(hallId, detailsEnabled);
 
@@ -136,6 +137,30 @@ export default function HallOwnerHallManagementView({
           </div>
         </header>
         <ManagementAccessBlockedState reason={blockedReason} />
+        {blockedReason === "PAYMENT_REQUIRED" && (
+          <>
+            <OwnerSubscriptionStatus hallId={hallId} hallName={headerName} />
+            <HallPaymentReceiptSection
+              hallId={hallId}
+              hallName={headerName}
+              approvalStatus={hallStatus}
+              paymentStatus={paymentStatus}
+              hasPaymentReceipt={details?.hasPaymentReceipt ?? false}
+              onUploaded={() => {
+                void reload();
+              }}
+            />
+          </>
+        )}
+        <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
+          <OwnerDeleteHallAction
+            hallId={hallId}
+            hallName={headerName}
+            onDeleted={() => {
+              router.replace(HALL_OWNER_HALLS_PATH);
+            }}
+          />
+        </div>
       </section>
     );
   }
@@ -239,6 +264,7 @@ export default function HallOwnerHallManagementView({
           onPatch={patchValues}
           onChangePeriod={setPeriod}
           onRemoveExistingPhoto={removeExistingPhoto}
+          onSetCover={setCoverPhoto}
           onSubmit={() => {
             void submit();
           }}

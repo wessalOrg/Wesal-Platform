@@ -1,5 +1,6 @@
 import { parseDateIso, utcDaysRemaining, utcTodayIso } from "@/lib/booking-date";
 import { mapBackendHallStatus } from "@/lib/hall-owner-halls-mapper";
+import { resolveMediaUrl } from "@/lib/hall-media-url";
 import type {
   AdminHallApprovalResult,
   AdminHallDetail,
@@ -83,7 +84,7 @@ export function mapAdminHallDetail(payload: unknown): AdminHallDetail | null {
 
   const photosRaw = dto.photoUrls ?? dto.PhotoUrls;
   const photoUrls = Array.isArray(photosRaw)
-    ? photosRaw.map((item) => asText(item)).filter(Boolean)
+    ? photosRaw.map((item) => asText(item)).filter(Boolean).map((url) => resolveMediaUrl(url))
     : [];
 
   const featuresRaw = dto.features ?? dto.Features;

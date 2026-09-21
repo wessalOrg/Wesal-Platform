@@ -331,3 +331,9 @@ export async function fetchAdminSubscriptionOverview(): Promise<AdminSubscriptio
   });
   return mapAdminSubscriptionOverview(data);
 }
+
+export async function deleteAdminHall(hallId: string): Promise<void> {
+  await api.delete(`/admin/halls/${encodeURIComponent(hallId)}`, {
+    timeout: 10000,
+  });
+}

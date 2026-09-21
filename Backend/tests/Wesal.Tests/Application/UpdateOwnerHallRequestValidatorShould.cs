@@ -224,7 +224,7 @@ public class UpdateOwnerHallRequestValidatorShould
     public async Task Validate_DetailedAddressInsideRegion_Passes()
     {
         var result = await _validator.ValidateAsync(
-            CreateRequest(region: HallRegion.Gaza, detailedAddress: "الرمال"));
+            CreateRequest(region: HallRegion.Gaza, detailedAddress: "حي الرمال"));
 
         Assert.True(result.IsValid);
     }

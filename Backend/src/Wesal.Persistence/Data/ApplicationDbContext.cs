@@ -37,6 +37,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Booking> Bookings => Set<Booking>();
 
+    public DbSet<ConversationReadState> ConversationReadStates => Set<ConversationReadState>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -273,6 +275,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(booking => booking.Hall)
                 .WithMany()
                 .HasForeignKey(booking => booking.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ConversationReadState>(entity =>
+        {
+            entity.ToTable("ConversationReadStates");
+
+            entity.HasKey(state => new { state.ConversationId, state.UserId });
+
+            entity.Property(state => state.UserId).IsRequired().HasMaxLength(450);
+
+            entity.Property(state => state.LastReadAt).HasColumnType("timestamp with time zone");
+
+            entity.HasOne(state => state.Conversation)
+                .WithMany()
+                .HasForeignKey(state => state.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

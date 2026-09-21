@@ -19,6 +19,8 @@ public sealed class ConversationSummaryResponse
     public int MessageCount { get; init; }
 
     public DateTimeOffset CreatedAt { get; init; }
+
+    public bool IsUnread { get; init; }
 }
 
 public sealed class MessageDto
@@ -65,4 +67,9 @@ public sealed class MessageSentEvent
     public string Content { get; init; } = string.Empty;
 
     public DateTimeOffset SentAt { get; init; }
+}
+
+public sealed class UnreadCountResponse
+{
+    public int UnreadCount { get; init; }
 }

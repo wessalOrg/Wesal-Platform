@@ -255,5 +255,6 @@ export function mapHallDetailsToEditForm(
       endTime: details.secondPeriod.endTime || EMPTY_BOOKING_PERIOD.endTime,
     },
     existingPhotos: [...details.photos],
+    coverPhotoUrl: details.mainImageUrl ?? (details.photos[0]?.url ?? null),
   };
 }

@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
+import { resolveMediaUrl } from "@/lib/hall-media-url";
 import { isBrowserOffline } from "@/services/ai-assistant";
 import type {
   AiChatTextLang,
@@ -174,7 +175,7 @@ function mapHalls(list: HallRecommendationDto[] | null | undefined): AiRecommend
       address: hall.address?.trim() || null,
       capacity: typeof hall.capacity === "number" ? hall.capacity : null,
       price: typeof hall.price === "number" ? hall.price : null,
-      mainImage: hall.mainImage?.trim() || null,
+      mainImage: resolveMediaUrl(hall.mainImage ?? ""),
       isAvailable: hall.isAvailable !== false,
       unavailableReason: hall.unavailableReason?.trim() || null,
     }))
@@ -192,7 +193,7 @@ function mapHallDetails(details: AssistantHallDetailsDto | null | undefined): Ai
     address: readTrimmed(details.address),
     capacity: typeof details.capacity === "number" ? details.capacity : null,
     price: typeof details.price === "number" ? details.price : null,
-    mainImage: readTrimmed(details.photos?.[0]?.url),
+    mainImage: resolveMediaUrl(readTrimmed(details.photos?.[0]?.url) ?? ""),
     isAvailable: details.status === "Approved",
     unavailableReason: null,
   };

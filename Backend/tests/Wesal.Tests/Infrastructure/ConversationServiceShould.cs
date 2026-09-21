@@ -483,6 +483,10 @@ public class ConversationServiceShould
                 .ToList();
             return Task.FromResult<IReadOnlyList<UserDisplayInfo>>(displayInfos);
         }
+
+        public Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<Dictionary<Guid, bool>>(new Dictionary<Guid, bool>());
     }
 
     private sealed class FakeMessageRepository : IMessageRepository

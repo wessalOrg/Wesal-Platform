@@ -199,6 +199,21 @@ export async function sendConversationMessage(
 
 export type ConversationErrorScope = "start" | "inbox" | "thread" | "send";
 
+export async function fetchUnreadConversationCount(): Promise<number> {
+  if (conversationsUseMock()) return 0;
+  const { data } = await api.get<{ unreadCount?: number }>("/conversations/unread-count", {
+    timeout: 8000,
+  });
+  return typeof data?.unreadCount === "number" ? data.unreadCount : 0;
+}
+
+export async function markConversationAsRead(conversationId: string): Promise<void> {
+  if (conversationsUseMock()) return;
+  await api.post(`/conversations/${encodeURIComponent(conversationId)}/read`, undefined, {
+    timeout: 8000,
+  });
+}
+
 export function conversationErrorMessage(
   err: unknown,
   scope: ConversationErrorScope = "start",

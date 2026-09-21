@@ -404,6 +404,41 @@ public sealed class ConversationService : IConversationService
         };
     }
 
+    public async Task MarkAsReadAsync(Guid conversationId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var userId = GetAuthenticatedUserId();
+
+        var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
+        if (conversation is null || conversation.Hall?.IsDeleted == true)
+        {
+            throw new NotFoundException(nameof(Conversation), conversationId);
+        }
+
+        var isParticipant = string.Equals(userId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(userId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase)
+            || _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+
+        if (!isParticipant)
+        {
+            throw new ForbiddenException("You do not have access to this conversation.");
+        }
+
+        await _conversationRepository.UpsertReadStateAsync(conversationId, userId, DateTimeOffset.UtcNow, cancellationToken);
+    }
+
+    public async Task<UnreadCountResponse> GetUnreadCountAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var userId = GetAuthenticatedUserId();
+
+        var count = await _conversationRepository.GetUnreadConversationCountAsync(userId, cancellationToken);
+
+        return new UnreadCountResponse { UnreadCount = count };
+    }
+
     private void EnsureAuthenticated()
     {
         if (!_currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUser.UserId))

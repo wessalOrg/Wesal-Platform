@@ -73,6 +73,9 @@ public class AuthorizationHallActionsShould
         public Task<Conversation?> GetByIdWithHallAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(Conversations.FirstOrDefault(c => c.Id == id));
         public Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Conversation>>(Conversations.Where(c => c.SenderUserId == userId || c.HallOwnerId == userId).ToList());
         public Task<IReadOnlyList<UserDisplayInfo>> GetUserDisplayNamesAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<UserDisplayInfo>>(userIds.Select(id => new UserDisplayInfo { UserId = id, FullName = "User " + id }).ToList());
+        public Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<Dictionary<Guid, bool>>(conversationIds.ToDictionary(id => id, _ => false));
     }
 
     private sealed class FakeMessageRepository : IMessageRepository

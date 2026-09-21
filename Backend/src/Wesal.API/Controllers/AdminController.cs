@@ -136,6 +136,17 @@ public class AdminController : ControllerBase
         return Ok(response);
     }
 
+    [HttpDelete("{hallId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteHall(Guid hallId, CancellationToken cancellationToken)
+    {
+        await _adminHallService.DeleteHallAsync(hallId, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>
     /// Streams the payment receipt the owner uploaded for a hall (US-ADMIN-07/10).
     /// Only the Admin can read it; the document is stored outside the public media area.

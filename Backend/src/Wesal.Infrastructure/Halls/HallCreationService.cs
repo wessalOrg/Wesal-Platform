@@ -53,8 +53,6 @@ public class HallCreationService : IHallCreationService
             throw new ValidationException(new Dictionary<string, string[]> { ["ContactPhone"] = new[] { "Contact phone is required." } });
         if (string.IsNullOrWhiteSpace(request.Address))
             throw new ValidationException(new Dictionary<string, string[]> { ["Address"] = new[] { "Address is required." } });
-        if (string.IsNullOrWhiteSpace(request.Description))
-            throw new ValidationException(new Dictionary<string, string[]> { ["Description"] = new[] { "Description is required." } });
         if (request.Capacity <= 0)
             throw new ValidationException(new Dictionary<string, string[]> { ["Capacity"] = new[] { "Capacity must be greater than 0." } });
         // Region validation
@@ -137,7 +135,7 @@ public class HallCreationService : IHallCreationService
             Region = region,
             Address = request.Address.Trim(),
             DetailedAddress = string.IsNullOrWhiteSpace(request.DetailedAddress) ? null : request.DetailedAddress.Trim(),
-            Description = request.Description.Trim(),
+            Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
             Capacity = request.Capacity,
             Price = request.Price,
             ShowPrice = request.Price.HasValue,

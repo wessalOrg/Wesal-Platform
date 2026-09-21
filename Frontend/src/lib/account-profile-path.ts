@@ -14,6 +14,9 @@ export const HALL_OWNER_PROFILE_PATH = "/owner/profile";
 /** Hall Owner halls list. */
 export const HALL_OWNER_HALLS_PATH = "/owner/halls";
 
+/** Hall Owner messages. */
+export const HALL_OWNER_MESSAGES_PATH = "/owner/messages";
+
 /**
  * Add Hall form route (US-OWNER-04 destination).
  * US-OWNER-03 only navigates here after successful initiation.

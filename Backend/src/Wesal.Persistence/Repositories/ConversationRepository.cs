@@ -69,4 +69,81 @@ public sealed class ConversationRepository : IConversationRepository
             .Select(user => new UserDisplayInfo { UserId = user.Id, FullName = user.FullName })
             .ToListAsync(cancellationToken);
     }
+
+    public async Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default)
+    {
+        var existing = await _context.ConversationReadStates
+            .FirstOrDefaultAsync(s => s.ConversationId == conversationId && s.UserId == userId, cancellationToken);
+
+        if (existing is null)
+        {
+            _context.ConversationReadStates.Add(new ConversationReadState
+            {
+                ConversationId = conversationId,
+                UserId = userId,
+                LastReadAt = lastReadAt
+            });
+        }
+        else if (lastReadAt > existing.LastReadAt)
+        {
+            existing.LastReadAt = lastReadAt;
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Conversations
+            .AsNoTracking()
+            .Where(c => (c.SenderUserId == userId || c.HallOwnerId == userId) && !c.Hall.IsDeleted)
+            .Where(c => _context.Messages
+                .Where(m => m.ConversationId == c.Id && m.SenderUserId != userId)
+                .Any(m => !_context.ConversationReadStates
+                    .Any(s => s.ConversationId == c.Id && s.UserId == userId && s.LastReadAt >= m.CreatedAt)))
+            .CountAsync(cancellationToken);
+    }
+
+    public async Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)
+    {
+        if (conversationIds.Count == 0)
+        {
+            return [];
+        }
+
+        var readStates = await _context.ConversationReadStates
+            .AsNoTracking()
+            .Where(s => conversationIds.Contains(s.ConversationId) && s.UserId == userId)
+            .ToListAsync(cancellationToken);
+
+        var readStateMap = readStates.ToDictionary(s => s.ConversationId, s => s.LastReadAt);
+
+        var latestMessages = await _context.Messages
+            .AsNoTracking()
+            .Where(m => conversationIds.Contains(m.ConversationId))
+            .GroupBy(m => m.ConversationId)
+            .Select(g => new { ConversationId = g.Key, LatestAt = g.Max(m => m.CreatedAt) })
+            .ToListAsync(cancellationToken);
+
+        var result = new Dictionary<Guid, bool>();
+        foreach (var convId in conversationIds)
+        {
+            var latest = latestMessages.FirstOrDefault(m => m.ConversationId == convId);
+            if (latest is null)
+            {
+                result[convId] = false;
+                continue;
+            }
+
+            if (!readStateMap.TryGetValue(convId, out var lastRead))
+            {
+                result[convId] = true;
+                continue;
+            }
+
+            result[convId] = latest.LatestAt > lastRead;
+        }
+
+        return result;
+    }
 }

@@ -279,10 +279,10 @@ public class HallCreationServiceShould : IDisposable
     [Fact]
     public async Task DetailedAddress_InRegion_AcceptedAndPersisted()
     {
-        var request = CreateValidRequest(region: "Gaza", detailedAddress: "الرمال");
+        var request = CreateValidRequest(region: "Gaza", detailedAddress: "حي الرمال");
         var result = await _service.CreateHallAsync(request);
         var hall = await _context.Halls.FindAsync(result.HallId);
-        Assert.Equal("الرمال", hall!.DetailedAddress);
+        Assert.Equal("حي الرمال", hall!.DetailedAddress);
     }
 
     [Fact]

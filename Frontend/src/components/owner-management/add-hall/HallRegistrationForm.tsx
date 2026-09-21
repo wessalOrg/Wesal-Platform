@@ -4,7 +4,6 @@ import { type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import BookingPeriodsSection from "@/components/owner-management/add-hall/BookingPeriodsSection";
 import HallBasicInfoSection from "@/components/owner-management/add-hall/HallBasicInfoSection";
-import HallDescriptionSection from "@/components/owner-management/add-hall/HallDescriptionSection";
 import HallFeaturesSection from "@/components/owner-management/add-hall/HallFeaturesSection";
 import HallFormActions from "@/components/owner-management/add-hall/HallFormActions";
 import HallLocationSection from "@/components/owner-management/add-hall/HallLocationSection";
@@ -91,14 +90,6 @@ export default function HallRegistrationForm() {
         />
 
         <HallLocationSection
-          values={values}
-          fieldErrors={fieldErrors}
-          disabled={isSubmitting}
-          onChange={patchValues}
-          resolveError={resolveError}
-        />
-
-        <HallDescriptionSection
           values={values}
           fieldErrors={fieldErrors}
           disabled={isSubmitting}

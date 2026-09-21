@@ -59,7 +59,7 @@ export function mapHallFormToUpdateHallRequest(
 
   return {
     name: values.hallName.trim(),
-    mainImageUrl: photos[0]?.url ?? null,
+    mainImageUrl: values.coverPhotoUrl ?? photos[0]?.url ?? null,
     contactPhone: normalizeRegisterPhone(values.ownerPhone) || null,
     region,
     address: values.address.trim(),

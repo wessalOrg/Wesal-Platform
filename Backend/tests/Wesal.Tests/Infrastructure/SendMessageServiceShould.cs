@@ -375,6 +375,10 @@ public class SendMessageServiceShould
             var result = userIds.Select(id => new UserDisplayInfo { UserId = id, FullName = $"Display of {id}" }).ToList();
             return Task.FromResult<IReadOnlyList<UserDisplayInfo>>(result);
         }
+
+        public Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<Dictionary<Guid, bool>>(new Dictionary<Guid, bool>());
     }
 
     private sealed class FakeMessageRepository : IMessageRepository

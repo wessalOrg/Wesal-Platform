@@ -3,7 +3,6 @@
 import { type FormEvent } from "react";
 import BookingPeriodsSection from "@/components/owner-management/add-hall/BookingPeriodsSection";
 import HallBasicInfoSection from "@/components/owner-management/add-hall/HallBasicInfoSection";
-import HallDescriptionSection from "@/components/owner-management/add-hall/HallDescriptionSection";
 import HallFeaturesSection from "@/components/owner-management/add-hall/HallFeaturesSection";
 import HallFormActions from "@/components/owner-management/add-hall/HallFormActions";
 import HallLocationSection from "@/components/owner-management/add-hall/HallLocationSection";
@@ -32,6 +31,7 @@ type HallManagementFormProps = {
     patch: Partial<HallEditFormValues["firstPeriod"]>,
   ) => void;
   onRemoveExistingPhoto: (photoId: string) => void;
+  onSetCover: (url: string) => void;
   onSubmit: () => void;
 };
 
@@ -94,6 +94,7 @@ export default function HallManagementForm({
   onPatch,
   onChangePeriod,
   onRemoveExistingPhoto,
+  onSetCover,
   onSubmit,
 }: HallManagementFormProps) {
   const t = useT();
@@ -146,14 +147,6 @@ export default function HallManagementForm({
           resolveError={resolveError}
         />
 
-        <HallDescriptionSection
-          values={sectionValues}
-          fieldErrors={fieldErrors}
-          disabled={controlsDisabled}
-          onChange={(patch) => onPatch(patch)}
-          resolveError={resolveError}
-        />
-
         <HallFeaturesSection
           values={sectionValues}
           fieldErrors={fieldErrors}
@@ -173,9 +166,11 @@ export default function HallManagementForm({
 
         <HallManagementPhotosSection
           existingPhotos={values.existingPhotos}
+          coverPhotoUrl={values.coverPhotoUrl}
           fieldErrors={fieldErrors}
           disabled={controlsDisabled}
           onRemoveExisting={onRemoveExistingPhoto}
+          onSetCover={onSetCover}
           resolveError={resolveError}
         />
 
