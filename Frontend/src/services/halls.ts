@@ -11,6 +11,7 @@ import { getDefaultHallAmenities } from "@/lib/amenities";
 import { parseDateIso } from "@/lib/booking-date";
 import { parseBookingPeriodType } from "@/lib/booking-period";
 import { toDeleteHallError } from "@/lib/delete-hall-errors";
+import { resolveMediaUrl } from "@/lib/hall-media-url";
 import { mapDeleteHallResult } from "@/lib/owner-delete-hall";
 import {
   REGION_API_PARAMS,
@@ -110,19 +111,7 @@ function resolveHallImage(
   const fallback = LOCAL_HALL_IMAGES[index % LOCAL_HALL_IMAGES.length];
   const value = apiImage?.trim();
   if (!value) return fallback;
-
-  if (
-    value.startsWith("http://") ||
-    value.startsWith("https://") ||
-    value.startsWith("/")
-  ) {
-    return value;
-  }
-
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5298/api/v1";
-  const origin = apiBase.replace(/\/api\/v1\/?$/i, "");
-  return `${origin}/${value.replace(/^\//, "")}`;
+  return resolveMediaUrl(value) || fallback;
 }
 
 function normalize(payload: FeaturedResponse): ApiFeaturedHall[] {

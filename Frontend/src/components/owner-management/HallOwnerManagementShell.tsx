@@ -13,6 +13,7 @@ import {
   HALL_OWNER_DASHBOARD_NAV,
   OWNER_ACCOUNT_PATH,
 } from "@/constants/hallOwnerManagementNav";
+import { useHallOwnerManagementProfile } from "@/hooks/useHallOwnerManagementProfile";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
@@ -43,6 +44,7 @@ export default function HallOwnerManagementShell({
   const identity = useUserIdentity();
   const profileStore = useOptionalUserProfileStore();
   const avatarUrl = useProfileAvatarUrl([profileStore?.profile?.id]);
+  const ownerProfileState = useHallOwnerManagementProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const openSidebar = () => setIsSidebarOpen(true);
@@ -79,6 +81,11 @@ export default function HallOwnerManagementShell({
     profileStore?.profile?.fullName ||
     identity.displayName ||
     t("owner.guestName");
+
+  const showProfileCompletionNotice =
+    ownerProfileState.status === "ready" &&
+    !!ownerProfileState.profile &&
+    !ownerProfileState.profile.isIdentityDocumentUploaded;
 
   return (
     <div
@@ -141,6 +148,46 @@ export default function HallOwnerManagementShell({
             </Link>
           </div>
         </header>
+
+        {showProfileCompletionNotice ? (
+          <div className="px-4 pt-3 sm:px-6">
+            <Link
+              href={OWNER_ACCOUNT_PATH}
+              className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#e2b93b]/50 bg-[#fdf6e3] px-4 py-3"
+              data-testid="owner-profile-completion"
+            >
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e2b93b]/20"
+                aria-hidden="true"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="h-5 w-5 text-[var(--wesal-maroon)]"
+                >
+                  <path
+                    d="M12 8v5m0 3h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-[var(--wesal-text)]">
+                  {t("owner.management.profileCompletion.message")}
+                </span>
+                <span className="block text-xs leading-5 text-[var(--wesal-muted)]">
+                  {t("owner.management.profileCompletion.hint")}
+                </span>
+              </span>
+              <span className="ms-auto shrink-0 text-sm font-semibold text-[var(--wesal-maroon)]">
+                {t("owner.management.profileCompletion.action")}
+              </span>
+            </Link>
+          </div>
+        ) : null}
 
         <div className="seeker-dash-content">{children}</div>
       </div>

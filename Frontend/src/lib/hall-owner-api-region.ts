@@ -1,5 +1,6 @@
 import type { HallRegion } from "@/constants/hallRegions";
 import { isHallRegion } from "@/constants/hallRegions";
+import { resolveMediaUrl } from "@/lib/hall-media-url";
 
 /** Backend HallRegion enum JSON values (JsonStringEnumConverter). */
 export type HallRegionApi =
@@ -42,16 +43,7 @@ export function fromHallRegionApi(raw: string | number | null | undefined): Hall
 
 /** Absolute media URL for relative `/uploads/...` paths from wesal-api. */
 export function resolveOwnerMediaUrl(url: string): string {
-  const trimmed = url.trim();
-  if (!trimmed) return "";
-  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith("blob:")) {
-    return trimmed;
-  }
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5298/api/v1";
-  const origin = apiBase.replace(/\/api\/v1\/?$/i, "");
-  if (trimmed.startsWith("/")) return `${origin}${trimmed}`;
-  return `${origin}/${trimmed}`;
+  return resolveMediaUrl(url);
 }
 
 /** TimeOnly-compatible string (HH:mm:ss) for UpdateOwnerHallRequest. */

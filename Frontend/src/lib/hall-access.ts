@@ -4,6 +4,7 @@
  * Do not collapse these into a single `locked` property.
  */
 import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
+import type { HallPaymentStatus } from "@/constants/hallPaymentStatus";
 import { parseHallStatus } from "@/lib/hall-status";
 import {
   PAYMENT_STATUS,
@@ -130,13 +131,14 @@ export function hallAccessFromFlags(
 
 export function hallAccessFromHall(hall: {
   status: HallApprovalStatus;
-  paymentStatus: PaymentStatus;
+  paymentStatus: HallPaymentStatus;
   adminLocked: boolean;
   systemLocked: boolean;
 }): HallAccessState {
   return {
     hallStatus: hall.status,
-    paymentStatus: hall.paymentStatus,
+    paymentStatus:
+      hall.paymentStatus === "Paid" ? PAYMENT_STATUS.Paid : PAYMENT_STATUS.Unpaid,
     adminLocked: hall.adminLocked,
     systemLocked: hall.systemLocked,
   };

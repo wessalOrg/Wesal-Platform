@@ -24,7 +24,7 @@ function isTimeValue(raw: string): boolean {
 }
 
 const YOUTUBE_URL_PATTERN =
-  /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|embed\/|shorts\/|live\/|@[\w-]+(\/[\w-]+)*\/|[a-zA-Z0-9_-]{11})(&[^#\s]*)?$/i;
+  /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)[A-Za-z0-9_-]{6,30}(?:\?[^\s#]*)?(?:#[^\s]*)?$/i;
 
 /** Client-side checks for edit form — backend remains authoritative. */
 export function validateHallEditForm(

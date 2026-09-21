@@ -1476,6 +1476,9 @@ const ar: MessageCatalog = {
   "owner.management.addHall.identityRequiredHint":
     "╪º╪▒┘ü╪╣ ┘ê╪½┘è┘é╪¬┘â ┘à┘å ╪╡┘ü╪¡╪⌐ ╪º┘ä╪¡╪│╪º╪¿ ╪½┘à ╪╣┘Å╪» ┘ç┘å╪º.",
   "owner.management.addHall.goToAccount": "╪º┘ä╪º┘å╪¬┘é╪º┘ä ╪Ñ┘ä┘ë ╪º┘ä╪¡╪│╪º╪¿",
+  "owner.management.profileCompletion.message": "يجب استكمال ملفك الشخصي",
+  "owner.management.profileCompletion.hint": "ارفع وثيقتك الشخصية لإكمال ملفك وتتمكن من إضافة القاعات.",
+  "owner.management.profileCompletion.action": "إكمال الملف الشخصي",
   "owner.management.identity.title": "╪º┘ä┘ê╪½┘è┘é╪⌐ ╪º┘ä╪┤╪«╪╡┘è╪⌐",
   "owner.management.identity.subtitle":
     "┘à╪╖┘ä┘ê╪¿╪⌐ ┘é╪¿┘ä ╪Ñ╪╢╪º┘ü╪⌐ ╪ú┘è ┘é╪º╪╣╪⌐. ┘ä╪º ┘è╪╖┘ä╪╣ ╪╣┘ä┘è┘ç╪º ╪Ñ┘ä╪º ╪ú┘å╪¬ ┘ê╪º┘ä╪Ñ╪»╪º╪▒╪⌐.",

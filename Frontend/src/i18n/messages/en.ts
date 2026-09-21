@@ -1533,6 +1533,9 @@ const en: MessageCatalog = {
   "owner.management.addHall.identityRequiredHint":
     "Upload it from your account page, then come back here.",
   "owner.management.addHall.goToAccount": "Go to account",
+  "owner.management.profileCompletion.message": "Complete your profile",
+  "owner.management.profileCompletion.hint": "Upload your identity document to finish your profile and start adding halls.",
+  "owner.management.profileCompletion.action": "Complete your profile",
   "owner.management.identity.title": "Identity document",
   "owner.management.identity.subtitle":
     "Required before adding any hall. Only you and the admin can see it.",
