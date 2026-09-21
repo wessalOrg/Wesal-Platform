@@ -425,7 +425,14 @@ public sealed class ConversationService : IConversationService
             throw new ForbiddenException("You do not have access to this conversation.");
         }
 
-        await _conversationRepository.UpsertReadStateAsync(conversationId, userId, DateTimeOffset.UtcNow, cancellationToken);
+        try
+        {
+            await _conversationRepository.UpsertReadStateAsync(conversationId, userId, DateTimeOffset.UtcNow, cancellationToken);
+        }
+        catch (Exception ex) when (IsMissingTable(ex))
+        {
+            // ConversationReadStates table may not exist yet if migration is pending.
+        }
     }
 
     public async Task<UnreadCountResponse> GetUnreadCountAsync(CancellationToken cancellationToken = default)
@@ -434,9 +441,22 @@ public sealed class ConversationService : IConversationService
 
         var userId = GetAuthenticatedUserId();
 
-        var count = await _conversationRepository.GetUnreadConversationCountAsync(userId, cancellationToken);
+        try
+        {
+            var count = await _conversationRepository.GetUnreadConversationCountAsync(userId, cancellationToken);
+            return new UnreadCountResponse { UnreadCount = count };
+        }
+        catch (Exception ex) when (IsMissingTable(ex))
+        {
+            // ConversationReadStates table may not exist yet if migration is pending.
+            return new UnreadCountResponse { UnreadCount = 0 };
+        }
+    }
 
-        return new UnreadCountResponse { UnreadCount = count };
+    private static bool IsMissingTable(Exception ex)
+    {
+        return ex.Message.Contains("42P01", StringComparison.Ordinal)
+            || (ex.InnerException is not null && IsMissingTable(ex.InnerException));
     }
 
     private void EnsureAuthenticated()

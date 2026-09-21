@@ -34,7 +34,6 @@ public class CreateHallRequestValidator : AbstractValidator<CreateHallRequest>
             .WithMessage("The detailed address does not belong to the selected region's address list.");
 
         RuleFor(x => x.Description)
-            .NotEmpty().WithMessage("Description is required.")
             .MaximumLength(2000).WithMessage("Description must not exceed 2000 characters.");
 
         RuleFor(x => x.Capacity)
