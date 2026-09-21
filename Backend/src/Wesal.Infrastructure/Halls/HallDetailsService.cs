@@ -57,23 +57,13 @@ public class HallDetailsService : IHallDetailsService
             throw new NotFoundException(nameof(Hall), hallId);
         }
 
-        var imagesTask = _hallRepository.GetHallImagesAsync(hallId, cancellationToken);
-        var featuresTask = _hallRepository.GetHallFeaturesAsync([hallId], cancellationToken);
+        var images = await _hallRepository.GetHallImagesAsync(hallId, cancellationToken);
+        var features = await _hallRepository.GetHallFeaturesAsync([hallId], cancellationToken);
         var fromDate = DateOnly.FromDateTime(_dateTime.Now.UtcDateTime);
         var toDate = fromDate.AddDays(FeaturedHallsService.AvailabilityDays - 1);
 
-        var periodsTask = _hallRepository.GetBookingPeriodsAsync([hallId], cancellationToken);
-        var availabilityTask = _hallRepository.GetAvailabilityAsync([hallId], fromDate, toDate, cancellationToken);
-
-        await Task.WhenAll(imagesTask, featuresTask, periodsTask, availabilityTask);
-
-        var photos = imagesTask.Result
-            .Where(image => !string.IsNullOrWhiteSpace(image.Url))
-            .Select(image => new HallImageDto { Id = image.Id, Url = image.Url })
-            .ToList();
-
-        var periods = periodsTask.Result;
-        var availabilityByKey = availabilityTask.Result.ToDictionary(item => (item.HallId, item.Date, item.PeriodType));
+        var periods = await _hallRepository.GetBookingPeriodsAsync([hallId], cancellationToken);
+        var availability = await _hallRepository.GetAvailabilityAsync([hallId], fromDate, toDate, cancellationToken);
 
         return new HallDetailsDto
         {
@@ -88,15 +78,18 @@ public class HallDetailsService : IHallDetailsService
             ContactPhone = hall.ContactPhone,
             MainImageUrl = hall.MainImageUrl,
             YouTubeVideoUrl = hall.YouTubeVideoUrl,
-            Features = featuresTask.Result
+            Features = features
                 .Where(feature => !string.IsNullOrWhiteSpace(feature.Name))
                 .Select(feature => feature.Name)
                 .ToList(),
             OtherFeatures = hall.OtherFeatures,
             Status = hall.Status,
             IsOwner = IsHallOwner(hall),
-            Photos = photos,
-            Availability = BuildAvailability(hallId, periods, availabilityByKey, fromDate, toDate)
+            Photos = images
+                .Where(image => !string.IsNullOrWhiteSpace(image.Url))
+                .Select(image => new HallImageDto { Id = image.Id, Url = image.Url })
+                .ToList(),
+            Availability = BuildAvailability(hallId, periods, availability.ToDictionary(item => (item.HallId, item.Date, item.PeriodType)), fromDate, toDate)
         };
     }
 

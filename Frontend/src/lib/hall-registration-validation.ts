@@ -57,10 +57,6 @@ export function validateHallRegistrationForm(
     errors.detailedAddress = "owner.management.addHall.errors.detailedAddressTooLong";
   }
 
-  if (!values.description.trim()) {
-    errors.description = "owner.management.addHall.errors.descriptionRequired";
-  }
-
   if (!values.guestCapacity.trim()) {
     errors.guestCapacity = "owner.management.addHall.errors.capacityRequired";
   } else if (!isPositiveInt(values.guestCapacity)) {
