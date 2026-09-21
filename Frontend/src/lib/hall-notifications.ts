@@ -157,7 +157,7 @@ export function mapAcceptBookingResult(
     hallId: mapped?.hallId || hallId,
     date: mapped?.date ?? "",
     periods: mapped?.periods ?? [],
-    status: statusAfterOwnerAccept(data.status),
+    status: statusAfterOwnerAccept(),
   };
 }
 

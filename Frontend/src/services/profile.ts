@@ -1,7 +1,7 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
-import { fieldErrorsFromUnknown, ProfileError, toProfileError } from "@/lib/profile-errors";
+import { ProfileError, toProfileError } from "@/lib/profile-errors";
 import { mockFetchProfile, mockUpdateProfile } from "@/services/profile-mock";
 import type { UpdateProfileInput, UserProfile } from "@/types/profile";
 

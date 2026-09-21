@@ -14,10 +14,6 @@ public sealed class RecommendationRequestValidator : AbstractValidator<Recommend
             .WithMessage("Message cannot be empty.");
 
         RuleFor(request => request.Message)
-            .Must(message => !string.IsNullOrWhiteSpace(message))
-            .WithMessage("Message cannot be whitespace only.");
-
-        RuleFor(request => request.Message)
             .MaximumLength(MaxMessageLength)
             .WithMessage($"Message cannot exceed {MaxMessageLength} characters.");
     }

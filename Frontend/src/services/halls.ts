@@ -284,7 +284,7 @@ function formatPriceAmount(value: number): string {
   return `${value.toLocaleString("en-US")} ₪`;
 }
 
-function mapSlotPrices(hall: ApiFeaturedHall, index: number): HallSlotPrice[] {
+function mapSlotPrices(hall: ApiFeaturedHall): HallSlotPrice[] {
   const fallback = getHallDetailsFallback(String(hall.hallId ?? hall.id ?? "")) ??
     HALL_DETAILS_FALLBACK["1"];
 
@@ -391,7 +391,7 @@ function mapApiHallDetail(hall: ApiFeaturedHall, index: number): HallDetail {
     youtubeVideoUrl: hall.youtubeVideoUrl ?? fallback.youtubeVideoUrl ?? null,
     gallery: resolveGalleryImages(hall, mainImageUrl, index),
     mainImageUrl,
-    slotPrices: mapSlotPrices(hall, index),
+    slotPrices: mapSlotPrices(hall),
     ownerPhone: hall.contactPhone ?? hall.ownerPhone ?? fallback.ownerPhone ?? null,
     isActive: isHallActive(hall),
     isOwner: Boolean(hall.isOwner),

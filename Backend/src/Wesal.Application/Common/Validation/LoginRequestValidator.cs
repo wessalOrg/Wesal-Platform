@@ -14,10 +14,6 @@ public class LoginRequestValidator : AbstractValidator<LoginRequest>
             .WithMessage("Email is required.");
 
         RuleFor(request => request.Email)
-            .Must(email => !string.IsNullOrWhiteSpace(email))
-            .WithMessage("Email cannot be whitespace only.");
-
-        RuleFor(request => request.Email)
             .EmailAddress()
             .WithMessage("A valid email address is required.")
             .MaximumLength(MaxEmailLength)

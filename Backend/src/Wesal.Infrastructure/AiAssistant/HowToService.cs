@@ -8,7 +8,6 @@ namespace Wesal.Infrastructure.AiAssistant;
 public sealed partial class HowToService : IHowToService
 {
     private const string DefaultLanguage = "ar";
-    private const string FallbackCategory = "general";
 
     /// <summary>
     /// Official-fact knowledge categories that win over the deterministic feature

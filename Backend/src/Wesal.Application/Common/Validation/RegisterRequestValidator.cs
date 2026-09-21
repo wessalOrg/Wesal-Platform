@@ -18,10 +18,6 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .WithMessage("Full name is required.");
 
         RuleFor(request => request.FullName)
-            .Must(name => !string.IsNullOrWhiteSpace(name))
-            .WithMessage("Full name cannot be whitespace only.");
-
-        RuleFor(request => request.FullName)
             .MaximumLength(MaxFullNameLength)
             .WithMessage($"Full name cannot exceed {MaxFullNameLength} characters.");
 

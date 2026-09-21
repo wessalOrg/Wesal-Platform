@@ -1,6 +1,4 @@
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using Wesal.Domain.Common;
 
 namespace Wesal.Domain.Entities;

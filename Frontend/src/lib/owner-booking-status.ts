@@ -52,9 +52,7 @@ export function canRejectBookingRequest(status: OwnerBookingRequestStatus | null
 }
 
 /** Successful owner accept starts deposit confirmation — never Fully Booked. */
-export function statusAfterOwnerAccept(
-  _value?: string | number | null,
-): OwnerBookingRequestStatus {
+export function statusAfterOwnerAccept(): OwnerBookingRequestStatus {
   return "AcceptedPendingDeposit";
 }
 

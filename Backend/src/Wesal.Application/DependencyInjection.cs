@@ -1,6 +1,5 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
-using Wesal.Application.Ai;
 
 namespace Wesal.Application;
 

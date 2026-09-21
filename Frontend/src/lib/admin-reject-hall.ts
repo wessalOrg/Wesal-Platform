@@ -8,7 +8,10 @@ export function validateAdminRejectReason(reason: string): AdminRejectReasonIssu
 }
 
 export function adminRejectReasonMessageKey(issue: AdminRejectReasonIssue): string {
-  return "admin.reject.tooLong";
+  switch (issue) {
+    case "tooLong":
+      return "admin.reject.tooLong";
+  }
 }
 
 /** Builds the PUT /admin/halls/{id}/reject body. Omits empty reason. */

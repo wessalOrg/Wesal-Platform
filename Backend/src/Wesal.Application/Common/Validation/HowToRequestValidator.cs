@@ -14,10 +14,6 @@ public sealed class HowToRequestValidator : AbstractValidator<HowToRequest>
             .WithMessage("Question cannot be empty.");
 
         RuleFor(request => request.Question)
-            .Must(question => !string.IsNullOrWhiteSpace(question))
-            .WithMessage("Question cannot be whitespace only.");
-
-        RuleFor(request => request.Question)
             .MaximumLength(MaxQuestionLength)
             .WithMessage($"Question cannot exceed {MaxQuestionLength} characters.");
     }

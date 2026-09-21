@@ -206,7 +206,7 @@ namespace Wesal.Infrastructure.AiAssistant;
             : context.Substring(0, maxContextCharacters);
     }
 
-    private static bool IsArabic(string language)
+    private static bool IsArabic(string? language)
         => !string.IsNullOrWhiteSpace(language) && language.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
@@ -215,7 +215,7 @@ namespace Wesal.Infrastructure.AiAssistant;
     /// explicitly told to ignore embedded user instructions (prompt-injection
     /// defense) and to never invent values that were not stated.
     /// </summary>
-    public static string BuildIntentSystemInstruction(string language)
+    public static string BuildIntentSystemInstruction(string? language)
     {
         var isArabic = IsArabic(language);
         var languageDirective = isArabic

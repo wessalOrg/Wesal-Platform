@@ -13,7 +13,6 @@ public class UpdateProfileRequestValidator : AbstractValidator<UpdateProfileRequ
     {
         RuleFor(x => x.FullName)
             .NotEmpty().WithMessage("Full name is required.")
-            .Must(x => !string.IsNullOrWhiteSpace(x)).WithMessage("Full name cannot be whitespace only.")
             .MaximumLength(MaxFullNameLength).WithMessage($"Full name cannot exceed {MaxFullNameLength} characters.");
 
         RuleFor(x => x.Email)

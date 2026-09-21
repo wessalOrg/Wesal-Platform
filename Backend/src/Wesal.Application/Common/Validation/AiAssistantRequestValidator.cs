@@ -11,7 +11,6 @@ public sealed class AiAssistantRequestValidator : AbstractValidator<AiAssistantR
     {
         RuleFor(x => x.Message)
             .NotEmpty().WithMessage("Message is required.")
-            .Must(q => !string.IsNullOrWhiteSpace(q)).WithMessage("Message cannot be empty or whitespace.")
             .MaximumLength(MaxMessageLength).WithMessage($"Message must not exceed {MaxMessageLength} characters.");
     }
 }

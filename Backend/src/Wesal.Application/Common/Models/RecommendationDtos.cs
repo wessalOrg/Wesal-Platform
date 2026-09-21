@@ -1,5 +1,3 @@
-using Wesal.Domain.Enums;
-
 namespace Wesal.Application.Common.Models;
 
 public sealed record RecommendationRequest(string? Message);
