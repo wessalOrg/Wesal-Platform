@@ -156,14 +156,8 @@ try
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        if (app.Environment.IsDevelopment())
-        {
-            db.Database.Migrate();
-        }
-        else
-        {
-            Log.Information("Skipping startup migration - apply migrations via the deployment pipeline.");
-        }
+        db.Database.Migrate();
+        Log.Information("Database migrations applied on startup.");
 
         var provisioningOptions = configuration
             .GetSection(AdminProvisioningOptions.SectionName)
