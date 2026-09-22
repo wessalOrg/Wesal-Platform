@@ -273,7 +273,7 @@ public class OwnerController : ControllerBase
         [FromForm] string Region,
         [FromForm] string Address,
         [FromForm] string? DetailedAddress,
-        [FromForm] string Description,
+        [FromForm] string? Description,
         [FromForm] int Capacity,
         [FromForm] decimal? Price,
         [FromForm] string? YouTubeVideoUrl,

@@ -209,6 +209,31 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
     }
 
     [Fact]
+    public async Task MissingDescriptionField_Returns201AndPersistsHall()
+    {
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent("Test Wedding Hall"), "name");
+        content.Add(new StringContent("+972599123456"), "contactPhone");
+        content.Add(new StringContent("Gaza"), "region");
+        content.Add(new StringContent("Gaza City, Main Street"), "address");
+        content.Add(new StringContent("300"), "capacity");
+        content.Add(new StringContent("1000"), "price");
+        content.Add(new StringContent("08:00"), "firstPeriodStart");
+        content.Add(new StringContent("14:00"), "firstPeriodEnd");
+        content.Add(new StringContent("15:00"), "secondPeriodStart");
+        content.Add(new StringContent("22:00"), "secondPeriodEnd");
+
+        var response = await _client.PostAsync("/api/v1/owner/halls", content);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.Created, $"Expected 201 but got {response.StatusCode}: {body}");
+        var hall = await _context.Halls.SingleOrDefaultAsync();
+        Assert.NotNull(hall);
+        Assert.Equal("Test Wedding Hall", hall!.Name);
+        Assert.Null(hall.Description);
+    }
+
+    [Fact]
     public async Task MalformedTime_Returns400()
     {
         using var content = new MultipartFormDataContent();
