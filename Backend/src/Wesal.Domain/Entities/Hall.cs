@@ -138,6 +138,44 @@ public class Hall : BaseAuditableEntity
     /// </summary>
     public int WarningSentAttempts { get; set; }
 
+    /// <summary>
+    /// Hourly booking window start used under the new hourly-slot model
+    /// (WESAL-TASK-1). The hall is bookable in fixed 60-minute hourly slots from
+    /// <see cref="HourlySlotStart"/> up to (but not including) <see cref="HourlySlotEnd"/>.
+    /// Null until the owner configures the hall; legacy two-period fields
+    /// (<see cref="BookingPeriods"/> / <see cref="Availability"/>) remain dormant.
+    /// </summary>
+    public TimeOnly? HourlySlotStart { get; set; }
+
+    /// <summary>
+    /// Hourly booking window end (exclusive) under the new hourly-slot model
+    /// (WESAL-TASK-1). See <see cref="HourlySlotStart"/>.
+    /// </summary>
+    public TimeOnly? HourlySlotEnd { get; set; }
+
+    /// <summary>
+    /// When true (default) seekers see every hourly slot for a date including ones
+    /// already <see cref="HallSlotStatus.Booked"/>, so the "booked" hours are visible
+    /// but not selectable. When false, booked slots are hidden entirely and only
+    /// available hours are returned (WESAL-TASK-1 "show/hide booked days and hours").
+    /// </summary>
+    public bool ShowBookedSlots { get; set; } = true;
+
+    /// <summary>
+    /// New-model per-day availability rows (WESAL-TASK-1). One row per (HallId,
+    /// Date); a missing row means the day defaults to Open. <see cref="Wesal.Domain.Enums.HallDayAvailability"/>.IsOpen
+    /// == false is the owner's block-entire-day action.
+    /// </summary>
+    public ICollection<HallDayAvailability> DayAvailabilities { get; set; } = [];
+
+    /// <summary>
+    /// New-model hourly slot rows (WESAL-TASK-1). One row per (HallId, Date,
+    /// StartTime) that has been materialised; a missing (HallId, Date, StartTime) row
+    /// means that hour is Available. An explicit <see cref="HallSlotStatus.Booked"/> row
+    /// marks the hour as taken.
+    /// </summary>
+    public ICollection<HallSlotAvailability> SlotAvailabilities { get; set; } = [];
+
     public ICollection<HallBookingPeriod> BookingPeriods { get; set; } = [];
 
     public ICollection<HallAvailability> Availability { get; set; } = [];

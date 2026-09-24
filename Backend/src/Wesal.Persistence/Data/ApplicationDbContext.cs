@@ -23,6 +23,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<HallAvailability> HallAvailabilities => Set<HallAvailability>();
 
+    /// <summary>
+    /// Per-day open/closed availability gate for a hall under the hourly-slot booking
+    /// model (WESAL-TASK-1). Dormant alongside the legacy <see cref="HallBookingPeriod"/>
+    /// / <see cref="HallAvailability"/> two-period tables which remain untouched.
+    /// </summary>
+    public DbSet<HallDayAvailability> HallDayAvailabilities => Set<HallDayAvailability>();
+
+    /// <summary>
+    /// Per (HallId, Date, StartTime) hourly 60-minute slot availability rows under the
+    /// hourly-slot booking model (WESAL-TASK-1).
+    /// </summary>
+    public DbSet<HallSlotAvailability> HallSlotAvailabilities => Set<HallSlotAvailability>();
+
     public DbSet<Rating> Ratings => Set<Rating>();
 
     public DbSet<Comment> Comments => Set<Comment>();
@@ -142,6 +155,35 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(availability => availability.Hall)
                 .WithMany(hall => hall.Availability)
                 .HasForeignKey(availability => availability.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<HallDayAvailability>(entity =>
+        {
+            entity.ToTable("HallDayAvailabilities");
+
+            entity.Property(day => day.Date).HasColumnType("date");
+
+            entity.HasIndex(day => new { day.HallId, day.Date }).IsUnique();
+
+            entity.HasOne(day => day.Hall)
+                .WithMany(hall => hall.DayAvailabilities)
+                .HasForeignKey(day => day.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<HallSlotAvailability>(entity =>
+        {
+            entity.ToTable("HallSlotAvailabilities");
+
+            entity.Property(slot => slot.Date).HasColumnType("date");
+            entity.Property(slot => slot.StartTime).HasColumnType("time");
+
+            entity.HasIndex(slot => new { slot.HallId, slot.Date, slot.StartTime }).IsUnique();
+
+            entity.HasOne(slot => slot.Hall)
+                .WithMany(hall => hall.SlotAvailabilities)
+                .HasForeignKey(slot => slot.HallId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
