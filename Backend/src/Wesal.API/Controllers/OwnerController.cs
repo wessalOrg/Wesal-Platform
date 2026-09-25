@@ -26,6 +26,7 @@ public class OwnerController : ControllerBase
     private readonly IOwnerHallService _ownerHallService;
     private readonly IOwnerBookingRequestsService _ownerBookingRequestsService;
     private readonly IOwnerAvailabilityService _ownerAvailabilityService;
+    private readonly IOwnerHourlyAvailabilityService _ownerHourlyAvailabilityService;
     private readonly IHallSubscriptionService _hallSubscriptionService;
     private readonly IOwnerIdentityService _ownerIdentityService;
     private readonly IPaymentReceiptService _paymentReceiptService;
@@ -38,6 +39,7 @@ public class OwnerController : ControllerBase
         IOwnerHallService ownerHallService,
         IOwnerBookingRequestsService ownerBookingRequestsService,
         IOwnerAvailabilityService ownerAvailabilityService,
+        IOwnerHourlyAvailabilityService ownerHourlyAvailabilityService,
         IHallSubscriptionService hallSubscriptionService,
         IOwnerIdentityService ownerIdentityService,
         IPaymentReceiptService paymentReceiptService)
@@ -49,6 +51,7 @@ public class OwnerController : ControllerBase
         _ownerHallService = ownerHallService;
         _ownerBookingRequestsService = ownerBookingRequestsService;
         _ownerAvailabilityService = ownerAvailabilityService;
+        _ownerHourlyAvailabilityService = ownerHourlyAvailabilityService;
         _hallSubscriptionService = hallSubscriptionService;
         _ownerIdentityService = ownerIdentityService;
         _paymentReceiptService = paymentReceiptService;
@@ -258,6 +261,52 @@ public class OwnerController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _ownerAvailabilityService.UpdateAvailabilityAsync(hallId, request, cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Blocks or unblocks one whole calendar day for the authenticated Hall Owner's own
+    /// hall (WESAL-TASK-1). This is the owner-side counterpart of the seeker hourly
+    /// availability model: a blocked day exposes no bookable slot and is reported as
+    /// closed by the seeker catalog and calendar endpoints. Blocking a day that already
+    /// carries a live booking is refused with 409 so a confirmed booking is never
+    /// silently orphaned. Ownership is resolved server-side.
+    /// </summary>
+    [HttpPut("halls/{hallId:guid}/day-block")]
+    [ProducesResponseType(typeof(OwnerDayBlockResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<OwnerDayBlockResultDto>> SetOwnedHallDayBlock(
+        Guid hallId,
+        [FromBody] OwnerDayBlockRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _ownerHourlyAvailabilityService.SetDayBlockAsync(hallId, request, cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Updates the authenticated Hall Owner's hourly-slot settings for their own hall
+    /// (WESAL-TASK-1): the "show booked slots" display toggle and the bookable hourly
+    /// window. Any omitted property keeps its current value. This is a display/scheduling
+    /// setting only and never alters or re-validates existing bookings. Ownership is
+    /// resolved server-side.
+    /// </summary>
+    [HttpPut("halls/{hallId:guid}/hourly-settings")]
+    [ProducesResponseType(typeof(OwnerHourlySettingsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OwnerHourlySettingsDto>> UpdateOwnedHallHourlySettings(
+        Guid hallId,
+        [FromBody] UpdateOwnerHourlySettingsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _ownerHourlyAvailabilityService.UpdateHourlySettingsAsync(hallId, request, cancellationToken);
         return Ok(response);
     }
 

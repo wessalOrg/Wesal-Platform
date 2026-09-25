@@ -71,4 +71,22 @@ public interface IBookingRepository
         TimeOnly startTime,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
+
+    // Owner day-block write path (WESAL-TASK-1). SetDayOpenAsync creates or updates the
+    // (HallId, Date) gate; HasActiveBookingsOnDayAsync lets the owner-facing service
+    // refuse to silently orphan a live booking when a whole day is blocked. "Active"
+    // reuses the same rule as HasOtherActiveBookingsAsync: Pending or Accepted.
+
+    Task SetDayOpenAsync(
+        Guid hallId,
+        DateOnly date,
+        bool isOpen,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
+
+    Task<bool> HasActiveBookingsOnDayAsync(
+        Guid hallId,
+        DateOnly date,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
 }

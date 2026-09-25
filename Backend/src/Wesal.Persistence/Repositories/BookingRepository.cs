@@ -395,4 +395,72 @@ public sealed class BookingRepository : IBookingRepository
 
         return 1;
     }
+
+    public async Task SetDayOpenAsync(
+        Guid hallId,
+        DateOnly date,
+        bool isOpen,
+        CancellationToken cancellationToken = default)
+    {
+        if (_context.Database.IsRelational())
+        {
+            // Single-statement upsert on the (HallId, Date) unique index so an owner's
+            // block/unblock is atomic even under concurrent taps: the row is inserted
+            // when absent and updated in place when present.
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                INSERT INTO wesal."HallDayAvailabilities" ("Id", "HallId", "Date", "IsOpen", "CreatedAt", "UpdatedAt")
+                VALUES ({Guid.NewGuid()}, {hallId}, {date}, {isOpen}, {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow})
+                ON CONFLICT ("HallId", "Date")
+                DO UPDATE
+                SET "IsOpen" = {isOpen},
+                    "UpdatedAt" = {DateTimeOffset.UtcNow};
+                """,
+                cancellationToken);
+
+            return;
+        }
+
+        var existing = await _context.HallDayAvailabilities
+            .FirstOrDefaultAsync(
+                day => day.HallId == hallId && day.Date == date,
+                cancellationToken);
+
+        if (existing is null)
+        {
+            _context.HallDayAvailabilities.Add(new HallDayAvailability
+            {
+                HallId = hallId,
+                Date = date,
+                IsOpen = isOpen
+            });
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return;
+        }
+
+        existing.IsOpen = isOpen;
+        existing.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> HasActiveBookingsOnDayAsync(
+        Guid hallId,
+        DateOnly date,
+        CancellationToken cancellationToken = default)
+    {
+        // Same "active" rule as HasOtherActiveBookingsAsync: a Pending or Accepted
+        // booking is live and must not be silently orphaned by an owner day-block.
+        return await _context.Bookings
+            .AsNoTracking()
+            .AnyAsync(
+                booking =>
+                    booking.HallId == hallId
+                    && booking.Date == date
+                    && (booking.Status == BookingStatus.Pending
+                        || booking.Status == BookingStatus.Accepted),
+                cancellationToken);
+    }
 }

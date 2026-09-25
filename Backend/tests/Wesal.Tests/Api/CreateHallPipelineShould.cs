@@ -99,6 +99,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         builder.Services.AddScoped<IOwnerHallService, StubOwnerHallService>();
         builder.Services.AddScoped<IOwnerBookingRequestsService, StubOwnerBookingRequestsService>();
         builder.Services.AddScoped<IOwnerAvailabilityService, StubOwnerAvailabilityService>();
+        builder.Services.AddScoped<IOwnerHourlyAvailabilityService, StubOwnerHourlyAvailabilityService>();
         builder.Services.AddScoped<IHallSubscriptionService, StubHallSubscriptionService>();
 
         _app = builder.Build();
@@ -482,6 +483,15 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
 
         public Task<OwnerAvailabilityPeriodDto> UpdateAvailabilityAsync(Guid hallId, UpdateOwnerAvailabilityRequest request, CancellationToken cancellationToken = default)
             => Task.FromResult(new OwnerAvailabilityPeriodDto());
+    }
+
+    private sealed class StubOwnerHourlyAvailabilityService : IOwnerHourlyAvailabilityService
+    {
+        public Task<OwnerDayBlockResultDto> SetDayBlockAsync(Guid hallId, OwnerDayBlockRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(new OwnerDayBlockResultDto { HallId = hallId, Date = request.Date, IsOpen = request.IsOpen });
+
+        public Task<OwnerHourlySettingsDto> UpdateHourlySettingsAsync(Guid hallId, UpdateOwnerHourlySettingsRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(new OwnerHourlySettingsDto { HallId = hallId });
     }
 
     private sealed class StubHallSubscriptionService : IHallSubscriptionService

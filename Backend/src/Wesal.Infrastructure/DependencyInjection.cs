@@ -104,6 +104,7 @@ public static class DependencyInjection
         services.AddScoped<IHallStatusTrackingService, HallStatusTrackingService>();
         services.AddScoped<IOwnerHallService, OwnerHallService>();
         services.AddScoped<IOwnerAvailabilityService, OwnerAvailabilityService>();
+        services.AddScoped<IOwnerHourlyAvailabilityService, OwnerHourlyAvailabilityService>();
         services.AddScoped<IHallSubscriptionService, HallSubscriptionService>();
         services.AddScoped<IAdminHallService, AdminHallService>();
         services.AddScoped<IAdminHallReviewService, AdminHallReviewService>();
