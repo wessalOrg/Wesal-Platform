@@ -203,41 +203,44 @@ public class HallRepositoryShould
     }
 
     [Fact]
-    public async Task GetBookingPeriodsAsync_FiltersByHallIds()
+    public async Task GetSlotAvailabilitiesAsync_FiltersByHallIds()
     {
         await using var context = CreateContext();
         var firstHall = new Hall { Id = Guid.NewGuid(), Name = "First", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
         var secondHall = new Hall { Id = Guid.NewGuid(), Name = "Second", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
         context.Halls.AddRange(firstHall, secondHall);
-        context.HallBookingPeriods.AddRange(
-            new HallBookingPeriod { HallId = firstHall.Id, Type = BookingPeriodType.FirstPeriod, StartTime = new TimeOnly(12, 0), EndTime = new TimeOnly(15, 0) },
-            new HallBookingPeriod { HallId = secondHall.Id, Type = BookingPeriodType.FirstPeriod, StartTime = new TimeOnly(12, 0), EndTime = new TimeOnly(15, 0) });
+        context.HallSlotAvailabilities.AddRange(
+            new HallSlotAvailability { HallId = firstHall.Id, Date = new DateOnly(2026, 8, 6), StartTime = new TimeOnly(12, 0), Status = HallSlotStatus.Booked },
+            new HallSlotAvailability { HallId = secondHall.Id, Date = new DateOnly(2026, 8, 6), StartTime = new TimeOnly(12, 0), Status = HallSlotStatus.Booked });
         await context.SaveChangesAsync();
 
         var repository = new HallRepository(context);
 
-        var result = await repository.GetBookingPeriodsAsync([firstHall.Id]);
+        var result = await repository.GetSlotAvailabilitiesAsync(
+            [firstHall.Id],
+            new DateOnly(2026, 8, 1),
+            new DateOnly(2026, 8, 31));
 
         Assert.Single(result);
         Assert.Equal(firstHall.Id, result[0].HallId);
     }
 
     [Fact]
-    public async Task GetAvailabilityAsync_FiltersByHallIdsAndDateRange()
+    public async Task GetSlotAvailabilitiesAsync_FiltersByHallIdsAndDateRange()
     {
         await using var context = CreateContext();
         var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
         var otherHall = new Hall { Id = Guid.NewGuid(), Name = "Other", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
         context.Halls.AddRange(hall, otherHall);
-        context.HallAvailabilities.AddRange(
-            new HallAvailability { HallId = hall.Id, Date = new DateOnly(2026, 8, 6), PeriodType = BookingPeriodType.FirstPeriod, Status = AvailabilityStatus.Booked },
-            new HallAvailability { HallId = hall.Id, Date = new DateOnly(2026, 9, 1), PeriodType = BookingPeriodType.FirstPeriod, Status = AvailabilityStatus.Booked },
-            new HallAvailability { HallId = otherHall.Id, Date = new DateOnly(2026, 8, 6), PeriodType = BookingPeriodType.FirstPeriod, Status = AvailabilityStatus.Booked });
+        context.HallSlotAvailabilities.AddRange(
+            new HallSlotAvailability { HallId = hall.Id, Date = new DateOnly(2026, 8, 6), StartTime = new TimeOnly(12, 0), Status = HallSlotStatus.Booked },
+            new HallSlotAvailability { HallId = hall.Id, Date = new DateOnly(2026, 9, 1), StartTime = new TimeOnly(12, 0), Status = HallSlotStatus.Booked },
+            new HallSlotAvailability { HallId = otherHall.Id, Date = new DateOnly(2026, 8, 6), StartTime = new TimeOnly(12, 0), Status = HallSlotStatus.Booked });
         await context.SaveChangesAsync();
 
         var repository = new HallRepository(context);
 
-        var result = await repository.GetAvailabilityAsync(
+        var result = await repository.GetSlotAvailabilitiesAsync(
             [hall.Id],
             new DateOnly(2026, 8, 1),
             new DateOnly(2026, 8, 31));
@@ -248,13 +251,13 @@ public class HallRepositoryShould
     }
 
     [Fact]
-    public async Task GetAvailabilityAsync_ReturnsEmptyForEmptyHallIds()
+    public async Task GetSlotAvailabilitiesAsync_ReturnsEmptyForEmptyHallIds()
     {
         await using var context = CreateContext();
 
         var repository = new HallRepository(context);
 
-        var result = await repository.GetAvailabilityAsync([], new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 31));
+        var result = await repository.GetSlotAvailabilitiesAsync([], new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 31));
 
         Assert.Empty(result);
     }

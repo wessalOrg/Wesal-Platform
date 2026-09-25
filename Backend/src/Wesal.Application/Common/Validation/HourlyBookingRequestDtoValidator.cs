@@ -4,11 +4,9 @@ using Wesal.Application.Common.Models;
 namespace Wesal.Application.Common.Validation;
 
 /// <summary>
-/// Validates a seeker's hourly-slot booking request (WESAL-TASK-1, seeker flow).
-/// Mirrors the conventions of <see cref="BookingRequestDtoValidator"/> (same rule
-/// shapes and message style). Slot-start alignment and the hall-window boundary are
-/// validated here as a first gate; day-open and already-booked rejection are enforced
-/// atomically in the service/repository so a collision can never be silent.
+/// Validates a seeker's multi-slot hourly booking requests (WESAL-TASK-1,
+/// seeker flow). Slot ordering, the hall-window boundary, day availability, and booking
+/// collisions are enforced atomically in the service and repository.
 /// </summary>
 public class HourlyBookingRequestDtoValidator : AbstractValidator<HourlyBookingRequestDto>
 {
@@ -17,16 +15,16 @@ public class HourlyBookingRequestDtoValidator : AbstractValidator<HourlyBookingR
         RuleFor(request => request.HallId)
             .NotEmpty();
 
+        // DateOnly is a non-nullable struct, so NotEmpty() can never fail here and would
+        // let default (0001-01-01) through. Compare against default explicitly.
         RuleFor(request => request.Date)
-            .NotEmpty();
+            .Must(date => date != default)
+            .WithMessage("The booking date is required.");
 
-        RuleFor(request => request.SlotStart)
-            .NotEmpty()
-            .WithMessage("An hourly slot start time is required.");
-
-        RuleFor(request => request.SlotStart.Minute)
-            .Equal(0)
-            .WithMessage("Hourly slots are 60 minutes and must start on the hour (minutes == 00), e.g. 10:00.");
+        RuleFor(request => request.SlotStarts)
+            .NotNull()
+            .Must(slots => slots is { Count: > 0 })
+            .WithMessage("Select at least one hourly slot to book.");
 
         RuleFor(request => request.NameOnBooking)
             .NotEmpty()

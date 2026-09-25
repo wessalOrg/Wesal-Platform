@@ -19,15 +19,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<HallFeature> HallFeatures => Set<HallFeature>();
 
-    public DbSet<HallBookingPeriod> HallBookingPeriods => Set<HallBookingPeriod>();
-
-    public DbSet<HallAvailability> HallAvailabilities => Set<HallAvailability>();
-
-    /// <summary>
-    /// Per-day open/closed availability gate for a hall under the hourly-slot booking
-    /// model (WESAL-TASK-1). Dormant alongside the legacy <see cref="HallBookingPeriod"/>
-    /// / <see cref="HallAvailability"/> two-period tables which remain untouched.
-    /// </summary>
     public DbSet<HallDayAvailability> HallDayAvailabilities => Set<HallDayAvailability>();
 
     /// <summary>
@@ -49,6 +40,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
 
     public DbSet<Booking> Bookings => Set<Booking>();
+
+    /// <summary>
+    /// The 60-minute hourly slots a booking occupies. A booking may own one slot or a
+    /// set of hourly slots, which is how a multi-hour reservation is represented
+    /// now that the legacy two-period model is gone.
+    /// </summary>
+    public DbSet<BookingSlot> BookingSlots => Set<BookingSlot>();
 
     public DbSet<ConversationReadState> ConversationReadStates => Set<ConversationReadState>();
 
@@ -133,35 +131,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(feature => feature.Hall)
                 .WithMany(hall => hall.Features)
                 .HasForeignKey(feature => feature.HallId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        builder.Entity<HallBookingPeriod>(entity =>
-        {
-            entity.ToTable("HallBookingPeriods");
-
-            entity.Property(period => period.StartTime).HasColumnType("time");
-            entity.Property(period => period.EndTime).HasColumnType("time");
-
-            entity.HasIndex(period => new { period.HallId, period.Type }).IsUnique();
-
-            entity.HasOne(period => period.Hall)
-                .WithMany(hall => hall.BookingPeriods)
-                .HasForeignKey(period => period.HallId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        builder.Entity<HallAvailability>(entity =>
-        {
-            entity.ToTable("HallAvailabilities");
-
-            entity.Property(availability => availability.Date).HasColumnType("date");
-
-            entity.HasIndex(availability => new { availability.HallId, availability.Date, availability.PeriodType }).IsUnique();
-
-            entity.HasOne(availability => availability.Hall)
-                .WithMany(hall => hall.Availability)
-                .HasForeignKey(availability => availability.HallId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -317,13 +286,28 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.HasIndex(booking => new { booking.HallId, booking.RequesterUserId });
 
-            entity.HasIndex(booking => new { booking.HallId, booking.Date, booking.Period, booking.Status });
+            entity.HasIndex(booking => new { booking.HallId, booking.Date, booking.Status });
 
             entity.HasIndex(booking => booking.RejectionMessageId).IsUnique();
 
             entity.HasOne(booking => booking.Hall)
                 .WithMany()
                 .HasForeignKey(booking => booking.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<BookingSlot>(entity =>
+        {
+            entity.ToTable("BookingSlots");
+
+            entity.Property(slot => slot.StartTime).HasColumnType("time");
+            entity.Property(slot => slot.EndTime).HasColumnType("time");
+
+            entity.HasIndex(slot => new { slot.BookingId, slot.StartTime }).IsUnique();
+
+            entity.HasOne(slot => slot.Booking)
+                .WithMany(booking => booking.Slots)
+                .HasForeignKey(slot => slot.BookingId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

@@ -12,7 +12,7 @@ public class HallSearchRequest
 
     public DateOnly? Date { get; init; }
 
-    public BookingPeriodType? Period { get; init; }
+    public TimeOnly? StartTime { get; init; }
 
     public int PageNumber { get; init; } = 1;
 

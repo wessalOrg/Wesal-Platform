@@ -7,12 +7,10 @@ namespace Wesal.Infrastructure.Halls;
 public class AllHallsService : IAllHallsService
 {
     private readonly IHallRepository _hallRepository;
-    private readonly IHallAvailabilityCleanupService? _cleanupService;
 
-    public AllHallsService(IHallRepository hallRepository, IHallAvailabilityCleanupService? cleanupService = null)
+    public AllHallsService(IHallRepository hallRepository)
     {
         _hallRepository = hallRepository;
-        _cleanupService = cleanupService;
     }
 
     public async Task<PagedResult<HallListItemDto>> GetApprovedHallsAsync(
@@ -20,7 +18,6 @@ public class AllHallsService : IAllHallsService
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        if (_cleanupService != null) try { await _cleanupService.CleanupExpiredAsync(cancellationToken); } catch { }
         pageNumber = Math.Max(1, pageNumber);
         pageSize = Math.Clamp(pageSize, 1, 50);
 

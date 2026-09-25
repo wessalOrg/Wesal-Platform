@@ -50,12 +50,6 @@ public interface IOwnerDashboardRepository
     void AddHallImages(IEnumerable<HallImage> images);
 
     /// <summary>
-    /// Registers a new booking period on a tracked hall aggregate (US-OWNER-07).
-    /// Nothing is persisted here; the caller saves atomically through the unit of work.
-    /// </summary>
-    void AddHallBookingPeriod(HallBookingPeriod period);
-
-    /// <summary>
     /// Returns a single non-deleted hall owned by a user together with its
     /// subscription state (US-OWNER-17, FR-HALL-05). Read-only (no tracking); the
     /// caller must not mutate the returned aggregate. Returns <see langword="null"/>

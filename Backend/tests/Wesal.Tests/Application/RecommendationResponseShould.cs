@@ -30,6 +30,7 @@ public class RecommendationResponseShould
         Assert.Equal("Gaza", response.ExtractedCriteria.Region);
         Assert.Equal("Al-Nasr", response.ExtractedCriteria.Area);
         Assert.Equal(new DateOnly(2026, 8, 2), response.ExtractedCriteria.Date);
+        Assert.Equal(200, response.ExtractedCriteria.Capacity);
     }
 
     [Fact]
@@ -46,7 +47,7 @@ public class RecommendationResponseShould
     {
         var response = new RecommendationResponse(
             RecommendationStatus.IncompleteCriteria,
-            new ExtractedCriteriaDto("Gaza", null, null, null, null),
+            new ExtractedCriteriaDto("Gaza", null, null, null),
             Array.Empty<HallRecommendationDto>(),
             "Please provide a date to find available halls.",
             "en",
@@ -61,7 +62,7 @@ public class RecommendationResponseShould
     {
         var response = new RecommendationResponse(
             RecommendationStatus.NoResults,
-            new ExtractedCriteriaDto("Gaza", "Al-Nasr", new DateOnly(2026, 8, 2), "FirstPeriod", 200),
+            new ExtractedCriteriaDto("Gaza", "Al-Nasr", new DateOnly(2026, 8, 2), 200),
             Array.Empty<HallRecommendationDto>(),
             "No halls found matching your criteria.",
             "ar",
@@ -125,12 +126,11 @@ public class RecommendationResponseShould
     [Fact]
     public void ExtractedCriteriaDto_AllFieldsNull_IsValid()
     {
-        var criteria = new ExtractedCriteriaDto(null, null, null, null, null);
+        var criteria = new ExtractedCriteriaDto(null, null, null, null);
 
         Assert.Null(criteria.Region);
         Assert.Null(criteria.Area);
         Assert.Null(criteria.Date);
-        Assert.Null(criteria.BookingPeriod);
         Assert.Null(criteria.Capacity);
     }
 
@@ -138,12 +138,11 @@ public class RecommendationResponseShould
     public void ExtractedCriteriaDto_AllFieldsPopulated_IsValid()
     {
         var criteria = new ExtractedCriteriaDto(
-            "Gaza", "Al-Nasr", new DateOnly(2026, 8, 2), "FirstPeriod", 300);
+            "Gaza", "Al-Nasr", new DateOnly(2026, 8, 2), 300);
 
         Assert.Equal("Gaza", criteria.Region);
         Assert.Equal("Al-Nasr", criteria.Area);
         Assert.Equal(new DateOnly(2026, 8, 2), criteria.Date);
-        Assert.Equal("FirstPeriod", criteria.BookingPeriod);
         Assert.Equal(300, criteria.Capacity);
     }
 
@@ -161,7 +160,7 @@ public class RecommendationResponseShould
     {
         var timestamp = DateTime.UtcNow;
         var msg = "test";
-        var criteria = new ExtractedCriteriaDto("Gaza", null, null, null, null);
+        var criteria = new ExtractedCriteriaDto("Gaza", null, null, null);
 
         var a = new RecommendationResponse(
             RecommendationStatus.Success, criteria, Array.Empty<HallRecommendationDto>(), msg, "ar", timestamp);
@@ -186,7 +185,7 @@ public class RecommendationResponseShould
 
     private static RecommendationResponse CreateSuccessResponse()
     {
-        var criteria = new ExtractedCriteriaDto("Gaza", "Al-Nasr", new DateOnly(2026, 8, 2), "FirstPeriod", 200);
+        var criteria = new ExtractedCriteriaDto("Gaza", "Al-Nasr", new DateOnly(2026, 8, 2), 200);
 
         var halls = new List<HallRecommendationDto>
         {

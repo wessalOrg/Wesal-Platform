@@ -21,7 +21,6 @@ public sealed record ExtractedCriteriaDto(
     string? Region,
     string? Area,
     DateOnly? Date,
-    string? BookingPeriod,
     int? Capacity);
 
 public sealed record HallRecommendationDto(

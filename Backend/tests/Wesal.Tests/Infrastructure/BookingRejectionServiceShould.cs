@@ -169,7 +169,7 @@ public class BookingRejectionServiceShould
     }
 
     [Fact]
-    public async Task RejectBooking_ReleasesReservedPeriod_WhenNoOtherActiveBookings()
+    public async Task RejectBooking_ReleasesReservedSlots_WhenNoOtherActiveBookings()
     {
         var scenario = Scenario();
 
@@ -178,14 +178,12 @@ public class BookingRejectionServiceShould
             scenario.Booking.Id,
             new RejectBookingRequestDto { Reason = "Not available" });
 
-        var released = Assert.Single(scenario.BookingRepository.ReleasedPeriods);
-        Assert.Equal(scenario.Hall.Id, released.HallId);
-        Assert.Equal(scenario.Booking.Date, released.Date);
-        Assert.Equal(scenario.Booking.Period, released.Period);
+        var released = Assert.Single(scenario.BookingRepository.ReleasedBookings);
+        Assert.Equal(scenario.Booking.Id, released);
     }
 
     [Fact]
-    public async Task RejectBooking_KeepsReservedPeriod_WhenAnotherActiveBookingHoldsIt()
+    public async Task RejectBooking_KeepsReservedSlots_WhenAnotherActiveBookingHoldsThem()
     {
         var scenario = Scenario();
         scenario.BookingRepository.AddAnother(new Booking
@@ -195,7 +193,7 @@ public class BookingRejectionServiceShould
             Hall = scenario.Hall,
             RequesterUserId = "user-2",
             Date = scenario.Booking.Date,
-            Period = scenario.Booking.Period,
+            Slots = [new BookingSlot { StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(11, 0) }],
             Status = BookingStatus.Pending
         });
 
@@ -204,7 +202,7 @@ public class BookingRejectionServiceShould
             scenario.Booking.Id,
             new RejectBookingRequestDto { Reason = "Not available" });
 
-        Assert.Empty(scenario.BookingRepository.ReleasedPeriods);
+        Assert.Empty(scenario.BookingRepository.ReleasedBookings);
     }
 
     [Fact]
@@ -482,7 +480,14 @@ public class BookingRejectionServiceShould
             Hall = hall,
             RequesterUserId = requesterId,
             Date = new DateOnly(2035, 6, 1),
-            Period = BookingPeriodType.FirstPeriod,
+            Slots =
+            [
+                new BookingSlot
+                {
+                    StartTime = new TimeOnly(10, 0),
+                    EndTime = new TimeOnly(11, 0)
+                }
+            ],
             Status = BookingStatus.Pending
         };
 
@@ -520,7 +525,7 @@ public class BookingRejectionServiceShould
 
         public IReadOnlyList<Booking> Bookings => _bookings;
 
-        public List<(Guid HallId, DateOnly Date, BookingPeriodType Period)> ReleasedPeriods { get; } = [];
+        public List<Guid> ReleasedBookings { get; } = [];
 
         public void AddAnother(Booking booking)
         {
@@ -553,39 +558,28 @@ public class BookingRejectionServiceShould
         public Task<int> DeleteAsync(Guid bookingId, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
-        public Task<bool> HasOtherActiveBookingsAsync(
-            Guid hallId,
-            DateOnly date,
-            BookingPeriodType periodType,
+        public Task<int> ReleaseBookingSlotsAsync(
             Guid bookingId,
-            CancellationToken cancellationToken = default)
-        {
-            var hasOther = _bookings.Any(booking =>
-                booking.HallId == hallId
-                && booking.Date == date
-                && booking.Period == periodType
-                && booking.Id != bookingId
-                && (booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Accepted));
-
-            return Task.FromResult(hasOther);
-        }
-
-        public Task<int> ReleasePeriodAsync(
             Guid hallId,
             DateOnly date,
-            BookingPeriodType periodType,
+            IReadOnlyList<TimeOnly> slotStarts,
             CancellationToken cancellationToken = default)
         {
-            ReleasedPeriods.Add((hallId, date, periodType));
-            return Task.FromResult(1);
-        }
+            var hasCompetingBooking = _bookings.Any(other =>
+                other.Id != bookingId
+                && other.HallId == hallId
+                && other.Date == date
+                && (other.Status == BookingStatus.Pending || other.Status == BookingStatus.Accepted)
+                && other.Slots.Any(otherSlot => slotStarts.Contains(otherSlot.StartTime)));
 
-        public Task<int> ReservePeriodAsync(
-            Guid hallId,
-            DateOnly date,
-            BookingPeriodType periodType,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(1);
+            if (hasCompetingBooking)
+            {
+                return Task.FromResult(0);
+            }
+
+            ReleasedBookings.Add(bookingId);
+            return Task.FromResult(slotStarts.Count);
+        }
     }
 
     private sealed class FakeConversationRepository : IConversationRepository

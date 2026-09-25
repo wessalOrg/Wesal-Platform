@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.InMemory;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
@@ -14,9 +15,11 @@ namespace Wesal.Tests.Persistence;
 public class BookingDeletionFlowShould
 {
     private static readonly DateOnly BookingDate = new(2035, 6, 1);
+    private static readonly TimeOnly BookingStart = new(10, 0);
+    private static readonly TimeOnly OtherStart = new(11, 0);
 
     [Fact]
-    public async Task Delete_PendingBooking_PermanentlyRemovesAndReleasesExactPeriod_OthersUntouched()
+    public async Task Delete_PendingBooking_PermanentlyRemovesAndReleasesExactSlot_OthersUntouched()
     {
         var databaseName = Guid.NewGuid().ToString();
         var hallId = Guid.NewGuid();
@@ -27,13 +30,18 @@ public class BookingDeletionFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
-            var other = SeedBooking(seedingContext, hall, "user-2", BookingDate, BookingPeriodType.SecondPeriod);
+            var other = SeedBooking(seedingContext, hall, "user-2", BookingDate, OtherStart);
             otherBookingId = other.Id;
-            var availability = SeedAvailability(seedingContext, hall, BookingDate, BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
+            var availability = SeedSlotAvailability(
+                seedingContext,
+                hall,
+                BookingDate,
+                BookingStart,
+                HallSlotStatus.Booked);
             availabilityId = availability.Id;
-            SeedAvailability(seedingContext, hall, BookingDate, BookingPeriodType.SecondPeriod, AvailabilityStatus.Booked);
+            SeedSlotAvailability(seedingContext, hall, BookingDate, OtherStart, HallSlotStatus.Booked);
         }
 
         await using (var context = CreateContext(databaseName))
@@ -46,19 +54,21 @@ public class BookingDeletionFlowShould
             Assert.Equal(hallId, result.HallId);
             Assert.Equal("user-1", result.RequesterUserId);
             Assert.Equal(BookingDate, result.Date);
-            Assert.Equal(BookingPeriodType.FirstPeriod, result.Period);
+            Assert.Equal(BookingStart, Assert.Single(result.SlotStarts));
             Assert.Equal(BookingStatus.Pending, result.Status);
 
-            Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
+            Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == bookingId));
             var remaining = Assert.Single(context.Bookings.AsNoTracking());
             Assert.Equal(otherBookingId, remaining.Id);
 
-            var released = context.HallAvailabilities.AsNoTracking().Single(a => a.Id == availabilityId);
-            Assert.Equal(AvailabilityStatus.Available, released.Status);
-            Assert.Equal(AvailabilityStatus.Booked, context.HallAvailabilities
-                .AsNoTracking()
-                .Single(a => a.PeriodType == BookingPeriodType.SecondPeriod)
-                .Status);
+            var released = context.HallSlotAvailabilities.AsNoTracking().Single(candidate => candidate.Id == availabilityId);
+            Assert.Equal(HallSlotStatus.Available, released.Status);
+            Assert.Equal(
+                HallSlotStatus.Booked,
+                context.HallSlotAvailabilities
+                    .AsNoTracking()
+                    .Single(candidate => candidate.StartTime == OtherStart)
+                    .Status);
         }
     }
 
@@ -72,31 +82,37 @@ public class BookingDeletionFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod, BookingStatus.Accepted);
+            var booking = SeedBooking(
+                seedingContext,
+                hall,
+                "user-1",
+                BookingDate,
+                BookingStart,
+                BookingStatus.Accepted);
             bookingId = booking.Id;
-            SeedAvailability(seedingContext, hall, BookingDate, BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
-            SeedAvailability(seedingContext, hall, BookingDate, BookingPeriodType.SecondPeriod, AvailabilityStatus.Booked);
-            SeedAvailability(seedingContext, hall, new DateOnly(2035, 6, 2), BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
+            SeedSlotAvailability(seedingContext, hall, BookingDate, BookingStart, HallSlotStatus.Booked);
+            SeedSlotAvailability(seedingContext, hall, BookingDate, OtherStart, HallSlotStatus.Booked);
+            SeedSlotAvailability(seedingContext, hall, new DateOnly(2035, 6, 2), BookingStart, HallSlotStatus.Booked);
         }
 
         await using (var context = CreateContext(databaseName))
         {
             var service = CreateService(context, "owner-1", [ApplicationRoles.HallOwner]);
 
-            var result = await service.DeleteBookingAsync(hallId, bookingId);
+            await service.DeleteBookingAsync(hallId, bookingId);
 
-            Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
+            Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == bookingId));
 
-            var publiclyAvailable = context.HallAvailabilities
+            var availableSlots = context.HallSlotAvailabilities
                 .AsNoTracking()
-                .Where(a => a.Status == AvailabilityStatus.Available)
+                .Where(candidate => candidate.Status == HallSlotStatus.Available)
                 .ToList();
 
-            Assert.Contains(publiclyAvailable, a =>
-                a.Date == BookingDate && a.PeriodType == BookingPeriodType.FirstPeriod);
-            Assert.DoesNotContain(publiclyAvailable, a =>
-                a.Date == BookingDate && a.PeriodType == BookingPeriodType.SecondPeriod);
-            Assert.DoesNotContain(publiclyAvailable, a => a.Date == new DateOnly(2035, 6, 2));
+            Assert.Contains(availableSlots, candidate =>
+                candidate.Date == BookingDate && candidate.StartTime == BookingStart);
+            Assert.DoesNotContain(availableSlots, candidate =>
+                candidate.Date == BookingDate && candidate.StartTime == OtherStart);
+            Assert.DoesNotContain(availableSlots, candidate => candidate.Date == new DateOnly(2035, 6, 2));
         }
     }
 
@@ -111,9 +127,14 @@ public class BookingDeletionFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
-            var availability = SeedAvailability(seedingContext, hall, BookingDate, BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
+            var availability = SeedSlotAvailability(
+                seedingContext,
+                hall,
+                BookingDate,
+                BookingStart,
+                HallSlotStatus.Booked);
             availabilityId = availability.Id;
         }
 
@@ -124,8 +145,10 @@ public class BookingDeletionFlowShould
             await Assert.ThrowsAsync<ForbiddenException>(() =>
                 service.DeleteBookingAsync(hallId, bookingId));
 
-            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
-            Assert.Equal(AvailabilityStatus.Booked, context.HallAvailabilities.AsNoTracking().Single(a => a.Id == availabilityId).Status);
+            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == bookingId));
+            Assert.Equal(
+                HallSlotStatus.Booked,
+                context.HallSlotAvailabilities.AsNoTracking().Single(candidate => candidate.Id == availabilityId).Status);
         }
     }
 
@@ -134,15 +157,14 @@ public class BookingDeletionFlowShould
     {
         var databaseName = Guid.NewGuid().ToString();
         var hallId = Guid.NewGuid();
-        Guid otherHallId;
+        var otherHallId = Guid.NewGuid();
         Guid bookingId;
 
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var otherHall = SeedHall(seedingContext, Guid.NewGuid());
-            otherHallId = otherHall.Id;
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
+            SeedHall(seedingContext, otherHallId);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
         }
 
@@ -153,7 +175,7 @@ public class BookingDeletionFlowShould
             await Assert.ThrowsAsync<NotFoundException>(() =>
                 service.DeleteBookingAsync(otherHallId, bookingId));
 
-            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
+            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == bookingId));
         }
     }
 
@@ -169,7 +191,7 @@ public class BookingDeletionFlowShould
             var hall = SeedHall(seedingContext, hallId);
             hall.IsDeleted = true;
             seedingContext.SaveChanges();
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
         }
 
@@ -180,7 +202,7 @@ public class BookingDeletionFlowShould
             await Assert.ThrowsAsync<NotFoundException>(() =>
                 service.DeleteBookingAsync(hallId, bookingId));
 
-            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
+            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == bookingId));
         }
     }
 
@@ -196,11 +218,16 @@ public class BookingDeletionFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
-            var competing = SeedBooking(seedingContext, hall, "user-2", BookingDate, BookingPeriodType.FirstPeriod);
+            var competing = SeedBooking(seedingContext, hall, "user-2", BookingDate, BookingStart);
             competingBookingId = competing.Id;
-            var availability = SeedAvailability(seedingContext, hall, BookingDate, BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
+            var availability = SeedSlotAvailability(
+                seedingContext,
+                hall,
+                BookingDate,
+                BookingStart,
+                HallSlotStatus.Booked);
             availabilityId = availability.Id;
         }
 
@@ -210,9 +237,11 @@ public class BookingDeletionFlowShould
 
             await service.DeleteBookingAsync(hallId, bookingId);
 
-            Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
-            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == competingBookingId));
-            Assert.Equal(AvailabilityStatus.Booked, context.HallAvailabilities.AsNoTracking().Single(a => a.Id == availabilityId).Status);
+            Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == bookingId));
+            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == competingBookingId));
+            Assert.Equal(
+                HallSlotStatus.Booked,
+                context.HallSlotAvailabilities.AsNoTracking().Single(candidate => candidate.Id == availabilityId).Status);
         }
     }
 
@@ -226,7 +255,7 @@ public class BookingDeletionFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod, BookingStatus.Rejected);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart, BookingStatus.Rejected);
             booking.RejectionReason = "Not available";
             booking.RejectionMessageId = null;
             seedingContext.SaveChanges();
@@ -241,8 +270,8 @@ public class BookingDeletionFlowShould
             await service.DeleteBookingAsync(hallId, bookingId);
 
             var pending = await repository.GetPendingRejectionNotificationsAsync();
-            Assert.DoesNotContain(pending, b => b.Id == bookingId);
-            Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
+            Assert.DoesNotContain(pending, candidate => candidate.Id == bookingId);
+            Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == bookingId));
         }
     }
 
@@ -258,7 +287,7 @@ public class BookingDeletionFlowShould
             var hall = SeedHall(seedingContext, hallId);
             var conversation = SeedConversation(seedingContext, hall);
             var message = SeedMessage(seedingContext, conversation);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod, BookingStatus.Rejected);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart, BookingStatus.Rejected);
             booking.RejectionMessageId = message.Id;
             seedingContext.SaveChanges();
             bookingId = booking.Id;
@@ -270,7 +299,7 @@ public class BookingDeletionFlowShould
 
             await service.DeleteBookingAsync(hallId, bookingId);
 
-            Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
+            Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == bookingId));
             Assert.Single(context.Conversations.AsNoTracking());
             Assert.Single(context.Messages.AsNoTracking());
         }
@@ -286,7 +315,7 @@ public class BookingDeletionFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
         }
 
@@ -306,16 +335,15 @@ public class BookingDeletionFlowShould
     {
         var databaseName = Guid.NewGuid().ToString();
         var hallId = Guid.NewGuid();
-        Guid otherHallId;
+        var otherHallId = Guid.NewGuid();
         Guid otherHallBookingId;
 
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
-            var otherHall = SeedHall(seedingContext, Guid.NewGuid());
-            otherHallId = otherHall.Id;
-            var otherHallBooking = SeedBooking(seedingContext, otherHall, "user-3", BookingDate, BookingPeriodType.FirstPeriod);
+            SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
+            var otherHall = SeedHall(seedingContext, otherHallId);
+            var otherHallBooking = SeedBooking(seedingContext, otherHall, "user-3", BookingDate, BookingStart);
             otherHallBookingId = otherHallBooking.Id;
         }
 
@@ -324,10 +352,10 @@ public class BookingDeletionFlowShould
             var service = CreateService(context, "owner-1", [ApplicationRoles.HallOwner]);
 
             var bookingsAtStart = context.Bookings.AsNoTracking().Count();
-            await service.DeleteBookingAsync(hallId, context.Bookings.AsNoTracking().First(b => b.HallId == hallId).Id);
+            await service.DeleteBookingAsync(hallId, context.Bookings.AsNoTracking().First(candidate => candidate.HallId == hallId).Id);
 
             Assert.Equal(bookingsAtStart - 1, context.Bookings.AsNoTracking().Count());
-            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == otherHallBookingId));
+            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == otherHallBookingId));
             Assert.Equal(2, context.Halls.AsNoTracking().Count());
         }
     }
@@ -342,7 +370,7 @@ public class BookingDeletionFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
         }
 
@@ -353,7 +381,7 @@ public class BookingDeletionFlowShould
             await Assert.ThrowsAsync<ForbiddenException>(() =>
                 service.DeleteBookingAsync(hallId, bookingId));
 
-            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
+            Assert.NotNull(context.Bookings.AsNoTracking().SingleOrDefault(candidate => candidate.Id == bookingId));
         }
     }
 
@@ -388,7 +416,7 @@ public class BookingDeletionFlowShould
         Hall hall,
         string requesterUserId,
         DateOnly date,
-        BookingPeriodType period,
+        TimeOnly startTime,
         BookingStatus status = BookingStatus.Pending)
     {
         var booking = new Booking
@@ -398,7 +426,14 @@ public class BookingDeletionFlowShould
             Hall = hall,
             RequesterUserId = requesterUserId,
             Date = date,
-            Period = period,
+            Slots =
+            [
+                new BookingSlot
+                {
+                    StartTime = startTime,
+                    EndTime = startTime.AddHours(1)
+                }
+            ],
             Status = status
         };
 
@@ -408,23 +443,24 @@ public class BookingDeletionFlowShould
         return booking;
     }
 
-    private static HallAvailability SeedAvailability(
+    private static HallSlotAvailability SeedSlotAvailability(
         ApplicationDbContext context,
         Hall hall,
         DateOnly date,
-        BookingPeriodType periodType,
-        AvailabilityStatus status)
+        TimeOnly startTime,
+        HallSlotStatus status)
     {
-        var availability = new HallAvailability
+        var availability = new HallSlotAvailability
         {
             Id = Guid.NewGuid(),
             HallId = hall.Id,
+            Hall = hall,
             Date = date,
-            PeriodType = periodType,
+            StartTime = startTime,
             Status = status
         };
 
-        context.HallAvailabilities.Add(availability);
+        context.HallSlotAvailabilities.Add(availability);
         context.SaveChanges();
 
         return availability;

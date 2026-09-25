@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Infrastructure.AiAssistant;
+using Wesal.Infrastructure.Halls;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
 
@@ -21,7 +22,7 @@ public class AiBilingualProcessingShould
         var context = new ApplicationDbContext(options);
         var repo = new HallRepository(context);
         var extractor = new NaturalLanguageCriteriaExtractor();
-        var matcher = new HallRecommendationMatcher(repo);
+        var matcher = new HallRecommendationMatcher(new HallSearchService(repo));
         return new RecommendationService(extractor, matcher, new AiLanguageDetector());
     }
 

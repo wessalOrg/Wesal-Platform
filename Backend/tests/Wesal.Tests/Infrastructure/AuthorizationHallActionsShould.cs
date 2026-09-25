@@ -34,12 +34,10 @@ public class AuthorizationHallActionsShould
         public Task<IReadOnlyList<Hall>> GetApprovedHallsAsync(int count, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Take(count).ToList());
         public Task<IReadOnlyList<Hall>> GetApprovedHallsPaginatedAsync(int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Skip(skip).Take(take).ToList());
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(Halls.Count);
-        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Skip(skip).Take(take).ToList());
-        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, CancellationToken cancellationToken = default) => Task.FromResult(Halls.Count);
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Skip(skip).Take(take).ToList());
+        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default) => Task.FromResult(Halls.Count);
         public Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(HallRegion region, int count, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Where(h => h.Region == region).Take(count).ToList());
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallImage>>([]);
-        public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(IReadOnlyCollection<Guid> hallIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallBookingPeriod>>([]);
-        public Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(IReadOnlyCollection<Guid> hallIds, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallAvailability>>([]);
     }
 
     private sealed class FakeCommentRepository : ICommentRepository
@@ -137,13 +135,19 @@ public class AuthorizationHallActionsShould
             Bookings.Remove(booking);
             return Task.FromResult(1);
         }
-        public Task<bool> HasOtherActiveBookingsAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<int> ReleasePeriodAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, CancellationToken cancellationToken = default) => Task.FromResult(0);
-        public Task<int> ReservePeriodAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, CancellationToken cancellationToken = default) => Task.FromResult(1);
+        public Task<bool> IsDayOpenAsync(Guid hallId, DateOnly date, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
 
-        // WESAL-TASK-1: the legacy booking path now enforces the owner day gate, so this
-        // double must answer it. No day is blocked in these authorization tests.
-        public Task<bool> IsDayOpenAsync(Guid hallId, DateOnly date, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<int> ReserveHourlySlotsAsync(Guid hallId, DateOnly date, IReadOnlyList<TimeOnly> startTimes, CancellationToken cancellationToken = default)
+            => Task.FromResult(startTimes.Count);
+
+        public Task<int> ReleaseBookingSlotsAsync(
+            Guid bookingId,
+            Guid hallId,
+            DateOnly date,
+            IReadOnlyList<TimeOnly> slotStarts,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork
@@ -155,10 +159,10 @@ public class AuthorizationHallActionsShould
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
     }
 
-    private static BookingRequestService CreateBookingService(
+    private static HourlySlotService CreateBookingService(
         FakeHallRepository repo,
         FakeCurrentUserService user)
-        => new(repo, user, new FakeBookingRepository(), new FakeUnitOfWork(), new FakeOwnerBookingRequestNotifier());
+        => new(repo, new FakeBookingRepository(), new FakeUnitOfWork(), user);
 
     private sealed class FakeOwnerBookingRequestNotifier : IOwnerBookingRequestNotifier
     {
@@ -182,7 +186,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
         var service = CreateBookingService(repo, new FakeCurrentUserService(null, false));
-        await Assert.ThrowsAsync<UnauthorizedException>(() => service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] }));
+        await Assert.ThrowsAsync<UnauthorizedException>(() => service.CreateHourlyBookingAsync(new HourlyBookingRequestDto { HallId = hall.Id, Date = new DateOnly(2035, 6, 1), SlotStarts = [new TimeOnly(10, 0)] }));
     }
 
     [Fact]
@@ -231,7 +235,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
         var service = CreateBookingService(repo, new FakeCurrentUserService("user-1", true, ApplicationRoles.RegisteredUser));
-        var result = await service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] });
+        var result = await service.CreateHourlyBookingAsync(new HourlyBookingRequestDto { HallId = hall.Id, Date = new DateOnly(2035, 6, 1), SlotStarts = [new TimeOnly(10, 0)] });
         Assert.Equal(hall.Id, result.HallId);
     }
 
@@ -277,7 +281,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
         var service = CreateBookingService(repo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
-        var ex = await Assert.ThrowsAsync<ForbiddenException>(() => service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] }));
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateHourlyBookingAsync(new HourlyBookingRequestDto { HallId = hall.Id, Date = new DateOnly(2035, 6, 1), SlotStarts = [new TimeOnly(10, 0)] }));
         Assert.Contains("Hall owners", ex.Message);
         // No booking side effect already ensured by service not storing
     }
@@ -308,7 +312,14 @@ public class AuthorizationHallActionsShould
             Hall = hall,
             RequesterUserId = "user-1",
             Date = new DateOnly(2035, 6, 1),
-            Period = BookingPeriodType.FirstPeriod,
+            Slots =
+            [
+                new BookingSlot
+                {
+                    StartTime = new TimeOnly(10, 0),
+                    EndTime = new TimeOnly(11, 0)
+                }
+            ],
             Status = BookingStatus.Pending
         });
 
@@ -378,7 +389,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
         var service = CreateBookingService(repo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
-        await Assert.ThrowsAsync<ForbiddenException>(() => service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] }));
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateHourlyBookingAsync(new HourlyBookingRequestDto { HallId = hall.Id, Date = new DateOnly(2035, 6, 1), SlotStarts = [new TimeOnly(10, 0)] }));
     }
 
     [Fact]
@@ -403,6 +414,6 @@ public class AuthorizationHallActionsShould
         var repo = new FakeHallRepository(); repo.Halls.Add(hall);
         // Simulate HallOwner with correct server role, even if client tries to claim RegisteredUser
         var service = CreateBookingService(repo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
-        await Assert.ThrowsAsync<ForbiddenException>(() => service.ValidateBookingRequestAsync(new BookingRequestDto { HallId = hall.Id, Date = new DateOnly(2026, 9, 10), Periods = [BookingPeriodType.FirstPeriod] }));
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateHourlyBookingAsync(new HourlyBookingRequestDto { HallId = hall.Id, Date = new DateOnly(2035, 6, 1), SlotStarts = [new TimeOnly(10, 0)] }));
     }
 }

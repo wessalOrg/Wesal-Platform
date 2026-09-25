@@ -85,20 +85,8 @@ public class OwnerHallServiceShould : IDisposable
         {
             hall.Images.Add(new HallImage { HallId = hall.Id, Url = "https://cdn.example.com/old-1.jpg", DisplayOrder = 0 });
             hall.Images.Add(new HallImage { HallId = hall.Id, Url = "https://cdn.example.com/old-2.jpg", DisplayOrder = 1 });
-            hall.BookingPeriods.Add(new HallBookingPeriod
-            {
-                HallId = hall.Id,
-                Type = BookingPeriodType.FirstPeriod,
-                StartTime = new TimeOnly(9, 0),
-                EndTime = new TimeOnly(15, 0)
-            });
-            hall.BookingPeriods.Add(new HallBookingPeriod
-            {
-                HallId = hall.Id,
-                Type = BookingPeriodType.SecondPeriod,
-                StartTime = new TimeOnly(16, 0),
-                EndTime = new TimeOnly(23, 0)
-            });
+            hall.HourlySlotStart = new TimeOnly(9, 0);
+            hall.HourlySlotEnd = new TimeOnly(23, 0);
         }
 
         _context.Halls.Add(hall);
@@ -128,11 +116,8 @@ public class OwnerHallServiceShould : IDisposable
             new UpdateOwnerHallPhotoDto { Url = "https://cdn.example.com/new-1.jpg", DisplayOrder = 0 },
             new UpdateOwnerHallPhotoDto { Url = "https://cdn.example.com/new-2.jpg", DisplayOrder = 1 }
         ],
-        BookingPeriods =
-        [
-            new UpdateOwnerHallBookingPeriodDto { Type = BookingPeriodType.FirstPeriod, StartTime = new TimeOnly(8, 0), EndTime = new TimeOnly(14, 0) },
-            new UpdateOwnerHallBookingPeriodDto { Type = BookingPeriodType.SecondPeriod, StartTime = new TimeOnly(15, 0), EndTime = new TimeOnly(22, 0) }
-        ]
+        HourlySlotStart = new TimeOnly(8, 0),
+        HourlySlotEnd = new TimeOnly(22, 0)
     };
 
     private async Task<OwnerHallDetailsDto> GetDetailsAsync(Guid hallId, FakeCurrentUser currentUser)
@@ -160,9 +145,10 @@ public class OwnerHallServiceShould : IDisposable
         Assert.True(details.IsEditable);
         Assert.Contains(details.Photos, photo => photo.Url == "https://cdn.example.com/old-1.jpg");
         Assert.Contains(details.Photos, photo => photo.Url == "https://cdn.example.com/old-2.jpg");
-        Assert.Equal(2, details.BookingPeriods.Count);
-        Assert.Contains(details.BookingPeriods, period => period.Type == BookingPeriodType.FirstPeriod);
-        Assert.Contains(details.BookingPeriods, period => period.Type == BookingPeriodType.SecondPeriod);
+
+        var persisted = _context.Halls.AsNoTracking().Single(item => item.Id == hall.Id);
+        Assert.Equal(new TimeOnly(9, 0), persisted.HourlySlotStart);
+        Assert.Equal(new TimeOnly(23, 0), persisted.HourlySlotEnd);
     }
 
     [Fact]
@@ -256,38 +242,31 @@ public class OwnerHallServiceShould : IDisposable
     }
 
     [Fact]
-    public async Task UpdateOwnedHall_UpdatesBothBookingPeriods()
+    public async Task UpdateOwnedHall_UpdatesHourlyWindow()
     {
         var owner = await CreateOwnerAsync("owner7@example.com", "+970599100008");
         var hall = AddHall(owner.Id, "Grand Hall", withDetails: true);
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
-        var details = await service.UpdateOwnedHallAsync(hall.Id, CreateUpdateRequest());
+        await service.UpdateOwnedHallAsync(hall.Id, CreateUpdateRequest());
 
-        var first = Assert.Single(details.BookingPeriods, period => period.Type == BookingPeriodType.FirstPeriod);
-        Assert.Equal(new TimeOnly(8, 0), first.StartTime);
-        Assert.Equal(new TimeOnly(14, 0), first.EndTime);
-
-        var second = Assert.Single(details.BookingPeriods, period => period.Type == BookingPeriodType.SecondPeriod);
-        Assert.Equal(new TimeOnly(15, 0), second.StartTime);
-        Assert.Equal(new TimeOnly(22, 0), second.EndTime);
-
-        Assert.Equal(2, _context.HallBookingPeriods.Count());
+        var persisted = _context.Halls.AsNoTracking().Single(item => item.Id == hall.Id);
+        Assert.Equal(new TimeOnly(8, 0), persisted.HourlySlotStart);
+        Assert.Equal(new TimeOnly(22, 0), persisted.HourlySlotEnd);
     }
 
     [Fact]
-    public async Task UpdateOwnedHall_AddsMissingBookingPeriod()
+    public async Task UpdateOwnedHall_AppliesHourlyWindowWhenNoneWasConfigured()
     {
         var owner = await CreateOwnerAsync("owner8@example.com", "+970599100009");
-        var hall = AddHall(owner.Id, "Grand Hall", withDetails: true);
-        hall.BookingPeriods.Remove(hall.BookingPeriods.Single(period => period.Type == BookingPeriodType.SecondPeriod));
-        _context.SaveChanges();
+        var hall = AddHall(owner.Id, "Grand Hall");
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
-        var details = await service.UpdateOwnedHallAsync(hall.Id, CreateUpdateRequest());
+        await service.UpdateOwnedHallAsync(hall.Id, CreateUpdateRequest());
 
-        Assert.Equal(2, details.BookingPeriods.Count);
-        Assert.Contains(details.BookingPeriods, period => period.Type == BookingPeriodType.SecondPeriod);
+        var persisted = _context.Halls.AsNoTracking().Single(item => item.Id == hall.Id);
+        Assert.Equal(new TimeOnly(8, 0), persisted.HourlySlotStart);
+        Assert.Equal(new TimeOnly(22, 0), persisted.HourlySlotEnd);
     }
 
     [Fact]

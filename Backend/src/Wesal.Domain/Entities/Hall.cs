@@ -139,11 +139,9 @@ public class Hall : BaseAuditableEntity
     public int WarningSentAttempts { get; set; }
 
     /// <summary>
-    /// Hourly booking window start used under the new hourly-slot model
-    /// (WESAL-TASK-1). The hall is bookable in fixed 60-minute hourly slots from
-    /// <see cref="HourlySlotStart"/> up to (but not including) <see cref="HourlySlotEnd"/>.
-    /// Null until the owner configures the hall; legacy two-period fields
-    /// (<see cref="BookingPeriods"/> / <see cref="Availability"/>) remain dormant.
+    /// Hourly booking window start (WESAL-TASK-1). The hall is bookable in fixed
+    /// 60-minute hourly slots from <see cref="HourlySlotStart"/> up to (but not
+    /// including) <see cref="HourlySlotEnd"/>. Null until the owner configures the hall.
     /// </summary>
     public TimeOnly? HourlySlotStart { get; set; }
 
@@ -175,10 +173,6 @@ public class Hall : BaseAuditableEntity
     /// marks the hour as taken.
     /// </summary>
     public ICollection<HallSlotAvailability> SlotAvailabilities { get; set; } = [];
-
-    public ICollection<HallBookingPeriod> BookingPeriods { get; set; } = [];
-
-    public ICollection<HallAvailability> Availability { get; set; } = [];
 
     public ICollection<HallImage> Images { get; set; } = [];
 

@@ -4,6 +4,7 @@ using Wesal.API.Mcp;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Enums;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Api;
 
@@ -11,7 +12,7 @@ public sealed class WesalHallMcpToolsShould
 {
     private readonly FakeHallSearchService _search = new();
     private readonly FakeHallDetailsService _details = new();
-    private readonly FakeHallAvailabilityService _availability = new();
+    private readonly FakeHourlySlotService _availability = new();
 
     private WesalHallMcpTools CreateTools() => new(
         _search,
@@ -68,25 +69,27 @@ public sealed class WesalHallMcpToolsShould
     {
         var hallId = Guid.NewGuid();
         var date = new DateOnly(2026, 12, 4);
-        _availability.Response = new HallAvailabilityDto
+        _availability.Response = new HallHourlyCatalogDto
         {
+            HallId = hallId,
             Date = date,
-            Periods =
+            DayOpen = true,
+            Slots =
             [
-                new HallBookingPeriodStatusDto
+                new HallHourlySlotDto
                 {
-                    PeriodType = BookingPeriodType.SecondPeriod,
-                    PeriodName = "Second Period",
-                    Status = AvailabilityStatus.Booked
+                    StartTime = new TimeOnly(14, 0),
+                    EndTime = new TimeOnly(15, 0),
+                    Status = HallSlotStatus.Booked
                 }
             ]
         };
 
         var result = await CreateTools().CheckHallAvailabilityAsync(hallId, date);
 
-        Assert.Equal(hallId, _availability.HallId);
+        Assert.Equal(hallId, _availability.LastHallId);
         Assert.Equal(date, result.Date);
-        Assert.Equal(AvailabilityStatus.Booked, Assert.Single(result.Periods).Status);
+        Assert.Equal(HallSlotStatus.Booked, Assert.Single(result.Slots).Status);
     }
 
     private sealed class FakeHallSearchService : IHallSearchService
@@ -105,17 +108,5 @@ public sealed class WesalHallMcpToolsShould
     {
         public Task<HallDetailsDto> GetHallDetailsAsync(Guid hallId, CancellationToken cancellationToken = default)
             => Task.FromResult(new HallDetailsDto { HallId = hallId, HallName = "Gaza Hall" });
-    }
-
-    private sealed class FakeHallAvailabilityService : IHallAvailabilityService
-    {
-        public Guid HallId { get; private set; }
-        public HallAvailabilityDto Response { get; set; } = new();
-
-        public Task<HallAvailabilityDto> GetHallAvailabilityAsync(Guid hallId, DateOnly date, CancellationToken cancellationToken = default)
-        {
-            HallId = hallId;
-            return Task.FromResult(Response);
-        }
     }
 }

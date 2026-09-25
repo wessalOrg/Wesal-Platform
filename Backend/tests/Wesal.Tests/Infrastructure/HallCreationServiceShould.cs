@@ -98,11 +98,9 @@ public class HallCreationServiceShould : IDisposable
         public Task<IReadOnlyList<Wesal.Domain.Entities.Hall>> GetApprovedHallsByRegionAsync(HallRegion region, int count, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Wesal.Domain.Entities.Hall>>(_ctx.Halls.Where(h => h.Region == region).Take(count).ToList());
         public Task<IReadOnlyList<Wesal.Domain.Entities.Hall>> GetApprovedHallsPaginatedAsync(int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Wesal.Domain.Entities.Hall>>(_ctx.Halls.Skip(skip).Take(take).ToList());
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(_ctx.Halls.Count());
-        public Task<IReadOnlyList<Wesal.Domain.Entities.Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Wesal.Domain.Entities.Hall>>(_ctx.Halls.Skip(skip).Take(take).ToList());
-        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, CancellationToken cancellationToken = default) => Task.FromResult(_ctx.Halls.Count());
+        public Task<IReadOnlyList<Wesal.Domain.Entities.Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Wesal.Domain.Entities.Hall>>(_ctx.Halls.Skip(skip).Take(take).ToList());
+        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default) => Task.FromResult(_ctx.Halls.Count());
         public Task<IReadOnlyList<Wesal.Domain.Entities.HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Wesal.Domain.Entities.HallImage>>(_ctx.HallImages.Where(i => i.HallId == hallId).ToList());
-        public Task<IReadOnlyList<Wesal.Domain.Entities.HallBookingPeriod>> GetBookingPeriodsAsync(IReadOnlyCollection<Guid> hallIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Wesal.Domain.Entities.HallBookingPeriod>>(_ctx.HallBookingPeriods.Where(p => hallIds.Contains(p.HallId)).ToList());
-        public Task<IReadOnlyList<Wesal.Domain.Entities.HallAvailability>> GetAvailabilityAsync(IReadOnlyCollection<Guid> hallIds, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Wesal.Domain.Entities.HallAvailability>>(_ctx.HallAvailabilities.Where(a => hallIds.Contains(a.HallId)).ToList());
     }
 
     private class TestUnitOfWork : Wesal.Application.Common.Interfaces.Persistence.IUnitOfWork
@@ -135,10 +133,8 @@ public class HallCreationServiceShould : IDisposable
         YouTubeVideoUrl = youtubeUrl,
         Features = features,
         OtherFeatures = otherFeatures,
-        FirstPeriodStart = new TimeOnly(8, 0),
-        FirstPeriodEnd = new TimeOnly(14, 0),
-        SecondPeriodStart = new TimeOnly(15, 0),
-        SecondPeriodEnd = new TimeOnly(22, 0),
+        HourlySlotStart = new TimeOnly(8, 0),
+        HourlySlotEnd = new TimeOnly(22, 0),
         MainPhoto = mainPhoto,
         Photos = photos
     };
@@ -206,11 +202,13 @@ public class HallCreationServiceShould : IDisposable
     }
 
     [Fact]
-    public async Task FirstPeriod_EndEqualStart_Rejected()
+    public async Task HourlyWindow_PersistedFromRequest()
     {
         var request = CreateValidRequest();
-        request = new CreateHallRequest { Name = request.Name, ContactPhone = request.ContactPhone, Region = request.Region, Address = request.Address, Description = request.Description, Capacity = request.Capacity, Price = request.Price, FirstPeriodStart = new TimeOnly(8, 0), FirstPeriodEnd = new TimeOnly(8, 0), SecondPeriodStart = request.SecondPeriodStart, SecondPeriodEnd = request.SecondPeriodEnd };
-        await Assert.ThrowsAsync<ValidationException>(() => _service.CreateHallAsync(request));
+        var result = await _service.CreateHallAsync(request);
+        var hall = await _context.Halls.FindAsync(result.HallId);
+        Assert.Equal(new TimeOnly(8, 0), hall!.HourlySlotStart);
+        Assert.Equal(new TimeOnly(22, 0), hall!.HourlySlotEnd);
     }
 
     [Fact]
@@ -252,7 +250,7 @@ public class HallCreationServiceShould : IDisposable
     {
         var countBefore = await _context.Halls.CountAsync();
         var request = CreateValidRequest();
-        request = new CreateHallRequest { Name = "", ContactPhone = request.ContactPhone, Region = request.Region, Address = request.Address, Description = request.Description, Capacity = request.Capacity, Price = request.Price, FirstPeriodStart = request.FirstPeriodStart, FirstPeriodEnd = request.FirstPeriodEnd, SecondPeriodStart = request.SecondPeriodStart, SecondPeriodEnd = request.SecondPeriodEnd };
+        request = new CreateHallRequest { Name = "", ContactPhone = request.ContactPhone, Region = request.Region, Address = request.Address, Description = request.Description, Capacity = request.Capacity, Price = request.Price, HourlySlotStart = request.HourlySlotStart, HourlySlotEnd = request.HourlySlotEnd };
         await Assert.ThrowsAsync<ValidationException>(() => _service.CreateHallAsync(request));
         Assert.Equal(countBefore, await _context.Halls.CountAsync());
     }

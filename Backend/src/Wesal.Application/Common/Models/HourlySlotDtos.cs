@@ -63,19 +63,25 @@ public class HallHourlyCalendarDayDto
     public bool IsOpen { get; init; }
 }
 
+/// <summary>
+/// Seeker request to book one or more 60-minute slots at one hall on one date.
+/// </summary>
 public class HourlyBookingRequestDto
 {
     public Guid HallId { get; init; }
 
     public DateOnly Date { get; init; }
 
-    public TimeOnly SlotStart { get; init; }
+    public IReadOnlyList<TimeOnly> SlotStarts { get; init; } = [];
 
     public string NameOnBooking { get; init; } = string.Empty;
 
     public string RequesterName { get; init; } = string.Empty;
 }
 
+/// <summary>
+/// Result of booking one or more 60-minute slots at one hall on one date.
+/// </summary>
 public class HourlyBookingResultDto
 {
     public Guid BookingId { get; init; }
@@ -84,7 +90,9 @@ public class HourlyBookingResultDto
 
     public DateOnly Date { get; init; }
 
-    public TimeOnly SlotStart { get; init; }
+    public IReadOnlyList<TimeOnly> SlotStarts { get; init; } = [];
+
+    public string TimeRange { get; init; } = string.Empty;
 
     public BookingStatus Status { get; init; } = BookingStatus.Pending;
 }

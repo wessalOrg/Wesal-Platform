@@ -21,7 +21,6 @@ using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.AiAssistant;
 using Wesal.Infrastructure.Languages;
 using Wesal.Infrastructure.Admin;
-using Wesal.Infrastructure.Background;
 using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Profile;
@@ -73,10 +72,8 @@ public static class DependencyInjection
         services.AddScoped<IHomepageIntroductionService, HomepageIntroductionService>();
         services.AddScoped<IFeaturedHallsService, FeaturedHallsService>();
         services.AddScoped<IHallDetailsService, HallDetailsService>();
-        services.AddScoped<IHallAvailabilityService, HallAvailabilityService>();
         services.AddScoped<IAllHallsService, AllHallsService>();
         services.AddScoped<IHallSearchService, HallSearchService>();
-        services.AddScoped<IBookingRequestService, BookingRequestService>();
         services.AddScoped<IHourlySlotService, HourlySlotService>();
         services.AddScoped<IBookingRejectionService, BookingRejectionService>();
         services.AddScoped<IBookingCancellationService, BookingCancellationService>();
@@ -102,7 +99,6 @@ public static class DependencyInjection
         services.AddScoped<IHallInitiationService, HallInitiationService>();
         services.AddScoped<IHallStatusTrackingService, HallStatusTrackingService>();
         services.AddScoped<IOwnerHallService, OwnerHallService>();
-        services.AddScoped<IOwnerAvailabilityService, OwnerAvailabilityService>();
         services.AddScoped<IOwnerHourlyAvailabilityService, OwnerHourlyAvailabilityService>();
         services.AddScoped<IHallSubscriptionService, HallSubscriptionService>();
         services.AddScoped<IAdminHallService, AdminHallService>();
@@ -118,8 +114,6 @@ public static class DependencyInjection
         services.Configure<SubscriptionExpiryWarningOptions>(configuration.GetSection(SubscriptionExpiryWarningOptions.SectionName));
         services.AddHostedService<SubscriptionExpiryWarningBackgroundService>();
         services.AddSingleton<IHallSearchIndexer, HallSearchIndexer>();
-        services.Configure<HallAvailabilityCleanupOptions>(configuration.GetSection(HallAvailabilityCleanupOptions.SectionName));
-        services.AddHostedService<HallAvailabilityCleanupBackgroundService>();
         services.AddScoped<IOwnerBookingRequestsService, OwnerBookingRequestsService>();
         services.AddScoped<ILanguageService, LanguageService>();
         services.AddSingleton<IChatSessionService, ChatSessionService>();

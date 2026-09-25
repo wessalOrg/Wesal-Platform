@@ -66,11 +66,11 @@ public class HallRepository : IHallRepository
         HallRegion? region,
         string? area,
         DateOnly? date,
-        BookingPeriodType? period,
+        TimeOnly? startTime,
         int skip,
         int take,
         CancellationToken cancellationToken = default)
-        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, date, period)
+        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, date, startTime)
             .OrderByDescending(hall => hall.CreatedAt)
             .ThenBy(hall => hall.Name)
             .Skip(skip)
@@ -82,9 +82,9 @@ public class HallRepository : IHallRepository
         HallRegion? region,
         string? area,
         DateOnly? date,
-        BookingPeriodType? period,
+        TimeOnly? startTime,
         CancellationToken cancellationToken = default)
-        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, date, period)
+        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, date, startTime)
             .CountAsync(cancellationToken);
 
     public async Task<IReadOnlyList<HallImage>> GetHallImagesAsync(
@@ -112,7 +112,7 @@ public class HallRepository : IHallRepository
         HallRegion? region,
         string? area,
         DateOnly? date,
-        BookingPeriodType? period)
+        TimeOnly? startTime)
     {
         if (!string.IsNullOrWhiteSpace(name))
         {
@@ -134,48 +134,35 @@ public class HallRepository : IHallRepository
             var selectedDate = date.Value;
 
             // WESAL-TASK-1 hardening: a day the owner blocked is unbookable in its
-            // entirety, so the hall must never be offered for it through the legacy
-            // search. This is evaluated whenever a date is supplied, not only when a
-            // period is, because a whole-day block makes every period on that day
-            // unbookable. Deliberately independent of ShowBookedSlots: search either
-            // lists the hall or omits it, and a hidden blocked day must be omitted just
-            // like a hidden fully-booked one - the seeker is never told why.
+            // entirety, so the hall must never be offered for it. This is evaluated
+            // whenever a date is supplied, not only when an hour is, because a whole-day
+            // block makes every hour on that day unbookable. Deliberately independent of
+            // ShowBookedSlots: search either lists the hall or omits it, and a hidden
+            // blocked day must be omitted just like a hidden fully-booked one - the seeker
+            // is never told why.
             query = query.Where(hall => !_context.HallDayAvailabilities.Any(day =>
                 day.HallId == hall.Id
                 && day.Date == selectedDate
                 && !day.IsOpen));
         }
 
-        if (date.HasValue && period.HasValue)
+        if (date.HasValue && startTime.HasValue)
         {
             var selectedDate = date.Value;
-            var selectedPeriod = period.Value;
+            var selectedStart = startTime.Value;
 
-            query = query.Where(hall => !_context.HallAvailabilities.Any(availability =>
-                availability.HallId == hall.Id
-                && availability.Date == selectedDate
-                && availability.PeriodType == selectedPeriod
-                && availability.Status == AvailabilityStatus.Booked));
+            // A seeker asking for a concrete hour must not be offered a hall whose slot is
+            // already taken. Independent of ShowBookedSlots for the same reason as the day
+            // gate above: a booked hour is simply unavailable, and the seeker is never
+            // told whether it is hidden or disclosed.
+            query = query.Where(hall => !_context.HallSlotAvailabilities.Any(slot =>
+                slot.HallId == hall.Id
+                && slot.Date == selectedDate
+                && slot.StartTime == selectedStart
+                && slot.Status == HallSlotStatus.Booked));
         }
 
         return query;
-    }
-
-    public async Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
-        IReadOnlyCollection<Guid> hallIds,
-        CancellationToken cancellationToken = default)
-    {
-        if (hallIds.Count == 0)
-        {
-            return [];
-        }
-
-        return await _context.HallBookingPeriods
-            .AsNoTracking()
-            .Where(period => hallIds.Contains(period.HallId))
-            .OrderBy(period => period.HallId)
-            .ThenBy(period => period.Type)
-            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<HallFeature>> GetHallFeaturesAsync(
@@ -195,7 +182,7 @@ public class HallRepository : IHallRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(
+    public async Task<IReadOnlyList<HallSlotAvailability>> GetSlotAvailabilitiesAsync(
         IReadOnlyCollection<Guid> hallIds,
         DateOnly fromDate,
         DateOnly toDate,
@@ -206,12 +193,15 @@ public class HallRepository : IHallRepository
             return [];
         }
 
-        return await _context.HallAvailabilities
+        return await _context.HallSlotAvailabilities
             .AsNoTracking()
             .Where(availability =>
                 hallIds.Contains(availability.HallId)
                 && availability.Date >= fromDate
                 && availability.Date <= toDate)
+            .OrderBy(availability => availability.HallId)
+            .ThenBy(availability => availability.Date)
+            .ThenBy(availability => availability.StartTime)
             .ToListAsync(cancellationToken);
     }
 
@@ -220,9 +210,8 @@ public class HallRepository : IHallRepository
     /// owner has blocked for at least one day inside the requested range.
     ///
     /// The day gate (<see cref="HallDayAvailability"/>) is authoritative for the whole
-    /// hall, so any seeker-facing read that works purely off the legacy per-period
-    /// availability set has to consult this as well - otherwise a blocked day still looks
-    /// bookable through the legacy endpoints.
+    /// hall, so any seeker-facing read that works purely off the hourly slot set has to
+    /// consult this as well - otherwise a blocked day still looks bookable.
     ///
     /// Note this intentionally reports the blocked fact without consulting
     /// <see cref="Hall.ShowBookedSlots"/>: deciding whether to disclose the block or hide

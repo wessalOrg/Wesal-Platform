@@ -98,7 +98,6 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         builder.Services.AddScoped<IHallStatusTrackingService, StubHallStatusTrackingService>();
         builder.Services.AddScoped<IOwnerHallService, StubOwnerHallService>();
         builder.Services.AddScoped<IOwnerBookingRequestsService, StubOwnerBookingRequestsService>();
-        builder.Services.AddScoped<IOwnerAvailabilityService, StubOwnerAvailabilityService>();
         builder.Services.AddScoped<IOwnerHourlyAvailabilityService, StubOwnerHourlyAvailabilityService>();
         builder.Services.AddScoped<IHallSubscriptionService, StubHallSubscriptionService>();
 
@@ -150,21 +149,20 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         content.Add(new StringContent("300"), "capacity");
         content.Add(new StringContent("1000"), "price");
         content.Add(new StringContent("initiation-id-123"), "initiationId");
-        content.Add(new StringContent("08:00"), "firstPeriodStart");
-        content.Add(new StringContent("14:00"), "firstPeriodEnd");
-        content.Add(new StringContent("15:00"), "secondPeriodStart");
-        content.Add(new StringContent("22:00"), "secondPeriodEnd");
+        content.Add(new StringContent("08:00"), "hourlySlotStart");
+        content.Add(new StringContent("22:00"), "hourlySlotEnd");
 
         var response = await _client.PostAsync("/api/v1/owner/halls", content);
 
         var body = await response.Content.ReadAsStringAsync();
         Assert.True(response.StatusCode == HttpStatusCode.Created, $"Expected 201 but got {response.StatusCode}: {body}");
 
-        var hall = await _context.Halls.Include(h => h.BookingPeriods).SingleOrDefaultAsync();
+        var hall = await _context.Halls.SingleOrDefaultAsync();
         Assert.True(hall is not null, $"Location={response.Headers.Location}");
         Assert.Equal("owner-1", hall!.OwnerId);
         Assert.Equal(HallStatus.PendingReview, hall.Status);
-        Assert.Equal(2, hall.BookingPeriods.Count);
+        Assert.Equal(new TimeOnly(8, 0), hall.HourlySlotStart);
+        Assert.Equal(new TimeOnly(22, 0), hall.HourlySlotEnd);
         Assert.Equal("Gaza", hall.Region.ToString());
     }
 
@@ -178,10 +176,8 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         content.Add(new StringContent("Gaza City, Main Street"), "address");
         content.Add(new StringContent("Elegant hall for weddings"), "description");
         content.Add(new StringContent("300"), "capacity");
-        content.Add(new StringContent("08:00"), "firstPeriodStart");
-        content.Add(new StringContent("14:00"), "firstPeriodEnd");
-        content.Add(new StringContent("15:00"), "secondPeriodStart");
-        content.Add(new StringContent("22:00"), "secondPeriodEnd");
+        content.Add(new StringContent("08:00"), "hourlySlotStart");
+        content.Add(new StringContent("22:00"), "hourlySlotEnd");
 
         var photoBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0x00, 0x00, 0x00 };
         var photoContent = new ByteArrayContent(photoBytes);
@@ -219,10 +215,8 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         content.Add(new StringContent("Gaza City, Main Street"), "address");
         content.Add(new StringContent("300"), "capacity");
         content.Add(new StringContent("1000"), "price");
-        content.Add(new StringContent("08:00"), "firstPeriodStart");
-        content.Add(new StringContent("14:00"), "firstPeriodEnd");
-        content.Add(new StringContent("15:00"), "secondPeriodStart");
-        content.Add(new StringContent("22:00"), "secondPeriodEnd");
+        content.Add(new StringContent("08:00"), "hourlySlotStart");
+        content.Add(new StringContent("22:00"), "hourlySlotEnd");
 
         var response = await _client.PostAsync("/api/v1/owner/halls", content);
 
@@ -244,10 +238,8 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         content.Add(new StringContent("Gaza City, Main Street"), "address");
         content.Add(new StringContent("Elegant hall for weddings"), "description");
         content.Add(new StringContent("300"), "capacity");
-        content.Add(new StringContent("not-a-time"), "firstPeriodStart");
-        content.Add(new StringContent("14:00"), "firstPeriodEnd");
-        content.Add(new StringContent("15:00"), "secondPeriodStart");
-        content.Add(new StringContent("22:00"), "secondPeriodEnd");
+        content.Add(new StringContent("not-a-time"), "hourlySlotStart");
+        content.Add(new StringContent("22:00"), "hourlySlotEnd");
 
         var response = await _client.PostAsync("/api/v1/owner/halls", content);
 
@@ -265,10 +257,8 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         content.Add(new StringContent("Gaza City, Main Street"), "address");
         content.Add(new StringContent("Elegant hall for weddings"), "description");
         content.Add(new StringContent("300"), "capacity");
-        content.Add(new StringContent("08:00"), "firstPeriodStart");
-        content.Add(new StringContent("14:00"), "firstPeriodEnd");
-        content.Add(new StringContent("15:00"), "secondPeriodStart");
-        content.Add(new StringContent("22:00"), "secondPeriodEnd");
+        content.Add(new StringContent("08:00"), "hourlySlotStart");
+        content.Add(new StringContent("22:00"), "hourlySlotEnd");
 
         var response = await _client.PostAsync("/api/v1/owner/halls", content);
 
@@ -297,10 +287,8 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
             Description = "Elegant hall for weddings",
             Capacity = 300,
             Price = 1000,
-            FirstPeriodStart = new TimeOnly(8, 0),
-            FirstPeriodEnd = new TimeOnly(14, 0),
-            SecondPeriodStart = new TimeOnly(15, 0),
-            SecondPeriodEnd = new TimeOnly(22, 0)
+            HourlySlotStart = new TimeOnly(8, 0),
+            HourlySlotEnd = new TimeOnly(22, 0)
         };
 
     public async ValueTask DisposeAsync()
@@ -392,20 +380,15 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(_ctx.Halls.Count());
 
-        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, int skip, int take, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>(_ctx.Halls.Skip(skip).Take(take).ToList());
 
-        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, CancellationToken cancellationToken = default)
+        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default)
             => Task.FromResult(_ctx.Halls.Count());
 
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<HallImage>>(_ctx.HallImages.Where(i => i.HallId == hallId).ToList());
 
-        public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(IReadOnlyCollection<Guid> hallIds, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<HallBookingPeriod>>(_ctx.HallBookingPeriods.Where(p => hallIds.Contains(p.HallId)).ToList());
-
-        public Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(IReadOnlyCollection<Guid> hallIds, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<HallAvailability>>(_ctx.HallAvailabilities.Where(a => hallIds.Contains(a.HallId)).ToList());
     }
 
     private sealed class TestInMemoryUnitOfWork : IUnitOfWork
@@ -474,15 +457,6 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
     {
         public Task<IReadOnlyList<OwnerBookingRequestDto>> GetBookingRequestsAsync(Guid hallId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<OwnerBookingRequestDto>>([]);
-    }
-
-    private sealed class StubOwnerAvailabilityService : IOwnerAvailabilityService
-    {
-        public Task<OwnerAvailabilityCalendarDto> GetAvailabilityAsync(Guid hallId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
-            => Task.FromResult(new OwnerAvailabilityCalendarDto());
-
-        public Task<OwnerAvailabilityPeriodDto> UpdateAvailabilityAsync(Guid hallId, UpdateOwnerAvailabilityRequest request, CancellationToken cancellationToken = default)
-            => Task.FromResult(new OwnerAvailabilityPeriodDto());
     }
 
     private sealed class StubOwnerHourlyAvailabilityService : IOwnerHourlyAvailabilityService

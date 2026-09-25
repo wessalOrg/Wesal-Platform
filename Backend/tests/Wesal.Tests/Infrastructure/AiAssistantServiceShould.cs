@@ -7,6 +7,8 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.AiAssistant;
+using Wesal.Infrastructure.Halls;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -17,7 +19,7 @@ public class AiAssistantServiceShould
     private readonly FakeRecommendationService _recommendation = new();
     private readonly FakeFeaturedHallsService _featured = new();
     private readonly FakeHallDetailsService _details = new();
-    private readonly FakeHallAvailabilityService _availability = new();
+    private readonly FakeHourlySlotService _availability = new();
     private readonly FakeHallRepository _repository = new();
     private readonly FakeDateTime _dateTime = new();
     private readonly FakeGeminiToolOrchestrator _orchestrator = new();
@@ -29,7 +31,7 @@ public class AiAssistantServiceShould
             _recommendation,
             _featured,
             _details,
-            _repository,
+            new HallSearchService(_repository),
             _availability,
             new AiLanguageDetector(),
             _dateTime,
@@ -57,7 +59,7 @@ public class AiAssistantServiceShould
         _extractor.Result = With(AiIntentType.SearchHalls);
         _recommendation.Response = new RecommendationResponse(
             RecommendationStatus.Success,
-            new ExtractedCriteriaDto("Gaza", null, null, null, 250),
+            new ExtractedCriteriaDto("Gaza", null, null, 250),
             [new HallRecommendationDto(Guid.NewGuid(), "Gaza Grand Hall", "Gaza", "Center", 300, 1500, null, true, null)],
             "I found 1 hall(s) matching your criteria.",
             "en",
@@ -203,17 +205,19 @@ public class AiAssistantServiceShould
     }
 
     [Fact]
-    public async Task Availability_ReturnsAvailabilityKind_WithRealPeriodStatuses()
+    public async Task Availability_ReturnsAvailabilityKind_WithRealSlotStatuses()
     {
         _extractor.Result = With(AiIntentType.CheckHallAvailability, hallName: "Grand Hall", date: FutureDate);
         _repository.ApprovedHallResults = [new Hall { Id = HallId, Name = "Grand Hall", Status = HallStatus.Approved, IsDeleted = false }];
-        _availability.Result = new HallAvailabilityDto
+        _availability.Response = new HallHourlyCatalogDto
         {
+            HallId = HallId,
             Date = FutureDate,
-            Periods =
+            DayOpen = true,
+            Slots =
             [
-                new HallBookingPeriodStatusDto { PeriodType = BookingPeriodType.FirstPeriod, PeriodName = "First Period", StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(14, 0), Status = AvailabilityStatus.Available },
-                new HallBookingPeriodStatusDto { PeriodType = BookingPeriodType.SecondPeriod, PeriodName = "Second Period", StartTime = new TimeOnly(18, 0), EndTime = new TimeOnly(23, 0), Status = AvailabilityStatus.Booked }
+                new HallHourlySlotDto { StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(11, 0), Status = HallSlotStatus.Available },
+                new HallHourlySlotDto { StartTime = new TimeOnly(18, 0), EndTime = new TimeOnly(19, 0), Status = HallSlotStatus.Booked }
             ]
         };
 
@@ -222,13 +226,12 @@ public class AiAssistantServiceShould
         Assert.Equal(AiAssistantResponseKind.Availability, result.Kind);
         Assert.NotNull(result.Availability);
         Assert.Equal(FutureDate, result.Availability!.Date);
-        Assert.Equal(2, result.Availability.Periods.Count);
+        Assert.Equal(2, result.Availability.Slots.Count);
 
-        var first = result.Availability.Periods.Single(p => p.PeriodType == BookingPeriodType.FirstPeriod);
-        var second = result.Availability.Periods.Single(p => p.PeriodType == BookingPeriodType.SecondPeriod);
-        Assert.Equal(AvailabilityStatus.Available, first.Status);
-        Assert.Equal(AvailabilityStatus.Booked, second.Status);
-        Assert.Contains("First Period", first.PeriodName);
+        var first = result.Availability.Slots.Single(s => s.StartTime == new TimeOnly(10, 0));
+        var second = result.Availability.Slots.Single(s => s.StartTime == new TimeOnly(18, 0));
+        Assert.Equal(HallSlotStatus.Available, first.Status);
+        Assert.Equal(HallSlotStatus.Booked, second.Status);
     }
 
     [Fact]
@@ -482,7 +485,7 @@ public class AiAssistantServiceShould
 
         // Follow-up only adds a new region refinement; date from prior should be kept.
         var followUp = new AiAssistantIntentDto(
-            AiIntentType.SearchHalls, "SouthGaza", null, null, null, null, null);
+            AiIntentType.SearchHalls, "SouthGaza", null, null, null, null);
 
         var result = AiAssistantService.MergeWithContext(followUp, context);
 
@@ -500,7 +503,7 @@ public class AiAssistantServiceShould
             prior);
 
         var followUp = new AiAssistantIntentDto(
-            AiIntentType.SearchHalls, "Gaza", null, new DateOnly(2026, 11, 5), null, 400, null);
+            AiIntentType.SearchHalls, "Gaza", null, new DateOnly(2026, 11, 5), 400, null);
 
         var result = AiAssistantService.MergeWithContext(followUp, context);
 
@@ -529,11 +532,11 @@ public class AiAssistantServiceShould
         string? region = null,
         string? hallName = null,
         DateOnly? date = null)
-        => new(intent, region, null, date, null, null, hallName);
+        => new(intent, region, null, date, null, hallName);
 
     private sealed class FakeIntentExtractor : IAiIntentExtractor
     {
-        public AiAssistantIntentDto Result { get; set; } = new(AiIntentType.Unknown, null, null, null, null, null, null);
+        public AiAssistantIntentDto Result { get; set; } = new(AiIntentType.Unknown, null, null, null, null, null);
         public Action<string?>? OnExtract { get; set; }
         public int CallCount { get; private set; }
 
@@ -612,20 +615,9 @@ public class AiAssistantServiceShould
         }
     }
 
-    private sealed class FakeHallAvailabilityService : IHallAvailabilityService
-    {
-        public HallAvailabilityDto Result { get; set; } = new();
-
-        public Task<HallAvailabilityDto> GetHallAvailabilityAsync(Guid hallId, DateOnly date, CancellationToken cancellationToken = default)
-            => Task.FromResult(Result);
-    }
-
     private sealed class FakeHallRepository : IHallRepository
     {
         public IReadOnlyList<Hall> ApprovedHallResults { get; set; } = [];
-        public IReadOnlyList<HallBookingPeriod> Periods { get; set; } = [];
-        public IReadOnlyList<HallAvailability> Availability { get; set; } = [];
-
         public Task<Hall?> GetHallByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult(ApprovedHallResults.FirstOrDefault(h => h.Id == id));
 
@@ -641,20 +633,15 @@ public class AiAssistantServiceShould
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(ApprovedHallResults.Count);
 
-        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, int skip, int take, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default)
             => Task.FromResult(ApprovedHallResults);
 
-        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, CancellationToken cancellationToken = default)
+        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default)
             => Task.FromResult(ApprovedHallResults.Count);
 
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<HallImage>>([]);
 
-        public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(IReadOnlyCollection<Guid> hallIds, CancellationToken cancellationToken = default)
-            => Task.FromResult(Periods);
-
-        public Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(IReadOnlyCollection<Guid> hallIds, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
-            => Task.FromResult(Availability);
     }
 
     private sealed class FakeDateTime : IDateTime

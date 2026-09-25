@@ -6,7 +6,6 @@ using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
-using Wesal.Persistence.Halls;
 using Wesal.Persistence.Repositories;
 
 namespace Wesal.Persistence;
@@ -65,7 +64,6 @@ public static class DependencyInjection
         services.AddScoped<ITokenRevocationRepository, TokenRevocationRepository>();
         services.AddScoped<IOwnerDashboardRepository, OwnerDashboardRepository>();
         services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
-        services.AddScoped<IHallAvailabilityCleanupService, HallAvailabilityCleanupService>();
 
         return services;
     }

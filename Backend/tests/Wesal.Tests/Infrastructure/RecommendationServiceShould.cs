@@ -4,6 +4,7 @@ using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Infrastructure.AiAssistant;
+using Wesal.Infrastructure.Halls;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
 
@@ -23,7 +24,7 @@ public class RecommendationServiceShould : IDisposable
 
         var repo = new HallRepository(_context);
         var extractor = new NaturalLanguageCriteriaExtractor();
-        var matcher = new HallRecommendationMatcher(repo);
+        var matcher = new HallRecommendationMatcher(new HallSearchService(repo));
         _service = new RecommendationService(extractor, matcher);
 
         SeedHalls();

@@ -3,9 +3,8 @@ using Wesal.Application.Common.Models;
 namespace Wesal.Application.Common.Interfaces;
 
 /// <summary>
-/// Seeker-facing hourly-slot availability and booking (WESAL-TASK-1). Additive to
-/// the legacy <see cref="IBookingRequestService"/> two-period flow, which stays
-/// dormant and unchanged.
+/// Seeker-facing hourly-slot availability and booking (WESAL-TASK-1). This is the
+/// only booking availability model; the legacy two-period flow has been removed.
 /// </summary>
 public interface IHourlySlotService
 {

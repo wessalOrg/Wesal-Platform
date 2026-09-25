@@ -4,6 +4,7 @@ using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Infrastructure.AiAssistant;
+using Wesal.Infrastructure.Halls;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
 
@@ -32,7 +33,7 @@ public class BilingualArchitectureContractShould : IDisposable
 
         var repo = new HallRepository(_context);
         var extractor = new NaturalLanguageCriteriaExtractor();
-        var matcher = new HallRecommendationMatcher(repo);
+        var matcher = new HallRecommendationMatcher(new HallSearchService(repo));
 
         _howToService = new HowToService(CreatePaymentService());
         _recommendationService = new RecommendationService(extractor, matcher);

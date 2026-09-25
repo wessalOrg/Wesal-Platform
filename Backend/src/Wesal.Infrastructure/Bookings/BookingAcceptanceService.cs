@@ -81,20 +81,16 @@ public sealed class BookingAcceptanceService : IBookingAcceptanceService
                     "The booking request is no longer in the pending state and cannot be accepted; it may have just been processed.");
             }
 
-            // WESAL-TASK-1: there is no separate publish step. Approving an hourly
-            // booking immediately and atomically marks its 60-minute slot Booked in the
-            // same transaction as the approval, so the slot becomes publicly visible as
-            // booked (or hidden from seekers when ShowBookedSlots is OFF) with no further
-            // owner action. Legacy two-period bookings keep their existing behavior: the
-            // legacy period is not marked Booked here.
-            if (booking.IsHourlyBooking)
-            {
-                await _bookingRepository.ReserveHourlySlotAsync(
-                    booking.HallId,
-                    booking.Date,
-                    booking.SlotStart,
-                    cancellationToken);
-            }
+            // WESAL-TASK-1: there is no separate publish step. The booking's hours were
+            // already reserved when the request was created, so approving re-asserts every
+            // one of its slots as Booked in the same transaction as the approval. A slot
+            // that is already Booked is left untouched, so the call is idempotent and a
+            // multi-hour booking is always published as a whole.
+            await _bookingRepository.ReserveHourlySlotsAsync(
+                booking.HallId,
+                booking.Date,
+                booking.Slots.Select(slot => slot.StartTime).ToList(),
+                cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
@@ -140,9 +136,11 @@ public sealed class BookingAcceptanceService : IBookingAcceptanceService
             HallName = booking.Hall?.Name ?? string.Empty,
             RequesterUserId = booking.RequesterUserId,
             Date = booking.Date,
-            Period = booking.Period,
-            SlotStart = booking.SlotStart,
-            IsHourlyBooking = booking.IsHourlyBooking,
+            SlotStarts = booking.Slots
+                .OrderBy(slot => slot.StartTime)
+                .Select(slot => slot.StartTime)
+                .ToList(),
+            TimeRange = booking.HourlyTimeRange,
             Status = BookingStatus.Accepted
         };
 }

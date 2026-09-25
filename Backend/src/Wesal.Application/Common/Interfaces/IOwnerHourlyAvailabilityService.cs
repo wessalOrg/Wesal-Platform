@@ -7,8 +7,7 @@ namespace Wesal.Application.Common.Interfaces;
 /// blocking/unblocking an entire calendar day, and changing the hall's hourly window
 /// and the "show booked slots" display toggle. Kept separate from the seeker-facing
 /// <see cref="IHourlySlotService"/> so the owner management surface and the public
-/// booking surface have distinct contracts, mirroring the existing split between
-/// IOwnerAvailabilityService and IBookingRequestService.
+/// booking surface have distinct contracts.
 /// </summary>
 public interface IOwnerHourlyAvailabilityService
 {

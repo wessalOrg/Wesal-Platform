@@ -84,46 +84,17 @@ public sealed class BookingDeletionService : IBookingDeletionService
                     "The booking has already been deleted and cannot be deleted again.");
             }
 
-            // Re-open the exact unit this booking held, and only when no other active
-            // booking still claims it, so another booking's protection is never released.
-            // WESAL-TASK-1: an hourly booking re-opens its own HallSlotAvailability slot;
-            // a legacy booking re-opens its legacy two-period row exactly as before.
-            if (booking.IsHourlyBooking)
-            {
-                var hasCompetingHourlyClaim = await _bookingRepository.HasOtherActiveHourlyBookingsAsync(
-                    booking.HallId,
-                    booking.Date,
-                    booking.SlotStart,
-                    booking.Id,
-                    cancellationToken);
-
-                if (!hasCompetingHourlyClaim)
-                {
-                    await _bookingRepository.ReleaseHourlySlotAsync(
-                        booking.HallId,
-                        booking.Date,
-                        booking.SlotStart,
-                        cancellationToken);
-                }
-            }
-            else
-            {
-                var hasCompetingClaim = await _bookingRepository.HasOtherActiveBookingsAsync(
-                    booking.HallId,
-                    booking.Date,
-                    booking.Period,
-                    booking.Id,
-                    cancellationToken);
-
-                if (!hasCompetingClaim)
-                {
-                    await _bookingRepository.ReleasePeriodAsync(
-                        booking.HallId,
-                        booking.Date,
-                        booking.Period,
-                        cancellationToken);
-                }
-            }
+            // The delete above has removed the booking row, so the slots are taken from the
+            // already-loaded aggregate rather than re-queried. Only the slots no other
+            // active booking still claims are re-opened, so another booking's protection
+            // is never released. A multi-hour booking therefore always frees all of its
+            // hours, and a failed delete above leaves every slot untouched.
+            await _bookingRepository.ReleaseBookingSlotsAsync(
+                booking.Id,
+                booking.HallId,
+                booking.Date,
+                [.. booking.Slots.Select(slot => slot.StartTime)],
+                cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
@@ -160,9 +131,11 @@ public sealed class BookingDeletionService : IBookingDeletionService
             HallName = booking.Hall?.Name ?? string.Empty,
             RequesterUserId = booking.RequesterUserId,
             Date = booking.Date,
-            Period = booking.Period,
-            SlotStart = booking.SlotStart,
-            IsHourlyBooking = booking.IsHourlyBooking,
+            SlotStarts = booking.Slots
+                .OrderBy(slot => slot.StartTime)
+                .Select(slot => slot.StartTime)
+                .ToList(),
+            TimeRange = booking.HourlyTimeRange,
             Status = booking.Status
         };
 }

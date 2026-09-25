@@ -4,6 +4,7 @@ using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Enums;
 using Wesal.Infrastructure.AiAssistant;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -11,7 +12,7 @@ public sealed class WesalToolGatewayShould
 {
     private readonly FakeSearchService _search = new();
     private readonly FakeDetailsService _details = new();
-    private readonly FakeAvailabilityService _availability = new();
+    private readonly FakeHourlySlotService _availability = new();
     private readonly WesalToolGateway _gateway;
 
     public WesalToolGatewayShould()
@@ -182,7 +183,7 @@ public sealed class WesalToolGatewayShould
     }
 
     [Fact]
-    public void SearchRejectsInvalidBookingPeriod()
+    public void SearchRejectsUnknownBookingPeriodArgument()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.SearchHalls,
@@ -347,13 +348,15 @@ public sealed class WesalToolGatewayShould
     {
         var hallId = Guid.NewGuid();
         var date = new DateOnly(2026, 12, 1);
-        _availability.Response = new HallAvailabilityDto
+        _availability.Response = new HallHourlyCatalogDto
         {
+            HallId = hallId,
             Date = date,
-            Periods =
+            DayOpen = true,
+            Slots =
             [
-                new HallBookingPeriodStatusDto { PeriodType = BookingPeriodType.FirstPeriod, Status = AvailabilityStatus.Available },
-                new HallBookingPeriodStatusDto { PeriodType = BookingPeriodType.SecondPeriod, Status = AvailabilityStatus.Booked }
+                new HallHourlySlotDto { StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(11, 0), Status = HallSlotStatus.Available },
+                new HallHourlySlotDto { StartTime = new TimeOnly(11, 0), EndTime = new TimeOnly(12, 0), Status = HallSlotStatus.Booked }
             ]
         };
 
@@ -370,7 +373,7 @@ public sealed class WesalToolGatewayShould
         Assert.True(result.Success);
         Assert.Equal(hallId, _availability.LastHallId);
         Assert.Equal(date, _availability.LastDate);
-        Assert.Equal(2, result.Data!["periods"]!.AsArray().Count);
+        Assert.Equal(2, result.Data!["slots"]!.AsArray().Count);
     }
 
     [Fact]
@@ -423,20 +426,6 @@ public sealed class WesalToolGatewayShould
                 Photos = Response.Photos,
                 Availability = Response.Availability
             };
-            return Task.FromResult(Response);
-        }
-    }
-
-    private sealed class FakeAvailabilityService : IHallAvailabilityService
-    {
-        public Guid LastHallId { get; private set; }
-        public DateOnly LastDate { get; private set; }
-        public HallAvailabilityDto Response { get; set; } = new();
-
-        public Task<HallAvailabilityDto> GetHallAvailabilityAsync(Guid hallId, DateOnly date, CancellationToken cancellationToken = default)
-        {
-            LastHallId = hallId;
-            LastDate = date;
             return Task.FromResult(Response);
         }
     }

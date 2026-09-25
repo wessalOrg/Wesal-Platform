@@ -72,47 +72,15 @@ public sealed class BookingCancellationService : IBookingCancellationService
                     "The booking request is no longer in the pending state and cannot be cancelled; it may have just been processed.");
             }
 
-            // WESAL-TASK-1: release the exact unit this booking held. An hourly booking
-            // re-opens its own 60-minute HallSlotAvailability slot; a legacy booking
-            // re-opens its legacy two-period row exactly as before. Before this branch
-            // existed, an hourly booking (which has no meaningful Period) released a
-            // FirstPeriod row and left its real slot Booked forever.
-            if (booking.IsHourlyBooking)
-            {
-                var hasOtherActiveHourlyBooking = await _bookingRepository.HasOtherActiveHourlyBookingsAsync(
-                    booking.HallId,
-                    booking.Date,
-                    booking.SlotStart,
-                    booking.Id,
-                    cancellationToken);
-
-                if (!hasOtherActiveHourlyBooking)
-                {
-                    await _bookingRepository.ReleaseHourlySlotAsync(
-                        booking.HallId,
-                        booking.Date,
-                        booking.SlotStart,
-                        cancellationToken);
-                }
-            }
-            else
-            {
-                var hasOtherActiveBooking = await _bookingRepository.HasOtherActiveBookingsAsync(
-                    booking.HallId,
-                    booking.Date,
-                    booking.Period,
-                    booking.Id,
-                    cancellationToken);
-
-                if (!hasOtherActiveBooking)
-                {
-                    await _bookingRepository.ReleasePeriodAsync(
-                        booking.HallId,
-                        booking.Date,
-                        booking.Period,
-                        cancellationToken);
-                }
-            }
+            // WESAL-TASK-1: release every hourly slot this booking held. A cancelled
+            // booking may span any number of hours, so all of them are re-opened, except a
+            // slot another active booking still claims, whose protection is kept.
+            await _bookingRepository.ReleaseBookingSlotsAsync(
+                booking.Id,
+                booking.HallId,
+                booking.Date,
+                [.. booking.Slots.Select(slot => slot.StartTime)],
+                cancellationToken);
 
             // Keep the in-memory entity consistent with the atomic UPDATE above so the
             // conversation notice and the owner notification describe a cancelled request.
@@ -133,7 +101,7 @@ public sealed class BookingCancellationService : IBookingCancellationService
 
     /// <summary>
     /// Pushes the cancellation to the Hall Owner's dashboard group (WESAL-TASK-1).
-    /// Mirrors BookingRequestService.NotifyOwnerAsync: the owner id comes from
+    /// The owner id comes from
     /// booking.Hall.OwnerId (trusted backend data), and delivery failures are swallowed
     /// because the cancellation itself is already committed.
     /// </summary>
@@ -156,10 +124,11 @@ public sealed class BookingCancellationService : IBookingCancellationService
                     HallId = booking.HallId,
                     HallName = hall.Name,
                     Date = booking.Date,
-                    SlotStart = booking.SlotStart,
-                    TimeRange = booking.IsHourlyBooking ? booking.HourlyTimeRange : string.Empty,
-                    RequestedPeriod = booking.Period,
-                    IsHourlyBooking = booking.IsHourlyBooking,
+                    SlotStarts = booking.Slots
+                        .OrderBy(slot => slot.StartTime)
+                        .Select(slot => slot.StartTime)
+                        .ToList(),
+                    TimeRange = booking.HourlyTimeRange,
                     RequesterUserId = booking.RequesterUserId,
                     RequesterName = ResolveRequesterName(booking),
                     OccurredAt = booking.UpdatedAt ?? DateTimeOffset.UtcNow
@@ -243,21 +212,15 @@ public sealed class BookingCancellationService : IBookingCancellationService
     }
 
     /// <summary>
-    /// Builds the chat notice left on the requester/owner conversation thread.
-    /// WESAL-TASK-1: an hourly booking is described by its real 60-minute range, because
-    /// its <c>Period</c> carries no meaning and would otherwise render the misleading
-    /// "FirstPeriod period". Legacy bookings keep the original two-period wording.
+    /// Builds the chat notice left on the requester/owner conversation thread. A booking
+    /// is always described by its real hourly range, so a multi-hour request reads as
+    /// "09:00 - 12:00" rather than naming a booking period that no longer exists.
     /// </summary>
     private static string BuildCancellationContent(Booking booking, Hall hall)
     {
         var requestedDate = booking.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-        if (booking.IsHourlyBooking)
-        {
-            return $"Your booking request for {hall.Name} on {requestedDate} for the {booking.HourlyTimeRange} slot was cancelled by the requester.";
-        }
-
-        return $"Your booking request for {hall.Name} on {requestedDate} for the {booking.Period} period was cancelled by the requester.";
+        return $"Your booking request for {hall.Name} on {requestedDate} for the {booking.HourlyTimeRange} slot was cancelled by the requester.";
     }
 
     private static string BuildFinalizedMessage(BookingStatus status)
@@ -277,9 +240,11 @@ public sealed class BookingCancellationService : IBookingCancellationService
             HallName = booking.Hall?.Name ?? string.Empty,
             RequesterUserId = booking.RequesterUserId,
             Date = booking.Date,
-            Period = booking.Period,
-            SlotStart = booking.SlotStart,
-            IsHourlyBooking = booking.IsHourlyBooking,
+            SlotStarts = booking.Slots
+                .OrderBy(slot => slot.StartTime)
+                .Select(slot => slot.StartTime)
+                .ToList(),
+            TimeRange = booking.HourlyTimeRange,
             Status = BookingStatus.Cancelled
         };
 }

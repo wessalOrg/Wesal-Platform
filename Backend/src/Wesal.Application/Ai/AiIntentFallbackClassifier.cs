@@ -25,7 +25,7 @@ public sealed partial class AiIntentFallbackClassifier
         var text = (message ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(text))
         {
-            return new AiAssistantIntentDto(AiIntentType.Unknown, null, null, null, null, null, null);
+            return new AiAssistantIntentDto(AiIntentType.Unknown, null, null, null, null, null);
         }
 
         var matchText = NormalizeArabic(text);
@@ -38,19 +38,11 @@ public sealed partial class AiIntentFallbackClassifier
 
         if (hasCriteria || SearchIntentRegex().IsMatch(matchText))
         {
-            BookingPeriodType? period = null;
-            if (!string.IsNullOrWhiteSpace(criteria.BookingPeriod)
-                && Enum.TryParse<BookingPeriodType>(criteria.BookingPeriod, true, out var parsed))
-            {
-                period = parsed;
-            }
-
             return new AiAssistantIntentDto(
                 AiIntentType.SearchHalls,
                 criteria.Region,
                 criteria.Area,
                 criteria.Date,
-                period,
                 criteria.Capacity,
                 null);
         }
@@ -59,17 +51,17 @@ public sealed partial class AiIntentFallbackClassifier
         // imperative command is treated as an unsupported action request.
         if (HowToRegex().IsMatch(matchText))
         {
-            return new AiAssistantIntentDto(AiIntentType.HowTo, null, null, null, null, null, null);
+            return new AiAssistantIntentDto(AiIntentType.HowTo, null, null, null, null, null);
         }
 
         if (ActionRequestRegex().IsMatch(matchText))
         {
-            return new AiAssistantIntentDto(AiIntentType.Unsupported, null, null, null, null, null, null);
+            return new AiAssistantIntentDto(AiIntentType.Unsupported, null, null, null, null, null);
         }
 
         // Anything else is treated as an informational question the how-to service
         // can answer with guidance or a clarifying prompt.
-        return new AiAssistantIntentDto(AiIntentType.HowTo, null, null, null, null, null, null);
+        return new AiAssistantIntentDto(AiIntentType.HowTo, null, null, null, null, null);
     }
 
     /// <summary>

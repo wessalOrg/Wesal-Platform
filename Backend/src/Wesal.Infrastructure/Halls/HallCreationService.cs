@@ -80,12 +80,6 @@ public class HallCreationService : IHallCreationService
                 throw new ValidationException(new Dictionary<string, string[]> { ["Features"] = new[] { $"The feature \"{feature}\" is not in the predefined feature list." } });
         }
 
-        // Period validation already done via validator, but double-check
-        if (request.FirstPeriodEnd <= request.FirstPeriodStart)
-            throw new ValidationException(new Dictionary<string, string[]> { ["FirstPeriodEnd"] = new[] { "First period end time must be after start time." } });
-        if (request.SecondPeriodEnd <= request.SecondPeriodStart)
-            throw new ValidationException(new Dictionary<string, string[]> { ["SecondPeriodEnd"] = new[] { "Second period end time must be after start time." } });
-
         // Photo validation before persistence
         var validatedPhotos = new List<(string OriginalName, string Extension, string MimeType, byte[] Content)>();
         if (request.Photos != null)
@@ -141,6 +135,8 @@ public class HallCreationService : IHallCreationService
             ShowPrice = request.Price.HasValue,
             YouTubeVideoUrl = string.IsNullOrWhiteSpace(request.YouTubeVideoUrl) ? null : request.YouTubeVideoUrl.Trim(),
             OtherFeatures = string.IsNullOrWhiteSpace(request.OtherFeatures) ? null : request.OtherFeatures.Trim(),
+            HourlySlotStart = request.HourlySlotStart,
+            HourlySlotEnd = request.HourlySlotEnd,
             OwnerId = ownerId,
             Status = HallStatus.PendingReview,
             IsDeleted = false
@@ -152,12 +148,6 @@ public class HallCreationService : IHallCreationService
         {
             return await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
-                hall.BookingPeriods = new List<HallBookingPeriod>
-                {
-                    new HallBookingPeriod { HallId = hall.Id, Type = BookingPeriodType.FirstPeriod, StartTime = request.FirstPeriodStart, EndTime = request.FirstPeriodEnd },
-                    new HallBookingPeriod { HallId = hall.Id, Type = BookingPeriodType.SecondPeriod, StartTime = request.SecondPeriodStart, EndTime = request.SecondPeriodEnd }
-                };
-
                 hall.Features = features
                     .Select(name => new HallFeature { HallId = hall.Id, Name = name })
                     .ToList();
@@ -209,7 +199,6 @@ public class HallCreationService : IHallCreationService
                     Capacity = hall.Capacity,
                     Price = hall.Price,
                     Status = hall.Status,
-                    BookingPeriods = hall.BookingPeriods.Select(p => new HallBookingPeriodDto { Type = p.Type, StartTime = p.StartTime, EndTime = p.EndTime }).ToList(),
                     Images = images.Select(i => new HallImageDto { Id = i.Id, Url = i.Url }).ToList()
                 };
             }, cancellationToken);

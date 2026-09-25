@@ -83,27 +83,27 @@ public class HallSearchRepositoryShould
     }
 
     [Fact]
-    public async Task SearchApprovedHallsAsync_ExcludesHallsBookedOnSelectedDateAndPeriod()
+    public async Task SearchApprovedHallsAsync_ExcludesHallsBookedOnSelectedDateAndStartTime()
     {
         await using var context = CreateContext();
         var availableHall = CreateHall("Available Hall");
         var bookedHall = CreateHall("Booked Hall");
-        var otherPeriodHall = CreateHall("Other Period Hall");
-        context.Halls.AddRange(availableHall, bookedHall, otherPeriodHall);
-        context.HallAvailabilities.AddRange(
-            new HallAvailability
+        var otherTimeHall = CreateHall("Other Time Hall");
+        context.Halls.AddRange(availableHall, bookedHall, otherTimeHall);
+        context.HallSlotAvailabilities.AddRange(
+            new HallSlotAvailability
             {
                 HallId = bookedHall.Id,
                 Date = new DateOnly(2026, 8, 10),
-                PeriodType = BookingPeriodType.FirstPeriod,
-                Status = AvailabilityStatus.Booked
+                StartTime = new TimeOnly(10, 0),
+                Status = HallSlotStatus.Booked
             },
-            new HallAvailability
+            new HallSlotAvailability
             {
-                HallId = otherPeriodHall.Id,
+                HallId = otherTimeHall.Id,
                 Date = new DateOnly(2026, 8, 10),
-                PeriodType = BookingPeriodType.SecondPeriod,
-                Status = AvailabilityStatus.Booked
+                StartTime = new TimeOnly(14, 0),
+                Status = HallSlotStatus.Booked
             });
         await context.SaveChangesAsync();
 
@@ -114,28 +114,28 @@ public class HallSearchRepositoryShould
             null,
             null,
             new DateOnly(2026, 8, 10),
-            BookingPeriodType.FirstPeriod,
+            new TimeOnly(10, 0),
             0,
             20);
 
         Assert.Equal(2, result.Count);
         Assert.Contains(result, hall => hall.Id == availableHall.Id);
-        Assert.Contains(result, hall => hall.Id == otherPeriodHall.Id);
+        Assert.Contains(result, hall => hall.Id == otherTimeHall.Id);
         Assert.DoesNotContain(result, hall => hall.Id == bookedHall.Id);
     }
 
     [Fact]
-    public async Task SearchApprovedHallsAsync_IgnoresDateFilterWhenPeriodNotProvided()
+    public async Task SearchApprovedHallsAsync_IgnoresStartTimeFilterWhenDateNotProvided()
     {
         await using var context = CreateContext();
         var bookedHall = CreateHall("Booked Hall");
         context.Halls.Add(bookedHall);
-        context.HallAvailabilities.Add(new HallAvailability
+        context.HallSlotAvailabilities.Add(new HallSlotAvailability
         {
             HallId = bookedHall.Id,
             Date = new DateOnly(2026, 8, 10),
-            PeriodType = BookingPeriodType.FirstPeriod,
-            Status = AvailabilityStatus.Booked
+            StartTime = new TimeOnly(10, 0),
+            Status = HallSlotStatus.Booked
         });
         await context.SaveChangesAsync();
 
@@ -145,8 +145,8 @@ public class HallSearchRepositoryShould
             null,
             null,
             null,
-            new DateOnly(2026, 8, 10),
             null,
+            new TimeOnly(10, 0),
             0,
             20);
 
@@ -182,12 +182,12 @@ public class HallSearchRepositoryShould
             CreateHall("Royal Hall", region: HallRegion.Gaza, address: "Other Street, Gaza"));
         var bookedHall = CreateHall("Royal Hall", region: HallRegion.Gaza, address: "Royal Street, Gaza");
         context.Halls.Add(bookedHall);
-        context.HallAvailabilities.Add(new HallAvailability
+        context.HallSlotAvailabilities.Add(new HallSlotAvailability
         {
             HallId = bookedHall.Id,
             Date = new DateOnly(2026, 8, 10),
-            PeriodType = BookingPeriodType.FirstPeriod,
-            Status = AvailabilityStatus.Booked
+            StartTime = new TimeOnly(10, 0),
+            Status = HallSlotStatus.Booked
         });
         await context.SaveChangesAsync();
 
@@ -198,7 +198,7 @@ public class HallSearchRepositoryShould
             HallRegion.Gaza,
             "Royal Street",
             new DateOnly(2026, 8, 10),
-            BookingPeriodType.FirstPeriod,
+            new TimeOnly(10, 0),
             0,
             20);
 
@@ -249,12 +249,12 @@ public class HallSearchRepositoryShould
             CreateHall("Other Hall", region: HallRegion.Gaza));
         var bookedHall = CreateHall("Royal Hall", region: HallRegion.Gaza);
         context.Halls.Add(bookedHall);
-        context.HallAvailabilities.Add(new HallAvailability
+        context.HallSlotAvailabilities.Add(new HallSlotAvailability
         {
             HallId = bookedHall.Id,
             Date = new DateOnly(2026, 8, 10),
-            PeriodType = BookingPeriodType.FirstPeriod,
-            Status = AvailabilityStatus.Booked
+            StartTime = new TimeOnly(10, 0),
+            Status = HallSlotStatus.Booked
         });
         await context.SaveChangesAsync();
 
@@ -265,7 +265,7 @@ public class HallSearchRepositoryShould
             HallRegion.Gaza,
             null,
             new DateOnly(2026, 8, 10),
-            BookingPeriodType.FirstPeriod);
+            new TimeOnly(10, 0));
 
         Assert.Equal(1, totalCount);
     }

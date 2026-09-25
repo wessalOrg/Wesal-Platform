@@ -71,46 +71,15 @@ public sealed class BookingRejectionService : IBookingRejectionService
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // WESAL-TASK-1: release the exact unit this booking held. An hourly booking
-            // re-opens its own 60-minute HallSlotAvailability slot; a legacy booking
-            // re-opens its legacy two-period row exactly as before. Branches on
-            // Booking.IsHourlyBooking so an hourly booking can never touch FirstPeriod.
-            if (booking.IsHourlyBooking)
-            {
-                var hasOtherActiveHourlyBooking = await _bookingRepository.HasOtherActiveHourlyBookingsAsync(
-                    booking.HallId,
-                    booking.Date,
-                    booking.SlotStart,
-                    booking.Id,
-                    cancellationToken);
-
-                if (!hasOtherActiveHourlyBooking)
-                {
-                    await _bookingRepository.ReleaseHourlySlotAsync(
-                        booking.HallId,
-                        booking.Date,
-                        booking.SlotStart,
-                        cancellationToken);
-                }
-            }
-            else
-            {
-                var hasOtherActiveBooking = await _bookingRepository.HasOtherActiveBookingsAsync(
-                    booking.HallId,
-                    booking.Date,
-                    booking.Period,
-                    booking.Id,
-                    cancellationToken);
-
-                if (!hasOtherActiveBooking)
-                {
-                    await _bookingRepository.ReleasePeriodAsync(
-                        booking.HallId,
-                        booking.Date,
-                        booking.Period,
-                        cancellationToken);
-                }
-            }
+            // WESAL-TASK-1: release the exact hours this booking held. A rejected booking
+            // may span any number of hourly slots, so every one of them is re-opened —
+            // except a slot another active booking still claims, whose protection is kept.
+            await _bookingRepository.ReleaseBookingSlotsAsync(
+                booking.Id,
+                booking.HallId,
+                booking.Date,
+                [.. booking.Slots.Select(slot => slot.StartTime)],
+                cancellationToken);
         }, cancellationToken);
 
         var notificationStatus = BookingRejectionNotificationStatus.Deferred;
@@ -259,7 +228,11 @@ public sealed class BookingRejectionService : IBookingRejectionService
             HallId = booking.HallId,
             HallName = booking.Hall?.Name ?? string.Empty,
             Date = booking.Date,
-            Period = booking.Period,
+            SlotStarts = booking.Slots
+                .OrderBy(slot => slot.StartTime)
+                .Select(slot => slot.StartTime)
+                .ToList(),
+            TimeRange = booking.HourlyTimeRange,
             RequesterUserId = booking.RequesterUserId,
             RejectionReason = booking.RejectionReason ?? string.Empty,
             NotificationStatus = status,

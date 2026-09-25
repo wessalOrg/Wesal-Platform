@@ -87,7 +87,7 @@ public class OwnerDashboardRepositoryShould
     }
 
     [Fact]
-    public async Task GetOwnedHallWithDetails_ReturnsOwnedHallWithPeriodsAndPhotos()
+    public async Task GetOwnedHallWithDetails_ReturnsOwnedHallWithFeaturesAndPhotos()
     {
         await using var context = CreateContext();
         var ownerId = Guid.NewGuid().ToString();
@@ -97,9 +97,9 @@ public class OwnerDashboardRepositoryShould
         context.HallImages.AddRange(
             new HallImage { HallId = hallId, Url = "a.jpg", DisplayOrder = 0 },
             new HallImage { HallId = hallId, Url = "b.jpg", DisplayOrder = 1, IsDeleted = true });
-        context.HallBookingPeriods.AddRange(
-            new HallBookingPeriod { HallId = hallId, Type = BookingPeriodType.FirstPeriod, StartTime = new TimeOnly(9, 0), EndTime = new TimeOnly(15, 0) },
-            new HallBookingPeriod { HallId = hallId, Type = BookingPeriodType.SecondPeriod, StartTime = new TimeOnly(16, 0), EndTime = new TimeOnly(23, 0) });
+        context.HallFeatures.AddRange(
+            new HallFeature { HallId = hallId, Name = "Stage" },
+            new HallFeature { HallId = hallId, Name = "Air conditioning" });
         await context.SaveChangesAsync();
 
         var repository = new OwnerDashboardRepository(context);
@@ -108,7 +108,7 @@ public class OwnerDashboardRepositoryShould
 
         Assert.NotNull(result);
         Assert.Equal(hallId, result.Id);
-        Assert.Equal(2, result.BookingPeriods.Count);
+        Assert.Equal(2, result.Features.Count);
         Assert.Equal(2, result.Images.Count);
     }
 
@@ -154,19 +154,14 @@ public class OwnerDashboardRepositoryShould
         var hall = new Hall { Id = hallId, Name = "Grand Hall", OwnerId = ownerId, Status = HallStatus.Approved };
         context.Halls.Add(hall);
         context.HallImages.Add(new HallImage { HallId = hallId, Url = "a.jpg", DisplayOrder = 0 });
-        context.HallBookingPeriods.Add(new HallBookingPeriod
-        {
-            HallId = hallId,
-            Type = BookingPeriodType.FirstPeriod,
-            StartTime = new TimeOnly(9, 0),
-            EndTime = new TimeOnly(15, 0)
-        });
+        context.HallFeatures.Add(new HallFeature { HallId = hallId, Name = "Stage" });
         await context.SaveChangesAsync();
 
         var repository = new OwnerDashboardRepository(context);
 
         var result = await repository.GetOwnedHallForUpdateAsync(hallId, ownerId);
         Assert.NotNull(result);
+        Assert.Equal("Stage", Assert.Single(result.Features).Name);
 
         result.Name = "Grand Hall Renamed";
         result.Images.Single().IsDeleted = true;
@@ -314,7 +309,11 @@ public class OwnerDashboardRepositoryShould
             HallId = hall.Id,
             RequesterUserId = requesterId,
             Date = new DateOnly(2027, 6, 1),
-            Period = BookingPeriodType.FirstPeriod
+            Slots =
+            [
+                new BookingSlot { StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(11, 0) },
+                new BookingSlot { StartTime = new TimeOnly(11, 0), EndTime = new TimeOnly(12, 0) }
+            ]
         });
         await context.SaveChangesAsync();
 
@@ -326,7 +325,8 @@ public class OwnerDashboardRepositoryShould
         Assert.Equal(requesterId, item.RequesterUserId);
         Assert.Equal("Mahmoud Salah", item.RequesterName);
         Assert.Equal(new DateOnly(2027, 6, 1), item.RequestedDate);
-        Assert.Equal(BookingPeriodType.FirstPeriod, item.RequestedPeriod);
+        Assert.Equal([new TimeOnly(10, 0), new TimeOnly(11, 0)], item.SlotStarts);
+        Assert.Equal("10:00 - 12:00", item.TimeRange);
         Assert.Equal(BookingStatus.Pending, item.Status);
     }
 
@@ -343,8 +343,8 @@ public class OwnerDashboardRepositoryShould
             new ApplicationUser { Id = firstId, UserName = "first", FullName = "First Requester" },
             new ApplicationUser { Id = secondId, UserName = "second", FullName = "Second Requester" });
         context.Bookings.AddRange(
-            new Booking { HallId = hall.Id, RequesterUserId = firstId, Date = new DateOnly(2027, 6, 1), Period = BookingPeriodType.FirstPeriod },
-            new Booking { HallId = hall.Id, RequesterUserId = secondId, Date = new DateOnly(2027, 6, 1), Period = BookingPeriodType.FirstPeriod });
+            CreateBooking(hall.Id, firstId, new DateOnly(2027, 6, 1), new TimeOnly(10, 0)),
+            CreateBooking(hall.Id, secondId, new DateOnly(2027, 6, 1), new TimeOnly(10, 0)));
         await context.SaveChangesAsync();
 
         var repository = new OwnerDashboardRepository(context);
@@ -367,10 +367,10 @@ public class OwnerDashboardRepositoryShould
         context.Halls.AddRange(hallA, hallB);
         context.Users.Add(new ApplicationUser { Id = requesterId, UserName = "requester", FullName = "Pending Only" });
         context.Bookings.AddRange(
-            new Booking { HallId = hallA.Id, RequesterUserId = requesterId, Date = new DateOnly(2027, 6, 1), Period = BookingPeriodType.FirstPeriod, Status = BookingStatus.Pending },
-            new Booking { HallId = hallA.Id, RequesterUserId = requesterId, Date = new DateOnly(2027, 6, 1), Period = BookingPeriodType.SecondPeriod, Status = BookingStatus.Accepted },
-            new Booking { HallId = hallA.Id, RequesterUserId = requesterId, Date = new DateOnly(2027, 6, 5), Period = BookingPeriodType.FirstPeriod, Status = BookingStatus.Rejected },
-            new Booking { HallId = hallB.Id, RequesterUserId = requesterId, Date = new DateOnly(2027, 6, 1), Period = BookingPeriodType.FirstPeriod, Status = BookingStatus.Pending });
+            CreateBooking(hallA.Id, requesterId, new DateOnly(2027, 6, 1), new TimeOnly(10, 0), BookingStatus.Pending),
+            CreateBooking(hallA.Id, requesterId, new DateOnly(2027, 6, 1), new TimeOnly(16, 0), BookingStatus.Accepted),
+            CreateBooking(hallA.Id, requesterId, new DateOnly(2027, 6, 5), new TimeOnly(10, 0), BookingStatus.Rejected),
+            CreateBooking(hallB.Id, requesterId, new DateOnly(2027, 6, 1), new TimeOnly(10, 0), BookingStatus.Pending));
         await context.SaveChangesAsync();
 
         var repository = new OwnerDashboardRepository(context);
@@ -379,7 +379,7 @@ public class OwnerDashboardRepositoryShould
 
         var item = Assert.Single(result!);
         Assert.Equal(BookingStatus.Pending, item.Status);
-        Assert.Equal(BookingPeriodType.FirstPeriod, item.RequestedPeriod);
+        Assert.Equal([new TimeOnly(10, 0)], item.SlotStarts);
     }
 
     [Fact]
@@ -392,9 +392,9 @@ public class OwnerDashboardRepositoryShould
         context.Halls.Add(hall);
         context.Users.Add(new ApplicationUser { Id = requesterId, UserName = "requester", FullName = "Ordered" });
         context.Bookings.AddRange(
-            new Booking { HallId = hall.Id, RequesterUserId = requesterId, Date = new DateOnly(2027, 7, 2), Period = BookingPeriodType.FirstPeriod },
-            new Booking { HallId = hall.Id, RequesterUserId = requesterId, Date = new DateOnly(2027, 6, 1), Period = BookingPeriodType.FirstPeriod },
-            new Booking { HallId = hall.Id, RequesterUserId = requesterId, Date = new DateOnly(2027, 6, 1), Period = BookingPeriodType.SecondPeriod });
+            CreateBooking(hall.Id, requesterId, new DateOnly(2027, 7, 2), new TimeOnly(10, 0)),
+            CreateBooking(hall.Id, requesterId, new DateOnly(2027, 6, 1), new TimeOnly(10, 0)),
+            CreateBooking(hall.Id, requesterId, new DateOnly(2027, 6, 1), new TimeOnly(16, 0)));
         await context.SaveChangesAsync();
 
         var repository = new OwnerDashboardRepository(context);
@@ -407,6 +407,24 @@ public class OwnerDashboardRepositoryShould
             item => Assert.Equal(new DateOnly(2027, 6, 1), item.RequestedDate),
             item => Assert.Equal(new DateOnly(2027, 7, 2), item.RequestedDate));
     }
+
+    private static Booking CreateBooking(
+        Guid hallId,
+        string requesterUserId,
+        DateOnly date,
+        TimeOnly slotStart,
+        BookingStatus status = BookingStatus.Pending)
+        => new()
+        {
+            HallId = hallId,
+            RequesterUserId = requesterUserId,
+            Date = date,
+            Slots =
+            [
+                new BookingSlot { StartTime = slotStart, EndTime = slotStart.AddHours(1) }
+            ],
+            Status = status
+        };
 
     private static ApplicationDbContext CreateContext()
     {

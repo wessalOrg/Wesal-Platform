@@ -15,19 +15,19 @@ public class FeaturedHallsService : IFeaturedHallsService
 
     private readonly IHallRepository _hallRepository;
     private readonly IDateTime _dateTime;
+    private readonly IHourlySlotService _hourlySlotService;
     private readonly ILogger<FeaturedHallsService> _logger;
-    private readonly IHallAvailabilityCleanupService? _cleanupService;
 
     public FeaturedHallsService(
         IHallRepository hallRepository,
         IDateTime dateTime,
-        ILogger<FeaturedHallsService> logger,
-        IHallAvailabilityCleanupService? cleanupService = null)
+        IHourlySlotService hourlySlotService,
+        ILogger<FeaturedHallsService> logger)
     {
         _hallRepository = hallRepository;
         _dateTime = dateTime;
+        _hourlySlotService = hourlySlotService;
         _logger = logger;
-        _cleanupService = cleanupService;
     }
 
     public Task<IReadOnlyList<FeaturedHallDto>> GetFeaturedHallsAsync(
@@ -41,7 +41,6 @@ public class FeaturedHallsService : IFeaturedHallsService
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (_cleanupService != null) try { await _cleanupService.CleanupExpiredAsync(cancellationToken); } catch { }
 
         var limit = take ?? int.MaxValue;
         var halls = region is null
@@ -57,50 +56,30 @@ public class FeaturedHallsService : IFeaturedHallsService
             return [];
         }
 
-        var hallIds = halls.Select(hall => hall.Id).ToHashSet();
-
         var fromDate = DateOnly.FromDateTime(_dateTime.Now.UtcDateTime);
         var toDate = fromDate.AddDays(AvailabilityDays - 1);
 
-        var periods = await _hallRepository.GetBookingPeriodsAsync(hallIds, cancellationToken);
-        var availability = await _hallRepository.GetAvailabilityAsync(hallIds, fromDate, toDate, cancellationToken);
+        var featuredHalls = new List<FeaturedHallDto>(halls.Count);
+        foreach (var hall in halls)
+        {
+            featuredHalls.Add(await BuildFeaturedHallAsync(hall, fromDate, toDate, cancellationToken));
+        }
 
-        var availabilityByKey = availability.ToDictionary(item => (item.HallId, item.Date, item.PeriodType));
-        var periodsByHall = periods.GroupBy(period => period.HallId)
-            .ToDictionary(group => group.Key, group => group.ToList());
-
-        return halls
-            .Select(hall => BuildFeaturedHall(hall, periodsByHall, availabilityByKey, fromDate, toDate))
-            .ToList();
+        return featuredHalls;
     }
 
-    private static FeaturedHallDto BuildFeaturedHall(
+    private async Task<FeaturedHallDto> BuildFeaturedHallAsync(
         Hall hall,
-        IReadOnlyDictionary<Guid, List<HallBookingPeriod>> periodsByHall,
-        IReadOnlyDictionary<(Guid HallId, DateOnly Date, BookingPeriodType PeriodType), HallAvailability> availabilityByKey,
         DateOnly fromDate,
-        DateOnly toDate)
+        DateOnly toDate,
+        CancellationToken cancellationToken)
     {
-        var hallPeriods = periodsByHall.GetValueOrDefault(hall.Id) ?? [];
-
         var days = new List<HallAvailabilityDto>((toDate.DayNumber - fromDate.DayNumber) + 1);
 
         for (var date = fromDate; date <= toDate; date = date.AddDays(1))
         {
-            var dayPeriods = hallPeriods
-                .Select(period => new HallBookingPeriodStatusDto
-                {
-                    PeriodType = period.Type,
-                    PeriodName = HallDisplayNames.GetPeriodName(period.Type),
-                    StartTime = period.StartTime,
-                    EndTime = period.EndTime,
-                    Status = availabilityByKey.TryGetValue((hall.Id, date, period.Type), out var availability)
-                        ? availability.Status
-                        : AvailabilityStatus.Available
-                })
-                .ToList();
-
-            days.Add(new HallAvailabilityDto { Date = date, Periods = dayPeriods });
+            var catalog = await _hourlySlotService.GetHourlyCatalogAsync(hall.Id, date, cancellationToken);
+            days.Add(new HallAvailabilityDto { Date = date, Slots = catalog.Slots });
         }
 
         return new FeaturedHallDto

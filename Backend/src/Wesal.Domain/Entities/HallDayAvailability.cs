@@ -7,8 +7,10 @@ namespace Wesal.Domain.Entities;
 /// Per-day booking gate for a hall under the new hourly-slot availability model
 /// (WESAL-TASK-1). Exactly one row per (HallId, Date); when a row is absent the day
 /// defaults to Open. <see cref="IsOpen"/> == false is the owner's "block entire day"
-/// action — the day is not bookable at all, and it does not appear as available to
-/// seekers regardless of the <see cref="Hall.ShowBookedSlots"/> toggle.
+    /// action — the day is not bookable at all, through either booking endpoint,
+    /// regardless of the <see cref="Hall.ShowBookedSlots"/> toggle. That toggle governs
+    /// only how the closed day is displayed: with it OFF the day is reported as open so
+    /// the block stays indistinguishable from hidden fully-booked time.
 /// </summary>
 public class HallDayAvailability : BaseAuditableEntity
 {

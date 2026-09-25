@@ -11,9 +11,9 @@ using Wesal.Domain.Exceptions;
 namespace Wesal.Infrastructure.Bookings;
 
 /// <summary>
-/// Seeker-facing hourly-slot availability and booking (WESAL-TASK-1). Additive to the
-/// legacy <see cref="BookingRequestService"/> two-period flow, which stays dormant and
-/// unchanged. Slot availability is a 60-minute grid derived from the hall's
+/// Seeker-facing hourly-slot availability and booking (WESAL-TASK-1). This is the only
+/// booking flow; the old two-period model has been removed. Slot availability is a
+/// 60-minute grid derived from the hall's
 /// <see cref="Hall.HourlySlotStart"/> / <see cref="Hall.HourlySlotEnd"/> window; the
 /// per-day <see cref="HallDayAvailability"/> gate can close a whole day. Booking an
 /// already-booked (or hidden) slot, or a fully blocked day, always returns an explicit
@@ -180,34 +180,39 @@ public class HourlySlotService : IHourlySlotService
 
         EnsureFutureBookingDate(request.Date);
 
-        EnsureSlotWithinWindow(hall, request.SlotStart);
+        var slotStarts = EnsureSlotsWithinWindow(hall, request.SlotStarts);
 
         var booking = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             // WESAL-TASK-1 hardening (atomicity): the day-gate check now runs inside the
             // same transaction as the slot reservation and the booking insert, so an owner
             // closing the day concurrently can no longer interleave between the two and
-            // leave a booking on a day that reports as blocked. The check and the write
-            // were previously two separate round-trips outside any shared scope.
+            // leave a booking on a day that reports as blocked.
             if (!await _bookingRepository.IsDayOpenAsync(hall.Id, request.Date, cancellationToken))
             {
                 throw new ConflictException(
                     $"The hall is not available on {request.Date:yyyy-MM-dd} (the day is blocked). Please choose another day.");
             }
 
-            var reserved = await _bookingRepository.ReserveHourlySlotAsync(
+            // All requested hours are reserved together. A partial result means at least
+            // one hour was already taken, so the whole booking is refused and the
+            // transaction rolls back the hours taken earlier in the loop.
+            var reserved = await _bookingRepository.ReserveHourlySlotsAsync(
                 hall.Id,
                 request.Date,
-                request.SlotStart,
+                slotStarts,
                 cancellationToken);
 
-            if (reserved == 0)
+            if (reserved != slotStarts.Count)
             {
                 var requestedDate = request.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                var requestedTime = request.SlotStart.ToString("HH:mm", CultureInfo.InvariantCulture);
+
+                var requestedTimes = string.Join(
+                    ", ",
+                    slotStarts.Select(start => start.ToString("HH:mm", CultureInfo.InvariantCulture)));
 
                 throw new ConflictException(
-                    $"The {requestedTime} slot on {requestedDate} is already booked. Please choose another slot.");
+                    $"The {requestedTimes} slot(s) on {requestedDate} are already booked. Please choose another slot.");
             }
 
             var created = new Booking
@@ -215,9 +220,15 @@ public class HourlySlotService : IHourlySlotService
                 HallId = hall.Id,
                 RequesterUserId = requesterUserId,
                 Date = request.Date,
-                SlotStart = request.SlotStart,
                 NameOnBooking = request.NameOnBooking,
-                Status = BookingStatus.Pending
+                Status = BookingStatus.Pending,
+                Slots = slotStarts
+                    .Select(start => new BookingSlot
+                    {
+                        StartTime = start,
+                        EndTime = start.AddHours(1)
+                    })
+                    .ToList()
             };
 
             await _bookingRepository.AddAsync(created, cancellationToken);
@@ -232,7 +243,8 @@ public class HourlySlotService : IHourlySlotService
             BookingId = booking.Id,
             HallId = booking.HallId,
             Date = booking.Date,
-            SlotStart = booking.SlotStart,
+            SlotStarts = slotStarts,
+            TimeRange = booking.HourlyTimeRange,
             Status = booking.Status
         };
     }
@@ -248,26 +260,47 @@ public class HourlySlotService : IHourlySlotService
         }
     }
 
-    private static void EnsureSlotWithinWindow(Hall hall, TimeOnly slotStart)
+    /// <summary>
+    /// Validates the requested hours and returns them de-duplicated and ordered. Every
+    /// hour must sit on the hour and fall inside the hall's bookable window. A booking
+    /// may cover one hour or several of them, so a repeated start is collapsed rather
+    /// than treated as a second reservation of the same hour.
+    /// </summary>
+    private static IReadOnlyList<TimeOnly> EnsureSlotsWithinWindow(Hall hall, IReadOnlyList<TimeOnly> requested)
     {
+        if (requested.Count == 0)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["SlotStarts"] = ["Select at least one hourly slot to book."]
+            });
+        }
+
         var start = hall.HourlySlotStart ?? new TimeOnly(9, 0);
         var end = hall.HourlySlotEnd ?? new TimeOnly(22, 0);
 
-        if (slotStart.Minute != 0)
+        var slotStarts = requested.Distinct().OrderBy(slot => slot).ToList();
+
+        foreach (var slotStart in slotStarts)
         {
-            throw new ValidationException(new Dictionary<string, string[]>
+            if (slotStart.Minute != 0)
             {
-                ["SlotStart"] = ["Hourly slots are 60 minutes and must start on the hour (minutes == 00), e.g. 10:00."]
-            });
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    ["SlotStarts"] = ["Hourly slots are 60 minutes and must start on the hour (minutes == 00), e.g. 10:00."]
+                });
+            }
+
+            if (slotStart < start || slotStart >= end)
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    ["SlotStarts"] = [$"The selected slot is outside this hall's bookable hours ({start:HH\\:mm} - {end:HH\\:mm})."]
+                });
+            }
         }
 
-        if (slotStart < start || slotStart >= end)
-        {
-            throw new ValidationException(new Dictionary<string, string[]>
-            {
-                ["SlotStart"] = [$"The selected slot is outside this hall's bookable hours ({start:HH\\:mm} - {end:HH\\:mm})."]
-            });
-        }
+        return slotStarts;
     }
 
     private string EnsureAuthenticatedRequester()

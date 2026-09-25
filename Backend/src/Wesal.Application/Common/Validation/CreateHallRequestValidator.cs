@@ -48,6 +48,24 @@ public class CreateHallRequestValidator : AbstractValidator<CreateHallRequest>
             .Must(value => string.IsNullOrWhiteSpace(value) || YoutubeUrlValidator.IsValid(value))
             .WithMessage("Enter a valid YouTube link (youtube.com or youtu.be).");
 
+        // A hall with no coherent hourly window is silently unbookable, because the
+        // seeker catalog derives its slots from start (inclusive) to end (exclusive).
+        RuleFor(x => x.HourlySlotStart)
+            .Must(BeWholeHour)
+            .When(x => x.HourlySlotStart.HasValue)
+            .WithMessage("HourlySlotStart must start on the hour (minutes == 00).");
+
+        RuleFor(x => x.HourlySlotEnd)
+            .Must(BeWholeHour)
+            .When(x => x.HourlySlotEnd.HasValue)
+            .WithMessage("HourlySlotEnd must start on the hour (minutes == 00).");
+
+        RuleFor(x => x)
+            .Must(x => !x.HourlySlotStart.HasValue
+                || !x.HourlySlotEnd.HasValue
+                || x.HourlySlotStart.Value < x.HourlySlotEnd.Value)
+            .WithMessage("HourlySlotEnd must be after HourlySlotStart.");
+
         RuleFor(x => x.Features)
             .Must(features => features == null || features.All(HallFeatureCatalog.IsPredefined))
             .WithMessage("One or more selected features are not in the predefined feature list.");
@@ -56,29 +74,13 @@ public class CreateHallRequestValidator : AbstractValidator<CreateHallRequest>
             .MaximumLength(HallFeatureCatalog.OtherFeaturesMaxLength)
             .WithMessage($"Additional features must not exceed {HallFeatureCatalog.OtherFeaturesMaxLength} characters.");
 
-        RuleFor(x => x.FirstPeriodStart)
-            .NotEmpty().WithMessage("First period start time is required.");
-        RuleFor(x => x.FirstPeriodEnd)
-            .NotEmpty().WithMessage("First period end time is required.");
-        RuleFor(x => x.SecondPeriodStart)
-            .NotEmpty().WithMessage("Second period start time is required.");
-        RuleFor(x => x.SecondPeriodEnd)
-            .NotEmpty().WithMessage("Second period end time is required.");
-
-        RuleFor(x => x)
-            .Must(x => x.FirstPeriodEnd > x.FirstPeriodStart)
-            .WithMessage("First period end time must be after start time.")
-            .WithName("FirstPeriodEnd");
-
-        RuleFor(x => x)
-            .Must(x => x.SecondPeriodEnd > x.SecondPeriodStart)
-            .WithMessage("Second period end time must be after start time.")
-            .WithName("SecondPeriodEnd");
-
         RuleFor(x => x.Photos)
             .Must(photos => photos == null || photos.Count <= 10).WithMessage("Cannot upload more than 10 photos.")
             .When(x => x.Photos != null);
     }
+
+    private static bool BeWholeHour(TimeOnly? time)
+        => time is null || (time.Value.Minute == 0 && time.Value.Second == 0);
 
     private static HallRegion ParseRegion(string region)
     {

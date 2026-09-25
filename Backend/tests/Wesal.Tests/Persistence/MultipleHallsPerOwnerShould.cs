@@ -112,8 +112,28 @@ public class MultipleHallsPerOwnerShould : IDisposable
         var ownerId = "owner-booking-1";
         var hallA = CreateHall(ownerId, "Hall A");
         var hallB = CreateHall(ownerId, "Hall B");
-        var bookingA = new Booking { HallId = hallA.Id, RequesterUserId = "user-1", Date = new DateOnly(2026, 9, 10), Period = BookingPeriodType.FirstPeriod, Status = BookingStatus.Pending };
-        var bookingB = new Booking { HallId = hallB.Id, RequesterUserId = "user-2", Date = new DateOnly(2026, 9, 10), Period = BookingPeriodType.FirstPeriod, Status = BookingStatus.Pending };
+        var bookingA = new Booking
+        {
+            HallId = hallA.Id,
+            RequesterUserId = "user-1",
+            Date = new DateOnly(2026, 9, 10),
+            Slots =
+            [
+                new BookingSlot { StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(11, 0) }
+            ],
+            Status = BookingStatus.Pending
+        };
+        var bookingB = new Booking
+        {
+            HallId = hallB.Id,
+            RequesterUserId = "user-2",
+            Date = new DateOnly(2026, 9, 10),
+            Slots =
+            [
+                new BookingSlot { StartTime = new TimeOnly(14, 0), EndTime = new TimeOnly(15, 0) }
+            ],
+            Status = BookingStatus.Pending
+        };
         _context.Bookings.AddRange(bookingA, bookingB);
         await _context.SaveChangesAsync();
         var bookingsForA = await _context.Bookings.Where(b => b.HallId == hallA.Id).ToListAsync();

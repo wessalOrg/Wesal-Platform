@@ -173,7 +173,7 @@ public class OwnerHourlyAvailabilityServiceShould : IDisposable
             {
                 HallId = hall.Id,
                 Date = date,
-                SlotStart = new TimeOnly(10, 0),
+                SlotStarts = [new TimeOnly(10, 0)],
                 NameOnBooking = "Layla Hassan",
                 RequesterName = "Layla Hassan"
             }));
@@ -217,7 +217,14 @@ public class OwnerHourlyAvailabilityServiceShould : IDisposable
             HallId = hall.Id,
             RequesterUserId = "seeker-1",
             Date = date,
-            SlotStart = new TimeOnly(10, 0),
+            Slots =
+            [
+                new BookingSlot
+                {
+                    StartTime = new TimeOnly(10, 0),
+                    EndTime = new TimeOnly(11, 0)
+                }
+            ],
             NameOnBooking = "Layla Hassan",
             Status = status
         });
@@ -249,7 +256,14 @@ public class OwnerHourlyAvailabilityServiceShould : IDisposable
             HallId = hall.Id,
             RequesterUserId = "seeker-1",
             Date = date,
-            SlotStart = new TimeOnly(10, 0),
+            Slots =
+            [
+                new BookingSlot
+                {
+                    StartTime = new TimeOnly(10, 0),
+                    EndTime = new TimeOnly(11, 0)
+                }
+            ],
             NameOnBooking = "Layla Hassan",
             Status = status
         });
@@ -405,7 +419,14 @@ public class OwnerHourlyAvailabilityServiceShould : IDisposable
             HallId = hall.Id,
             RequesterUserId = "seeker-1",
             Date = date,
-            SlotStart = new TimeOnly(10, 0),
+            Slots =
+            [
+                new BookingSlot
+                {
+                    StartTime = new TimeOnly(10, 0),
+                    EndTime = new TimeOnly(11, 0)
+                }
+            ],
             NameOnBooking = "Layla Hassan",
             Status = BookingStatus.Accepted
         };

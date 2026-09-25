@@ -29,20 +29,17 @@ public sealed class OwnerHallService : IOwnerHallService
     private readonly ICurrentUserService _currentUser;
     private readonly IOwnerDashboardRepository _ownerDashboardRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IHallAvailabilityCleanupService? _cleanupService;
 
     public OwnerHallService(
         UserManager<ApplicationUser> userManager,
         ICurrentUserService currentUser,
         IOwnerDashboardRepository ownerDashboardRepository,
-        IUnitOfWork unitOfWork,
-        IHallAvailabilityCleanupService? cleanupService = null)
+        IUnitOfWork unitOfWork)
     {
         _userManager = userManager;
         _currentUser = currentUser;
         _ownerDashboardRepository = ownerDashboardRepository;
         _unitOfWork = unitOfWork;
-        _cleanupService = cleanupService;
     }
 
     public async Task<OwnerHallDetailsDto> GetOwnedHallDetailsAsync(
@@ -125,19 +122,6 @@ public sealed class OwnerHallService : IOwnerHallService
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            if (_cleanupService is not null)
-            {
-                try
-                {
-                    await _cleanupService.CleanupForHallAsync(hallId, cancellationToken);
-                }
-                catch
-                {
-                    // Cleanup is best-effort here; Hall remains deleted and
-                    // background/fallback cleanup will retry. Do not rollback deletion.
-                }
-            }
         }, cancellationToken);
     }
 
@@ -189,7 +173,8 @@ public sealed class OwnerHallService : IOwnerHallService
         ApplyFeatures(hall, request.Features);
 
         ApplyPhotos(hall, request.Photos);
-        ApplyBookingPeriods(hall, request.BookingPeriods);
+        hall.HourlySlotStart = request.HourlySlotStart;
+        hall.HourlySlotEnd = request.HourlySlotEnd;
     }
 
     /// <summary>
@@ -263,41 +248,6 @@ public sealed class OwnerHallService : IOwnerHallService
             .ToList());
     }
 
-    private void ApplyBookingPeriods(Hall hall, IReadOnlyList<UpdateOwnerHallBookingPeriodDto> periods)
-    {
-        // In-place update by period type avoids delete-then-insert against the unique
-        // (HallId, Type) index; the validator guarantees both daily periods are present.
-        var existing = hall.BookingPeriods.ToDictionary(period => period.Type);
-        var incoming = periods.ToDictionary(period => period.Type);
-
-        foreach (var (type, period) in incoming)
-        {
-            if (existing.TryGetValue(type, out var current))
-            {
-                current.StartTime = period.StartTime;
-                current.EndTime = period.EndTime;
-            }
-            else
-            {
-                _ownerDashboardRepository.AddHallBookingPeriod(new HallBookingPeriod
-                {
-                    HallId = hall.Id,
-                    Type = type,
-                    StartTime = period.StartTime,
-                    EndTime = period.EndTime
-                });
-            }
-        }
-
-        foreach (var (type, period) in existing)
-        {
-            if (!incoming.ContainsKey(type))
-            {
-                hall.BookingPeriods.Remove(period);
-            }
-        }
-    }
-
     private static OwnerHallDetailsDto MapToDetails(Hall hall)
         => new()
         {
@@ -333,15 +283,6 @@ public sealed class OwnerHallService : IOwnerHallService
                     Id = image.Id,
                     Url = image.Url,
                     DisplayOrder = image.DisplayOrder
-                })
-                .ToList(),
-            BookingPeriods = hall.BookingPeriods
-                .OrderBy(period => period.Type)
-                .Select(period => new OwnerHallBookingPeriodDto
-                {
-                    Type = period.Type,
-                    StartTime = period.StartTime,
-                    EndTime = period.EndTime
                 })
                 .ToList()
         };

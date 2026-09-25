@@ -25,7 +25,6 @@ public class OwnerController : ControllerBase
     private readonly IHallStatusTrackingService _hallStatusTrackingService;
     private readonly IOwnerHallService _ownerHallService;
     private readonly IOwnerBookingRequestsService _ownerBookingRequestsService;
-    private readonly IOwnerAvailabilityService _ownerAvailabilityService;
     private readonly IOwnerHourlyAvailabilityService _ownerHourlyAvailabilityService;
     private readonly IHallSubscriptionService _hallSubscriptionService;
     private readonly IOwnerIdentityService _ownerIdentityService;
@@ -38,7 +37,6 @@ public class OwnerController : ControllerBase
         IHallStatusTrackingService hallStatusTrackingService,
         IOwnerHallService ownerHallService,
         IOwnerBookingRequestsService ownerBookingRequestsService,
-        IOwnerAvailabilityService ownerAvailabilityService,
         IOwnerHourlyAvailabilityService ownerHourlyAvailabilityService,
         IHallSubscriptionService hallSubscriptionService,
         IOwnerIdentityService ownerIdentityService,
@@ -50,7 +48,6 @@ public class OwnerController : ControllerBase
         _hallStatusTrackingService = hallStatusTrackingService;
         _ownerHallService = ownerHallService;
         _ownerBookingRequestsService = ownerBookingRequestsService;
-        _ownerAvailabilityService = ownerAvailabilityService;
         _ownerHourlyAvailabilityService = ownerHourlyAvailabilityService;
         _hallSubscriptionService = hallSubscriptionService;
         _ownerIdentityService = ownerIdentityService;
@@ -114,7 +111,7 @@ public class OwnerController : ControllerBase
     /// <summary>
     /// Returns the authenticated Hall Owner's hall with its full editable details
     /// (US-OWNER-07): contact phone, region, address, description, capacity, price,
-    /// photos and the two daily booking periods, together with its current approval
+    /// photos and hourly-slot settings, together with its current approval
     /// status and a server-computed editability flag. The owner is resolved exclusively
     /// from the authenticated session, so an owner can never read another owner's hall.
     /// </summary>
@@ -159,14 +156,11 @@ public class OwnerController : ControllerBase
     /// <summary>
     /// Returns the incoming (pending) booking requests for the authenticated Hall
     /// Owner's own hall (US-OWNER-09, FR-BOOK-01). Each entry shows the request id,
-    /// the requested date, its requested booking period, and the display name of the
-    /// Regular User who submitted it. The owner is resolved exclusively from the
-    /// authenticated session and the requester name is resolved server-side, so the
-    /// client can never read another owner's hall or impersonate a requester. All
-    /// pending requests are returned without deduplication: competing requests for the
-    /// same hall/date/period each appear, and a request covering both daily periods
-    /// appears as one entry per period. This endpoint is read-only and never changes a
-    /// booking's status, availability, or reservation.
+    /// the requested date and hourly slots, and the display name of the Regular User
+    /// who submitted it. The owner is resolved exclusively from the authenticated
+    /// session and the requester name is resolved server-side, so the client can never
+    /// read another owner's hall or impersonate a requester. This endpoint is read-only
+    /// and never changes a booking's status, availability, or reservation.
     /// </summary>
     [HttpGet("halls/{hallId:guid}/bookings")]
     [ProducesResponseType(typeof(IReadOnlyList<OwnerBookingRequestDto>), StatusCodes.Status200OK)]
@@ -221,47 +215,6 @@ public class OwnerController : ControllerBase
     {
         var subscription = await _hallSubscriptionService.GetHallSubscriptionAsync(hallId, cancellationToken);
         return Ok(subscription);
-    }
-
-    /// <summary>
-    /// Returns the availability calendar for the authenticated Hall Owner's own
-    /// hall (US-OWNER-18). Both predefined daily booking periods are returned
-    /// independently per day. Ownership is resolved server-side.
-    /// </summary>
-    [HttpGet("halls/{hallId:guid}/availability")]
-    [ProducesResponseType(typeof(OwnerAvailabilityCalendarDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OwnerAvailabilityCalendarDto>> GetOwnedHallAvailability(
-        Guid hallId,
-        [FromQuery] DateOnly fromDate,
-        [FromQuery] DateOnly toDate,
-        CancellationToken cancellationToken)
-    {
-        var response = await _ownerAvailabilityService.GetAvailabilityAsync(hallId, fromDate, toDate, cancellationToken);
-        return Ok(response);
-    }
-
-    /// <summary>
-    /// Updates an individual booking period's availability for the authenticated
-    /// Hall Owner's own hall (US-OWNER-18). Periods are independent; only the
-    /// requested period is modified. Genuinely reserved periods cannot be released.
-    /// </summary>
-    [HttpPut("halls/{hallId:guid}/availability")]
-    [ProducesResponseType(typeof(OwnerAvailabilityPeriodDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<OwnerAvailabilityPeriodDto>> UpdateOwnedHallAvailability(
-        Guid hallId,
-        [FromBody] UpdateOwnerAvailabilityRequest request,
-        CancellationToken cancellationToken)
-    {
-        var response = await _ownerAvailabilityService.UpdateAvailabilityAsync(hallId, request, cancellationToken);
-        return Ok(response);
     }
 
     /// <summary>
@@ -328,10 +281,8 @@ public class OwnerController : ControllerBase
         [FromForm] string? YouTubeVideoUrl,
         [FromForm] string? Features,
         [FromForm] string? OtherFeatures,
-        [FromForm] TimeOnly FirstPeriodStart,
-        [FromForm] TimeOnly FirstPeriodEnd,
-        [FromForm] TimeOnly SecondPeriodStart,
-        [FromForm] TimeOnly SecondPeriodEnd,
+        [FromForm] TimeOnly? HourlySlotStart,
+        [FromForm] TimeOnly? HourlySlotEnd,
         [FromForm] IFormFile? MainPhoto,
         [FromForm] IFormFile[]? Photos,
         CancellationToken cancellationToken)
@@ -358,16 +309,14 @@ public class OwnerController : ControllerBase
             Region = Region,
             Address = Address,
             DetailedAddress = DetailedAddress,
-            Description = Description,
+            Description = Description ?? string.Empty,
             Capacity = Capacity,
             Price = Price,
             YouTubeVideoUrl = YouTubeVideoUrl,
             Features = SplitFeatures(Features),
             OtherFeatures = OtherFeatures,
-            FirstPeriodStart = FirstPeriodStart,
-            FirstPeriodEnd = FirstPeriodEnd,
-            SecondPeriodStart = SecondPeriodStart,
-            SecondPeriodEnd = SecondPeriodEnd,
+            HourlySlotStart = HourlySlotStart,
+            HourlySlotEnd = HourlySlotEnd,
             MainPhoto = mainPhotoUpload,
             Photos = photoUploads
         };

@@ -25,6 +25,7 @@ public sealed class BookingRepository : IBookingRepository
     {
         return await _context.Bookings
             .Include(booking => booking.Hall)
+            .Include(booking => booking.Slots)
             .FirstOrDefaultAsync(booking => booking.Id == bookingId, cancellationToken);
     }
 
@@ -140,127 +141,6 @@ public sealed class BookingRepository : IBookingRepository
         return 1;
     }
 
-    public async Task<bool> HasOtherActiveBookingsAsync(
-        Guid hallId,
-        DateOnly date,
-        BookingPeriodType periodType,
-        Guid bookingId,
-        CancellationToken cancellationToken = default)
-    {
-        return await _context.Bookings
-            .AnyAsync(booking =>
-                booking.HallId == hallId
-                && booking.Date == date
-                && booking.Period == periodType
-                && booking.Id != bookingId
-                && (booking.Status == BookingStatus.Pending
-                    || booking.Status == BookingStatus.Accepted),
-                cancellationToken);
-    }
-
-    public async Task<int> ReleasePeriodAsync(
-        Guid hallId,
-        DateOnly date,
-        BookingPeriodType periodType,
-        CancellationToken cancellationToken = default)
-    {
-        if (_context.Database.IsRelational())
-        {
-            return await _context.HallAvailabilities
-                .Where(availability =>
-                    availability.HallId == hallId
-                    && availability.Date == date
-                    && availability.PeriodType == periodType
-                    && availability.Status == AvailabilityStatus.Booked)
-                .ExecuteUpdateAsync(
-                    set =>
-                        set.SetProperty(availability => availability.Status, AvailabilityStatus.Available)
-                            .SetProperty(availability => availability.UpdatedAt, DateTimeOffset.UtcNow),
-                    cancellationToken);
-        }
-
-        var booked = await _context.HallAvailabilities
-            .Where(availability =>
-                availability.HallId == hallId
-                && availability.Date == date
-                && availability.PeriodType == periodType
-                && availability.Status == AvailabilityStatus.Booked)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (booked is null)
-        {
-            return 0;
-        }
-
-        booked.Status = AvailabilityStatus.Available;
-        booked.UpdatedAt = DateTimeOffset.UtcNow;
-
-        await _context.SaveChangesAsync(cancellationToken);
-
-        return 1;
-    }
-
-    public async Task<int> ReservePeriodAsync(
-        Guid hallId,
-        DateOnly date,
-        BookingPeriodType periodType,
-        CancellationToken cancellationToken = default)
-    {
-        if (_context.Database.IsRelational())
-        {
-            // Single-statement conditional upsert so that reserving a fresh
-            // (HallId, Date, PeriodType) combination succeeds atomically:
-            // - no row yet        -> inserted as Booked, 1 row affected
-            // - row Available     -> updated to Booked,  1 row affected
-            // - row already Booked -> WHERE excludes the update, 0 rows affected
-            return await _context.Database.ExecuteSqlInterpolatedAsync(
-                $"""
-                INSERT INTO wesal."HallAvailabilities" ("Id", "HallId", "Date", "PeriodType", "Status", "CreatedAt", "UpdatedAt")
-                VALUES ({Guid.NewGuid()}, {hallId}, {date}, {(int)periodType}, {(int)AvailabilityStatus.Booked}, {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow})
-                ON CONFLICT ("HallId", "Date", "PeriodType")
-                DO UPDATE
-                SET "Status" = {(int)AvailabilityStatus.Booked},
-                    "UpdatedAt" = {DateTimeOffset.UtcNow}
-                WHERE wesal."HallAvailabilities"."Status" <> {(int)AvailabilityStatus.Booked};
-                """,
-                cancellationToken);
-        }
-
-        var existing = await _context.HallAvailabilities
-            .FirstOrDefaultAsync(availability =>
-                availability.HallId == hallId
-                && availability.Date == date
-                && availability.PeriodType == periodType,
-                cancellationToken);
-
-        if (existing is null)
-        {
-            _context.HallAvailabilities.Add(new HallAvailability
-            {
-                HallId = hallId,
-                Date = date,
-                PeriodType = periodType,
-                Status = AvailabilityStatus.Booked
-            });
-
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return 1;
-        }
-
-        if (existing.Status == AvailabilityStatus.Booked)
-        {
-            return 0;
-        }
-
-        existing.Status = AvailabilityStatus.Booked;
-        existing.UpdatedAt = DateTimeOffset.UtcNow;
-
-        await _context.SaveChangesAsync(cancellationToken);
-
-        return 1;
-    }
-
     public async Task<bool> IsDayOpenAsync(
         Guid hallId,
         DateOnly date,
@@ -299,11 +179,42 @@ public sealed class BookingRepository : IBookingRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<int> ReserveHourlySlotAsync(
+    public async Task<int> ReserveHourlySlotsAsync(
+        Guid hallId,
+        DateOnly date,
+        IReadOnlyList<TimeOnly> startTimes,
+        CancellationToken cancellationToken = default)
+    {
+        if (startTimes.Count == 0)
+        {
+            return 0;
+        }
+
+        var reserved = 0;
+
+        foreach (var startTime in startTimes)
+        {
+            var affected = await ReserveOneHourlySlotAsync(hallId, date, startTime, cancellationToken);
+
+            if (affected == 0)
+            {
+                // A conflicting slot stops the walk. The caller runs this inside a
+                // transaction, so the slots already taken in this loop are rolled back and
+                // the booking is never persisted with a partially-reserved set of hours.
+                return reserved;
+            }
+
+            reserved++;
+        }
+
+        return reserved;
+    }
+
+    private async Task<int> ReserveOneHourlySlotAsync(
         Guid hallId,
         DateOnly date,
         TimeOnly startTime,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (_context.Database.IsRelational())
         {
@@ -426,35 +337,63 @@ public sealed class BookingRepository : IBookingRepository
                 cancellationToken);
     }
 
-    public async Task<bool> HasOtherActiveHourlyBookingsAsync(
+    /// <summary>
+    /// Re-opens every hourly slot the booking owns, skipping any slot that another
+    /// active booking still holds. This is the single release path used by the whole
+    /// accept/cancel/reject/delete lifecycle, so a booking that covers several hours
+    /// always frees all of them.
+    ///
+    /// The slots arrive from the caller rather than being re-queried, because the delete
+    /// path removes the booking row first and a re-query would then find nothing.
+    /// </summary>
+    public async Task<int> ReleaseBookingSlotsAsync(
+        Guid bookingId,
         Guid hallId,
         DateOnly date,
-        TimeOnly startTime,
-        Guid bookingId,
+        IReadOnlyList<TimeOnly> slotStarts,
         CancellationToken cancellationToken = default)
     {
-        // Hourly counterpart of HasOtherActiveBookingsAsync: matches on the real slot
-        // start, never on the legacy Period, and excludes the booking being processed.
-        // Legacy rows carry SlotStart = 00:00, so they can never collide with a real
-        // hourly slot (the hourly window rejects anything before 09:00).
-        return await _context.Bookings
-            .AsNoTracking()
-            .AnyAsync(
-                booking =>
-                    booking.HallId == hallId
-                    && booking.Date == date
-                    && booking.SlotStart == startTime
-                    && booking.Id != bookingId
-                    && (booking.Status == BookingStatus.Pending
-                        || booking.Status == BookingStatus.Accepted),
+        if (slotStarts.Count == 0)
+        {
+            return 0;
+        }
+
+        var released = 0;
+
+        foreach (var slotStart in slotStarts)
+        {
+            var stillHeld = await _context.Bookings
+                .AsNoTracking()
+                .AnyAsync(
+                    candidate =>
+                        candidate.Id != bookingId
+                        && candidate.HallId == hallId
+                        && candidate.Date == date
+                        && (candidate.Status == BookingStatus.Pending
+                            || candidate.Status == BookingStatus.Accepted)
+                        && candidate.Slots.Any(other => other.StartTime == slotStart),
+                    cancellationToken);
+
+            if (stillHeld)
+            {
+                continue;
+            }
+
+            released += await ReleaseOneHourlySlotAsync(
+                hallId,
+                date,
+                slotStart,
                 cancellationToken);
+        }
+
+        return released;
     }
 
-    public async Task<int> ReleaseHourlySlotAsync(
+    private async Task<int> ReleaseOneHourlySlotAsync(
         Guid hallId,
         DateOnly date,
         TimeOnly startTime,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (_context.Database.IsRelational())
         {
@@ -495,13 +434,10 @@ public sealed class BookingRepository : IBookingRepository
     }
 
     /// <summary>
-    /// WESAL-TASK-1 hardening: true when the hall still has a live hourly booking whose
-    /// start falls outside the candidate window [windowStart, windowEnd).
-    ///
-    /// Only hourly bookings are considered (SlotStart differs from the legacy 00:00 marker),
-    /// matching the hourly-vs-legacy discriminator used across the booking lifecycle. Dates
-    /// in the past are included on purpose: the booking is still a real record, and letting
-    /// a window change silently strand it is exactly what this guard prevents.
+    /// True when the hall still has a live booking that owns at least one slot whose
+    /// start falls outside the candidate window [windowStart, windowEnd). Dates in the
+    /// past are included on purpose: the booking is still a real record, and letting a
+    /// window change silently strand it is exactly what this guard prevents.
     /// </summary>
     public async Task<bool> HasActiveHourlyBookingsOutsideWindowAsync(
         Guid hallId,
@@ -509,16 +445,13 @@ public sealed class BookingRepository : IBookingRepository
         TimeOnly windowEnd,
         CancellationToken cancellationToken = default)
     {
-        var midnight = TimeOnly.MinValue;
-
         return await _context.Bookings
             .AsNoTracking()
             .AnyAsync(
                 booking =>
                     booking.HallId == hallId
-                    && booking.SlotStart != midnight
                     && (booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Accepted)
-                    && (booking.SlotStart < windowStart || booking.SlotStart >= windowEnd),
+                    && booking.Slots.Any(slot => slot.StartTime < windowStart || slot.StartTime >= windowEnd),
                 cancellationToken);
     }
 }

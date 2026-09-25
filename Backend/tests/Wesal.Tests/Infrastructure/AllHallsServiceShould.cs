@@ -171,10 +171,6 @@ public class AllHallsServiceShould
 
         public List<HallImage> Images { get; } = [];
 
-        public List<HallBookingPeriod> Periods { get; } = [];
-
-        public List<HallAvailability> Availability { get; } = [];
-
         public Task<Hall?> GetHallByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult(Halls.FirstOrDefault(hall => hall.Id == id));
 
@@ -202,7 +198,7 @@ public class AllHallsServiceShould
             HallRegion? region,
             string? area,
             DateOnly? date,
-            BookingPeriodType? period,
+            TimeOnly? startTime,
             int skip,
             int take,
             CancellationToken cancellationToken = default)
@@ -214,7 +210,7 @@ public class AllHallsServiceShould
             HallRegion? region,
             string? area,
             DateOnly? date,
-            BookingPeriodType? period,
+            TimeOnly? startTime,
             CancellationToken cancellationToken = default)
             => Task.FromResult<int>(ApplySearch(name, region, area).Count());
 
@@ -239,17 +235,5 @@ public class AllHallsServiceShould
                     .ThenBy(image => image.CreatedAt)
                     .ToList());
 
-        public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
-            IReadOnlyCollection<Guid> hallIds,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<HallBookingPeriod>>(Periods.Where(period => hallIds.Contains(period.HallId)).ToList());
-
-        public Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(
-            IReadOnlyCollection<Guid> hallIds,
-            DateOnly fromDate,
-            DateOnly toDate,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<HallAvailability>>(
-                Availability.Where(item => hallIds.Contains(item.HallId) && item.Date >= fromDate && item.Date <= toDate).ToList());
     }
 }

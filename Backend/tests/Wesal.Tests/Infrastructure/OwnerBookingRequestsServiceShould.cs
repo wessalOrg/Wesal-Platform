@@ -125,7 +125,7 @@ public class OwnerBookingRequestsServiceShould : IDisposable
             ApplicationRoles.RegisteredUser,
             fullName: "Mahmoud Salah");
         var hall = AddHall(owner.Id, "Grand Hall");
-        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.FirstPeriod);
+        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(10, 0));
 
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
@@ -133,14 +133,14 @@ public class OwnerBookingRequestsServiceShould : IDisposable
 
         Assert.Equal(hall.Id, item.HallId);
         Assert.Equal(new DateOnly(2027, 6, 1), item.RequestedDate);
-        Assert.Equal(BookingPeriodType.FirstPeriod, item.RequestedPeriod);
+        Assert.Contains(new TimeOnly(10, 0), item.SlotStarts);
         Assert.Equal(requester.Id, item.RequesterUserId);
         Assert.Equal("Mahmoud Salah", item.RequesterName);
         Assert.Equal(BookingStatus.Pending, item.Status);
     }
 
     [Fact]
-    public async Task GetBookingRequests_BothPeriodsRequested_ReturnsOneEntryPerPeriod()
+    public async Task GetBookingRequests_MultipleHourlyRequests_ReturnsOneEntryPerBooking()
     {
         var owner = await CreateUserAsync("owner@example.com", "+970599200008", ApplicationRoles.HallOwner);
         var requester = await CreateUserAsync(
@@ -149,8 +149,8 @@ public class OwnerBookingRequestsServiceShould : IDisposable
             ApplicationRoles.RegisteredUser,
             fullName: "Sara Ali");
         var hall = AddHall(owner.Id, "Grand Hall");
-        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.FirstPeriod);
-        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.SecondPeriod);
+        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(10, 0));
+        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(11, 0));
 
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
@@ -158,11 +158,11 @@ public class OwnerBookingRequestsServiceShould : IDisposable
 
         Assert.Equal(2, result.Count);
         Assert.Contains(result, item =>
-            item.RequestedPeriod == BookingPeriodType.FirstPeriod
+            item.SlotStarts.Contains(new TimeOnly(10, 0))
             && item.RequesterName == "Sara Ali"
             && item.RequestedDate == new DateOnly(2027, 6, 1));
         Assert.Contains(result, item =>
-            item.RequestedPeriod == BookingPeriodType.SecondPeriod
+            item.SlotStarts.Contains(new TimeOnly(11, 0))
             && item.RequesterName == "Sara Ali"
             && item.RequestedDate == new DateOnly(2027, 6, 1));
     }
@@ -182,8 +182,8 @@ public class OwnerBookingRequestsServiceShould : IDisposable
             ApplicationRoles.RegisteredUser,
             fullName: "Second Requester");
         var hall = AddHall(owner.Id, "Grand Hall");
-        AddBooking(hall, firstRequester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.FirstPeriod);
-        AddBooking(hall, secondRequester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.FirstPeriod);
+        AddBooking(hall, firstRequester.Id, new DateOnly(2027, 6, 1), new TimeOnly(10, 0));
+        AddBooking(hall, secondRequester.Id, new DateOnly(2027, 6, 1), new TimeOnly(10, 0));
 
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
@@ -204,9 +204,9 @@ public class OwnerBookingRequestsServiceShould : IDisposable
             ApplicationRoles.RegisteredUser,
             fullName: "Nader Husam");
         var hall = AddHall(owner.Id, "Grand Hall");
-        AddBooking(hall, requester.Id, new DateOnly(2027, 7, 2), BookingPeriodType.FirstPeriod);
-        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.FirstPeriod);
-        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.SecondPeriod);
+        AddBooking(hall, requester.Id, new DateOnly(2027, 7, 2), new TimeOnly(10, 0));
+        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(10, 0));
+        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(11, 0));
 
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
@@ -229,9 +229,9 @@ public class OwnerBookingRequestsServiceShould : IDisposable
             ApplicationRoles.RegisteredUser,
             fullName: "Pending Only");
         var hall = AddHall(owner.Id, "Grand Hall");
-        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.FirstPeriod, BookingStatus.Pending);
-        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.SecondPeriod, BookingStatus.Accepted);
-        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 5), BookingPeriodType.FirstPeriod, BookingStatus.Rejected);
+        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(10, 0), BookingStatus.Pending);
+        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(11, 0), BookingStatus.Accepted);
+        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 5), new TimeOnly(10, 0), BookingStatus.Rejected);
 
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
@@ -239,7 +239,7 @@ public class OwnerBookingRequestsServiceShould : IDisposable
 
         var item = Assert.Single(result);
         Assert.Equal(BookingStatus.Pending, item.Status);
-        Assert.Equal(BookingPeriodType.FirstPeriod, item.RequestedPeriod);
+        Assert.Contains(new TimeOnly(10, 0), item.SlotStarts);
     }
 
     [Fact]
@@ -253,7 +253,7 @@ public class OwnerBookingRequestsServiceShould : IDisposable
             fullName: "Scoped Requester");
         var myHall = AddHall(owner.Id, "My Hall");
         var otherHall = AddHall(owner.Id, "Other Owned Hall");
-        AddBooking(otherHall, requester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.FirstPeriod);
+        AddBooking(otherHall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(10, 0));
 
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
@@ -272,15 +272,19 @@ public class OwnerBookingRequestsServiceShould : IDisposable
             ApplicationRoles.RegisteredUser,
             fullName: "Immutable Requester");
         var hall = AddHall(owner.Id, "Grand Hall");
-        var booking = AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), BookingPeriodType.FirstPeriod);
+        var booking = AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(10, 0));
 
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
         await service.GetBookingRequestsAsync(hall.Id);
 
-        var persisted = _context.Bookings.AsNoTracking().Single(item => item.Id == booking.Id);
+        var persisted = _context.Bookings
+            .AsNoTracking()
+            .Include(item => item.Slots)
+            .Single(item => item.Id == booking.Id);
+
         Assert.Equal(BookingStatus.Pending, persisted.Status);
-        Assert.Equal(BookingPeriodType.FirstPeriod, persisted.Period);
+        Assert.Equal(new TimeOnly(10, 0), Assert.Single(persisted.Slots).StartTime);
         Assert.Equal(hall.Id, persisted.HallId);
     }
 
@@ -350,7 +354,7 @@ public class OwnerBookingRequestsServiceShould : IDisposable
         Hall hall,
         string requesterUserId,
         DateOnly date,
-        BookingPeriodType period,
+        TimeOnly slotStart,
         BookingStatus status = BookingStatus.Pending)
     {
         var booking = new Booking
@@ -358,7 +362,14 @@ public class OwnerBookingRequestsServiceShould : IDisposable
             HallId = hall.Id,
             RequesterUserId = requesterUserId,
             Date = date,
-            Period = period,
+            Slots =
+            [
+                new BookingSlot
+                {
+                    StartTime = slotStart,
+                    EndTime = slotStart.AddHours(1)
+                }
+            ],
             Status = status
         };
 

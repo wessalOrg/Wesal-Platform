@@ -8,8 +8,12 @@ namespace Wesal.Tests.Persistence;
 
 public class BookingRepositoryShould
 {
+    private static readonly DateOnly BookingDate = new(2035, 6, 1);
+    private static readonly TimeOnly BookingStart = new(10, 0);
+    private static readonly TimeOnly OtherStart = new(11, 0);
+
     [Fact]
-    public async Task AddAsync_PersistsBooking()
+    public async Task AddAsync_PersistsBookingAndSlots()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
@@ -22,10 +26,11 @@ public class BookingRepositoryShould
         Assert.NotNull(stored);
         Assert.Equal(booking.Id, stored!.Id);
         Assert.Equal(BookingStatus.Pending, stored.Status);
+        Assert.Equal(BookingStart, Assert.Single(stored.Slots).StartTime);
     }
 
     [Fact]
-    public async Task GetByIdWithHallAsync_IncludesHall()
+    public async Task GetByIdWithHallAsync_IncludesHallAndSlots()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
@@ -39,13 +44,13 @@ public class BookingRepositoryShould
         Assert.Equal(hall.Id, result!.HallId);
         Assert.NotNull(result.Hall);
         Assert.Equal(hall.Name, result.Hall.Name);
+        Assert.Equal(BookingStart, Assert.Single(result.Slots).StartTime);
     }
 
     [Fact]
     public async Task GetByIdWithHallAsync_UnknownId_ReturnsNull()
     {
         await using var context = CreateContext();
-        var hall = SeedHall(context);
         var repository = new BookingRepository(context);
 
         var result = await repository.GetByIdWithHallAsync(Guid.NewGuid());
@@ -60,53 +65,21 @@ public class BookingRepositoryShould
         var hall = SeedHall(context);
         var repository = new BookingRepository(context);
 
-        var eligible = new Booking
-        {
-            Id = Guid.NewGuid(),
-            HallId = hall.Id,
-            RequesterUserId = "user-1",
-            Date = new DateOnly(2035, 6, 1),
-            Period = BookingPeriodType.FirstPeriod,
-            Status = BookingStatus.Rejected,
-            RejectionReason = "Not available",
-            RejectionMessageId = null
-        };
+        var eligible = CreateBooking(hall, BookingStatus.Rejected);
+        eligible.RejectionReason = "Not available";
+        eligible.RejectionMessageId = null;
 
-        var alreadyDelivered = new Booking
-        {
-            Id = Guid.NewGuid(),
-            HallId = hall.Id,
-            RequesterUserId = "user-2",
-            Date = new DateOnly(2035, 6, 2),
-            Period = BookingPeriodType.SecondPeriod,
-            Status = BookingStatus.Rejected,
-            RejectionReason = "Already notified",
-            RejectionMessageId = Guid.NewGuid()
-        };
+        var alreadyDelivered = CreateBooking(hall, BookingStatus.Rejected, "user-2", new DateOnly(2035, 6, 2), OtherStart);
+        alreadyDelivered.RejectionReason = "Already notified";
+        alreadyDelivered.RejectionMessageId = Guid.NewGuid();
 
-        var pendingNoReason = new Booking
-        {
-            Id = Guid.NewGuid(),
-            HallId = hall.Id,
-            RequesterUserId = "user-3",
-            Date = new DateOnly(2035, 6, 3),
-            Period = BookingPeriodType.FirstPeriod,
-            Status = BookingStatus.Rejected,
-            RejectionReason = null,
-            RejectionMessageId = null
-        };
+        var pendingNoReason = CreateBooking(hall, BookingStatus.Rejected, "user-3", new DateOnly(2035, 6, 3), BookingStart);
+        pendingNoReason.RejectionReason = null;
+        pendingNoReason.RejectionMessageId = null;
 
-        var pendingStatus = new Booking
-        {
-            Id = Guid.NewGuid(),
-            HallId = hall.Id,
-            RequesterUserId = "user-4",
-            Date = new DateOnly(2035, 6, 4),
-            Period = BookingPeriodType.FirstPeriod,
-            Status = BookingStatus.Pending,
-            RejectionReason = null,
-            RejectionMessageId = null
-        };
+        var pendingStatus = CreateBooking(hall, BookingStatus.Pending, "user-4", new DateOnly(2035, 6, 4), BookingStart);
+        pendingStatus.RejectionReason = null;
+        pendingStatus.RejectionMessageId = null;
 
         context.Bookings.AddRange(eligible, alreadyDelivered, pendingNoReason, pendingStatus);
         await context.SaveChangesAsync();
@@ -134,7 +107,7 @@ public class BookingRepositoryShould
 
         Assert.Contains(
             entityType.GetIndexes(),
-            index => index.Properties.Select(property => property.Name).SequenceEqual(["HallId", "Date", "Period", "Status"]));
+            index => index.Properties.Select(property => property.Name).SequenceEqual(["HallId", "Date", "Status"]));
 
         var foreignKeys = entityType.GetForeignKeys().ToList();
         Assert.Contains(
@@ -144,15 +117,21 @@ public class BookingRepositoryShould
     }
 
     [Fact]
-    public void Model_ConfiguresUniqueIndexForHallAvailability()
+    public void Model_ConfiguresUniqueIndexesForHourlyAvailability()
     {
         using var context = CreateContext();
-        var entityType = context.Model.FindEntityType(typeof(HallAvailability))!;
+        var slotEntityType = context.Model.FindEntityType(typeof(HallSlotAvailability))!;
+        var bookingSlotEntityType = context.Model.FindEntityType(typeof(BookingSlot))!;
 
         Assert.Contains(
-            entityType.GetIndexes(),
+            slotEntityType.GetIndexes(),
             index => index.IsUnique
-                && index.Properties.Select(property => property.Name).SequenceEqual(["HallId", "Date", "PeriodType"]));
+                && index.Properties.Select(property => property.Name).SequenceEqual(["HallId", "Date", "StartTime"]));
+
+        Assert.Contains(
+            bookingSlotEntityType.GetIndexes(),
+            index => index.IsUnique
+                && index.Properties.Select(property => property.Name).SequenceEqual(["BookingId", "StartTime"]));
     }
 
     [Fact]
@@ -160,7 +139,7 @@ public class BookingRepositoryShould
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var booking = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod);
+        var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart);
         var repository = new BookingRepository(context);
 
         var affectedRows = await repository.CancelPendingAsync(booking.Id, booking.RequesterUserId);
@@ -172,7 +151,7 @@ public class BookingRepositoryShould
         Assert.Equal(booking.HallId, stored.HallId);
         Assert.Equal(booking.RequesterUserId, stored.RequesterUserId);
         Assert.Equal(booking.Date, stored.Date);
-        Assert.Equal(booking.Period, stored.Period);
+        Assert.Equal(BookingStart, Assert.Single(stored.Slots).StartTime);
     }
 
     [Fact]
@@ -180,7 +159,7 @@ public class BookingRepositoryShould
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var booking = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod, BookingStatus.Accepted);
+        var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart, BookingStatus.Accepted);
         var repository = new BookingRepository(context);
 
         var affectedRows = await repository.CancelPendingAsync(booking.Id, booking.RequesterUserId);
@@ -195,7 +174,7 @@ public class BookingRepositoryShould
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var booking = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod, BookingStatus.Rejected);
+        var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart, BookingStatus.Rejected);
         var repository = new BookingRepository(context);
 
         var affectedRows = await repository.CancelPendingAsync(booking.Id, booking.RequesterUserId);
@@ -210,7 +189,7 @@ public class BookingRepositoryShould
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var booking = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod, BookingStatus.Cancelled);
+        var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart, BookingStatus.Cancelled);
         var repository = new BookingRepository(context);
 
         var affectedRows = await repository.CancelPendingAsync(booking.Id, booking.RequesterUserId);
@@ -225,7 +204,7 @@ public class BookingRepositoryShould
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var booking = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod);
+        var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart);
         var repository = new BookingRepository(context);
 
         var affectedRows = await repository.CancelPendingAsync(booking.Id, "user-2");
@@ -244,7 +223,7 @@ public class BookingRepositoryShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext);
-            var booking = SeedBooking(seedingContext, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
         }
 
@@ -275,16 +254,16 @@ public class BookingRepositoryShould
     }
 
     [Fact]
-    public async Task CancelPendingAsync_AfterCancellation_ApprovalConditionalUpdate_ReturnsZero()
+    public async Task CancelPendingAsync_AfterCancellation_AcceptanceConditionalUpdate_ReturnsZero()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var booking = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod);
+        var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart);
         var repository = new BookingRepository(context);
 
         await repository.CancelPendingAsync(booking.Id, booking.RequesterUserId);
 
-        var approvalRows = await TryApproveAsync(context, booking.Id);
+        var approvalRows = await repository.AcceptPendingAsync(booking.Id);
 
         Assert.Equal(0, approvalRows);
         var stored = await repository.GetByIdWithHallAsync(booking.Id);
@@ -292,214 +271,180 @@ public class BookingRepositoryShould
     }
 
     [Fact]
-    public async Task HasOtherActiveBookingsAsync_True_WhenAnotherPending()
+    public async Task ReleaseBookingSlotsAsync_ReopensExactSlotsAndLeavesOthersUntouched()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var booking = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod);
-        SeedBooking(context, hall, "user-2", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod);
+        var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart);
+        var target = SeedSlotAvailability(context, hall, BookingDate, BookingStart, HallSlotStatus.Booked);
+        var otherSlot = SeedSlotAvailability(context, hall, BookingDate, OtherStart, HallSlotStatus.Booked);
+        var otherDate = SeedSlotAvailability(context, hall, new DateOnly(2035, 6, 2), BookingStart, HallSlotStatus.Booked);
         var repository = new BookingRepository(context);
 
-        var hasOther = await repository.HasOtherActiveBookingsAsync(
-            hall.Id, booking.Date, booking.Period, booking.Id);
-
-        Assert.True(hasOther);
-    }
-
-    [Fact]
-    public async Task HasOtherActiveBookingsAsync_True_WhenAnotherAccepted()
-    {
-        await using var context = CreateContext();
-        var hall = SeedHall(context);
-        var booking = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod);
-        SeedBooking(context, hall, "user-2", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod, BookingStatus.Accepted);
-        var repository = new BookingRepository(context);
-
-        var hasOther = await repository.HasOtherActiveBookingsAsync(
-            hall.Id, booking.Date, booking.Period, booking.Id);
-
-        Assert.True(hasOther);
-    }
-
-    [Fact]
-    public async Task HasOtherActiveBookingsAsync_False_WhenOnlyRejectedOrCancelled()
-    {
-        await using var context = CreateContext();
-        var hall = SeedHall(context);
-        var booking = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod);
-        SeedBooking(context, hall, "user-2", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod, BookingStatus.Rejected);
-        SeedBooking(context, hall, "user-3", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod, BookingStatus.Cancelled);
-        var repository = new BookingRepository(context);
-
-        var hasOther = await repository.HasOtherActiveBookingsAsync(
-            hall.Id, booking.Date, booking.Period, booking.Id);
-
-        Assert.False(hasOther);
-    }
-
-    [Fact]
-    public async Task HasOtherActiveBookingsAsync_False_ForDifferentPeriodOrDate()
-    {
-        await using var context = CreateContext();
-        var hall = SeedHall(context);
-        var booking = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod);
-        SeedBooking(context, hall, "user-2", new DateOnly(2035, 6, 1), BookingPeriodType.SecondPeriod);
-        SeedBooking(context, hall, "user-3", new DateOnly(2035, 6, 2), BookingPeriodType.FirstPeriod);
-        var repository = new BookingRepository(context);
-
-        var hasOther = await repository.HasOtherActiveBookingsAsync(
-            hall.Id, booking.Date, booking.Period, booking.Id);
-
-        Assert.False(hasOther);
-    }
-
-    [Fact]
-    public async Task ReleasePeriodAsync_UnbooksExactPeriod_UnrelatedPeriodsUntouched()
-    {
-        await using var context = CreateContext();
-        var hall = SeedHall(context);
-        var date = new DateOnly(2035, 6, 1);
-        var target = SeedAvailability(context, hall, date, BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
-        var otherPeriod = SeedAvailability(context, hall, date, BookingPeriodType.SecondPeriod, AvailabilityStatus.Booked);
-        var otherDate = SeedAvailability(context, hall, new DateOnly(2035, 6, 2), BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
-        var repository = new BookingRepository(context);
-
-        var affectedRows = await repository.ReleasePeriodAsync(hall.Id, date, BookingPeriodType.FirstPeriod);
+        var affectedRows = await repository.ReleaseBookingSlotsAsync(
+            booking.Id,
+            booking.HallId,
+            booking.Date,
+            [BookingStart]);
 
         Assert.Equal(1, affectedRows);
-        var released = await context.HallAvailabilities.FindAsync(target.Id);
-        Assert.Equal(AvailabilityStatus.Available, released!.Status);
-        Assert.Equal(AvailabilityStatus.Booked, (await context.HallAvailabilities.FindAsync(otherPeriod.Id))!.Status);
-        Assert.Equal(AvailabilityStatus.Booked, (await context.HallAvailabilities.FindAsync(otherDate.Id))!.Status);
+        Assert.Equal(HallSlotStatus.Available, (await context.HallSlotAvailabilities.FindAsync(target.Id))!.Status);
+        Assert.Equal(HallSlotStatus.Booked, (await context.HallSlotAvailabilities.FindAsync(otherSlot.Id))!.Status);
+        Assert.Equal(HallSlotStatus.Booked, (await context.HallSlotAvailabilities.FindAsync(otherDate.Id))!.Status);
     }
 
     [Fact]
-    public async Task ReleasePeriodAsync_AlreadyAvailable_ReturnsZero()
+    public async Task ReleaseBookingSlotsAsync_AlreadyAvailable_ReturnsZero()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var date = new DateOnly(2035, 6, 1);
-        var availability = SeedAvailability(context, hall, date, BookingPeriodType.FirstPeriod, AvailabilityStatus.Available);
+        var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart);
+        var availability = SeedSlotAvailability(context, hall, BookingDate, BookingStart, HallSlotStatus.Available);
         var repository = new BookingRepository(context);
 
-        var affectedRows = await repository.ReleasePeriodAsync(hall.Id, date, BookingPeriodType.FirstPeriod);
+        var affectedRows = await repository.ReleaseBookingSlotsAsync(
+            booking.Id,
+            booking.HallId,
+            booking.Date,
+            [BookingStart]);
 
         Assert.Equal(0, affectedRows);
-        var stored = await context.HallAvailabilities.FindAsync(availability.Id);
-        Assert.Equal(AvailabilityStatus.Available, stored!.Status);
+        var stored = await context.HallSlotAvailabilities.FindAsync(availability.Id);
+        Assert.Equal(HallSlotStatus.Available, stored!.Status);
     }
 
     [Fact]
-    public async Task PendingSet_ExcludesCancelled_AndKeepsHistory()
+    public async Task ReleaseBookingSlotsAsync_KeepsSlotBookedWhenAnotherActiveBookingHoldsIt()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var pending = SeedBooking(context, hall, "user-1", new DateOnly(2035, 6, 1), BookingPeriodType.FirstPeriod);
-        var cancelled = SeedBooking(context, hall, "user-2", new DateOnly(2035, 6, 2), BookingPeriodType.SecondPeriod, BookingStatus.Cancelled);
+        var target = SeedBooking(context, hall, "user-1", BookingDate, BookingStart);
+        SeedBooking(context, hall, "user-2", BookingDate, BookingStart, BookingStatus.Accepted);
+        var availability = SeedSlotAvailability(context, hall, BookingDate, BookingStart, HallSlotStatus.Booked);
         var repository = new BookingRepository(context);
 
-        var ownerPendingSet = await context.Bookings
-            .Where(b => b.HallId == hall.Id && b.Status == BookingStatus.Pending)
-            .ToListAsync();
+        var affectedRows = await repository.ReleaseBookingSlotsAsync(
+            target.Id,
+            target.HallId,
+            target.Date,
+            [BookingStart]);
 
-        var onlyPending = Assert.Single(ownerPendingSet);
-        Assert.Equal(pending.Id, onlyPending.Id);
-
-        var stored = await repository.GetByIdWithHallAsync(cancelled.Id);
-        Assert.NotNull(stored);
-        Assert.Equal(BookingStatus.Cancelled, stored!.Status);
+        Assert.Equal(0, affectedRows);
+        Assert.Equal(HallSlotStatus.Booked, (await context.HallSlotAvailabilities.FindAsync(availability.Id))!.Status);
     }
 
     [Fact]
-    public async Task ReservePeriodAsync_NoAvailabilityRow_BooksAndReturnsOne()
+    public async Task ReserveHourlySlotsAsync_NoSlotRow_BooksAndReturnsOne()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var date = new DateOnly(2035, 6, 1);
         var repository = new BookingRepository(context);
 
-        var affectedRows = await repository.ReservePeriodAsync(hall.Id, date, BookingPeriodType.FirstPeriod);
+        var affectedRows = await repository.ReserveHourlySlotsAsync(hall.Id, BookingDate, [BookingStart]);
 
         Assert.Equal(1, affectedRows);
-        var stored = Assert.Single(context.HallAvailabilities);
+        var stored = Assert.Single(context.HallSlotAvailabilities);
         Assert.Equal(hall.Id, stored.HallId);
-        Assert.Equal(date, stored.Date);
-        Assert.Equal(BookingPeriodType.FirstPeriod, stored.PeriodType);
-        Assert.Equal(AvailabilityStatus.Booked, stored.Status);
+        Assert.Equal(BookingDate, stored.Date);
+        Assert.Equal(BookingStart, stored.StartTime);
+        Assert.Equal(HallSlotStatus.Booked, stored.Status);
     }
 
     [Fact]
-    public async Task ReservePeriodAsync_AvailableRow_BooksAndReturnsOne()
+    public async Task ReserveHourlySlotsAsync_AvailableSlot_BooksAndReturnsOne()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var date = new DateOnly(2035, 6, 1);
-        var availability = SeedAvailability(context, hall, date, BookingPeriodType.FirstPeriod, AvailabilityStatus.Available);
+        var availability = SeedSlotAvailability(context, hall, BookingDate, BookingStart, HallSlotStatus.Available);
         var repository = new BookingRepository(context);
 
-        var affectedRows = await repository.ReservePeriodAsync(hall.Id, date, BookingPeriodType.FirstPeriod);
+        var affectedRows = await repository.ReserveHourlySlotsAsync(hall.Id, BookingDate, [BookingStart]);
 
         Assert.Equal(1, affectedRows);
-        var stored = await context.HallAvailabilities.FindAsync(availability.Id);
-        Assert.Equal(AvailabilityStatus.Booked, stored!.Status);
+        var stored = await context.HallSlotAvailabilities.FindAsync(availability.Id);
+        Assert.Equal(HallSlotStatus.Booked, stored!.Status);
     }
 
     [Fact]
-    public async Task ReservePeriodAsync_BookedRow_ReturnsZero()
+    public async Task ReserveHourlySlotsAsync_BookedSlot_ReturnsZero()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var date = new DateOnly(2035, 6, 1);
-        var availability = SeedAvailability(context, hall, date, BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
+        var availability = SeedSlotAvailability(context, hall, BookingDate, BookingStart, HallSlotStatus.Booked);
         var repository = new BookingRepository(context);
 
-        var affectedRows = await repository.ReservePeriodAsync(hall.Id, date, BookingPeriodType.FirstPeriod);
+        var affectedRows = await repository.ReserveHourlySlotsAsync(hall.Id, BookingDate, [BookingStart]);
 
         Assert.Equal(0, affectedRows);
-        var stored = await context.HallAvailabilities.FindAsync(availability.Id);
-        Assert.Equal(AvailabilityStatus.Booked, stored!.Status);
+        var stored = await context.HallSlotAvailabilities.FindAsync(availability.Id);
+        Assert.Equal(HallSlotStatus.Booked, stored!.Status);
     }
 
     [Fact]
-    public async Task ReservePeriodAsync_OnlyBooksExactPeriod_UnrelatedPeriodsUntouched()
+    public async Task ReserveHourlySlotsAsync_StopsAtFirstBookedSlot()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
-        var date = new DateOnly(2035, 6, 1);
-        var target = SeedAvailability(context, hall, date, BookingPeriodType.FirstPeriod, AvailabilityStatus.Available);
-        var otherPeriod = SeedAvailability(context, hall, date, BookingPeriodType.SecondPeriod, AvailabilityStatus.Booked);
-        var otherDate = SeedAvailability(context, hall, new DateOnly(2035, 6, 2), BookingPeriodType.FirstPeriod, AvailabilityStatus.Available);
+        var second = SeedSlotAvailability(context, hall, BookingDate, OtherStart, HallSlotStatus.Booked);
         var repository = new BookingRepository(context);
 
-        var affectedRows = await repository.ReservePeriodAsync(hall.Id, date, BookingPeriodType.FirstPeriod);
+        var affectedRows = await repository.ReserveHourlySlotsAsync(hall.Id, BookingDate, [BookingStart, OtherStart]);
 
         Assert.Equal(1, affectedRows);
-        Assert.Equal(AvailabilityStatus.Booked, (await context.HallAvailabilities.FindAsync(target.Id))!.Status);
-        Assert.Equal(AvailabilityStatus.Booked, (await context.HallAvailabilities.FindAsync(otherPeriod.Id))!.Status);
-        Assert.Equal(AvailabilityStatus.Available, (await context.HallAvailabilities.FindAsync(otherDate.Id))!.Status);
+        Assert.Equal(HallSlotStatus.Booked, (await context.HallSlotAvailabilities.FindAsync(second.Id))!.Status);
+        Assert.Equal(HallSlotStatus.Booked, Assert.Single(context.HallSlotAvailabilities.Where(candidate => candidate.StartTime == BookingStart)).Status);
     }
 
-    private static async Task<int> TryApproveAsync(ApplicationDbContext context, Guid bookingId)
+    [Fact]
+    public async Task IsDayOpenAsync_MissingGateDefaultsToOpen()
     {
-        if (context.Database.IsRelational())
-        {
-            return await context.Bookings
-                .Where(booking => booking.Id == bookingId && booking.Status == BookingStatus.Pending)
-                .ExecuteUpdateAsync(set => set.SetProperty(booking => booking.Status, BookingStatus.Accepted));
-        }
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var repository = new BookingRepository(context);
 
-        var pending = await context.Bookings
-            .FirstOrDefaultAsync(booking => booking.Id == bookingId && booking.Status == BookingStatus.Pending);
+        Assert.True(await repository.IsDayOpenAsync(hall.Id, BookingDate));
+    }
 
-        if (pending is null)
-        {
-            return 0;
-        }
+    [Fact]
+    public async Task SetDayOpenAsync_CreatesAndUpdatesDayGate()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var repository = new BookingRepository(context);
 
-        pending.Status = BookingStatus.Accepted;
-        await context.SaveChangesAsync();
+        await repository.SetDayOpenAsync(hall.Id, BookingDate, false);
+        Assert.False(await repository.IsDayOpenAsync(hall.Id, BookingDate));
 
-        return 1;
+        await repository.SetDayOpenAsync(hall.Id, BookingDate, true);
+        Assert.True(await repository.IsDayOpenAsync(hall.Id, BookingDate));
+        Assert.Single(context.HallDayAvailabilities);
+    }
+
+    [Fact]
+    public async Task HasActiveBookingsOnDayAsync_IncludesPendingAndAccepted()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        SeedBooking(context, hall, "user-1", BookingDate, BookingStart, BookingStatus.Pending);
+        SeedBooking(context, hall, "user-2", BookingDate, OtherStart, BookingStatus.Accepted);
+        var repository = new BookingRepository(context);
+
+        Assert.True(await repository.HasActiveBookingsOnDayAsync(hall.Id, BookingDate));
+        Assert.False(await repository.HasActiveBookingsOnDayAsync(hall.Id, new DateOnly(2035, 6, 2)));
+    }
+
+    [Fact]
+    public async Task HasActiveHourlyBookingsOutsideWindowAsync_IgnoresCancelledBookings()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        SeedBooking(context, hall, "user-1", BookingDate, new TimeOnly(9, 0), BookingStatus.Cancelled);
+        var repository = new BookingRepository(context);
+
+        Assert.False(await repository.HasActiveHourlyBookingsOutsideWindowAsync(hall.Id, new TimeOnly(9, 0), new TimeOnly(12, 0)));
+
+        SeedBooking(context, hall, "user-2", BookingDate, new TimeOnly(8, 0));
+        Assert.True(await repository.HasActiveHourlyBookingsOutsideWindowAsync(hall.Id, new TimeOnly(9, 0), new TimeOnly(12, 0)));
     }
 
     private static Hall SeedHall(ApplicationDbContext context)
@@ -523,59 +468,68 @@ public class BookingRepositoryShould
         Hall hall,
         string requesterUserId,
         DateOnly date,
-        BookingPeriodType period,
+        TimeOnly startTime,
         BookingStatus status = BookingStatus.Pending)
     {
-        var booking = new Booking
-        {
-            Id = Guid.NewGuid(),
-            HallId = hall.Id,
-            Hall = hall,
-            RequesterUserId = requesterUserId,
-            Date = date,
-            Period = period,
-            Status = status
-        };
-
+        var booking = CreateBooking(hall, status, requesterUserId, date, startTime);
         context.Bookings.Add(booking);
         context.SaveChanges();
 
         return booking;
     }
 
-    private static HallAvailability SeedAvailability(
+    private static HallSlotAvailability SeedSlotAvailability(
         ApplicationDbContext context,
         Hall hall,
         DateOnly date,
-        BookingPeriodType periodType,
-        AvailabilityStatus status)
+        TimeOnly startTime,
+        HallSlotStatus status)
     {
-        var availability = new HallAvailability
+        var availability = new HallSlotAvailability
         {
             Id = Guid.NewGuid(),
             HallId = hall.Id,
             Hall = hall,
             Date = date,
-            PeriodType = periodType,
+            StartTime = startTime,
             Status = status
         };
 
-        context.HallAvailabilities.Add(availability);
+        context.HallSlotAvailabilities.Add(availability);
         context.SaveChanges();
 
         return availability;
     }
 
-    private static Booking CreateBooking(Hall hall, BookingStatus status = BookingStatus.Pending)
-        => new()
+    private static Booking CreateBooking(
+        Hall hall,
+        BookingStatus status = BookingStatus.Pending,
+        string requesterUserId = "user-1",
+        DateOnly date = default,
+        TimeOnly startTime = default)
+    {
+        var selectedDate = date == default ? BookingDate : date;
+        var selectedStart = startTime == default ? BookingStart : startTime;
+
+        return new Booking
         {
             Id = Guid.NewGuid(),
             HallId = hall.Id,
-            RequesterUserId = "user-1",
-            Date = new DateOnly(2035, 6, 1),
-            Period = BookingPeriodType.FirstPeriod,
+            Hall = hall,
+            RequesterUserId = requesterUserId,
+            Date = selectedDate,
+            Slots =
+            [
+                new BookingSlot
+                {
+                    Id = Guid.NewGuid(),
+                    StartTime = selectedStart,
+                    EndTime = selectedStart.AddHours(1)
+                }
+            ],
             Status = status
         };
+    }
 
     private static ApplicationDbContext CreateContext(string? databaseName = null)
     {

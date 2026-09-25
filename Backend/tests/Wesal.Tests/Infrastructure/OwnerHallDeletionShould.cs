@@ -153,7 +153,14 @@ public class OwnerHallDeletionShould : IDisposable
             HallId = hall.Id,
             RequesterUserId = "requester-1",
             Date = new DateOnly(2026, 9, 20),
-            Period = BookingPeriodType.FirstPeriod,
+            Slots =
+            [
+                new BookingSlot
+                {
+                    StartTime = new TimeOnly(10, 0),
+                    EndTime = new TimeOnly(11, 0)
+                }
+            ],
             Status = BookingStatus.Pending
         };
         _context.Bookings.Add(booking);

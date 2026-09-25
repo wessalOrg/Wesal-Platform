@@ -12,11 +12,4 @@ internal static class HallDisplayNames
         HallRegion.SouthGaza => "South Gaza",
         _ => region.ToString()
     };
-
-    public static string GetPeriodName(BookingPeriodType type) => type switch
-    {
-        BookingPeriodType.FirstPeriod => "First Period",
-        BookingPeriodType.SecondPeriod => "Second Period",
-        _ => type.ToString()
-    };
 }

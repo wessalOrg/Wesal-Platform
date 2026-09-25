@@ -166,10 +166,10 @@ public sealed partial class HowToService : IHowToService
     private (string Answer, string Category) MatchEnglish(string question)
     {
         if (ContainsAny(question, "search", "find", "look for", "browse halls", "filter"))
-            return ("To search for halls: go to the Browse & Search page from the navigation bar. You can filter halls by region (North Gaza, Gaza, Middle Area, South Gaza), by area, by date, by booking period, or by hall name. You can combine multiple filters. Only approved halls appear in results.", "search");
+            return ("To search for halls: go to the Browse & Search page from the navigation bar. You can filter halls by region (North Gaza, Gaza, Middle Area, South Gaza), by area, by date, or by hall name. You can combine multiple filters. Only approved halls appear in results.", "search");
 
         if (ContainsAny(question, "book", "reserve", "booking", "book a hall"))
-            return ("To book a hall: open the hall details page and tap the Book button. Select your preferred date, then choose one or both of the hall's daily booking periods. Submit your booking request and the hall owner will review it. You need a registered account to book.", "booking");
+            return ("To book a hall: open the hall details page and tap the Book button. Select your preferred date, then choose one or more 60-minute slots. Submit your booking request and the hall owner will review it. You need a registered account to book.", "booking");
 
         if (ContainsAny(question, "rate", "rating", "star", "rate a hall"))
             return ("To rate a hall: open the hall details page while logged in as a Registered User. You will see a 5-star rating control. Tap the number of stars (1-5) to submit your rating. You can update your rating later. Hall Owners cannot rate halls.", "ratings");
@@ -189,14 +189,14 @@ public sealed partial class HowToService : IHowToService
         if (ContainsAny(question, "hall detail", "hall info", "photo", "gallery", "ameniti", "capacity", "hall page"))
             return ("To view hall details: tap any hall card from the search results or homepage. The details page shows the photo gallery, description, capacity, location, contact information, available amenities, pricing, and an interactive availability calendar.", "hall-details");
 
-        if (ContainsAny(question, "availability", "calendar", "available", "period", "free date"))
-            return ("To check availability: open a hall's details page. The interactive calendar shows each day divided into two booking periods (e.g., morning and evening). Available periods are shown in green and booked periods in red. You can select a date to see which periods are available.", "availability");
+        if (ContainsAny(question, "availability", "calendar", "available", "slot", "hour", "free date"))
+            return ("To check availability: open a hall's details page and select a date. The page shows the hall's hourly slots for that day. Available slots are shown in green and booked slots in red, or hidden when the owner chooses not to show them.", "availability");
 
         if (ContainsAny(question, "featured", "homepage", "landing", "home"))
             return ("The homepage shows an introduction to Wesal, 6 featured approved halls, and a How It Works section. You can filter featured halls by region. Tap any hall card to see full details. The Browse More Halls button takes you to the complete halls listing.", "homepage");
 
         if (ContainsAny(question, "hall owner", "add hall", "manage hall", "dashboard"))
-            return ("Hall Owners can add halls, manage availability calendars, handle booking requests, and respond to customer messages from their dashboard. Tap the Profile icon to access the management interface with a sidebar for managing all your halls.", "hall-owner");
+            return ("Hall Owners can add halls, manage hourly settings and day blocks, handle booking requests, and respond to customer messages from their dashboard. Tap the Profile icon to access the management interface with a sidebar for managing all your halls.", "hall-owner");
 
         if (ContainsAny(question, "language", "arabic", "english", "toggle"))
             return ("To switch the site language: tap the language toggle button in the top navigation bar. The site supports Arabic (default, RTL) and English (LTR). All content and layout adjust automatically when you switch.", "language");
@@ -219,10 +219,10 @@ public sealed partial class HowToService : IHowToService
     private (string Answer, string Category) MatchArabic(string question)
     {
         if (ContainsAny(question, "بحث", "ابحث", "أبحث", "تصفية", "about search", "about filter", "search", "find", "browse", "filter"))
-            return ("للبحث عن قاعات: انتقل إلى صفحة الاستكشاف والبحث من شريط التنقل. يمكنك تصفية القاعات حسب المنطقة (شمال غزة، غزة، الوسطى، جنوب المنطقة)، المنطقة الفئة، التاريخ، فترة الحجز، أو اسم القاعة. يمكنك الجمع بين عدة مرشحات. فقط القاعات المعتمدة تظهر في النتائج.", "search");
+            return ("للبحث عن قاعات: انتقل إلى صفحة الاستكشاف والبحث من شريط التنقل. يمكنك تصفية القاعات حسب المنطقة (شمال غزة، غزة، الوسطى، جنوب المنطقة)، المنطقة الفئة، التاريخ، أو اسم القاعة. يمكنك الجمع بين عدة مرشحات. فقط القاعات المعتمدة تظهر في النتائج.", "search");
 
         if (ContainsAny(question, "حجز", "احجز", "حجزت", "about booking", "about reserve", "book", "reserve", "booking"))
-            return ("لحجز قاعة: افتح صفحة تفاصيل القاعة واضغط على زر حجز. اختر التاريخ المفضل، ثم اختر واحدة أو كلا فترتي الحجز اليومية للقاعة. أرسل طلب الحجز وسيراجعه صاحب القاعة. تحتاج إلى حساب مسجل للحجز.", "booking");
+            return ("لحجز قاعة: افتح صفحة تفاصيل القاعة واضغط على زر حجز. اختر التاريخ المفضل، ثم اختر فترة ساعة أو أكثر متتالية. أرسل طلب الحجز وسيراجعه صاحب القاعة. تحتاج إلى حساب مسجل للحجز.", "booking");
 
         if (ContainsAny(question, "تقييم", "قيّم", "نجمة", "about rating", "about rate", "about star"))
             return ("لتقييم قاعة: افتح صفحة تفاصيل القاعة وأنت مسجل الدخول كمستخدم عادي. سترى عناصر النجوم الخمسة. اضغط على عدد النجوم (1-5) لإرسال تقييمك. يمكنك تحديث تقييمك لاحقاً. أصحاب القاعات لا يمكنهم تقييم القاعات.", "ratings");
@@ -242,14 +242,14 @@ public sealed partial class HowToService : IHowToService
         if (ContainsAny(question, "تفاصيل القاعة", "معلومات القاعة", "صورة", "معرض", "مرافق", "سعة", "about hall detail", "about hall info", "about photo", "about gallery", "about ameniti", "about capacity"))
             return ("لعرض تفاصيل القاعة: اضغط على أي بطاقة قاعة من نتائج البحث أو الصفحة الرئيسية. صفحة التفاصيل تضم معرض الصور، الوصف، السعة، الموقع، معلومات الاتصال، المرافق المتوفرة، الأسعار، وتقويم التوفر التفاعلي.", "hall-details");
 
-        if (ContainsAny(question, "توفر", "تقويم", "متاح", "فترة", "about availability", "about calendar", "about available", "about period"))
-            return ("للتحقق من التوفر: افتح صفحة تفاصيل القاعة. التقويم التفاعلي يظهر كل يوم مقسمًا إلى فترتي حجز (صباحاً ومساءً). الفترات المتاحة باللون الأخضر والمحجوزة باللون الأحمر. يمكنك اختيار التاريخ لترى أي فترات متاحة.", "availability");
+        if (ContainsAny(question, "توفر", "تقويم", "متاح", "فترات", "ساعة", "about availability", "about calendar", "about available", "about slot", "about hour"))
+            return ("للتحقق من التوفر: افتح صفحة تفاصيل القاعة واختر التاريخ. تعرض الصفحة الفترات المتاحة بالساعة في ذلك اليوم. الفترات المتاحة باللون الأخضر والمحجوزة باللون الأحمر، أو تُخفى إذا اختار صاحب القاعة ذلك.", "availability");
 
         if (ContainsAny(question, "الصفحة الرئيسية", "مقدمة", "about featured", "about homepage", "about landing", "about home"))
             return ("الصفحة الرئيسية تُعرّف وصال وتعرض 6 قاعات معتمدة مميزة وقسم كيفية العمل. يمكنك تصفية القاعات المميزة حسب المنطقة. اضغط على بطاقة أي قاعة لعرض تفاصيلها الكاملة. زر تصفح المزيد ينقلك إلى قائمة القاعات الكاملة.", "homepage");
 
         if (ContainsAny(question, "صاحب القاعة", "إضافة قاعة", "إدارة قاعة", "لوحة التحكم", "about hall owner", "about add hall", "about manage hall", "about dashboard"))
-            return ("أصحاب القاعات يمكنهم إضافة قاعات، إدارة تقويمات التوفر، التعامل مع طلبات الحجز، والرد على رسائل العملاء من لوحة التحكم. اضغط على أيقونة الملف الشخصي للوصول إلى واجهة الإدارة مع الشريط الجانبي لإدارة جميع قاعاتك.", "hall-owner");
+            return ("أصحاب القاعات يمكنهم إضافة قاعات، إدارة إعدادات الساعات وحظر الأيام، التعامل مع طلبات الحجز، والرد على رسائل العملاء من لوحة التحكم. اضغط على أيقونة الملف الشخصي للوصول إلى واجهة الإدارة مع الشريط الجانبي لإدارة جميع قاعاتك.", "hall-owner");
 
         if (ContainsAny(question, "لغة", "عربية", "إنجليزية", "تبديل", "about language", "about arabic", "about english", "about toggle"))
             return ("لتبديل لغة الموقع: اضغط على زر تبديل اللغة في شريط التنقل العلوي. الموقع يدعم العربية (الافتراضي، من اليمين لليسار) والإنجليزية (من اليسار لليمين). جميع المحتوى والتخطيط يتكيفون تلقائياً عند التبديل.", "language");

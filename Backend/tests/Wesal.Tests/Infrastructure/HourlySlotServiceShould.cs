@@ -164,11 +164,11 @@ public class HourlySlotServiceShould
         var booking = Assert.Single(bookingRepository.AddedBookings);
         Assert.Equal(hall.Id, booking.HallId);
         Assert.Equal(date, booking.Date);
-        Assert.Equal(new TimeOnly(10, 0), booking.SlotStart);
+        Assert.Equal(new TimeOnly(10, 0), Assert.Single(booking.Slots).StartTime);
         Assert.Equal("Layla Hassan", booking.NameOnBooking);
         Assert.Equal(BookingStatus.Pending, booking.Status);
         Assert.Equal(booking.Id, result.BookingId);
-        Assert.Equal(new TimeOnly(10, 0), result.SlotStart);
+        Assert.Equal(new TimeOnly(10, 0), Assert.Single(result.SlotStarts));
         // The atomic reservation marked the slot booked.
         Assert.Equal(HallSlotStatus.Booked, Assert.Single(bookingRepository.Slots).Status);
     }
@@ -298,7 +298,7 @@ public class HourlySlotServiceShould
         {
             HallId = hallId,
             Date = date,
-            SlotStart = slotStart,
+            SlotStarts = [slotStart],
             NameOnBooking = name,
             RequesterName = name
         };
@@ -370,25 +370,18 @@ public class HourlySlotServiceShould
             => Task.FromResult(Halls.Count);
 
         public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
-            string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period,
+            string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime,
             int skip, int take, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>(Halls.Skip(skip).Take(take).ToList());
 
         public Task<int> SearchApprovedHallsCountAsync(
-            string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period,
+            string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime,
             CancellationToken cancellationToken = default)
             => Task.FromResult(Halls.Count);
 
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<HallImage>>([]);
 
-        public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
-            IReadOnlyCollection<Guid> hallIds, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<HallBookingPeriod>>([]);
-
-        public Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(
-            IReadOnlyCollection<Guid> hallIds, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<HallAvailability>>([]);
     }
 
     private sealed class FakeBookingRepository : IBookingRepository
@@ -420,18 +413,6 @@ public class HourlySlotServiceShould
         public Task<int> DeleteAsync(Guid bookingId, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
 
-        public Task<bool> HasOtherActiveBookingsAsync(
-            Guid hallId, DateOnly date, BookingPeriodType periodType, Guid bookingId, CancellationToken cancellationToken = default)
-            => Task.FromResult(false);
-
-        public Task<int> ReleasePeriodAsync(
-            Guid hallId, DateOnly date, BookingPeriodType periodType, CancellationToken cancellationToken = default)
-            => Task.FromResult(0);
-
-        public Task<int> ReservePeriodAsync(
-            Guid hallId, DateOnly date, BookingPeriodType periodType, CancellationToken cancellationToken = default)
-            => Task.FromResult(0);
-
         // WESAL-TASK-1 hourly-slot methods: implemented in memory so the real service
         // logic (day gate, atomic reserve, ShowBookedSlots filtering) is exercised.
 
@@ -448,24 +429,36 @@ public class HourlySlotServiceShould
             => Task.FromResult<IReadOnlyList<HallSlotAvailability>>(
                 Slots.Where(slot => slot.HallId == hallId && slot.Date == date).ToList());
 
-        public Task<int> ReserveHourlySlotAsync(
-            Guid hallId, DateOnly date, TimeOnly startTime, CancellationToken cancellationToken = default)
+        public Task<int> ReserveHourlySlotsAsync(
+            Guid hallId,
+            DateOnly date,
+            IReadOnlyList<TimeOnly> startTimes,
+            CancellationToken cancellationToken = default)
         {
-            var existing = Slots.FirstOrDefault(slot => slot.HallId == hallId && slot.Date == date && slot.StartTime == startTime);
+            var reserved = 0;
 
-            if (existing is null)
+            foreach (var startTime in startTimes)
             {
-                Slots.Add(NewSlot(hallId, date, startTime, HallSlotStatus.Booked));
-                return Task.FromResult(1);
+                var existing = Slots.FirstOrDefault(slot =>
+                    slot.HallId == hallId && slot.Date == date && slot.StartTime == startTime);
+
+                if (existing is null)
+                {
+                    Slots.Add(NewSlot(hallId, date, startTime, HallSlotStatus.Booked));
+                    reserved++;
+                    continue;
+                }
+
+                if (existing.Status == HallSlotStatus.Booked)
+                {
+                    break;
+                }
+
+                existing.Status = HallSlotStatus.Booked;
+                reserved++;
             }
 
-            if (existing.Status == HallSlotStatus.Booked)
-            {
-                return Task.FromResult(0);
-            }
-
-            existing.Status = HallSlotStatus.Booked;
-            return Task.FromResult(1);
+            return Task.FromResult(reserved);
         }
     }
 }

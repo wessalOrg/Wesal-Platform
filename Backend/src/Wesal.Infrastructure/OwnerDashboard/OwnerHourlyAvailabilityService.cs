@@ -10,8 +10,8 @@ using Wesal.Infrastructure.Identity;
 namespace Wesal.Infrastructure.OwnerDashboard;
 
 /// <summary>
-/// Owner-facing hourly-slot availability management (WESAL-TASK-1). Mirrors the
-/// ownership and access conventions of <see cref="OwnerAvailabilityService"/>: the owner
+/// Owner-facing hourly-slot availability management (WESAL-TASK-1). Follows the
+/// ownership and access conventions of the hall management services: the owner
 /// id is resolved exclusively from the authenticated session, the hall is fetched through
 /// the ownership-scoped repository (so a wrong-owner call surfaces as not-found rather
 /// than leaking another owner's hall), and <see cref="HallManagementAccess"/> gates the

@@ -14,7 +14,7 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// The single application-level gateway that mediates between a model's tool
 /// invocations and Wesal's existing read-only hall services
 /// (<see cref="IHallSearchService"/>, <see cref="IHallDetailsService"/>,
-/// <see cref="IHallAvailabilityService"/>). It is the ONLY place a tool
+/// <see cref="IHourlySlotService"/>). It is the ONLY place a tool
 /// invocation is turned into application code, and it enforces:
 /// <list type="bullet">
 /// <item>an allow-list of exactly three stable tool names;</item>
@@ -47,7 +47,7 @@ public sealed class WesalToolGateway : IWesalToolGateway
         {
             [WesalToolNames.SearchHalls] = new(
                 WesalToolNames.SearchHalls,
-                "Searches the public, approved Wesal wedding halls by optional name, region, area, date and/or booking period. Returns a bounded page of halls with id, name, region, address, description, capacity, price and main image. This is a read-only public search.",
+                "Searches the public, approved Wesal wedding halls by optional name, region, area, or date. Returns a bounded page of halls with id, name, region, address, description, capacity, price and main image. This is a read-only public search.",
                 BuildSearchSchema()),
             [WesalToolNames.GetHallDetails] = new(
                 WesalToolNames.GetHallDetails,
@@ -55,7 +55,7 @@ public sealed class WesalToolGateway : IWesalToolGateway
                 BuildDetailsSchema()),
             [WesalToolNames.CheckHallAvailability] = new(
                 WesalToolNames.CheckHallAvailability,
-                "Returns the booking-period availability (Available or Booked) of one approved Wesal hall on one specific date. Requires hallId and an ISO date (yyyy-MM-dd). Read-only public data.",
+                "Returns the hourly-slot availability of one approved Wesal hall on one specific date. Requires hallId and an ISO date (yyyy-MM-dd). Read-only public data.",
                 BuildAvailabilitySchema())
         };
 
@@ -65,18 +65,18 @@ public sealed class WesalToolGateway : IWesalToolGateway
 
     private readonly IHallSearchService _searchService;
     private readonly IHallDetailsService _detailsService;
-    private readonly IHallAvailabilityService _availabilityService;
+    private readonly IHourlySlotService _hourlySlotService;
     private readonly ILogger<WesalToolGateway> _logger;
 
     public WesalToolGateway(
         IHallSearchService searchService,
         IHallDetailsService detailsService,
-        IHallAvailabilityService availabilityService,
+        IHourlySlotService hourlySlotService,
         ILogger<WesalToolGateway> logger)
     {
         _searchService = searchService;
         _detailsService = detailsService;
-        _availabilityService = availabilityService;
+        _hourlySlotService = hourlySlotService;
         _logger = logger;
     }
 
@@ -131,7 +131,7 @@ public sealed class WesalToolGateway : IWesalToolGateway
 
     private async Task<WesalToolResult> ExecuteSearchAsync(JsonObject args, CancellationToken cancellationToken)
     {
-        var allowed = new[] { "name", "region", "area", "date", "bookingPeriod", "pageSize" };
+        var allowed = new[] { "name", "region", "area", "date", "pageSize" };
         if (!EnsureOnlyKnownArguments(args, allowed, WesalToolNames.SearchHalls, out var knownError))
             return knownError;
 
@@ -141,16 +141,14 @@ public sealed class WesalToolGateway : IWesalToolGateway
             return WesalToolResult.Fail("The 'area' parameter must be text with at most 80 characters.");
         if (!TryGetOptionalEnum<HallRegion>(args, "region", out var region))
             return WesalToolResult.Fail("The 'region' parameter must be one of: NorthGaza, Gaza, MiddleArea, SouthGaza.");
-        if (!TryGetOptionalEnum<BookingPeriodType>(args, "bookingPeriod", out var period))
-            return WesalToolResult.Fail("The 'bookingPeriod' parameter must be one of: FirstPeriod, SecondPeriod.");
         if (!TryGetOptionalDate(args, "date", out var date))
             return WesalToolResult.Fail("The 'date' parameter must be an ISO date in yyyy-MM-dd format.");
         if (!TryGetPageSize(args, out var pageSize))
             return WesalToolResult.Fail($"The 'pageSize' parameter must be an integer between 1 and {MaxPageSize}.");
 
-        if (name is null && area is null && region is null && date is null && period is null)
+        if (name is null && area is null && region is null && date is null)
         {
-            return WesalToolResult.Fail("Provide at least one search criterion: name, region, area, date or bookingPeriod.");
+            return WesalToolResult.Fail("Provide at least one search criterion: name, region, area, or date.");
         }
 
         var request = new HallSearchRequest
@@ -159,7 +157,6 @@ public sealed class WesalToolGateway : IWesalToolGateway
             Region = region,
             Area = area,
             Date = date,
-            Period = period,
             PageNumber = 1,
             PageSize = pageSize
         };
@@ -221,13 +218,14 @@ public sealed class WesalToolGateway : IWesalToolGateway
         if (!TryGetRequiredDate(args, "date", out var date))
             return WesalToolResult.Fail("The 'date' parameter must be an ISO date in yyyy-MM-dd format.");
 
-        var availability = await _availabilityService.GetHallAvailabilityAsync(hallId, date, cancellationToken);
+        var availability = await _hourlySlotService.GetHourlyCatalogAsync(hallId, date, cancellationToken);
 
         var payload = JsonSerializer.SerializeToNode(new
         {
             hallId,
-            date = availability.Date,
-            periods = availability.Periods
+            availability.Date,
+            availability.DayOpen,
+            availability.Slots
         }, JsonOptions) as JsonObject ?? new JsonObject();
 
         return WesalToolResult.Ok(payload);
@@ -381,12 +379,6 @@ public sealed class WesalToolGateway : IWesalToolGateway
             },
             ["area"] = new JsonObject { ["type"] = "string", ["description"] = "Hall area/locality (partial match)." },
             ["date"] = new JsonObject { ["type"] = "string", ["format"] = "date", ["description"] = "Event date, ISO yyyy-MM-dd. Use it only when the user gave a real date." },
-            ["bookingPeriod"] = new JsonObject
-            {
-                ["type"] = "string",
-                ["enum"] = new JsonArray("FirstPeriod", "SecondPeriod"),
-                ["description"] = "Morning (FirstPeriod) or evening (SecondPeriod) booking period."
-            },
             ["pageSize"] = new JsonObject
             {
                 ["type"] = "integer",

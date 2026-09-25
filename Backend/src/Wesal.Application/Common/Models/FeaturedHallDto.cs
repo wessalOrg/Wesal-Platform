@@ -1,5 +1,3 @@
-using Wesal.Domain.Enums;
-
 namespace Wesal.Application.Common.Models;
 
 public class FeaturedHallDto
@@ -27,18 +25,5 @@ public class HallAvailabilityDto
 {
     public DateOnly Date { get; init; }
 
-    public IReadOnlyList<HallBookingPeriodStatusDto> Periods { get; init; } = [];
-}
-
-public class HallBookingPeriodStatusDto
-{
-    public BookingPeriodType PeriodType { get; init; }
-
-    public string PeriodName { get; init; } = string.Empty;
-
-    public TimeOnly StartTime { get; init; }
-
-    public TimeOnly EndTime { get; init; }
-
-    public AvailabilityStatus Status { get; init; }
+    public IReadOnlyList<HallHourlySlotDto> Slots { get; init; } = [];
 }

@@ -8,8 +8,7 @@ namespace Wesal.Application.Common.Validation;
 /// <summary>
 /// Validates an owner hall update payload (US-OWNER-07, FR-HALL-02). The rules reuse
 /// the Add Hall field constraints defined in FR-HALL-01: mandatory name, address and
-/// photos, the two predefined daily booking periods (each with an end time strictly
-/// later than its start time), and length/value limits aligned with the domain model.
+/// photos, plus length and value limits aligned with the domain model.
 /// </summary>
 public class UpdateOwnerHallRequestValidator : AbstractValidator<UpdateOwnerHallRequest>
 {
@@ -47,6 +46,24 @@ public class UpdateOwnerHallRequestValidator : AbstractValidator<UpdateOwnerHall
             .Must(request => !request.ShowPrice || request.Price.HasValue)
             .WithName("Price")
             .WithMessage("A price must be provided when the price is shown.");
+
+        // A hall with no coherent hourly window is silently unbookable, because the
+        // seeker catalog derives its slots from start (inclusive) to end (exclusive).
+        RuleFor(request => request.HourlySlotStart)
+            .Must(BeWholeHour)
+            .When(request => request.HourlySlotStart.HasValue)
+            .WithMessage("HourlySlotStart must start on the hour (minutes == 00).");
+
+        RuleFor(request => request.HourlySlotEnd)
+            .Must(BeWholeHour)
+            .When(request => request.HourlySlotEnd.HasValue)
+            .WithMessage("HourlySlotEnd must start on the hour (minutes == 00).");
+
+        RuleFor(request => request)
+            .Must(request => !request.HourlySlotStart.HasValue
+                || !request.HourlySlotEnd.HasValue
+                || request.HourlySlotStart.Value < request.HourlySlotEnd.Value)
+            .WithMessage("HourlySlotEnd must be after HourlySlotStart.");
 
         RuleFor(request => request.Region)
             .IsInEnum()
@@ -94,22 +111,8 @@ public class UpdateOwnerHallRequestValidator : AbstractValidator<UpdateOwnerHall
                     .GreaterThanOrEqualTo(0)
                     .WithMessage("Photo display order must be zero or greater.");
             });
-
-        RuleFor(request => request.BookingPeriods)
-            .Must(periods => periods.Count(period => period.Type == BookingPeriodType.FirstPeriod) == 1
-                && periods.Count(period => period.Type == BookingPeriodType.SecondPeriod) == 1)
-            .WithMessage("Each of the two daily booking periods must be configured exactly once.");
-
-        RuleForEach(request => request.BookingPeriods)
-            .ChildRules(period =>
-            {
-                period.RuleFor(item => item.Type)
-                    .IsInEnum()
-                    .WithMessage("An unknown booking period type was provided.");
-
-                period.RuleFor(item => item.EndTime)
-                    .GreaterThan(item => item.StartTime)
-                    .WithMessage("The booking period end time must be later than its start time.");
-            });
     }
+
+    private static bool BeWholeHour(TimeOnly? time)
+        => time is null || (time.Value.Minute == 0 && time.Value.Second == 0);
 }

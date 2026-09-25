@@ -1,5 +1,3 @@
-using Wesal.Domain.Enums;
-
 namespace Wesal.Application.Common.Models;
 
 /// <summary>
@@ -18,7 +16,6 @@ public sealed record AiAssistantIntentDto(
     string? Region,
     string? Area,
     DateOnly? Date,
-    BookingPeriodType? BookingPeriod,
     int? Capacity,
     string? HallName);
 
@@ -36,7 +33,7 @@ public enum AiIntentType
 /// <summary>
 /// Discriminator the frontend uses to decide how to render a turn:
 /// <see cref="Halls"/> lists halls, <see cref="HallDetails"/> carries one hall's
-/// full details, <see cref="Availability"/> carries per-period availability,
+/// full details, <see cref="Availability"/> carries hourly-slot availability,
 /// <see cref="Clarification"/> asks the user for more input,
 /// <see cref="Unsupported"/> explains the action cannot be performed,
 /// <see cref="Error"/> is a service-level failure, and
@@ -57,7 +54,7 @@ public sealed record AiAssistantAvailabilityDayDto(
     Guid HallId,
     string HallName,
     DateOnly Date,
-    IReadOnlyList<HallBookingPeriodStatusDto> Periods);
+    IReadOnlyList<HallHourlySlotDto> Slots);
 
 /// <summary>
 /// Stable response contract for the unified assistant. <see cref="Halls"/>,

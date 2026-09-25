@@ -5,6 +5,7 @@ using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Infrastructure.Halls;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -18,14 +19,10 @@ public class FeaturedHallsServiceShould
         var fakeRepository = new FakeHallRepository();
         for (var index = 0; index < 8; index++)
         {
-            var hall = CreateHall(name: $"Hall {index}", createdAt: FixedNow.AddDays(-index));
-            fakeRepository.Halls.Add(hall);
-            fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
+            fakeRepository.Halls.Add(CreateHall(name: $"Hall {index}", createdAt: FixedNow.AddDays(-index)));
         }
 
-        var service = CreateService(fakeRepository);
-
-        var result = await service.GetFeaturedHallsAsync();
+        var result = await CreateService(fakeRepository).GetFeaturedHallsAsync();
 
         Assert.Equal(6, result.Count);
     }
@@ -33,9 +30,7 @@ public class FeaturedHallsServiceShould
     [Fact]
     public async Task GetFeaturedHallsAsync_ReturnsEmptyListWhenNoHallsExist()
     {
-        var service = CreateService(new FakeHallRepository());
-
-        var result = await service.GetFeaturedHallsAsync();
+        var result = await CreateService(new FakeHallRepository()).GetFeaturedHallsAsync();
 
         Assert.Empty(result);
     }
@@ -53,12 +48,8 @@ public class FeaturedHallsServiceShould
             description: "Spacious hall in the heart of Gaza.");
         var fakeRepository = new FakeHallRepository();
         fakeRepository.Halls.Add(hall);
-        fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
 
-        var service = CreateService(fakeRepository);
-
-        var result = await service.GetFeaturedHallsAsync();
-        var featured = Assert.Single(result);
+        var featured = Assert.Single(await CreateService(fakeRepository).GetFeaturedHallsAsync());
 
         Assert.Equal(hall.Id, featured.HallId);
         Assert.Equal("Al-Nasr Hall", featured.HallName);
@@ -74,81 +65,76 @@ public class FeaturedHallsServiceShould
     {
         var hall = CreateHall(name: "Hidden Price Hall", createdAt: FixedNow, price: 2000m);
         hall.ShowPrice = false;
-
         var fakeRepository = new FakeHallRepository();
         fakeRepository.Halls.Add(hall);
-        fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
 
-        var service = CreateService(fakeRepository);
-
-        var result = await service.GetFeaturedHallsAsync();
-        var featured = Assert.Single(result);
+        var featured = Assert.Single(await CreateService(fakeRepository).GetFeaturedHallsAsync());
 
         Assert.Null(featured.Price);
     }
 
     [Fact]
-    public async Task GetFeaturedHallsAsync_ExposesBookingPeriodsForEachDay()
+    public async Task GetFeaturedHallsAsync_ExposesHourlySlotsForEachDay()
     {
-        var hall = CreateHall(name: "Two Period Hall", createdAt: FixedNow);
+        var hall = CreateHall(name: "Hourly Hall", createdAt: FixedNow);
         var fakeRepository = new FakeHallRepository();
         fakeRepository.Halls.Add(hall);
-        fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
 
-        var service = CreateService(fakeRepository);
-
-        var result = await service.GetFeaturedHallsAsync();
-        var featured = Assert.Single(result);
+        var featured = Assert.Single(await CreateService(fakeRepository).GetFeaturedHallsAsync());
 
         Assert.Equal(FeaturedHallsService.AvailabilityDays, featured.Availability.Count);
-
-        var firstDay = featured.Availability[0];
-        Assert.Equal(2, firstDay.Periods.Count);
-        Assert.Equal(BookingPeriodType.FirstPeriod, firstDay.Periods[0].PeriodType);
-        Assert.Equal(BookingPeriodType.SecondPeriod, firstDay.Periods[1].PeriodType);
+        Assert.All(featured.Availability, day => Assert.Equal(3, day.Slots.Count));
+        Assert.All(featured.Availability, day => Assert.Equal(new TimeOnly(9, 0), day.Slots[0].StartTime));
     }
 
     [Fact]
-    public async Task GetFeaturedHallsAsync_ResolvesAvailabilityStatusFromStore()
+    public async Task GetFeaturedHallsAsync_ResolvesHourlySlotStatusFromCatalog()
     {
         var hall = CreateHall(name: "Availability Hall", createdAt: FixedNow);
         var firstDay = DateOnly.FromDateTime(FixedNow.UtcDateTime);
-
         var fakeRepository = new FakeHallRepository();
         fakeRepository.Halls.Add(hall);
-        fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
-        fakeRepository.Availability.Add(new HallAvailability
+        var hourly = new FakeHourlySlotService();
+        hourly.Catalogs[firstDay] = new HallHourlyCatalogDto
         {
             HallId = hall.Id,
             Date = firstDay,
-            PeriodType = BookingPeriodType.FirstPeriod,
-            Status = AvailabilityStatus.Booked
-        });
+            DayOpen = true,
+            Slots =
+            [
+                new HallHourlySlotDto
+                {
+                    StartTime = new TimeOnly(9, 0),
+                    EndTime = new TimeOnly(10, 0),
+                    Status = HallSlotStatus.Booked
+                },
+                new HallHourlySlotDto
+                {
+                    StartTime = new TimeOnly(10, 0),
+                    EndTime = new TimeOnly(11, 0),
+                    Status = HallSlotStatus.Available
+                }
+            ]
+        };
 
-        var service = CreateService(fakeRepository);
-
-        var result = await service.GetFeaturedHallsAsync();
-        var featured = Assert.Single(result);
+        var featured = Assert.Single(await CreateService(fakeRepository, hourly).GetFeaturedHallsAsync());
         var day = featured.Availability.Single(item => item.Date == firstDay);
 
-        Assert.Equal(AvailabilityStatus.Booked, day.Periods[0].Status);
-        Assert.Equal(AvailabilityStatus.Available, day.Periods[1].Status);
+        Assert.Equal(HallSlotStatus.Booked, day.Slots[0].Status);
+        Assert.Equal(HallSlotStatus.Available, day.Slots[1].Status);
     }
 
     [Fact]
-    public async Task GetFeaturedHallsAsync_DefaultsUnrecordedPeriodsToAvailable()
+    public async Task GetFeaturedHallsAsync_DefaultsUnrecordedSlotsToAvailable()
     {
         var hall = CreateHall(name: "No Availability Hall", createdAt: FixedNow);
         var fakeRepository = new FakeHallRepository();
         fakeRepository.Halls.Add(hall);
-        fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
 
-        var service = CreateService(fakeRepository);
+        var featured = Assert.Single(await CreateService(fakeRepository).GetFeaturedHallsAsync());
 
-        var result = await service.GetFeaturedHallsAsync();
-        var featured = Assert.Single(result);
-
-        Assert.All(featured.Availability, day => Assert.All(day.Periods, period => Assert.Equal(AvailabilityStatus.Available, period.Status)));
+        Assert.All(featured.Availability, day =>
+            Assert.All(day.Slots, slot => Assert.Equal(HallSlotStatus.Available, slot.Status)));
     }
 
     [Fact]
@@ -159,14 +145,8 @@ public class FeaturedHallsServiceShould
         fakeRepository.Halls.Add(CreateHall(name: "Gaza 1", createdAt: FixedNow.AddDays(-1), region: HallRegion.Gaza));
         fakeRepository.Halls.Add(CreateHall(name: "Gaza 2", createdAt: FixedNow.AddDays(-2), region: HallRegion.Gaza));
         fakeRepository.Halls.Add(CreateHall(name: "South 1", createdAt: FixedNow.AddDays(-3), region: HallRegion.SouthGaza));
-        foreach (var hall in fakeRepository.Halls)
-        {
-            fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
-        }
 
-        var service = CreateService(fakeRepository);
-
-        var result = await service.GetFeaturedHallsAsync(HallRegion.Gaza);
+        var result = await CreateService(fakeRepository).GetFeaturedHallsAsync(HallRegion.Gaza);
 
         Assert.Collection(
             result,
@@ -180,11 +160,8 @@ public class FeaturedHallsServiceShould
     {
         var fakeRepository = new FakeHallRepository();
         fakeRepository.Halls.Add(CreateHall(name: "Gaza 1", createdAt: FixedNow, region: HallRegion.Gaza));
-        fakeRepository.Periods.AddRange(CreatePeriods(fakeRepository.Halls[0].Id));
 
-        var service = CreateService(fakeRepository);
-
-        var result = await service.GetFeaturedHallsAsync(HallRegion.MiddleArea);
+        var result = await CreateService(fakeRepository).GetFeaturedHallsAsync(HallRegion.MiddleArea);
 
         Assert.Empty(result);
     }
@@ -195,18 +172,17 @@ public class FeaturedHallsServiceShould
         var fakeRepository = new FakeHallRepository();
         for (var index = 0; index < 8; index++)
         {
-            var hall = CreateHall(name: $"Gaza {index}", createdAt: FixedNow.AddDays(-index), region: HallRegion.Gaza);
-            fakeRepository.Halls.Add(hall);
-            fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
+            fakeRepository.Halls.Add(CreateHall(
+                name: $"Gaza {index}",
+                createdAt: FixedNow.AddDays(-index),
+                region: HallRegion.Gaza));
         }
 
-        var service = CreateService(fakeRepository);
-
-        var result = await service.GetFeaturedHallsAsync(HallRegion.Gaza);
+        var result = await CreateService(fakeRepository).GetFeaturedHallsAsync(HallRegion.Gaza);
 
         Assert.Equal(FeaturedHallsService.FeatureCount, result.Count);
         Assert.All(result, featured => Assert.Equal(FeaturedHallsService.AvailabilityDays, featured.Availability.Count));
-        Assert.All(result, featured => Assert.All(featured.Availability, day => Assert.Equal(2, day.Periods.Count)));
+        Assert.All(result, featured => Assert.All(featured.Availability, day => Assert.Equal(3, day.Slots.Count)));
     }
 
     [Fact]
@@ -217,21 +193,21 @@ public class FeaturedHallsServiceShould
         fakeRepository.Halls.Add(CreateHall(name: "Gaza 1", createdAt: FixedNow.AddDays(-1), region: HallRegion.Gaza));
         fakeRepository.Halls.Add(CreateHall(name: "Middle 1", createdAt: FixedNow.AddDays(-2), region: HallRegion.MiddleArea));
         fakeRepository.Halls.Add(CreateHall(name: "South 1", createdAt: FixedNow.AddDays(-3), region: HallRegion.SouthGaza));
-        foreach (var hall in fakeRepository.Halls)
-        {
-            fakeRepository.Periods.AddRange(CreatePeriods(hall.Id));
-        }
 
-        var service = CreateService(fakeRepository);
-
-        var result = await service.GetFeaturedHallsAsync();
+        var result = await CreateService(fakeRepository).GetFeaturedHallsAsync();
 
         Assert.Equal(4, result.Count);
         Assert.All(result, featured => Assert.NotNull(featured.Availability));
     }
 
-    private static FeaturedHallsService CreateService(FakeHallRepository repository)
-        => new(repository, new FakeDateTime(FixedNow), NullLogger<FeaturedHallsService>.Instance);
+    private static FeaturedHallsService CreateService(
+        FakeHallRepository repository,
+        FakeHourlySlotService? hourlySlotService = null)
+        => new(
+            repository,
+            new FakeDateTime(FixedNow),
+            hourlySlotService ?? new FakeHourlySlotService(),
+            NullLogger<FeaturedHallsService>.Instance);
 
     private static Hall CreateHall(
         string name,
@@ -255,34 +231,11 @@ public class FeaturedHallsServiceShould
             CreatedAt = createdAt
         };
 
-    private static IEnumerable<HallBookingPeriod> CreatePeriods(Guid hallId)
-    {
-        yield return new HallBookingPeriod
-        {
-            HallId = hallId,
-            Type = BookingPeriodType.FirstPeriod,
-            StartTime = new TimeOnly(12, 0),
-            EndTime = new TimeOnly(15, 0)
-        };
-
-        yield return new HallBookingPeriod
-        {
-            HallId = hallId,
-            Type = BookingPeriodType.SecondPeriod,
-            StartTime = new TimeOnly(16, 0),
-            EndTime = new TimeOnly(20, 0)
-        };
-    }
-
     private sealed class FakeHallRepository : IHallRepository
     {
         public List<Hall> Halls { get; } = [];
 
         public List<HallImage> Images { get; } = [];
-
-        public List<HallBookingPeriod> Periods { get; } = [];
-
-        public List<HallAvailability> Availability { get; } = [];
 
         public Task<Hall?> GetHallByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult(Halls.FirstOrDefault(hall => hall.Id == id));
@@ -300,14 +253,22 @@ public class FeaturedHallsServiceShould
             => Task.FromResult(Halls.Count);
 
         public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
-            string? name, HallRegion? region, string? area,
-            DateOnly? date, BookingPeriodType? period,
-            int skip, int take, CancellationToken cancellationToken = default)
+            string? name,
+            HallRegion? region,
+            string? area,
+            DateOnly? date,
+            TimeOnly? startTime,
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>(Halls.Skip(skip).Take(take).ToList());
 
         public Task<int> SearchApprovedHallsCountAsync(
-            string? name, HallRegion? region, string? area,
-            DateOnly? date, BookingPeriodType? period,
+            string? name,
+            HallRegion? region,
+            string? area,
+            DateOnly? date,
+            TimeOnly? startTime,
             CancellationToken cancellationToken = default)
             => Task.FromResult(Halls.Count);
 
@@ -324,19 +285,6 @@ public class FeaturedHallsServiceShould
                     .OrderBy(image => image.DisplayOrder)
                     .ThenBy(image => image.CreatedAt)
                     .ToList());
-
-        public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
-            IReadOnlyCollection<Guid> hallIds,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<HallBookingPeriod>>(Periods.Where(period => hallIds.Contains(period.HallId)).ToList());
-
-        public Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(
-            IReadOnlyCollection<Guid> hallIds,
-            DateOnly fromDate,
-            DateOnly toDate,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<HallAvailability>>(
-                Availability.Where(item => hallIds.Contains(item.HallId) && item.Date >= fromDate && item.Date <= toDate).ToList());
     }
 
     private sealed class FakeDateTime : IDateTime

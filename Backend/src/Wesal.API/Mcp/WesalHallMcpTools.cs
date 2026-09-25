@@ -18,29 +18,29 @@ public sealed class WesalHallMcpTools
 
     private readonly IHallSearchService _hallSearchService;
     private readonly IHallDetailsService _hallDetailsService;
-    private readonly IHallAvailabilityService _hallAvailabilityService;
+    private readonly IHourlySlotService _hourlySlotService;
     private readonly ILogger<WesalHallMcpTools> _logger;
 
     public WesalHallMcpTools(
         IHallSearchService hallSearchService,
         IHallDetailsService hallDetailsService,
-        IHallAvailabilityService hallAvailabilityService,
+        IHourlySlotService hourlySlotService,
         ILogger<WesalHallMcpTools> logger)
     {
         _hallSearchService = hallSearchService;
         _hallDetailsService = hallDetailsService;
-        _hallAvailabilityService = hallAvailabilityService;
+        _hourlySlotService = hourlySlotService;
         _logger = logger;
     }
 
     [McpServerTool(Name = "search_halls"), Description(
-        "Searches publicly visible, approved Wesal halls. Use it to find halls by exact or partial name, Gaza region, area, date, and/or booking period. It returns only public search-listing data. Capacity is not supported by the current Wesal search service.")]
+        "Searches publicly visible, approved Wesal halls. Use it to find halls by exact or partial name, Gaza region, area, date, and/or start time. It returns only public search-listing data. Capacity is not supported by the current Wesal search service.")]
     public async Task<McpHallSearchResponse> SearchHallsAsync(
         [Description("Optional hall name, or part of a hall name.")] string? name = null,
         [Description("Optional Wesal region: NorthGaza, Gaza, MiddleArea, or SouthGaza.")] HallRegion? region = null,
         [Description("Optional area text within the selected region.")] string? area = null,
         [Description("Optional ISO-8601 date (YYYY-MM-DD) that must be available.")] DateOnly? date = null,
-        [Description("Optional booking period: FirstPeriod or SecondPeriod.")] BookingPeriodType? bookingPeriod = null,
+        [Description("Optional hourly slot start (HH:mm) that must be free on the given date.")] TimeOnly? startTime = null,
         [Description("Maximum number of halls to return, from 1 to 20. Defaults to 12.")] int pageSize = 12,
         CancellationToken cancellationToken = default)
     {
@@ -56,7 +56,7 @@ public sealed class WesalHallMcpTools
                 Region = region,
                 Area = Normalize(area, 80),
                 Date = date,
-                Period = bookingPeriod,
+                StartTime = startTime,
                 PageNumber = 1,
                 PageSize = pageSize
             },
@@ -89,15 +89,15 @@ public sealed class WesalHallMcpTools
     }
 
     [McpServerTool(Name = "check_hall_availability"), Description(
-        "Checks every configured booking period for one public, approved Wesal hall on one date. Use a hallId returned by search_halls and an ISO-8601 date. A returned Available status means that booking period has no current reservation; this tool does not create a booking.")]
-    public async Task<HallAvailabilityDto> CheckHallAvailabilityAsync(
+        "Lists the hourly slots for one public, approved Wesal hall on one date. Use a hallId returned by search_halls and an ISO-8601 date. A slot marked Available has no current reservation; this tool does not create a booking.")]
+    public async Task<HallHourlyCatalogDto> CheckHallAvailabilityAsync(
         [Description("The GUID hallId returned by search_halls.")] Guid hallId,
         [Description("ISO-8601 date (YYYY-MM-DD) to check.")] DateOnly date,
         CancellationToken cancellationToken = default)
     {
-        var availability = await _hallAvailabilityService.GetHallAvailabilityAsync(hallId, date, cancellationToken);
+        var catalog = await _hourlySlotService.GetHourlyCatalogAsync(hallId, date, cancellationToken);
         _logger.LogInformation("MCP check_hall_availability completed for hall {HallId} on {Date}.", hallId, date);
-        return availability;
+        return catalog;
     }
 
     private static string? Normalize(string? value, int maxLength)

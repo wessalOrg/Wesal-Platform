@@ -42,7 +42,6 @@ public class HallsController : ControllerBase
         [FromQuery] HallRegion? region,
         [FromQuery] string? area,
         [FromQuery] DateOnly? date,
-        [FromQuery] BookingPeriodType? period,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 12,
         CancellationToken cancellationToken = default)
@@ -53,19 +52,12 @@ public class HallsController : ControllerBase
             return ValidationProblem();
         }
 
-        if (period is not null && !Enum.IsDefined(period.Value))
-        {
-            ModelState.AddModelError(nameof(period), $"Period must be one of: {string.Join(", ", Enum.GetNames<BookingPeriodType>())}.");
-            return ValidationProblem();
-        }
-
         var request = new HallSearchRequest
         {
             Name = name,
             Region = region,
             Area = area,
             Date = date,
-            Period = period,
             PageNumber = pageNumber,
             PageSize = pageSize
         };
@@ -183,8 +175,10 @@ public class HallsController : ControllerBase
 
     /// <summary>
     /// Returns the per-day open/closed availability calendar for one hall across a date
-    /// range (WESAL-TASK-1, seeker flow). A day with no explicit gate defaults to open;
-    /// a day the owner blocked is reported as closed.
+    /// range (WESAL-TASK-1, seeker flow). A day with no explicit gate defaults to open.
+    /// A day the owner blocked is reported as closed only while the hall's ShowBookedSlots
+    /// toggle is ON; with the toggle OFF a blocked day is deliberately indistinguishable
+    /// from a hidden fully-booked day and reads as open, so the block is never leaked.
     /// </summary>
     [HttpGet("{id:guid}/availability-calendar")]
     [AllowAnonymous]
@@ -226,7 +220,7 @@ public class HallsController : ControllerBase
         {
             HallId = id,
             Date = request.Date,
-            SlotStart = request.SlotStart,
+            SlotStarts = request.SlotStarts,
             NameOnBooking = request.NameOnBooking,
             RequesterName = request.RequesterName
         };

@@ -85,8 +85,6 @@ public class OwnerHallDetailsDto
     public bool HasPaymentReceipt { get; init; }
 
     public IReadOnlyList<OwnerHallPhotoDto> Photos { get; init; } = [];
-
-    public IReadOnlyList<OwnerHallBookingPeriodDto> BookingPeriods { get; init; } = [];
 }
 
 public class OwnerHallPhotoDto
@@ -96,15 +94,6 @@ public class OwnerHallPhotoDto
     public string Url { get; init; } = string.Empty;
 
     public int DisplayOrder { get; init; }
-}
-
-public class OwnerHallBookingPeriodDto
-{
-    public BookingPeriodType Type { get; init; }
-
-    public TimeOnly StartTime { get; init; }
-
-    public TimeOnly EndTime { get; init; }
 }
 
 /// <summary>
@@ -145,7 +134,9 @@ public class UpdateOwnerHallRequest
 
     public IReadOnlyList<UpdateOwnerHallPhotoDto> Photos { get; init; } = [];
 
-    public IReadOnlyList<UpdateOwnerHallBookingPeriodDto> BookingPeriods { get; init; } = [];
+    public TimeOnly? HourlySlotStart { get; init; }
+
+    public TimeOnly? HourlySlotEnd { get; init; }
 }
 
 public class UpdateOwnerHallPhotoDto
@@ -153,13 +144,4 @@ public class UpdateOwnerHallPhotoDto
     public string Url { get; init; } = string.Empty;
 
     public int DisplayOrder { get; init; }
-}
-
-public class UpdateOwnerHallBookingPeriodDto
-{
-    public BookingPeriodType Type { get; init; }
-
-    public TimeOnly StartTime { get; init; }
-
-    public TimeOnly EndTime { get; init; }
 }

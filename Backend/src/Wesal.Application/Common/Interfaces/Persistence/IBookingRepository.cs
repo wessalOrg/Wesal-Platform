@@ -17,32 +17,12 @@ public interface IBookingRepository
 
     Task<int> DeleteAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
-    Task<bool> HasOtherActiveBookingsAsync(
-        Guid hallId,
-        DateOnly date,
-        BookingPeriodType periodType,
-        Guid bookingId,
-        CancellationToken cancellationToken = default);
-
-    Task<int> ReleasePeriodAsync(
-        Guid hallId,
-        DateOnly date,
-        BookingPeriodType periodType,
-        CancellationToken cancellationToken = default);
-
-    Task<int> ReservePeriodAsync(
-        Guid hallId,
-        DateOnly date,
-        BookingPeriodType periodType,
-        CancellationToken cancellationToken = default);
-
-    // WESAL-TASK-1 hourly-slot model (additive; the legacy two-period methods above
-    // stay dormant and untouched). These operate on HallSlotAvailability /
-    // HallDayAvailability and the new Booking.SlotStart / Booking.NameOnBooking fields.
-    // Default interface members keep legacy/dormant implementations (and the
-    // legacy-only test fakes) compiling unchanged; the real BookingRepository
-    // overrides all four, and a NotSupportedException here guarantees a dormant
-    // implementation can never silently accept an hourly request.
+    // Hourly-slot model. The legacy two-period members (ReservePeriodAsync /
+    // ReleasePeriodAsync / HasOtherActiveBookingsAsync) were removed with the legacy
+    // tables; availability is now expressed exclusively as calendar day + hourly slots.
+    // Default interface members keep the lighter test fakes compiling; the real
+    // BookingRepository overrides them, and NotSupportedException here guarantees a
+    // partial implementation can never silently accept an hourly request.
 
     Task<bool> IsDayOpenAsync(
         Guid hallId,
@@ -63,17 +43,38 @@ public interface IBookingRepository
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
 
-    Task<int> ReserveHourlySlotAsync(
+    /// <summary>
+    /// Atomically reserves every requested hourly slot. Returns the number of slots
+    /// actually reserved, which equals <paramref name="startTimes"/> only when all of
+    /// them were free. A partial result must be treated as a conflict and rolled back.
+    /// </summary>
+    Task<int> ReserveHourlySlotsAsync(
         Guid hallId,
         DateOnly date,
-        TimeOnly startTime,
+        IReadOnlyList<TimeOnly> startTimes,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
 
-    // Owner day-block write path (WESAL-TASK-1). SetDayOpenAsync creates or updates the
-    // (HallId, Date) gate; HasActiveBookingsOnDayAsync lets the owner-facing service
-    // refuse to silently orphan a live booking when a whole day is blocked. "Active"
-    // reuses the same rule as HasOtherActiveBookingsAsync: Pending or Accepted.
+    /// <summary>
+    /// Re-opens the given hourly slots, skipping any slot that another active booking
+    /// still holds. Used by the accept/cancel/reject/delete lifecycle so a multi-hour
+    /// booking frees all of its hours.
+    ///
+    /// The slots are passed in by the caller, which has already loaded the booking,
+    /// rather than re-queried here. Deletion hard-removes the booking row, so a release
+    /// that re-queried by id would find nothing and strand the hours as Booked forever.
+    /// </summary>
+    Task<int> ReleaseBookingSlotsAsync(
+        Guid bookingId,
+        Guid hallId,
+        DateOnly date,
+        IReadOnlyList<TimeOnly> slotStarts,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
+
+    // Owner day-block write path. SetDayOpenAsync creates or updates the (HallId, Date)
+    // gate; HasActiveBookingsOnDayAsync lets the owner-facing service refuse to silently
+    // orphan a live booking when a whole day is blocked. "Active" means Pending or Accepted.
 
     Task SetDayOpenAsync(
         Guid hallId,
@@ -88,34 +89,11 @@ public interface IBookingRepository
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
 
-    // Hourly lifecycle support (WESAL-TASK-1). The booking lifecycle (accept / cancel /
-    // reject / delete) branches on Booking.IsHourlyBooking and uses these two members for
-    // hourly bookings, so an hourly booking releases its own HallSlotAvailability row
-    // instead of a legacy two-period HallAvailability row. ReleaseHourlySlotAsync only
-    // re-opens a slot that is currently Booked; it never touches any other slot/date.
-
-    Task<bool> HasOtherActiveHourlyBookingsAsync(
-        Guid hallId,
-        DateOnly date,
-        TimeOnly startTime,
-        Guid bookingId,
-        CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
-
-    Task<int> ReleaseHourlySlotAsync(
-        Guid hallId,
-        DateOnly date,
-        TimeOnly startTime,
-        CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
-
-    // WESAL-TASK-1 hardening: guards the hourly window against shrinking past a live
-    // booking. The seeker catalog is generated from [HourlySlotStart, HourlySlotEnd), so
-    // narrowing the window would make an already-booked hour vanish from the catalog while
-    // the booking itself stayed real and active. The owner-facing service turns a true
-    // result into the same ConflictException it already uses when a day-block would
-    // orphan a live booking, so the two rules stay consistent. "Active" reuses the same
-    // Pending-or-Accepted rule as the rest of this interface.
+    // Guards the hourly window against shrinking past a live booking. The seeker catalog
+    // is generated from [HourlySlotStart, HourlySlotEnd), so narrowing the window would
+    // make an already-booked hour vanish from the catalog while the booking itself stayed
+    // real and active. The owner-facing service turns a true result into the same
+    // ConflictException it already uses when a day-block would orphan a live booking.
 
     Task<bool> HasActiveHourlyBookingsOutsideWindowAsync(
         Guid hallId,

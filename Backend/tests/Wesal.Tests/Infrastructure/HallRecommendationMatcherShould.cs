@@ -4,6 +4,7 @@ using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Infrastructure.AiAssistant;
+using Wesal.Infrastructure.Halls;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
 
@@ -11,8 +12,13 @@ namespace Wesal.Tests.Infrastructure;
 
 public class HallRecommendationMatcherShould : IDisposable
 {
+    private static readonly DateOnly BookedDate = new(2026, 8, 30);
+    private static readonly TimeOnly BookedStart = new(10, 0);
+    private static readonly TimeOnly FreeStart = new(11, 0);
+
     private readonly ApplicationDbContext _context;
     private readonly HallRecommendationMatcher _matcher;
+    private readonly HallSearchService _search;
     private readonly HallRepository _repo;
 
     public HallRecommendationMatcherShould()
@@ -22,7 +28,8 @@ public class HallRecommendationMatcherShould : IDisposable
             .Options;
         _context = new ApplicationDbContext(options);
         _repo = new HallRepository(_context);
-        _matcher = new HallRecommendationMatcher(_repo);
+        _search = new HallSearchService(_repo);
+        _matcher = new HallRecommendationMatcher(_search);
         SeedHalls();
     }
 
@@ -35,52 +42,61 @@ public class HallRecommendationMatcherShould : IDisposable
         _context.Halls.AddRange(h1, h2, h3, h4);
         _context.SaveChanges();
 
-        // Mark h1 as booked on 2026-08-30 first period
-        var booked = new HallAvailability { HallId = h1.Id, Date = new DateOnly(2026, 8, 30), PeriodType = BookingPeriodType.FirstPeriod, Status = AvailabilityStatus.Booked };
-        _context.HallAvailabilities.Add(booked);
+        // Mark h1 as booked on 2026-08-30 at 10:00
+        var booked = new HallSlotAvailability { HallId = h1.Id, Date = BookedDate, StartTime = BookedStart, Status = HallSlotStatus.Booked };
+        _context.HallSlotAvailabilities.Add(booked);
         _context.SaveChanges();
     }
 
     [Fact]
     public async Task Match_ByArea_ReturnsOnlyGaza()
     {
-        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), null, null, null, null);
+        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), null, null, null);
         var result = await _matcher.FindMatchingHallsAsync(criteria);
         Assert.All(result, r => Assert.Equal("Gaza", r.Region));
         Assert.DoesNotContain(result, r => r.HallName == "North Hall");
     }
 
     [Fact]
-    public async Task Match_ByDateAndPeriod_ExcludesBooked()
+    public async Task Match_ByDateAndStartTime_ExcludesBooked()
     {
-        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), null, new DateOnly(2026, 8, 30), BookingPeriodType.FirstPeriod.ToString(), null);
-        var result = await _matcher.FindMatchingHallsAsync(criteria);
-        // Gaza Hall is booked on that date/period, so should be excluded, leaving 0 for Gaza
-        Assert.Empty(result);
+        var result = await _search.SearchHallsAsync(new HallSearchRequest
+        {
+            Region = HallRegion.Gaza,
+            Date = BookedDate,
+            StartTime = BookedStart
+        });
+        // Gaza Hall is booked at that hour, so should be excluded, leaving 0 for Gaza
+        Assert.Empty(result.Items);
     }
 
     [Fact]
-    public async Task Match_ByDateAndPeriod_AvailablePeriod_ReturnsHall()
+    public async Task Match_ByDateAndStartTime_AvailableHour_ReturnsHall()
     {
-        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), null, new DateOnly(2026, 8, 30), BookingPeriodType.SecondPeriod.ToString(), null);
-        var result = await _matcher.FindMatchingHallsAsync(criteria);
-        Assert.Contains(result, r => r.HallName == "Gaza Hall");
+        var result = await _search.SearchHallsAsync(new HallSearchRequest
+        {
+            Region = HallRegion.Gaza,
+            Date = BookedDate,
+            StartTime = FreeStart
+        });
+        Assert.Contains(result.Items, item => item.HallName == "Gaza Hall");
     }
 
     [Fact]
-    public async Task Match_ByPeriodOnly_FiltersCorrectly()
+    public async Task Match_ByStartTimeOnly_FiltersCorrectly()
     {
-        // Without date, period alone should not filter via DB (repo requires both), but matcher should still work
-        var criteria = new ExtractedCriteriaDto(null, null, null, BookingPeriodType.FirstPeriod.ToString(), null);
-        var result = await _matcher.FindMatchingHallsAsync(criteria);
-        // Should return approved halls (2) without availability filtering
-        Assert.Equal(2, result.Count);
+        // Without date, a start time alone must not filter via DB (repo requires both)
+        var result = await _search.SearchHallsAsync(new HallSearchRequest
+        {
+            StartTime = BookedStart
+        });
+        Assert.Equal(2, result.Items.Count);
     }
 
     [Fact]
     public async Task DeletedHall_Excluded()
     {
-        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), null, null, null, null);
+        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), null, null, null);
         var result = await _matcher.FindMatchingHallsAsync(criteria);
         Assert.DoesNotContain(result, r => r.HallName == "Deleted Hall");
     }
@@ -88,7 +104,7 @@ public class HallRecommendationMatcherShould : IDisposable
     [Fact]
     public async Task PendingHall_Excluded_LockedRule()
     {
-        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), null, null, null, null);
+        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), null, null, null);
         var result = await _matcher.FindMatchingHallsAsync(criteria);
         Assert.DoesNotContain(result, r => r.HallName == "Pending Hall");
     }
@@ -96,33 +112,41 @@ public class HallRecommendationMatcherShould : IDisposable
     [Fact]
     public async Task UnavailableHall_Excluded_RealAvailability()
     {
-        var criteria = new ExtractedCriteriaDto(null, null, new DateOnly(2026, 8, 30), BookingPeriodType.FirstPeriod.ToString(), null);
-        var result = await _matcher.FindMatchingHallsAsync(criteria);
-        // North Hall is available on that date/period, Gaza Hall booked -> only North Hall should appear
-        Assert.Contains(result, r => r.HallName == "North Hall");
-        Assert.DoesNotContain(result, r => r.HallName == "Gaza Hall");
+        var result = await _search.SearchHallsAsync(new HallSearchRequest
+        {
+            Date = BookedDate,
+            StartTime = BookedStart
+        });
+        // North Hall is free at that hour, Gaza Hall booked -> only North Hall should appear
+        Assert.Contains(result.Items, item => item.HallName == "North Hall");
+        Assert.DoesNotContain(result.Items, item => item.HallName == "Gaza Hall");
     }
 
     [Fact]
     public async Task AvailabilityReCheck_PreventsStale()
     {
-        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), null, new DateOnly(2026, 8, 31), BookingPeriodType.FirstPeriod.ToString(), null);
+        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), null, new DateOnly(2026, 8, 31), null);
         var first = await _matcher.FindMatchingHallsAsync(criteria);
         Assert.Contains(first, r => r.HallName == "Gaza Hall");
 
         // Simulate race: another booking occurs before final result
         var gazaHall = _context.Halls.First(h => h.Name == "Gaza Hall");
-        _context.HallAvailabilities.Add(new HallAvailability { HallId = gazaHall.Id, Date = new DateOnly(2026, 8, 31), PeriodType = BookingPeriodType.FirstPeriod, Status = AvailabilityStatus.Booked });
+        _context.HallSlotAvailabilities.Add(new HallSlotAvailability { HallId = gazaHall.Id, Date = new DateOnly(2026, 8, 31), StartTime = BookedStart, Status = HallSlotStatus.Booked });
         _context.SaveChanges();
 
-        var second = await _matcher.FindMatchingHallsAsync(criteria);
-        Assert.DoesNotContain(second, r => r.HallName == "Gaza Hall");
+        var second = await _search.SearchHallsAsync(new HallSearchRequest
+        {
+            Region = HallRegion.Gaza,
+            Date = new DateOnly(2026, 8, 31),
+            StartTime = BookedStart
+        });
+        Assert.DoesNotContain(second.Items, item => item.HallName == "Gaza Hall");
     }
 
     [Fact]
     public async Task NoMatchingHalls_ReturnsEmptySafely()
     {
-        var criteria = new ExtractedCriteriaDto(HallRegion.SouthGaza.ToString(), null, null, null, null);
+        var criteria = new ExtractedCriteriaDto(HallRegion.SouthGaza.ToString(), null, null, null);
         var result = await _matcher.FindMatchingHallsAsync(criteria);
         Assert.Empty(result);
     }
@@ -130,7 +154,7 @@ public class HallRecommendationMatcherShould : IDisposable
     [Fact]
     public async Task CapacityFiltering_RespectsCapacity()
     {
-        var criteria = new ExtractedCriteriaDto(null, null, null, null, 250);
+        var criteria = new ExtractedCriteriaDto(null, null, null, 250);
         var result = await _matcher.FindMatchingHallsAsync(criteria);
         // Gaza Hall 300, North Hall 200 -> only Gaza meets 250
         Assert.Contains(result, r => r.HallName == "Gaza Hall");
@@ -140,7 +164,7 @@ public class HallRecommendationMatcherShould : IDisposable
     [Fact]
     public async Task ExistingBusinessRules_Respected_OnlyApproved()
     {
-        var criteria = new ExtractedCriteriaDto(null, null, null, null, null);
+        var criteria = new ExtractedCriteriaDto(null, null, null, null);
         var result = await _matcher.FindMatchingHallsAsync(criteria);
         Assert.All(result, r => Assert.True(r.IsAvailable));
         Assert.Equal(2, result.Count); // Only 2 approved non-deleted
@@ -150,7 +174,7 @@ public class HallRecommendationMatcherShould : IDisposable
     public async Task ReusesExistingRepositoryLogic_NoDuplicateFiltering()
     {
         // Verify that matcher delegates to repository's search which already handles Approved/Deleted/Booked
-        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), "Gaza City", null, null, null);
+        var criteria = new ExtractedCriteriaDto(HallRegion.Gaza.ToString(), "Gaza City", null, null);
         var result = await _matcher.FindMatchingHallsAsync(criteria);
         Assert.Contains(result, r => r.Address == "Gaza City");
     }

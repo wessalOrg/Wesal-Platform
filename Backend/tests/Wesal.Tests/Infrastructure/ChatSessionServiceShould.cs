@@ -298,7 +298,7 @@ public class ChatSessionServiceShould
         using var service = new ChatSessionService();
         var session = await service.InitializeSessionAsync(null);
         var intent = new AiAssistantIntentDto(
-            AiIntentType.SearchHalls, "Gaza", null, null, null, 300, null);
+            AiIntentType.SearchHalls, "Gaza", null, null, 300, null);
 
         await service.SaveTurnAsync(session.SessionId, "أريد قاعة في غزة لـ 300 شخص", intent);
         var context = await service.GetConversationContextAsync(session.SessionId);

@@ -12,7 +12,7 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// is disabled, fails, times out, returns invalid JSON, or returns an
 /// unrecognized classification, control falls through to the deterministic
 /// <see cref="AiIntentFallbackClassifier"/>. Every extracted value is validated:
-/// regions/periods must match the platform enums, dates must be real ISO dates,
+/// regions must match the platform enums, dates must be real ISO dates,
 /// capacities must be within bounds, and hall names are trimmed and length-capped.
 /// </summary>
 public sealed class GeminiAiIntentExtractor : IAiIntentExtractor
@@ -81,7 +81,6 @@ public sealed class GeminiAiIntentExtractor : IAiIntentExtractor
             NormalizeRegion(payload.Region),
             NormalizeArea(payload.Area),
             ParseDate(payload.Date),
-            MapBookingPeriod(payload.BookingPeriod),
             NormalizeCapacity(payload.Capacity),
             NormalizeHallName(payload.HallName));
     }
@@ -144,26 +143,6 @@ public sealed class GeminiAiIntentExtractor : IAiIntentExtractor
             : null;
     }
 
-    private static BookingPeriodType? MapBookingPeriod(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return null;
-        }
-
-        if (Enum.TryParse<BookingPeriodType>(raw.Trim(), true, out var period))
-        {
-            return period;
-        }
-
-        return raw.Trim().ToLowerInvariant() switch
-        {
-            "morning" or "صباحية" or "الفترة الأولى" => BookingPeriodType.FirstPeriod,
-            "evening" or "afternoon" or "مسائية" or "الفترة الثانية" => BookingPeriodType.SecondPeriod,
-            _ => null
-        };
-    }
-
     private static int? NormalizeCapacity(int? raw)
     {
         return raw.HasValue && raw.Value >= MinCapacity && raw.Value <= MaxCapacity ? raw.Value : null;
@@ -189,7 +168,6 @@ public sealed class GeminiAiIntentExtractor : IAiIntentExtractor
         string? Region,
         string? Area,
         string? Date,
-        string? BookingPeriod,
         int? Capacity,
         string? HallName);
 }

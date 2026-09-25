@@ -26,7 +26,7 @@ public class BookingAcceptanceServiceShould
         Assert.Equal(scenario.Hall.Name, result.HallName);
         Assert.Equal(RequesterId, result.RequesterUserId);
         Assert.Equal(new DateOnly(2035, 6, 1), result.Date);
-        Assert.Equal(BookingPeriodType.FirstPeriod, result.Period);
+        Assert.Equal(new TimeOnly(10, 0), Assert.Single(result.SlotStarts));
         Assert.Equal(BookingStatus.Accepted, result.Status);
     }
 
@@ -41,7 +41,7 @@ public class BookingAcceptanceServiceShould
     }
 
     [Fact]
-    public async Task AcceptBooking_PreservesRequesterHallDateAndPeriod()
+    public async Task AcceptBooking_PreservesRequesterHallDateAndSlots()
     {
         var scenario = Scenario();
 
@@ -50,17 +50,23 @@ public class BookingAcceptanceServiceShould
         Assert.Equal(RequesterId, scenario.Booking.RequesterUserId);
         Assert.Equal(scenario.Hall.Id, scenario.Booking.HallId);
         Assert.Equal(new DateOnly(2035, 6, 1), scenario.Booking.Date);
-        Assert.Equal(BookingPeriodType.FirstPeriod, scenario.Booking.Period);
+        Assert.Equal(new TimeOnly(10, 0), Assert.Single(scenario.Booking.Slots).StartTime);
     }
 
     [Fact]
-    public async Task AcceptBooking_KeepsPeriodReserved()
+    public async Task AcceptBooking_ReassertsHourlySlotsAsBooked()
     {
         var scenario = Scenario();
 
         await scenario.Service.AcceptBookingAsync(scenario.Hall.Id, scenario.Booking.Id);
 
-        Assert.Empty(scenario.BookingRepository.ReleasedPeriods);
+        // A tuple holding an array compares by array reference, so the elements are
+        // asserted separately rather than through a single tuple Assert.Equal.
+        var reservation = Assert.Single(scenario.BookingRepository.ReservedSlots);
+
+        Assert.Equal(scenario.Hall.Id, reservation.HallId);
+        Assert.Equal(scenario.Booking.Date, reservation.Date);
+        Assert.Equal([new TimeOnly(10, 0)], reservation.SlotStarts);
     }
 
     [Fact]
@@ -254,7 +260,14 @@ public class BookingAcceptanceServiceShould
             Hall = hall,
             RequesterUserId = requesterId,
             Date = new DateOnly(2035, 6, 1),
-            Period = BookingPeriodType.FirstPeriod,
+            Slots =
+            [
+                new BookingSlot
+                {
+                    StartTime = new TimeOnly(10, 0),
+                    EndTime = new TimeOnly(11, 0)
+                }
+            ],
             Status = status
         };
 
@@ -293,7 +306,7 @@ public class BookingAcceptanceServiceShould
 
         public bool AcceptedAgainstCancelled { get; private set; }
 
-        public List<(Guid HallId, DateOnly Date, BookingPeriodType Period)> ReleasedPeriods { get; } = [];
+        public List<(Guid HallId, DateOnly Date, IReadOnlyList<TimeOnly> SlotStarts)> ReservedSlots { get; } = [];
 
         public Task AddAsync(Booking booking, CancellationToken cancellationToken = default)
         {
@@ -359,39 +372,15 @@ public class BookingAcceptanceServiceShould
             return Task.FromResult(1);
         }
 
-        public Task<bool> HasOtherActiveBookingsAsync(
+        public Task<int> ReserveHourlySlotsAsync(
             Guid hallId,
             DateOnly date,
-            BookingPeriodType periodType,
-            Guid bookingId,
+            IReadOnlyList<TimeOnly> startTimes,
             CancellationToken cancellationToken = default)
         {
-            var hasOther = _bookings.Any(b =>
-                b.HallId == hallId
-                && b.Date == date
-                && b.Period == periodType
-                && b.Id != bookingId
-                && (b.Status == BookingStatus.Pending || b.Status == BookingStatus.Accepted));
-
-            return Task.FromResult(hasOther);
+            ReservedSlots.Add((hallId, date, startTimes));
+            return Task.FromResult(startTimes.Count);
         }
-
-        public Task<int> ReleasePeriodAsync(
-            Guid hallId,
-            DateOnly date,
-            BookingPeriodType periodType,
-            CancellationToken cancellationToken = default)
-        {
-            ReleasedPeriods.Add((hallId, date, periodType));
-            return Task.FromResult(1);
-        }
-
-        public Task<int> ReservePeriodAsync(
-            Guid hallId,
-            DateOnly date,
-            BookingPeriodType periodType,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(1);
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

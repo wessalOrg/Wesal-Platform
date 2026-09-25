@@ -243,89 +243,77 @@ public class HallAccessGuardShould : IDisposable
     // --- US-ADMIN-05: seeker booking blocked on locked hall ---
 
     [Fact]
-    public async Task ValidateBookingRequest_AdminLocked_ThrowsHallLocked()
+    public async Task CreateHourlyBooking_AdminLocked_ThrowsHallLocked()
     {
         var owner = await CreateOwnerAsync("owner@example.com");
         var hall = AddHall(owner.Id, "Grand Hall", adminLocked: true);
-        var service = new BookingRequestService(
-            new HallRepository(_context),
-            new FakeCurrentUser("seeker-1", [ApplicationRoles.RegisteredUser]),
-            new BookingRepository(_context),
-            new UnitOfWork(_context),
-            new FakeOwnerBookingRequestNotifier());
+        var service = BuildHourlySlotService();
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            service.ValidateBookingRequestAsync(new BookingRequestDto
+            service.CreateHourlyBookingAsync(new HourlyBookingRequestDto
             {
                 HallId = hall.Id,
                 Date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
-                Periods = [BookingPeriodType.FirstPeriod]
+                SlotStarts = [new TimeOnly(10, 0)]
             }));
         Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);
     }
 
     [Fact]
-    public async Task ValidateBookingRequest_SystemLocked_ThrowsHallSystemLocked()
+    public async Task CreateHourlyBooking_SystemLocked_ThrowsHallSystemLocked()
     {
         var owner = await CreateOwnerAsync("owner@example.com");
         var hall = AddHall(owner.Id, "Grand Hall", systemLocked: true);
-        var service = new BookingRequestService(
-            new HallRepository(_context),
-            new FakeCurrentUser("seeker-1", [ApplicationRoles.RegisteredUser]),
-            new BookingRepository(_context),
-            new UnitOfWork(_context),
-            new FakeOwnerBookingRequestNotifier());
+        var service = BuildHourlySlotService();
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            service.ValidateBookingRequestAsync(new BookingRequestDto
+            service.CreateHourlyBookingAsync(new HourlyBookingRequestDto
             {
                 HallId = hall.Id,
                 Date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
-                Periods = [BookingPeriodType.FirstPeriod]
+                SlotStarts = [new TimeOnly(10, 0)]
             }));
         Assert.Equal(HallManagementAccess.HallSystemLockedCode, ex.Code);
     }
 
     [Fact]
-    public async Task ValidateBookingRequest_PaidOpenHall_ReturnsHall()
+    public async Task CreateHourlyBooking_PaidOpenHall_Succeeds()
     {
         var owner = await CreateOwnerAsync("owner@example.com");
         var hall = AddHall(owner.Id, "Grand Hall");
-        var service = new BookingRequestService(
-            new HallRepository(_context),
-            new FakeCurrentUser("seeker-1", [ApplicationRoles.RegisteredUser]),
-            new BookingRepository(_context),
-            new UnitOfWork(_context),
-            new FakeOwnerBookingRequestNotifier());
+        var service = BuildHourlySlotService();
 
-        var result = await service.ValidateBookingRequestAsync(new BookingRequestDto
+        var result = await service.CreateHourlyBookingAsync(new HourlyBookingRequestDto
         {
             HallId = hall.Id,
             Date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
-            Periods = [BookingPeriodType.FirstPeriod]
+            SlotStarts = [new TimeOnly(10, 0)]
         });
 
         Assert.Equal(hall.Id, result.HallId);
-        Assert.Equal("Grand Hall", result.HallName);
+        Assert.Equal(BookingStatus.Pending, result.Status);
     }
 
     // --- US-ADMIN-05: owner calendar blocked on locked hall ---
 
     [Fact]
-    public async Task GetAvailability_AdminLocked_ThrowsHallLocked()
+    public async Task SetDayBlock_AdminLocked_ThrowsHallLocked()
     {
         var owner = await CreateOwnerAsync("owner@example.com");
         var hall = AddHall(owner.Id, "Grand Hall", adminLocked: true);
-        var service = new OwnerAvailabilityService(
+        var service = new OwnerHourlyAvailabilityService(
             _userManager,
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
-            new HallRepository(_context),
             new BookingRepository(_context),
             new UnitOfWork(_context));
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            service.GetAvailabilityAsync(hall.Id, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 10)));
+            service.SetDayBlockAsync(hall.Id, new OwnerDayBlockRequest
+            {
+                Date = new DateOnly(2026, 9, 1),
+                IsOpen = false
+            }));
         Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);
     }
 
@@ -433,9 +421,14 @@ public class HallAccessGuardShould : IDisposable
         ShowPrice = true,
         ContactPhone = "+970599111111",
         Description = "Spacious hall",
-        Photos = [],
-        BookingPeriods = []
+        Photos = []
     };
+
+    private HourlySlotService BuildHourlySlotService() => new(
+        new HallRepository(_context),
+        new BookingRepository(_context),
+        new UnitOfWork(_context),
+        new FakeCurrentUser("seeker-1", [ApplicationRoles.RegisteredUser]));
 
     private sealed class FakeCurrentUser : ICurrentUserService
     {
@@ -523,11 +516,9 @@ public class HallAccessGuardShould : IDisposable
         public Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(HallRegion region, int count, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>([]);
         public Task<IReadOnlyList<Hall>> GetApprovedHallsPaginatedAsync(int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>([]);
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
-        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>([]);
-        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, BookingPeriodType? period, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>([]);
+        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallImage>>([]);
-        public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(IReadOnlyCollection<Guid> hallIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallBookingPeriod>>([]);
-        public Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(IReadOnlyCollection<Guid> hallIds, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallAvailability>>([]);
     }
 
     private sealed class FakeConversationNotifier : IConversationNotifier

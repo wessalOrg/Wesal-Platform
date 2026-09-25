@@ -17,7 +17,9 @@ public class RejectBookingResultDto
 
     public DateOnly Date { get; init; }
 
-    public BookingPeriodType Period { get; init; }
+    public IReadOnlyList<TimeOnly> SlotStarts { get; init; } = [];
+
+    public string TimeRange { get; init; } = string.Empty;
 
     public string RequesterUserId { get; init; } = string.Empty;
 

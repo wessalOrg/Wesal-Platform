@@ -13,7 +13,6 @@ public class NaturalLanguageCriteriaExtractorShould
         var result = _extractor.Extract("I need a hall in Gaza");
         Assert.Equal(HallRegion.Gaza.ToString(), result.Region);
         Assert.Null(result.Date);
-        Assert.Null(result.BookingPeriod);
     }
 
     [Fact]
@@ -21,13 +20,6 @@ public class NaturalLanguageCriteriaExtractorShould
     {
         var result = _extractor.Extract("I need a hall on 2026-08-30");
         Assert.Equal(new DateOnly(2026, 8, 30), result.Date);
-    }
-
-    [Fact]
-    public void Extract_PeriodOnly_FirstPeriod()
-    {
-        var result = _extractor.Extract("first period please");
-        Assert.Equal(BookingPeriodType.FirstPeriod.ToString(), result.BookingPeriod);
     }
 
     [Fact]
@@ -39,30 +31,12 @@ public class NaturalLanguageCriteriaExtractorShould
     }
 
     [Fact]
-    public void Extract_AreaAndPeriod_ReturnsBoth()
-    {
-        var result = _extractor.Extract("hall in Gaza for second period");
-        Assert.Equal(HallRegion.Gaza.ToString(), result.Region);
-        Assert.Equal(BookingPeriodType.SecondPeriod.ToString(), result.BookingPeriod);
-    }
-
-    [Fact]
-    public void Extract_AreaDatePeriod_ReturnsAll()
-    {
-        var result = _extractor.Extract("I need a hall in Gaza on August 30 for the first period");
-        Assert.Equal(HallRegion.Gaza.ToString(), result.Region);
-        Assert.NotNull(result.Date);
-        Assert.Equal(BookingPeriodType.FirstPeriod.ToString(), result.BookingPeriod);
-    }
-
-    [Fact]
     public void Extract_DifferentPhrasings_SameCriteria()
     {
-        var a = _extractor.Extract("hall in Gaza on 2026-08-30 first period");
-        var b = _extractor.Extract("Need hall Gaza 2026-08-30 First Period");
+        var a = _extractor.Extract("hall in Gaza on 2026-08-30");
+        var b = _extractor.Extract("Need hall Gaza 2026-08-30");
         Assert.Equal(a.Region, b.Region);
         Assert.Equal(a.Date, b.Date);
-        Assert.Equal(a.BookingPeriod, b.BookingPeriod);
     }
 
     [Fact]
@@ -77,23 +51,8 @@ public class NaturalLanguageCriteriaExtractorShould
     [Fact]
     public void Extract_InvalidDate_HandledSafely()
     {
-        var result = _extractor.Extract("on 2026-02-30"); // invalid date Feb 30
-        // Should not throw, should return null date
+        var result = _extractor.Extract("on 2026-02-30");
         Assert.Null(result.Date);
-    }
-
-    [Fact]
-    public void Extract_ValidPeriod_ArabicFirst()
-    {
-        var result = _extractor.Extract("أحتاج قاعة الفترة الأولى");
-        Assert.Equal(BookingPeriodType.FirstPeriod.ToString(), result.BookingPeriod);
-    }
-
-    [Fact]
-    public void Extract_InvalidPeriod_HandledSafely()
-    {
-        var result = _extractor.Extract("for third period");
-        Assert.Null(result.BookingPeriod);
     }
 
     [Fact]
@@ -115,8 +74,9 @@ public class NaturalLanguageCriteriaExtractorShould
     {
         var result = _extractor.Extract("");
         Assert.Null(result.Region);
+        Assert.Null(result.Area);
         Assert.Null(result.Date);
-        Assert.Null(result.BookingPeriod);
+        Assert.Null(result.Capacity);
     }
 
     [Fact]
@@ -124,7 +84,9 @@ public class NaturalLanguageCriteriaExtractorShould
     {
         var result = _extractor.Extract("   ");
         Assert.Null(result.Region);
+        Assert.Null(result.Area);
         Assert.Null(result.Date);
+        Assert.Null(result.Capacity);
     }
 
     [Fact]

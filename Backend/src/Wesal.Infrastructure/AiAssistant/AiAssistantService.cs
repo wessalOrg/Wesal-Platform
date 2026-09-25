@@ -2,9 +2,7 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
-using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
-using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Halls;
@@ -32,8 +30,8 @@ public sealed class AiAssistantService : IAiAssistantService
     private readonly IRecommendationService _recommendationService;
     private readonly IFeaturedHallsService _featuredHallsService;
     private readonly IHallDetailsService _hallDetailsService;
-    private readonly IHallRepository _hallRepository;
-    private readonly IHallAvailabilityService _hallAvailabilityService;
+    private readonly IHallSearchService _hallSearchService;
+    private readonly IHourlySlotService _hourlySlotService;
     private readonly IAiLanguageDetector _languageDetector;
     private readonly IDateTime _dateTime;
     private readonly IGeminiToolOrchestrator _toolOrchestrator;
@@ -44,8 +42,8 @@ public sealed class AiAssistantService : IAiAssistantService
         IRecommendationService recommendationService,
         IFeaturedHallsService featuredHallsService,
         IHallDetailsService hallDetailsService,
-        IHallRepository hallRepository,
-        IHallAvailabilityService hallAvailabilityService,
+        IHallSearchService hallSearchService,
+        IHourlySlotService hourlySlotService,
         IAiLanguageDetector? languageDetector,
         IDateTime dateTime,
         IGeminiToolOrchestrator toolOrchestrator,
@@ -56,8 +54,8 @@ public sealed class AiAssistantService : IAiAssistantService
         _recommendationService = recommendationService;
         _featuredHallsService = featuredHallsService;
         _hallDetailsService = hallDetailsService;
-        _hallRepository = hallRepository;
-        _hallAvailabilityService = hallAvailabilityService;
+        _hallSearchService = hallSearchService;
+        _hourlySlotService = hourlySlotService;
         _languageDetector = languageDetector ?? new AiLanguageDetector();
         _dateTime = dateTime;
         _toolOrchestrator = toolOrchestrator;
@@ -151,13 +149,11 @@ public sealed class AiAssistantService : IAiAssistantService
         var region = intent.Region ?? prior.Region;
         var area = intent.Area ?? prior.Area;
         var date = intent.Date ?? prior.Date;
-        var period = intent.BookingPeriod ?? prior.BookingPeriod;
         var capacity = intent.Capacity ?? prior.Capacity;
 
         if (region == intent.Region
             && area == intent.Area
             && date == intent.Date
-            && period == intent.BookingPeriod
             && capacity == intent.Capacity)
         {
             return intent;
@@ -168,7 +164,6 @@ public sealed class AiAssistantService : IAiAssistantService
             region,
             area,
             date,
-            period,
             capacity,
             intent.HallName);
     }
@@ -271,7 +266,7 @@ public sealed class AiAssistantService : IAiAssistantService
         HallDetailsDto details;
         try
         {
-            details = await _hallDetailsService.GetHallDetailsAsync(hall.Id, cancellationToken);
+            details = await _hallDetailsService.GetHallDetailsAsync(hall.HallId, cancellationToken);
         }
         catch (NotFoundException)
         {
@@ -279,8 +274,8 @@ public sealed class AiAssistantService : IAiAssistantService
         }
 
         var message = language == "en"
-            ? $"Here are the details for {hall.Name}:"
-            : $"هذه هي تفاصيل قاعة {hall.Name}:";
+            ? $"Here are the details for {hall.HallName}:"
+            : $"هذه هي تفاصيل قاعة {hall.HallName}:";
 
         return Build(language, AiAssistantResponseKind.HallDetails, message, intention, hallDetails: details);
     }
@@ -318,56 +313,64 @@ public sealed class AiAssistantService : IAiAssistantService
             return Build(language, AiAssistantResponseKind.Clarification, HallNotFoundMessage(language, hallName), intention);
         }
 
-        var availability = await _hallAvailabilityService.GetHallAvailabilityAsync(hall.Id, date, cancellationToken);
-        var periodStatuses = availability.Periods;
-
-        var message = BuildAvailabilityMessage(language, hall.Name, date, periodStatuses);
+        var catalog = await _hourlySlotService.GetHourlyCatalogAsync(hall.HallId, date, cancellationToken);
+        var message = BuildAvailabilityMessage(language, hall.HallName, date, catalog.DayOpen, catalog.Slots);
 
         return Build(
             language,
             AiAssistantResponseKind.Availability,
             message,
             intention,
-            availability: new AiAssistantAvailabilityDayDto(hall.Id, hall.Name, date, periodStatuses));
+            availability: new AiAssistantAvailabilityDayDto(hall.HallId, hall.HallName, date, catalog.Slots));
     }
 
-    private async Task<Hall?> TryResolveHallAsync(string hallName, CancellationToken cancellationToken)
+    private async Task<HallListItemDto?> TryResolveHallAsync(string hallName, CancellationToken cancellationToken)
     {
         var normalized = hallName.Trim();
-        var halls = await _hallRepository.SearchApprovedHallsAsync(
-            normalized,
-            region: null,
-            area: null,
-            date: null,
-            period: null,
-            skip: 0,
-            take: HallResolutionLimit,
+        var page = await _hallSearchService.SearchHallsAsync(
+            new HallSearchRequest
+            {
+                Name = normalized,
+                PageNumber = 1,
+                PageSize = HallResolutionLimit
+            },
             cancellationToken);
 
-        if (halls.Count == 0)
+        if (page.Items.Count == 0)
         {
             return null;
         }
 
-        return halls.FirstOrDefault(hall => string.Equals(hall.Name, normalized, StringComparison.OrdinalIgnoreCase))
-            ?? halls[0];
+        return page.Items.FirstOrDefault(hall => string.Equals(hall.HallName, normalized, StringComparison.OrdinalIgnoreCase))
+            ?? page.Items[0];
     }
 
     private static string BuildAvailabilityMessage(
         string language,
         string hallName,
         DateOnly date,
-        IReadOnlyList<HallBookingPeriodStatusDto> periods)
+        bool dayOpen,
+        IReadOnlyList<HallHourlySlotDto> slots)
     {
         var formattedDate = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        var available = periods.Where(p => p.Status == AvailabilityStatus.Available).ToList();
 
-        if (periods.Count == 0)
+        if (!dayOpen)
         {
             return language == "en"
-                ? $"This hall has no booking periods configured for {formattedDate}."
-                : $"قاعة {hallName} لا تحتوي على فترات حجز معرفة لتاريخ {formattedDate}.";
+                ? $"The hall is closed on {formattedDate}."
+                : $"القاعة مغلقة في {formattedDate}.";
         }
+
+        if (slots.Count == 0)
+        {
+            return language == "en"
+                ? $"No available hourly slots were found for {formattedDate}."
+                : $"لم يتم العثور على فترات ساعة متاحة في {formattedDate}.";
+        }
+
+        var available = slots
+            .Where(slot => slot.Status == HallSlotStatus.Available)
+            .ToList();
 
         if (available.Count == 0)
         {
@@ -376,17 +379,13 @@ public sealed class AiAssistantService : IAiAssistantService
                 : $"قاعة {hallName} محجوزة بالكامل في {formattedDate}.";
         }
 
-        if (available.Count == periods.Count)
-        {
-            return language == "en"
-                ? $"The hall is fully available on {formattedDate}."
-                : $"قاعة {hallName} متاحة بالكامل في {formattedDate}.";
-        }
+        var availableRanges = string.Join(
+            ", ",
+            available.Select(slot => $"{slot.StartTime.ToString("HH:mm", CultureInfo.InvariantCulture)}-{slot.EndTime.ToString("HH:mm", CultureInfo.InvariantCulture)}"));
 
-        var availableNames = string.Join(", ", available.Select(p => p.PeriodName));
         return language == "en"
-            ? $"On {formattedDate} the available period(s): {availableNames}."
-            : $"في {formattedDate} الفترة (الفترات) المتاحة: {availableNames}.";
+            ? $"On {formattedDate} the available hourly slot(s): {availableRanges}."
+            : $"في {formattedDate} الفترات horaire المتاحة: {availableRanges}.";
     }
 
     private static AiAssistantResponse BuildClarification(string language, AiAssistantIntentDto intention, string? message = null)

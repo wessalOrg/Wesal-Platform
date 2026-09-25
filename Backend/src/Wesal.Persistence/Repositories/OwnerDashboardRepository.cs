@@ -36,7 +36,6 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
         string ownerId,
         CancellationToken cancellationToken = default)
         => OwnedHallsQuery(ownerId)
-            .Include(hall => hall.BookingPeriods)
             .Include(hall => hall.Images)
             .Include(hall => hall.Features)
             .FirstOrDefaultAsync(hall => hall.Id == hallId, cancellationToken);
@@ -46,7 +45,6 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
         string ownerId,
         CancellationToken cancellationToken = default)
         => _context.Halls
-            .Include(hall => hall.BookingPeriods)
             .Include(hall => hall.Images)
             .Include(hall => hall.Features)
             .FirstOrDefaultAsync(
@@ -55,9 +53,6 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
 
     public void AddHallImages(IEnumerable<HallImage> images)
         => _context.HallImages.AddRange(images);
-
-    public void AddHallBookingPeriod(HallBookingPeriod period)
-        => _context.HallBookingPeriods.Add(period);
 
     public Task<Hall?> GetOwnedHallAsync(
         Guid hallId,
@@ -90,25 +85,39 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
             return null;
         }
 
-        return await (
-            from booking in _context.Bookings.AsNoTracking()
+        var pending = await (
+            from booking in _context.Bookings
+                .AsNoTracking()
+                .Include(booking => booking.Slots)
             join requester in _context.Users.AsNoTracking()
                 on booking.RequesterUserId equals requester.Id
             where booking.HallId == hallId
                 && booking.Status == BookingStatus.Pending
-            orderby booking.Date, booking.Period, booking.CreatedAt, booking.Id
-            select new OwnerBookingRequestDto
+            orderby booking.Date, booking.CreatedAt, booking.Id
+            select new
             {
-                BookingRequestId = booking.Id,
-                HallId = booking.HallId,
-                RequestedDate = booking.Date,
-                RequestedPeriod = booking.Period,
-                RequesterUserId = booking.RequesterUserId,
-                RequesterName = requester.FullName,
-                Status = booking.Status,
-                RequestedAt = booking.CreatedAt
+                Booking = booking,
+                RequesterName = requester.FullName
             })
             .ToListAsync(cancellationToken);
+
+        return pending
+            .Select(row => new OwnerBookingRequestDto
+            {
+                BookingRequestId = row.Booking.Id,
+                HallId = row.Booking.HallId,
+                RequestedDate = row.Booking.Date,
+                SlotStarts = row.Booking.Slots
+                    .OrderBy(slot => slot.StartTime)
+                    .Select(slot => slot.StartTime)
+                    .ToList(),
+                TimeRange = row.Booking.HourlyTimeRange,
+                RequesterUserId = row.Booking.RequesterUserId,
+                RequesterName = row.RequesterName,
+                Status = row.Booking.Status,
+                RequestedAt = row.Booking.CreatedAt
+            })
+            .ToList();
     }
 
     private IQueryable<Hall> OwnedHallsQuery(string ownerId)

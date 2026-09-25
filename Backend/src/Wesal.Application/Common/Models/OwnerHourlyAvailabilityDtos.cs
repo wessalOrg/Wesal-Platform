@@ -2,8 +2,7 @@ namespace Wesal.Application.Common.Models;
 
 /// <summary>
 /// Owner-facing request to block or unblock one whole calendar day for a hall
-/// (WESAL-TASK-1). Mirrors the shape of <see cref="UpdateOwnerAvailabilityRequest"/>:
-/// a single date plus the desired state.
+/// (WESAL-TASK-1).
 ///
 /// WESAL-TASK-1 hardening: <see cref="IsOpen"/> is deliberately nullable with NO default.
 /// This endpoint is a state-setting call, not a partial update, so an omitted field must

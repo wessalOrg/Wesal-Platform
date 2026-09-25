@@ -26,7 +26,7 @@ public interface IHallRepository
         HallRegion? region,
         string? area,
         DateOnly? date,
-        BookingPeriodType? period,
+        TimeOnly? startTime,
         int skip,
         int take,
         CancellationToken cancellationToken = default);
@@ -36,7 +36,7 @@ public interface IHallRepository
         HallRegion? region,
         string? area,
         DateOnly? date,
-        BookingPeriodType? period,
+        TimeOnly? startTime,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default);
@@ -48,15 +48,18 @@ public interface IHallRepository
         return Task.FromResult<IReadOnlyList<HallFeature>>(Array.Empty<HallFeature>());
     }
 
-    Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
-        IReadOnlyCollection<Guid> hallIds,
-        CancellationToken cancellationToken = default);
-
-    Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(
+    /// <summary>
+    /// The hourly slot reservations for the given halls and date window, used to decide
+    /// whether a hall is free on a date/hour. A hall with no rows is free.
+    /// </summary>
+    Task<IReadOnlyList<HallSlotAvailability>> GetSlotAvailabilitiesAsync(
         IReadOnlyCollection<Guid> hallIds,
         DateOnly fromDate,
         DateOnly toDate,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyList<HallSlotAvailability>>(Array.Empty<HallSlotAvailability>());
+    }
 
     /// <summary>
     /// WESAL-TASK-1 hardening: the halls in <paramref name="hallIds"/> whose owner blocked

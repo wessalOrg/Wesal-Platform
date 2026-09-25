@@ -77,17 +77,18 @@ public class HallSearchServiceShould
     }
 
     [Fact]
-    public async Task SearchHallsAsync_PeriodFilter_IsPassedToRepository()
+    public async Task SearchHallsAsync_StartTimeFilter_IsPassedToRepository()
     {
         var repository = new FakeHallRepository();
         repository.Halls.Add(CreateHall(name: "Hall A", createdAt: FixedNow));
 
         var service = CreateService(repository);
+        var searchStart = new TimeOnly(14, 0);
 
-        var result = await service.SearchHallsAsync(new HallSearchRequest { Period = BookingPeriodType.SecondPeriod });
+        var result = await service.SearchHallsAsync(new HallSearchRequest { StartTime = searchStart });
 
         Assert.NotNull(repository.LastSearchRequest);
-        Assert.Equal(BookingPeriodType.SecondPeriod, repository.LastSearchRequest.Period);
+        Assert.Equal(searchStart, repository.LastSearchRequest.StartTime);
     }
 
     [Fact]
@@ -232,8 +233,6 @@ public class HallSearchServiceShould
     {
         public List<Hall> Halls { get; } = [];
         public List<HallImage> Images { get; } = [];
-        public List<HallBookingPeriod> Periods { get; } = [];
-        public List<HallAvailability> Availability { get; } = [];
         public HallSearchRequest? LastSearchRequest { get; private set; }
 
         public Task<Hall?> GetHallByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -254,13 +253,13 @@ public class HallSearchServiceShould
 
         public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
             string? name, HallRegion? region, string? area,
-            DateOnly? date, BookingPeriodType? period,
+            DateOnly? date, TimeOnly? startTime,
             int skip, int take, CancellationToken cancellationToken = default)
         {
             LastSearchRequest = new HallSearchRequest
             {
                 Name = name, Region = region, Area = area,
-                Date = date, Period = period
+                Date = date, StartTime = startTime
             };
 
             var query = Halls
@@ -276,7 +275,7 @@ public class HallSearchServiceShould
 
         public Task<int> SearchApprovedHallsCountAsync(
             string? name, HallRegion? region, string? area,
-            DateOnly? date, BookingPeriodType? period,
+            DateOnly? date, TimeOnly? startTime,
             CancellationToken cancellationToken = default)
         {
             var count = Halls
@@ -297,13 +296,5 @@ public class HallSearchServiceShould
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<HallImage>>([]);
 
-        public Task<IReadOnlyList<HallBookingPeriod>> GetBookingPeriodsAsync(
-            IReadOnlyCollection<Guid> hallIds, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<HallBookingPeriod>>([]);
-
-        public Task<IReadOnlyList<HallAvailability>> GetAvailabilityAsync(
-            IReadOnlyCollection<Guid> hallIds, DateOnly fromDate, DateOnly toDate,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<HallAvailability>>([]);
     }
 }

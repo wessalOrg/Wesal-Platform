@@ -15,9 +15,10 @@ namespace Wesal.Tests.Persistence;
 public class BookingAcceptanceFlowShould
 {
     private static readonly DateOnly BookingDate = new(2035, 6, 1);
+    private static readonly TimeOnly BookingStart = new(10, 0);
 
     [Fact]
-    public async Task Accept_PendingBooking_PersistsAcceptedAndKeepsPeriodProtected()
+    public async Task Accept_PendingBooking_PersistsAcceptedAndKeepsHourlySlotProtected()
     {
         var databaseName = Guid.NewGuid().ToString();
         var hallId = Guid.NewGuid();
@@ -26,9 +27,9 @@ public class BookingAcceptanceFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
-            SeedAvailability(seedingContext, hall, BookingDate, BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
+            SeedSlotAvailability(seedingContext, hall, BookingDate, BookingStart, HallSlotStatus.Booked);
         }
 
         await using (var context = CreateContext(databaseName))
@@ -41,19 +42,24 @@ public class BookingAcceptanceFlowShould
             Assert.Equal(hallId, result.HallId);
             Assert.Equal("user-1", result.RequesterUserId);
             Assert.Equal(BookingDate, result.Date);
-            Assert.Equal(BookingPeriodType.FirstPeriod, result.Period);
+            Assert.Equal(BookingStart, Assert.Single(result.SlotStarts));
             Assert.Equal(BookingStatus.Accepted, result.Status);
 
-            var booking = context.Bookings.AsNoTracking().Single(b => b.Id == bookingId);
+            var booking = context.Bookings
+                .AsNoTracking()
+                .Include(candidate => candidate.Slots)
+                .Single(candidate => candidate.Id == bookingId);
             Assert.Equal(BookingStatus.Accepted, booking.Status);
             Assert.Equal(hallId, booking.HallId);
             Assert.Equal("user-1", booking.RequesterUserId);
             Assert.Equal(BookingDate, booking.Date);
-            Assert.Equal(BookingPeriodType.FirstPeriod, booking.Period);
+            Assert.Equal(BookingStart, Assert.Single(booking.Slots).StartTime);
 
-            var availability = context.HallAvailabilities.AsNoTracking().Single(a =>
-                a.HallId == hallId && a.Date == BookingDate && a.PeriodType == BookingPeriodType.FirstPeriod);
-            Assert.Equal(AvailabilityStatus.Booked, availability.Status);
+            var availability = context.HallSlotAvailabilities.AsNoTracking().Single(candidate =>
+                candidate.HallId == hallId
+                && candidate.Date == BookingDate
+                && candidate.StartTime == BookingStart);
+            Assert.Equal(HallSlotStatus.Booked, availability.Status);
         }
     }
 
@@ -67,7 +73,7 @@ public class BookingAcceptanceFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
         }
 
@@ -78,7 +84,7 @@ public class BookingAcceptanceFlowShould
             await Assert.ThrowsAsync<ForbiddenException>(() =>
                 service.AcceptBookingAsync(hallId, bookingId));
 
-            var booking = context.Bookings.AsNoTracking().Single(b => b.Id == bookingId);
+            var booking = context.Bookings.AsNoTracking().Single(candidate => candidate.Id == bookingId);
             Assert.Equal(BookingStatus.Pending, booking.Status);
         }
     }
@@ -93,7 +99,13 @@ public class BookingAcceptanceFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod, BookingStatus.Rejected);
+            var booking = SeedBooking(
+                seedingContext,
+                hall,
+                "user-1",
+                BookingDate,
+                BookingStart,
+                BookingStatus.Rejected);
             bookingId = booking.Id;
         }
 
@@ -104,7 +116,7 @@ public class BookingAcceptanceFlowShould
             await Assert.ThrowsAsync<ConflictException>(() =>
                 service.AcceptBookingAsync(hallId, bookingId));
 
-            var booking = context.Bookings.AsNoTracking().Single(b => b.Id == bookingId);
+            var booking = context.Bookings.AsNoTracking().Single(candidate => candidate.Id == bookingId);
             Assert.Equal(BookingStatus.Rejected, booking.Status);
         }
     }
@@ -119,7 +131,13 @@ public class BookingAcceptanceFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod, BookingStatus.Cancelled);
+            var booking = SeedBooking(
+                seedingContext,
+                hall,
+                "user-1",
+                BookingDate,
+                BookingStart,
+                BookingStatus.Cancelled);
             bookingId = booking.Id;
         }
 
@@ -130,7 +148,7 @@ public class BookingAcceptanceFlowShould
             await Assert.ThrowsAsync<ConflictException>(() =>
                 service.AcceptBookingAsync(hallId, bookingId));
 
-            var booking = context.Bookings.AsNoTracking().Single(b => b.Id == bookingId);
+            var booking = context.Bookings.AsNoTracking().Single(candidate => candidate.Id == bookingId);
             Assert.Equal(BookingStatus.Cancelled, booking.Status);
         }
     }
@@ -145,11 +163,10 @@ public class BookingAcceptanceFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
         }
 
-        // Cancellation already won the race (cheaper to simulate: cancel first).
         await using (var cancelContext = CreateContext(databaseName))
         {
             var cancelRows = await new BookingRepository(cancelContext).CancelPendingAsync(bookingId, "user-1");
@@ -168,7 +185,7 @@ public class BookingAcceptanceFlowShould
 
         await using (var readContext = CreateContext(databaseName))
         {
-            var booking = readContext.Bookings.AsNoTracking().Single(b => b.Id == bookingId);
+            var booking = readContext.Bookings.AsNoTracking().Single(candidate => candidate.Id == bookingId);
             Assert.Equal(BookingStatus.Cancelled, booking.Status);
         }
     }
@@ -204,7 +221,7 @@ public class BookingAcceptanceFlowShould
         Hall hall,
         string requesterUserId,
         DateOnly date,
-        BookingPeriodType period,
+        TimeOnly startTime,
         BookingStatus status = BookingStatus.Pending)
     {
         var booking = new Booking
@@ -212,7 +229,14 @@ public class BookingAcceptanceFlowShould
             HallId = hall.Id,
             RequesterUserId = requesterUserId,
             Date = date,
-            Period = period,
+            Slots =
+            [
+                new BookingSlot
+                {
+                    StartTime = startTime,
+                    EndTime = startTime.AddHours(1)
+                }
+            ],
             Status = status
         };
 
@@ -222,18 +246,18 @@ public class BookingAcceptanceFlowShould
         return booking;
     }
 
-    private static void SeedAvailability(
+    private static void SeedSlotAvailability(
         ApplicationDbContext context,
         Hall hall,
         DateOnly date,
-        BookingPeriodType periodType,
-        AvailabilityStatus status)
+        TimeOnly startTime,
+        HallSlotStatus status)
     {
-        context.HallAvailabilities.Add(new HallAvailability
+        context.HallSlotAvailabilities.Add(new HallSlotAvailability
         {
             HallId = hall.Id,
             Date = date,
-            PeriodType = periodType,
+            StartTime = startTime,
             Status = status
         });
 

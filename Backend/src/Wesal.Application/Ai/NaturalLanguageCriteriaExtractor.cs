@@ -10,17 +10,16 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
     public ExtractedCriteriaDto Extract(string message)
     {
         if (string.IsNullOrWhiteSpace(message))
-            return new ExtractedCriteriaDto(null, null, null, null, null);
+            return new ExtractedCriteriaDto(null, null, null, null);
 
         var normalized = message.Trim();
 
         var region = ExtractRegion(normalized);
         var area = ExtractArea(normalized, region);
         var date = ExtractDate(normalized);
-        var period = ExtractBookingPeriod(normalized);
         var capacity = ExtractCapacity(normalized);
 
-        return new ExtractedCriteriaDto(region, area, date, period, capacity);
+        return new ExtractedCriteriaDto(region, area, date, capacity);
     }
 
     private static string? ExtractRegion(string message)
@@ -143,25 +142,6 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
                 }
             }
         }
-
-        return null;
-    }
-
-    private static string? ExtractBookingPeriod(string message)
-    {
-        var lower = message.ToLowerInvariant();
-        // English first period
-        if (lower.Contains("first period") || lower.Contains("first") && lower.Contains("period") || lower.Contains("morning period") || lower.Contains("morning"))
-            return BookingPeriodType.FirstPeriod.ToString();
-        // English second period
-        if (lower.Contains("second period") || lower.Contains("second") && lower.Contains("period") || lower.Contains("evening period") || lower.Contains("evening") || lower.Contains("afternoon"))
-            return BookingPeriodType.SecondPeriod.ToString();
-
-        // Arabic
-        if (message.Contains("الفترة الأولى") || message.Contains("الفترة الاولى") || message.Contains("صباح") || message.Contains("الفترة الصباحية") || message.Contains("فترة أولى"))
-            return BookingPeriodType.FirstPeriod.ToString();
-        if (message.Contains("الفترة الثانية") || message.Contains("الفترة الثانيه") || message.Contains("مساء") || message.Contains("الفترة المسائية") || message.Contains("فترة ثانية"))
-            return BookingPeriodType.SecondPeriod.ToString();
 
         return null;
     }

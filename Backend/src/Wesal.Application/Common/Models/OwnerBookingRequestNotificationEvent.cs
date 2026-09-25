@@ -1,5 +1,3 @@
-using Wesal.Domain.Enums;
-
 namespace Wesal.Application.Common.Models;
 
 /// <summary>
@@ -18,7 +16,9 @@ public sealed class OwnerBookingRequestNotificationEvent
 
     public DateOnly RequestedDate { get; init; }
 
-    public BookingPeriodType RequestedPeriod { get; init; }
+    public IReadOnlyList<TimeOnly> SlotStarts { get; init; } = [];
+
+    public string TimeRange { get; init; } = string.Empty;
 
     public string RequesterUserId { get; init; } = string.Empty;
 
