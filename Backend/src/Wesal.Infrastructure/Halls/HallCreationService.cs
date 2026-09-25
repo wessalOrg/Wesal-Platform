@@ -59,13 +59,11 @@ public class HallCreationService : IHallCreationService
         if (!TryParseRegion(request.Region, out var region))
             throw new ValidationException(new Dictionary<string, string[]> { ["Region"] = new[] { "Region must be one of: North Gaza, Gaza, Middle Area, South Gaza." } });
 
-        // Dependent Region → DetailedAddress rule (US-HALL): the detailed address is
-        // selected from the region's predefined list and must belong to it.
-        if (!string.IsNullOrWhiteSpace(request.DetailedAddress))
-        {
-            if (!RegionAddressCatalog.Contains(region, request.DetailedAddress))
-                throw new ValidationException(new Dictionary<string, string[]> { ["DetailedAddress"] = new[] { "The detailed address does not belong to the selected region's address list." } });
-        }
+        // Dependent Region → Address rule (US-HALL): the address is selected from the
+        // region's predefined list and must belong to it. The detailed address is the
+        // owner's own free-text detail and is not list-validated.
+        if (!RegionAddressCatalog.Contains(region, request.Address))
+            throw new ValidationException(new Dictionary<string, string[]> { ["Address"] = new[] { "The address does not belong to the selected region's address list." } });
 
         if (!string.IsNullOrWhiteSpace(request.YouTubeVideoUrl) && !YoutubeUrlValidator.IsValid(request.YouTubeVideoUrl))
             throw new ValidationException(new Dictionary<string, string[]> { ["YouTubeVideoUrl"] = new[] { "Enter a valid YouTube link (youtube.com or youtu.be)." } });

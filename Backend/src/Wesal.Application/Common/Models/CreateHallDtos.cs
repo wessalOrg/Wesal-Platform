@@ -15,7 +15,11 @@ public class CreateHallRequest
     public string Name { get; init; } = string.Empty;
     public string ContactPhone { get; init; } = string.Empty;
     public string Region { get; init; } = string.Empty;
+
+    /// <summary>Address-area name selected from the selected region's predefined list.</summary>
     public string Address { get; init; } = string.Empty;
+
+    /// <summary>The owner's own free-text address detail; never list-validated.</summary>
     public string? DetailedAddress { get; init; }
     public string Description { get; init; } = string.Empty;
     public int Capacity { get; init; }
@@ -38,7 +42,11 @@ public class CreateHallResponse
     public string Name { get; init; } = string.Empty;
     public string ContactPhone { get; init; } = string.Empty;
     public HallRegion Region { get; init; }
+
+    /// <summary>Address-area name selected from the region's predefined address list.</summary>
     public string Address { get; init; } = string.Empty;
+
+    /// <summary>The owner's own free-text address detail; never list-validated.</summary>
     public string? DetailedAddress { get; init; }
     public string? MainImageUrl { get; init; }
     public string? YouTubeVideoUrl { get; init; }

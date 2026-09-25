@@ -235,7 +235,9 @@ public class HallAccessGuardShould : IDisposable
         var result = await service.UpdateOwnedHallAsync(hall.Id, MinimalUpdateRequest());
 
         Assert.Equal(HallStatus.PendingReview, result.Status);
-        Assert.False(result.IsEditable);
+        // WESAL-TASK-2+3: re-queued to PendingReview, and still editable, because
+        // approval status no longer gates the owner's edits.
+        Assert.True(result.IsEditable);
         var reloaded = await _context.Halls.FindAsync(hall.Id);
         Assert.Equal(HallStatus.PendingReview, reloaded!.Status);
     }
@@ -414,7 +416,7 @@ public class HallAccessGuardShould : IDisposable
     private static UpdateOwnerHallRequest MinimalUpdateRequest() => new()
     {
         Name = "Grand Hall",
-        Address = "Al-Rashid Street, Gaza",
+        Address = "حي الشجاعية",
         Region = HallRegion.Gaza,
         Capacity = 200,
         Price = 1500,

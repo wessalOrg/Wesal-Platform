@@ -23,15 +23,19 @@ public class CreateHallRequestValidator : AbstractValidator<CreateHallRequest>
             .Must(region => Enum.TryParse<HallRegion>(region.Replace(" ", ""), true, out _ ) || IsValidRegionString(region))
             .WithMessage("Region must be one of: North Gaza, Gaza, Middle Area, South Gaza.");
 
+        // The address is a dependent selection (US-HALL): it must be one of the
+        // selected region's predefined values and can never be free text.
         RuleFor(x => x.Address)
             .NotEmpty().WithMessage("Address is required.")
-            .MaximumLength(500).WithMessage("Address must not exceed 500 characters.");
+            .MaximumLength(RegionAddressCatalog.AddressMaxLength)
+            .WithMessage($"Address must not exceed {RegionAddressCatalog.AddressMaxLength} characters.")
+            .Must((request, value) => string.IsNullOrWhiteSpace(value) || RegionAddressCatalog.Contains(ParseRegion(request.Region), value))
+            .WithMessage("The address does not belong to the selected region's address list.");
 
+        // The detailed address is the owner's own extra detail, typed freely.
         RuleFor(x => x.DetailedAddress)
             .MaximumLength(RegionAddressCatalog.DetailedAddressMaxLength)
-            .WithMessage($"Detailed address must not exceed {RegionAddressCatalog.DetailedAddressMaxLength} characters.")
-            .Must((request, value) => string.IsNullOrWhiteSpace(value) || RegionAddressCatalog.Contains(ParseRegion(request.Region), value))
-            .WithMessage("The detailed address does not belong to the selected region's address list.");
+            .WithMessage($"Detailed address must not exceed {RegionAddressCatalog.DetailedAddressMaxLength} characters.");
 
         RuleFor(x => x.Description)
             .MaximumLength(2000).WithMessage("Description must not exceed 2000 characters.");

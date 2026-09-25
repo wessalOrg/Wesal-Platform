@@ -119,9 +119,11 @@ public class HallsController : ControllerBase
     }
 
     /// <summary>
-    /// Returns the dependent Region → detailed-address lists used by the Add/Edit Hall
-    /// flow (US-HALL). The owner first selects a region and then picks a detailed address
-    /// from that region's predefined list; the detailed address is never free-text typed.
+    /// Returns the dependent Region → address lists used by the Add/Edit Hall flow
+    /// (US-HALL). The owner first selects a region and then picks the hall's Address
+    /// from that region's predefined list; the address is never free-text typed. The
+    /// separate DetailedAddress field is the owner's own free-text detail and is
+    /// therefore not served from this list.
     /// </summary>
     [HttpGet("catalog/addresses")]
     [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]

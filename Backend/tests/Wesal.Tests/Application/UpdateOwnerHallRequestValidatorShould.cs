@@ -10,7 +10,7 @@ public class UpdateOwnerHallRequestValidatorShould
 
     private static UpdateOwnerHallRequest CreateRequest(
         string name = "Grand Hall",
-        string address = "Al-Rashid Street, Gaza",
+        string address = "حي الشجاعية",
         HallRegion region = HallRegion.Gaza,
         int capacity = 200,
         decimal? price = 1500,
@@ -143,23 +143,82 @@ public class UpdateOwnerHallRequestValidatorShould
         Assert.False(result.IsValid);
     }
 
-    // --- US-HALL: dependent Region -> DetailedAddress selection ---
+    // --- US-HALL: dependent Region -> Address selection (WESAL-TASK-2 field-role swap) ---
+    //
+    // Before the swap the list-backed field was DetailedAddress and Address was free
+    // text. These tests pin the swapped roles in both directions: the exact inputs that
+    // were legal under the old mapping are now rejected, and the inputs that were
+    // rejected under the old mapping are now accepted.
 
     [Fact]
-    public async Task Validate_DetailedAddressOutsideRegion_Fails()
+    public async Task Validate_AddressOutsideRegion_Fails()
     {
         var result = await _validator.ValidateAsync(
-            CreateRequest(region: HallRegion.Gaza, detailedAddress: "جباليا")); // North Gaza area
+            CreateRequest(region: HallRegion.Gaza, address: "جباليا")); // North Gaza area
 
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.PropertyName == nameof(UpdateOwnerHallRequest.DetailedAddress));
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(UpdateOwnerHallRequest.Address));
     }
 
     [Fact]
-    public async Task Validate_DetailedAddressInsideRegion_Passes()
+    public async Task Validate_AddressInsideRegion_Passes()
     {
         var result = await _validator.ValidateAsync(
-            CreateRequest(region: HallRegion.Gaza, detailedAddress: "حي الرمال"));
+            CreateRequest(region: HallRegion.Gaza, address: "حي الرمال"));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task Validate_AddressFreeText_Fails()
+    {
+        // This exact value was valid before the swap, when Address was free text.
+        var result = await _validator.ValidateAsync(
+            CreateRequest(region: HallRegion.Gaza, address: "Al-Rashid Street, Gaza"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(UpdateOwnerHallRequest.Address));
+    }
+
+    [Fact]
+    public async Task Validate_AddressEmpty_Fails()
+    {
+        var result = await _validator.ValidateAsync(CreateRequest(address: string.Empty));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(UpdateOwnerHallRequest.Address));
+    }
+
+    [Fact]
+    public async Task Validate_AddressTooLong_Fails()
+    {
+        var result = await _validator.ValidateAsync(CreateRequest(address: new string('x', 101)));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(UpdateOwnerHallRequest.Address));
+    }
+
+    [Fact]
+    public async Task Validate_AddressFromAnotherRegionList_Fails()
+    {
+        // The list is region-dependent: a Gaza value is illegal for a North Gaza hall.
+        var result = await _validator.ValidateAsync(
+            CreateRequest(region: HallRegion.NorthGaza, address: "حي الرمال"));
+
+        Assert.False(result.IsValid);
+    }
+
+    [Theory]
+    [InlineData("جباليا")]                                              // a North Gaza list value
+    [InlineData("Al-Rashid Street, Gaza")]                              // arbitrary free text
+    [InlineData("مول الرحاب، شارع ٨، بجوار مسجد النور")]                  // free text with a landmark
+    public async Task Validate_DetailedAddressAnyText_Passes(string detailedAddress)
+    {
+        // DetailedAddress is now the owner's own free-text detail. Every one of these
+        // used to be validated against the region's list; the first one was outright
+        // rejected before the swap.
+        var result = await _validator.ValidateAsync(
+            CreateRequest(region: HallRegion.Gaza, detailedAddress: detailedAddress));
 
         Assert.True(result.IsValid);
     }
@@ -170,6 +229,15 @@ public class UpdateOwnerHallRequestValidatorShould
         var result = await _validator.ValidateAsync(CreateRequest(detailedAddress: null));
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task Validate_DetailedAddressTooLong_Fails()
+    {
+        var result = await _validator.ValidateAsync(CreateRequest(detailedAddress: new string('x', 151)));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(UpdateOwnerHallRequest.DetailedAddress));
     }
 
     // --- US-HALL: YouTube link + feature catalog ---

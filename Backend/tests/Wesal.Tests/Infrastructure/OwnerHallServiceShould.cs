@@ -104,7 +104,8 @@ public class OwnerHallServiceShould : IDisposable
     private static UpdateOwnerHallRequest CreateUpdateRequest() => new()
     {
         Name = "Grand Hall Updated",
-        Address = "Omar Al-Mukhtar Street, Gaza",
+        Address = "بني سهيلا",
+        DetailedAddress = "شارع 8، بجوار مسجد النور",
         Region = HallRegion.SouthGaza,
         Capacity = 250,
         Price = UpdatedPrice,
@@ -191,15 +192,17 @@ public class OwnerHallServiceShould : IDisposable
     }
 
     [Fact]
-    public async Task GetOwnedHallDetails_UnderReviewHall_IsReportedAsNotEditable()
+    public async Task GetOwnedHallDetails_UnderReviewHall_IsStillReportedAsEditable()
     {
+        // WESAL-TASK-2+3: approval status no longer gates editing, so a hall awaiting
+        // review is reported as editable like any other owned hall.
         var owner = await CreateOwnerAsync("owner4@example.com", "+970599100005");
         var hall = AddHall(owner.Id, "Pending Hall", HallStatus.PendingReview, withDetails: true);
 
         var details = await GetDetailsAsync(hall.Id, new FakeCurrentUser(owner.Id, true));
 
         Assert.Equal(HallStatus.PendingReview, details.Status);
-        Assert.False(details.IsEditable);
+        Assert.True(details.IsEditable);
     }
 
     [Fact]
@@ -214,7 +217,8 @@ public class OwnerHallServiceShould : IDisposable
         Assert.Equal("Grand Hall Updated", details.HallName);
         Assert.Equal("+970599222222", details.ContactPhone);
         Assert.Equal(HallRegion.SouthGaza, details.Region);
-        Assert.Equal("Omar Al-Mukhtar Street, Gaza", details.Address);
+        Assert.Equal("بني سهيلا", details.Address);
+        Assert.Equal("شارع 8، بجوار مسجد النور", details.DetailedAddress);
         Assert.Equal("Renovated hall", details.Description);
         Assert.Equal(250, details.Capacity);
         Assert.Equal(UpdatedPrice, details.Price);
@@ -270,20 +274,24 @@ public class OwnerHallServiceShould : IDisposable
     }
 
     [Fact]
-    public async Task UpdateOwnedHall_UnderReview_ThrowsBusinessRule_AndPersistsNothing()
+    public async Task UpdateOwnedHall_UnderReview_SucceedsAndKeepsPendingStatus()
     {
+        // WESAL-TASK-2+3: editing a hall that is under Admin review is now allowed. The
+        // edit is applied and the hall stays PendingReview, so the Admin reviews exactly
+        // what the owner just saved. Before this change this threw "HallNotEditable".
         var owner = await CreateOwnerAsync("owner9@example.com", "+970599100010");
         var hall = AddHall(owner.Id, "Pending Hall", HallStatus.PendingReview, withDetails: true);
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
-        var exception = await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            service.UpdateOwnedHallAsync(hall.Id, CreateUpdateRequest()));
+        var details = await service.UpdateOwnedHallAsync(hall.Id, CreateUpdateRequest());
 
-        Assert.Equal("HallNotEditable", exception.Code);
+        Assert.Equal("Grand Hall Updated", details.HallName);
+        Assert.Equal(HallStatus.PendingReview, details.Status);
 
-        var untouched = _context.Halls.AsNoTracking().Single(item => item.Id == hall.Id);
-        Assert.Equal("Pending Hall", untouched.Name);
-        Assert.Equal(HallStatus.PendingReview, untouched.Status);
+        var persisted = _context.Halls.AsNoTracking().Single(item => item.Id == hall.Id);
+        Assert.Equal("Grand Hall Updated", persisted.Name);
+        Assert.Equal("بني سهيلا", persisted.Address);
+        Assert.Equal(HallStatus.PendingReview, persisted.Status);
     }
 
     [Fact]
@@ -325,6 +333,98 @@ public class OwnerHallServiceShould : IDisposable
         Assert.Equal(typeof(Guid), parameters[0].ParameterType);
         Assert.Equal(typeof(UpdateOwnerHallRequest), parameters[1].ParameterType);
         Assert.Equal(typeof(CancellationToken), parameters[2].ParameterType);
+    }
+
+    // --- WESAL-TASK-2 field-role swap at the service layer ---
+
+    [Fact]
+    public async Task UpdateOwnedHall_AddressFromAnotherRegionList_ThrowsAndPersistsNothing()
+    {
+        var owner = await CreateOwnerAsync("owner12@example.com", "+970599100013");
+        var hall = AddHall(owner.Id, "Grand Hall", withDetails: true);
+        var service = CreateService(new FakeCurrentUser(owner.Id, true));
+
+        var crossedRegion = new UpdateOwnerHallRequest
+        {
+            Name = "Grand Hall Updated",
+            Address = "جباليا", // a North Gaza value, submitted for a South Gaza hall
+            Region = HallRegion.SouthGaza,
+            Capacity = 250,
+            Price = UpdatedPrice,
+            ContactPhone = "+970599222222",
+            Photos =
+            [
+                new UpdateOwnerHallPhotoDto { Url = "https://cdn.example.com/new-1.jpg", DisplayOrder = 0 }
+            ]
+        };
+
+        var exception = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.UpdateOwnedHallAsync(hall.Id, crossedRegion));
+
+        Assert.Equal("AddressNotInRegion", exception.Code);
+
+        var untouched = _context.Halls.AsNoTracking().Single(item => item.Id == hall.Id);
+        Assert.Equal("Grand Hall", untouched.Name);
+        Assert.Equal("Al-Rashid Street, Gaza", untouched.Address);
+    }
+
+    [Fact]
+    public async Task UpdateOwnedHall_UnchangedLegacyAddress_IsNotRevalidatedAgainstTheList()
+    {
+        // A hall whose stored address predates the list-backed rule can still edit the
+        // rest of its details: ApplyAddress only re-validates on an actual change, so the
+        // owner is not forced to re-pick a list value before being reviewable again.
+        var owner = await CreateOwnerAsync("owner13@example.com", "+970599100014");
+        var hall = AddHall(owner.Id, "Grand Hall", withDetails: true);
+        var service = CreateService(new FakeCurrentUser(owner.Id, true));
+
+        var details = await service.UpdateOwnedHallAsync(hall.Id, new UpdateOwnerHallRequest
+        {
+            Name = "Renamed Only",
+            Address = "Al-Rashid Street, Gaza", // unchanged legacy free text
+            Region = HallRegion.Gaza,
+            Capacity = 300,
+            ContactPhone = "+970599333333",
+            Photos =
+            [
+                new UpdateOwnerHallPhotoDto { Url = "https://cdn.example.com/new-1.jpg", DisplayOrder = 0 }
+            ]
+        });
+
+        Assert.Equal("Renamed Only", details.HallName);
+        Assert.Equal("Al-Rashid Street, Gaza", details.Address);
+
+        var persisted = _context.Halls.AsNoTracking().Single(item => item.Id == hall.Id);
+        Assert.Equal("Renamed Only", persisted.Name);
+    }
+
+    [Fact]
+    public async Task UpdateOwnedHall_DetailedAddressAcceptsFreeTextAndClearsWhenEmptied()
+    {
+        var owner = await CreateOwnerAsync("owner14@example.com", "+970599100015");
+        var hall = AddHall(owner.Id, "Grand Hall", withDetails: true);
+        var service = CreateService(new FakeCurrentUser(owner.Id, true));
+
+        var typed = await service.UpdateOwnedHallAsync(hall.Id, CreateUpdateRequest());
+        Assert.Equal("شارع 8، بجوار مسجد النور", typed.DetailedAddress);
+
+        var cleared = await service.UpdateOwnedHallAsync(hall.Id, new UpdateOwnerHallRequest
+        {
+            Name = "Grand Hall Updated",
+            Address = "بني سهيلا",
+            DetailedAddress = "   ",
+            Region = HallRegion.SouthGaza,
+            Capacity = 250,
+            ContactPhone = "+970599222222",
+            Photos =
+            [
+                new UpdateOwnerHallPhotoDto { Url = "https://cdn.example.com/new-1.jpg", DisplayOrder = 0 }
+            ]
+        });
+
+        Assert.Null(cleared.DetailedAddress);
+        var persisted = _context.Halls.AsNoTracking().Single(item => item.Id == hall.Id);
+        Assert.Null(persisted.DetailedAddress);
     }
 
     public void Dispose()

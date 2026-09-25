@@ -19,10 +19,17 @@ public class UpdateOwnerHallRequestValidator : AbstractValidator<UpdateOwnerHall
             .WithMessage("Hall name is required.")
             .MaximumLength(200);
 
+        // The address is a dependent selection (US-HALL): it must be one of the
+        // selected region's predefined values and can never be free text.
         RuleFor(request => request.Address)
             .NotEmpty()
             .WithMessage("Hall address is required.")
-            .MaximumLength(500);
+            .MaximumLength(RegionAddressCatalog.AddressMaxLength)
+            .WithMessage($"Address must not exceed {RegionAddressCatalog.AddressMaxLength} characters.")
+            .Must((request, value) =>
+                string.IsNullOrWhiteSpace(value)
+                || RegionAddressCatalog.Contains(request.Region, value))
+            .WithMessage("The address does not belong to the selected region's address list.");
 
         RuleFor(request => request.ContactPhone)
             .MaximumLength(30);
@@ -69,15 +76,11 @@ public class UpdateOwnerHallRequestValidator : AbstractValidator<UpdateOwnerHall
             .IsInEnum()
             .WithMessage("An unknown hall region was provided.");
 
+        // The detailed address is the owner's own extra detail, typed freely and no
+        // longer validated against the region's predefined list.
         RuleFor(request => request.DetailedAddress)
             .MaximumLength(RegionAddressCatalog.DetailedAddressMaxLength)
             .WithMessage($"Detailed address must not exceed {RegionAddressCatalog.DetailedAddressMaxLength} characters.");
-
-        RuleFor(request => request.DetailedAddress)
-            .Must((request, value) =>
-                string.IsNullOrWhiteSpace(value)
-                || RegionAddressCatalog.Contains(request.Region, value))
-            .WithMessage("The detailed address does not belong to the selected region's address list.");
 
         RuleFor(request => request.YouTubeVideoUrl)
             .Must(value => string.IsNullOrWhiteSpace(value) || YoutubeUrlValidator.IsValid(value))

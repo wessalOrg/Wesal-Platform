@@ -144,7 +144,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         content.Add(new StringContent("Test Wedding Hall"), "name");
         content.Add(new StringContent("+972599123456"), "contactPhone");
         content.Add(new StringContent("Gaza"), "region");
-        content.Add(new StringContent("Gaza City, Main Street"), "address");
+        content.Add(new StringContent("حي الشجاعية"), "address");
         content.Add(new StringContent("Elegant hall for weddings"), "description");
         content.Add(new StringContent("300"), "capacity");
         content.Add(new StringContent("1000"), "price");
@@ -173,7 +173,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         content.Add(new StringContent("Test Wedding Hall"), "name");
         content.Add(new StringContent("+972599123456"), "contactPhone");
         content.Add(new StringContent("Gaza"), "region");
-        content.Add(new StringContent("Gaza City, Main Street"), "address");
+        content.Add(new StringContent("حي الشجاعية"), "address");
         content.Add(new StringContent("Elegant hall for weddings"), "description");
         content.Add(new StringContent("300"), "capacity");
         content.Add(new StringContent("08:00"), "hourlySlotStart");
@@ -212,7 +212,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         content.Add(new StringContent("Test Wedding Hall"), "name");
         content.Add(new StringContent("+972599123456"), "contactPhone");
         content.Add(new StringContent("Gaza"), "region");
-        content.Add(new StringContent("Gaza City, Main Street"), "address");
+        content.Add(new StringContent("حي الشجاعية"), "address");
         content.Add(new StringContent("300"), "capacity");
         content.Add(new StringContent("1000"), "price");
         content.Add(new StringContent("08:00"), "hourlySlotStart");
@@ -235,7 +235,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         content.Add(new StringContent("Test Wedding Hall"), "name");
         content.Add(new StringContent("+972599123456"), "contactPhone");
         content.Add(new StringContent("Gaza"), "region");
-        content.Add(new StringContent("Gaza City, Main Street"), "address");
+        content.Add(new StringContent("حي الشجاعية"), "address");
         content.Add(new StringContent("Elegant hall for weddings"), "description");
         content.Add(new StringContent("300"), "capacity");
         content.Add(new StringContent("not-a-time"), "hourlySlotStart");
@@ -254,7 +254,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         content.Add(new StringContent(""), "name");
         content.Add(new StringContent("+972599123456"), "contactPhone");
         content.Add(new StringContent("Gaza"), "region");
-        content.Add(new StringContent("Gaza City, Main Street"), "address");
+        content.Add(new StringContent("حي الشجاعية"), "address");
         content.Add(new StringContent("Elegant hall for weddings"), "description");
         content.Add(new StringContent("300"), "capacity");
         content.Add(new StringContent("08:00"), "hourlySlotStart");
@@ -283,7 +283,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
             Name = "Test Wedding Hall",
             ContactPhone = "+972599123456",
             Region = "Gaza",
-            Address = "Gaza City, Main Street",
+            Address = "حي الشجاعية",
             Description = "Elegant hall for weddings",
             Capacity = 300,
             Price = 1000,

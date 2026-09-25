@@ -116,6 +116,7 @@ public class HallCreationServiceShould : IDisposable
         string region = "Gaza",
         decimal? price = 1000,
         IReadOnlyList<HallPhotoUpload>? photos = null,
+        string? address = null,
         string? detailedAddress = null,
         string? youtubeUrl = null,
         IReadOnlyList<string>? features = null,
@@ -125,7 +126,7 @@ public class HallCreationServiceShould : IDisposable
         Name = "Test Hall",
         ContactPhone = "+972599123456",
         Region = region,
-        Address = "Gaza City, Test Street",
+        Address = address ?? ValidAddressFor(region),
         DetailedAddress = detailedAddress,
         Description = "Beautiful hall for weddings",
         Capacity = 300,
@@ -138,6 +139,19 @@ public class HallCreationServiceShould : IDisposable
         MainPhoto = mainPhoto,
         Photos = photos
     };
+
+    /// <summary>
+    /// The Address field is backed by the region's predefined list (WESAL-TASK-2), so a
+    /// valid request for a given region must use one of that region's own values.
+    /// </summary>
+    private static string ValidAddressFor(string region)
+        => region.Replace(" ", "").ToLowerInvariant() switch
+        {
+            "northgaza" => "جباليا",
+            "middlearea" => "النصيرات",
+            "southgaza" => "بني سهيلا",
+            _ => "حي الشجاعية"
+        };
 
     private static HallPhotoUpload CreateValidPhoto(string fileName = "test.jpg", string contentType = "image/jpeg")
     {
@@ -266,21 +280,63 @@ public class HallCreationServiceShould : IDisposable
         Assert.Equal(0, await _context.Halls.CountAsync());
     }
 
+    // WESAL-TASK-2 field-role swap: the list-backed field is now Address, and
+    // DetailedAddress is the owner's own free-text detail.
+
     [Fact]
-    public async Task DetailedAddress_NotInRegion_Rejected()
+    public async Task Address_NotInRegion_Rejected()
     {
-        var request = CreateValidRequest(region: "Gaza", detailedAddress: "جباليا"); // a North Gaza area, not a Gaza one
+        var request = CreateValidRequest(region: "Gaza", address: "جباليا"); // a North Gaza area, not a Gaza one
         await Assert.ThrowsAsync<ValidationException>(() => _service.CreateHallAsync(request));
         Assert.Equal(0, await _context.Halls.CountAsync());
     }
 
     [Fact]
-    public async Task DetailedAddress_InRegion_AcceptedAndPersisted()
+    public async Task Address_FreeText_Rejected()
     {
-        var request = CreateValidRequest(region: "Gaza", detailedAddress: "حي الرمال");
+        // Free text was legal for Address before the swap.
+        var request = CreateValidRequest(region: "Gaza", address: "Gaza City, Test Street");
+        await Assert.ThrowsAsync<ValidationException>(() => _service.CreateHallAsync(request));
+        Assert.Equal(0, await _context.Halls.CountAsync());
+    }
+
+    [Fact]
+    public async Task Address_InRegion_AcceptedAndPersisted()
+    {
+        var result = await _service.CreateHallAsync(CreateValidRequest(region: "Gaza"));
+        var hall = await _context.Halls.FindAsync(result.HallId);
+        Assert.Equal("حي الشجاعية", hall!.Address);
+    }
+
+    [Fact]
+    public async Task DetailedAddress_FreeText_AcceptedAndPersisted()
+    {
+        // This exact value was rejected before the swap, when DetailedAddress was the
+        // list-backed field.
+        var request = CreateValidRequest(region: "Gaza", detailedAddress: "مول الرحاب، شارع ٨، بجوار مسجد النور");
         var result = await _service.CreateHallAsync(request);
         var hall = await _context.Halls.FindAsync(result.HallId);
-        Assert.Equal("حي الرمال", hall!.DetailedAddress);
+        Assert.Equal("مول الرحاب، شارع ٨، بجوار مسجد النور", hall!.DetailedAddress);
+    }
+
+    [Fact]
+    public async Task DetailedAddress_OtherRegionsListValue_Accepted()
+    {
+        // A value from another region's list is just text now, so it is accepted.
+        var request = CreateValidRequest(region: "Gaza", detailedAddress: "جباليا");
+        var result = await _service.CreateHallAsync(request);
+        var hall = await _context.Halls.FindAsync(result.HallId);
+        Assert.Equal("جباليا", hall!.DetailedAddress);
+    }
+
+    [Fact]
+    public async Task BothFields_PersistUnderTheirNewRoles()
+    {
+        var request = CreateValidRequest(region: "Gaza", detailedAddress: "بجوار دوار النابلسي");
+        var result = await _service.CreateHallAsync(request);
+        var hall = await _context.Halls.FindAsync(result.HallId);
+        Assert.Equal("حي الشجاعية", hall!.Address);
+        Assert.Equal("بجوار دوار النابلسي", hall.DetailedAddress);
     }
 
     [Fact]

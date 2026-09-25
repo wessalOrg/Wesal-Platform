@@ -34,8 +34,9 @@ public class OwnerHallDto
 /// hall is resolved exclusively from the authenticated session; ownership is enforced
 /// server-side and the DTO never carries a client-supplied owner identity. The
 /// editable fields mirror the Add Hall fields (FR-HALL-01), plus the current approval
-/// status and a server-computed editability flag used to block editing of a hall
-/// currently under Admin review (and of admin-locked halls once that state exists).
+/// status and a server-computed editability flag. An owner may always edit their own
+/// hall regardless of approval status, so editability reflects ownership (already
+/// guaranteed by the endpoint) rather than any review state.
 /// </summary>
 public class OwnerHallDetailsDto
 {
@@ -51,8 +52,10 @@ public class OwnerHallDetailsDto
 
     public string RegionDisplayName { get; init; } = string.Empty;
 
+    /// <summary>Address-area name selected from the region's predefined address list.</summary>
     public string Address { get; init; } = string.Empty;
 
+    /// <summary>The owner's own free-text address detail; never list-validated.</summary>
     public string? DetailedAddress { get; init; }
 
     public string? Description { get; init; }
@@ -71,6 +74,11 @@ public class OwnerHallDetailsDto
 
     public HallStatus Status { get; init; }
 
+    /// <summary>
+    /// Always true: an owner may edit their own hall whatever its approval status
+    /// (PendingReview, Approved, or Rejected). The endpoint already scopes the request
+    /// to halls the caller owns.
+    /// </summary>
     public bool IsEditable { get; init; }
 
     /// <summary>
@@ -112,8 +120,10 @@ public class UpdateOwnerHallRequest
 
     public HallRegion Region { get; init; }
 
+    /// <summary>Address-area name selected from the region's predefined address list.</summary>
     public string Address { get; init; } = string.Empty;
 
+    /// <summary>The owner's own free-text address detail; never list-validated.</summary>
     public string? DetailedAddress { get; init; }
 
     public string? Description { get; init; }

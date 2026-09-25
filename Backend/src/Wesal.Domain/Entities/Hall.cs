@@ -13,12 +13,18 @@ public class Hall : BaseAuditableEntity
 
     public HallRegion Region { get; set; }
 
+    /// <summary>
+    /// Address-area name selected by the owner from the dependent address list for the
+    /// hall's <see cref="Region"/>. Selected from the predefined catalog
+    /// (<see cref="Catalogs.RegionAddressCatalog"/>), never free-text typed by the
+    /// owner.
+    /// </summary>
     public string Address { get; set; } = string.Empty;
 
     /// <summary>
-    /// Owner-selected address-area name from the dependent address list for the hall's
-    /// <see cref="Region"/>. Selected from the predefined catalog, never free-text typed
-    /// by the owner.
+    /// The extra address detail the owner types by hand (street, building, landmark)
+    /// for halls whose <see cref="Address"/> list value is not specific enough. Free
+    /// text, length-limited, and never validated against the predefined catalog.
     /// </summary>
     public string? DetailedAddress { get; set; }
 

@@ -83,6 +83,35 @@ public class HallSearchRepositoryShould
     }
 
     [Fact]
+    public async Task SearchApprovedHallsAsync_AreaFiltersOnTheListBackedAddressNotTheFreeTextDetail()
+    {
+        // WESAL-TASK-2 field-role swap: Address is now the list-backed area name and
+        // DetailedAddress is the owner's free text, so the "Area" search filter must
+        // match the list-backed Address and must not match the free-text detail.
+        await using var context = CreateContext();
+        context.Halls.AddRange(
+            CreateHall("Ramla Hall", address: "حي الرمال"),
+            CreateHall("Mjedda Hall", address: "حي المجوسي"));
+        foreach (var hall in context.Halls)
+        {
+            hall.DetailedAddress = "شارع 8، بجوار مسجد النور";
+        }
+
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        // The list value is searchable.
+        var byListValue = await repository.SearchApprovedHallsAsync(null, null, "حي الرمال", null, null, 0, 20);
+        Assert.Single(byListValue);
+        Assert.Equal("Ramla Hall", byListValue[0].Name);
+
+        // The free-text detail is not part of the Area filter.
+        var byFreeText = await repository.SearchApprovedHallsAsync(null, null, "مسجد النور", null, null, 0, 20);
+        Assert.Empty(byFreeText);
+    }
+
+    [Fact]
     public async Task SearchApprovedHallsAsync_ExcludesHallsBookedOnSelectedDateAndStartTime()
     {
         await using var context = CreateContext();

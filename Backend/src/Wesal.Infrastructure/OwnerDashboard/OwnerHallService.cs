@@ -17,11 +17,12 @@ namespace Wesal.Infrastructure.OwnerDashboard;
 /// FR-HALL-02). The owner is resolved exclusively from the authenticated session;
 /// ownership is enforced by the repository so a caller can never read or update
 /// another owner's hall. Management access is gated by <see cref="HallManagementAccess"/>
-/// (US-ADMIN-05/07/09) and editing is blocked while the hall is under Admin review
-/// (PendingReview). The update is applied atomically in a single transaction and
-/// never touches the hall's approval status or owner identity — except for the
-/// resubmission rule (FR-ADM-01): editing a Rejected hall re-queues it to
-/// PendingReview.
+/// (US-ADMIN-05/07/09) on payment and lock state — deliberately not on approval status:
+/// an owner may edit their hall at any time, whether it is PendingReview, Approved, or
+/// Rejected, so the Admin always reviews exactly what is currently stored. The update
+/// is applied atomically in a single transaction and never touches the hall's approval
+/// status or owner identity — except for the resubmission rule (FR-ADM-01): editing a
+/// Rejected hall re-queues it to PendingReview.
 /// </summary>
 public sealed class OwnerHallService : IOwnerHallService
 {
@@ -77,7 +78,6 @@ public sealed class OwnerHallService : IOwnerHallService
         }
 
         HallManagementAccess.EnsureAllowed(hall);
-        EnsureEditable(hall);
 
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
@@ -142,32 +142,19 @@ public sealed class OwnerHallService : IOwnerHallService
         return _currentUser.UserId;
     }
 
-    private static void EnsureEditable(Hall hall)
-    {
-        // Editing is blocked while the hall is under Admin review (PendingReview).
-        // The management-access gate (HallManagementAccess, US-ADMIN-05/07/09) is
-        // enforced before this check so a locked hall surfaces the correct lock code.
-        if (hall.Status == HallStatus.PendingReview)
-        {
-            throw new BusinessRuleException(
-                "HallNotEditable",
-                "This hall is under review and cannot be edited right now.");
-        }
-    }
-
     private void ApplyHallDetails(Hall hall, UpdateOwnerHallRequest request)
     {
         hall.Name = request.Name.Trim();
         hall.MainImageUrl = NormalizeOptional(request.MainImageUrl);
         hall.ContactPhone = NormalizeOptional(request.ContactPhone);
         hall.Region = request.Region;
-        hall.Address = request.Address.Trim();
         hall.Description = NormalizeOptional(request.Description);
         hall.Capacity = request.Capacity;
         hall.Price = request.Price;
         hall.ShowPrice = request.ShowPrice;
 
-        ApplyDetailedAddress(hall, request);
+        ApplyAddress(hall, request);
+        hall.DetailedAddress = NormalizeOptional(request.DetailedAddress);
         hall.YouTubeVideoUrl = NormalizeOptional(request.YouTubeVideoUrl);
         hall.OtherFeatures = NormalizeOptional(request.OtherFeatures);
         ApplyFeatures(hall, request.Features);
@@ -178,27 +165,28 @@ public sealed class OwnerHallService : IOwnerHallService
     }
 
     /// <summary>
-    /// The detailed address is a dependent selection: it must belong to the hall's
-    /// region list. It is only re-validated on an actual change so existing halls whose
-    /// address predates the catalog can keep editing the rest of their details.
+    /// The address is a dependent selection: it must belong to the hall's region list.
+    /// It is only re-validated on an actual change, so a hall whose stored address
+    /// predates the catalog (or predates this list-backed rule) can still edit the rest
+    /// of its details and be re-reviewed without first re-picking a value.
     /// </summary>
-    private static void ApplyDetailedAddress(Hall hall, UpdateOwnerHallRequest request)
+    private static void ApplyAddress(Hall hall, UpdateOwnerHallRequest request)
     {
-        var incoming = string.IsNullOrWhiteSpace(request.DetailedAddress) ? null : request.DetailedAddress.Trim();
+        var incoming = request.Address.Trim();
 
-        if (string.Equals(incoming, hall.DetailedAddress, StringComparison.Ordinal))
+        if (string.Equals(incoming, hall.Address, StringComparison.Ordinal))
         {
             return;
         }
 
-        if (incoming is not null && !RegionAddressCatalog.Contains(request.Region, incoming))
+        if (!RegionAddressCatalog.Contains(request.Region, incoming))
         {
             throw new BusinessRuleException(
-                "DetailedAddressNotInRegion",
-                "The detailed address must be selected from the selected region's address list.");
+                "AddressNotInRegion",
+                "The address must be selected from the selected region's address list.");
         }
 
-        hall.DetailedAddress = incoming;
+        hall.Address = incoming;
     }
 
     private static void ApplyFeatures(Hall hall, IReadOnlyList<string> features)
@@ -270,7 +258,7 @@ public sealed class OwnerHallService : IOwnerHallService
                 .ToList(),
             OtherFeatures = hall.OtherFeatures,
             Status = hall.Status,
-            IsEditable = hall.Status != HallStatus.PendingReview,
+            IsEditable = true,
             PaymentStatus = hall.PaymentStatus,
             PaymentReceiptUploadedAt = hall.PaymentReceiptUploadedAt,
             HasPaymentReceipt = !string.IsNullOrWhiteSpace(hall.PaymentReceiptUrl),
