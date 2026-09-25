@@ -40,7 +40,21 @@ public sealed class HallAvailabilityService : IHallAvailabilityService
 
         var periodsTask = _hallRepository.GetBookingPeriodsAsync([hallId], cancellationToken);
         var availabilityTask = _hallRepository.GetAvailabilityAsync([hallId], date, date, cancellationToken);
-        await Task.WhenAll(periodsTask, availabilityTask);
+        var blockedTask = _hallRepository.GetBlockedDayHallIdsAsync([hallId], date, date, cancellationToken);
+        await Task.WhenAll(periodsTask, availabilityTask, blockedTask);
+
+        // WESAL-TASK-1 hardening: a day the owner blocked is unbookable in full, so it must
+        // read as entirely unavailable here too. This is the endpoint behind the MCP
+        // check_hall_availability tool and the AI assistant's availability answer, and
+        // without this a blocked day was reported as "fully available".
+        //
+        // The whole day is reported as Booked rather than as a separate "blocked" status
+        // on purpose: Booked is the vocabulary this contract already uses for "not
+        // available", and reusing it means a blocked day is indistinguishable from a fully
+        // booked one, so the response never discloses that the owner closed the day. That
+        // keeps the seeker-facing output identical to how hidden booked time behaves when
+        // ShowBookedSlots is OFF.
+        var dayBlocked = blockedTask.Result.Contains(hallId);
 
         var statuses = availabilityTask.Result.ToDictionary(item => item.PeriodType, item => item.Status);
         var periods = periodsTask.Result
@@ -50,9 +64,11 @@ public sealed class HallAvailabilityService : IHallAvailabilityService
                 PeriodName = HallDisplayNames.GetPeriodName(period.Type),
                 StartTime = period.StartTime,
                 EndTime = period.EndTime,
-                Status = statuses.TryGetValue(period.Type, out var status)
-                    ? status
-                    : AvailabilityStatus.Available
+                Status = dayBlocked
+                    ? AvailabilityStatus.Booked
+                    : statuses.TryGetValue(period.Type, out var status)
+                        ? status
+                        : AvailabilityStatus.Available
             })
             .ToList();
 

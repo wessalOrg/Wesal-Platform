@@ -58,6 +58,35 @@ public interface IHallRepository
         DateOnly toDate,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// WESAL-TASK-1 hardening: the halls in <paramref name="hallIds"/> whose owner blocked
+    /// at least one day in the range. Default implementation reports "nothing blocked" so
+    /// the many lightweight test doubles of this interface keep compiling unchanged.
+    /// </summary>
+    Task<IReadOnlySet<Guid>> GetBlockedDayHallIdsAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlySet<Guid>>(new HashSet<Guid>());
+    }
+
+    /// <summary>
+    /// WESAL-TASK-1 hardening: the specific dates inside the range that the owner blocked
+    /// for this one hall. Per-date granularity is needed by the hall-details availability
+    /// window, which projects a handful of days and must mark each blocked one. Default
+    /// implementation reports "nothing blocked" so existing test doubles keep compiling.
+    /// </summary>
+    Task<IReadOnlySet<DateOnly>> GetBlockedDatesAsync(
+        Guid hallId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlySet<DateOnly>>(new HashSet<DateOnly>());
+    }
+
     Task AddAsync(Hall hall, CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;

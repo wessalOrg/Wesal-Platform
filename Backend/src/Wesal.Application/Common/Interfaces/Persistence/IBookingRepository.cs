@@ -108,4 +108,19 @@ public interface IBookingRepository
         TimeOnly startTime,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
+
+    // WESAL-TASK-1 hardening: guards the hourly window against shrinking past a live
+    // booking. The seeker catalog is generated from [HourlySlotStart, HourlySlotEnd), so
+    // narrowing the window would make an already-booked hour vanish from the catalog while
+    // the booking itself stayed real and active. The owner-facing service turns a true
+    // result into the same ConflictException it already uses when a day-block would
+    // orphan a live booking, so the two rules stay consistent. "Active" reuses the same
+    // Pending-or-Accepted rule as the rest of this interface.
+
+    Task<bool> HasActiveHourlyBookingsOutsideWindowAsync(
+        Guid hallId,
+        TimeOnly windowStart,
+        TimeOnly windowEnd,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
 }

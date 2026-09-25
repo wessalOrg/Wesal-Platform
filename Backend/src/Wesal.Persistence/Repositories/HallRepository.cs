@@ -129,6 +129,23 @@ public class HallRepository : IHallRepository
             query = query.Where(hall => hall.Address.Contains(area));
         }
 
+        if (date.HasValue)
+        {
+            var selectedDate = date.Value;
+
+            // WESAL-TASK-1 hardening: a day the owner blocked is unbookable in its
+            // entirety, so the hall must never be offered for it through the legacy
+            // search. This is evaluated whenever a date is supplied, not only when a
+            // period is, because a whole-day block makes every period on that day
+            // unbookable. Deliberately independent of ShowBookedSlots: search either
+            // lists the hall or omits it, and a hidden blocked day must be omitted just
+            // like a hidden fully-booked one - the seeker is never told why.
+            query = query.Where(hall => !_context.HallDayAvailabilities.Any(day =>
+                day.HallId == hall.Id
+                && day.Date == selectedDate
+                && !day.IsOpen));
+        }
+
         if (date.HasValue && period.HasValue)
         {
             var selectedDate = date.Value;
@@ -196,5 +213,68 @@ public class HallRepository : IHallRepository
                 && availability.Date >= fromDate
                 && availability.Date <= toDate)
             .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// WESAL-TASK-1 hardening: returns the subset of <paramref name="hallIds"/> that the
+    /// owner has blocked for at least one day inside the requested range.
+    ///
+    /// The day gate (<see cref="HallDayAvailability"/>) is authoritative for the whole
+    /// hall, so any seeker-facing read that works purely off the legacy per-period
+    /// availability set has to consult this as well - otherwise a blocked day still looks
+    /// bookable through the legacy endpoints.
+    ///
+    /// Note this intentionally reports the blocked fact without consulting
+    /// <see cref="Hall.ShowBookedSlots"/>: deciding whether to disclose the block or hide
+    /// it is the caller's job, because the owner view must always see the truth while a
+    /// seeker view must honour the toggle.
+    /// </summary>
+    public async Task<IReadOnlySet<Guid>> GetBlockedDayHallIdsAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        if (hallIds.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        var blockedHallIds = await _context.HallDayAvailabilities
+            .AsNoTracking()
+            .Where(day =>
+                hallIds.Contains(day.HallId)
+                && day.Date >= fromDate
+                && day.Date <= toDate
+                && !day.IsOpen)
+            .Select(day => day.HallId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return blockedHallIds.ToHashSet();
+    }
+
+    /// <summary>
+    /// WESAL-TASK-1 hardening: the specific dates the owner blocked for one hall within the
+    /// range. Used by the hall-details availability window, which projects individual days.
+    /// </summary>
+    public async Task<IReadOnlySet<DateOnly>> GetBlockedDatesAsync(
+        Guid hallId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        var blockedDates = await _context.HallDayAvailabilities
+            .AsNoTracking()
+            .Where(day =>
+                day.HallId == hallId
+                && day.Date >= fromDate
+                && day.Date <= toDate
+                && !day.IsOpen)
+            .Select(day => day.Date)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return blockedDates.ToHashSet();
     }
 }

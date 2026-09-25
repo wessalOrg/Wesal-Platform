@@ -140,6 +140,10 @@ public class AuthorizationHallActionsShould
         public Task<bool> HasOtherActiveBookingsAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<int> ReleasePeriodAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task<int> ReservePeriodAsync(Guid hallId, DateOnly date, BookingPeriodType periodType, CancellationToken cancellationToken = default) => Task.FromResult(1);
+
+        // WESAL-TASK-1: the legacy booking path now enforces the owner day gate, so this
+        // double must answer it. No day is blocked in these authorization tests.
+        public Task<bool> IsDayOpenAsync(Guid hallId, DateOnly date, CancellationToken cancellationToken = default) => Task.FromResult(true);
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

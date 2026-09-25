@@ -53,6 +53,24 @@ public sealed class HallRecommendationMatcher : IHallRecommendationMatcher
                 return Array.Empty<HallRecommendationDto>();
         }
 
+        // WESAL-TASK-1 hardening: a day the owner blocked is unbookable in its entirety, so
+        // it must never be recommended. This runs whenever a date is present, independently
+        // of `period`, because a whole-day block makes every period on that day unbookable.
+        // Blocked halls are dropped silently rather than flagged, so the assistant never
+        // discloses that an owner closed a day - it just stops suggesting that hall.
+        if (date.HasValue)
+        {
+            var dateHallIds = candidates.Select(h => h.Id).ToList();
+            var blocked = await _hallRepository.GetBlockedDayHallIdsAsync(dateHallIds, date.Value, date.Value, cancellationToken);
+
+            if (blocked.Count > 0)
+            {
+                candidates = candidates.Where(h => !blocked.Contains(h.Id)).ToList();
+                if (candidates.Count == 0)
+                    return Array.Empty<HallRecommendationDto>();
+            }
+        }
+
         // Real availability verification for every candidate when date+period provided
         if (date.HasValue && period.HasValue)
         {

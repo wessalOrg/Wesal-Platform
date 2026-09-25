@@ -23,5 +23,13 @@ public class BookingRequestDtoValidator : AbstractValidator<BookingRequestDto>
 
         RuleForEach(request => request.Periods)
             .IsInEnum();
+
+        // WESAL-TASK-1 hardening: the legacy path now requires and persists the name on
+        // the booking too, mirroring HourlyBookingRequestDtoValidator so both booking
+        // entry points enforce requirement 6 identically.
+        RuleFor(request => request.NameOnBooking)
+            .NotEmpty()
+            .WithMessage("The name on the booking is required.")
+            .MaximumLength(100);
     }
 }

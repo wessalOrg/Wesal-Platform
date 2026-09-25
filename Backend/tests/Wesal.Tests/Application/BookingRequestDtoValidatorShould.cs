@@ -81,6 +81,9 @@ public class BookingRequestDtoValidatorShould
         {
             HallId = hallId ?? Guid.NewGuid(),
             Date = date ?? new DateOnly(2026, 9, 10),
-            Periods = periods ?? [BookingPeriodType.FirstPeriod, BookingPeriodType.SecondPeriod]
+            Periods = periods ?? [BookingPeriodType.FirstPeriod, BookingPeriodType.SecondPeriod],
+            // WESAL-TASK-1: required on the legacy path too, so the shared "valid request"
+            // fixture has to supply it.
+            NameOnBooking = "Layla Hassan"
         };
 }

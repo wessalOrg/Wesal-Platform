@@ -592,7 +592,9 @@ public class BookingRequestServiceShould
         {
             HallId = hallId,
             Date = date,
-            Periods = periods
+            Periods = periods,
+            // WESAL-TASK-1: the name on the booking is required on the legacy path too.
+            NameOnBooking = "Layla Hassan"
         };
 
     private static Hall CreateHall(string name, HallStatus status)
@@ -703,7 +705,17 @@ public class BookingRequestServiceShould
 
         public HashSet<BookingPeriodType> BlockedPeriods { get; } = [];
 
+        /// <summary>
+        /// WESAL-TASK-1: days the owner has closed with the day gate. The legacy booking
+        /// path is now gated by it exactly like the hourly path, so these tests can model a
+        /// blocked day and leave every other day open.
+        /// </summary>
+        public HashSet<(Guid HallId, DateOnly Date)> BlockedDays { get; } = [];
+
         public List<(Guid HallId, DateOnly Date, BookingPeriodType Period)> Reservations { get; } = [];
+
+        public Task<bool> IsDayOpenAsync(Guid hallId, DateOnly date, CancellationToken cancellationToken = default)
+            => Task.FromResult(!BlockedDays.Contains((hallId, date)));
 
         public Task AddAsync(Booking booking, CancellationToken cancellationToken = default)
         {

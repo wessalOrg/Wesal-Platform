@@ -94,6 +94,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(hall => hall.SubscriptionCycleStart).HasColumnType("date");
             entity.Property(hall => hall.LockedAt).HasColumnType("timestamp with time zone");
 
+            // WESAL-TASK-1 hardening: align the schema default with Hall.ShowBookedSlots
+            // (true). The column was originally created with defaultValue:false, so a hall
+            // inserted without the column (raw SQL, a future seeder) silently disagreed
+            // with the entity default. Declaring it here keeps the model snapshot and the
+            // database default in lockstep so a new migration never reverts it.
+            entity.Property(hall => hall.ShowBookedSlots).HasDefaultValue(true);
+
             entity.HasIndex(hall => hall.Status);
             entity.HasIndex(hall => new { hall.Status, hall.IsDeleted });
             entity.HasIndex(hall => hall.Region);

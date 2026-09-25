@@ -488,7 +488,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
     private sealed class StubOwnerHourlyAvailabilityService : IOwnerHourlyAvailabilityService
     {
         public Task<OwnerDayBlockResultDto> SetDayBlockAsync(Guid hallId, OwnerDayBlockRequest request, CancellationToken cancellationToken = default)
-            => Task.FromResult(new OwnerDayBlockResultDto { HallId = hallId, Date = request.Date, IsOpen = request.IsOpen });
+            => Task.FromResult(new OwnerDayBlockResultDto { HallId = hallId, Date = request.Date, IsOpen = request.IsOpen ?? false });
 
         public Task<OwnerHourlySettingsDto> UpdateHourlySettingsAsync(Guid hallId, UpdateOwnerHourlySettingsRequest request, CancellationToken cancellationToken = default)
             => Task.FromResult(new OwnerHourlySettingsDto { HallId = hallId });

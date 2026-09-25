@@ -46,6 +46,20 @@ public sealed class OwnerHourlyAvailabilityService : IOwnerHourlyAvailabilitySer
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        // WESAL-TASK-1 hardening: IsOpen is a required state, not a partial update.
+        // The FluentValidation rule rejects an omitted value at the API boundary; this
+        // guard repeats the same check so the service can never silently re-open a day
+        // the owner blocked, no matter which caller reaches it.
+        if (!request.IsOpen.HasValue)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["IsOpen"] = ["IsOpen is required: send false to block the day or true to re-open it."]
+            });
+        }
+
+        var isOpen = request.IsOpen.Value;
+
         var ownerId = await ResolveOwnerAsync(cancellationToken);
 
         var hall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken)
@@ -63,19 +77,26 @@ public sealed class OwnerHourlyAvailabilityService : IOwnerHourlyAvailabilitySer
             });
         }
 
-        // Blocking must never silently orphan a live booking. Reuse the codebase's
-        // existing rule for an occupied unit (Pending or Accepted is "active") and
-        // refuse the block with the same ConflictException shape the legacy period
-        // release path uses.
-        if (!request.IsOpen && await _bookingRepository.HasActiveBookingsOnDayAsync(hallId, request.Date, cancellationToken))
-        {
-            throw new ConflictException(
-                $"This day already has an active booking and cannot be blocked. Cancel or complete the booking first.");
-        }
-
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            await _bookingRepository.SetDayOpenAsync(hallId, request.Date, request.IsOpen, cancellationToken);
+            // WESAL-TASK-1 hardening (atomicity): the occupied-day check used to run as a
+            // separate round-trip before the transaction opened, leaving a window in which
+            // a booking could be created between the check and the write. Colocating the
+            // check with the write means the guard and the state change commit or fail as
+            // one unit, mirroring the booking side, which likewise checks the day gate
+            // inside the transaction that reserves and inserts.
+            //
+            // Blocking must never silently orphan a live booking. Reuse the codebase's
+            // existing rule for an occupied unit (Pending or Accepted is "active") and
+            // refuse the block with the same ConflictException shape the legacy period
+            // release path uses.
+            if (!isOpen && await _bookingRepository.HasActiveBookingsOnDayAsync(hallId, request.Date, cancellationToken))
+            {
+                throw new ConflictException(
+                    $"This day already has an active booking and cannot be blocked. Cancel or complete the booking first.");
+            }
+
+            await _bookingRepository.SetDayOpenAsync(hallId, request.Date, isOpen, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
 
@@ -83,7 +104,7 @@ public sealed class OwnerHourlyAvailabilityService : IOwnerHourlyAvailabilitySer
         {
             HallId = hallId,
             Date = request.Date,
-            IsOpen = request.IsOpen
+            IsOpen = isOpen
         };
     }
 
@@ -127,6 +148,27 @@ public sealed class OwnerHourlyAvailabilityService : IOwnerHourlyAvailabilitySer
         if (request.HourlySlotEnd.HasValue)
         {
             hall.HourlySlotEnd = request.HourlySlotEnd.Value;
+        }
+
+        // WESAL-TASK-1 hardening: the seeker catalog is generated from the window bounds, so
+        // narrowing the window would drop an already-booked hour out of the catalog while the
+        // booking stayed real and active - invisible but still occupying that hour. Refuse the
+        // change with the same ConflictException used when a day-block would orphan a live
+        // booking, so an owner can never strand a booking by reshaping the window around it.
+        // Only a window change can strand a booking, so an untouched window costs no query.
+        if (request.HourlySlotStart.HasValue || request.HourlySlotEnd.HasValue)
+        {
+            var strandsBooking = await _bookingRepository.HasActiveHourlyBookingsOutsideWindowAsync(
+                hallId,
+                effectiveStart,
+                effectiveEnd,
+                cancellationToken);
+
+            if (strandsBooking)
+            {
+                throw new ConflictException(
+                    $"The new bookable window would hide an hour that already has an active booking. Cancel or complete that booking first, or keep the window wide enough to include it.");
+            }
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

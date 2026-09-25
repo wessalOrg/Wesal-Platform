@@ -493,4 +493,32 @@ public sealed class BookingRepository : IBookingRepository
 
         return 1;
     }
+
+    /// <summary>
+    /// WESAL-TASK-1 hardening: true when the hall still has a live hourly booking whose
+    /// start falls outside the candidate window [windowStart, windowEnd).
+    ///
+    /// Only hourly bookings are considered (SlotStart differs from the legacy 00:00 marker),
+    /// matching the hourly-vs-legacy discriminator used across the booking lifecycle. Dates
+    /// in the past are included on purpose: the booking is still a real record, and letting
+    /// a window change silently strand it is exactly what this guard prevents.
+    /// </summary>
+    public async Task<bool> HasActiveHourlyBookingsOutsideWindowAsync(
+        Guid hallId,
+        TimeOnly windowStart,
+        TimeOnly windowEnd,
+        CancellationToken cancellationToken = default)
+    {
+        var midnight = TimeOnly.MinValue;
+
+        return await _context.Bookings
+            .AsNoTracking()
+            .AnyAsync(
+                booking =>
+                    booking.HallId == hallId
+                    && booking.SlotStart != midnight
+                    && (booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Accepted)
+                    && (booking.SlotStart < windowStart || booking.SlotStart >= windowEnd),
+                cancellationToken);
+    }
 }

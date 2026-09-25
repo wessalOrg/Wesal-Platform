@@ -53,11 +53,21 @@ public class HourlySlotService : IHourlySlotService
         if (!dayOpen)
         {
             // A fully blocked day exposes no slots to seekers at all.
+            //
+            // WESAL-TASK-1 hardening: how the block itself is reported depends on the
+            // hall's ShowBookedSlots toggle, because a blocked day is a fully-booked day
+            // as far as booking is concerned.
+            //   ON  -> the day is disclosed as closed, matching how a fully-booked day reads
+            //           when booked time is shown.
+            //   OFF -> the block must stay invisible. DayOpen=true with an empty slot list
+            //          is exactly the response a fully-booked hidden day produces further
+            //          down, so a seeker cannot tell "the owner closed this day" apart from
+            //          "someone booked every hour".
             return new HallHourlyCatalogDto
             {
                 HallId = hallId,
                 Date = date,
-                DayOpen = false,
+                DayOpen = !hall.ShowBookedSlots,
                 Slots = []
             };
         }
@@ -123,10 +133,19 @@ public class HourlySlotService : IHourlySlotService
         {
             // A day with no HallDayAvailability row defaults to Open; only an explicit
             // closed gate marks the day as blocked.
+            //
+            // WESAL-TASK-1 hardening: the gate is only disclosed to seekers when the hall
+            // opts into showing booked days/hours. With ShowBookedSlots OFF a blocked day is
+            // reported as an ordinary open day, so the calendar never reveals that the
+            // owner closed it; the seeker simply finds no bookable hours for it, exactly as
+            // for a day whose hours are all already booked. With the toggle ON the day is
+            // correctly surfaced as Closed.
+            var isBlocked = blockedDates.Contains(date);
+
             days.Add(new HallHourlyCalendarDayDto
             {
                 Date = date,
-                IsOpen = !blockedDates.Contains(date)
+                IsOpen = !isBlocked || !hall.ShowBookedSlots
             });
         }
 
@@ -163,14 +182,19 @@ public class HourlySlotService : IHourlySlotService
 
         EnsureSlotWithinWindow(hall, request.SlotStart);
 
-        if (!await _bookingRepository.IsDayOpenAsync(hall.Id, request.Date, cancellationToken))
-        {
-            throw new ConflictException(
-                $"The hall is not available on {request.Date:yyyy-MM-dd} (the day is blocked). Please choose another day.");
-        }
-
         var booking = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
+            // WESAL-TASK-1 hardening (atomicity): the day-gate check now runs inside the
+            // same transaction as the slot reservation and the booking insert, so an owner
+            // closing the day concurrently can no longer interleave between the two and
+            // leave a booking on a day that reports as blocked. The check and the write
+            // were previously two separate round-trips outside any shared scope.
+            if (!await _bookingRepository.IsDayOpenAsync(hall.Id, request.Date, cancellationToken))
+            {
+                throw new ConflictException(
+                    $"The hall is not available on {request.Date:yyyy-MM-dd} (the day is blocked). Please choose another day.");
+            }
+
             var reserved = await _bookingRepository.ReserveHourlySlotAsync(
                 hall.Id,
                 request.Date,

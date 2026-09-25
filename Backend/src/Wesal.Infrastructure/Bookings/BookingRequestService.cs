@@ -51,6 +51,10 @@ public class BookingRequestService : IBookingRequestService
 
         var hall = await EnsureEligibleHallAsync(request.HallId, cancellationToken);
 
+        // WESAL-TASK-1 hardening: the pre-flight check must agree with the create path, or
+        // it would tell a seeker "valid" for a day the owner blocked and only fail later.
+        await EnsureDayIsOpenAsync(hall.Id, request.Date, cancellationToken);
+
         return new BookingRequestValidationResultDto
         {
             HallId = hall.Id,
@@ -86,9 +90,23 @@ public class BookingRequestService : IBookingRequestService
 
         var bookings = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
+            // WESAL-TASK-1 hardening (day-block gate + atomicity): a day the owner blocked
+            // must be unbookable through the legacy endpoint exactly as it is through the
+            // hourly one. The check lives INSIDE the transaction that performs the
+            // reservation and the insert, so no booking can slip between the check and the
+            // write. The exception is the same ConflictException, with the same message,
+            // that HourlySlotService.CreateHourlyBookingAsync raises for a blocked day.
+            await EnsureDayIsOpenAsync(hall.Id, request.Date, cancellationToken);
+
             await ReservePeriodsAsync(hall, request.Date, request.Periods, cancellationToken);
 
-            var createdBookings = await PersistRequestedBookingsAsync(hall, request.Date, requesterUserId, request.Periods, cancellationToken);
+            var createdBookings = await PersistRequestedBookingsAsync(
+                hall,
+                request.Date,
+                requesterUserId,
+                request.NameOnBooking,
+                request.Periods,
+                cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -118,6 +136,28 @@ public class BookingRequestService : IBookingRequestService
         }
 
         return _currentUser.UserId;
+    }
+
+    /// <summary>
+    /// WESAL-TASK-1 hardening: rejects a booking whose day the owner has blocked.
+    ///
+    /// The day gate (<see cref="HallDayAvailability"/>) is the hourly model's whole-day
+    /// switch, and it is authoritative for the hall regardless of which booking shape the
+    /// seeker used. Before this check existed the legacy two-period endpoint ignored the
+    /// gate entirely, so an owner could close a day and a seeker could still book it by
+    /// calling POST /api/v1/bookings instead of the hourly endpoint.
+    ///
+    /// The exception type and wording intentionally match
+    /// HourlySlotService.CreateHourlyBookingAsync so both paths reject a blocked day in
+    /// exactly the same way.
+    /// </summary>
+    private async Task EnsureDayIsOpenAsync(Guid hallId, DateOnly date, CancellationToken cancellationToken)
+    {
+        if (!await _bookingRepository.IsDayOpenAsync(hallId, date, cancellationToken))
+        {
+            throw new ConflictException(
+                $"The hall is not available on {date:yyyy-MM-dd} (the day is blocked). Please choose another day.");
+        }
     }
 
     private async Task<Hall> EnsureEligibleHallAsync(Guid hallId, CancellationToken cancellationToken)
@@ -206,6 +246,7 @@ public class BookingRequestService : IBookingRequestService
         Hall hall,
         DateOnly date,
         string requesterUserId,
+        string nameOnBooking,
         IReadOnlyList<BookingPeriodType> periods,
         CancellationToken cancellationToken)
     {
@@ -219,6 +260,9 @@ public class BookingRequestService : IBookingRequestService
                 RequesterUserId = requesterUserId,
                 Date = date,
                 Period = period,
+                // WESAL-TASK-1 hardening: the seeker's own name for this booking is now
+                // persisted on the legacy path too, as it already was on the hourly path.
+                NameOnBooking = nameOnBooking,
                 Status = BookingStatus.Pending
             };
 

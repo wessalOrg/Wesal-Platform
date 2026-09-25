@@ -65,6 +65,11 @@ public class HallDetailsService : IHallDetailsService
         var periods = await _hallRepository.GetBookingPeriodsAsync([hallId], cancellationToken);
         var availability = await _hallRepository.GetAvailabilityAsync([hallId], fromDate, toDate, cancellationToken);
 
+        // WESAL-TASK-1 hardening: the projected availability window must honour owner
+        // day-blocks, otherwise a blocked day is still advertised as bookable on the hall
+        // details page and in the featured-halls projection that reuses this builder.
+        var blockedDates = await _hallRepository.GetBlockedDatesAsync(hallId, fromDate, toDate, cancellationToken);
+
         return new HallDetailsDto
         {
             HallId = hall.Id,
@@ -89,7 +94,7 @@ public class HallDetailsService : IHallDetailsService
                 .Where(image => !string.IsNullOrWhiteSpace(image.Url))
                 .Select(image => new HallImageDto { Id = image.Id, Url = image.Url })
                 .ToList(),
-            Availability = BuildAvailability(hallId, periods, availability.ToDictionary(item => (item.HallId, item.Date, item.PeriodType)), fromDate, toDate)
+            Availability = BuildAvailability(hallId, periods, availability.ToDictionary(item => (item.HallId, item.Date, item.PeriodType)), blockedDates, fromDate, toDate)
         };
     }
 
@@ -102,6 +107,7 @@ public class HallDetailsService : IHallDetailsService
         Guid hallId,
         IReadOnlyList<HallBookingPeriod> periods,
         IReadOnlyDictionary<(Guid HallId, DateOnly Date, BookingPeriodType PeriodType), HallAvailability> availabilityByKey,
+        IReadOnlySet<DateOnly> blockedDates,
         DateOnly fromDate,
         DateOnly toDate)
     {
@@ -109,6 +115,13 @@ public class HallDetailsService : IHallDetailsService
 
         for (var date = fromDate; date <= toDate; date = date.AddDays(1))
         {
+            // WESAL-TASK-1 hardening: a day the owner blocked is unbookable in full, so every
+            // period on it projects as Booked. This mirrors the treatment a genuinely
+            // fully-booked day already gets, and deliberately does not surface a separate
+            // "blocked" label: the seeker learns the day is unavailable, never that the
+            // owner closed it, so a hidden block is indistinguishable from hidden booked time.
+            var dayBlocked = blockedDates.Contains(date);
+
             var dayPeriods = periods
                 .Select(period => new HallBookingPeriodStatusDto
                 {
@@ -116,9 +129,11 @@ public class HallDetailsService : IHallDetailsService
                     PeriodName = HallDisplayNames.GetPeriodName(period.Type),
                     StartTime = period.StartTime,
                     EndTime = period.EndTime,
-                    Status = availabilityByKey.TryGetValue((hallId, date, period.Type), out var availability)
-                        ? availability.Status
-                        : AvailabilityStatus.Available
+                    Status = dayBlocked
+                        ? AvailabilityStatus.Booked
+                        : availabilityByKey.TryGetValue((hallId, date, period.Type), out var availability)
+                            ? availability.Status
+                            : AvailabilityStatus.Available
                 })
                 .ToList();
 

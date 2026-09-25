@@ -4,6 +4,12 @@ namespace Wesal.Application.Common.Models;
 /// Owner-facing request to block or unblock one whole calendar day for a hall
 /// (WESAL-TASK-1). Mirrors the shape of <see cref="UpdateOwnerAvailabilityRequest"/>:
 /// a single date plus the desired state.
+///
+/// WESAL-TASK-1 hardening: <see cref="IsOpen"/> is deliberately nullable with NO default.
+/// This endpoint is a state-setting call, not a partial update, so an omitted field must
+/// never be guessed: defaulting it would silently re-open a day the owner had blocked.
+/// A missing value is rejected by <see cref="Validation.OwnerDayBlockRequestValidator"/>
+/// and, defensively, by the service itself.
 /// </summary>
 public class OwnerDayBlockRequest
 {
@@ -11,10 +17,10 @@ public class OwnerDayBlockRequest
     public DateOnly Date { get; init; }
 
     /// <summary>
-    /// false blocks the whole day (no slot is bookable, and the seeker catalog and
-    /// calendar report it as closed); true reopens the day.
+    /// REQUIRED. false blocks the whole day (no slot is bookable, and the seeker catalog
+    /// and calendar report it as closed); true reopens the day. Null is a validation error.
     /// </summary>
-    public bool IsOpen { get; init; } = true;
+    public bool? IsOpen { get; init; }
 }
 
 /// <summary>Authoritative persisted state of one hall's day gate after an owner change.</summary>

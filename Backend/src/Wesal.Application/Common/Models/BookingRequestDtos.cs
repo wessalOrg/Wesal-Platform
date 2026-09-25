@@ -9,6 +9,14 @@ public class BookingRequestDto
     public DateOnly Date { get; init; }
 
     public IReadOnlyList<BookingPeriodType> Periods { get; init; } = [];
+
+    /// <summary>
+    /// WESAL-TASK-1 hardening: the full name the seeker enters for this specific booking.
+    /// Required, and persisted to <see cref="Wesal.Domain.Entities.Booking.NameOnBooking"/>,
+    /// exactly as on the hourly booking path. Previously the legacy path created bookings
+    /// with no name at all, so requirement 6 silently did not hold here.
+    /// </summary>
+    public string NameOnBooking { get; init; } = string.Empty;
 }
 
 public class BookingRequestValidationResultDto

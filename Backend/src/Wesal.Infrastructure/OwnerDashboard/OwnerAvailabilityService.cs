@@ -55,6 +55,15 @@ public sealed class OwnerAvailabilityService : IOwnerAvailabilityService
         var availability = await _hallRepository.GetAvailabilityAsync([hallId], fromDate, toDate, cancellationToken);
         var availabilityByKey = availability.ToDictionary(a => (a.Date, a.PeriodType), a => a.Status);
 
+        // WESAL-TASK-1 hardening: the owner calendar used to ignore the day gate entirely,
+        // so a day the owner had blocked still rendered as an ordinary day with available
+        // periods - the view contradicted the day-block endpoint that had just set it. Read
+        // the gates so the owner sees the real state of every day in the range. The owner is
+        // deliberately told the truth regardless of ShowBookedSlots, which only governs the
+        // seeker-facing projections.
+        var dayGates = await _bookingRepository.GetDayGatesAsync(hallId, fromDate, toDate, cancellationToken);
+        var blockedDates = dayGates.Where(day => !day.IsOpen).Select(day => day.Date).ToHashSet();
+
         var days = new List<OwnerAvailabilityDayDto>();
         for (var date = fromDate; date <= toDate; date = date.AddDays(1))
         {
@@ -67,7 +76,12 @@ public sealed class OwnerAvailabilityService : IOwnerAvailabilityService
                     EndTime = p.EndTime,
                     Status = availabilityByKey.TryGetValue((date, p.Type), out var status) ? status : AvailabilityStatus.Available
                 }).ToList();
-            days.Add(new OwnerAvailabilityDayDto { Date = date, Periods = dayPeriods });
+            days.Add(new OwnerAvailabilityDayDto
+            {
+                Date = date,
+                IsOpen = !blockedDates.Contains(date),
+                Periods = dayPeriods
+            });
         }
 
         return new OwnerAvailabilityCalendarDto { HallId = hallId, FromDate = fromDate, ToDate = toDate, Days = days };
