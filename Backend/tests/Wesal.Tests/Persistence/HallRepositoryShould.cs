@@ -332,6 +332,38 @@ public class HallRepositoryShould
     }
 
     [Fact]
+    public async Task GetHallImagesAsync_BreaksDisplayOrderTiesByCreatedAt()
+    {
+        // The details view renders the gallery in the order the repository returns it
+        // (WESAL-TASK-5, Edit 5), so that order has to be deterministic. DisplayOrder
+        // alone does not pin it: two images can legitimately share a position, e.g. when a
+        // legacy hall or a partial owner save leaves duplicate indexes. The CreatedAt
+        // tiebreak is what keeps the response stable across requests instead of letting
+        // the database return them in whatever order the storage engine feels like.
+        await using var context = CreateContext();
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Hall", Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid };
+        context.Halls.Add(hall);
+        context.HallImages.AddRange(
+            new HallImage { HallId = hall.Id, Url = "tied-later.jpg", DisplayOrder = 1, CreatedAt = FixedNow.AddMinutes(-5) },
+            new HallImage { HallId = hall.Id, Url = "tied-earlier.jpg", DisplayOrder = 1, CreatedAt = FixedNow.AddMinutes(-9) },
+            new HallImage { HallId = hall.Id, Url = "first.jpg", DisplayOrder = 0, CreatedAt = FixedNow });
+        await context.SaveChangesAsync();
+
+        var repository = new HallRepository(context);
+
+        var first = await repository.GetHallImagesAsync(hall.Id);
+        var second = await repository.GetHallImagesAsync(hall.Id);
+
+        Assert.Equal(
+            ["first.jpg", "tied-earlier.jpg", "tied-later.jpg"],
+            first.Select(image => image.Url).ToArray());
+
+        // Repeat the query: a tie broken by insertion order rather than by CreatedAt would
+        // pass a single call and still shuffle the seeker's gallery on the next one.
+        Assert.Equal(first.Select(image => image.Id), second.Select(image => image.Id));
+    }
+
+    [Fact]
     public async Task GetHallImagesAsync_ExcludesDeletedImages()
     {
         await using var context = CreateContext();

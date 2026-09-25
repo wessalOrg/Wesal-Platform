@@ -70,9 +70,12 @@ public class HallDetailsService : IHallDetailsService
             Description = hall.Description,
             Capacity = hall.Capacity,
             Price = hall.ShowPrice ? hall.Price : null,
+            ShowPrice = hall.ShowPrice,
             ContactPhone = hall.ContactPhone,
             MainImageUrl = hall.MainImageUrl,
             YouTubeVideoUrl = hall.YouTubeVideoUrl,
+            HourlySlotStart = hall.HourlySlotStart,
+            HourlySlotEnd = hall.HourlySlotEnd,
             Features = features
                 .Where(feature => !string.IsNullOrWhiteSpace(feature.Name))
                 .Select(feature => feature.Name)
@@ -82,7 +85,12 @@ public class HallDetailsService : IHallDetailsService
             IsOwner = IsHallOwner(hall),
             Photos = images
                 .Where(image => !string.IsNullOrWhiteSpace(image.Url))
-                .Select(image => new HallImageDto { Id = image.Id, Url = image.Url })
+                .Select(image => new HallImageDto
+                {
+                    Id = image.Id,
+                    Url = image.Url,
+                    DisplayOrder = image.DisplayOrder
+                })
                 .ToList(),
             Availability = availability
         };
@@ -103,8 +111,18 @@ public class HallDetailsService : IHallDetailsService
 
         for (var date = fromDate; date <= toDate; date = date.AddDays(1))
         {
+            // The dedicated hourly-catalog endpoint is the single source of truth for
+            // this rule (WESAL-TASK-1), including the ShowBookedSlots owner toggle and the
+            // blocked-day disclosure. Delegating here is what keeps the embedded
+            // availability in step with that endpoint, instead of a second implementation
+            // of the same rules that could drift away from it.
             var catalog = await _hourlySlotService.GetHourlyCatalogAsync(hallId, date, cancellationToken);
-            days.Add(new HallAvailabilityDto { Date = date, Slots = catalog.Slots });
+            days.Add(new HallAvailabilityDto
+            {
+                Date = date,
+                DayOpen = catalog.DayOpen,
+                Slots = catalog.Slots
+            });
         }
 
         return days;

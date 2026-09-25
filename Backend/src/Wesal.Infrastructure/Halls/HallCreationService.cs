@@ -197,7 +197,12 @@ public class HallCreationService : IHallCreationService
                     Capacity = hall.Capacity,
                     Price = hall.Price,
                     Status = hall.Status,
-                    Images = images.Select(i => new HallImageDto { Id = i.Id, Url = i.Url }).ToList()
+                    // DisplayOrder is carried through so the create response reports the
+                    // real gallery position for each image (WESAL-TASK-5, Edit 5) rather
+                    // than defaulting every entry to 0.
+                    Images = images
+                        .Select(i => new HallImageDto { Id = i.Id, Url = i.Url, DisplayOrder = i.DisplayOrder })
+                        .ToList()
                 };
             }, cancellationToken);
         }

@@ -13,6 +13,13 @@ internal sealed class FakeHourlySlotService : IHourlySlotService
 
     public DateOnly LastDate { get; private set; }
 
+    /// <summary>
+    /// Every (hall, date) pair requested, in call order. Lets a test pin that a caller
+    /// delegates to the shared hourly catalog once per day instead of re-deriving
+    /// availability itself (WESAL-TASK-5, Edit 5).
+    /// </summary>
+    public List<(Guid HallId, DateOnly Date)> Calls { get; } = [];
+
     public Task<HallHourlyCatalogDto> GetHourlyCatalogAsync(
         Guid hallId,
         DateOnly date,
@@ -20,6 +27,7 @@ internal sealed class FakeHourlySlotService : IHourlySlotService
     {
         LastHallId = hallId;
         LastDate = date;
+        Calls.Add((hallId, date));
 
         if (Response is not null)
         {

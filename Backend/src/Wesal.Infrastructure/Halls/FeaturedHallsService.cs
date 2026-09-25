@@ -79,7 +79,17 @@ public class FeaturedHallsService : IFeaturedHallsService
         for (var date = fromDate; date <= toDate; date = date.AddDays(1))
         {
             var catalog = await _hourlySlotService.GetHourlyCatalogAsync(hall.Id, date, cancellationToken);
-            days.Add(new HallAvailabilityDto { Date = date, Slots = catalog.Slots });
+
+            // DayOpen is carried through from the same catalog call the hall-details
+            // endpoint uses (WESAL-TASK-5, Edit 5), so both embedded-availability
+            // surfaces report a blocked day identically instead of one of them
+            // defaulting the flag to false and claiming every day is closed.
+            days.Add(new HallAvailabilityDto
+            {
+                Date = date,
+                DayOpen = catalog.DayOpen,
+                Slots = catalog.Slots
+            });
         }
 
         return new FeaturedHallDto
