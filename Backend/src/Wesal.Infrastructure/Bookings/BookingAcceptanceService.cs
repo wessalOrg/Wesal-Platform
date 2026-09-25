@@ -14,9 +14,12 @@ namespace Wesal.Infrastructure.Bookings;
 /// (US-OWNER-11, FR-BOOK-01). The owner is resolved from the JWT session; ownership
 /// is enforced by comparing the session user id to the persisted hall owner id so a
 /// caller can never accept another owner's booking. Acceptance transitions the booking
-/// from Pending to Accepted (deposit-pending in this model). The requested period(s)
-/// remain protected (reserved); the period is NOT permanently marked as Booked because
-/// the deposit workflow (US-BOOK-05) is not yet implemented.
+/// from Pending to Accepted.
+///
+/// WESAL-TASK-1: acceptance IS the publish step. For an hourly booking the 60-minute
+/// slot is marked Booked in the same transaction as the approval, so the owner never
+/// performs a second "publish" action. Legacy two-period bookings are untouched and the
+/// legacy period is not marked Booked by this service.
 ///
 /// The accept-vs-cancel race is resolved at the database level via an atomic conditional
 /// UPDATE (AcceptPendingAsync / CancelPendingAsync): exactly one wins per row. A lost
@@ -78,6 +81,21 @@ public sealed class BookingAcceptanceService : IBookingAcceptanceService
                     "The booking request is no longer in the pending state and cannot be accepted; it may have just been processed.");
             }
 
+            // WESAL-TASK-1: there is no separate publish step. Approving an hourly
+            // booking immediately and atomically marks its 60-minute slot Booked in the
+            // same transaction as the approval, so the slot becomes publicly visible as
+            // booked (or hidden from seekers when ShowBookedSlots is OFF) with no further
+            // owner action. Legacy two-period bookings keep their existing behavior: the
+            // legacy period is not marked Booked here.
+            if (booking.IsHourlyBooking)
+            {
+                await _bookingRepository.ReserveHourlySlotAsync(
+                    booking.HallId,
+                    booking.Date,
+                    booking.SlotStart,
+                    cancellationToken);
+            }
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
 
@@ -123,6 +141,8 @@ public sealed class BookingAcceptanceService : IBookingAcceptanceService
             RequesterUserId = booking.RequesterUserId,
             Date = booking.Date,
             Period = booking.Period,
+            SlotStart = booking.SlotStart,
+            IsHourlyBooking = booking.IsHourlyBooking,
             Status = BookingStatus.Accepted
         };
 }

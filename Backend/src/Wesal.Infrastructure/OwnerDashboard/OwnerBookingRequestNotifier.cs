@@ -29,4 +29,15 @@ public sealed class OwnerBookingRequestNotifier : IOwnerBookingRequestNotifier
             .Group(ownerUserId)
             .SendAsync(OwnerDashboardHub.BookingRequestReceived, notification, cancellationToken);
     }
+
+    public async Task NotifyBookingRequestCancelledAsync(
+        string ownerUserId,
+        OwnerBookingCancellationNotificationEvent notification,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext
+            .Clients
+            .Group(ownerUserId)
+            .SendAsync(OwnerDashboardHub.BookingRequestCancelled, notification, cancellationToken);
+    }
 }

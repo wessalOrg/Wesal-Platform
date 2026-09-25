@@ -101,22 +101,20 @@ public class BookingDeletionServiceShould
         var result = await context.Service.DeleteBookingAsync(context.Hall.Id, context.Booking.Id);
 
         Assert.Equal(BookingStatus.Accepted, result.Status);
-        Assert.False(result.IsPublished);
         Assert.Empty(context.Bookings);
         Assert.Single(context.BookingRepository.ReleasedPeriods);
         Assert.True(context.BookingRepository.AvailabilityCheckPerformed);
     }
 
     [Fact]
-    public async Task Delete_PublishedBooking_RemovesBooking_AndClearsPublicBooked()
+    public async Task Delete_BookedBooking_RemovesBooking_AndClearsPublicBooked()
     {
-        var context = Scenario(status: BookingStatus.Accepted, isPublished: true);
+        var context = Scenario(status: BookingStatus.Accepted);
         var booking = context.Booking;
         var hallId = context.Hall.Id;
 
         var result = await context.Service.DeleteBookingAsync(hallId, booking.Id);
 
-        Assert.True(result.IsPublished);
         Assert.Empty(context.Bookings);
         var released = Assert.Single(context.BookingRepository.ReleasedPeriods);
         Assert.Equal((hallId, booking.Date, booking.Period), released);
@@ -190,7 +188,6 @@ public class BookingDeletionServiceShould
         var result = await context.Service.DeleteBookingAsync(hall.Id, booking.Id);
 
         Assert.Equal(BookingStatus.Cancelled, result.Status);
-        Assert.False(result.IsPublished);
         Assert.Equal(booking.Date, result.Date);
         Assert.Equal(booking.Period, result.Period);
         Assert.Equal(hall.Name, result.HallName);
@@ -200,10 +197,9 @@ public class BookingDeletionServiceShould
         IReadOnlyList<Booking>? bookings = null,
         string? userId = HallOwnerId,
         IReadOnlyList<string>? roles = null,
-        BookingStatus status = BookingStatus.Pending,
-        bool isPublished = false)
+        BookingStatus status = BookingStatus.Pending)
     {
-        var bookingsList = bookings ?? [CreateBooking(Hall(), RequesterId, status, isPublished)];
+        var bookingsList = bookings ?? [CreateBooking(Hall(), RequesterId, status)];
 
         var unitOfWork = new FakeUnitOfWork();
 
@@ -239,8 +235,7 @@ public class BookingDeletionServiceShould
     private static Booking CreateBooking(
         Hall hall,
         string requesterId,
-        BookingStatus status = BookingStatus.Pending,
-        bool isPublished = false)
+        BookingStatus status = BookingStatus.Pending)
         => new()
         {
             Id = Guid.NewGuid(),
@@ -249,8 +244,7 @@ public class BookingDeletionServiceShould
             RequesterUserId = requesterId,
             Date = new DateOnly(2035, 6, 1),
             Period = BookingPeriodType.FirstPeriod,
-            Status = status,
-            IsPublished = isPublished
+            Status = status
         };
 
     private sealed class ScenarioContext
@@ -373,11 +367,6 @@ public class BookingDeletionServiceShould
             => Task.FromResult(0);
 
         public Task<int> AcceptPendingAsync(
-            Guid bookingId,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(0);
-
-        public Task<int> PublishAcceptedAsync(
             Guid bookingId,
             CancellationToken cancellationToken = default)
             => Task.FromResult(0);

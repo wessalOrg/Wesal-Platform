@@ -114,44 +114,6 @@ public sealed class BookingRepository : IBookingRepository
         return 1;
     }
 
-    public async Task<int> PublishAcceptedAsync(
-        Guid bookingId,
-        CancellationToken cancellationToken = default)
-    {
-        if (_context.Database.IsRelational())
-        {
-            return await _context.Bookings
-                .Where(booking =>
-                    booking.Id == bookingId
-                    && booking.Status == BookingStatus.Accepted
-                    && !booking.IsPublished)
-                .ExecuteUpdateAsync(
-                    set =>
-                        set.SetProperty(booking => booking.IsPublished, true)
-                            .SetProperty(booking => booking.UpdatedAt, DateTimeOffset.UtcNow),
-                    cancellationToken);
-        }
-
-        var accepted = await _context.Bookings
-            .Where(booking =>
-                booking.Id == bookingId
-                && booking.Status == BookingStatus.Accepted
-                && !booking.IsPublished)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (accepted is null)
-        {
-            return 0;
-        }
-
-        accepted.IsPublished = true;
-        accepted.UpdatedAt = DateTimeOffset.UtcNow;
-
-        await _context.SaveChangesAsync(cancellationToken);
-
-        return 1;
-    }
-
     public async Task<int> DeleteAsync(
         Guid bookingId,
         CancellationToken cancellationToken = default)
@@ -462,5 +424,73 @@ public sealed class BookingRepository : IBookingRepository
                     && (booking.Status == BookingStatus.Pending
                         || booking.Status == BookingStatus.Accepted),
                 cancellationToken);
+    }
+
+    public async Task<bool> HasOtherActiveHourlyBookingsAsync(
+        Guid hallId,
+        DateOnly date,
+        TimeOnly startTime,
+        Guid bookingId,
+        CancellationToken cancellationToken = default)
+    {
+        // Hourly counterpart of HasOtherActiveBookingsAsync: matches on the real slot
+        // start, never on the legacy Period, and excludes the booking being processed.
+        // Legacy rows carry SlotStart = 00:00, so they can never collide with a real
+        // hourly slot (the hourly window rejects anything before 09:00).
+        return await _context.Bookings
+            .AsNoTracking()
+            .AnyAsync(
+                booking =>
+                    booking.HallId == hallId
+                    && booking.Date == date
+                    && booking.SlotStart == startTime
+                    && booking.Id != bookingId
+                    && (booking.Status == BookingStatus.Pending
+                        || booking.Status == BookingStatus.Accepted),
+                cancellationToken);
+    }
+
+    public async Task<int> ReleaseHourlySlotAsync(
+        Guid hallId,
+        DateOnly date,
+        TimeOnly startTime,
+        CancellationToken cancellationToken = default)
+    {
+        if (_context.Database.IsRelational())
+        {
+            // Only re-open a slot that is currently Booked; a missing row means the slot
+            // was never reserved, which is already "available" for the seeker catalog.
+            return await _context.HallSlotAvailabilities
+                .Where(slot =>
+                    slot.HallId == hallId
+                    && slot.Date == date
+                    && slot.StartTime == startTime
+                    && slot.Status == HallSlotStatus.Booked)
+                .ExecuteUpdateAsync(
+                    set =>
+                        set.SetProperty(slot => slot.Status, HallSlotStatus.Available)
+                            .SetProperty(slot => slot.UpdatedAt, DateTimeOffset.UtcNow),
+                    cancellationToken);
+        }
+
+        var slot = await _context.HallSlotAvailabilities
+            .FirstOrDefaultAsync(
+                candidate =>
+                    candidate.HallId == hallId
+                    && candidate.Date == date
+                    && candidate.StartTime == startTime,
+                cancellationToken);
+
+        if (slot is null || slot.Status != HallSlotStatus.Booked)
+        {
+            return 0;
+        }
+
+        slot.Status = HallSlotStatus.Available;
+        slot.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return 1;
     }
 }

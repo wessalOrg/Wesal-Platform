@@ -11,8 +11,9 @@ namespace Wesal.API.Controllers;
 /// Permanently deletes a booking from the Hall Owner's own hall's schedule
 /// (US-OWNER-15). Ownership and existence are verified exclusively from the JWT
 /// session and persisted records; the client can never supply a trusted owner
-/// identity. Deleting a published booking clears its public 'Booked' status by
-/// re-opening the exact requested period. The operation is atomic: a concurrent
+/// identity. Deleting a booking clears its public 'Booked' status by re-opening the
+/// exact unit it held: its 60-minute hourly slot (WESAL-TASK-1) or, for a legacy
+/// two-period booking, its requested period. The operation is atomic: a concurrent
 /// deletion or state change leaves the state unchanged and the caller receives a
 /// 409 Conflict.
 /// </summary>
@@ -30,11 +31,12 @@ public class BookingDeletionsController : ControllerBase
 
     /// <summary>
     /// Permanently deletes the booking (US-OWNER-15). Only the hall's owner can
-    /// delete it. The deleted booking's exact requested period is released back to
-    /// Available when no other active booking claims it, which also clears the
-    /// public 'Booked' status of a published booking. Conversation history and the
-    /// rejected-booking notification message are retained. A concurrent deletion or
-    /// a state change that already processed the booking surfaces as 409 Conflict.
+    /// delete it. The exact unit the booking held is released back to Available when no
+    /// other active booking claims it, which also clears its public 'Booked' status: the
+    /// 60-minute hourly slot for an hourly booking, or the requested period for a legacy
+    /// two-period booking. Conversation history and the rejected-booking notification
+    /// message are retained. A concurrent deletion or a state change that already
+    /// processed the booking surfaces as 409 Conflict.
     /// </summary>
     [HttpPost("delete")]
     [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]

@@ -1,4 +1,3 @@
-using System.Globalization;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -72,20 +71,45 @@ public sealed class BookingRejectionService : IBookingRejectionService
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var hasOtherActiveBooking = await _bookingRepository.HasOtherActiveBookingsAsync(
-                booking.HallId,
-                booking.Date,
-                booking.Period,
-                booking.Id,
-                cancellationToken);
-
-            if (!hasOtherActiveBooking)
+            // WESAL-TASK-1: release the exact unit this booking held. An hourly booking
+            // re-opens its own 60-minute HallSlotAvailability slot; a legacy booking
+            // re-opens its legacy two-period row exactly as before. Branches on
+            // Booking.IsHourlyBooking so an hourly booking can never touch FirstPeriod.
+            if (booking.IsHourlyBooking)
             {
-                await _bookingRepository.ReleasePeriodAsync(
+                var hasOtherActiveHourlyBooking = await _bookingRepository.HasOtherActiveHourlyBookingsAsync(
+                    booking.HallId,
+                    booking.Date,
+                    booking.SlotStart,
+                    booking.Id,
+                    cancellationToken);
+
+                if (!hasOtherActiveHourlyBooking)
+                {
+                    await _bookingRepository.ReleaseHourlySlotAsync(
+                        booking.HallId,
+                        booking.Date,
+                        booking.SlotStart,
+                        cancellationToken);
+                }
+            }
+            else
+            {
+                var hasOtherActiveBooking = await _bookingRepository.HasOtherActiveBookingsAsync(
                     booking.HallId,
                     booking.Date,
                     booking.Period,
+                    booking.Id,
                     cancellationToken);
+
+                if (!hasOtherActiveBooking)
+                {
+                    await _bookingRepository.ReleasePeriodAsync(
+                        booking.HallId,
+                        booking.Date,
+                        booking.Period,
+                        cancellationToken);
+                }
             }
         }, cancellationToken);
 
@@ -172,7 +196,7 @@ public sealed class BookingRejectionService : IBookingRejectionService
         {
             ConversationId = conversation.Id,
             SenderUserId = hall.OwnerId,
-            Content = BuildRejectionContent(booking, hall)
+            Content = BuildRejectionContent(booking)
         };
 
         await _messageRepository.AddAsync(message, cancellationToken);
@@ -182,11 +206,20 @@ public sealed class BookingRejectionService : IBookingRejectionService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    private static string BuildRejectionContent(Booking booking, Hall hall)
+    /// <summary>
+    /// Builds the requester-facing rejection notice (WESAL-TASK-1). The text is exactly
+    /// the product-specified sentence with the owner's reason appended, and it is stored
+    /// as a Message on the requester/owner conversation (created on demand above), so
+    /// tapping the notification opens that same chat thread. The language is fixed
+    /// Arabic by product decision and is independent of the hourly/legacy model.
+    /// </summary>
+    private static string BuildRejectionContent(Booking booking)
     {
-        var requestedDate = booking.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var reason = string.IsNullOrWhiteSpace(booking.RejectionReason)
+            ? string.Empty
+            : booking.RejectionReason.Trim();
 
-        return $"Your booking request for {hall.Name} on {requestedDate} for the {booking.Period} period was rejected by the hall owner. Reason: {booking.RejectionReason}";
+        return $"تم رفض طلب الحجز الخاص بك للسبب الاتي: {reason}";
     }
 
     private void EnsureAuthenticatedHallOwner()

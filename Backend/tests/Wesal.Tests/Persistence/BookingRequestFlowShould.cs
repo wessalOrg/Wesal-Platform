@@ -205,6 +205,12 @@ public class BookingRequestFlowShould
             OwnerBookingRequestNotificationEvent notification,
             CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task NotifyBookingRequestCancelledAsync(
+            string ownerUserId,
+            OwnerBookingCancellationNotificationEvent notification,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private static BookingRequestDto CreateRequest(Guid hallId, IReadOnlyList<BookingPeriodType> periods)

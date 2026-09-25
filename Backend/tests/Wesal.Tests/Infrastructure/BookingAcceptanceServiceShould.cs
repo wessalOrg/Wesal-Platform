@@ -344,24 +344,6 @@ public class BookingAcceptanceServiceShould
             return Task.FromResult(1);
         }
 
-        public Task<int> PublishAcceptedAsync(
-            Guid bookingId,
-            CancellationToken cancellationToken = default)
-        {
-            var booking = _bookings.FirstOrDefault(b => b.Id == bookingId);
-
-            if (booking is null
-                || booking.Status != BookingStatus.Accepted
-                || booking.IsPublished
-                || ForceZeroConditionalUpdate)
-            {
-                return Task.FromResult(0);
-            }
-
-            booking.IsPublished = true;
-            return Task.FromResult(1);
-        }
-
         public Task<int> DeleteAsync(
             Guid bookingId,
             CancellationToken cancellationToken = default)

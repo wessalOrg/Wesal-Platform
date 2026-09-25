@@ -459,6 +459,12 @@ public class HallAccessGuardShould : IDisposable
             OwnerBookingRequestNotificationEvent notification,
             CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task NotifyBookingRequestCancelledAsync(
+            string ownerUserId,
+            OwnerBookingCancellationNotificationEvent notification,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private sealed class FakeConversationRepository : IConversationRepository

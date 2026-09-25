@@ -41,12 +41,23 @@ public class Booking : BaseAuditableEntity
     public BookingStatus Status { get; set; } = BookingStatus.Pending;
 
     /// <summary>
-    /// True once the Hall Owner has published the accepted booking's period as
-    /// Booked (US-OWNER-13). A booking can only be published while Accepted;
-    /// publishing permanently marks the requested HallAvailability as Booked and
-    /// is irreversible in this model.
+    /// True when this booking belongs to the hourly-slot model (WESAL-TASK-1) rather
+    /// than the legacy two-period model. <see cref="SlotStart"/> is a non-nullable
+    /// column that the hourly migration populated with 00:00 for pre-existing legacy
+    /// rows, so a null check cannot discriminate the two models. A real hourly booking
+    /// always has a genuine slot time: the hourly window rejects anything before 09:00,
+    /// so 00:00 (TimeOnly.MinValue) can only ever mean "legacy row with no hourly slot".
+    /// The whole booking lifecycle branches on this flag so an hourly booking releases
+    /// its HallSlotAvailability row instead of a legacy two-period row.
     /// </summary>
-    public bool IsPublished { get; set; }
+    public bool IsHourlyBooking => SlotStart != TimeOnly.MinValue;
+
+    /// <summary>
+    /// The 60-minute time range this booking occupies, e.g. "10:00 - 11:00", used in
+    /// owner/requester-facing messages. Only meaningful for hourly bookings.
+    /// </summary>
+    public string HourlyTimeRange
+        => $"{SlotStart:HH\\:mm} - {SlotStart.AddHours(1):HH\\:mm}";
 
     public string? RejectionReason { get; set; }
 

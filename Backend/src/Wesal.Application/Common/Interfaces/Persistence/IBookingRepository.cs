@@ -15,8 +15,6 @@ public interface IBookingRepository
 
     Task<int> AcceptPendingAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
-    Task<int> PublishAcceptedAsync(Guid bookingId, CancellationToken cancellationToken = default);
-
     Task<int> DeleteAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
     Task<bool> HasOtherActiveBookingsAsync(
@@ -87,6 +85,27 @@ public interface IBookingRepository
     Task<bool> HasActiveBookingsOnDayAsync(
         Guid hallId,
         DateOnly date,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
+
+    // Hourly lifecycle support (WESAL-TASK-1). The booking lifecycle (accept / cancel /
+    // reject / delete) branches on Booking.IsHourlyBooking and uses these two members for
+    // hourly bookings, so an hourly booking releases its own HallSlotAvailability row
+    // instead of a legacy two-period HallAvailability row. ReleaseHourlySlotAsync only
+    // re-opens a slot that is currently Booked; it never touches any other slot/date.
+
+    Task<bool> HasOtherActiveHourlyBookingsAsync(
+        Guid hallId,
+        DateOnly date,
+        TimeOnly startTime,
+        Guid bookingId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
+
+    Task<int> ReleaseHourlySlotAsync(
+        Guid hallId,
+        DateOnly date,
+        TimeOnly startTime,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
 }

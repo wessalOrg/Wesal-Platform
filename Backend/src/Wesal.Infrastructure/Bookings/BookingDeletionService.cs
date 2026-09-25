@@ -14,17 +14,18 @@ namespace Wesal.Infrastructure.Bookings;
 /// by comparing the session user id to the persisted hall owner id so a caller can
 /// never delete another owner's booking (or a booking of another owner's hall).
 ///
-/// Deletion is a terminal, hard delete: the booking row is removed and its exact
-/// requested HallAvailability period is released to Available when no other active
-/// (Pending or Accepted) booking claims the same hall/date/period. Releasing the
-/// exact period also clears the public 'Booked' status of a published booking, so
-/// public availability queries no longer report the period as Booked. No other
-/// period, date, booking, conversation, or message is ever touched: conversations
-/// are scoped to a hall and user (not to a booking), so deleting a booking cannot
-/// orphan or break a conversation, and delivered rejection messages remain as
-/// conversation history. Deleting a rejected/undelivered booking simply removes the
-/// only source a deferred rejection notification is derived from, which prevents a
-/// stale pending-booking notification.
+/// Deletion is a terminal, hard delete: the booking row is removed and the exact unit
+/// it held is released to Available when no other active (Pending or Accepted) booking
+/// claims the same hall/date/slot. WESAL-TASK-1: that unit is the booking's 60-minute
+/// HallSlotAvailability slot for an hourly booking, or its requested
+/// HallAvailability period for a legacy two-period booking. Releasing it also clears
+/// the public 'Booked' status, so public availability queries no longer report it as
+/// Booked. No other period, date, slot, booking, conversation, or message is ever
+/// touched: conversations are scoped to a hall and user (not to a booking), so deleting
+/// a booking cannot orphan or break a conversation, and delivered rejection messages
+/// remain as conversation history. Deleting a rejected/undelivered booking simply
+/// removes the only source a deferred rejection notification is derived from, which
+/// prevents a stale pending-booking notification.
 ///
 /// The delete-vs-delete (and delete-vs-state-change) race is resolved at the
 /// database level via an atomic conditional DELETE (DeleteAsync): exactly one
@@ -83,22 +84,45 @@ public sealed class BookingDeletionService : IBookingDeletionService
                     "The booking has already been deleted and cannot be deleted again.");
             }
 
-            // Re-open the exact requested period only when no other active booking
-            // still claims it, so another booking's protection is never released.
-            var hasCompetingClaim = await _bookingRepository.HasOtherActiveBookingsAsync(
-                booking.HallId,
-                booking.Date,
-                booking.Period,
-                booking.Id,
-                cancellationToken);
-
-            if (!hasCompetingClaim)
+            // Re-open the exact unit this booking held, and only when no other active
+            // booking still claims it, so another booking's protection is never released.
+            // WESAL-TASK-1: an hourly booking re-opens its own HallSlotAvailability slot;
+            // a legacy booking re-opens its legacy two-period row exactly as before.
+            if (booking.IsHourlyBooking)
             {
-                await _bookingRepository.ReleasePeriodAsync(
+                var hasCompetingHourlyClaim = await _bookingRepository.HasOtherActiveHourlyBookingsAsync(
+                    booking.HallId,
+                    booking.Date,
+                    booking.SlotStart,
+                    booking.Id,
+                    cancellationToken);
+
+                if (!hasCompetingHourlyClaim)
+                {
+                    await _bookingRepository.ReleaseHourlySlotAsync(
+                        booking.HallId,
+                        booking.Date,
+                        booking.SlotStart,
+                        cancellationToken);
+                }
+            }
+            else
+            {
+                var hasCompetingClaim = await _bookingRepository.HasOtherActiveBookingsAsync(
                     booking.HallId,
                     booking.Date,
                     booking.Period,
+                    booking.Id,
                     cancellationToken);
+
+                if (!hasCompetingClaim)
+                {
+                    await _bookingRepository.ReleasePeriodAsync(
+                        booking.HallId,
+                        booking.Date,
+                        booking.Period,
+                        cancellationToken);
+                }
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -137,7 +161,8 @@ public sealed class BookingDeletionService : IBookingDeletionService
             RequesterUserId = booking.RequesterUserId,
             Date = booking.Date,
             Period = booking.Period,
-            Status = booking.Status,
-            IsPublished = booking.IsPublished
+            SlotStart = booking.SlotStart,
+            IsHourlyBooking = booking.IsHourlyBooking,
+            Status = booking.Status
         };
 }

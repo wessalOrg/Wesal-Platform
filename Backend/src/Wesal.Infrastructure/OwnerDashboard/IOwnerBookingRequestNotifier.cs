@@ -15,4 +15,14 @@ public interface IOwnerBookingRequestNotifier
         string ownerUserId,
         OwnerBookingRequestNotificationEvent notification,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Tells the Hall Owner that a seeker cancelled one of their own booking requests,
+    /// with the requester's name and the affected date/time (WESAL-TASK-1). Best-effort:
+    /// a delivery failure must never fail the cancellation.
+    /// </summary>
+    Task NotifyBookingRequestCancelledAsync(
+        string ownerUserId,
+        OwnerBookingCancellationNotificationEvent notification,
+        CancellationToken cancellationToken = default);
 }

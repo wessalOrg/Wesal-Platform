@@ -337,6 +337,7 @@ public class BookingCancellationServiceShould
             MessageRepository = new FakeMessageRepository(),
             UnitOfWork = null!,
             CurrentUser = CurrentUser(userId, roles ?? [ApplicationRoles.RegisteredUser]),
+            OwnerNotifier = new FakeOwnerBookingRequestNotifier(),
             Service = null!
         };
 
@@ -350,7 +351,8 @@ public class BookingCancellationServiceShould
             context.ConversationRepository,
             context.MessageRepository,
             context.UnitOfWork,
-            context.CurrentUser);
+            context.CurrentUser,
+            context.OwnerNotifier);
 
         return context;
     }
@@ -391,6 +393,8 @@ public class BookingCancellationServiceShould
 
         public required FakeCurrentUserService CurrentUser { get; init; }
 
+        public required FakeOwnerBookingRequestNotifier OwnerNotifier { get; init; }
+
         public required BookingCancellationService Service { get; set; }
 
         public IReadOnlyList<Booking> Bookings => BookingRepository.Bookings;
@@ -402,6 +406,33 @@ public class BookingCancellationServiceShould
         public List<Conversation> Conversations => ConversationRepository.Conversations;
 
         public List<Message> Messages => MessageRepository.Messages;
+    }
+
+    private sealed class FakeOwnerBookingRequestNotifier : Wesal.Infrastructure.OwnerDashboard.IOwnerBookingRequestNotifier
+    {
+        public List<(string OwnerId, OwnerBookingCancellationNotificationEvent Notification)> CancellationsSent { get; } = [];
+
+        public bool ThrowOnNotify { get; set; }
+
+        public Task NotifyBookingRequestReceivedAsync(
+            string ownerUserId,
+            OwnerBookingRequestNotificationEvent notification,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task NotifyBookingRequestCancelledAsync(
+            string ownerUserId,
+            OwnerBookingCancellationNotificationEvent notification,
+            CancellationToken cancellationToken = default)
+        {
+            if (ThrowOnNotify)
+            {
+                throw new InvalidOperationException("The realtime channel failed.");
+            }
+
+            CancellationsSent.Add((ownerUserId, notification));
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeBookingRepository : IBookingRepository
@@ -493,11 +524,6 @@ public class BookingCancellationServiceShould
             => Task.FromResult(1);
 
         public Task<int> AcceptPendingAsync(
-            Guid bookingId,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(0);
-
-        public Task<int> PublishAcceptedAsync(
             Guid bookingId,
             CancellationToken cancellationToken = default)
             => Task.FromResult(0);

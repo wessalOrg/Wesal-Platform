@@ -750,11 +750,6 @@ public class BookingRequestServiceShould
             CancellationToken cancellationToken = default)
             => Task.FromResult(0);
 
-        public Task<int> PublishAcceptedAsync(
-            Guid bookingId,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(0);
-
         public Task<int> DeleteAsync(
             Guid bookingId,
             CancellationToken cancellationToken = default)
@@ -815,6 +810,8 @@ public class BookingRequestServiceShould
     {
         public List<(string OwnerId, OwnerBookingRequestNotificationEvent Notification)> Sent { get; } = [];
 
+        public List<(string OwnerId, OwnerBookingCancellationNotificationEvent Notification)> CancellationsSent { get; } = [];
+
         public bool ThrowOnNotify { get; set; }
 
         public Task NotifyBookingRequestReceivedAsync(
@@ -828,6 +825,20 @@ public class BookingRequestServiceShould
             }
 
             Sent.Add((ownerUserId, notification));
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyBookingRequestCancelledAsync(
+            string ownerUserId,
+            OwnerBookingCancellationNotificationEvent notification,
+            CancellationToken cancellationToken = default)
+        {
+            if (ThrowOnNotify)
+            {
+                throw new InvalidOperationException("The realtime channel failed.");
+            }
+
+            CancellationsSent.Add((ownerUserId, notification));
             return Task.CompletedTask;
         }
     }

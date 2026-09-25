@@ -33,7 +33,7 @@ public class BookingRejectionServiceShould
     }
 
     [Fact]
-    public async Task RejectBooking_DeliversMessageWithHallDatePeriodAndReason()
+    public async Task RejectBooking_DeliversExactArabicMessageWithReason()
     {
         var scenario = Scenario();
         var result = await scenario.Service.RejectBookingAsync(
@@ -42,11 +42,24 @@ public class BookingRejectionServiceShould
             new RejectBookingRequestDto { Reason = "Booked by another customer" });
 
         var message = Assert.Single(scenario.Messages);
-        Assert.Contains(scenario.Hall.Name, message.Content);
-        Assert.Contains("2035-06-01", message.Content);
-        Assert.Contains("FirstPeriod", message.Content);
-        Assert.Contains("Booked by another customer", message.Content);
+        Assert.Equal(
+            "تم رفض طلب الحجز الخاص بك للسبب الاتي: Booked by another customer",
+            message.Content);
         Assert.Equal(BookingRejectionNotificationStatus.Delivered, result.NotificationStatus);
+    }
+
+    [Fact]
+    public async Task RejectBooking_MessageDoesNotLeakLegacyPeriodOrHallName()
+    {
+        var scenario = Scenario();
+        await scenario.Service.RejectBookingAsync(
+            scenario.Hall.Id,
+            scenario.Booking.Id,
+            new RejectBookingRequestDto { Reason = "Not available" });
+
+        var message = Assert.Single(scenario.Messages);
+        Assert.DoesNotContain("FirstPeriod", message.Content);
+        Assert.DoesNotContain("SecondPeriod", message.Content);
     }
 
     [Fact]
@@ -410,8 +423,9 @@ public class BookingRejectionServiceShould
         var payload = await scenario.MessageRepository.GetByConversationAsync(conversation.Id);
 
         var rejectionMessage = Assert.Single(payload);
-        Assert.Contains("grand hall", rejectionMessage.Content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not available", rejectionMessage.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            "تم رفض طلب الحجز الخاص بك للسبب الاتي: Not available",
+            rejectionMessage.Content);
     }
 
     private static ScenarioContext Scenario(
@@ -534,9 +548,6 @@ public class BookingRejectionServiceShould
             => throw new NotImplementedException();
 
         public Task<int> AcceptPendingAsync(Guid bookingId, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<int> PublishAcceptedAsync(Guid bookingId, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<int> DeleteAsync(Guid bookingId, CancellationToken cancellationToken = default)

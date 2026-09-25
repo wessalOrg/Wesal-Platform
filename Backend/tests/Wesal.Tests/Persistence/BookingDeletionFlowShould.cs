@@ -48,7 +48,6 @@ public class BookingDeletionFlowShould
             Assert.Equal(BookingDate, result.Date);
             Assert.Equal(BookingPeriodType.FirstPeriod, result.Period);
             Assert.Equal(BookingStatus.Pending, result.Status);
-            Assert.False(result.IsPublished);
 
             Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
             var remaining = Assert.Single(context.Bookings.AsNoTracking());
@@ -64,7 +63,7 @@ public class BookingDeletionFlowShould
     }
 
     [Fact]
-    public async Task Delete_AcceptedPublishedBooking_ClearsPublicBooked()
+    public async Task Delete_AcceptedBookedBooking_ClearsPublicBooked()
     {
         var databaseName = Guid.NewGuid().ToString();
         var hallId = Guid.NewGuid();
@@ -73,7 +72,7 @@ public class BookingDeletionFlowShould
         await using (var seedingContext = CreateContext(databaseName))
         {
             var hall = SeedHall(seedingContext, hallId);
-            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod, BookingStatus.Accepted, isPublished: true);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingPeriodType.FirstPeriod, BookingStatus.Accepted);
             bookingId = booking.Id;
             SeedAvailability(seedingContext, hall, BookingDate, BookingPeriodType.FirstPeriod, AvailabilityStatus.Booked);
             SeedAvailability(seedingContext, hall, BookingDate, BookingPeriodType.SecondPeriod, AvailabilityStatus.Booked);
@@ -85,8 +84,6 @@ public class BookingDeletionFlowShould
             var service = CreateService(context, "owner-1", [ApplicationRoles.HallOwner]);
 
             var result = await service.DeleteBookingAsync(hallId, bookingId);
-
-            Assert.True(result.IsPublished);
 
             Assert.Null(context.Bookings.AsNoTracking().SingleOrDefault(b => b.Id == bookingId));
 
@@ -392,8 +389,7 @@ public class BookingDeletionFlowShould
         string requesterUserId,
         DateOnly date,
         BookingPeriodType period,
-        BookingStatus status = BookingStatus.Pending,
-        bool isPublished = false)
+        BookingStatus status = BookingStatus.Pending)
     {
         var booking = new Booking
         {
@@ -403,8 +399,7 @@ public class BookingDeletionFlowShould
             RequesterUserId = requesterUserId,
             Date = date,
             Period = period,
-            Status = status,
-            IsPublished = isPublished
+            Status = status
         };
 
         context.Bookings.Add(booking);

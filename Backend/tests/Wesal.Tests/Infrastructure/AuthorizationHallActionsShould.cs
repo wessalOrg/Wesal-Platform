@@ -127,7 +127,6 @@ public class AuthorizationHallActionsShould
         public Task<IReadOnlyList<Booking>> GetPendingRejectionNotificationsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Booking>>([]);
         public Task<int> CancelPendingAsync(Guid bookingId, string requesterUserId, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task<int> AcceptPendingAsync(Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult(0);
-        public Task<int> PublishAcceptedAsync(Guid bookingId, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task<int> DeleteAsync(Guid bookingId, CancellationToken cancellationToken = default)
         {
             var booking = Bookings.FirstOrDefault(b => b.Id == bookingId);
@@ -162,6 +161,12 @@ public class AuthorizationHallActionsShould
         public Task NotifyBookingRequestReceivedAsync(
             string ownerUserId,
             OwnerBookingRequestNotificationEvent notification,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task NotifyBookingRequestCancelledAsync(
+            string ownerUserId,
+            OwnerBookingCancellationNotificationEvent notification,
             CancellationToken cancellationToken = default)
             => Task.CompletedTask;
     }

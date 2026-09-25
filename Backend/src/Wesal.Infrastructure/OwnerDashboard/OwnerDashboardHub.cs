@@ -16,6 +16,8 @@ public sealed class OwnerDashboardHub : Hub
 {
     public const string BookingRequestReceived = "BookingRequestReceived";
 
+    public const string BookingRequestCancelled = "BookingRequestCancelled";
+
     private readonly ICurrentUserService _currentUser;
 
     public OwnerDashboardHub(ICurrentUserService currentUser)
