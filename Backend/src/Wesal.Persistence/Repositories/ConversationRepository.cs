@@ -27,10 +27,23 @@ public sealed class ConversationRepository : IConversationRepository
             .FirstOrDefaultAsync(c => c.HallId == hallId && c.SenderUserId == userId, cancellationToken);
     }
 
+    /// <summary>
+    /// Resolves the single owner-to-Admin thread for a hall (WESAL-TASK-4, Edit 4).
+    ///
+    /// The owner/Admin relationship is the thread's real identity, so lookup keys on
+    /// (HallId, HallOwnerId) and NOT on the Admin who happens to act. This makes every
+    /// Admin message for a hall land in the same thread regardless of which Admin sent
+    /// it. Historical rows created before this rule (one per Admin) are left untouched; the
+    /// oldest thread wins deterministically so the resolution is stable across calls and
+    /// the returned thread never changes for a given hall/owner.
+    /// </summary>
     public async Task<Conversation?> GetByHallForOwnerAsync(Guid hallId, string ownerId, CancellationToken cancellationToken = default)
     {
         return await _context.Conversations
-            .FirstOrDefaultAsync(c => c.HallId == hallId && c.HallOwnerId == ownerId, cancellationToken);
+            .Where(c => c.HallId == hallId && c.HallOwnerId == ownerId)
+            .OrderBy(c => c.CreatedAt)
+            .ThenBy(c => c.Id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<Conversation?> GetByIdWithHallAsync(Guid conversationId, CancellationToken cancellationToken = default)

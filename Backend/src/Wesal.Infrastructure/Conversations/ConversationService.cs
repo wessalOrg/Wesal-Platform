@@ -6,6 +6,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Infrastructure.Documents;
 
 namespace Wesal.Infrastructure.Conversations;
 
@@ -17,6 +18,7 @@ public sealed class ConversationService : IConversationService
     private readonly IHallRepository _hallRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IConversationNotifier _notifier;
+    private readonly IDocumentStorage _documentStorage;
 
     public ConversationService(
         IConversationRepository conversationRepository,
@@ -24,7 +26,8 @@ public sealed class ConversationService : IConversationService
         IBookingRejectionService bookingRejectionService,
         IHallRepository hallRepository,
         ICurrentUserService currentUser,
-        IConversationNotifier notifier)
+        IConversationNotifier notifier,
+        IDocumentStorage documentStorage)
     {
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
@@ -32,6 +35,7 @@ public sealed class ConversationService : IConversationService
         _hallRepository = hallRepository;
         _currentUser = currentUser;
         _notifier = notifier;
+        _documentStorage = documentStorage;
     }
 
     public async Task<ConversationResponse> CreateConversationAsync(
@@ -157,6 +161,7 @@ public sealed class ConversationService : IConversationService
                     OtherParticipantId = otherParticipantId,
                     OtherParticipantName = nameLookup.GetValueOrDefault(otherParticipantId) ?? string.Empty,
                     LastMessagePreview = latest?.Content ?? string.Empty,
+                    LastMessageHasAttachment = latest?.HasAttachment ?? false,
                     LastMessageAt = latest?.CreatedAt,
                     MessageCount = messageCounts.GetValueOrDefault(conversation.Id),
                     CreatedAt = conversation.CreatedAt
@@ -214,8 +219,14 @@ public sealed class ConversationService : IConversationService
                     Id = message.Id,
                     SenderUserId = message.SenderUserId,
                     SenderName = senderNames.GetValueOrDefault(message.SenderUserId) ?? string.Empty,
-                    Content = message.Content,
-                    SentAt = message.CreatedAt
+                    Content = message.Content ?? string.Empty,
+                    SentAt = message.CreatedAt,
+                    HasAttachment = message.HasAttachment,
+                    AttachmentUrl = message.HasAttachment
+                        ? $"/api/v1/conversations/{conversationId}/messages/{message.Id}/attachment"
+                        : null,
+                    AttachmentContentType = message.AttachmentContentType,
+                    AttachmentFileName = message.AttachmentFileName
                 })
                 .ToList()
         };
@@ -300,6 +311,238 @@ public sealed class ConversationService : IConversationService
         return MapToSendMessageResponse(message, conversationId, resolvedSenderName);
     }
 
+    /// <summary>
+    /// Posts a message carrying an image attachment (WESAL-TASK-4, Edit 4). This is the
+    /// channel an owner uses to send subscription-payment proof to the Admins inside the
+    /// same owner/Admin thread, so it deliberately reuses every existing guard: same
+    /// conversation lookup, same participant check, same owner messaging gate (with the
+    /// documented payment-proof carve-out), same ClientRequestId de-duplication and the
+    /// same SignalR push.
+    /// </summary>
+    public async Task<SendMessageResponse> SendAttachmentMessageAsync(
+        Guid conversationId,
+        MessageAttachmentUpload attachment,
+        string? content,
+        string? clientRequestId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        EnsureAuthenticated();
+
+        var caption = content?.Trim();
+        if (string.IsNullOrEmpty(caption))
+        {
+            caption = null;
+        }
+        else if (caption.Length > 1000)
+        {
+            throw new ValidationException("Message content must not exceed 1000 characters.");
+        }
+
+        DocumentUploadValidator.EnsureValidImage(new OwnerDocumentUpload
+        {
+            FileName = attachment.FileName,
+            ContentType = attachment.ContentType,
+            Content = attachment.Content
+        });
+
+        var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
+
+        if (conversation is null || conversation.Hall?.IsDeleted == true)
+        {
+            throw new NotFoundException(nameof(Conversation), conversationId);
+        }
+
+        var senderUserId = _currentUser.UserId!;
+
+        EnsureParticipant(conversation, senderUserId);
+
+        // The attachment is the payment proof, so the owner may post it even when unpaid.
+        EnsureOwnerMessagingAccess(conversation, hasAttachment: true);
+
+        var normalizedRequestId = string.IsNullOrWhiteSpace(clientRequestId) ? null : clientRequestId;
+
+        if (normalizedRequestId is not null)
+        {
+            var existing = await _messageRepository.GetByClientRequestIdAsync(
+                senderUserId, normalizedRequestId, cancellationToken);
+
+            if (existing is not null)
+            {
+                // Only an idempotent replay of THIS send is a no-op. A ClientRequestId is
+                // scoped to one sender across all their threads, so reusing an id that
+                // belongs to a different conversation (or to a plain text message) must not
+                // silently return that unrelated row as if the image had been sent.
+                if (existing.ConversationId == conversationId && existing.HasAttachment)
+                {
+                    var existingSenderName = await ResolveSenderNameAsync(senderUserId, cancellationToken);
+                    return MapToSendMessageResponse(existing, conversationId, existingSenderName, isDuplicate: true);
+                }
+
+                throw new ValidationException(
+                    "ClientRequestId has already been used for a different message.");
+            }
+        }
+
+        // Persist the bytes first: the database row references the stored file, so a
+        // failed write must never leave a row pointing at a missing file.
+        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(attachment.FileName).ToLowerInvariant()}";
+        var relativeUrl = DocumentPath.MessageAttachmentRelativeUrl(conversationId, fileName);
+        var directory = _documentStorage.ConversationAttachmentsDirectory(conversationId);
+        Directory.CreateDirectory(directory);
+        var fullPath = Path.Combine(directory, fileName);
+        await File.WriteAllBytesAsync(fullPath, attachment.Content, cancellationToken);
+
+        var message = new Message
+        {
+            ConversationId = conversationId,
+            SenderUserId = senderUserId,
+            Content = caption,
+            ClientRequestId = normalizedRequestId,
+            AttachmentUrl = relativeUrl,
+            AttachmentContentType = attachment.ContentType?.ToLowerInvariant(),
+            AttachmentFileName = SanitizeDisplayFileName(attachment.FileName)
+        };
+
+        await _messageRepository.AddAsync(message, cancellationToken);
+
+        try
+        {
+            await _messageRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (IsUniqueViolation(ex) && normalizedRequestId is not null)
+        {
+            // Lost the race against a concurrent send with the same ClientRequestId: the
+            // other request persisted the file and the row, so drop our orphaned copy and
+            // return the row that actually won instead of surfacing a unique-constraint error.
+            TryDeleteAttachmentFile(fullPath);
+
+            var duplicate = await _messageRepository.GetByClientRequestIdAsync(
+                senderUserId, normalizedRequestId, cancellationToken);
+
+            if (duplicate is not null)
+            {
+                var duplicateSenderName = await ResolveSenderNameAsync(senderUserId, cancellationToken);
+                return MapToSendMessageResponse(duplicate, conversationId, duplicateSenderName, isDuplicate: true);
+            }
+
+            throw;
+        }
+        catch
+        {
+            // Any other failure: best-effort cleanup so a rejected insert never orphans a file.
+            TryDeleteAttachmentFile(fullPath);
+            throw;
+        }
+
+        var senderName = await ResolveSenderNameAsync(senderUserId, cancellationToken);
+
+        await NotifyMessageSentAsync(conversationId, message, senderName, cancellationToken);
+
+        return MapToSendMessageResponse(message, conversationId, senderName);
+    }
+
+    /// <summary>
+    /// Streams a message's image attachment. Reuses the thread's own participant rule so
+    /// only the hall owner, the initiating participant, or an Admin can read it, and
+    /// resolves the path from the persisted URL (never from client input) so a traversal
+    /// attempt cannot escape the document storage root.
+    /// </summary>
+    public async Task<StoredDocument> GetMessageAttachmentAsync(
+        Guid conversationId,
+        Guid messageId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var userId = GetAuthenticatedUserId();
+
+        var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
+
+        if (conversation is null || conversation.Hall?.IsDeleted == true)
+        {
+            throw new NotFoundException(nameof(Conversation), conversationId);
+        }
+
+        EnsureParticipant(conversation, userId);
+
+        var message = await _messageRepository.GetByIdAsync(messageId, cancellationToken);
+
+        // The message must belong to the conversation named in the route, so a caller
+        // cannot pair an arbitrary message id with a thread they are allowed to read.
+        if (message is null || message.ConversationId != conversationId || !message.HasAttachment)
+        {
+            throw new NotFoundException("MessageAttachment", messageId);
+        }
+
+        var fullPath = DocumentPath.ResolveFullPath(_documentStorage.Root, message.AttachmentUrl!);
+
+        if (fullPath is null || !File.Exists(fullPath))
+        {
+            throw new NotFoundException("MessageAttachment", messageId);
+        }
+
+        return new StoredDocument
+        {
+            RelativeUrl = message.AttachmentUrl!,
+            FullPath = fullPath,
+            ContentType = message.AttachmentContentType ?? "application/octet-stream",
+            FileName = message.AttachmentFileName ?? Path.GetFileName(fullPath)
+        };
+    }
+
+    /// <summary>
+    /// Reduces the client-supplied file name to a safe display value (WESAL-TASK-4, Edit 4).
+    /// The name is echoed to every other participant in the thread and returned in a
+    /// Content-Disposition header on download, so it must never carry directory components
+    /// or control characters. Falls back to the stored file name when nothing survives.
+    /// </summary>
+    private static string SanitizeDisplayFileName(string? original)
+    {
+        if (string.IsNullOrWhiteSpace(original))
+        {
+            return "attachment";
+        }
+
+        // Keep only the leaf segment: a client cannot smuggle in a path.
+        var leaf = original.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? string.Empty;
+
+        var cleaned = new string(leaf
+            .Where(c => !char.IsControl(c) && c != '"' && c != '\'')
+            .ToArray())
+            .Trim();
+
+        return cleaned.Length == 0 ? "attachment" : cleaned;
+    }
+
+    private void TryDeleteAttachmentFile(string fullPath)
+    {
+        try
+        {
+            if (File.Exists(fullPath))
+            {
+                File.Delete(fullPath);
+            }
+        }
+        catch (Exception)
+        {
+            // Best-effort: an orphaned file is preferable to failing an already-persisted message.
+        }
+    }
+
+    private void EnsureParticipant(Conversation conversation, string senderUserId)
+    {
+        var isParticipant = string.Equals(senderUserId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(senderUserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase)
+            || _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+
+        if (!isParticipant)
+        {
+            throw new ForbiddenException("You do not have access to this conversation.");
+        }
+    }
+
     private async Task<string> ResolveSenderNameAsync(string senderUserId, CancellationToken cancellationToken)
     {
         var users = await _conversationRepository.GetUserDisplayNamesAsync([senderUserId], cancellationToken);
@@ -320,8 +563,14 @@ public sealed class ConversationService : IConversationService
                 ConversationId = conversationId,
                 SenderUserId = message.SenderUserId,
                 SenderName = senderName,
-                Content = message.Content,
-                SentAt = message.CreatedAt
+                Content = message.Content ?? string.Empty,
+                SentAt = message.CreatedAt,
+                HasAttachment = message.HasAttachment,
+                AttachmentUrl = message.HasAttachment
+                    ? $"/api/v1/conversations/{conversationId}/messages/{message.Id}/attachment"
+                    : null,
+                AttachmentContentType = message.AttachmentContentType,
+                AttachmentFileName = message.AttachmentFileName
             }, cancellationToken);
         }
         catch (OperationCanceledException)
@@ -361,9 +610,15 @@ public sealed class ConversationService : IConversationService
             ConversationId = conversationId,
             SenderUserId = message.SenderUserId,
             SenderName = senderName,
-            Content = message.Content,
+            Content = message.Content ?? string.Empty,
             SentAt = message.CreatedAt,
-            IsDuplicate = isDuplicate
+            IsDuplicate = isDuplicate,
+            HasAttachment = message.HasAttachment,
+            AttachmentUrl = message.HasAttachment
+                ? $"/api/v1/conversations/{conversationId}/messages/{message.Id}/attachment"
+                : null,
+            AttachmentContentType = message.AttachmentContentType,
+            AttachmentFileName = message.AttachmentFileName
         };
     }
 
@@ -502,8 +757,17 @@ public sealed class ConversationService : IConversationService
     /// system lock). PendingReview/Rejected hall threads stay open so the owner can
     /// read and reply to review/rejection messages (US-ADMIN-03). Seekers and Admins
     /// are never blocked by this gate.
+    ///
+    /// WESAL-TASK-4 (Edit 4) carves out one case: an owner posting an image attachment
+    /// in their own owner/Admin thread stays allowed even when the hall is unpaid, because
+    /// that attachment IS the subscription-payment proof the Admin asked for. Without this
+    /// the payment notice would be unsendable exactly when it is needed. The carve-out is
+    /// deliberately narrow — it applies only to the owner of this conversation, only to
+    /// attachment posts, and only inside the thread; every text-only message and every
+    /// Admin/seeker path is gated exactly as before. A manual Admin lock and the system
+    /// lock still apply, so this only waives the payment requirement, never a lock.
     /// </summary>
-    private void EnsureOwnerMessagingAccess(Conversation conversation)
+    private void EnsureOwnerMessagingAccess(Conversation conversation, bool hasAttachment = false)
     {
         if (_currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase))
         {
@@ -528,6 +792,18 @@ public sealed class ConversationService : IConversationService
 
         if (hall.Status != HallStatus.Approved)
         {
+            return;
+        }
+
+        // Edit 4 carve-out: an owner posting their subscription-payment proof is allowed
+        // past the PAYMENT requirement only. Admin lock and system lock still apply.
+        if (hasAttachment && hall.PaymentStatus != HallPaymentStatus.Paid)
+        {
+            if (hall.IsAdminLocked || hall.SystemLocked)
+            {
+                HallManagementAccess.EnsureAllowed(hall);
+            }
+
             return;
         }
 

@@ -26,4 +26,19 @@ public class OwnerHallSubscriptionDto
     /// active billing date.
     /// </summary>
     public DateOnly? NextBillingDate { get; init; }
+
+    /// <summary>
+    /// Whole days left in the current paid cycle (WESAL-TASK-4, Edit 4). Computed
+    /// server-side on every request, never cached.
+    ///
+    /// The value is deliberately explicit rather than clamped at zero:
+    /// <list type="bullet">
+    ///   <item><c>null</c> — never paid: no cycle exists, so there is nothing to count down;</item>
+    ///   <item><c>30</c> — just paid: the full cycle remains;</item>
+    ///   <item><c>1..29</c> — partway through the cycle;</item>
+    ///   <item><c>0</c> — the cycle ends today (still active for this day);</item>
+    ///   <item><c>&lt; 0</c> — expired: negative is how many days ago it lapsed.</item>
+    /// </list>
+    /// </summary>
+    public int? DaysRemaining { get; init; }
 }

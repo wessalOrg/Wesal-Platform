@@ -6,16 +6,16 @@ namespace Wesal.Domain.Enums;
 /// suspended/Rejected. The Admin confirms a payment (US-ADMIN-10) which marks the
 /// hall Paid and seeds <c>Hall.SubscriptionCycleStart</c>/<c>SubscriptionCycleEnd</c>.
 /// Defaults to <see cref="Unpaid"/> for a newly created hall.
+///
+/// WESAL-TASK-4 (Edit 4) removed the old <c>ReceiptUploaded = 2</c> state together with
+/// the dedicated receipt-upload endpoints. Payment proof is now an ordinary image
+/// message inside the existing owner/Admin conversation thread, so the hall stays
+/// <see cref="Unpaid"/> while the Admin reviews it — the Admin still flips the state
+/// explicitly via mark paid / not paid. The value 2 is intentionally not reused, and no
+/// live row carried it (verified read-only before removal), so no data was orphaned.
 /// </summary>
 public enum HallPaymentStatus
 {
     Unpaid = 0,
-    Paid = 1,
-
-    /// <summary>
-    /// The owner uploaded a payment receipt and the hall is waiting for the Admin to
-    /// explicitly confirm the payment (US-ADMIN-10). A hall in this state is still NOT
-    /// public: public visibility requires <see cref="Paid"/>.
-    /// </summary>
-    ReceiptUploaded = 2
+    Paid = 1
 }

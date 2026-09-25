@@ -260,8 +260,6 @@ public sealed class OwnerHallService : IOwnerHallService
             Status = hall.Status,
             IsEditable = true,
             PaymentStatus = hall.PaymentStatus,
-            PaymentReceiptUploadedAt = hall.PaymentReceiptUploadedAt,
-            HasPaymentReceipt = !string.IsNullOrWhiteSpace(hall.PaymentReceiptUrl),
             Photos = hall.Images
                 .Where(image => !image.IsDeleted)
                 .OrderBy(image => image.DisplayOrder)

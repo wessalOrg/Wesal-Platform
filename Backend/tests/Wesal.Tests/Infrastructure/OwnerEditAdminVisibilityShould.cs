@@ -348,6 +348,6 @@ public class OwnerEditAdminVisibilityShould : IDisposable
     {
         public string Root => Path.Combine(Path.GetTempPath(), "wesal-test-documents");
         public string OwnerDocumentsDirectory(string ownerId) => Path.Combine(Root, "documents", "owners", ownerId);
-        public string HallReceiptsDirectory(Guid hallId) => Path.Combine(Root, "documents", "halls", hallId.ToString(), "receipts");
+            public string ConversationAttachmentsDirectory(Guid conversationId) => Path.Combine(Root, "documents", "conversations", conversationId.ToString(), "attachments");
     }
 }

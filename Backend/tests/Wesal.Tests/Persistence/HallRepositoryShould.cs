@@ -30,7 +30,7 @@ public class HallRepositoryShould
     }
 
     // --- US-ADMIN-10 / US-OWNER-31: a hall is publicly visible only when it is
-    // Approved AND Paid; an Approved hall awaiting its payment receipt stays hidden. ---
+    // Approved AND Paid; an Approved hall awaiting its payment stays hidden. ---
 
     [Fact]
     public async Task GetApprovedHallsAsync_ApprovedButUnpaidHall_IsHiddenFromPublicList()

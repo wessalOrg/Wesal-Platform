@@ -4,9 +4,9 @@ using Wesal.Application.Common.Interfaces;
 namespace Wesal.Infrastructure.Documents;
 
 /// <summary>
-/// Resolves the writable root directory for protected owner documents (identity documents
-/// and payment receipts). Keep in sync with the static-file mapping in <c>Program.cs</c>:
-/// this root must never be served by <c>UseStaticFiles</c>.
+/// Resolves the writable root directory for protected documents (owner identity documents
+/// and conversation message attachments). Keep in sync with the static-file mapping in
+/// <c>Program.cs</c>: this root must never be served by <c>UseStaticFiles</c>.
 /// </summary>
 public sealed class DocumentStorage : IDocumentStorage
 {
@@ -26,6 +26,6 @@ public sealed class DocumentStorage : IDocumentStorage
     public string OwnerDocumentsDirectory(string ownerId)
         => Path.Combine(_root, "documents", "owners", ownerId);
 
-    public string HallReceiptsDirectory(Guid hallId)
-        => Path.Combine(_root, "documents", "halls", hallId.ToString(), "receipts");
+    public string ConversationAttachmentsDirectory(Guid conversationId)
+        => Path.Combine(_root, "documents", "conversations", conversationId.ToString(), "attachments");
 }

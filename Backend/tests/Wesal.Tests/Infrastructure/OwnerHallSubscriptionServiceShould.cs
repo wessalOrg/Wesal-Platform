@@ -421,7 +421,78 @@ public class OwnerHallSubscriptionServiceShould : IDisposable
             .Select(p => p.Name)
             .OrderBy(n => n)
             .ToArray();
-        Assert.Equal(new[] { "HallId", "HallName", "NextBillingDate", "Status" }, props);
+            // WESAL-TASK-4 (Edit 4): DaysRemaining joins the contract so the owner can see
+            // the countdown to their next billing date. Still no provider/payment-gateway
+            // fields leak into the public owner contract.
+            Assert.Equal(new[] { "DaysRemaining", "HallId", "HallName", "NextBillingDate", "Status" }, props);
+        }
+
+    // --- WESAL-TASK-4 (Edit 4): owner-facing DaysRemaining countdown ---
+
+    [Fact]
+    public async Task GetSubscription_NeverPaidHall_ReturnsNullDaysRemaining()
+    {
+        var owner = await CreateOwnerAsync("owner-days-1@example.com", "+970599000031");
+        // Approved but never paid: no cycle exists, so there is nothing to count down.
+        var hall = AddHall(owner.Id, cycleEnd: null);
+        var service = CreateService(new FakeCurrentUser(owner.Id, true));
+
+        var result = await service.GetHallSubscriptionAsync(hall.Id);
+
+        Assert.Null(result.NextBillingDate);
+        Assert.Null(result.DaysRemaining);
+    }
+
+    [Fact]
+    public async Task GetSubscription_JustPaidHall_ReturnsFullCycleInDays()
+    {
+        var owner = await CreateOwnerAsync("owner-days-2@example.com", "+970599000032");
+        var hall = AddHall(owner.Id, cycleEnd: Today.AddDays(30));
+        var service = CreateService(new FakeCurrentUser(owner.Id, true));
+
+        var result = await service.GetHallSubscriptionAsync(hall.Id);
+
+        Assert.Equal(30, result.DaysRemaining);
+    }
+
+    [Fact]
+    public async Task GetSubscription_MidCycle_ReturnsRemainingDays()
+    {
+        var owner = await CreateOwnerAsync("owner-days-3@example.com", "+970599000033");
+        var hall = AddHall(owner.Id, cycleEnd: Today.AddDays(7));
+        var service = CreateService(new FakeCurrentUser(owner.Id, true));
+
+        var result = await service.GetHallSubscriptionAsync(hall.Id);
+
+        Assert.Equal(7, result.DaysRemaining);
+    }
+
+    [Fact]
+    public async Task GetSubscription_CycleEndsToday_ReturnsZeroNotNegative()
+    {
+        var owner = await CreateOwnerAsync("owner-days-4@example.com", "+970599000034");
+        var hall = AddHall(owner.Id, cycleEnd: Today);
+        var service = CreateService(new FakeCurrentUser(owner.Id, true));
+
+        var result = await service.GetHallSubscriptionAsync(hall.Id);
+
+        // Final day is still active, so the countdown reads 0 rather than going negative.
+        Assert.Equal(0, result.DaysRemaining);
+        Assert.Equal(HallSubscriptionStatus.Active, result.Status);
+    }
+
+    [Fact]
+    public async Task GetSubscription_ExpiredCycle_ReturnsNegativeDaysRemaining()
+    {
+        var owner = await CreateOwnerAsync("owner-days-5@example.com", "+970599000035");
+        var hall = AddHall(owner.Id, cycleEnd: Today.AddDays(-3));
+        var service = CreateService(new FakeCurrentUser(owner.Id, true));
+
+        var result = await service.GetHallSubscriptionAsync(hall.Id);
+
+        // Negative rather than clamped: the owner can tell "expired 3 days ago" from "ends today".
+        Assert.Equal(-3, result.DaysRemaining);
+        Assert.Equal(HallSubscriptionStatus.Expired, result.Status);
     }
 
     private sealed class FakeCurrentUser : ICurrentUserService

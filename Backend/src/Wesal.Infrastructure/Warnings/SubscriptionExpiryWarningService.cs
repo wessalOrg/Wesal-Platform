@@ -132,7 +132,9 @@ public sealed class SubscriptionExpiryWarningService : ISubscriptionExpiryWarnin
 
         var daysRemaining = cycleEnd.DayNumber - today.DayNumber;
 
-        var conversation = await _conversationRepository.GetByHallAndUserAsync(hall.Id, SystemSenderUserId, cancellationToken);
+        // WESAL-TASK-4 (Edit 4): owner/Admin thread resolved by (HallId, HallOwnerId) so
+        // the expiry warning lands in the same thread as the approval/payment notices.
+        var conversation = await _conversationRepository.GetByHallForOwnerAsync(hall.Id, hall.OwnerId!, cancellationToken);
 
         if (conversation is null)
         {

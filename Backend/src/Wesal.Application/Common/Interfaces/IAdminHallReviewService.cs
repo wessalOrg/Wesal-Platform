@@ -39,9 +39,4 @@ public interface IAdminHallReviewService
     Task<StoredDocument> GetOwnerIdentityDocumentAsync(
         string ownerId,
         CancellationToken cancellationToken = default);
-
-    /// <summary>Streams the hall's uploaded payment receipt (US-ADMIN-10); NotFound when none exists.</summary>
-    Task<StoredDocument> GetPaymentReceiptAsync(
-        Guid hallId,
-        CancellationToken cancellationToken = default);
 }

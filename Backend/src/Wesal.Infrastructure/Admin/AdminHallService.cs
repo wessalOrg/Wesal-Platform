@@ -133,7 +133,10 @@ public class AdminHallService : IAdminHallService
 
         var adminUserId = ResolveAdminUserId();
 
-        var conversation = await _conversationRepository.GetByHallAndUserAsync(hall.Id, adminUserId, cancellationToken);
+        // WESAL-TASK-4 (Edit 4): resolve the owner/Admin thread by (HallId, HallOwnerId)
+        // rather than by whichever Admin is acting, so the approval notice lands in the
+        // same single thread as every other Admin message for this hall.
+        var conversation = await _conversationRepository.GetByHallForOwnerAsync(hall.Id, hall.OwnerId, cancellationToken);
 
         if (conversation is null)
         {
@@ -151,7 +154,7 @@ public class AdminHallService : IAdminHallService
         {
             ConversationId = conversation.Id,
             SenderUserId = adminUserId,
-            Content = $"تم اعتماد قاعتك «{hall.Name}»، ولكن يجب دفع الاشتراك وإرفاق إشعار الدفع لإكمال التفعيل."
+            Content = $"تم اعتماد قاعتك «{hall.Name}»، ولكن يجب دفع الاشتراك وإرسال صورة إثبات الدفع عبر المحادثة لإكمال التفعيل."
         };
 
         await _messageRepository.AddAsync(message, cancellationToken);
@@ -178,7 +181,7 @@ public class AdminHallService : IAdminHallService
                 ConversationId = conversationId,
                 SenderUserId = message.SenderUserId,
                 SenderName = senderName,
-                Content = message.Content,
+                Content = message.Content ?? string.Empty,
                 SentAt = message.CreatedAt
             }, cancellationToken);
         }

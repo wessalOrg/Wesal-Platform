@@ -10,14 +10,17 @@ public static class DocumentPath
     /// <summary>URL segment used for owner identity documents.</summary>
     private const string OwnersSegment = "owners";
 
-    /// <summary>URL segment used for hall payment receipts.</summary>
-    private const string HallsSegment = "halls";
+    /// <summary>URL segment used for conversation message attachments.</summary>
+    private const string ConversationsSegment = "conversations";
 
     public static string OwnerIdentityRelativeUrl(string ownerId, string fileName)
         => $"/documents/{OwnersSegment}/{ownerId}/{fileName}";
 
-    public static string HallReceiptRelativeUrl(Guid hallId, string fileName)
-        => $"/documents/{HallsSegment}/{hallId}/receipts/{fileName}";
+    /// <summary>
+    /// Relative URL of a conversation message's image attachment (WESAL-TASK-4, Edit 4).
+    /// </summary>
+    public static string MessageAttachmentRelativeUrl(Guid conversationId, string fileName)
+        => $"/documents/{ConversationsSegment}/{conversationId}/attachments/{fileName}";
 
     /// <summary>
     /// Resolves a persisted relative URL to a full path under the given storage root.

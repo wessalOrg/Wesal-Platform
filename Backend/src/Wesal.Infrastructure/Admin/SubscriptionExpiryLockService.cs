@@ -143,7 +143,9 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
             return;
         }
 
-        var conversation = await _conversationRepository.GetByHallAndUserAsync(hall.Id, SystemSenderUserId, cancellationToken);
+        // WESAL-TASK-4 (Edit 4): owner/Admin thread resolved by (HallId, HallOwnerId) so
+        // the auto-lock notice joins the same thread as the other owner notifications.
+        var conversation = await _conversationRepository.GetByHallForOwnerAsync(hall.Id, hall.OwnerId!, cancellationToken);
 
         if (conversation is null)
         {

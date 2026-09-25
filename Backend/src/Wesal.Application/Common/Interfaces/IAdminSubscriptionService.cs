@@ -17,4 +17,13 @@ public interface IAdminSubscriptionService
     Task<AdminMarkPaidResultDto> MarkSubscriptionPaidAsync(
         Guid hallId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Revokes a confirmed subscription payment (WESAL-TASK-4, Edit 4): sets
+    /// <c>PaymentStatus = Unpaid</c> and clears the cycle dates. A direct administrative
+    /// action, entirely independent of whether any payment-proof message exists.
+    /// </summary>
+    Task<AdminMarkPaidResultDto> MarkSubscriptionNotPaidAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default);
 }

@@ -123,8 +123,6 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
             Features = row.Features,
             OtherFeatures = row.OtherFeatures,
             PaymentStatus = row.PaymentStatus,
-            PaymentReceiptUploadedAt = row.PaymentReceiptUploadedAt,
-            HasPaymentReceipt = row.HasPaymentReceipt,
             OwnerHasIdentityDocument = row.OwnerHasIdentityDocument,
             PhotoUrls = row.PhotoUrls
         };
@@ -160,40 +158,6 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
             FullPath = fullPath,
             ContentType = InferContentType(fullPath),
             FileName = DocumentPath.FileNameFromUrl(owner.IdentityDocumentUrl) ?? Path.GetFileName(fullPath)
-        };
-    }
-
-    public async Task<StoredDocument> GetPaymentReceiptAsync(
-        Guid hallId,
-        CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var hall = await _hallRepository.GetHallByIdAsync(hallId, cancellationToken);
-
-        if (hall is null || hall.IsDeleted)
-        {
-            throw new NotFoundException(nameof(Hall), hallId);
-        }
-
-        if (string.IsNullOrWhiteSpace(hall.PaymentReceiptUrl))
-        {
-            throw new NotFoundException("No payment receipt has been uploaded for this hall.");
-        }
-
-        var fullPath = DocumentPath.ResolveFullPath(_documentStorage.Root, hall.PaymentReceiptUrl);
-
-        if (fullPath is null || !File.Exists(fullPath))
-        {
-            throw new NotFoundException("The payment receipt was not found.");
-        }
-
-        return new StoredDocument
-        {
-            RelativeUrl = hall.PaymentReceiptUrl,
-            FullPath = fullPath,
-            ContentType = InferContentType(fullPath),
-            FileName = DocumentPath.FileNameFromUrl(hall.PaymentReceiptUrl) ?? Path.GetFileName(fullPath)
         };
     }
 
@@ -377,7 +341,9 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
 
         var adminUserId = ResolveAdminUserId();
 
-        var conversation = await _conversationRepository.GetByHallAndUserAsync(hall.Id, adminUserId, cancellationToken);
+        // WESAL-TASK-4 (Edit 4): resolve the owner/Admin thread by (HallId, HallOwnerId)
+        // so two different Admins messaging the same owner always land in ONE thread.
+        var conversation = await _conversationRepository.GetByHallForOwnerAsync(hall.Id, hall.OwnerId!, cancellationToken);
 
         if (conversation is null)
         {
@@ -414,7 +380,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
             MessageId = message.Id,
             ConversationId = conversation.Id,
             HallId = hall.Id,
-            Content = message.Content,
+            Content = message.Content ?? string.Empty,
             SentAt = message.CreatedAt,
             OwnerBlocked = ownerBlocked,
             DeliveryPending = ownerBlocked
@@ -486,7 +452,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
                 ConversationId = conversationId,
                 SenderUserId = message.SenderUserId,
                 SenderName = senderName,
-                Content = message.Content,
+                Content = message.Content ?? string.Empty,
                 SentAt = message.CreatedAt
             }, cancellationToken);
         }
@@ -538,7 +504,9 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
 
         var adminUserId = ResolveAdminUserId();
 
-        var conversation = await _conversationRepository.GetByHallAndUserAsync(hall.Id, adminUserId, cancellationToken);
+        // WESAL-TASK-4 (Edit 4): resolve the owner/Admin thread by (HallId, HallOwnerId)
+        // so two different Admins messaging the same owner always land in ONE thread.
+        var conversation = await _conversationRepository.GetByHallForOwnerAsync(hall.Id, hall.OwnerId!, cancellationToken);
 
         if (conversation is null)
         {

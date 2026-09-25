@@ -3,9 +3,9 @@ using Wesal.Domain.Enums;
 namespace Wesal.Application.Common.Models;
 
 /// <summary>
-/// A document uploaded through the owner document endpoints (identity card or payment
-/// receipt). Content is validated for size, extension, MIME type and file signature
-/// before it is persisted outside the public static-file area.
+/// An identity document uploaded through the owner document endpoints. Content is
+/// validated for size, extension, MIME type and file signature before it is persisted
+/// outside the public static-file area.
 /// </summary>
 public class OwnerDocumentUpload
 {
@@ -40,24 +40,6 @@ public class IdentityDocumentUploadResult
     public DateTimeOffset? UploadedAt { get; init; }
 
     public bool HasDocument { get; init; }
-}
-
-/// <summary>
-/// Result of the Hall Owner's payment-receipt upload (US-OWNER-31). The hall moves to
-/// <see cref="HallPaymentStatus.ReceiptUploaded"/> and stays private until the Admin
-/// confirms payment (US-ADMIN-10).
-/// </summary>
-public class PaymentReceiptUploadResult
-{
-    public Guid HallId { get; init; }
-
-    public string HallName { get; init; } = string.Empty;
-
-    public HallPaymentStatus PaymentStatus { get; init; }
-
-    public DateTimeOffset? UploadedAt { get; init; }
-
-    public bool HasReceipt { get; init; }
 }
 
 /// <summary>

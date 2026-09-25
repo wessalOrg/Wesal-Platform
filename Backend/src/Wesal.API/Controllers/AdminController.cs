@@ -136,6 +136,29 @@ public class AdminController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Revokes a hall owner's subscription payment (WESAL-TASK-4, Edit 4). Sets the
+    /// subscription to not-paid and clears the cycle, so the hall falls back behind the
+    /// <c>PaymentRequired</c> management gate and the owner sees no days remaining.
+    ///
+    /// A direct administrative action: it does not require, inspect, or depend on any
+    /// payment-proof message having been sent. The target is the hall named in the route,
+    /// and the controller requires the Admin role, so an owner or seeker calling this is
+    /// rejected with 403 before the service runs.
+    /// </summary>
+    [HttpPut("{hallId:guid}/subscription/unpaid")]
+    [ProducesResponseType(typeof(AdminMarkPaidResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminMarkPaidResultDto>> MarkSubscriptionNotPaid(
+        Guid hallId,
+        CancellationToken cancellationToken)
+    {
+        var response = await _adminSubscriptionService.MarkSubscriptionNotPaidAsync(hallId, cancellationToken);
+        return Ok(response);
+    }
+
     [HttpDelete("{hallId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -145,21 +168,6 @@ public class AdminController : ControllerBase
     {
         await _adminHallService.DeleteHallAsync(hallId, cancellationToken);
         return NoContent();
-    }
-
-    /// <summary>
-    /// Streams the payment receipt the owner uploaded for a hall (US-ADMIN-07/10).
-    /// Only the Admin can read it; the document is stored outside the public media area.
-    /// </summary>
-    [HttpGet("{hallId:guid}/payment-receipt")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetHallPaymentReceipt(Guid hallId, CancellationToken cancellationToken)
-    {
-        var document = await _adminHallReviewService.GetPaymentReceiptAsync(hallId, cancellationToken);
-        return PhysicalFile(document.FullPath, document.ContentType);
     }
 
     /// <summary>

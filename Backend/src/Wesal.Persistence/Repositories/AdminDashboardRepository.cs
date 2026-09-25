@@ -89,9 +89,7 @@ public class AdminDashboardRepository : IAdminDashboardRepository
                 .Select(feature => feature.Name)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToList(),
-            PaymentStatus = hall.PaymentStatus,
-            PaymentReceiptUploadedAt = hall.PaymentReceiptUploadedAt,
-            HasPaymentReceipt = !string.IsNullOrWhiteSpace(hall.PaymentReceiptUrl),
+        PaymentStatus = hall.PaymentStatus,
             OwnerHasIdentityDocument = !string.IsNullOrWhiteSpace(owner?.IdentityDocumentUrl),
             PhotoUrls = hall.Images
                 .Where(image => !image.IsDeleted)

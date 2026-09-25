@@ -85,8 +85,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(hall => hall.Description).HasMaxLength(2000);
             entity.Property(hall => hall.YouTubeVideoUrl).HasMaxLength(500);
             entity.Property(hall => hall.OtherFeatures).HasMaxLength(200);
-            entity.Property(hall => hall.PaymentReceiptUrl).HasMaxLength(500);
-            entity.Property(hall => hall.PaymentReceiptUploadedAt).HasColumnType("timestamp with time zone");
             entity.Property(hall => hall.Price).HasPrecision(12, 2);
             entity.Property(hall => hall.SubscriptionCycleEnd).HasColumnType("date");
             entity.Property(hall => hall.SubscriptionCycleStart).HasColumnType("date");
@@ -226,8 +224,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.ToTable("Messages");
 
             entity.Property(message => message.SenderUserId).IsRequired().HasMaxLength(450);
-            entity.Property(message => message.Content).IsRequired().HasMaxLength(1000);
+            entity.Property(message => message.Content).HasMaxLength(1000);
             entity.Property(message => message.ClientRequestId).HasMaxLength(450);
+
+            // WESAL-TASK-4 (Edit 4): content is now optional because a message may carry
+            // only an image attachment (payment proof) with no caption. Enforced in the
+            // service: at least one of Content / HasAttachment must be present.
+            entity.Property(message => message.AttachmentUrl).HasMaxLength(500);
+            entity.Property(message => message.AttachmentContentType).HasMaxLength(100);
+            entity.Property(message => message.AttachmentFileName).HasMaxLength(256);
 
             entity.HasIndex(message => new { message.ConversationId, message.CreatedAt });
             entity.HasIndex(message => new { message.SenderUserId, message.ClientRequestId }).IsUnique();

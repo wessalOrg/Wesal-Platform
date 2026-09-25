@@ -92,10 +92,8 @@ public static class DependencyInjection
         services.AddScoped<IHallCreationService, HallCreationService>();
         services.AddOptions<HallMediaOptions>().Bind(configuration.GetSection(HallMediaOptions.SectionName));
         services.AddSingleton<IHallMediaStorage, HallMediaStorage>();
-        services.AddOptions<DocumentStorageOptions>().Bind(configuration.GetSection(DocumentStorageOptions.SectionName));
-        services.AddSingleton<IDocumentStorage, DocumentStorage>();
-        services.AddScoped<IOwnerIdentityService, OwnerIdentityService>();
-        services.AddScoped<IPaymentReceiptService, PaymentReceiptService>();
+services.AddOptions<DocumentStorageOptions>().Bind(configuration.GetSection(DocumentStorageOptions.SectionName));
+services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddScoped<IHallInitiationService, HallInitiationService>();
         services.AddScoped<IHallStatusTrackingService, HallStatusTrackingService>();
         services.AddScoped<IOwnerHallService, OwnerHallService>();

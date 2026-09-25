@@ -293,7 +293,8 @@ public class SendMessageServiceShould
             new FakeBookingRejectionService(),
             new FakeHallRepository(ConversationId, HallId),
             currentUser,
-            notifier);
+            notifier,
+            new FakeDocumentStorage());
 
         if (seedMessages)
         {
@@ -437,6 +438,9 @@ public class SendMessageServiceShould
             return Task.CompletedTask;
         }
 
+        public Task<Message?> GetByIdAsync(Guid messageId, CancellationToken cancellationToken = default)
+            => Task.FromResult<Message?>(null);
+
         public Task<Message?> GetByClientRequestIdAsync(string senderUserId, string clientRequestId, CancellationToken cancellationToken = default)
         {
             Message? match;
@@ -570,5 +574,15 @@ public class SendMessageServiceShould
         public string? Email => null;
         public bool IsAuthenticated { get; }
         public IReadOnlyList<string> Roles { get; }
+    }
+
+    private sealed class FakeDocumentStorage : IDocumentStorage
+    {
+        public string Root => Path.Combine(Path.GetTempPath(), "wesal-test-documents");
+
+        public string OwnerDocumentsDirectory(string ownerId) => Path.Combine(Root, "documents", "owners", ownerId);
+
+    
+        public string ConversationAttachmentsDirectory(Guid conversationId) => Path.Combine(Root, "documents", "conversations", conversationId.ToString(), "attachments");
     }
 }

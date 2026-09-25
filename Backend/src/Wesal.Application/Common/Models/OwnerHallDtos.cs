@@ -19,14 +19,12 @@ public class OwnerHallDto
 
     /// <summary>
     /// Live subscription payment state (US-ADMIN-07/10): Unpaid means the hall is
-    /// approved/pending but payment is still required; ReceiptUploaded means the owner
-    /// uploaded a payment receipt that the Admin has not yet confirmed; Paid means the
-    /// Admin confirmed the payment (and the hall is public when also Approved).
+    /// approved/pending and payment is still required (including while the Admin reviews
+    /// a payment-proof image the owner sent in the conversation); Paid means the Admin
+    /// confirmed the payment (and the hall is public when also Approved).
+    /// WESAL-TASK-4 (Edit 4) removed the old ReceiptUploaded state.
     /// </summary>
     public HallPaymentStatus PaymentStatus { get; init; }
-
-    /// <summary>When the owner last uploaded a payment receipt (UTC), if any.</summary>
-    public DateTimeOffset? PaymentReceiptUploadedAt { get; init; }
 }
 
 /// <summary>
@@ -85,12 +83,6 @@ public class OwnerHallDetailsDto
     /// Live subscription payment state of the hall (see <see cref="OwnerHallDto.PaymentStatus"/>).
     /// </summary>
     public HallPaymentStatus PaymentStatus { get; init; }
-
-    /// <summary>When the owner last uploaded a payment receipt (UTC), if any.</summary>
-    public DateTimeOffset? PaymentReceiptUploadedAt { get; init; }
-
-    /// <summary>True when the owner uploaded a payment receipt that is pending Admin confirmation.</summary>
-    public bool HasPaymentReceipt { get; init; }
 
     public IReadOnlyList<OwnerHallPhotoDto> Photos { get; init; } = [];
 }

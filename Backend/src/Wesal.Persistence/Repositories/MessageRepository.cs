@@ -35,6 +35,13 @@ public sealed class MessageRepository : IMessageRepository
                 cancellationToken);
     }
 
+    public async Task<Message?> GetByIdAsync(Guid messageId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Messages
+            .AsNoTracking()
+            .FirstOrDefaultAsync(message => message.Id == messageId, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Message>> GetByConversationAsync(
         Guid conversationId,
         CancellationToken cancellationToken = default)

@@ -404,7 +404,8 @@ public class HallAccessGuardShould : IDisposable
             new FakeBookingRejectionService(),
             new FakeHallRepository(),
             new FakeCurrentUser(conversation.HallOwnerId, [ApplicationRoles.HallOwner]),
-            new FakeConversationNotifier());
+            new FakeConversationNotifier(),
+            new FakeDocumentStorage());
 
     public void Dispose()
     {
@@ -499,6 +500,8 @@ public class HallAccessGuardShould : IDisposable
     {
         public Task AddAsync(Message message, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<Message?> GetByIdAsync(Guid messageId, CancellationToken cancellationToken = default) => Task.FromResult<Message?>(null);
+
         public Task<Message?> GetByClientRequestIdAsync(string senderUserId, string clientRequestId, CancellationToken cancellationToken = default) => Task.FromResult<Message?>(null);
         public Task<IReadOnlyList<Message>> GetByConversationAsync(Guid conversationId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Message>>([]);
         public Task<IReadOnlyList<Message>> GetByConversationIdsAsync(IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Message>>([]);
@@ -526,5 +529,15 @@ public class HallAccessGuardShould : IDisposable
     private sealed class FakeConversationNotifier : IConversationNotifier
     {
         public Task NotifyMessageSentAsync(MessageSentEvent message, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class FakeDocumentStorage : IDocumentStorage
+    {
+        public string Root => Path.Combine(Path.GetTempPath(), "wesal-test-documents");
+
+        public string OwnerDocumentsDirectory(string ownerId) => Path.Combine(Root, "documents", "owners", ownerId);
+
+    
+        public string ConversationAttachmentsDirectory(Guid conversationId) => Path.Combine(Root, "documents", "conversations", conversationId.ToString(), "attachments");
     }
 }

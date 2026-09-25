@@ -91,8 +91,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         builder.Services.AddScoped<IUnitOfWork, TestInMemoryUnitOfWork>();
         builder.Services.AddSingleton<IHallMediaStorage>(new FakeHallMediaStorage());
         builder.Services.AddScoped<IHallCreationService, HallCreationService>();
-        builder.Services.AddScoped<IOwnerIdentityService, StubOwnerIdentityService>();
-        builder.Services.AddScoped<IPaymentReceiptService, StubPaymentReceiptService>();
+    builder.Services.AddScoped<IOwnerIdentityService, StubOwnerIdentityService>();
         builder.Services.AddScoped<IOwnerSidebarService, StubOwnerSidebarService>();
         builder.Services.AddScoped<IHallInitiationService, StubHallInitiationService>();
         builder.Services.AddScoped<IHallStatusTrackingService, StubHallStatusTrackingService>();
@@ -420,15 +419,6 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
 
         public Task<StoredDocument> GetIdentityDocumentAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(new StoredDocument { RelativeUrl = "/documents/owners/owner-1/id.jpg", FullPath = "n/a", ContentType = "image/jpeg", FileName = "id.jpg" });
-    }
-
-    private sealed class StubPaymentReceiptService : IPaymentReceiptService
-    {
-        public Task<PaymentReceiptUploadResult> UploadPaymentReceiptAsync(Guid hallId, OwnerDocumentUpload upload, CancellationToken cancellationToken = default)
-            => Task.FromResult(new PaymentReceiptUploadResult { HallId = hallId, HasReceipt = true });
-
-        public Task<StoredDocument> GetPaymentReceiptAsync(Guid hallId, CancellationToken cancellationToken = default)
-            => Task.FromResult(new StoredDocument { RelativeUrl = "/documents/halls/receipt.pdf", FullPath = "n/a", ContentType = "application/pdf", FileName = "receipt.pdf" });
     }
 
     private sealed class StubHallInitiationService : IHallInitiationService

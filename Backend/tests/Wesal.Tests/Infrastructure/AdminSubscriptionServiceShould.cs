@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Common;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
@@ -64,32 +65,37 @@ public class AdminSubscriptionServiceShould : IDisposable
     }
 
     private Hall AddHall(
-        string name,
-        string ownerId,
-        HallStatus status = HallStatus.Approved,
-        HallPaymentStatus payment = HallPaymentStatus.Paid,
-        bool systemLocked = false,
-        bool isAdminLocked = false,
-        DateOnly? cycleEnd = null)
-    {
-        var hall = new Hall
-        {
-            Name = name,
-            Region = HallRegion.Gaza,
-            OwnerId = ownerId,
-            Status = status,
-            PaymentStatus = payment,
-            SystemLocked = systemLocked,
-            IsAdminLocked = isAdminLocked,
-            SubscriptionCycleEnd = cycleEnd,
-            SubscriptionCycleStart = cycleEnd?.AddDays(-30),
-            LockedAt = isAdminLocked ? FixedNow : null,
-            LockedByAdminUserId = isAdminLocked ? "admin-1" : null
-        };
-        _context.Halls.Add(hall);
-        _context.SaveChanges();
-        return hall;
-    }
+          string name,
+          string ownerId,
+          HallStatus status = HallStatus.Approved,
+          HallPaymentStatus payment = HallPaymentStatus.Paid,
+          bool systemLocked = false,
+          bool isAdminLocked = false,
+          DateOnly? cycleEnd = null,
+          DateOnly? cycleStart = null,
+          bool isDeleted = false)
+      {
+          var hall = new Hall
+          {
+              Name = name,
+              Region = HallRegion.Gaza,
+              OwnerId = ownerId,
+              Status = status,
+              PaymentStatus = payment,
+              SystemLocked = systemLocked,
+              IsAdminLocked = isAdminLocked,
+              IsDeleted = isDeleted,
+              SubscriptionCycleEnd = cycleEnd,
+              // Default the start to 30 days before the end unless a test overrides it,
+              // which lets a test model a half-set cycle explicitly.
+              SubscriptionCycleStart = cycleStart ?? cycleEnd?.AddDays(-30),
+              LockedAt = isAdminLocked ? FixedNow : null,
+              LockedByAdminUserId = isAdminLocked ? "admin-1" : null
+          };
+          _context.Halls.Add(hall);
+          _context.SaveChanges();
+          return hall;
+      }
 
     private AdminSubscriptionService CreateService()
         => new(
@@ -310,6 +316,145 @@ public class AdminSubscriptionServiceShould : IDisposable
     {
         await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateService().MarkSubscriptionPaidAsync(Guid.NewGuid()));
+    }
+
+    // --- WESAL-TASK-4 (Edit 4): revoke a confirmed payment (mark not paid) ---
+
+    [Fact]
+    public async Task MarkNotPaid_PaidWithCycle_ClearsCycleAndStatus()
+    {
+        AddOwner("owner-1", "Alaa Owner", "+970111", "alaa@example.com");
+        var hall = AddHall("My Hall", "owner-1", status: HallStatus.Approved, payment: HallPaymentStatus.Paid, cycleStart: Today.AddDays(-10), cycleEnd: Today.AddDays(20));
+
+        var result = await CreateService().MarkSubscriptionNotPaidAsync(hall.Id);
+
+        Assert.Equal(HallPaymentStatus.Unpaid, result.PaymentStatus);
+        Assert.Null(result.CycleStart);
+        Assert.Null(result.CycleEnd);
+        Assert.False(result.AlreadyPaidWithActiveCycle);
+        Assert.Equal(120m, result.AmountIls);
+
+        var reloaded = await _context.Halls.FindAsync(hall.Id);
+        Assert.Equal(HallPaymentStatus.Unpaid, reloaded!.PaymentStatus);
+        Assert.Null(reloaded.SubscriptionCycleStart);
+        Assert.Null(reloaded.SubscriptionCycleEnd);
+    }
+
+    [Fact]
+    public async Task MarkNotPaid_AlreadyUnpaidWithNoCycle_IsIdempotentNoOp()
+    {
+        AddOwner("owner-1", "Alaa Owner", "+970111", "alaa@example.com");
+        var hall = AddHall("My Hall", "owner-1", status: HallStatus.Approved, payment: HallPaymentStatus.Unpaid);
+
+        var result = await CreateService().MarkSubscriptionNotPaidAsync(hall.Id);
+
+        Assert.Equal(HallPaymentStatus.Unpaid, result.PaymentStatus);
+        Assert.Null(result.CycleStart);
+        Assert.Null(result.CycleEnd);
+
+        var reloaded = await _context.Halls.FindAsync(hall.Id);
+        Assert.Null(reloaded!.SubscriptionCycleStart);
+        Assert.Null(reloaded.SubscriptionCycleEnd);
+    }
+
+    [Fact]
+    public async Task MarkNotPaid_PartialCycle_IsClearedNotLeftHalfSet()
+    {
+        // A half-set cycle (start without end, as a failed earlier write could leave)
+        // must be fully cleared rather than reported as a no-op.
+        AddOwner("owner-1", "Alaa Owner", "+970111", "alaa@example.com");
+        var hall = AddHall("My Hall", "owner-1", status: HallStatus.Approved, payment: HallPaymentStatus.Unpaid, cycleStart: Today.AddDays(-5));
+
+        var result = await CreateService().MarkSubscriptionNotPaidAsync(hall.Id);
+
+        Assert.Null(result.CycleStart);
+        var reloaded = await _context.Halls.FindAsync(hall.Id);
+        Assert.Null(reloaded!.SubscriptionCycleStart);
+        Assert.Null(reloaded.SubscriptionCycleEnd);
+    }
+
+    [Fact]
+    public async Task MarkNotPaid_NeverTouchesLocks()
+    {
+        // Revoking a payment is not a lock operation: an admin lock stays, and a system
+        // lock stays, because the payment action must not silently change lock state.
+        AddOwner("owner-1", "Alaa Owner", "+970111", "alaa@example.com");
+        var hall = AddHall("My Hall", "owner-1", status: HallStatus.Approved, payment: HallPaymentStatus.Paid, cycleStart: Today.AddDays(-10), cycleEnd: Today.AddDays(20), systemLocked: true, isAdminLocked: true);
+
+        var result = await CreateService().MarkSubscriptionNotPaidAsync(hall.Id);
+
+        Assert.True(result.AdminLocked);
+        Assert.True(result.SystemLocked);
+
+        var reloaded = await _context.Halls.FindAsync(hall.Id);
+        Assert.True(reloaded!.IsAdminLocked);
+        Assert.True(reloaded.SystemLocked);
+    }
+
+    [Fact]
+    public async Task MarkNotPaid_WorksRegardlessOfReviewStatusIndependence()
+    {
+        // Payment state is independent of review status, so a Rejected-but-Paid hall can
+        // still have its payment revoked.
+        AddOwner("owner-1", "Alaa Owner", "+970111", "alaa@example.com");
+        var hall = AddHall("My Hall", "owner-1", status: HallStatus.Rejected, payment: HallPaymentStatus.Paid, cycleStart: Today.AddDays(-10), cycleEnd: Today.AddDays(20));
+
+        var result = await CreateService().MarkSubscriptionNotPaidAsync(hall.Id);
+
+        Assert.Equal(HallPaymentStatus.Unpaid, result.PaymentStatus);
+
+        var reloaded = await _context.Halls.FindAsync(hall.Id);
+        Assert.Equal(HallStatus.Rejected, reloaded!.Status);
+        Assert.Equal(HallPaymentStatus.Unpaid, reloaded.PaymentStatus);
+    }
+
+    [Fact]
+    public async Task MarkNotPaid_ClosedHall_ReopensManagementAccessViaGate()
+    {
+        // The reason this action exists: after revoking, the owner is blocked again with
+        // the accurate payment reason rather than a stale "paid" state.
+        AddOwner("owner-1", "Alaa Owner", "+970111", "alaa@example.com");
+        var hall = AddHall("My Hall", "owner-1", status: HallStatus.Approved, payment: HallPaymentStatus.Paid, cycleStart: Today.AddDays(-10), cycleEnd: Today.AddDays(20));
+
+        var before = await _context.Halls.FindAsync(hall.Id);
+        HallManagementAccess.EnsureAllowed(before!);
+
+        await CreateService().MarkSubscriptionNotPaidAsync(hall.Id);
+
+        var after = await _context.Halls.FindAsync(hall.Id);
+        var ex = Assert.Throws<BusinessRuleException>(() => HallManagementAccess.EnsureAllowed(after!));
+        Assert.Equal(HallManagementAccess.PaymentRequiredCode, ex.Code);
+    }
+
+    [Fact]
+    public async Task MarkNotPaid_DoesNotRequireAnyPaymentProofMessage()
+    {
+        // Deliberate: paid/not-paid is a direct administrative decision, independent of
+        // whether the owner ever sent a proof image. No conversation/message is involved.
+        AddOwner("owner-1", "Alaa Owner", "+970111", "alaa@example.com");
+        var hall = AddHall("My Hall", "owner-1", status: HallStatus.Approved, payment: HallPaymentStatus.Paid, cycleStart: Today.AddDays(-10), cycleEnd: Today.AddDays(20));
+
+        await CreateService().MarkSubscriptionNotPaidAsync(hall.Id);
+
+        Assert.Empty(_context.Conversations);
+        Assert.Empty(_context.Messages);
+    }
+
+    [Fact]
+    public async Task MarkNotPaid_NonExistentHall_ThrowsNotFound()
+    {
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            CreateService().MarkSubscriptionNotPaidAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task MarkNotPaid_DeletedHall_ThrowsNotFound()
+    {
+        AddOwner("owner-1", "Alaa Owner", "+970111", "alaa@example.com");
+        var hall = AddHall("My Hall", "owner-1", status: HallStatus.Approved, payment: HallPaymentStatus.Paid, isDeleted: true);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            CreateService().MarkSubscriptionNotPaidAsync(hall.Id));
     }
 
     public void Dispose()

@@ -38,12 +38,6 @@ public class AdminHallDetailDto
     /// <summary>Live subscription payment state (US-ADMIN-07/10).</summary>
     public HallPaymentStatus PaymentStatus { get; init; }
 
-    /// <summary>When the owner uploaded a payment receipt (UTC), if any.</summary>
-    public DateTimeOffset? PaymentReceiptUploadedAt { get; init; }
-
-    /// <summary>True when the owner uploaded a payment receipt awaiting Admin confirmation.</summary>
-    public bool HasPaymentReceipt { get; init; }
-
     /// <summary>True when the owner has uploaded an identity document required to reach the Add Hall flow.</summary>
     public bool OwnerHasIdentityDocument { get; init; }
 }
@@ -75,12 +69,6 @@ public class AdminHallDetailRow
 
     /// <summary>Live subscription payment state (US-ADMIN-07/10).</summary>
     public HallPaymentStatus PaymentStatus { get; init; }
-
-    /// <summary>When the owner uploaded a payment receipt (UTC), if any.</summary>
-    public DateTimeOffset? PaymentReceiptUploadedAt { get; init; }
-
-    /// <summary>True when the owner uploaded a payment receipt awaiting Admin confirmation.</summary>
-    public bool HasPaymentReceipt { get; init; }
 
     /// <summary>True when the owner has uploaded an identity document required to reach the Add Hall flow.</summary>
     public bool OwnerHasIdentityDocument { get; init; }

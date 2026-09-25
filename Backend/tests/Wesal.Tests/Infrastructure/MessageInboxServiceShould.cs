@@ -362,7 +362,7 @@ public class MessageInboxServiceShould
     {
         var effectiveUserId = authenticated ? userId ?? "test-user-1" : null;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? []);
-        return new ConversationService(conversationRepository, messageRepository, new FakeBookingRejectionService(), new FakeHallRepository(), currentUser, new FakeConversationNotifier());
+        return new ConversationService(conversationRepository, messageRepository, new FakeBookingRejectionService(), new FakeHallRepository(), currentUser, new FakeConversationNotifier(), new FakeDocumentStorage());
     }
 
     private sealed class FakeConversationRepository : IConversationRepository
@@ -458,6 +458,9 @@ public class MessageInboxServiceShould
         public Task SaveChangesAsync(CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
+        public Task<Message?> GetByIdAsync(Guid messageId, CancellationToken cancellationToken = default)
+            => Task.FromResult<Message?>(null);
+
         public Task<Message?> GetByClientRequestIdAsync(string senderUserId, string clientRequestId, CancellationToken cancellationToken = default)
             => Task.FromResult<Message?>(null);
 
@@ -546,5 +549,15 @@ public class MessageInboxServiceShould
     {
         public Task NotifyMessageSentAsync(MessageSentEvent message, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+    }
+
+    private sealed class FakeDocumentStorage : IDocumentStorage
+    {
+        public string Root => Path.Combine(Path.GetTempPath(), "wesal-test-documents");
+
+        public string OwnerDocumentsDirectory(string ownerId) => Path.Combine(Root, "documents", "owners", ownerId);
+
+    
+        public string ConversationAttachmentsDirectory(Guid conversationId) => Path.Combine(Root, "documents", "conversations", conversationId.ToString(), "attachments");
     }
 }

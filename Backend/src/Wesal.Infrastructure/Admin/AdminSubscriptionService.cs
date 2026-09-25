@@ -170,6 +170,82 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
         };
     }
 
+    /// <summary>
+    /// Revokes a confirmed subscription payment (WESAL-TASK-4, Edit 4). This is a direct
+    /// administrative action and is deliberately independent of any payment-proof message:
+    /// the Admin can set paid or not-paid at any time, with or without an uploaded proof.
+    ///
+    /// Semantics are the exact inverse of <see cref="MarkSubscriptionPaidAsync"/>: the
+    /// payment status becomes Unpaid and both cycle dates are cleared, so
+    /// <c>DaysRemaining</c> returns to <c>null</c> (never paid) on every read surface.
+    /// The idempotent no-op applies symmetrically — revoking an already-unpaid hall is a
+    /// no-op that never discards a partially-set cycle twice.
+    ///
+    /// Locks are intentionally left alone: <see cref="HallManagementAccess"/> evaluates
+    /// the payment requirement BEFORE the system-lock requirement, so an unpaid hall is
+    /// already blocked with the accurate <c>PaymentRequired</c> code, and forcing
+    /// SystemLocked here would report two reasons for one condition. A manual Admin lock
+    /// is never touched by any payment action.
+    /// </summary>
+    public async Task<AdminMarkPaidResultDto> MarkSubscriptionNotPaidAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
+
+        if (hall is null || hall.IsDeleted)
+        {
+            throw new NotFoundException(nameof(Hall), hallId);
+        }
+
+        var alreadyUnpaid = hall.PaymentStatus == HallPaymentStatus.Unpaid
+            && hall.SubscriptionCycleStart is null
+            && hall.SubscriptionCycleEnd is null;
+
+        if (alreadyUnpaid)
+        {
+            return new AdminMarkPaidResultDto
+            {
+                HallId = hall.Id,
+                Name = hall.Name,
+                PaymentStatus = hall.PaymentStatus,
+                SystemLocked = hall.SystemLocked,
+                AdminLocked = hall.IsAdminLocked,
+                CycleStart = hall.SubscriptionCycleStart,
+                CycleEnd = hall.SubscriptionCycleEnd,
+                AmountIls = _subscriptionPaymentOptions.Value.SubscriptionPriceIls,
+                AlreadyPaidWithActiveCycle = false
+            };
+        }
+
+        hall.PaymentStatus = HallPaymentStatus.Unpaid;
+        hall.SubscriptionCycleStart = null;
+        hall.SubscriptionCycleEnd = null;
+        hall.UpdatedAt = _dateTime.Now;
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Subscription payment for hall {HallId} was revoked by admin {AdminId}",
+            hallId,
+            _currentUser.UserId);
+
+        return new AdminMarkPaidResultDto
+        {
+            HallId = hall.Id,
+            Name = hall.Name,
+            PaymentStatus = hall.PaymentStatus,
+            SystemLocked = hall.SystemLocked,
+            AdminLocked = hall.IsAdminLocked,
+            CycleStart = hall.SubscriptionCycleStart,
+            CycleEnd = hall.SubscriptionCycleEnd,
+            AmountIls = _subscriptionPaymentOptions.Value.SubscriptionPriceIls,
+            AlreadyPaidWithActiveCycle = false
+        };
+    }
+
     private async Task TryNotifyOwnerAsync(Hall hall, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(hall.OwnerId))
@@ -219,7 +295,7 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
                     ConversationId = conversation.Id,
                     SenderUserId = message.SenderUserId,
                     SenderName = senderName,
-                    Content = message.Content,
+                    Content = message.Content ?? string.Empty,
                     SentAt = message.CreatedAt
                 }, cancellationToken);
             }

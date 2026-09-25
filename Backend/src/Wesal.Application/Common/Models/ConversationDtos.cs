@@ -27,6 +27,15 @@ public sealed class SendMessageResponse
     public DateTimeOffset SentAt { get; init; }
 
     public bool IsDuplicate { get; init; }
+
+    /// <summary>True when the sent message carries an image attachment (WESAL-TASK-4, Edit 4).</summary>
+    public bool HasAttachment { get; init; }
+
+    public string? AttachmentUrl { get; init; }
+
+    public string? AttachmentContentType { get; init; }
+
+    public string? AttachmentFileName { get; init; }
 }
 
 public sealed class ConversationResponse

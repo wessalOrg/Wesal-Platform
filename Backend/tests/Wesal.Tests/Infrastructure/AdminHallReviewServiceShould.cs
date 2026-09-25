@@ -113,7 +113,8 @@ public class AdminHallReviewServiceShould : IDisposable
 
         public string OwnerDocumentsDirectory(string ownerId) => Path.Combine(Root, "documents", "owners", ownerId);
 
-        public string HallReceiptsDirectory(Guid hallId) => Path.Combine(Root, "documents", "halls", hallId.ToString(), "receipts");
+    
+        public string ConversationAttachmentsDirectory(Guid conversationId) => Path.Combine(Root, "documents", "conversations", conversationId.ToString(), "attachments");
     }
 
     // --- US-ADMIN-01: Pending queue ---
@@ -230,7 +231,7 @@ public class AdminHallReviewServiceShould : IDisposable
 
         var message = await _context.Messages
             .Include(m => m.Conversation)
-            .FirstOrDefaultAsync(m => m.SenderUserId == admin.Id && m.Content.Contains("Incomplete"));
+            .FirstOrDefaultAsync(m => m.SenderUserId == admin.Id && (m.Content ?? string.Empty).Contains("Incomplete"));
         Assert.NotNull(message);
         Assert.Equal(owner.Id.ToString(), message!.Conversation.HallOwnerId);
         Assert.Equal(hall.Id, message.Conversation.HallId);
@@ -273,7 +274,7 @@ public class AdminHallReviewServiceShould : IDisposable
         Assert.Equal(HallStatus.Rejected, result.Status);
         Assert.True(result.NotificationDelivered);
 
-        var message = await _context.Messages.FirstOrDefaultAsync(m => m.SenderUserId == admin.Id && m.Content.Contains("Policy violation"));
+        var message = await _context.Messages.FirstOrDefaultAsync(m => m.SenderUserId == admin.Id && (m.Content ?? string.Empty).Contains("Policy violation"));
         Assert.NotNull(message);
     }
 
@@ -490,6 +491,148 @@ public class AdminHallReviewServiceShould : IDisposable
             .Where(m => m.ConversationId == first.ConversationId)
             .ToListAsync();
         Assert.Equal(2, all.Count);
+    }
+
+    // --- WESAL-TASK-4 (Edit 4): the owner/Admin thread is keyed by (HallId, HallOwnerId),
+    // not by whichever Admin happens to be acting, so two different Admins must always
+    // land in one single thread. ---
+
+    [Fact]
+    public async Task SendMessageToOwner_TwoDifferentAdmins_ShareOneThread()
+    {
+        var owner = await CreateOwnerAsync("owner@example.com", "+970599100001");
+        var firstAdmin = await CreateAdminAsync("admin-a@example.com");
+        var secondAdmin = await CreateAdminAsync("admin-b@example.com");
+        var hall = AddHall(owner.Id, "Grand Hall", HallStatus.PendingReview);
+
+        var fromFirst = await CreateService(new FakeCurrentUser(firstAdmin.Id, true, ApplicationRoles.Admin))
+            .SendMessageToOwnerAsync(hall.Id, "From the first admin.");
+        var fromSecond = await CreateService(new FakeCurrentUser(secondAdmin.Id, true, ApplicationRoles.Admin))
+            .SendMessageToOwnerAsync(hall.Id, "From the second admin.");
+
+        Assert.Equal(fromFirst.ConversationId, fromSecond.ConversationId);
+
+        // Exactly one owner/Admin thread exists for this hall+owner pair.
+        var conversations = await _context.Conversations
+            .Where(c => c.HallId == hall.Id && c.HallOwnerId == owner.Id)
+            .ToListAsync();
+        Assert.Single(conversations);
+    }
+
+    [Fact]
+    public async Task SendMessageToOwner_TwoAdmins_ThenOwnerReply_AllInSameThread()
+    {
+        var owner = await CreateOwnerAsync("owner@example.com", "+970599100001");
+        var firstAdmin = await CreateAdminAsync("admin-a@example.com");
+        var secondAdmin = await CreateAdminAsync("admin-b@example.com");
+        var hall = AddHall(owner.Id, "Grand Hall", HallStatus.Approved);
+
+        var fromFirst = await CreateService(new FakeCurrentUser(firstAdmin.Id, true, ApplicationRoles.Admin))
+            .SendMessageToOwnerAsync(hall.Id, "First admin message.");
+        var fromSecond = await CreateService(new FakeCurrentUser(secondAdmin.Id, true, ApplicationRoles.Admin))
+            .SendMessageToOwnerAsync(hall.Id, "Second admin message.");
+
+        // The owner's payment-proof reply must land in that same thread, so the Admin sees
+        // the proof alongside their own messages.
+        var conversation = await _context.Conversations.FindAsync(fromFirst.ConversationId);
+        _context.Messages.Add(new Message
+        {
+            ConversationId = conversation!.Id,
+            SenderUserId = owner.Id,
+            Content = string.Empty,
+            AttachmentUrl = "/documents/conversations/" + conversation.Id + "/attachments/proof.png",
+            AttachmentContentType = "image/png",
+            AttachmentFileName = "proof.png"
+        });
+        await _context.SaveChangesAsync();
+
+        var senders = await _context.Messages
+            .Where(m => m.ConversationId == fromFirst.ConversationId)
+            .Select(m => m.SenderUserId)
+            .ToListAsync();
+        Assert.Equal(3, senders.Count);
+        Assert.Contains(firstAdmin.Id, senders);
+        Assert.Contains(secondAdmin.Id, senders);
+        Assert.Contains(owner.Id, senders);
+        Assert.Equal(fromSecond.ConversationId, fromFirst.ConversationId);
+    }
+
+    [Fact]
+    public async Task SendMessageToOwner_ExistingDuplicateThreads_ReusesTheOldestDeterministically()
+    {
+        // Production already contains duplicate owner/Admin threads from the old
+        // per-Admin keying. The lookup must deterministically pick the oldest row rather
+        // than whichever row the database happens to return first.
+        var owner = await CreateOwnerAsync("owner@example.com", "+970599100001");
+        var hall = AddHall(owner.Id, "Grand Hall", HallStatus.Approved);
+        var clock = new FakeDateTime(new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero));
+        var repository = new ConversationRepository(_context);
+
+        // Seed the pre-existing older thread, then a newer duplicate of it.
+        _context.Conversations.Add(new Conversation
+        {
+            HallId = hall.Id,
+            HallOwnerId = owner.Id,
+            SenderUserId = "admin-older",
+            CreatedAt = clock.Now
+        });
+        await _context.SaveChangesAsync();
+        var older = await repository.GetByHallForOwnerAsync(hall.Id, owner.Id);
+
+        _context.Conversations.Add(new Conversation
+        {
+            HallId = hall.Id,
+            HallOwnerId = owner.Id,
+            SenderUserId = "admin-later",
+            CreatedAt = clock.Now.AddDays(5)
+        });
+        await _context.SaveChangesAsync();
+
+        var result = await CreateService(new FakeCurrentUser("admin-1", true, ApplicationRoles.Admin), clock)
+            .SendMessageToOwnerAsync(hall.Id, "Should reuse the oldest thread.");
+
+        // No new thread was created and the message joined the pre-existing (oldest) one.
+        Assert.NotNull(older);
+        Assert.Equal(older!.Id, result.ConversationId);
+        Assert.Equal(2, await _context.Conversations.CountAsync(c => c.HallId == hall.Id));
+    }
+
+    [Fact]
+    public async Task GetByHallForOwnerAsync_TieOnCreatedAt_OrdersByIdSoLookupIsStable()
+    {
+        var owner = await CreateOwnerAsync("owner@example.com", "+970599100001");
+        var hall = AddHall(owner.Id, "Grand Hall", HallStatus.Approved);
+        var clock = new FakeDateTime(new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero));
+        var repository = new ConversationRepository(_context);
+
+        // Two threads share the same CreatedAt: the Id tiebreaker must make the result
+        // stable across repeated calls instead of depending on storage order.
+        _context.Conversations.Add(new Conversation { HallId = hall.Id, HallOwnerId = owner.Id, SenderUserId = "admin-1", CreatedAt = clock.Now });
+        await _context.SaveChangesAsync();
+        _context.Conversations.Add(new Conversation { HallId = hall.Id, HallOwnerId = owner.Id, SenderUserId = "admin-2", CreatedAt = clock.Now });
+        await _context.SaveChangesAsync();
+
+        var first = await repository.GetByHallForOwnerAsync(hall.Id, owner.Id);
+        var second = await repository.GetByHallForOwnerAsync(hall.Id, owner.Id);
+
+        Assert.NotNull(first);
+        Assert.Equal(first!.Id, second!.Id);
+    }
+
+    [Fact]
+    public async Task GetByHallForOwnerAsync_DifferentOwner_SameHall_ReturnsNull()
+    {
+        // The lookup is scoped by owner as well as hall, so a hall's thread is never
+        // handed to a different owner.
+        var firstOwner = await CreateOwnerAsync("first@example.com", "+970599100001");
+        var secondOwner = await CreateOwnerAsync("second@example.com", "+970599100002");
+        var hall = AddHall(firstOwner.Id, "Grand Hall", HallStatus.Approved);
+        _context.Conversations.Add(new Conversation { HallId = hall.Id, HallOwnerId = firstOwner.Id, SenderUserId = "admin-1" });
+        await _context.SaveChangesAsync();
+
+        var repository = new ConversationRepository(_context);
+
+        Assert.Null(await repository.GetByHallForOwnerAsync(hall.Id, secondOwner.Id));
     }
 
     [Fact]

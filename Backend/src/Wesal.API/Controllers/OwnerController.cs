@@ -28,7 +28,6 @@ public class OwnerController : ControllerBase
     private readonly IOwnerHourlyAvailabilityService _ownerHourlyAvailabilityService;
     private readonly IHallSubscriptionService _hallSubscriptionService;
     private readonly IOwnerIdentityService _ownerIdentityService;
-    private readonly IPaymentReceiptService _paymentReceiptService;
 
     public OwnerController(
         IOwnerSidebarService sidebarService,
@@ -39,8 +38,7 @@ public class OwnerController : ControllerBase
         IOwnerBookingRequestsService ownerBookingRequestsService,
         IOwnerHourlyAvailabilityService ownerHourlyAvailabilityService,
         IHallSubscriptionService hallSubscriptionService,
-        IOwnerIdentityService ownerIdentityService,
-        IPaymentReceiptService paymentReceiptService)
+        IOwnerIdentityService ownerIdentityService)
     {
         _sidebarService = sidebarService;
         _hallCreationService = hallCreationService;
@@ -51,7 +49,6 @@ public class OwnerController : ControllerBase
         _ownerHourlyAvailabilityService = ownerHourlyAvailabilityService;
         _hallSubscriptionService = hallSubscriptionService;
         _ownerIdentityService = ownerIdentityService;
-        _paymentReceiptService = paymentReceiptService;
     }
 
     /// <summary>
@@ -393,48 +390,4 @@ public class OwnerController : ControllerBase
         return PhysicalFile(document.FullPath, document.ContentType);
     }
 
-    /// <summary>
-    /// Uploads the payment receipt for one of the authenticated Hall Owner's own halls
-    /// (US-OWNER-31). Only valid for an Approved, not-yet-paid hall; the hall moves to
-    /// ReceiptUploaded and stays private until the Admin confirms the payment.
-    /// </summary>
-    [HttpPost("halls/{hallId:guid}/payment-receipt")]
-    [Consumes("multipart/form-data")]
-    [ProducesResponseType(typeof(PaymentReceiptUploadResult), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<PaymentReceiptUploadResult>> UploadPaymentReceipt(
-        Guid hallId,
-        [FromForm] IFormFile file,
-        CancellationToken cancellationToken)
-    {
-        using var ms = new MemoryStream();
-        await file.CopyToAsync(ms, cancellationToken);
-
-        var upload = new OwnerDocumentUpload
-        {
-            FileName = file.FileName,
-            ContentType = file.ContentType,
-            Content = ms.ToArray()
-        };
-
-        var result = await _paymentReceiptService.UploadPaymentReceiptAsync(hallId, upload, cancellationToken);
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Streams the payment receipt of one of the authenticated Hall Owner's own halls
-    /// (US-OWNER-31). Only the owner (and the Admin) can read it.
-    /// </summary>
-    [HttpGet("halls/{hallId:guid}/payment-receipt")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPaymentReceipt(Guid hallId, CancellationToken cancellationToken)
-    {
-        var document = await _paymentReceiptService.GetPaymentReceiptAsync(hallId, cancellationToken);
-        return PhysicalFile(document.FullPath, document.ContentType);
-    }
 }

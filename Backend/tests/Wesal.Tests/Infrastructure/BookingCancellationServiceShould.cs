@@ -594,6 +594,9 @@ public class BookingCancellationServiceShould
             return Task.CompletedTask;
         }
 
+        public Task<Message?> GetByIdAsync(Guid messageId, CancellationToken cancellationToken = default)
+            => Task.FromResult<Message?>(null);
+
         public Task<Message?> GetByClientRequestIdAsync(string senderUserId, string clientRequestId, CancellationToken cancellationToken = default)
             => Task.FromResult(_committed.FirstOrDefault(m => m.SenderUserId == senderUserId && m.ClientRequestId == clientRequestId));
 

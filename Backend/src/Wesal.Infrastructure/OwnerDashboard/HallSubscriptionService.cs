@@ -61,9 +61,19 @@ public sealed class HallSubscriptionService : IHallSubscriptionService
             HallId = hall.Id,
             HallName = hall.Name,
             Status = ComputeStatus(hall, today, out var nextBillingDate),
-            NextBillingDate = nextBillingDate
+            NextBillingDate = nextBillingDate,
+            DaysRemaining = ComputeDaysRemaining(nextBillingDate, today)
         };
     }
+
+    /// <summary>
+    /// Days left until the cycle ends, computed from the cycle end and never cached
+    /// (WESAL-TASK-4, Edit 4). Null when no cycle was ever confirmed, otherwise the
+    /// exact signed day difference: 0 on the final day, negative once lapsed, so the
+    /// owner can tell "ends today" from "expired 3 days ago" without a second field.
+    /// </summary>
+    private static int? ComputeDaysRemaining(DateOnly? cycleEnd, DateOnly today)
+        => cycleEnd is null ? null : cycleEnd.Value.DayNumber - today.DayNumber;
 
     /// <summary>
     /// Derives the live subscription state from the persisted hall record alone.

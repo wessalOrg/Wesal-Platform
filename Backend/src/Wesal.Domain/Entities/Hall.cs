@@ -80,16 +80,6 @@ public class Hall : BaseAuditableEntity
     public HallPaymentStatus PaymentStatus { get; set; } = HallPaymentStatus.Unpaid;
 
     /// <summary>
-    /// Relative storage URL of the owner-uploaded subscription payment receipt, stored
-    /// OUTSIDE the public static-file area; it can only be read through the protected
-    /// Admin (and owner) receipt endpoints.
-    /// </summary>
-    public string? PaymentReceiptUrl { get; set; }
-
-    /// <summary>When the owner uploaded the payment receipt (UTC).</summary>
-    public DateTimeOffset? PaymentReceiptUploadedAt { get; set; }
-
-    /// <summary>
     /// Manual Admin lock for this hall (FR-SUB-05, US-ADMIN-05). Independent of the
     /// payment-driven state: when set, hall access is restricted regardless of
     /// subscription status until an Admin unlocks it. Never modified by the automatic
