@@ -40,9 +40,15 @@ public class HallHourlySlotDto
 
 /// <summary>
 /// Calendar view the seeker uses to pick a date (WESAL-TASK-1): for each day in the
-/// requested range, whether the day is available for hourly seeking (owner has not
-/// blocked it). Days the owner blocked are reported explicitly as Closed so the
-/// seeker can never silently pick them.
+/// requested range, whether the day is available for hourly seeking. A day with no
+/// explicit owner gate defaults to open.
+///
+/// A day the owner has fully blocked is treated exactly like a day whose hours are all
+/// already booked, and is governed by the same <see cref="Hall.ShowBookedSlots"/> rule as
+/// any booked slot. With the toggle ON the day is disclosed as not open; with the toggle
+/// OFF it is deliberately indistinguishable from a hidden fully-booked day and reads as
+/// open, so the block is never leaked. A blocked day is never reported through a distinct
+/// "Closed" status of its own.
 /// </summary>
 public class HallHourlyCalendarDto
 {
@@ -59,7 +65,11 @@ public class HallHourlyCalendarDayDto
 {
     public DateOnly Date { get; init; }
 
-    /// <summary>true = seekable day, false = owner blocked (Closed).</summary>
+    /// <summary>
+    /// true = seekable day. false only while <see cref="Hall.ShowBookedSlots"/> is ON and
+    /// the owner blocked the day; with the toggle OFF a blocked day reports true, exactly
+    /// as a hidden fully-booked day does.
+    /// </summary>
     public bool IsOpen { get; init; }
 }
 

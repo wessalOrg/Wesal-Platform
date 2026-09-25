@@ -270,19 +270,175 @@ public class HourlySlotServiceShould
             service.CreateHourlyBookingAsync(CreateRequest(hall.Id, Tomorrow(), new TimeOnly(10, 0))));
     }
 
+    // ---------------------------------------------------------------------------------
+    // Public visibility: a non-public hall must not expose its schedule through the
+    // seeker-facing endpoints. GET /halls/{id} already 404s for these, so the hourly
+    // catalog and calendar must return the identical 404 rather than an empty 200 that
+    // still reveals the hall's bookable window and booked hours.
+    // ---------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetHourlyCatalogAsync_SoftDeletedHall_ThrowsNotFound()
+    {
+        var hall = CreateHall("Deleted Hall", showBookedSlots: true);
+        hall.IsDeleted = true;
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+        var bookingRepository = new FakeBookingRepository();
+        var date = Tomorrow();
+        bookingRepository.Slots.Add(NewSlot(hall.Id, date, new TimeOnly(10, 0), HallSlotStatus.Booked));
+
+        var service = CreateService(hallRepository, bookingRepository);
+
+        // Not an empty catalog: a 404, so the schedule is not readable at all.
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetHourlyCatalogAsync(hall.Id, date));
+    }
+
+    [Fact]
+    public async Task GetAvailabilityCalendarAsync_SoftDeletedHall_ThrowsNotFound()
+    {
+        var hall = CreateHall("Deleted Hall", showBookedSlots: true);
+        hall.IsDeleted = true;
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+        var bookingRepository = new FakeBookingRepository();
+        bookingRepository.DayGates.Add(new HallDayAvailability
+        {
+            HallId = hall.Id,
+            Date = Tomorrow(),
+            IsOpen = false
+        });
+
+        var service = CreateService(hallRepository, bookingRepository);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.GetAvailabilityCalendarAsync(hall.Id, Tomorrow(), Tomorrow()));
+    }
+
+    [Theory]
+    [InlineData(HallStatus.PendingReview)]
+    [InlineData(HallStatus.Rejected)]
+    public async Task GetHourlyCatalogAsync_NonApprovedHall_ThrowsNotFound(HallStatus status)
+    {
+        var hall = CreateHall("Not Public Yet", showBookedSlots: true);
+        hall.Status = status;
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+
+        var service = CreateService(hallRepository, new FakeBookingRepository());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetHourlyCatalogAsync(hall.Id, Tomorrow()));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetHourlyCatalogAsync_LockedOrUnpaidHall_ThrowsNotFound(bool adminLocked)
+    {
+        var hall = CreateHall("Locked Hall", showBookedSlots: true);
+        hall.IsAdminLocked = adminLocked;
+        hall.PaymentStatus = adminLocked ? HallPaymentStatus.Paid : HallPaymentStatus.Unpaid;
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+
+        var service = CreateService(hallRepository, new FakeBookingRepository());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetHourlyCatalogAsync(hall.Id, Tomorrow()));
+    }
+
+    [Fact]
+    public async Task GetHourlyCatalogAsync_PubliclyVisibleHall_StillReturnsItsSchedule()
+    {
+        // Happy-path guard: the visibility check must not over-reject a normal listing.
+        var hall = CreateHall("Public Hall", showBookedSlots: true);
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+        var bookingRepository = new FakeBookingRepository();
+        var date = Tomorrow();
+        bookingRepository.Slots.Add(NewSlot(hall.Id, date, new TimeOnly(10, 0), HallSlotStatus.Booked));
+
+        var service = CreateService(hallRepository, bookingRepository);
+
+        var catalog = await service.GetHourlyCatalogAsync(hall.Id, date);
+
+        Assert.True(catalog.DayOpen);
+        Assert.Equal(13, catalog.Slots.Count);
+        Assert.Contains(catalog.Slots, slot => slot.StartTime == WindowStart);
+        var booked = Assert.Single(catalog.Slots, slot => slot.StartTime == new TimeOnly(10, 0));
+        Assert.Equal(HallSlotStatus.Booked, booked.Status);
+    }
+
+    [Fact]
+    public async Task GetAvailabilityCalendarAsync_PubliclyVisibleHall_StillReturnsItsCalendar()
+    {
+        var hall = CreateHall("Public Hall", showBookedSlots: true);
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+        var bookingRepository = new FakeBookingRepository();
+        var blocked = Tomorrow();
+        bookingRepository.DayGates.Add(new HallDayAvailability
+        {
+            HallId = hall.Id,
+            Date = blocked,
+            IsOpen = false
+        });
+
+        var service = CreateService(hallRepository, bookingRepository);
+
+        var calendar = await service.GetAvailabilityCalendarAsync(hall.Id, blocked, blocked.AddDays(1));
+
+        Assert.Equal(2, calendar.Days.Count);
+        Assert.False(calendar.Days[0].IsOpen);
+        Assert.True(calendar.Days[1].IsOpen);
+    }
+
+    [Fact]
+    public async Task GetHourlyCatalogAsync_UnknownHall_ThrowsNotFound()
+    {
+        var service = CreateService(new FakeHallRepository(), new FakeBookingRepository());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.GetHourlyCatalogAsync(Guid.NewGuid(), Tomorrow()));
+    }
+
+    [Fact]
+    public async Task CreateHourlyBookingAsync_SoftDeletedHall_ThrowsNotFound()
+    {
+        // The write side must stay symmetric with the read side: a soft-deleted hall
+        // accepts no booking, so the schedule being hidden and the booking being rejected
+        // are enforced by the same rule.
+        var hall = CreateHall("Deleted Hall", showBookedSlots: true);
+        hall.IsDeleted = true;
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+
+        var service = new HourlySlotService(
+            hallRepository,
+            new FakeBookingRepository(),
+            new FakeUnitOfWork(),
+            new FakeCurrentUserService("seeker-1", authenticated: true, ApplicationRoles.RegisteredUser));
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.CreateHourlyBookingAsync(CreateRequest(hall.Id, Tomorrow(), new TimeOnly(10, 0))));
+    }
+
     private static DateOnly Tomorrow() => DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
 
     private static Hall CreateHall(string name, bool showBookedSlots)
-        => new()
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
-            Status = HallStatus.Approved,
-            OwnerId = "owner-1",
-            HourlySlotStart = WindowStart,
-            HourlySlotEnd = WindowEnd,
-            ShowBookedSlots = showBookedSlots
-        };
+    => new()
+    {
+        Id = Guid.NewGuid(),
+        Name = name,
+        Status = HallStatus.Approved,
+        // The seeker-facing read paths only expose a hall whose listing is publicly
+        // visible, which includes a confirmed subscription payment. Without this the
+        // entity default is Unpaid and the catalog/calendar 404 by design.
+        PaymentStatus = HallPaymentStatus.Paid,
+        OwnerId = "owner-1",
+        HourlySlotStart = WindowStart,
+        HourlySlotEnd = WindowEnd,
+        ShowBookedSlots = showBookedSlots
+    };
 
     private static HallSlotAvailability NewSlot(Guid hallId, DateOnly date, TimeOnly start, HallSlotStatus status)
         => new()

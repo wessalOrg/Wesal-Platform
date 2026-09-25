@@ -45,8 +45,13 @@ public class HourlySlotService : IHourlySlotService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var hall = await _hallRepository.GetHallByIdAsync(hallId, cancellationToken)
-            ?? throw new NotFoundException(nameof(Hall), hallId);
+        // A non-public hall (soft-deleted, unapproved, or locked) must not expose its
+        // schedule. The public hall-details endpoint already 404s for these, so the hourly
+        // catalog must return the identical 404 rather than an empty 200: otherwise the
+        // slots stay readable by anyone who knows or guesses the hall id.
+        var hall = HallPublicVisibility.EnsurePubliclyVisible(
+            await _hallRepository.GetHallByIdAsync(hallId, cancellationToken),
+            hallId);
 
         var dayOpen = await _bookingRepository.IsDayOpenAsync(hallId, date, cancellationToken);
 
@@ -116,8 +121,11 @@ public class HourlySlotService : IHourlySlotService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var hall = await _hallRepository.GetHallByIdAsync(hallId, cancellationToken)
-            ?? throw new NotFoundException(nameof(Hall), hallId);
+        // Same public-visibility rule as the hourly catalog above: a non-public hall's
+        // open/closed calendar must 404 like its details and slots do.
+        var hall = HallPublicVisibility.EnsurePubliclyVisible(
+            await _hallRepository.GetHallByIdAsync(hallId, cancellationToken),
+            hallId);
 
         EnsureValidRange(fromDate, toDate);
 

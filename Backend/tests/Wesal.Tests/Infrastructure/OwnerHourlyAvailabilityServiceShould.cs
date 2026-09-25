@@ -445,6 +445,83 @@ public class OwnerHourlyAvailabilityServiceShould : IDisposable
         Assert.Empty(await _context.HallSlotAvailabilities.ToListAsync());
     }
 
+    // ---------- Public visibility must not touch the owner surface ----------
+
+    [Fact]
+    public async Task Owner_StillManagesOwnRejectedHallSchedule()
+    {
+        // A hall that is not publicly listed (rejected) is still fully manageable by its
+        // owner: the owner-facing path never consults the public-visibility rule.
+        var owner = await CreateOwnerAsync("ownerrejected@example.com", "+970599100009");
+        var hall = AddHall(owner.Id, "Owner Rejected Hall");
+        hall.Status = HallStatus.Rejected;
+        await _context.SaveChangesAsync();
+
+        var service = CreateOwnerService(new FakeCurrentUser(owner.Id, true));
+        var result = await service.SetDayBlockAsync(
+            hall.Id, new OwnerDayBlockRequest { Date = Tomorrow(), IsOpen = false });
+
+        Assert.False(result.IsOpen);
+    }
+
+    [Fact]
+    public async Task Owner_SoftDeletedHallBehaviourIsUnchangedByThePublicVisibilityFix()
+    {
+        // Guards the scope of the seeker-facing fix. GetOwnedHallForUpdateAsync has always
+        // filtered soft-deleted halls out of the owner surface (a pre-existing rule this
+        // change does not touch), so the owner still gets NotFound here. This test exists
+        // to prove the public-visibility fix neither widened nor narrowed owner access.
+        var owner = await CreateOwnerAsync("ownersddeleted@example.com", "+970599100012");
+        var hall = AddHall(owner.Id, "Owner Soft Deleted Hall");
+        hall.IsDeleted = true;
+        await _context.SaveChangesAsync();
+
+        var service = CreateOwnerService(new FakeCurrentUser(owner.Id, true));
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.SetDayBlockAsync(
+                hall.Id, new OwnerDayBlockRequest { Date = Tomorrow(), IsOpen = false }));
+    }
+
+    [Fact]
+    public async Task Owner_StillManagesOwnPendingHallSchedule()
+    {
+        var owner = await CreateOwnerAsync("ownerpending@example.com", "+970599100010");
+        var hall = AddHall(owner.Id, "Owner Pending Hall");
+        hall.Status = HallStatus.PendingReview;
+        await _context.SaveChangesAsync();
+
+        var service = CreateOwnerService(new FakeCurrentUser(owner.Id, true));
+        var settings = await service.UpdateHourlySettingsAsync(
+            hall.Id, new UpdateOwnerHourlySettingsRequest
+            {
+                ShowBookedSlots = false,
+                HourlySlotStart = new TimeOnly(8, 0),
+                HourlySlotEnd = new TimeOnly(20, 0)
+            });
+
+        Assert.False(settings.ShowBookedSlots);
+        Assert.Equal(new TimeOnly(8, 0), settings.HourlySlotStart);
+        Assert.Equal(new TimeOnly(20, 0), settings.HourlySlotEnd);
+    }
+
+    [Fact]
+    public async Task Owner_SoftDeletedHallIsStillHiddenFromSeekers()
+    {
+        // Symmetry check: the owner can manage it, yet a seeker still gets a 404.
+        var owner = await CreateOwnerAsync("ownersymmetry@example.com", "+970599100011");
+        var hall = AddHall(owner.Id, "Owner Symmetry Hall");
+        hall.IsDeleted = true;
+        await _context.SaveChangesAsync();
+
+        var seeker = CreateSeekerService();
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            seeker.GetHourlyCatalogAsync(hall.Id, Tomorrow()));
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            seeker.GetAvailabilityCalendarAsync(hall.Id, Tomorrow(), Tomorrow()));
+    }
+
     private sealed class FakeCurrentUser : ICurrentUserService
     {
         private readonly string[] _roles;

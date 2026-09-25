@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Common;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
@@ -36,12 +37,10 @@ public class HallDetailsService : IHallDetailsService
 
         var hall = await _hallRepository.GetHallByIdAsync(hallId, cancellationToken);
 
-        if (hall is null
-            || hall.IsDeleted
-            || hall.Status != HallStatus.Approved
-            || hall.IsAdminLocked
-            || hall.SystemLocked
-            || hall.PaymentStatus != HallPaymentStatus.Paid)
+        // HallPublicVisibility is the single source of truth for this rule, shared with the
+        // public hourly availability endpoints so a hidden hall can never leak its schedule
+        // through one surface while 404ing on another.
+        if (hall is null || !HallPublicVisibility.IsPubliclyVisible(hall))
         {
             _logger.LogInformation(
                 "Hall {HallId} is not available for public details (status {Status}, payment {Payment}, deleted {IsDeleted}, adminLocked {IsAdminLocked}, systemLocked {SystemLocked}).",
