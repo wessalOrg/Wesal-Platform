@@ -298,4 +298,101 @@ public sealed class BookingRepository : IBookingRepository
 
         return 1;
     }
+
+    public async Task<bool> IsDayOpenAsync(
+        Guid hallId,
+        DateOnly date,
+        CancellationToken cancellationToken = default)
+    {
+        var dayGate = await _context.HallDayAvailabilities
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                day => day.HallId == hallId && day.Date == date,
+                cancellationToken);
+
+        // A missing per-day row defaults to Open under the hourly model.
+        return dayGate?.IsOpen ?? true;
+    }
+
+    public async Task<IReadOnlyList<HallDayAvailability>> GetDayGatesAsync(
+        Guid hallId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.HallDayAvailabilities
+            .AsNoTracking()
+            .Where(day => day.HallId == hallId && day.Date >= fromDate && day.Date <= toDate)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<HallSlotAvailability>> GetHourlySlotsAsync(
+        Guid hallId,
+        DateOnly date,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.HallSlotAvailabilities
+            .AsNoTracking()
+            .Where(slot => slot.HallId == hallId && slot.Date == date)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> ReserveHourlySlotAsync(
+        Guid hallId,
+        DateOnly date,
+        TimeOnly startTime,
+        CancellationToken cancellationToken = default)
+    {
+        if (_context.Database.IsRelational())
+        {
+            // Single-statement conditional upsert so reserving a fresh
+            // (HallId, Date, StartTime) hourly slot succeeds atomically:
+            // - no row yet        -> inserted as Booked, 1 row affected
+            // - row Available     -> updated to Booked,  1 row affected
+            // - row already Booked -> WHERE excludes the update, 0 rows affected
+            return await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                INSERT INTO wesal."HallSlotAvailabilities" ("Id", "HallId", "Date", "StartTime", "Status", "CreatedAt", "UpdatedAt")
+                VALUES ({Guid.NewGuid()}, {hallId}, {date}, {startTime}, {(int)HallSlotStatus.Booked}, {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow})
+                ON CONFLICT ("HallId", "Date", "StartTime")
+                DO UPDATE
+                SET "Status" = {(int)HallSlotStatus.Booked},
+                    "UpdatedAt" = {DateTimeOffset.UtcNow}
+                WHERE wesal."HallSlotAvailabilities"."Status" <> {(int)HallSlotStatus.Booked};
+                """,
+                cancellationToken);
+        }
+
+        var existing = await _context.HallSlotAvailabilities
+            .FirstOrDefaultAsync(
+                slot => slot.HallId == hallId && slot.Date == date && slot.StartTime == startTime,
+                cancellationToken);
+
+        if (existing is null)
+        {
+            _context.HallSlotAvailabilities.Add(new HallSlotAvailability
+            {
+                HallId = hallId,
+                Date = date,
+                StartTime = startTime,
+                Status = HallSlotStatus.Booked
+            });
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return 1;
+        }
+
+        if (existing.Status == HallSlotStatus.Booked)
+        {
+            return 0;
+        }
+
+        existing.Status = HallSlotStatus.Booked;
+        existing.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return 1;
+    }
 }

@@ -18,17 +18,20 @@ public class HallsController : ControllerBase
     private readonly IHallDetailsService _hallDetailsService;
     private readonly IAllHallsService _allHallsService;
     private readonly IHallSearchService _hallSearchService;
+    private readonly IHourlySlotService _hourlySlotService;
 
     public HallsController(
         IFeaturedHallsService featuredHallsService,
         IHallDetailsService hallDetailsService,
         IAllHallsService allHallsService,
-        IHallSearchService hallSearchService)
+        IHallSearchService hallSearchService,
+        IHourlySlotService hourlySlotService)
     {
         _featuredHallsService = featuredHallsService;
         _hallDetailsService = hallDetailsService;
         _allHallsService = allHallsService;
         _hallSearchService = hallSearchService;
+        _hourlySlotService = hourlySlotService;
     }
 
     [HttpGet("search")]
@@ -154,5 +157,81 @@ public class HallsController : ControllerBase
         {
             Features = HallFeatureCatalog.PredefinedFeatures
         });
+    }
+
+    /// <summary>
+    /// Returns the hourly-slot catalog for one hall on one date (WESAL-TASK-1, seeker
+    /// flow): the day's 60-minute slots from the hall's hourly window, each marked
+    /// Available or Booked. When the owner blocks the whole day, the day gate is closed
+    /// and no slots are returned. When the hall's ShowBookedSlots toggle is OFF, booked
+    /// hours are omitted from the response entirely; attempting to book one still returns
+    /// an explicit 'already booked' conflict.
+    /// </summary>
+    [HttpGet("{id:guid}/hourly-catalog")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(HallHourlyCatalogDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<HallHourlyCatalogDto>> GetHourlyCatalog(
+        Guid id,
+        [FromQuery] DateOnly date,
+        CancellationToken cancellationToken)
+    {
+        var catalog = await _hourlySlotService.GetHourlyCatalogAsync(id, date, cancellationToken);
+        return Ok(catalog);
+    }
+
+    /// <summary>
+    /// Returns the per-day open/closed availability calendar for one hall across a date
+    /// range (WESAL-TASK-1, seeker flow). A day with no explicit gate defaults to open;
+    /// a day the owner blocked is reported as closed.
+    /// </summary>
+    [HttpGet("{id:guid}/availability-calendar")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(HallHourlyCalendarDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<HallHourlyCalendarDto>> GetAvailabilityCalendar(
+        Guid id,
+        [FromQuery] DateOnly fromDate,
+        [FromQuery] DateOnly toDate,
+        CancellationToken cancellationToken)
+    {
+        var calendar = await _hourlySlotService.GetAvailabilityCalendarAsync(id, fromDate, toDate, cancellationToken);
+        return Ok(calendar);
+    }
+
+    /// <summary>
+    /// Creates a booking request for a single hourly slot (WESAL-TASK-1, seeker flow).
+    /// The slot is reserved atomically; a fully blocked day or an already-booked slot
+    /// returns an explicit conflict (409) with a clear message rather than silently
+    /// succeeding or failing.
+    /// </summary>
+    [HttpPost("{id:guid}/hourly-bookings")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(HourlyBookingResultDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<HourlyBookingResultDto>> CreateHourlyBooking(
+        Guid id,
+        [FromBody] HourlyBookingRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        // The route hall id is authoritative; the body may not redirect the booking to
+        // a different hall.
+        var hourlyRequest = new HourlyBookingRequestDto
+        {
+            HallId = id,
+            Date = request.Date,
+            SlotStart = request.SlotStart,
+            NameOnBooking = request.NameOnBooking,
+            RequesterName = request.RequesterName
+        };
+
+        var result = await _hourlySlotService.CreateHourlyBookingAsync(hourlyRequest, cancellationToken);
+        return CreatedAtAction(nameof(CreateHourlyBooking), new { version = "1", id }, result);
     }
 }
