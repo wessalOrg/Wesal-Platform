@@ -5,6 +5,7 @@ using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
+using Wesal.Domain.Enums;
 using Wesal.Persistence.Data;
 
 namespace Wesal.Persistence.Repositories;
@@ -279,7 +280,7 @@ public sealed class ConversationRepository : IConversationRepository
             cancellationToken);
     }
 
-    public async Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<int> GetUnreadConversationCountAsync(string userId, bool isAdmin, CancellationToken cancellationToken = default)
     {
         // THE unread rule, half one: a conversation is unread when it holds at least one
         // message from the OTHER PARTY that the caller's read watermark does not cover.
@@ -288,10 +289,33 @@ public sealed class ConversationRepository : IConversationRepository
         // flag compared the watermark against the newest message WHOSEVER sent it, so a
         // thread the user had just replied in showed a stale unread badge while the count
         // said zero. The tests pin them together.
-        return await _context.Conversations
+        var query = _context.Conversations
             .AsNoTracking()
             .Where(c => (c.SenderUserId == userId || c.HallOwnerId == userId) && !c.Hall.IsDeleted)
-            .Where(VisibleToUser(_context, userId))
+            .Where(VisibleToUser(_context, userId));
+
+        // WESAL-TASK-10, Edit 14: the count must not advertise a thread the caller cannot
+        // open, or the badge counts something the inbox refuses to show.
+        //
+        // This is the owner half of ConversationAccess.CanAccess, written inline because EF
+        // will not translate a call to a private helper inside Where. Note that the payment
+        // requirement cannot appear here: the full gate admits a thread owner unless the hall
+        // is Admin-locked or system-locked, because Edit 4 waives payment for a hall owner
+        // entirely (an unpaid owner is not locked out of their own payment thread). Reducing
+        // the gate to those two flags is what keeps this filter and the inbox list's
+        // ConversationAccess.CanAccess call in agreement; adding the payment check back
+        // would make the badge disagree with the list again.
+        //
+        // A non-Approved hall is not locked out of (its owner must keep reading review and
+        // rejection messages, US-ADMIN-03), and a deleted hall never reaches here.
+        if (!isAdmin)
+        {
+            query = query.Where(c => !(c.HallOwnerId == userId
+                && c.Hall.Status == HallStatus.Approved
+                && (c.Hall.IsAdminLocked || c.Hall.SystemLocked)));
+        }
+
+        return await query
             .Where(c => _context.Messages
                 .Where(m => m.ConversationId == c.Id && m.SenderUserId != userId)
                 .Any(m => !_context.ConversationReadStates
@@ -299,7 +323,7 @@ public sealed class ConversationRepository : IConversationRepository
             .CountAsync(cancellationToken);
     }
 
-    public async Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)
+    public async Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)
     {
         if (conversationIds.Count == 0)
         {

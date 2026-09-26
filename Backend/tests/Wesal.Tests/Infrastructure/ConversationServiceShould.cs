@@ -14,6 +14,103 @@ namespace Wesal.Tests.Infrastructure;
 
 public class ConversationServiceShould
 {
+    /// <summary>
+    /// WESAL-TASK-10, Edit 14. The inbox list is the one conversation surface that never ran
+    /// the hall-messaging gate, so a locked owner was refused the thread, its messages, its
+    /// read receipt and both send paths, and was still handed the row: hall name, the other
+    /// party, the newest message's CONTENT, its attachment flag, the message count and an
+    /// unread badge. The gate was enforced everywhere except the endpoint that previews it.
+    ///
+    /// This asserts the lock holds on the list. It should fail against the list as written.
+    /// </summary>
+    [Fact]
+    public async Task GetMyConversations_LockedOwnerThread_IsNotAdvertisedInTheInbox()
+    {
+        var hall = CreateApprovedHall("Locked Hall", "owner-1");
+        hall.IsAdminLocked = true;
+
+        var conversation = new Conversation
+        {
+            Id = Guid.NewGuid(),
+            HallId = hall.Id,
+            SenderUserId = "seeker-1",
+            HallOwnerId = "owner-1",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        conversation.Hall = hall;
+
+        var repository = new FakeConversationRepository();
+        repository.Conversations.Add(conversation);
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var inbox = await service.GetMyConversationsAsync();
+
+        Assert.Empty(inbox);
+    }
+
+    /// <summary>
+    /// The converse, so the fix cannot be "stop listing owner threads": a seeker is never
+    /// blocked by this gate and must keep seeing their thread on the very same locked hall.
+    /// </summary>
+    [Fact]
+    public async Task GetMyConversations_LockedHall_SeekerStillSeesTheirThread()
+    {
+        var hall = CreateApprovedHall("Locked Hall", "owner-1");
+        hall.IsAdminLocked = true;
+
+        var conversation = new Conversation
+        {
+            Id = Guid.NewGuid(),
+            HallId = hall.Id,
+            SenderUserId = "seeker-1",
+            HallOwnerId = "owner-1",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        conversation.Hall = hall;
+
+        var repository = new FakeConversationRepository();
+        repository.Conversations.Add(conversation);
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "seeker-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        var inbox = await service.GetMyConversationsAsync();
+
+        Assert.Single(inbox);
+        Assert.Equal(conversation.Id, inbox[0].ConversationId);
+    }
+
+    /// <summary>
+    /// Edit 4's carve-out reaches the list too: an Approved but UNPAID hall is not locked,
+    /// so the owner keeps their payment thread, and therefore the row that shows it.
+    /// </summary>
+    [Fact]
+    public async Task GetMyConversations_UnpaidButUnlockedHall_OwnerStillSeesTheirThread()
+    {
+        var hall = CreateApprovedHall("Unpaid Hall", "owner-1");
+        hall.PaymentStatus = HallPaymentStatus.Unpaid;
+
+        var conversation = new Conversation
+        {
+            Id = Guid.NewGuid(),
+            HallId = hall.Id,
+            SenderUserId = "seeker-1",
+            HallOwnerId = "owner-1",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        conversation.Hall = hall;
+
+        var repository = new FakeConversationRepository();
+        repository.Conversations.Add(conversation);
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var inbox = await service.GetMyConversationsAsync();
+
+        Assert.Single(inbox);
+        Assert.Equal(conversation.Id, inbox[0].ConversationId);
+    }
+
     [Fact]
     public async Task CreateConversation_RegisteredUser_ReturnsConversationResponse()
     {
@@ -853,7 +950,7 @@ public class ConversationServiceShould
             return Task.CompletedTask;
         }
 
-        public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> GetUnreadConversationCountAsync(string userId, bool isAdmin, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<Dictionary<Guid, bool>>(new Dictionary<Guid, bool>());
     }
 

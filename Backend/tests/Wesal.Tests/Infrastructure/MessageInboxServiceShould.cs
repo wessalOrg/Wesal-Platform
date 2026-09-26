@@ -473,7 +473,7 @@ public class MessageInboxServiceShould
 
         public Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> GetUnreadConversationCountAsync(string userId, bool isAdmin, CancellationToken cancellationToken = default) => Task.FromResult(0);
 
         /// <summary>Lets a test declare which conversations the repository reports unread.</summary>
         public Dictionary<Guid, bool> UnreadStatus { get; } = [];
@@ -504,7 +504,7 @@ public class MessageInboxServiceShould
         public Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
-        public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default)
+        public Task<int> GetUnreadConversationCountAsync(string userId, bool isAdmin, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)

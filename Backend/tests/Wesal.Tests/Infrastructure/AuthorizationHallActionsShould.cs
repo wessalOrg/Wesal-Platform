@@ -75,7 +75,7 @@ public class AuthorizationHallActionsShould
         public Task<IReadOnlyList<UserDisplayInfo>> GetUserDisplayNamesAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<UserDisplayInfo>>(userIds.Select(id => new UserDisplayInfo { UserId = id, FullName = "User " + id }).ToList());
         public Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> GetUnreadConversationCountAsync(string userId, bool isAdmin, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<Dictionary<Guid, bool>>(conversationIds.ToDictionary(id => id, _ => false));
     }
 

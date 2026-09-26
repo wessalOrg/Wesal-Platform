@@ -51,7 +51,16 @@ public interface IConversationRepository
     /// </summary>
     Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default);
 
-    Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default);
+    /// The number of the caller's conversations that hold an unread incoming message.
+    ///
+    /// <paramref name="isAdmin"/> is part of the signature because the count is a filtered
+    /// count, not a plain one: a conversation the caller is not allowed to read must not be
+    /// counted, or the badge advertises a thread that cannot be opened. The filter is the
+    /// same hall-messaging gate the inbox list applies, mirrored into LINQ here, and
+    /// <see cref="GetUnreadStatusAsync"/> is expected to be called with the same set of
+    /// conversations the list returns.
+    /// </summary>
+    Task<int> GetUnreadConversationCountAsync(string userId, bool isAdmin, CancellationToken cancellationToken = default);
 
     Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default);
 }

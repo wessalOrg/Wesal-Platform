@@ -215,6 +215,36 @@ public sealed class ConversationService : IConversationService
             return [];
         }
 
+        // WESAL-TASK-10, Edit 14: the inbox was the one conversation surface that never ran
+        // the hall-messaging gate. A locked owner was refused the thread, its messages, its
+        // read receipt and both send paths, and was still handed this row: hall name, the
+        // other party, the newest message's CONTENT, its attachment flag, the message count
+        // and an unread badge. The gate was enforced everywhere except the endpoint that
+        // previews the thread, which is a bypass of it rather than a cosmetic gap.
+        //
+        // The row is dropped, not blanked. A row with the content removed would still report
+        // that a thread exists, who it is with, how many messages it holds and when it was
+        // last active, and an unopenable row is not something a client can render. Dropping
+        // it also keeps this list and the unread badge in step: the badge is filtered by the
+        // same rule (see GetUnreadConversationCountAsync), so the count of unread rows a user
+        // can see always equals the badge.
+        //
+        // Seekers and Admins are unaffected, and Edit 4's unpaid carve-out is untouched, so an
+        // Approved-but-unpaid owner keeps the row that shows them their payment thread.
+        var isAdmin = _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+
+        conversations = conversations
+            .Where(conversation => ConversationAccess.CanAccess(
+                conversation.Hall,
+                isThreadOwner: string.Equals(userId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase),
+                isAdmin: isAdmin))
+            .ToList();
+
+        if (conversations.Count == 0)
+        {
+            return [];
+        }
+
         var conversationIds = conversations.Select(conversation => conversation.Id).ToList();
 
         var messages = await _messageRepository.GetByConversationIdsAsync(conversationIds, cancellationToken);
@@ -900,7 +930,10 @@ public sealed class ConversationService : IConversationService
 
         try
         {
-            var count = await _conversationRepository.GetUnreadConversationCountAsync(userId, cancellationToken);
+            var count = await _conversationRepository.GetUnreadConversationCountAsync(
+                userId,
+                _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase),
+                cancellationToken);
             return new UnreadCountResponse { UnreadCount = count };
         }
         catch (Exception ex) when (IsMissingTable(ex))

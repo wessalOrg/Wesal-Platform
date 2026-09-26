@@ -526,7 +526,7 @@ public sealed class MessagingCrashSweepShould : IDisposable
         public Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
-        public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default)
+        public Task<int> GetUnreadConversationCountAsync(string userId, bool isAdmin, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
 
         public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)

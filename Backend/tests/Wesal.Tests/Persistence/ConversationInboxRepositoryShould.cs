@@ -230,12 +230,12 @@ public class ConversationInboxRepositoryShould
         var repository = new ConversationRepository(context);
 
         // Both start unread for the seeker.
-        Assert.Equal(2, await repository.GetUnreadConversationCountAsync("seeker-1"));
+        Assert.Equal(2, await repository.GetUnreadConversationCountAsync("seeker-1", isAdmin: false));
 
         await repository.HideConversationAsync(hidden.Id, "seeker-1", messageAt.AddHours(1));
 
         // The badge must never advertise a thread the inbox is deliberately not showing.
-        Assert.Equal(1, await repository.GetUnreadConversationCountAsync("seeker-1"));
+        Assert.Equal(1, await repository.GetUnreadConversationCountAsync("seeker-1", isAdmin: false));
 
         // The other participant is completely unaffected by the seeker's hide.
         var ownerInbox = await repository.GetParticipantConversationsAsync("owner-1");
@@ -267,8 +267,8 @@ public class ConversationInboxRepositoryShould
         // The flag and the badge must agree for both parties. owner-1: nothing unread, the
         // only message was their own. seeker-1: nothing unread, the thread is hidden and no
         // newer message has arrived to bring it back.
-        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("owner-1"));
-        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("seeker-1"));
+        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("owner-1", isAdmin: false));
+        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("seeker-1", isAdmin: false));
     }
 
     [Fact]
@@ -582,7 +582,7 @@ public class ConversationInboxRepositoryShould
         var status = await repository.GetUnreadStatusAsync("seeker-1", [conversation.Id]);
 
         Assert.False(status[conversation.Id]);
-        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("seeker-1"));
+        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("seeker-1", isAdmin: false));
     }
 
     [Fact]
@@ -601,7 +601,7 @@ public class ConversationInboxRepositoryShould
         var status = await repository.GetUnreadStatusAsync("seeker-1", [conversation.Id]);
 
         Assert.False(status[conversation.Id]);
-        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("seeker-1"));
+        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("seeker-1", isAdmin: false));
     }
 
     /// <summary>
@@ -631,7 +631,7 @@ public class ConversationInboxRepositoryShould
         var status = await repository.GetUnreadStatusAsync("seeker-1", [conversation.Id]);
 
         Assert.True(status[conversation.Id]);
-        Assert.Equal(1, await repository.GetUnreadConversationCountAsync("seeker-1"));
+        Assert.Equal(1, await repository.GetUnreadConversationCountAsync("seeker-1", isAdmin: false));
     }
 
     /// <summary>
@@ -653,7 +653,7 @@ public class ConversationInboxRepositoryShould
         var status = await repository.GetUnreadStatusAsync("seeker-1", [conversation.Id]);
 
         Assert.True(status[conversation.Id]);
-        Assert.Equal(1, await repository.GetUnreadConversationCountAsync("seeker-1"));
+        Assert.Equal(1, await repository.GetUnreadConversationCountAsync("seeker-1", isAdmin: false));
     }
 
     private static Hall SeedHall(ApplicationDbContext context, string name, bool isDeleted)
