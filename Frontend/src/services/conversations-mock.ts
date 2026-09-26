@@ -60,11 +60,23 @@ function scheduleMockDeferredRejection(conversationId: string) {
 
 const INBOX: ConversationSummary[] = [
   {
+    conversationId: "mock-convo-payment-hope",
+    hallId: "mock-hall-hope",
+    hallName: "قاعة الأمل",
+    otherParticipantId: "owner-hope",
+    otherParticipantName: "أحمد أبو سالم",
+    lastMessagePreview:
+      'Your subscription for "قاعة الأمل" ends on 2026-09-30 (4 days remaining). Please renew your subscription to keep management access to this hall active.',
+    lastMessageAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
+    messageCount: 2,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
+  },
+  {
     conversationId: "mock-convo-gold",
     hallId: "mock-hall-gold",
     hallName: "قاعة النخيل الذهبية",
     otherParticipantId: "owner-1",
-    otherParticipantName: "صاحب قاعة النخيل",
+    otherParticipantName: "سارة أحمد",
     lastMessagePreview: formatBookingRejectionContent(
       "قاعة النخيل الذهبية",
       "2026-09-18",
@@ -89,6 +101,30 @@ const INBOX: ConversationSummary[] = [
 ];
 
 const THREADS: Record<string, MessageThread> = {
+  "mock-convo-payment-hope": {
+    conversationId: "mock-convo-payment-hope",
+    hallId: "mock-hall-hope",
+    hallName: "قاعة الأمل",
+    messages: [
+      {
+        id: "hope-pay-1",
+        senderUserId: "system",
+        senderName: "Wesal",
+        content:
+          'Your subscription for "قاعة الأمل" ends on 2026-09-30 (4 days remaining). Please renew your subscription to keep management access to this hall active.',
+        sentAt: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
+        delivery: "sent",
+      },
+      {
+        id: "hope-pay-2",
+        senderUserId: "owner-hope",
+        senderName: "أحمد أبو سالم",
+        content: "مرحباً. هل يمكن معرفة تفاصيل أكثر عن طريقة الدفع؟ شكراً.",
+        sentAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
+        delivery: "sent",
+      },
+    ],
+  },
   "mock-convo-gold": {
     conversationId: "mock-convo-gold",
     hallId: "mock-hall-gold",

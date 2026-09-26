@@ -14,6 +14,8 @@ import {
   getAccountProfilePath,
   isAccountProfileActive,
 } from "@/lib/account-profile-path";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
+import UnreadBadge from "@/components/ui/UnreadBadge";
 
 type AuthAccountMenuProps = {
   stacked?: boolean;
@@ -51,6 +53,8 @@ export default function AuthAccountMenu({
   const [confirmLogout, setConfirmLogout] = useState(false);
   const identity = useUserIdentity();
   const inbox = useOptionalMessagesInbox();
+  const { count: unreadCount, ready: unreadReady } = useUnreadCount();
+  const messagesUnread = unreadReady ? unreadCount : 0;
   const showAudio = identity.isHallOwner;
   const avatarUrl = useProfileAvatarUrl([identity.profile?.id]);
 
@@ -125,6 +129,8 @@ export default function AuthAccountMenu({
           label={messagesLabel}
           description={t("nav.messagesHint")}
           active={pathname === "/messages" || pathname.startsWith("/messages/")}
+          badgeCount={messagesUnread}
+          badgeLabel={t("messages.unreadCount", { count: messagesUnread })}
           onClick={openMessages}
         >
           <MessageIcon />
@@ -203,6 +209,8 @@ function MenuLink({
   label,
   description,
   active,
+  badgeCount = 0,
+  badgeLabel,
   onClick,
   children,
 }: {
@@ -210,6 +218,8 @@ function MenuLink({
   label: string;
   description: string;
   active: boolean;
+  badgeCount?: number;
+  badgeLabel?: string;
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
   children: ReactNode;
 }) {
@@ -224,7 +234,14 @@ function MenuLink({
         {children}
       </span>
       <span className="wesal-account-menu-copy">
-        <span className="wesal-account-menu-title">{label}</span>
+        <span className="inline-flex min-w-0 items-center gap-2">
+          <span className="wesal-account-menu-title min-w-0 truncate">{label}</span>
+          <UnreadBadge
+            count={badgeCount}
+            label={badgeLabel}
+            data-testid="account-menu-messages-unread"
+          />
+        </span>
         <span className="wesal-account-menu-desc">{description}</span>
       </span>
     </Link>

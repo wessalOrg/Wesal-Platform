@@ -15,6 +15,7 @@ import {
 } from "@/constants/hallOwnerManagementNav";
 import { useT } from "@/i18n";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
+import UnreadBadge from "@/components/ui/UnreadBadge";
 
 type OwnerSidebarProps = {
   id?: string;
@@ -32,7 +33,8 @@ export default function OwnerSidebar({
   const router = useRouter();
   const { logout, isLoggingOut } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
-  const { count: unreadCount } = useUnreadCount();
+  const { count: unreadCount, ready: unreadReady } = useUnreadCount();
+  const messagesUnread = unreadReady ? unreadCount : 0;
 
   return (
     <>
@@ -71,9 +73,16 @@ export default function OwnerSidebar({
                     <span className="seeker-dash-sidebar-icon" aria-hidden="true">
                       <NavIcon id={item.id} />
                     </span>
-                    <span>{t(item.labelKey)}{item.id === "messages" && unreadCount > 0 ? (
-                      <span className="ml-1 inline-flex h-2 w-2 shrink-0 rounded-full bg-[#c45b55]" aria-label={`${unreadCount}`} />
-                    ) : null}</span>
+                    <span className="inline-flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 truncate">{t(item.labelKey)}</span>
+                      {item.id === "messages" ? (
+                        <UnreadBadge
+                          count={messagesUnread}
+                          label={t("messages.unreadCount", { count: messagesUnread })}
+                          data-testid="owner-nav-messages-unread"
+                        />
+                      ) : null}
+                    </span>
                   </Link>
                 </li>
               );

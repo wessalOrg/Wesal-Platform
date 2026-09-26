@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -18,6 +19,8 @@ import { canAccessMessaging } from "@/lib/hall-access";
 import { useMessageDrafts } from "@/hooks/useMessageDrafts";
 import { useThreadDeliverySync } from "@/hooks/useThreadDeliverySync";
 import { getCurrentUserId } from "@/lib/current-user";
+import { refreshUnreadCount } from "@/hooks/useUnreadCount";
+import { markConversationAsRead } from "@/services/conversations";
 import type { ConversationSummary, InboxStatus, MessageThread, ThreadStatus } from "@/types/messages";
 
 type MessagesInboxContextValue = {
@@ -114,6 +117,25 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       applyPreview(conversationId, message.content, message.sentAt);
     },
   );
+
+  // Mark the open conversation as read, then revalidate the shared unread badge.
+  useEffect(() => {
+    if (!ownerKey || !selectedId || !threadFetchEnabled) return;
+    if (threadState.status !== "ready" && threadState.status !== "empty") return;
+
+    let cancelled = false;
+    void markConversationAsRead(selectedId)
+      .then(() => {
+        if (!cancelled) return refreshUnreadCount();
+      })
+      .catch(() => {
+        // Non-critical — navigation/thread stay usable if mark-read fails.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerKey, selectedId, threadFetchEnabled, threadState.status]);
 
   const closeInbox = useCallback(() => {
     setIsOpen(false);
