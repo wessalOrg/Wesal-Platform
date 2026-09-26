@@ -112,6 +112,20 @@ export default function AdminSidebar({
         </nav>
 
         <div className="seeker-dash-sidebar-footer">
+          <Link
+            href="/halls"
+            prefetch
+            className="seeker-dash-sidebar-browse"
+            data-testid="admin-nav-browse-halls"
+            onClick={onNavigate}
+            onMouseEnter={() => router.prefetch("/halls")}
+            onFocus={() => router.prefetch("/halls")}
+          >
+            <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+              <HomeSiteIcon />
+            </span>
+            <span>{t("admin.nav.browseHalls")}</span>
+          </Link>
           <button
             type="button"
             className="seeker-dash-sidebar-logout"
@@ -189,6 +203,19 @@ function LogoutIcon() {
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function HomeSiteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <path
+        d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
         strokeLinejoin="round"
       />
     </svg>

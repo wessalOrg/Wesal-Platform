@@ -671,6 +671,7 @@ const ar: MessageCatalog = {
   "admin.nav.submissions": "طلبات القاعات",
   "admin.nav.subscriptions": "الاشتراكات",
   "admin.nav.messages": "الرسائل",
+  "admin.nav.browseHalls": "تصفح القاعات",
   "admin.nav.logout": "تسجيل الخروج",
   "admin.messages.title": "الرسائل",
   "admin.messages.subtitle": "إدارة المحادثات العادية وإشعارات دفع اشتراك أصحاب القاعات.",

@@ -677,6 +677,7 @@ const en: MessageCatalog = {
   "admin.nav.submissions": "Hall submissions",
   "admin.nav.subscriptions": "Subscriptions",
   "admin.nav.messages": "Messages",
+  "admin.nav.browseHalls": "Browse halls",
   "admin.nav.logout": "Log out",
   "admin.messages.title": "Messages",
   "admin.messages.subtitle": "Manage regular conversations and hall owners’ subscription payment notices.",

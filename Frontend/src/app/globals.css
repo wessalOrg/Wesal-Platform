@@ -4515,11 +4515,12 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .seeker-dash-sidebar-browse {
-  color: var(--seeker-text);
+  color: var(--seeker-maroon);
+  font-weight: 700;
 }
 
 .seeker-dash-sidebar-logout {
-  color: var(--seeker-muted);
+  color: var(--seeker-maroon);
 }
 
 .seeker-dash-sidebar-browse:hover,
