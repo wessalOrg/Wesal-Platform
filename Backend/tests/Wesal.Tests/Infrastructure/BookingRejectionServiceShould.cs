@@ -7,6 +7,7 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Bookings;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -42,14 +43,18 @@ public class BookingRejectionServiceShould
             new RejectBookingRequestDto { Reason = "Booked by another customer" });
 
         var message = Assert.Single(scenario.Messages);
+
+        // WESAL-TASK-13 (Edit 13): this is the product-approved Arabic wording, now rendered
+        // from NotificationCatalog instead of a hard-coded string in this service. It also
+        // names the hall, which the old wording omitted.
         Assert.Equal(
-            "تم رفض طلب الحجز الخاص بك للسبب الاتي: Booked by another customer",
+            "لم تتم الموافقة على طلب حجزك لصالة Grand Hall. سبب الرفض: Booked by another customer",
             message.Content);
         Assert.Equal(BookingRejectionNotificationStatus.Delivered, result.NotificationStatus);
     }
 
     [Fact]
-    public async Task RejectBooking_MessageDoesNotLeakLegacyPeriodOrHallName()
+    public async Task RejectBooking_MessageDoesNotLeakLegacyPeriodNames()
     {
         var scenario = Scenario();
         await scenario.Service.RejectBookingAsync(
@@ -60,6 +65,10 @@ public class BookingRejectionServiceShould
         var message = Assert.Single(scenario.Messages);
         Assert.DoesNotContain("FirstPeriod", message.Content);
         Assert.DoesNotContain("SecondPeriod", message.Content);
+
+        // WESAL-TASK-13 (Edit 13): naming the hall is now intentional, product-approved
+        // wording, so this asserts it is present rather than absent.
+        Assert.Contains("Grand Hall", message.Content);
     }
 
     [Fact]
@@ -468,7 +477,7 @@ public class BookingRejectionServiceShould
 
         var rejectionMessage = Assert.Single(payload);
         Assert.Equal(
-            "تم رفض طلب الحجز الخاص بك للسبب الاتي: Not available",
+            "لم تتم الموافقة على طلب حجزك لصالة Grand Hall. سبب الرفض: Not available",
             rejectionMessage.Content);
     }
 
@@ -499,8 +508,10 @@ public class BookingRejectionServiceShould
             context.BookingRepository,
             context.ConversationRepository,
             context.MessageRepository,
-            context.UnitOfWork,
-            context.CurrentUser);
+                context.UnitOfWork,
+                context.CurrentUser,
+                new FakeNotificationService(),
+                new RecordingNotificationDispatcher());
 
         return context;
     }

@@ -22,6 +22,7 @@ using Wesal.Infrastructure.AiAssistant;
 using Wesal.Infrastructure.Languages;
 using Wesal.Infrastructure.Admin;
 using Wesal.Infrastructure.OwnerDashboard;
+using Wesal.Infrastructure.Notifications;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Profile;
 using Wesal.Infrastructure.Search;
@@ -86,6 +87,9 @@ public static class DependencyInjection
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<IConversationNotifier, ConversationNotifier>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<INotificationNotifier, NotificationNotifier>();
+        services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
         services.AddScoped<ILoginService, LoginService>();
         services.AddScoped<ILogoutService, LogoutService>();
         services.AddScoped<IProfileService, ProfileService>();

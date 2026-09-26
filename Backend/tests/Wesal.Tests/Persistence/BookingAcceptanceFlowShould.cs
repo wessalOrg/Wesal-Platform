@@ -10,6 +10,7 @@ using Wesal.Application.Common.Models;
 using Wesal.Infrastructure.Bookings;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Persistence;
 
@@ -246,8 +247,10 @@ public class BookingAcceptanceFlowShould
             new BookingRepository(context),
             new ConversationRepository(context),
             new MessageRepository(context),
-            new UnitOfWork(context),
-            new FakeCurrentUserService(userId, roles));
+                new UnitOfWork(context),
+                new FakeCurrentUserService(userId, roles),
+                new FakeNotificationService(),
+                new RecordingNotificationDispatcher());
 
     private static Hall SeedHall(ApplicationDbContext context, Guid id)
     {

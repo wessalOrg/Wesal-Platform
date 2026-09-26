@@ -15,6 +15,7 @@ using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Logging;
 using Wesal.Infrastructure.Middleware;
+using Wesal.Infrastructure.Notifications;
 using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence;
 using Wesal.Persistence.Data;
@@ -186,6 +187,7 @@ try
     app.MapMcp("/mcp");
     app.MapHub<ConversationHub>("/hubs/conversation");
     app.MapHub<OwnerDashboardHub>("/hubs/owner-dashboard");
+app.MapHub<NotificationsHub>("/hubs/notifications");
     app.MapHealthChecks("/health");
 
     app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" }));

@@ -10,6 +10,7 @@ using Wesal.Infrastructure.Auth;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Time;
 using Wesal.Persistence.Data;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -38,7 +39,7 @@ public class LoginRateLimitingShould
         var roleManager = provider.GetRequiredService<RoleManager<ApplicationRole>>();
         var context = provider.GetRequiredService<ApplicationDbContext>();
         var tokenService = new TokenService(Options.Create(new JwtSettings { Issuer = "WesalTests", Audience = "WesalTests", SecretKey = SecretKey, ExpirationMinutes = 30, ClockSkewMinutes = 5 }));
-        var login = new LoginService(userManager, tokenService, new DateTimeService());
+        var login = new LoginService(userManager, tokenService, new DateTimeService(), new RecordingNotificationDispatcher());
         var registration = new AuthService(userManager, roleManager, tokenService, NullEmailService.Instance, Options.Create(new PasswordResetOptions()), NullLogger<AuthService>.Instance);
         return (login, registration, context);
     }

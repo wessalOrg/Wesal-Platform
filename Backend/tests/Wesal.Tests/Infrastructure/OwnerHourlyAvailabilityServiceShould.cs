@@ -94,7 +94,8 @@ public class OwnerHourlyAvailabilityServiceShould : IDisposable
        private HourlySlotService CreateSeekerService()
            => new(new HallRepository(_context), new BookingRepository(_context),
                new UnitOfWork(_context), new FakeCurrentUser("seeker-1", true, ApplicationRoles.RegisteredUser),
-               new RecordingOwnerBookingRequestNotifier());
+               new RecordingOwnerBookingRequestNotifier(),
+    new RecordingNotificationDispatcher());
 
 
     private static DateOnly Tomorrow() => DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);

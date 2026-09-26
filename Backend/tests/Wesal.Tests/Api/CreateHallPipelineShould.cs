@@ -24,6 +24,7 @@ using Wesal.Domain.Enums;
 using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Api;
 
@@ -90,6 +91,12 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         builder.Services.AddScoped<IHallRepository, TestInMemoryHallRepository>();
         builder.Services.AddScoped<IUnitOfWork, TestInMemoryUnitOfWork>();
         builder.Services.AddSingleton<IHallMediaStorage>(new FakeHallMediaStorage());
+        // WESAL-TASK-13 (Edit 13): the production dispatcher is built into the real DI graph
+        // by Wesal.Infrastructure. This pipeline test uses a trimmed container, so the
+        // notification port is supplied here to keep the service constructible; the wording
+        // and recipient assertions live in NotificationLocalizationShould.
+        builder.Services.AddScoped<INotificationService>(_ => new FakeNotificationService());
+        builder.Services.AddScoped<INotificationDispatcher>(_ => new RecordingNotificationDispatcher());
         builder.Services.AddScoped<IHallCreationService, HallCreationService>();
     builder.Services.AddScoped<IOwnerIdentityService, StubOwnerIdentityService>();
         builder.Services.AddScoped<IOwnerSidebarService, StubOwnerSidebarService>();

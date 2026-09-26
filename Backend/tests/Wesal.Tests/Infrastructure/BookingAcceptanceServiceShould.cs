@@ -434,8 +434,10 @@ public class BookingAcceptanceServiceShould
             context.BookingRepository,
             context.Conversations,
             context.Messages,
-            unitOfWork,
-            context.CurrentUser);
+                unitOfWork,
+                context.CurrentUser,
+                new FakeNotificationService(),
+                new RecordingNotificationDispatcher());
 
         return context;
     }

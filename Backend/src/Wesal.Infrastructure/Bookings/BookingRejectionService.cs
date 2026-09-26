@@ -6,6 +6,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 
 namespace Wesal.Infrastructure.Bookings;
 
@@ -16,19 +17,25 @@ public sealed class BookingRejectionService : IBookingRejectionService
     private readonly IMessageRepository _messageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly INotificationService _notificationService;
+    private readonly INotificationDispatcher _notificationDispatcher;
 
     public BookingRejectionService(
         IBookingRepository bookingRepository,
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        INotificationService notificationService,
+        INotificationDispatcher notificationDispatcher)
     {
         _bookingRepository = bookingRepository;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _notificationService = notificationService;
+        _notificationDispatcher = notificationDispatcher;
     }
 
     public async Task<RejectBookingResultDto> RejectBookingAsync(
@@ -176,7 +183,10 @@ public sealed class BookingRejectionService : IBookingRejectionService
         {
             ConversationId = conversation.Id,
             SenderUserId = hall.OwnerId,
-            Content = BuildRejectionContent(booking)
+            // WESAL-TASK-13 (Edit 13): rendered from the catalog in the REQUESTER's own
+            // stored language, so the durable thread record and the push notification always
+            // tell the requester the same thing, including the rejection reason.
+            Content = await BuildRejectionContentAsync(booking, cancellationToken)
         };
 
         await _messageRepository.AddAsync(message, cancellationToken);
@@ -184,22 +194,39 @@ public sealed class BookingRejectionService : IBookingRejectionService
         booking.RejectionMessageId = message.Id;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // WESAL-TASK-12 (Edit 12): the click-through resolves to this very thread, which was
+        // just created on demand if the seeker had never messaged this owner before. So
+        // "contact the hall owner" always opens a real, writable conversation instead of
+        // erroring on a missing thread.
+        await _notificationDispatcher.DispatchAsync(
+            NotificationKind.BookingRejectedForRequester,
+            booking.RequesterUserId,
+            BookingNotificationValues.ForBooking(booking, reason: booking.RejectionReason?.Trim()),
+            conversation.Id.ToString(),
+            cancellationToken);
     }
 
     /// <summary>
-    /// Builds the requester-facing rejection notice (WESAL-TASK-1). The text is exactly
-    /// the product-specified sentence with the owner's reason appended, and it is stored
-    /// as a Message on the requester/owner conversation (created on demand above), so
-    /// tapping the notification opens that same chat thread. The language is fixed
-    /// Arabic by product decision and is independent of the hourly/legacy model.
+    /// Builds the requester-facing rejection notice (WESAL-TASK-1, localized by
+    /// WESAL-TASK-13 / Edit 13). It is stored as a Message on the requester/owner
+    /// conversation (created on demand above), so tapping the notification opens that same
+    /// chat thread.
     /// </summary>
-    private static string BuildRejectionContent(Booking booking)
+    /// <remarks>
+    /// WESAL-TASK-1 originally fixed this text to Arabic by product decision. Edit 13
+    /// supersedes that: the wording, including the owner's reason, is now resolved per
+    /// recipient from <c>ApplicationUser.PreferredLanguage</c>.
+    /// </remarks>
+    private async Task<string> BuildRejectionContentAsync(Booking booking, CancellationToken cancellationToken)
     {
-        var reason = string.IsNullOrWhiteSpace(booking.RejectionReason)
-            ? string.Empty
-            : booking.RejectionReason.Trim();
+        var content = await _notificationService.BuildAsync(
+            NotificationKind.BookingRejectedForRequester,
+            booking.RequesterUserId,
+            BookingNotificationValues.ForBooking(booking, reason: booking.RejectionReason?.Trim()),
+            cancellationToken: cancellationToken);
 
-        return $"تم رفض طلب الحجز الخاص بك للسبب الاتي: {reason}";
+        return content.Body;
     }
 
     private void EnsureAuthenticatedHallOwner()

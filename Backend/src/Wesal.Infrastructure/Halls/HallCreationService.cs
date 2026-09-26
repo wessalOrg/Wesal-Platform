@@ -7,6 +7,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Identity;
 
 namespace Wesal.Infrastructure.Halls;
@@ -18,18 +19,26 @@ public class HallCreationService : IHallCreationService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHallMediaStorage _mediaStorage;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly INotificationDispatcher _notificationDispatcher;
 
     private static readonly string[] PermittedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
     private static readonly string[] PermittedMimeTypes = new[] { "image/jpeg", "image/png", "image/webp" };
     private const long MaxFileSize = 5 * 1024 * 1024; // 5MB
 
-    public HallCreationService(ICurrentUserService currentUser, IHallRepository hallRepository, IUnitOfWork unitOfWork, IHallMediaStorage mediaStorage, UserManager<ApplicationUser> userManager)
+    public HallCreationService(
+        ICurrentUserService currentUser,
+        IHallRepository hallRepository,
+        IUnitOfWork unitOfWork,
+        IHallMediaStorage mediaStorage,
+        UserManager<ApplicationUser> userManager,
+        INotificationDispatcher notificationDispatcher)
     {
         _currentUser = currentUser;
         _hallRepository = hallRepository;
         _unitOfWork = unitOfWork;
         _mediaStorage = mediaStorage;
         _userManager = userManager;
+        _notificationDispatcher = notificationDispatcher;
     }
 
     public async Task<CreateHallResponse> CreateHallAsync(CreateHallRequest request, CancellationToken cancellationToken = default)
@@ -144,7 +153,7 @@ public class HallCreationService : IHallCreationService
 
         try
         {
-            return await _unitOfWork.ExecuteInTransactionAsync(async () =>
+            var result = await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
                 hall.Features = features
                     .Select(name => new HallFeature { HallId = hall.Id, Name = name })
@@ -205,6 +214,16 @@ public class HallCreationService : IHallCreationService
                         .ToList()
                 };
             }, cancellationToken);
+
+            // WESAL-TASK-13 (Edit 13): the hall exists and is committed, so it is now safe to
+            // tell people about it. Two recipients, each in their own language: the owner is
+            // told it is awaiting review (routed to "My halls"), and Admins are told a hall is
+            // waiting for them (routed to the hall-requests review list). Both dispatches are
+            // best-effort, so a realtime failure cannot fail the creation the owner just paid
+            // the effort to complete.
+            await NotifyHallSubmittedAsync(result.HallId, result.Name, ownerId, cancellationToken);
+
+            return result;
         }
         catch
         {
@@ -217,6 +236,57 @@ public class HallCreationService : IHallCreationService
             catch { }
             throw;
         }
+    }
+
+    /// <summary>
+    /// Announces a newly submitted hall (WESAL-TASK-13, Edit 13): the owner is told it is
+    /// awaiting review, and every Admin is told a hall is waiting for them.
+    /// </summary>
+    /// <remarks>
+    /// The Admin list is resolved from the database rather than from a configured id, so a
+    /// hall is never left unreviewed because a hard-coded admin account was renamed. If the
+    /// deployment has no Admin account at all, the owner still gets their notification and
+    /// only the Admin alert is skipped.
+    /// </remarks>
+    private async Task NotifyHallSubmittedAsync(
+        Guid hallId,
+        string hallName,
+        string ownerId,
+        CancellationToken cancellationToken)
+    {
+        var values = new Dictionary<string, string?>
+        {
+            [NotificationTokens.HallName] = hallName
+        };
+
+        await _notificationDispatcher.DispatchAsync(
+            NotificationKind.HallCreatedForOwner,
+            ownerId,
+            values,
+            hallId.ToString(),
+            cancellationToken);
+
+        var adminIds = await ResolveAdminUserIdsAsync(cancellationToken);
+
+        foreach (var adminId in adminIds)
+        {
+            await _notificationDispatcher.DispatchAsync(
+                NotificationKind.HallSubmittedForAdmin,
+                adminId,
+                values,
+                hallId.ToString(),
+                cancellationToken);
+        }
+    }
+
+    private async Task<IReadOnlyList<string>> ResolveAdminUserIdsAsync(CancellationToken cancellationToken)
+    {
+        var admins = await _userManager.GetUsersInRoleAsync(ApplicationRoles.Admin);
+
+        return admins
+            .Select(admin => admin.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToList();
     }
 
     private async Task EnsureIdentityDocumentUploadedAsync(string ownerId)

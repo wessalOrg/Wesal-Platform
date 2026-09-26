@@ -177,7 +177,7 @@ public class AuthorizationHallActionsShould
     private static HourlySlotService CreateBookingService(
         FakeHallRepository repo,
         FakeCurrentUserService user)
-           => new(repo, new FakeBookingRepository(), new FakeUnitOfWork(), user, new FakeOwnerBookingRequestNotifier());
+           => new(repo, new FakeBookingRepository(), new FakeUnitOfWork(), user, new FakeOwnerBookingRequestNotifier(), new RecordingNotificationDispatcher());
 
 
     private sealed class FakeOwnerBookingRequestNotifier : IOwnerBookingRequestNotifier

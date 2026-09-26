@@ -170,7 +170,8 @@ public class HallDetailsAvailabilityParityShould
                bookings,
                new StubUnitOfWork(),
                currentUser,
-               new RecordingOwnerBookingRequestNotifier());
+               new RecordingOwnerBookingRequestNotifier(),
+    new RecordingNotificationDispatcher());
 
 
         var details = new HallDetailsService(

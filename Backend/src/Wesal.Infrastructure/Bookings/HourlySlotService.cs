@@ -7,6 +7,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.OwnerDashboard;
 
 namespace Wesal.Infrastructure.Bookings;
@@ -27,19 +28,22 @@ public class HourlySlotService : IHourlySlotService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IOwnerBookingRequestNotifier _ownerRequestNotifier;
+    private readonly INotificationDispatcher _notificationDispatcher;
 
     public HourlySlotService(
         IHallRepository hallRepository,
         IBookingRepository bookingRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
-        IOwnerBookingRequestNotifier ownerRequestNotifier)
+        IOwnerBookingRequestNotifier ownerRequestNotifier,
+        INotificationDispatcher notificationDispatcher)
     {
         _hallRepository = hallRepository;
         _bookingRepository = bookingRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _ownerRequestNotifier = ownerRequestNotifier;
+        _notificationDispatcher = notificationDispatcher;
     }
 
     public async Task<HallHourlyCatalogDto> GetHourlyCatalogAsync(
@@ -267,6 +271,16 @@ public class HourlySlotService : IHourlySlotService
         // data), never from the request body.
         await NotifyOwnerOfRequestAsync(hall, booking, cancellationToken);
 
+        // WESAL-TASK-13 (Edit 13): the seeker who just sent the request is told so in their
+        // own language, with a click-through to their own bookings. Previously the requester
+        // got no confirmation at all and only saw the state change on a later page load.
+        await _notificationDispatcher.DispatchAsync(
+            NotificationKind.BookingRequestSentToRequester,
+            booking.RequesterUserId,
+            null,
+            booking.Id.ToString(),
+            cancellationToken);
+
         return new HourlyBookingResultDto
         {
             BookingId = booking.Id,
@@ -277,6 +291,16 @@ public class HourlySlotService : IHourlySlotService
             Status = booking.Status
         };
     }
+
+    /// <summary>
+    /// The name shown to the Hall Owner for a request. The persisted booking name is
+    /// preferred and falls back to the requester's user id, matching the existing
+    /// dashboard event so both notifications name the requester identically.
+    /// </summary>
+    private static string ResolveRequesterName(Booking booking)
+        => string.IsNullOrWhiteSpace(booking.NameOnBooking)
+            ? booking.RequesterUserId
+            : booking.NameOnBooking.Trim();
 
     /// <summary>
     /// Pushes the new request to the Hall Owner's dashboard group (US-OWNER-10). The
@@ -314,6 +338,17 @@ public class HourlySlotService : IHourlySlotService
                         : booking.NameOnBooking.Trim(),
                     OccurredAt = booking.CreatedAt
                 },
+                cancellationToken);
+
+            // WESAL-TASK-13 (Edit 13): the data-only dashboard event above stays exactly as it
+            // was, so the owner's existing request list keeps working untouched. This adds the
+            // fully localized, actionable notification beside it, worded and routed per
+            // product spec and rendered in the OWNER's own language.
+            await _notificationDispatcher.DispatchAsync(
+                NotificationKind.BookingRequestCreatedForOwner,
+                hall.OwnerId,
+                BookingNotificationValues.ForBooking(booking, ResolveRequesterName(booking)),
+                booking.Id.ToString(),
                 cancellationToken);
         }
         catch (OperationCanceledException)

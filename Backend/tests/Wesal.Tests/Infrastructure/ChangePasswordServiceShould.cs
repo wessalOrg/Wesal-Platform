@@ -8,6 +8,7 @@ using Wesal.Infrastructure.Auth;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Profile;
 using Wesal.Persistence.Data;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -297,7 +298,7 @@ public class ChangePasswordServiceShould : IDisposable
         => new(_userManager, new FakeCurrentUser(userId, authenticated));
 
     private LoginService CreateLoginService()
-        => new(_userManager, _tokenService, new FakeDateTime());
+        => new(_userManager, _tokenService, new FakeDateTime(), new RecordingNotificationDispatcher());
 
     private sealed class FakeCurrentUser : ICurrentUserService
     {

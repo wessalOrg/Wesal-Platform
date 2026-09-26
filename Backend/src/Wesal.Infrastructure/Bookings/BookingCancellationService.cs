@@ -6,6 +6,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 
 namespace Wesal.Infrastructure.Bookings;
 
@@ -17,6 +18,7 @@ public sealed class BookingCancellationService : IBookingCancellationService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly OwnerDashboard.IOwnerBookingRequestNotifier _ownerNotifier;
+    private readonly INotificationDispatcher _notificationDispatcher;
 
     public BookingCancellationService(
         IBookingRepository bookingRepository,
@@ -24,7 +26,8 @@ public sealed class BookingCancellationService : IBookingCancellationService
         IMessageRepository messageRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
-        OwnerDashboard.IOwnerBookingRequestNotifier ownerNotifier)
+        OwnerDashboard.IOwnerBookingRequestNotifier ownerNotifier,
+        INotificationDispatcher notificationDispatcher)
     {
         _bookingRepository = bookingRepository;
         _conversationRepository = conversationRepository;
@@ -32,6 +35,7 @@ public sealed class BookingCancellationService : IBookingCancellationService
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _ownerNotifier = ownerNotifier;
+        _notificationDispatcher = notificationDispatcher;
     }
 
     public async Task<CancelBookingResultDto> CancelBookingAsync(
@@ -146,6 +150,16 @@ public sealed class BookingCancellationService : IBookingCancellationService
                     RequesterName = ResolveRequesterName(booking),
                     OccurredAt = booking.UpdatedAt ?? DateTimeOffset.UtcNow
                 },
+                cancellationToken);
+
+            // WESAL-TASK-13 (Edit 13): the data-only dashboard event above is preserved
+            // unchanged; this adds the localized, actionable cancellation notification in the
+            // OWNER's own language, routed to their booking-requests view.
+            await _notificationDispatcher.DispatchAsync(
+                NotificationKind.BookingCancelledForOwner,
+                hall.OwnerId,
+                BookingNotificationValues.ForBooking(booking, ResolveRequesterName(booking)),
+                booking.Id.ToString(),
                 cancellationToken);
         }
         catch (OperationCanceledException)

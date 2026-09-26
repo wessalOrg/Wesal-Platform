@@ -3,6 +3,7 @@ using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Identity;
 
 namespace Wesal.Infrastructure.Auth;
@@ -14,15 +15,18 @@ public sealed class LoginService : ILoginService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
     private readonly IDateTime _dateTime;
+    private readonly INotificationDispatcher _notificationDispatcher;
 
     public LoginService(
         UserManager<ApplicationUser> userManager,
         ITokenService tokenService,
-        IDateTime dateTime)
+        IDateTime dateTime,
+        INotificationDispatcher notificationDispatcher)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _dateTime = dateTime;
+        _notificationDispatcher = notificationDispatcher;
     }
 
     public async Task<LoginResponse> LoginAsync(
@@ -76,7 +80,7 @@ public sealed class LoginService : ILoginService
             user.Email ?? string.Empty,
             roles);
 
-        return new LoginResponse
+        var response = new LoginResponse
         {
             Token = token,
             Id = user.Id,
@@ -85,8 +89,17 @@ public sealed class LoginService : ILoginService
             AccountType = AccountTypes.FromRole(primaryRole) ?? string.Empty,
             Role = primaryRole
         };
-    }
 
+        // WESAL-TASK-13 (Edit 13): the welcome notification, in the user's own stored
+        // language. Dispatched only once the login has actually succeeded, and best-effort,
+        // so a realtime hiccup can never turn a valid sign-in into a failed request.
+        await _notificationDispatcher.DispatchAsync(
+            NotificationKind.WelcomeLogin,
+            user.Id,
+            cancellationToken: cancellationToken);
+
+        return response;
+    }
     private async Task ThrowForBlockedAccountAsync(ApplicationUser user)
     {
         var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);

@@ -7,6 +7,7 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Bookings;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -403,8 +404,9 @@ public class BookingCancellationServiceShould
             context.ConversationRepository,
             context.MessageRepository,
             context.UnitOfWork,
-            context.CurrentUser,
-            context.OwnerNotifier);
+                context.CurrentUser,
+                context.OwnerNotifier,
+                new RecordingNotificationDispatcher());
 
         return context;
     }

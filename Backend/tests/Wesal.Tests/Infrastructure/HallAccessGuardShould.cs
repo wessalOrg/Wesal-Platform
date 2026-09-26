@@ -438,7 +438,8 @@ public class HallAccessGuardShould : IDisposable
            new BookingRepository(_context),
            new UnitOfWork(_context),
            new FakeCurrentUser("seeker-1", [ApplicationRoles.RegisteredUser]),
-           new RecordingOwnerBookingRequestNotifier());
+           new RecordingOwnerBookingRequestNotifier(),
+    new RecordingNotificationDispatcher());
 
 
     private sealed class FakeCurrentUser : ICurrentUserService

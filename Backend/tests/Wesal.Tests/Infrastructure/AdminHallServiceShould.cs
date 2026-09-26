@@ -10,6 +10,7 @@ using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Search;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -44,6 +45,8 @@ public class AdminHallServiceShould : IDisposable
             new FakeConversationNotifier(),
             new FakeCurrentUser("admin-1", true, "Admin"),
             new FakeDateTime(),
+            new FakeNotificationService(),
+            new RecordingNotificationDispatcher(),
             NullLogger<AdminHallService>.Instance);
 
     private sealed class FakeConversationNotifier : IConversationNotifier

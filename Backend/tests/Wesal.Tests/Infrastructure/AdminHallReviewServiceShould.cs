@@ -14,6 +14,8 @@ using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Wesal.Domain.Notifications;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -50,9 +52,19 @@ public class AdminHallReviewServiceShould : IDisposable
         _userManager = _provider.GetRequiredService<UserManager<ApplicationUser>>();
     }
 
-    private async Task<ApplicationUser> CreateOwnerAsync(string email, string phone)
+    private async Task<ApplicationUser> CreateOwnerAsync(
+        string email,
+        string phone,
+        Language language = Language.Arabic)
     {
-        var user = new ApplicationUser { FullName = "Hall Owner", Email = email, UserName = email, PhoneNumber = phone };
+        var user = new ApplicationUser
+        {
+            FullName = "Hall Owner",
+            Email = email,
+            UserName = email,
+            PhoneNumber = phone,
+            PreferredLanguage = language
+        };
         await _userManager.CreateAsync(user, "Password123!");
         await _userManager.AddToRoleAsync(user, ApplicationRoles.HallOwner);
         return user;
@@ -93,7 +105,11 @@ public class AdminHallReviewServiceShould : IDisposable
         return hall;
     }
 
-    private AdminHallReviewService CreateService(ICurrentUserService currentUser, IDateTime? dateTime = null)
+    private AdminHallReviewService CreateService(
+        ICurrentUserService currentUser,
+        IDateTime? dateTime = null,
+        INotificationService? notificationService = null,
+        INotificationDispatcher? notificationDispatcher = null)
         => new(
             new AdminDashboardRepository(_context),
             new HallRepository(_context),
@@ -105,6 +121,8 @@ public class AdminHallReviewServiceShould : IDisposable
             new FakeNotifier(),
             _userManager,
             new FakeDocumentStorage(),
+            notificationService ?? new FakeNotificationService(),
+            notificationDispatcher ?? new RecordingNotificationDispatcher(),
             NullLogger<AdminHallReviewService>.Instance);
 
     private sealed class FakeDocumentStorage : IDocumentStorage
@@ -235,6 +253,80 @@ public class AdminHallReviewServiceShould : IDisposable
         Assert.NotNull(message);
         Assert.Equal(owner.Id.ToString(), message!.Conversation.HallOwnerId);
         Assert.Equal(hall.Id, message.Conversation.HallId);
+    }
+
+    // --- WESAL-TASK-13 (Edit 13): the localized notification wiring ---
+
+    [Fact]
+    public async Task RejectHall_NotifiesTheOwnerInTheirOwnStoredLanguage()
+    {
+        var owner = await CreateOwnerAsync("owner-arabic@example.com", "+970599100011");
+        var admin = await CreateAdminAsync("admin-reject@example.com");
+        var hall = AddHall(owner.Id, "Grand Hall", HallStatus.PendingReview);
+
+        var dispatcher = new RecordingNotificationDispatcher();
+        var notifications = new FakeNotificationService();
+
+        await CreateService(
+                new FakeCurrentUser(admin.Id, true, ApplicationRoles.Admin),
+                notificationService: notifications,
+                notificationDispatcher: dispatcher)
+            .RejectHallAsync(hall.Id, new AdminRejectHallRequestDto { Reason = "Incomplete" });
+
+        // The owner is notified, not the acting Admin.
+        var pushed = dispatcher.Single();
+        Assert.Equal(NotificationKind.HallRejectedForOwner, pushed.Kind);
+        Assert.Equal(owner.Id.ToString(), pushed.RecipientUserId);
+        Assert.Equal("Grand Hall", pushed.Values[NotificationTokens.HallName]);
+        Assert.Equal("Incomplete", pushed.Values[NotificationTokens.Reason]);
+
+        // The click-through targets the same owner/Admin thread the durable message landed in.
+        var conversation = await _context.Conversations.AsNoTracking().SingleAsync();
+        Assert.Equal(conversation.Id.ToString(), pushed.TargetId);
+
+        // The durable message and the pushed notification carry identical wording.
+        var message = await _context.Messages.AsNoTracking().SingleAsync();
+        var rendered = Assert.Single(notifications.Rendered);
+        Assert.Equal(rendered.Content.Body, message.Content);
+    }
+
+    [Fact]
+    public async Task RejectHall_WritesTheDurableMessageInTheOwnersLanguage_NotTheAdmins()
+    {
+        var owner = await CreateOwnerAsync("owner-english@example.com", "+970599100012", Language.English);
+        var admin = await CreateAdminAsync("admin-reject-en@example.com");
+        var hall = AddHall(owner.Id, "Grand Hall", HallStatus.PendingReview);
+
+        // The acting Admin is deliberately left on the platform default (Arabic). The owner
+        // must still receive English, because their stored preference decides.
+        var notifications = new FakeNotificationService();
+        notifications.SetLanguage(owner.Id.ToString(), Language.English);
+        notifications.SetLanguage(admin.Id.ToString(), Language.Arabic);
+
+        await CreateService(
+                new FakeCurrentUser(admin.Id, true, ApplicationRoles.Admin),
+                notificationService: notifications)
+            .RejectHallAsync(hall.Id, new AdminRejectHallRequestDto { Reason = "Incomplete" });
+
+        var message = await _context.Messages.AsNoTracking().SingleAsync();
+
+        Assert.Equal("Your hall was rejected by the Wesal technical support for the following reason: \"Incomplete\"", message.Content);
+    }
+
+    [Fact]
+    public async Task RejectHall_AlreadyRejected_DoesNotNotifyAgain()
+    {
+        var owner = await CreateOwnerAsync("owner@example.com", "+970599100001");
+        var hall = AddHall(owner.Id, "Rejected Hall", HallStatus.Rejected);
+
+        var dispatcher = new RecordingNotificationDispatcher();
+
+        await CreateService(
+                new FakeCurrentUser("admin-1", true, ApplicationRoles.Admin),
+                notificationDispatcher: dispatcher)
+            .RejectHallAsync(hall.Id, new AdminRejectHallRequestDto());
+
+        Assert.Empty(dispatcher.Dispatches);
     }
 
     [Fact]

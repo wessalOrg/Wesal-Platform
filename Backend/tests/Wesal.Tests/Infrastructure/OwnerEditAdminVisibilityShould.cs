@@ -16,6 +16,7 @@ using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -104,8 +105,9 @@ public class OwnerEditAdminVisibilityShould : IDisposable
             new ConversationRepository(_context), new MessageRepository(_context),
             new FakeCurrentUser("admin-1", true, ApplicationRoles.Admin),
             new FakeDateTime(new DateTimeOffset(2026, 8, 15, 10, 0, 0, TimeSpan.Zero)),
-            new FakeNotifier(), _userManager, new FakeDocumentStorage(),
-            NullLogger<AdminHallReviewService>.Instance);
+        new FakeNotifier(), _userManager, new FakeDocumentStorage(),
+        new FakeNotificationService(), new RecordingNotificationDispatcher(),
+        NullLogger<AdminHallReviewService>.Instance);
 
     private static UpdateOwnerHallRequest EditRequest(
         string name = "قاعة النخبة المحدثة",

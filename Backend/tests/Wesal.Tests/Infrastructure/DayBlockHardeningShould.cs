@@ -167,7 +167,8 @@ public class DayBlockHardeningShould : IDisposable
             HallRepo(),
             BookingRepo(),
             UnitOfWork(),
-            new FakeCurrentUser(seekerId, true, ApplicationRoles.RegisteredUser), new RecordingOwnerBookingRequestNotifier());
+            new FakeCurrentUser(seekerId, true, ApplicationRoles.RegisteredUser), new RecordingOwnerBookingRequestNotifier(),
+        new RecordingNotificationDispatcher());
 
     private OwnerHourlyAvailabilityService OwnerHourly(string ownerId)
         => new(

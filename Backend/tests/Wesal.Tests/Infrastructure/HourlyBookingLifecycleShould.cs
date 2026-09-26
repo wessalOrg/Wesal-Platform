@@ -153,7 +153,9 @@ public class HourlyBookingLifecycleShould : IDisposable
             new ConversationRepository(_context),
             new MessageRepository(_context),
             UnitOfWork(),
-            currentUser);
+            currentUser,
+            new FakeNotificationService(),
+            new RecordingNotificationDispatcher());
 
     private BookingPaymentConfirmationService PaymentConfirmation(ICurrentUserService currentUser)
         => new(BookingRepo(), UnitOfWork(), currentUser);
@@ -187,7 +189,8 @@ public class HourlyBookingLifecycleShould : IDisposable
             new MessageRepository(_context),
             UnitOfWork(),
             currentUser,
-            notifier ?? new RecordingNotifier());
+            notifier ?? new RecordingNotifier(),
+            new RecordingNotificationDispatcher());
 
     private BookingRejectionService Rejection(ICurrentUserService currentUser)
         => new(
@@ -195,7 +198,9 @@ public class HourlyBookingLifecycleShould : IDisposable
             new ConversationRepository(_context),
             new MessageRepository(_context),
             UnitOfWork(),
-            currentUser);
+            currentUser,
+            new FakeNotificationService(),
+            new RecordingNotificationDispatcher());
 
     private BookingDeletionService Deletion(ICurrentUserService currentUser)
         => new(BookingRepo(), UnitOfWork(), currentUser);
@@ -206,7 +211,8 @@ public class HourlyBookingLifecycleShould : IDisposable
                BookingRepo(),
                UnitOfWork(),
                new FakeCurrentUser("seeker-1", true, ApplicationRoles.RegisteredUser),
-               new RecordingOwnerBookingRequestNotifier());
+               new RecordingOwnerBookingRequestNotifier(),
+               new RecordingNotificationDispatcher());
 
 
     [Fact]
@@ -513,7 +519,11 @@ public class HourlyBookingLifecycleShould : IDisposable
         var message = await _context.Messages.AsNoTracking().SingleAsync();
         Assert.Equal(owner.Id, message.SenderUserId);
         Assert.Equal(conversation.Id, message.ConversationId);
-        Assert.Equal("تم رفض طلب الحجز الخاص بك للسبب الاتي: الحفل محجوز بالكامل", message.Content);
+        // WESAL-TASK-13 (Edit 13): product-approved Arabic wording, now rendered from
+        // NotificationCatalog in the requester's own stored language (Arabic by default).
+        Assert.Equal(
+            "لم تتم الموافقة على طلب حجزك لصالة Grand Hall. سبب الرفض: الحفل محجوز بالكامل",
+            message.Content);
     }
 
     [Fact]

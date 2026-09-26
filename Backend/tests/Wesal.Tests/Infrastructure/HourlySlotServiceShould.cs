@@ -378,7 +378,8 @@ public class HourlySlotServiceShould
                bookingRepository,
                new FakeUnitOfWork(),
                new FakeCurrentUserService(null, authenticated: false),
-               new RecordingOwnerBookingRequestNotifier());
+               new RecordingOwnerBookingRequestNotifier(),
+    new RecordingNotificationDispatcher());
 
 
         await Assert.ThrowsAsync<UnauthorizedException>(() =>
@@ -399,7 +400,8 @@ public class HourlySlotServiceShould
                bookingRepository,
                new FakeUnitOfWork(),
                new FakeCurrentUserService("guest-1", authenticated: true, ApplicationRoles.Guest),
-               new RecordingOwnerBookingRequestNotifier());
+               new RecordingOwnerBookingRequestNotifier(),
+    new RecordingNotificationDispatcher());
 
 
         await Assert.ThrowsAsync<ForbiddenException>(() =>
@@ -553,7 +555,8 @@ public class HourlySlotServiceShould
                new FakeBookingRepository(),
                new FakeUnitOfWork(),
                new FakeCurrentUserService("seeker-1", authenticated: true, ApplicationRoles.RegisteredUser),
-               new RecordingOwnerBookingRequestNotifier());
+               new RecordingOwnerBookingRequestNotifier(),
+    new RecordingNotificationDispatcher());
 
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -607,7 +610,8 @@ public class HourlySlotServiceShould
                bookingRepository,
                new FakeUnitOfWork(),
                new FakeCurrentUserService(userId ?? "seeker-1", authenticated: true, registeredUser ? ApplicationRoles.RegisteredUser : ApplicationRoles.Guest),
-               new RecordingOwnerBookingRequestNotifier());
+               new RecordingOwnerBookingRequestNotifier(),
+    new RecordingNotificationDispatcher());
 
 
 

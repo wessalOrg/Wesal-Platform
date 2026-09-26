@@ -15,6 +15,7 @@ using Wesal.Infrastructure.CurrentUser;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Time;
 using Wesal.Persistence.Data;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -71,7 +72,7 @@ public class LoginPostAuthenticationStateShould
 
         var tokenService = new TokenService(Options.Create(Settings));
 
-        var loginService = new LoginService(userManager, tokenService, new DateTimeService());
+        var loginService = new LoginService(userManager, tokenService, new DateTimeService(), new RecordingNotificationDispatcher());
         var registrationService = new AuthService(userManager, roleManager, tokenService, NullEmailService.Instance, Options.Create(new PasswordResetOptions()), NullLogger<AuthService>.Instance);
 
         return (loginService, registrationService, context);

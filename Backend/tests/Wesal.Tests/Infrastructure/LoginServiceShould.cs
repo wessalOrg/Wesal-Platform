@@ -11,6 +11,8 @@ using Wesal.Infrastructure.Auth;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Time;
 using Wesal.Persistence.Data;
+using Wesal.Domain.Notifications;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -30,7 +32,7 @@ public class LoginServiceShould
         AccountType = accountType
     };
 
-    private static (LoginService Login, AuthService Registration, ApplicationDbContext Context) CreateService()
+    private static (LoginService Login, AuthService Registration, ApplicationDbContext Context, RecordingNotificationDispatcher Dispatcher) CreateService()
     {
         var services = new ServiceCollection();
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -65,16 +67,17 @@ public class LoginServiceShould
             ClockSkewMinutes = 5
         }));
 
-        var loginService = new LoginService(userManager, tokenService, new DateTimeService());
+        var dispatcher = new RecordingNotificationDispatcher();
+        var loginService = new LoginService(userManager, tokenService, new DateTimeService(), dispatcher);
         var registrationService = new AuthService(userManager, roleManager, tokenService, NullEmailService.Instance, Options.Create(new PasswordResetOptions()), NullLogger<AuthService>.Instance);
 
-        return (loginService, registrationService, context);
+        return (loginService, registrationService, context, dispatcher);
     }
 
     [Fact]
     public async Task Login_RegisteredUserByEmail_ReturnsTokenAndUserDetails()
     {
-        var (login, registration, _) = CreateService();
+        var (login, registration, _, _) = CreateService();
         await registration.RegisterAsync(
             CreateRegisterRequest("regular@example.com", AccountTypes.RegularUser));
 
@@ -93,10 +96,47 @@ public class LoginServiceShould
         Assert.False(string.IsNullOrEmpty(response.Id));
     }
 
+    // --- WESAL-TASK-13 (Edit 13): the welcome notification ---
+
+    [Fact]
+    public async Task Login_SendsTheWelcomeNotificationToTheSignedInUser()
+    {
+        var (login, registration, _, dispatcher) = CreateService();
+        await registration.RegisterAsync(
+            CreateRegisterRequest("welcome@example.com", AccountTypes.RegularUser));
+
+        var response = await login.LoginAsync(new LoginRequest
+        {
+            Email = "welcome@example.com",
+            Password = Password
+        });
+
+        var pushed = dispatcher.Single();
+        Assert.Equal(NotificationKind.WelcomeLogin, pushed.Kind);
+        Assert.Equal(response.Id, pushed.RecipientUserId);
+    }
+
+    [Fact]
+    public async Task Login_FailedAttempt_DoesNotSendTheWelcomeNotification()
+    {
+        var (login, registration, _, dispatcher) = CreateService();
+        await registration.RegisterAsync(
+            CreateRegisterRequest("nowelcome@example.com", AccountTypes.RegularUser));
+
+        await Assert.ThrowsAsync<ValidationException>(() => login.LoginAsync(new LoginRequest
+        {
+            Email = "nowelcome@example.com",
+            Password = "WrongPassword1!"
+        }));
+
+        // A rejected sign-in must not greet the user as if they had arrived.
+        Assert.Empty(dispatcher.Dispatches);
+    }
+
     [Fact]
     public async Task Login_HallOwnerByEmail_ReturnsTokenAndRole()
     {
-        var (login, registration, _) = CreateService();
+        var (login, registration, _, _) = CreateService();
         await registration.RegisterAsync(
             CreateRegisterRequest("owner@example.com", AccountTypes.HallOwner));
 
@@ -116,7 +156,7 @@ public class LoginServiceShould
     [InlineData("owner@example.com", AccountTypes.HallOwner)]
     public async Task Login_ByEmail_ReturnsToken(string email, string accountType)
     {
-        var (login, registration, _) = CreateService();
+        var (login, registration, _, _) = CreateService();
         await registration.RegisterAsync(CreateRegisterRequest(email, accountType));
 
         var response = await login.LoginAsync(new LoginRequest
@@ -138,7 +178,7 @@ public class LoginServiceShould
     [Fact]
     public async Task Login_EmailCaseInsensitive_ReturnsToken()
     {
-        var (login, registration, _) = CreateService();
+        var (login, registration, _, _) = CreateService();
         await registration.RegisterAsync(
             CreateRegisterRequest("Case.User@Example.com", AccountTypes.RegularUser));
 
@@ -155,7 +195,7 @@ public class LoginServiceShould
     [Fact]
     public async Task Login_WrongPassword_ThrowsUnauthorizedExceptionAndIncrementsFailedAttempts()
     {
-        var (login, registration, context) = CreateService();
+        var (login, registration, context, _) = CreateService();
         await registration.RegisterAsync(
             CreateRegisterRequest("wrongpass@example.com", AccountTypes.RegularUser));
 
@@ -177,7 +217,7 @@ public class LoginServiceShould
     [Fact]
     public async Task Login_UnknownEmail_ThrowsUnauthorizedExceptionMatchingWrongPassword()
     {
-        var (login, _, _) = CreateService();
+        var (login, _, _, _) = CreateService();
 
         var unknownException = await Assert.ThrowsAsync<ValidationException>(() =>
             login.LoginAsync(new LoginRequest
@@ -190,7 +230,7 @@ public class LoginServiceShould
         Assert.Contains(unknownException.Errors.Values.SelectMany(v => v), msg => msg.Contains("not registered", StringComparison.OrdinalIgnoreCase));
 
         // Wrong password should map to Password field
-        var (login2, registration2, _) = CreateService();
+        var (login2, registration2, _, _) = CreateService();
         await registration2.RegisterAsync(CreateRegisterRequest("regular2@example.com", AccountTypes.RegularUser));
         var wrongPasswordException = await Assert.ThrowsAsync<ValidationException>(() =>
             login2.LoginAsync(new LoginRequest
@@ -204,7 +244,7 @@ public class LoginServiceShould
     [Fact]
     public async Task Login_UnknownNonEmailIdentifier_MapsToEmailField()
     {
-        var (login, registration, _) = CreateService();
+        var (login, registration, _, _) = CreateService();
         await registration.RegisterAsync(
             CreateRegisterRequest("known@example.com", AccountTypes.RegularUser));
 
@@ -228,7 +268,7 @@ public class LoginServiceShould
     [Fact]
     public async Task Login_FourWrongAttempts_ThenCorrectPassword_SucceedsAndResetsFailedAttempts()
     {
-        var (login, registration, context) = CreateService();
+        var (login, registration, context, _) = CreateService();
         await registration.RegisterAsync(
             CreateRegisterRequest("recovery@example.com", AccountTypes.RegularUser));
 
@@ -258,7 +298,7 @@ public class LoginServiceShould
     [Fact]
     public async Task Login_FifthWrongAttempt_LocksAccountAndReturnsBlockedMessageWithRemainingDuration()
     {
-        var (login, registration, context) = CreateService();
+        var (login, registration, context, _) = CreateService();
         await registration.RegisterAsync(
             CreateRegisterRequest("locked@example.com", AccountTypes.RegularUser));
 
@@ -290,7 +330,7 @@ public class LoginServiceShould
     [Fact]
     public async Task Login_BlockedAccount_EvenWithCorrectPassword_ReturnsBlockedMessageWithRemainingDuration()
     {
-        var (login, registration, context) = CreateService();
+        var (login, registration, context, _) = CreateService();
         await registration.RegisterAsync(
             CreateRegisterRequest("blocked@example.com", AccountTypes.RegularUser));
 
@@ -313,7 +353,7 @@ public class LoginServiceShould
     [Fact]
     public async Task Login_BlockedAccountAfterLockoutExpires_CorrectPasswordSucceeds()
     {
-        var (login, registration, context) = CreateService();
+        var (login, registration, context, _) = CreateService();
         await registration.RegisterAsync(
             CreateRegisterRequest("expired@example.com", AccountTypes.RegularUser));
 
@@ -333,7 +373,7 @@ public class LoginServiceShould
     [Fact]
     public async Task Login_WhitespaceSurroundingIdentifier_TrimsAndSucceeds()
     {
-        var (login, registration, _) = CreateService();
+        var (login, registration, _, _) = CreateService();
         await registration.RegisterAsync(
             CreateRegisterRequest("spaces@example.com", AccountTypes.RegularUser));
 

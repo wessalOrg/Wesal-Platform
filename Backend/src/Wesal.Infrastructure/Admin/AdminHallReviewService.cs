@@ -6,6 +6,7 @@ using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Documents;
 using Wesal.Infrastructure.Halls;
@@ -44,6 +45,8 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
     private readonly IConversationNotifier _notifier;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IDocumentStorage _documentStorage;
+    private readonly INotificationService _notificationService;
+    private readonly INotificationDispatcher _notificationDispatcher;
     private readonly ILogger<AdminHallReviewService> _logger;
 
     public AdminHallReviewService(
@@ -57,6 +60,8 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         IConversationNotifier notifier,
         UserManager<ApplicationUser> userManager,
         IDocumentStorage documentStorage,
+        INotificationService notificationService,
+        INotificationDispatcher notificationDispatcher,
         ILogger<AdminHallReviewService> logger)
     {
         _adminDashboardRepository = adminDashboardRepository;
@@ -69,6 +74,8 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         _notifier = notifier;
         _userManager = userManager;
         _documentStorage = documentStorage;
+        _notificationService = notificationService;
+        _notificationDispatcher = notificationDispatcher;
         _logger = logger;
     }
 
@@ -524,24 +531,46 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         {
             ConversationId = conversation.Id,
             SenderUserId = adminUserId,
-            Content = BuildRejectionContent(hall, reason)
+            // WESAL-TASK-13 (Edit 13): this notice used to be English-only, so an
+            // Arabic-speaking owner received the rejection in a language they had not chosen.
+            // It is now rendered from the catalog in the OWNER's own stored language, and the
+            // pushed notification reuses the identical wording.
+            Content = await BuildRejectionContentAsync(hall, reason, cancellationToken)
         };
 
         await _messageRepository.AddAsync(message, cancellationToken);
         await _messageRepository.SaveChangesAsync(cancellationToken);
+
+        // The click-through opens this very owner/Admin thread, which was just created on
+        // demand when the owner had never been messaged before, so "contact support" always
+        // lands in a real, writable conversation.
+        await _notificationDispatcher.DispatchAsync(
+            NotificationKind.HallRejectedForOwner,
+            hall.OwnerId!,
+            new Dictionary<string, string?>
+            {
+                [NotificationTokens.HallName] = hall.Name,
+                [NotificationTokens.Reason] = string.IsNullOrWhiteSpace(reason) ? string.Empty : reason.Trim()
+            },
+            conversation.Id.ToString(),
+            cancellationToken);
     }
 
-    private static string BuildRejectionContent(Hall hall, string? reason)
+    private async Task<string> BuildRejectionContentAsync(
+        Hall hall,
+        string? reason,
+        CancellationToken cancellationToken)
     {
-        var content = $"Your hall \"{hall.Name}\" was rejected by the administrator.";
+        var content = await _notificationService.BuildAsync(
+            NotificationKind.HallRejectedForOwner,
+            hall.OwnerId!,
+            new Dictionary<string, string?>
+            {
+                [NotificationTokens.HallName] = hall.Name,
+                [NotificationTokens.Reason] = string.IsNullOrWhiteSpace(reason) ? string.Empty : reason.Trim()
+            },
+            cancellationToken: cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(reason))
-        {
-            content += $" Reason: {reason.Trim()}";
-        }
-
-        content += " You can edit your hall and resubmit it for review.";
-
-        return content;
+        return content.Body;
     }
 }

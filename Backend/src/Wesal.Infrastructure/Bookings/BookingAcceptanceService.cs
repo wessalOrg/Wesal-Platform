@@ -6,6 +6,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 
 namespace Wesal.Infrastructure.Bookings;
 
@@ -40,19 +41,25 @@ public sealed class BookingAcceptanceService : IBookingAcceptanceService
     private readonly IMessageRepository _messageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly INotificationService _notificationService;
+    private readonly INotificationDispatcher _notificationDispatcher;
 
     public BookingAcceptanceService(
         IBookingRepository bookingRepository,
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        INotificationService notificationService,
+        INotificationDispatcher notificationDispatcher)
     {
         _bookingRepository = bookingRepository;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _notificationService = notificationService;
+        _notificationDispatcher = notificationDispatcher;
     }
 
     public async Task<AcceptBookingResultDto> AcceptBookingAsync(
@@ -218,7 +225,11 @@ public sealed class BookingAcceptanceService : IBookingAcceptanceService
         {
             ConversationId = conversation.Id,
             SenderUserId = hall.OwnerId,
-            Content = BuildApprovalContent(booking)
+            // WESAL-TASK-13 (Edit 13): the notice text is no longer fixed Arabic. It is the
+            // same catalog entry the push notification uses, rendered in the REQUESTER's own
+            // stored language, so the durable thread record and the realtime notification can
+            // never disagree about what the requester was told.
+            Content = await BuildApprovalContentAsync(booking, cancellationToken)
         };
 
         await _messageRepository.AddAsync(message, cancellationToken);
@@ -227,20 +238,39 @@ public sealed class BookingAcceptanceService : IBookingAcceptanceService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // The click-through lands in this exact thread, which is where the requester sends
+        // the deposit payment notice (Edit 8's flow).
+        await _notificationDispatcher.DispatchAsync(
+            NotificationKind.BookingAcceptedForRequester,
+            booking.RequesterUserId,
+            BookingNotificationValues.ForBooking(booking),
+            conversation.Id.ToString(),
+            cancellationToken);
+
         return true;
     }
 
     /// <summary>
-    /// Builds the requester-facing approval notice (WESAL-TASK-8). It states what the hall
-    /// is available and how much the requester must pay as a deposit before the booking is
-    /// final, which is the message that makes the requester aware of the second step. The
-    /// language is fixed Arabic by product decision, matching the rejection notice.
+    /// Builds the requester-facing approval notice (WESAL-TASK-8, localized by
+    /// WESAL-TASK-13 / Edit 13). It states what the hall is available and how much the
+    /// requester must pay as a deposit before the booking is final, which is the message
+    /// that makes the requester aware of the second step.
     /// </summary>
-    private static string BuildApprovalContent(Booking booking)
+    /// <remarks>
+    /// WESAL-TASK-8 originally fixed this text to Arabic by product decision. Edit 13
+    /// supersedes that: the wording is now resolved per recipient from
+    /// <see cref="ApplicationUser.PreferredLanguage"/>, so the Arabic and the English carry
+    /// the same deposit amount, date and time range.
+    /// </remarks>
+    private async Task<string> BuildApprovalContentAsync(Booking booking, CancellationToken cancellationToken)
     {
-        var deposit = booking.DepositAmount ?? 0m;
+        var content = await _notificationService.BuildAsync(
+            NotificationKind.BookingAcceptedForRequester,
+            booking.RequesterUserId,
+            BookingNotificationValues.ForBooking(booking),
+            cancellationToken: cancellationToken);
 
-        return $"تم قبول طلب الحجز الخاص بك. برجاء دفع عربون قدره {deposit:0.##} للتأكيد النهائي للحجز";
+        return content.Body;
     }
 
     /// <summary>

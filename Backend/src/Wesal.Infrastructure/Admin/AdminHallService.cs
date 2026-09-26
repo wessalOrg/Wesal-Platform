@@ -4,6 +4,7 @@ using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Conversations;
 
 namespace Wesal.Infrastructure.Admin;
@@ -29,6 +30,8 @@ public class AdminHallService : IAdminHallService
     private readonly IConversationNotifier _notifier;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _dateTime;
+    private readonly INotificationService _notificationService;
+    private readonly INotificationDispatcher _notificationDispatcher;
     private readonly ILogger<AdminHallService> _logger;
 
     public AdminHallService(
@@ -40,6 +43,8 @@ public class AdminHallService : IAdminHallService
         IConversationNotifier notifier,
         ICurrentUserService currentUser,
         IDateTime dateTime,
+        INotificationService notificationService,
+        INotificationDispatcher notificationDispatcher,
         ILogger<AdminHallService> logger)
     {
         _hallRepository = hallRepository;
@@ -50,6 +55,8 @@ public class AdminHallService : IAdminHallService
         _notifier = notifier;
         _currentUser = currentUser;
         _dateTime = dateTime;
+        _notificationService = notificationService;
+        _notificationDispatcher = notificationDispatcher;
         _logger = logger;
     }
 
@@ -154,13 +161,41 @@ public class AdminHallService : IAdminHallService
         {
             ConversationId = conversation.Id,
             SenderUserId = adminUserId,
-            Content = $"تم اعتماد قاعتك «{hall.Name}»، ولكن يجب دفع الاشتراك وإرسال صورة إثبات الدفع عبر المحادثة لإكمال التفعيل."
+            // WESAL-TASK-13 (Edit 13): the approval notice is no longer fixed Arabic. It is
+            // rendered from the catalog in the OWNER's own stored language, so the durable
+            // thread record and the push notification always say the same thing.
+            Content = await BuildApprovalNoticeContentAsync(hall, cancellationToken)
         };
 
         await _messageRepository.AddAsync(message, cancellationToken);
         await _messageRepository.SaveChangesAsync(cancellationToken);
 
         await TryNotifyRealTimeAsync(conversation.Id, message, adminUserId, cancellationToken);
+
+        // The owner's click-through lands on their own "My halls" list, which is where the
+        // payment-notice entry point (and the attachment upload) lives.
+        await _notificationDispatcher.DispatchAsync(
+            NotificationKind.HallApprovedForOwner,
+            hall.OwnerId,
+            BuildHallValues(hall.Name),
+            hall.Id.ToString(),
+            cancellationToken);
+    }
+
+    private static Dictionary<string, string?> BuildHallValues(string hallName)
+        => new() { [NotificationTokens.HallName] = hallName };
+
+    private async Task<string> BuildApprovalNoticeContentAsync(
+        Wesal.Domain.Entities.Hall hall,
+        CancellationToken cancellationToken)
+    {
+        var content = await _notificationService.BuildAsync(
+            NotificationKind.HallApprovedForOwner,
+            hall.OwnerId!,
+            BuildHallValues(hall.Name),
+            cancellationToken: cancellationToken);
+
+        return content.Body;
     }
 
     private async Task TryNotifyRealTimeAsync(
