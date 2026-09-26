@@ -156,10 +156,12 @@ public class HallsController : ControllerBase
     /// <summary>
     /// Returns the hourly-slot catalog for one hall on one date (WESAL-TASK-1, seeker
     /// flow): the day's 60-minute slots from the hall's hourly window, each marked
-    /// Available or Booked. When the owner blocks the whole day, the day gate is closed
-    /// and no slots are returned. When the hall's ShowBookedSlots toggle is OFF, booked
-    /// hours are omitted from the response entirely; attempting to book one still returns
-    /// an explicit 'already booked' conflict.
+    /// Available or Booked. No slots are ever returned for a day the owner blocked. How
+    /// that day is reported depends on the hall's ShowBookedSlots toggle: with it ON the
+    /// response reports the day as not open; with it OFF the day is reported as open with
+    /// an empty slot list, which is identical to a hidden fully-booked day, so the block
+    /// is never disclosed. When the toggle is OFF, booked hours are likewise omitted from
+    /// the response entirely; attempting to book one still returns an explicit conflict.
     /// </summary>
     [HttpGet("{id:guid}/hourly-catalog")]
     [AllowAnonymous]

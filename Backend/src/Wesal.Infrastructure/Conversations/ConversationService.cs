@@ -358,8 +358,9 @@ public sealed class ConversationService : IConversationService
 
         EnsureParticipant(conversation, senderUserId);
 
-        // The attachment is the payment proof, so the owner may post it even when unpaid.
-        EnsureOwnerMessagingAccess(conversation, hasAttachment: true);
+        // The attachment is the subscription-payment proof the Admin asked for, so this is
+        // the call that motivated the unpaid carve-out in EnsureOwnerMessagingAccess.
+        EnsureOwnerMessagingAccess(conversation);
 
         var normalizedRequestId = string.IsNullOrWhiteSpace(clientRequestId) ? null : clientRequestId;
 
@@ -758,16 +759,21 @@ public sealed class ConversationService : IConversationService
     /// read and reply to review/rejection messages (US-ADMIN-03). Seekers and Admins
     /// are never blocked by this gate.
     ///
-    /// WESAL-TASK-4 (Edit 4) carves out one case: an owner posting an image attachment
-    /// in their own owner/Admin thread stays allowed even when the hall is unpaid, because
-    /// that attachment IS the subscription-payment proof the Admin asked for. Without this
-    /// the payment notice would be unsendable exactly when it is needed. The carve-out is
-    /// deliberately narrow — it applies only to the owner of this conversation, only to
-    /// attachment posts, and only inside the thread; every text-only message and every
-    /// Admin/seeker path is gated exactly as before. A manual Admin lock and the system
-    /// lock still apply, so this only waives the payment requirement, never a lock.
+    /// WESAL-TASK-4 (Edit 4) carves out one case: the owner of their own owner/Admin
+    /// thread may read it and post into it even when the hall is unpaid, because that
+    /// thread is exactly where the payment notice lives and where the payment proof is
+    /// sent. Without this the notice is unsendable AND unreadable at the precise moment
+    /// it is needed: the Admin asks for payment, then cannot let the owner answer.
+    ///
+    /// The carve-out is deliberately narrow — it applies only to the owner of this
+    /// conversation, only inside this thread, and only waives the PAYMENT requirement.
+    /// A manual Admin lock and the system lock still apply, so a locked hall is never
+    /// waived, and no other HallManagementAccess-gated action (hall management, hall
+    /// settings, owner booking actions) is affected: this gate guards conversation
+    /// access only. Seekers and Admins are unaffected, and a deleted hall is still
+    /// rejected earlier as not-found.
     /// </summary>
-    private void EnsureOwnerMessagingAccess(Conversation conversation, bool hasAttachment = false)
+    private void EnsureOwnerMessagingAccess(Conversation conversation)
     {
         if (_currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase))
         {
@@ -795,15 +801,12 @@ public sealed class ConversationService : IConversationService
             return;
         }
 
-        // Edit 4 carve-out: an owner posting their subscription-payment proof is allowed
-        // past the PAYMENT requirement only. Admin lock and system lock still apply.
-        if (hasAttachment && hall.PaymentStatus != HallPaymentStatus.Paid)
+        // Edit 4 carve-out: the owner may read and post in their own owner/Admin thread
+        // while the subscription is unpaid. Only the PAYMENT requirement is waived, so a
+        // lock still denies access and delegates to the shared guard to raise the correct
+        // locked reason rather than silently allowing access.
+        if (hall.PaymentStatus != HallPaymentStatus.Paid && !hall.IsAdminLocked && !hall.SystemLocked)
         {
-            if (hall.IsAdminLocked || hall.SystemLocked)
-            {
-                HallManagementAccess.EnsureAllowed(hall);
-            }
-
             return;
         }
 

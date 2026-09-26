@@ -234,6 +234,38 @@ public class HourlySlotServiceShould
     }
 
     [Fact]
+    public async Task GetAvailabilityCalendarAsync_BlockedDayWithToggleOff_StaysHidden()
+    {
+        // Intentional design (confirmed with the product owner): ShowBookedSlots is the
+        // owner's privacy control. With it OFF a blocked day must be reported exactly like a
+        // hidden fully-booked day, so a seeker cannot infer the block from the response. The
+        // day-level API has no "fully booked" signal, which is why a hidden fully-booked day
+        // also reads as open — both states are deliberately indistinguishable.
+        //
+        // Bookability is unaffected: CreateHourlyBookingAsync re-checks the stored gate and
+        // still rejects the date with a 409 (see
+        // CreateHourlyBookingAsync_BlockedDay_ThrowsExplicitConflict below).
+        var hall = CreateHall("Approved Hall", showBookedSlots: false);
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+        var bookingRepository = new FakeBookingRepository();
+        var from = Tomorrow();
+        bookingRepository.DayGates.Add(new HallDayAvailability
+        {
+            HallId = hall.Id,
+            Date = from,
+            IsOpen = false
+        });
+
+        var service = CreateService(hallRepository, bookingRepository);
+
+        var calendar = await service.GetAvailabilityCalendarAsync(hall.Id, from, from.AddDays(1));
+
+        var blockedDay = Assert.Single(calendar.Days, day => day.Date == from);
+        Assert.True(blockedDay.IsOpen);
+    }
+
+    [Fact]
     public async Task CreateHourlyBookingAsync_Unauthenticated_ThrowsUnauthorized()
     {
         var hall = CreateHall("Approved Hall", showBookedSlots: true);

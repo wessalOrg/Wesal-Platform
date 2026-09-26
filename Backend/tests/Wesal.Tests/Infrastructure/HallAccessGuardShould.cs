@@ -322,8 +322,12 @@ public class HallAccessGuardShould : IDisposable
     // --- US-ADMIN-05/07: owner messaging blocked only on Approved halls ---
 
     [Fact]
-    public async Task GetConversation_Owner_ApprovedUnpaid_ThrowsPaymentRequired()
+    public async Task GetConversation_Owner_ApprovedUnpaid_AllowsAccess()
     {
+        // Audit fix: this used to assert PaymentRequired, which is the bug. The owner of an
+        // Approved+Unpaid hall must be able to open their own owner/Admin thread, because
+        // that thread is where the payment notice and the payment proof live. Only the
+        // payment requirement is waived; locks still block (see the admin-locked case below).
         var owner = await CreateOwnerAsync("owner@example.com");
         var hall = AddHall(owner.Id, "Grand Hall", payment: HallPaymentStatus.Unpaid);
         var conversation = new Conversation
@@ -335,9 +339,8 @@ public class HallAccessGuardShould : IDisposable
             Hall = hall
         };
 
-        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            BuildMessagingService(conversation).GetConversationAsync(conversation.Id));
-        Assert.Equal(HallManagementAccess.PaymentRequiredCode, ex.Code);
+        var result = await BuildMessagingService(conversation).GetConversationAsync(conversation.Id);
+        Assert.Equal(conversation.Id, result.ConversationId);
     }
 
     [Fact]

@@ -217,10 +217,12 @@ public class OwnerController : ControllerBase
     /// <summary>
     /// Blocks or unblocks one whole calendar day for the authenticated Hall Owner's own
     /// hall (WESAL-TASK-1). This is the owner-side counterpart of the seeker hourly
-    /// availability model: a blocked day exposes no bookable slot and is reported as
-    /// closed by the seeker catalog and calendar endpoints. Blocking a day that already
-    /// carries a live booking is refused with 409 so a confirmed booking is never
-    /// silently orphaned. Ownership is resolved server-side.
+    /// availability model: a blocked day exposes no bookable slot and is refused on every
+    /// booking path. How the seeker catalog and calendar endpoints report it depends on the
+    /// hall's ShowBookedSlots toggle — with it ON the day is reported as closed, and with it
+    /// OFF the block is hidden exactly like fully-booked time so it is never disclosed.
+    /// Blocking a day that already carries a live booking is refused with 409 so a confirmed
+    /// booking is never silently orphaned. Ownership is resolved server-side.
     /// </summary>
     [HttpPut("halls/{hallId:guid}/day-block")]
     [ProducesResponseType(typeof(OwnerDayBlockResultDto), StatusCodes.Status200OK)]

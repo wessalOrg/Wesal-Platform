@@ -311,7 +311,7 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
             () => anonymous.Service.GetMessageAttachmentAsync(ConversationId, messageId));
     }
 
-    // --- The payment-proof carve-out: unpaid owners may post the image, and only it ---
+    // --- The payment-proof carve-out: an unpaid owner owns their own payment thread ---
 
     [Fact]
     public async Task SendAttachment_UnpaidOwner_CanSendPaymentProof()
@@ -327,16 +327,151 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
     }
 
     [Fact]
-    public async Task SendTextMessage_UnpaidOwner_StillBlocked()
+    public async Task SendTextMessage_UnpaidOwner_CanReplyInOwnPaymentThread()
     {
-        // The carve-out is narrow: plain text to the Admins remains payment-gated.
+        // Audit fix: the carve-out was limited to attachments, which left the owner able to
+        // upload proof but unable to read the Admin's notice or answer a question about it.
+        // The thread is the owner's own, so text is allowed through too.
         var harness = CreateHarness(
             OwnerId, [ApplicationRoles.HallOwner], payment: HallPaymentStatus.Unpaid);
+
+        var result = await harness.Service.SendMessageAsync(
+            ConversationId, new SendMessageRequest { Content = "Payment sent, please check." });
+
+        Assert.Equal("Payment sent, please check.", result.Content);
+        Assert.False(result.HasAttachment);
+    }
+
+    // --- The same carve-out must cover reading, which was the actual dead end ---
+
+    [Fact]
+    public async Task GetConversationThread_UnpaidOwner_CanReadPaymentNotice()
+    {
+        // The regression that motivated the fix: the Admin's payment notice was written into
+        // this thread and the owner was then blocked from opening it.
+        var harness = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner], payment: HallPaymentStatus.Unpaid);
+        harness.Messages.Committed.Add(new Message
+        {
+            Id = Guid.NewGuid(),
+            ConversationId = ConversationId,
+            SenderUserId = AdminId,
+            Content = "Please pay the subscription fee and send the receipt image here.",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+
+        var thread = await harness.Service.GetConversationThreadAsync(ConversationId);
+
+        Assert.Equal(ConversationId, thread.ConversationId);
+        Assert.Contains(thread.Messages, m => m.Content.Contains("send the receipt image"));
+    }
+
+    [Fact]
+    public async Task GetConversation_UnpaidOwner_CanReadConversationMetadata()
+    {
+        var harness = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner], payment: HallPaymentStatus.Unpaid);
+
+        var conversation = await harness.Service.GetConversationAsync(ConversationId);
+
+        Assert.Equal(ConversationId, conversation.ConversationId);
+        Assert.Equal(HallId, conversation.HallId);
+        Assert.Equal(OwnerId, conversation.OwnerUserId);
+    }
+
+    // --- Scope proofs: only the payment requirement is waived, and only for the owner ---
+
+    [Fact]
+    public async Task GetConversationThread_UnpaidOwnerAdminLocked_StillBlocked()
+    {
+        var harness = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner],
+            payment: HallPaymentStatus.Unpaid, adminLocked: true);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => harness.Service.GetConversationThreadAsync(ConversationId));
+
+        Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);
+    }
+
+    [Fact]
+    public async Task GetConversationThread_UnpaidOwnerSystemLocked_StillBlocked()
+    {
+        var harness = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner],
+            payment: HallPaymentStatus.Unpaid, systemLocked: true);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => harness.Service.GetConversationThreadAsync(ConversationId));
+
+        // PaymentRequired, not HallSystemLocked: HallManagementAccess evaluates payment before
+        // the system lock, and the carve-out delegates for any lock.
+        Assert.Equal(HallManagementAccess.PaymentRequiredCode, ex.Code);
+    }
+
+    [Fact]
+    public async Task SendTextMessage_UnpaidOwnerAdminLocked_StillBlocked()
+    {
+        // The carve-out must not widen the send path past the payment requirement either.
+        var harness = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner],
+            payment: HallPaymentStatus.Unpaid, adminLocked: true);
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(
             () => harness.Service.SendMessageAsync(ConversationId, new SendMessageRequest { Content = "Hello" }));
 
-        Assert.Equal(HallManagementAccess.PaymentRequiredCode, ex.Code);
+        Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);
+    }
+
+    [Fact]
+    public async Task GetConversationThread_SeekerParticipantOnUnpaidHall_UnaffectedByCarveOut()
+    {
+        // Scope proof. A seeker participant is NOT the hall owner, and the hall-management
+        // gate has never applied to them: the carve-out lives strictly below the ownership
+        // check, so their access is byte-for-byte the same before and after the change.
+        var harness = CreateHarness(
+            "seeker-1", [ApplicationRoles.RegisteredUser],
+            payment: HallPaymentStatus.Unpaid, conversationSenderId: "seeker-1");
+
+        var thread = await harness.Service.GetConversationThreadAsync(ConversationId);
+
+        Assert.Equal(ConversationId, thread.ConversationId);
+    }
+
+    [Fact]
+    public async Task GetConversationThread_PaidOwner_ReadsNormally()
+    {
+        // Sanity: the normal paid path is unchanged.
+        var harness = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner], payment: HallPaymentStatus.Paid);
+
+        var thread = await harness.Service.GetConversationThreadAsync(ConversationId);
+
+        Assert.Equal(ConversationId, thread.ConversationId);
+    }
+
+    [Fact]
+    public async Task GetConversationThread_Admin_ReadsUnpaidHallThread()
+    {
+        var harness = CreateHarness(
+            AdminId, [ApplicationRoles.Admin], payment: HallPaymentStatus.Unpaid);
+
+        var thread = await harness.Service.GetConversationThreadAsync(ConversationId);
+
+        Assert.Equal(ConversationId, thread.ConversationId);
+    }
+
+    [Fact]
+    public async Task GetConversationThread_PendingReviewOwner_ReadsNormally()
+    {
+        // PendingReview was never payment-gated, so the carve-out changes nothing here.
+        var harness = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner],
+            hallStatus: HallStatus.PendingReview, payment: HallPaymentStatus.Unpaid);
+
+        var thread = await harness.Service.GetConversationThreadAsync(ConversationId);
+
+        Assert.Equal(ConversationId, thread.ConversationId);
     }
 
     [Fact]
