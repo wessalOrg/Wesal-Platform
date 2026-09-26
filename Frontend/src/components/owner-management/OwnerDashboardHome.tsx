@@ -218,8 +218,8 @@ export default function OwnerDashboardHome() {
                   className="seeker-home-booking-row block"
                   prefetch
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-[var(--wesal-text)]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="min-w-0 flex-1 truncate font-semibold text-[var(--wesal-text)]">
                       {localizeHallName(hall.id, hall.name, lang)}
                     </p>
                     <HallApprovalStatusBadge status={hall.status} />
@@ -240,8 +240,8 @@ export default function OwnerDashboardHome() {
                   className="seeker-home-booking-row block"
                   prefetch
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-[var(--wesal-text)]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="min-w-0 flex-1 truncate font-semibold text-[var(--wesal-text)]">
                       {localizeHallName(hall.id, hall.name, lang)}
                     </p>
                     <HallApprovalStatusBadge status={hall.status} />

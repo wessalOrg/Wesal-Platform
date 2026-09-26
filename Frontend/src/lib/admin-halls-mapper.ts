@@ -82,10 +82,23 @@ export function mapAdminHallDetail(payload: unknown): AdminHallDetail | null {
   const status = mapStatus(dto.status ?? dto.Status);
   if (!hallId || !status) return null;
 
-  const photosRaw = dto.photoUrls ?? dto.PhotoUrls;
-  const photoUrls = Array.isArray(photosRaw)
-    ? photosRaw.map((item) => asText(item)).filter(Boolean).map((url) => resolveMediaUrl(url))
+  const mainImageUrl =
+    resolveMediaUrl(
+      asText(dto.mainImageUrl ?? dto.MainImageUrl ?? dto.mainImage ?? dto.MainImage),
+    ) || null;
+
+  const photosRaw = dto.photoUrls ?? dto.PhotoUrls ?? dto.images ?? dto.Images;
+  const galleryUrls = Array.isArray(photosRaw)
+    ? photosRaw
+        .map((item) => resolveMediaUrl(asText(item)))
+        .filter(Boolean)
     : [];
+
+  // Cover lives on MainImageUrl and is often NOT duplicated in PhotoUrls.
+  const photoUrls = mergeUniqueMediaUrls(
+    mainImageUrl ? [mainImageUrl] : [],
+    galleryUrls,
+  );
 
   const featuresRaw = dto.features ?? dto.Features;
   const features = Array.isArray(featuresRaw)
@@ -118,6 +131,7 @@ export function mapAdminHallDetail(payload: unknown): AdminHallDetail | null {
     ownerFullName: asText(dto.ownerFullName ?? dto.OwnerFullName) || null,
     ownerPhoneNumber: asText(dto.ownerPhoneNumber ?? dto.OwnerPhoneNumber) || null,
     ownerEmail: asText(dto.ownerEmail ?? dto.OwnerEmail) || null,
+    mainImageUrl: mainImageUrl || photoUrls[0] || null,
     photoUrls,
     youtubeVideoUrl: asText(dto.youtubeVideoUrl ?? dto.YouTubeVideoUrl) || null,
     features,
@@ -143,6 +157,20 @@ export function mapAdminHallDetail(payload: unknown): AdminHallDetail | null {
   };
 }
 
+function mergeUniqueMediaUrls(...groups: string[][]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const group of groups) {
+    for (const url of group) {
+      const key = url.trim();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      result.push(key);
+    }
+  }
+  return result;
+}
+
 export function mapAdminPendingHalls(payload: unknown): AdminPendingHall[] {
   const root =
     payload && typeof payload === "object"
@@ -165,7 +193,9 @@ export function mapAdminPendingHalls(payload: unknown): AdminPendingHall[] {
     halls.push({
       hallId,
       name: asText(dto.name ?? dto.Name) || "—",
-      thumbnailUrl: asText(dto.thumbnailUrl ?? dto.ThumbnailUrl) || null,
+      thumbnailUrl:
+        resolveMediaUrl(asText(dto.thumbnailUrl ?? dto.ThumbnailUrl ?? dto.mainImageUrl ?? dto.MainImageUrl)) ||
+        null,
       submittedAt: asText(dto.submittedAt ?? dto.SubmittedAt) || null,
       adminLocked: asBool(dto.adminLocked ?? dto.AdminLocked ?? dto.isLocked ?? dto.IsLocked),
       systemLocked: asBool(dto.systemLocked ?? dto.SystemLocked),

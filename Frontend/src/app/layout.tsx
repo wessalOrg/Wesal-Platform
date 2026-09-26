@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Cairo } from "next/font/google";
 import { AiAssistantProvider } from "@/components/assistant/AiAssistantProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import HallOwnerAudioAlerts from "@/components/halls/notifications/HallOwnerAudioAlerts";
@@ -13,11 +14,16 @@ import { LANGUAGE_BOOT_SCRIPT } from "@/lib/language";
 import "./globals.css";
 
 /**
- * Cairo loads via stylesheet link (not next/font/google) so a blocked
- * Google Fonts network cannot hang the App Router bootstrap.
- * System stacks remain as fallbacks in --font-wesal-sans.
+ * Cairo is bundled at build time via next/font (self-hosted), so runtime
+ * never waits on Google Fonts. Fallbacks stay in --font-wesal-sans.
  */
-const fontSansClass = "font-wesal-sans";
+const cairo = Cairo({
+  subsets: ["arabic", "latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-wesal-sans",
+  fallback: ["Segoe UI", "Tahoma", "sans-serif"],
+});
 
 export const metadata: Metadata = {
   title: translate("meta.siteTitle", "ar"),
@@ -34,18 +40,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl" className={`${fontSansClass} antialiased`} suppressHydrationWarning>
+    <html
+      lang="ar"
+      dir="rtl"
+      className={`${cairo.variable} font-wesal-sans antialiased`}
+      suppressHydrationWarning
+    >
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
         <script dangerouslySetInnerHTML={{ __html: LANGUAGE_BOOT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: FAB_POSITION_BOOT_SCRIPT }} />
       </head>
-      <body className={`${fontSansClass} min-h-svh overflow-x-hidden font-sans`}>
+      <body className={`${cairo.className} min-h-svh overflow-x-hidden font-sans`}>
         <AuthProvider>
           <AudioPermissionProvider>
             <HallOwnerAudioAlerts />

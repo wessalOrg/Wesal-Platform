@@ -127,7 +127,9 @@ export default function HallOwnerManagementShell({
 
           <div className="seeker-dash-topbar-end">
             <LanguageSwitcher iconOnly className="seeker-dash-lang" />
-            <AudioControlToggle variant="nav" />
+            <span className="hidden min-[400px]:inline-flex">
+              <AudioControlToggle variant="nav" />
+            </span>
             <OwnerBookingNotificationsPopover />
             <Link href={OWNER_ACCOUNT_PATH} className="seeker-dash-userchip" prefetch>
               <span className="seeker-dash-userchip-avatar" aria-hidden="true">
@@ -154,36 +156,38 @@ export default function HallOwnerManagementShell({
           <div className="px-4 pt-3 sm:px-6">
             <Link
               href={OWNER_ACCOUNT_PATH}
-              className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#e2b93b]/50 bg-[#fdf6e3] px-4 py-3"
+              className="flex min-w-0 flex-col gap-3 rounded-2xl border border-[#e2b93b]/50 bg-[#fdf6e3] px-4 py-3 sm:flex-row sm:items-center"
               data-testid="owner-profile-completion"
             >
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e2b93b]/20"
-                aria-hidden="true"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="h-5 w-5 text-[var(--wesal-maroon)]"
+              <span className="flex min-w-0 items-start gap-3 sm:items-center">
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e2b93b]/20"
+                  aria-hidden="true"
                 >
-                  <path
-                    d="M12 8v5m0 3h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-[var(--wesal-text)]">
-                  {t("owner.management.profileCompletion.message")}
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="h-5 w-5 text-[var(--wesal-maroon)]"
+                  >
+                    <path
+                      d="M12 8v5m0 3h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </span>
-                <span className="block text-xs leading-5 text-[var(--wesal-muted)]">
-                  {t("owner.management.profileCompletion.hint")}
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-[var(--wesal-text)]">
+                    {t("owner.management.profileCompletion.message")}
+                  </span>
+                  <span className="block text-xs leading-5 text-[var(--wesal-muted)]">
+                    {t("owner.management.profileCompletion.hint")}
+                  </span>
                 </span>
               </span>
-              <span className="ms-auto shrink-0 text-sm font-semibold text-[var(--wesal-maroon)]">
+              <span className="shrink-0 self-start text-sm font-semibold text-[var(--wesal-maroon)] sm:ms-auto sm:self-center">
                 {t("owner.management.profileCompletion.action")}
               </span>
             </Link>

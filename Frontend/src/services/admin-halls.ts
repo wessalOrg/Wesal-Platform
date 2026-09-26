@@ -71,6 +71,7 @@ function buildDemoAdminHallDetail(hallId: string): AdminHallDetail {
     ownerFullName: "صاحب قاعة تجريبي",
     ownerPhoneNumber: "0599111111",
     ownerEmail: "owner.demo@wesal.local",
+    mainImageUrl: null,
     photoUrls: [],
     youtubeVideoUrl: null,
     features: ["تكييف", "موقف سيارات"],

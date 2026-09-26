@@ -7,6 +7,7 @@ import AdminHallLockBadge from "@/components/admin/halls/AdminHallLockBadge";
 import AdminHallLockControls from "@/components/admin/halls/AdminHallLockControls";
 import AdminHallPaidControls from "@/components/admin/halls/AdminHallPaidControls";
 import AdminHallRejectControls from "@/components/admin/halls/AdminHallRejectControls";
+import AdminHallReviewGallery from "@/components/admin/halls/AdminHallReviewGallery";
 import AdminHallUnlockControls from "@/components/admin/halls/AdminHallUnlockControls";
 import AdminPaymentStatusBadge from "@/components/admin/halls/AdminPaymentStatusBadge";
 import AdminSecureDocumentViewer from "@/components/admin/halls/AdminSecureDocumentViewer";
@@ -20,10 +21,7 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import { ADMIN_MANAGEMENT_PATH } from "@/lib/account-profile-path";
 import { canApproveHallStatus } from "@/lib/admin-halls-mapper";
 import { formatBookingDateLabel } from "@/lib/booking-date";
-import {
-  fetchAdminOwnerIdentityUrl,
-  fetchAdminPaymentReceiptUrl,
-} from "@/services/admin-documents";
+import { fetchAdminOwnerIdentityUrl } from "@/services/admin-documents";
 import { toYouTubeEmbedUrl } from "@/lib/youtube-embed";
 import { useT } from "@/i18n";
 
@@ -86,42 +84,41 @@ export default function AdminHallSubmissionDetailView({
   const hall = detail.hall;
   const canApprove = canApproveHallStatus(hall.status);
   const submitted = hall.submittedAt
-    ? new Date(hall.submittedAt).toLocaleDateString(locale)
+    ? new Date(hall.submittedAt).toLocaleString(locale)
     : null;
 
-  const facts: Array<{ label: string; value: string | null; dir?: "ltr" }> = [
-    { label: t("admin.halls.detail.owner"), value: hall.ownerFullName },
-    { label: t("admin.halls.detail.email"), value: hall.ownerEmail, dir: "ltr" },
-    { label: t("admin.halls.detail.phone"), value: hall.ownerPhoneNumber, dir: "ltr" },
+  const hallFacts: Array<{ label: string; value: string | null }> = [
     { label: t("admin.halls.detail.region"), value: hall.regionDisplayName },
     { label: t("admin.halls.detail.address"), value: hall.address },
     { label: t("admin.halls.detail.detailedAddress"), value: hall.detailedAddress },
     {
       label: t("admin.halls.detail.capacity"),
-      value: hall.capacity ? String(hall.capacity) : null,
+      value: hall.capacity
+        ? t("common.peopleCount", { count: hall.capacity })
+        : null,
     },
     {
       label: t("admin.halls.detail.price"),
-      value: hall.price != null ? String(hall.price) : null,
+      value: hall.price != null ? `${hall.price.toLocaleString(locale)} ₪` : null,
     },
     { label: t("admin.halls.detail.submitted"), value: submitted },
   ];
 
   if (hall.cycleEnd) {
-    facts.push({
+    hallFacts.push({
       label: t("admin.halls.paid.nextBilling"),
       value: formatBookingDateLabel(hall.cycleEnd, locale),
     });
   }
   if (hall.daysRemaining != null) {
-    facts.push({
+    hallFacts.push({
       label: t("admin.halls.paid.remainingLabel"),
       value: t("admin.halls.paid.daysRemaining", { count: hall.daysRemaining }),
     });
   }
 
   return (
-    <div className="seeker-home" data-testid="admin-hall-detail">
+    <div className="seeker-home space-y-5" data-testid="admin-hall-detail">
       <SuccessToast
         open={Boolean(toastKey)}
         message={toastKey ? t(toastKey) : ""}
@@ -130,21 +127,25 @@ export default function AdminHallSubmissionDetailView({
 
       <section className="seeker-welcome seeker-welcome--compact">
         <div className="seeker-welcome-copy">
-          <Link href={ADMIN_MANAGEMENT_PATH} className="admin-ops-back">
-            {t("admin.halls.detail.back")}
-          </Link>
-          <h1 className="seeker-welcome-title">{hall.name}</h1>
-          <div className="admin-ops-badges">
-            <HallApprovalStatusBadge status={hall.approvalBadge} />
-            <AdminPaymentStatusBadge status={hall.paymentStatus} />
-            {hall.adminLocked || hall.systemLocked || hall.lockBadgeVisible ? (
-              <AdminHallLockBadge
-                adminLocked={hall.adminLocked}
-                systemLocked={hall.systemLocked}
-              />
-            ) : null}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="seeker-welcome-title">{t("admin.halls.detail.pageTitle")}</h1>
+              <div className="admin-ops-badges mt-2">
+                <HallApprovalStatusBadge status={hall.approvalBadge} />
+                <AdminPaymentStatusBadge status={hall.paymentStatus} />
+                {hall.adminLocked || hall.systemLocked || hall.lockBadgeVisible ? (
+                  <AdminHallLockBadge
+                    adminLocked={hall.adminLocked}
+                    systemLocked={hall.systemLocked}
+                  />
+                ) : null}
+              </div>
+              <p className="seeker-welcome-body mt-2">{t("admin.halls.detail.subtitle")}</p>
+            </div>
+            <Link href={ADMIN_MANAGEMENT_PATH} className="btn-outline min-h-10 shrink-0">
+              {t("admin.halls.detail.back")}
+            </Link>
           </div>
-          <p className="seeker-welcome-body">{t("admin.halls.detail.subtitle")}</p>
         </div>
       </section>
 
@@ -154,70 +155,60 @@ export default function AdminHallSubmissionDetailView({
         </p>
       ) : null}
 
-      <section className="admin-ops-section" data-testid="admin-hall-detail-summary">
-        <h2 className="admin-ops-section-title admin-ops-section-title--center">
-          {t("admin.halls.detail.summaryTitle")}
-        </h2>
-        <dl className="admin-ops-facts">
-          {facts.map((fact) => (
-            <DetailFact
-              key={fact.label}
-              label={fact.label}
-              value={fact.value}
-              dir={fact.dir}
-            />
-          ))}
-        </dl>
-
-        {hall.description ? (
-          <p className="admin-ops-description">{hall.description}</p>
-        ) : null}
-
-        {hall.features.length > 0 ? (
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-[var(--wesal-muted)]">
-              {t("admin.halls.detail.features")}
-            </p>
-            <ul className="mt-2 flex flex-wrap gap-2">
-              {hall.features.map((feature) => (
-                <li
-                  key={feature}
-                  className="rounded-full bg-[var(--wesal-pink)] px-3 py-1 text-xs font-semibold text-[var(--wesal-maroon)]"
-                >
-                  {feature}
-                </li>
-              ))}
-            </ul>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <section
+          className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.06)] sm:p-5"
+          data-testid="admin-hall-detail-summary"
+        >
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <HallApprovalStatusBadge status={hall.approvalBadge} />
           </div>
-        ) : null}
+          <h2 className="text-lg font-extrabold text-[var(--wesal-maroon)] sm:text-xl">
+            {hall.name}
+          </h2>
+          <dl className="admin-ops-facts mt-4">
+            {hallFacts.map((fact) => (
+              <DetailFact key={fact.label} label={fact.label} value={fact.value} />
+            ))}
+          </dl>
+        </section>
 
-        {hall.otherFeatures ? (
-          <p className="mt-4 text-sm leading-7 text-[var(--wesal-text)]">
-            {t("admin.halls.detail.otherFeatures")}: {hall.otherFeatures}
-          </p>
-        ) : null}
+        <section
+          className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.06)] sm:p-5"
+          data-testid="admin-hall-detail-media"
+        >
+          <h2 className="admin-ops-section-title">{t("admin.halls.detail.mediaTitle")}</h2>
+          <div className="mt-3">
+            <AdminHallReviewGallery hallName={hall.name} photos={hall.photoUrls} />
+          </div>
+        </section>
+      </div>
 
-        {(() => {
-          const embedUrl = toYouTubeEmbedUrl(hall.youtubeVideoUrl);
-          return embedUrl ? (
-            <div className="mt-5">
-              <p className="mb-2 text-xs font-semibold text-[var(--wesal-muted)]">
-                {t("admin.halls.detail.youtube")}
-              </p>
-              <div className="aspect-video overflow-hidden rounded-xl border border-[var(--wesal-border)]">
-                <iframe
-                  src={embedUrl}
-                  title={t("admin.halls.detail.youtube")}
-                  className="h-full w-full border-0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                />
-              </div>
-            </div>
-          ) : null;
-        })()}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <section
+          className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.06)] sm:p-5"
+          data-testid="admin-hall-detail-owner"
+        >
+          <h2 className="admin-ops-section-title">{t("admin.halls.detail.ownerSection")}</h2>
+          <dl className="admin-ops-facts mt-3">
+            <DetailFact label={t("admin.halls.detail.owner")} value={hall.ownerFullName} />
+            <DetailFact
+              label={t("admin.halls.detail.phone")}
+              value={hall.ownerPhoneNumber}
+              dir="ltr"
+            />
+            <DetailFact
+              label={t("admin.halls.detail.email")}
+              value={hall.ownerEmail}
+              dir="ltr"
+            />
+          </dl>
+        </section>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2" data-testid="admin-documents">
+        <section data-testid="admin-documents">
+          <h2 className="mb-3 text-base font-bold text-[var(--wesal-maroon)]">
+            {t("admin.halls.detail.identitySection")}
+          </h2>
           <AdminSecureDocumentViewer
             available={hall.ownerHasIdentityDocument}
             labelKey="admin.halls.details.identity.view"
@@ -225,42 +216,74 @@ export default function AdminHallSubmissionDetailView({
             missingHintKey="admin.halls.details.identity.missing"
             errorKey="admin.halls.details.identity.errors.loadFailed"
             loadDocument={() =>
-              hall.ownerId ? fetchAdminOwnerIdentityUrl(hall.ownerId) : Promise.resolve(null)
+              hall.ownerId
+                ? fetchAdminOwnerIdentityUrl(hall.ownerId)
+                : Promise.resolve(null)
             }
             testId="admin-owner-identity-document"
           />
-          <AdminSecureDocumentViewer
-            available={hall.hasPaymentReceipt || hall.paymentStatus === "ReceiptUploaded"}
-            labelKey="admin.halls.details.receipt.view"
-            hintKey="admin.halls.details.receipt.hint"
-            missingHintKey="admin.halls.details.receipt.missing"
-            errorKey="admin.halls.details.receipt.errors.loadFailed"
-            loadDocument={() => fetchAdminPaymentReceiptUrl(hall.hallId)}
-            testId="admin-payment-receipt-document"
-          />
-        </div>
+        </section>
+      </div>
 
-        {hall.photoUrls.length > 0 ? (
-          <ul className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {hall.photoUrls.map((url) => (
-              <li key={url} className="overflow-hidden rounded-xl bg-[var(--wesal-pink)]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" className="h-28 w-full object-cover" />
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
+      {(hall.description || hall.features.length > 0 || hall.otherFeatures) && (
+        <section className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.06)] sm:p-5">
+          {hall.description ? (
+            <p className="admin-ops-description !mt-0">{hall.description}</p>
+          ) : null}
+          {hall.features.length > 0 ? (
+            <div className={hall.description ? "mt-4" : undefined}>
+              <p className="text-xs font-semibold text-[var(--wesal-muted)]">
+                {t("admin.halls.detail.features")}
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {hall.features.map((feature) => (
+                  <li
+                    key={feature}
+                    className="rounded-full bg-[var(--wesal-pink)] px-3 py-1 text-xs font-semibold text-[var(--wesal-maroon)]"
+                  >
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {hall.otherFeatures ? (
+            <p className="mt-4 text-sm leading-7 text-[var(--wesal-text)]">
+              {t("admin.halls.detail.otherFeatures")}: {hall.otherFeatures}
+            </p>
+          ) : null}
+        </section>
+      )}
 
-      <section className="admin-ops-section" data-testid="admin-hall-detail-actions">
+      {(() => {
+        const embedUrl = toYouTubeEmbedUrl(hall.youtubeVideoUrl);
+        return embedUrl ? (
+          <section className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-5">
+            <p className="mb-2 text-xs font-semibold text-[var(--wesal-muted)]">
+              {t("admin.halls.detail.youtube")}
+            </p>
+            <div className="aspect-video overflow-hidden rounded-xl border border-[var(--wesal-border)]">
+              <iframe
+                src={embedUrl}
+                title={t("admin.halls.detail.youtube")}
+                className="h-full w-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          </section>
+        ) : null;
+      })()}
+
+      <section
+        className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.06)] sm:p-5"
+        data-testid="admin-hall-detail-actions"
+      >
         <h2 className="admin-ops-section-title">{t("admin.halls.detail.actionsTitle")}</h2>
-        <div className="admin-ops-toolbar">
-          <MessageHallOwnerButton
-            hallId={hall.hallId}
-            hallName={hall.name}
-            ownerName={hall.ownerFullName}
-            variant="primary"
-          />
+        <p className="mt-1 text-sm text-[var(--wesal-muted)]">
+          {t("admin.halls.detail.actionsHint")}
+        </p>
+        <div className="admin-ops-toolbar mt-4">
           {canApprove ? (
             <ApproveHallActionButton
               disabled={approval.pending}
@@ -271,6 +294,12 @@ export default function AdminHallSubmissionDetailView({
               }}
             />
           ) : null}
+          <MessageHallOwnerButton
+            hallId={hall.hallId}
+            hallName={hall.name}
+            ownerName={hall.ownerFullName}
+            variant="soft"
+          />
           <AdminHallPaidControls
             hallId={hall.hallId}
             status={hall.status}
@@ -307,10 +336,7 @@ export default function AdminHallSubmissionDetailView({
               setToastKey("admin.lock.success");
             }}
           />
-          <AdminHallDeleteControls
-            hallId={hall.hallId}
-            hallName={hall.name}
-          />
+          <AdminHallDeleteControls hallId={hall.hallId} hallName={hall.name} />
         </div>
       </section>
 

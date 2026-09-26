@@ -22,12 +22,11 @@
   --wesal-ivory: #ffffff;
   --background: var(--wesal-cream);
   --foreground: var(--wesal-text);
-  /* Site typeface: Cairo (+ system Arabic fallbacks) */
-  --font-wesal-sans: "Cairo", "Segoe UI", Tahoma, sans-serif;
+  /* --font-wesal-sans is set by next/font (Cairo) on <html>; system stack is the fallback */
 }
 
 .font-wesal-sans {
-  font-family: var(--font-wesal-sans);
+  font-family: var(--font-wesal-sans, "Segoe UI", Tahoma, sans-serif);
 }
 
 @theme inline {
@@ -35,7 +34,7 @@
   --color-foreground: var(--foreground);
   --color-wesal-maroon: var(--wesal-maroon);
   --color-wesal-pink: var(--wesal-pink);
-  --font-sans: var(--font-wesal-sans);
+  --font-sans: var(--font-wesal-sans, "Segoe UI", Tahoma, sans-serif);
 }
 
 body {
@@ -48,7 +47,7 @@ body {
     radial-gradient(ellipse 50% 35% at 0% 100%, rgba(196, 160, 92, 0.05), transparent 55%),
     linear-gradient(180deg, #ffffff 0%, var(--wesal-cream) 55%, #f8f3ee 100%);
   color: var(--foreground);
-  font-family: var(--font-wesal-sans);
+  font-family: var(--font-wesal-sans, "Segoe UI", Tahoma, sans-serif);
 }
 
 html.wesal-scroll-locked,
@@ -4295,6 +4294,10 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .seeker-app {
+    --seeker-sidebar-w: 14.75rem;
+  }
+
   .seeker-dash-sidebar,
   .seeker-dash-sidebar--open {
     /* Fixed to viewport so browse/logout stay flush at the bottom while the page scrolls */
@@ -4338,6 +4341,12 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     /* Always clear the fixed sidebar on the physical right */
     margin-right: var(--seeker-sidebar-w);
     margin-left: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .seeker-app {
+    --seeker-sidebar-w: 16.5rem;
   }
 }
 
@@ -4567,24 +4576,45 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.85rem;
+  gap: 0.55rem;
   min-height: var(--seeker-topbar-h);
-  padding: 0.7rem clamp(0.9rem, 2.2vw, 1.6rem);
+  padding: 0.55rem clamp(0.75rem, 2.2vw, 1.6rem);
   border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
   background: color-mix(in srgb, var(--seeker-white) 96%, var(--seeker-pink-soft));
+}
+
+@media (min-width: 640px) {
+  .seeker-dash-topbar {
+    gap: 0.85rem;
+    padding: 0.7rem clamp(0.9rem, 2.2vw, 1.6rem);
+  }
 }
 
 .seeker-dash-topbar-start,
 .seeker-dash-topbar-end {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.45rem;
   min-width: 0;
 }
 
+@media (min-width: 640px) {
+  .seeker-dash-topbar-start,
+  .seeker-dash-topbar-end {
+    gap: 0.7rem;
+  }
+}
+
 .seeker-dash-topbar-end {
-  flex-shrink: 0;
-  gap: 0.85rem;
+  flex-shrink: 1;
+  gap: 0.45rem;
+}
+
+@media (min-width: 640px) {
+  .seeker-dash-topbar-end {
+    flex-shrink: 0;
+    gap: 0.85rem;
+  }
 }
 
 .seeker-dash-topbar-title {
@@ -4614,9 +4644,10 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 3.15rem;
-  width: 3.15rem;
-  min-height: 3.15rem;
+  height: 2.75rem;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
   padding: 0;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--seeker-border) 85%, white);
@@ -4629,6 +4660,16 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     background-color 160ms ease,
     color 160ms ease,
     transform 160ms ease;
+}
+
+@media (min-width: 640px) {
+  .seeker-dash-notify,
+  .seeker-dash-lang.lang-switch-trigger {
+    height: 3.15rem;
+    width: 3.15rem;
+    min-height: 3.15rem;
+    min-width: 3.15rem;
+  }
 }
 
 .seeker-dash-lang.lang-switch-trigger:hover,
@@ -4947,12 +4988,18 @@ html[dir="rtl"] .seeker-notify-panel {
 .seeker-messages-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  min-height: min(34rem, calc(100svh - 9.5rem));
+  min-height: min(28rem, calc(100svh - 8.5rem));
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
   border-radius: 1.35rem;
   background: color-mix(in srgb, var(--seeker-white) 94%, transparent);
   box-shadow: 0 12px 28px rgba(90, 55, 45, 0.05);
+}
+
+@media (min-width: 640px) {
+  .seeker-messages-workspace {
+    min-height: min(34rem, calc(100svh - 9.5rem));
+  }
 }
 
 @media (min-width: 900px) {
@@ -5200,13 +5247,13 @@ html[dir="rtl"] .seeker-notify-panel {
 .seeker-dash-userchip {
   display: inline-flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.55rem;
   max-width: 16.5rem;
-  min-height: 3.15rem;
+  min-height: 2.75rem;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--seeker-border) 85%, white);
   background: var(--seeker-white);
-  padding: 0.3rem 0.9rem 0.3rem 0.35rem;
+  padding: 0.25rem 0.55rem 0.25rem 0.3rem;
   text-decoration: none;
   color: inherit;
   transition:
@@ -5215,8 +5262,22 @@ html[dir="rtl"] .seeker-notify-panel {
     transform 160ms ease;
 }
 
+@media (min-width: 640px) {
+  .seeker-dash-userchip {
+    gap: 0.7rem;
+    min-height: 3.15rem;
+    padding: 0.3rem 0.9rem 0.3rem 0.35rem;
+  }
+}
+
 [dir="ltr"] .seeker-dash-userchip {
-  padding: 0.3rem 0.35rem 0.3rem 0.9rem;
+  padding: 0.25rem 0.3rem 0.25rem 0.55rem;
+}
+
+@media (min-width: 640px) {
+  [dir="ltr"] .seeker-dash-userchip {
+    padding: 0.3rem 0.35rem 0.3rem 0.9rem;
+  }
 }
 
 .seeker-dash-userchip:hover {
@@ -5232,17 +5293,25 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-dash-userchip-avatar {
   display: inline-flex;
-  height: 2.55rem;
-  width: 2.55rem;
+  height: 2.25rem;
+  width: 2.25rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border-radius: 999px;
   background: linear-gradient(145deg, var(--seeker-maroon), var(--seeker-maroon-soft));
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 800;
   color: #fff;
+}
+
+@media (min-width: 640px) {
+  .seeker-dash-userchip-avatar {
+    height: 2.55rem;
+    width: 2.55rem;
+    font-size: 0.88rem;
+  }
 }
 
 .seeker-dash-userchip-meta {
@@ -5252,7 +5321,7 @@ html[dir="rtl"] .seeker-notify-panel {
   line-height: 1.25;
 }
 
-@media (min-width: 480px) {
+@media (min-width: 640px) {
   .seeker-dash-userchip-meta {
     display: flex;
   }
@@ -5368,16 +5437,64 @@ html[dir="rtl"] .seeker-notify-panel {
 .admin-ops-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: stretch;
   gap: 0.55rem;
+}
+
+.admin-ops-toolbar > * {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.admin-ops-toolbar button,
+.admin-ops-toolbar a,
+.admin-ops-row-actions button,
+.admin-ops-row-actions a {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .admin-ops-toolbar {
+    align-items: center;
+  }
+
+  .admin-ops-toolbar > * {
+    flex: 0 1 auto;
+  }
+
+  .admin-ops-toolbar button,
+  .admin-ops-toolbar a,
+  .admin-ops-row-actions button,
+  .admin-ops-row-actions a {
+    width: auto;
+  }
 }
 
 .admin-ops-row-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
+  align-items: stretch;
+  justify-content: stretch;
   gap: 0.5rem;
+  width: 100%;
+}
+
+.admin-ops-row-actions > * {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .admin-ops-row-actions {
+    align-items: center;
+    justify-content: flex-end;
+    width: auto;
+  }
+
+  .admin-ops-row-actions > * {
+    flex: 0 1 auto;
+  }
 }
 
 .admin-ops-section {
@@ -5413,13 +5530,21 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .admin-ops-fact {
   display: grid;
-  grid-template-columns: minmax(7.5rem, 10rem) minmax(0, 1fr);
-  gap: 0.55rem 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.2rem 0;
   align-items: baseline;
   margin: 0;
-  padding: 0.8rem 1rem;
+  padding: 0.75rem 0.9rem;
   border-bottom: 1px solid color-mix(in srgb, var(--wesal-border) 80%, var(--wesal-pink));
   background: var(--wesal-white);
+}
+
+@media (min-width: 480px) {
+  .admin-ops-fact {
+    grid-template-columns: minmax(7.5rem, 10rem) minmax(0, 1fr);
+    gap: 0.55rem 1rem;
+    padding: 0.8rem 1rem;
+  }
 }
 
 .admin-ops-fact:nth-child(even) {
@@ -5894,10 +6019,16 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-pending-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.55rem 0.75rem;
   margin-bottom: 0.95rem;
+}
+
+.seeker-pending-head > :first-child {
+  min-width: 0;
+  flex: 1 1 12rem;
 }
 
 .seeker-pending-empty {

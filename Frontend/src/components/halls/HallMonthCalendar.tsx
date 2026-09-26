@@ -179,7 +179,7 @@ export default function HallMonthCalendar({
           >
             ‹
           </button>
-          <p className="min-w-[9rem] text-center text-sm font-bold text-[var(--wesal-text)]">
+          <p className="min-w-0 flex-1 text-center text-sm font-bold text-[var(--wesal-text)] sm:min-w-[9rem] sm:flex-none">
             {monthLabel(cursor.year, cursor.month, locale)}
           </p>
           <button
@@ -208,9 +208,9 @@ export default function HallMonthCalendar({
         </ul>
       </div>
 
-      <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[0.7rem] font-semibold text-[var(--wesal-muted)] sm:gap-1.5 sm:text-xs">
+      <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[0.65rem] font-semibold text-[var(--wesal-muted)] sm:gap-1.5 sm:text-xs">
         {weekdays.map((label, index) => (
-          <div key={`${label}-${index}`} className="py-1">
+          <div key={`${label}-${index}`} className="truncate py-1">
             {label}
           </div>
         ))}

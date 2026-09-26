@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { AdminSecureDocument } from "@/services/admin-documents";
 import { useT } from "@/i18n";
 
 type AdminSecureDocumentViewerProps = {
@@ -10,14 +11,17 @@ type AdminSecureDocumentViewerProps = {
   hintKey: string;
   missingHintKey: string;
   errorKey: string;
-  loadDocument: () => Promise<string | null>;
+  loadDocument: () => Promise<AdminSecureDocument | null>;
   testId: string;
 };
 
+function isImageMime(mimeType: string): boolean {
+  return mimeType.startsWith("image/");
+}
+
 /**
- * Secure document preview for Admin review (payment receipt / owner identity).
- * Documents stream from protected Admin endpoints as blobs and are shown in an
- * iframe preview — never served from the public media area.
+ * Secure document preview for Admin review (owner identity / payment receipt).
+ * Documents stream from protected Admin endpoints as blobs — never from public /uploads.
  */
 export default function AdminSecureDocumentViewer({
   available,
@@ -30,12 +34,13 @@ export default function AdminSecureDocumentViewer({
 }: AdminSecureDocumentViewerProps) {
   const t = useT();
   const [viewing, setViewing] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<AdminSecureDocument | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
-      if (preview) URL.revokeObjectURL(preview);
+      if (preview?.url) URL.revokeObjectURL(preview.url);
     };
   }, [preview]);
 
@@ -47,19 +52,22 @@ export default function AdminSecureDocumentViewer({
     }
     setViewing(true);
     setError(null);
+    setLoading(true);
     try {
-      const url = await loadDocument();
-      setPreview(url);
+      const doc = await loadDocument();
+      setPreview(doc);
     } catch {
       setPreview(null);
       setViewing(false);
       setError(errorKey);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div
-      className="min-w-0 rounded-xl border border-[var(--wesal-border)] bg-white/60 p-4"
+      className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.06)]"
       data-testid={testId}
       data-available={available || undefined}
     >
@@ -69,11 +77,17 @@ export default function AdminSecureDocumentViewer({
             type="button"
             className="btn-outline min-h-10"
             data-testid={`${testId}-toggle`}
+            disabled={loading}
+            aria-busy={loading || undefined}
             onClick={() => {
               void onToggle();
             }}
           >
-            {viewing ? t("admin.halls.details.hide") : t(labelKey)}
+            {loading
+              ? t("common.loading")
+              : viewing
+                ? t("admin.halls.details.hide")
+                : t(labelKey)}
           </button>
           <p className="text-xs leading-5 text-[var(--wesal-muted)]">{t(hintKey)}</p>
         </div>
@@ -93,15 +107,29 @@ export default function AdminSecureDocumentViewer({
 
       {viewing ? (
         <div
-          className="mt-3 flex max-h-[30rem] min-w-0 items-center justify-center overflow-auto rounded-xl border border-[var(--wesal-border)] bg-white/70 p-3"
+          className="mt-3 flex max-h-[30rem] min-w-0 items-center justify-center overflow-auto rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] p-3"
           data-testid={`${testId}-preview`}
         >
-          {preview ? (
-            <iframe
-              src={preview}
-              title={t(labelKey)}
-              className="h-full min-h-[24rem] w-full border-0"
+          {loading && !preview ? (
+            <div
+              className="h-48 w-full animate-pulse rounded-lg bg-[var(--wesal-pink)]/70"
+              aria-busy="true"
             />
+          ) : preview ? (
+            isImageMime(preview.mimeType) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={preview.url}
+                alt={t(labelKey)}
+                className="max-h-[28rem] w-full max-w-full rounded-lg object-contain"
+              />
+            ) : (
+              <iframe
+                src={preview.url}
+                title={t(labelKey)}
+                className="h-full min-h-[16rem] w-full border-0 sm:min-h-[24rem]"
+              />
+            )
           ) : (
             <p className="text-sm text-[var(--wesal-muted)]">
               {t("admin.halls.details.previewUnavailable")}

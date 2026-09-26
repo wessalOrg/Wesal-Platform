@@ -140,7 +140,7 @@ export default function HallTimePicker({
           id={listId}
           role="dialog"
           dir="ltr"
-          className="wesal-time-spinner absolute bottom-full left-1/2 z-50 mb-2 w-[16.5rem] -translate-x-1/2 rounded-2xl border border-[var(--wesal-border)] bg-white p-2.5 shadow-[0_16px_36px_rgba(90,55,45,0.16)]"
+          className="wesal-time-spinner absolute bottom-full left-1/2 z-50 mb-2 w-[min(16.5rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] -translate-x-1/2 rounded-2xl border border-[var(--wesal-border)] bg-white p-2.5 shadow-[0_16px_36px_rgba(90,55,45,0.16)]"
         >
           <div className="wesal-time-grid">
             <StepButton label={`${hourLabel} +`} onClick={() => commit({ ...current, hour12: wrap(current.hour12, 1, 12, -1) })} dir="up" />

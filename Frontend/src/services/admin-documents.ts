@@ -13,20 +13,39 @@ export const ADMIN_PAYMENT_RECEIPT_PATH = (hallId: string) =>
 export const ADMIN_OWNER_IDENTITY_PATH = (ownerId: string) =>
   `/admin/halls/owners/${encodeURIComponent(ownerId)}/identity-document`;
 
+export type AdminSecureDocument = {
+  url: string;
+  mimeType: string;
+};
+
 async function fetchAdminDocument(
   path: string,
-  notFoundErrorKey: string,
   loadErrorKey: string,
-): Promise<string | null> {
+): Promise<AdminSecureDocument | null> {
   if (usesMock()) return null;
 
   try {
-    const { data } = await api.get<Blob>(path, {
+    const response = await api.get<Blob>(path, {
       responseType: "blob",
       timeout: 20000,
     });
+    const data = response.data;
     if (!data || (typeof Blob !== "undefined" && data.size === 0)) return null;
-    return URL.createObjectURL(data);
+
+    const headerType =
+      typeof response.headers?.["content-type"] === "string"
+        ? response.headers["content-type"].split(";")[0]?.trim()
+        : "";
+    const mimeType = (data.type || headerType || "").toLowerCase();
+    const blob =
+      mimeType && data.type !== mimeType
+        ? new Blob([data], { type: mimeType })
+        : data;
+
+    return {
+      url: URL.createObjectURL(blob),
+      mimeType: blob.type || mimeType,
+    };
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.status === 404) return null;
@@ -42,14 +61,12 @@ async function fetchAdminDocument(
 /**
  * Streams the payment receipt the owner uploaded for a hall (Admin only).
  * GET /api/v1/admin/halls/{hallId}/payment-receipt
- * Returns the document as an object URL, or null when no receipt exists (404).
  */
 export async function fetchAdminPaymentReceiptUrl(
   hallId: string,
-): Promise<string | null> {
+): Promise<AdminSecureDocument | null> {
   return fetchAdminDocument(
     ADMIN_PAYMENT_RECEIPT_PATH(hallId),
-    "admin.halls.details.receipt.missing",
     "admin.halls.details.receipt.errors.loadFailed",
   );
 }
@@ -57,14 +74,12 @@ export async function fetchAdminPaymentReceiptUrl(
 /**
  * Streams a Hall Owner's identity document (Admin only).
  * GET /api/v1/admin/halls/owners/{ownerId}/identity-document
- * Returns the document as an object URL, or null when none exists (404).
  */
 export async function fetchAdminOwnerIdentityUrl(
   ownerId: string,
-): Promise<string | null> {
+): Promise<AdminSecureDocument | null> {
   return fetchAdminDocument(
     ADMIN_OWNER_IDENTITY_PATH(ownerId),
-    "admin.halls.details.identity.missing",
     "admin.halls.details.identity.errors.loadFailed",
   );
 }

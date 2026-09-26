@@ -19,7 +19,7 @@ export default function ApproveHallActionButton({
   return (
     <button
       type="button"
-      className="btn-primary min-h-11 min-w-[8.5rem]"
+      className="btn-primary min-h-11 w-full min-w-0 sm:w-auto sm:min-w-[8.5rem]"
       disabled={busy}
       aria-busy={pending || undefined}
       data-testid="admin-hall-approve"

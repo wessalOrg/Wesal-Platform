@@ -47,13 +47,13 @@ export default function AdminPendingHallsView() {
           <ul className="seeker-home-booking-list" data-testid="admin-pending-halls-list">
             {halls.map((hall) => (
               <li key={hall.hallId} className="seeker-home-booking-row">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                   <p className="min-w-0 font-semibold text-[var(--wesal-text)]">{hall.name}</p>
                   <div className="admin-ops-row-actions">
                     <MessageHallOwnerButton hallId={hall.hallId} hallName={hall.name} />
                     <Link
                       href={adminHallSubmissionPath(hall.hallId)}
-                      className="btn-primary min-h-10 px-4"
+                      className="btn-primary min-h-11 px-4 sm:min-h-10"
                       prefetch
                     >
                       {t("admin.halls.queue.open")}

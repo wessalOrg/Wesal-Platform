@@ -22,7 +22,7 @@ export default function LockHallActionButton({
     <button
       type="button"
       className={
-        variant === "soft" ? "seeker-home-soft-btn" : "btn-outline min-h-11 min-w-[8.5rem]"
+        variant === "soft" ? "seeker-home-soft-btn" : "btn-outline min-h-11 w-full min-w-0 sm:w-auto sm:min-w-[8.5rem]"
       }
       disabled={busy}
       aria-busy={pending || undefined}

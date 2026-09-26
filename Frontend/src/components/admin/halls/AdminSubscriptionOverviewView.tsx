@@ -89,7 +89,7 @@ export default function AdminSubscriptionOverviewView() {
                     data-hall-id={hall.hallId}
                     data-payment={hall.paymentStatus}
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <p className="font-semibold text-[var(--wesal-text)]">{hall.name}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -147,7 +147,7 @@ export default function AdminSubscriptionOverviewView() {
                         />
                         <Link
                           href={adminHallSubmissionPath(hall.hallId)}
-                          className="btn-primary min-h-10 px-4"
+                          className="btn-primary min-h-11 px-4 sm:min-h-10"
                           prefetch
                         >
                           {t("admin.halls.queue.open")}

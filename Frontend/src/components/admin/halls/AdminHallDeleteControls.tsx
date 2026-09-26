@@ -39,7 +39,7 @@ export default function AdminHallDeleteControls({
       {!confirmOpen ? (
         <button
           type="button"
-          className="btn-outline min-h-11 min-w-[8.5rem] border-[#b42318] text-[#b42318] hover:bg-[#fdecea]"
+          className="btn-outline min-h-11 w-full min-w-0 border-[#b42318] text-[#b42318] hover:bg-[#fdecea] sm:w-auto sm:min-w-[8.5rem]"
           disabled={deleteState.pending}
           data-testid="admin-hall-delete"
           onClick={() => setConfirmOpen(true)}

@@ -19,6 +19,9 @@ export type AdminHallDetail = {
   ownerFullName: string | null;
   ownerPhoneNumber: string | null;
   ownerEmail: string | null;
+  /** Cover image (MainImageUrl), absolute for the browser. */
+  mainImageUrl: string | null;
+  /** Cover first, then gallery — all resolved via resolveMediaUrl. */
   photoUrls: string[];
   youtubeVideoUrl: string | null;
   features: string[];

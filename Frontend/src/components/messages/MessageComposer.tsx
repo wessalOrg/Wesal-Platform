@@ -82,10 +82,31 @@ export default function MessageComposer({
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
         />
-        <button type="submit" className="btn-primary shrink-0" disabled={!canSend}>
-          {t("messages.send")}
+        <button
+          type="submit"
+          className="btn-primary inline-flex h-11 w-11 shrink-0 items-center justify-center p-0 sm:h-auto sm:w-auto sm:min-w-[5.5rem] sm:px-4"
+          disabled={!canSend}
+          aria-label={t("messages.send")}
+        >
+          <span className="sm:hidden" aria-hidden="true">
+            <SendIcon />
+          </span>
+          <span className="hidden sm:inline">{t("messages.send")}</span>
         </button>
       </div>
     </form>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="h-5 w-5 rtl:-scale-x-100"
+      aria-hidden="true"
+    >
+      <path d="M3.4 20.4 21 12 3.4 3.6l-.1 6.5L14.5 12 3.3 13.9z" />
+    </svg>
   );
 }

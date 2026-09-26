@@ -15,6 +15,7 @@ import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessa
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
+import { floatingPanelBounds } from "@/lib/floating-panel-bounds";
 import {
   conversationHallLabel,
   conversationPreviewSubtitle,
@@ -107,15 +108,19 @@ export default function MessagesInboxPanel() {
     const panel = panelRef.current;
     if (!panel || typeof window === "undefined") return;
 
-    const maxWidth = Math.max(PANEL_MIN_WIDTH_PX, window.innerWidth - PANEL_EDGE_GAP_PX * 2);
-    const maxHeight = Math.max(PANEL_MIN_HEIGHT_PX, window.innerHeight - PANEL_EDGE_GAP_PX * 2);
-    const width = clamp(next.width, PANEL_MIN_WIDTH_PX, maxWidth);
-    const height = clamp(next.height, PANEL_MIN_HEIGHT_PX, maxHeight);
+    const { maxWidth, maxHeight, minWidth, minHeight } = floatingPanelBounds(
+      PANEL_EDGE_GAP_PX,
+      PANEL_MIN_WIDTH_PX,
+      PANEL_MIN_HEIGHT_PX,
+    );
+    const sheetMode = window.innerWidth < 480;
+    const width = sheetMode ? maxWidth : clamp(next.width, minWidth, maxWidth);
+    const height = clamp(next.height, minHeight, maxHeight);
     const left = PANEL_EDGE_GAP_PX;
     const top = clamp(
       window.innerHeight - height - PANEL_EDGE_GAP_PX,
       PANEL_EDGE_GAP_PX,
-      window.innerHeight - PANEL_MIN_HEIGHT_PX - PANEL_EDGE_GAP_PX,
+      Math.max(PANEL_EDGE_GAP_PX, window.innerHeight - minHeight - PANEL_EDGE_GAP_PX),
     );
     const applied = { width, height };
 
@@ -136,11 +141,14 @@ export default function MessagesInboxPanel() {
 
   const toggleExpand = useCallback(() => {
     if (typeof window === "undefined") return;
-    const maxWidth = Math.max(PANEL_MIN_WIDTH_PX, window.innerWidth - PANEL_EDGE_GAP_PX * 2);
-    const maxHeight = Math.max(PANEL_MIN_HEIGHT_PX, window.innerHeight - PANEL_EDGE_GAP_PX * 2);
+    const { maxWidth, maxHeight, minWidth, minHeight } = floatingPanelBounds(
+      PANEL_EDGE_GAP_PX,
+      PANEL_MIN_WIDTH_PX,
+      PANEL_MIN_HEIGHT_PX,
+    );
     const expandedTarget: PanelSize = {
-      width: clamp(EXPANDED_SIZE.width, PANEL_MIN_WIDTH_PX, maxWidth),
-      height: clamp(EXPANDED_SIZE.height, PANEL_MIN_HEIGHT_PX, maxHeight),
+      width: clamp(EXPANDED_SIZE.width, minWidth, maxWidth),
+      height: clamp(EXPANDED_SIZE.height, minHeight, maxHeight),
     };
 
     if (isWide) {
@@ -198,10 +206,8 @@ export default function MessagesInboxPanel() {
     // Handle sits beside the close button (top-inline-end). Pin the opposite corner.
     const pinnedBottom = startRect.bottom;
     const pinnedInlineStart = isRtl ? startRect.right : startRect.left;
-    const maxWidth = () =>
-      Math.max(PANEL_MIN_WIDTH_PX, window.innerWidth - PANEL_EDGE_GAP_PX * 2);
-    const maxHeight = () =>
-      Math.max(PANEL_MIN_HEIGHT_PX, window.innerHeight - PANEL_EDGE_GAP_PX * 2);
+    const bounds = () =>
+      floatingPanelBounds(PANEL_EDGE_GAP_PX, PANEL_MIN_WIDTH_PX, PANEL_MIN_HEIGHT_PX);
 
     dragMovedRef.current = false;
     resizingRef.current = true;
@@ -218,27 +224,28 @@ export default function MessagesInboxPanel() {
         document.body.style.userSelect = "none";
       }
 
+      const live = bounds();
       const widthDelta = isRtl ? startX - moveEvent.clientX : moveEvent.clientX - startX;
       const heightDelta = startY - moveEvent.clientY;
       const nextSize: PanelSize = {
-        width: clamp(startWidth + widthDelta, PANEL_MIN_WIDTH_PX, maxWidth()),
-        height: clamp(startHeight + heightDelta, PANEL_MIN_HEIGHT_PX, maxHeight()),
+        width: clamp(startWidth + widthDelta, live.minWidth, live.maxWidth),
+        height: clamp(startHeight + heightDelta, live.minHeight, live.maxHeight),
       };
       const nextTop = clamp(
         pinnedBottom - nextSize.height,
         PANEL_EDGE_GAP_PX,
-        window.innerHeight - PANEL_MIN_HEIGHT_PX - PANEL_EDGE_GAP_PX,
+        Math.max(PANEL_EDGE_GAP_PX, window.innerHeight - live.minHeight - PANEL_EDGE_GAP_PX),
       );
       const nextLeft = isRtl
         ? clamp(
             pinnedInlineStart - nextSize.width,
             PANEL_EDGE_GAP_PX,
-            window.innerWidth - PANEL_MIN_WIDTH_PX - PANEL_EDGE_GAP_PX,
+            Math.max(PANEL_EDGE_GAP_PX, window.innerWidth - live.minWidth - PANEL_EDGE_GAP_PX),
           )
         : clamp(
             pinnedInlineStart,
             PANEL_EDGE_GAP_PX,
-            window.innerWidth - PANEL_MIN_WIDTH_PX - PANEL_EDGE_GAP_PX,
+            Math.max(PANEL_EDGE_GAP_PX, window.innerWidth - nextSize.width - PANEL_EDGE_GAP_PX),
           );
 
       userSizeRef.current = nextSize;
