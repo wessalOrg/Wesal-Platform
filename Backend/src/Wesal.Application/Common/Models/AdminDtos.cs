@@ -193,6 +193,31 @@ public class AdminOwnerMessageRequestDto
     public string Content { get; init; } = string.Empty;
 }
 
+/// <summary>
+/// The resolved owner/Admin thread for one hall (WESAL-TASK-10, Edit 15), backing the
+/// Admin "Message" action. Carries the hall and owner context as well as the id so a client
+/// can render the conversation view straight from this response, without a second round trip.
+///
+/// Deliberately not a <see cref="ConversationResponse"/>: that shape reports the hall name and
+/// the two participant ids from the CONVERSATION's point of view, where the Admin is whichever
+/// user created the thread. This one is addressed by hall, so it reports the hall's actual
+/// owner and is meaningful even for a thread the owner opened themselves.
+/// </summary>
+public class AdminOwnerConversationDto
+{
+    /// <summary>The thread to open. The same id for a given hall on every call.</summary>
+    public Guid ConversationId { get; init; }
+
+    public Guid HallId { get; init; }
+
+    public string HallName { get; init; } = string.Empty;
+
+    public string OwnerUserId { get; init; } = string.Empty;
+
+    /// <summary>True when the thread already existed, false when this call created it.</summary>
+    public bool IsExisting { get; init; }
+}
+
 public class AdminOwnerMessageResponseDto
 {
     public Guid MessageId { get; init; }

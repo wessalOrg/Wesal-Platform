@@ -107,6 +107,35 @@ public class AdminController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Resolves this hall's owner/Admin conversation, creating it if none exists yet, WITHOUT
+    /// sending a message (WESAL-TASK-10, Edit 15).
+    ///
+    /// This is what an Admin "Message" / "مراسلة" button calls. The existing
+    /// <c>POST {hallId}/messages</c> is a send and requires non-empty content, so it cannot
+    /// back a button whose only job is to open the thread; doing that through it would put a
+    /// placeholder message in the owner's inbox.
+    ///
+    /// Resolution uses the same (HallId, HallOwnerId) key as Edit 4's payment notice and
+    /// Edit 11's ContactAdmin, so this returns the thread that already exists rather than a
+    /// second copy, and repeated calls always return the same id. Works for a hall in ANY
+    /// status, including a locked one — an Admin must be able to open the conversation about a
+    /// lock they applied. Admin-only via the controller's RequireAdmin policy.
+    /// </summary>
+    [HttpGet("{hallId:guid}/conversation")]
+    [ProducesResponseType(typeof(AdminOwnerConversationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<AdminOwnerConversationDto>> GetOwnerConversation(
+        Guid hallId,
+        CancellationToken cancellationToken)
+    {
+        var response = await _adminHallReviewService.GetOwnerConversationAsync(hallId, cancellationToken);
+        return Ok(response);
+    }
+
     [HttpPost("{hallId:guid}/messages")]
     [ProducesResponseType(typeof(AdminOwnerMessageResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

@@ -31,14 +31,16 @@ public class SwaggerDocumentShould
     private const string AcceptBookingPath = "/api/v{version}/halls/{hallId}/bookings/{bookingId}/accept";
     private const string ConfirmBookingPaymentPath = "/api/v{version}/halls/{hallId}/bookings/{bookingId}/payment/confirmed";
     private const string ContactAdminPath = "/api/v{version}/halls/{hallId}/conversations/contact-admin";
+    private const string AdminOwnerConversationPath = "/api/v{version}/admin/halls/{hallId}/conversation";
 
     /// <summary>
     /// Total operations' paths. Guards against the document silently losing endpoints, and
     /// pins the count so a new operation is a deliberate edit rather than a surprise.
     /// 61 includes WESAL-TASK-8's owner deposit-confirmation endpoint; 62 adds
-    /// WESAL-TASK-11's general-purpose owner "Contact Admin" action.
+    /// WESAL-TASK-11's general-purpose owner "Contact Admin" action; 63 adds
+    /// WESAL-TASK-10 Edit 15's Admin "Message" thread-resolve endpoint.
     /// </summary>
-    private const int ExpectedPathCount = 62;
+    private const int ExpectedPathCount = 63;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -81,6 +83,34 @@ public class SwaggerDocumentShould
         var document = BuildDocument();
 
         Assert.Contains(ContactAdminPath, document.Paths.Keys);
+    }
+
+    [Fact]
+    public void AdminOwnerConversationEndpoint_IsDocumented()
+    {
+        // WESAL-TASK-10 (Edit 15): the Admin "Message" action resolves the owner/Admin thread
+        // for a hall, so an admin UI can open a conversation from a hall list or review view
+        // without composing a message first. It has to be a published operation for that to
+        // be wireable.
+        var document = BuildDocument();
+
+        Assert.Contains(AdminOwnerConversationPath, document.Paths.Keys);
+    }
+
+    /// <summary>
+    /// The endpoint is a GET that resolves state, so a body would be meaningless, and it
+    /// takes no request payload at all — the hall is in the route. Asserted because a "Message"
+    /// button wired against a spec that invented a body would generate a client that posts
+    /// one.
+    /// </summary>
+    [Fact]
+    public void AdminOwnerConversationEndpoint_TakesNoRequestBody()
+    {
+        var document = BuildDocument();
+
+        var operation = document.Paths[AdminOwnerConversationPath].Operations[OperationType.Get];
+
+        Assert.True(operation.RequestBody == null || operation.RequestBody.Content.Count == 0);
     }
 
     [Fact]

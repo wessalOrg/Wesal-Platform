@@ -317,6 +317,76 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         };
     }
 
+    /// <summary>
+    /// Resolves this hall's owner/Admin conversation without sending anything, creating it if
+    /// it does not exist yet (WESAL-TASK-10, Edit 15).
+    ///
+    /// This is the backend half of the Admin "Message" / "مراسلة" action. Edit 4's
+    /// SendMessageToOwnerAsync already lets an Admin write to an owner, but it is a SEND: it
+    /// requires non-empty content, so it cannot back a button whose job is to OPEN a thread.
+    /// Posting an empty placeholder just to learn the conversation id would put a junk message
+    /// in the owner's inbox, so the two are separate operations.
+    ///
+    /// The thread is resolved on the same (HallId, HallOwnerId) key Edit 4 and Edit 11 use, so
+    /// this is a lookup rather than a new resolution path: it lands on the thread a payment
+    /// notice already created, and on the thread the owner's own ContactAdmin action creates,
+    /// rather than forking a third copy. Repeated calls for one hall always return the same
+    /// single thread.
+    ///
+    /// Deliberately NOT subject to the hall-messaging lock gate that Edit 10 applies to the
+    /// OWNER's side of this feature. An Admin must be able to open the thread for a hall in any
+    /// state — including one they have just locked, which is frequently the very thing the two
+    /// sides need to discuss. The gate exists to stop a locked owner using the platform; it
+    /// has no business stopping the platform from talking to the owner.
+    ///
+    /// Authorization is the Admin role, enforced by the RequireAdmin policy on the controller.
+    /// </summary>
+    public async Task<AdminOwnerConversationDto> GetOwnerConversationAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
+
+        if (hall is null || hall.IsDeleted)
+        {
+            throw new NotFoundException(nameof(Hall), hallId);
+        }
+
+        if (string.IsNullOrWhiteSpace(hall.OwnerId))
+        {
+            throw new ValidationException("The hall has no owner to message.");
+        }
+
+        var conversation = await _conversationRepository.GetByHallForOwnerAsync(
+            hall.Id, hall.OwnerId!, cancellationToken);
+
+        var isExisting = conversation is not null;
+
+        if (conversation is null)
+        {
+            conversation = new Conversation
+            {
+                HallId = hall.Id,
+                SenderUserId = ResolveAdminUserId(),
+                HallOwnerId = hall.OwnerId!
+            };
+
+            await _conversationRepository.AddAsync(conversation, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        return new AdminOwnerConversationDto
+        {
+            ConversationId = conversation.Id,
+            HallId = hall.Id,
+            HallName = hall.Name,
+            OwnerUserId = hall.OwnerId!,
+            IsExisting = isExisting
+        };
+    }
+
     public async Task<AdminOwnerMessageResponseDto> SendMessageToOwnerAsync(
         Guid hallId,
         string content,

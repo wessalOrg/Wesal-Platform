@@ -30,6 +30,10 @@ public interface IAdminHallReviewService
         Guid hallId,
         CancellationToken cancellationToken = default);
 
+    Task<AdminOwnerConversationDto> GetOwnerConversationAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default);
+
     Task<AdminOwnerMessageResponseDto> SendMessageToOwnerAsync(
         Guid hallId,
         string content,
