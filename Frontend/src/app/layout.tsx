@@ -13,9 +13,9 @@ import { LANGUAGE_BOOT_SCRIPT } from "@/lib/language";
 import "./globals.css";
 
 /**
- * Avoid next/font/google here — when Google Fonts is unreachable the
- * request can hang the whole page. System Arabic stacks keep the app
- * loading offline / behind a blocked network.
+ * Cairo loads via stylesheet link (not next/font/google) so a blocked
+ * Google Fonts network cannot hang the App Router bootstrap.
+ * System stacks remain as fallbacks in --font-wesal-sans.
  */
 const fontSansClass = "font-wesal-sans";
 
@@ -36,6 +36,12 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={`${fontSansClass} antialiased`} suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
         <script dangerouslySetInnerHTML={{ __html: LANGUAGE_BOOT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: FAB_POSITION_BOOT_SCRIPT }} />
       </head>

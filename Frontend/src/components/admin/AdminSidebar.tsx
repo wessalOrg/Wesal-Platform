@@ -6,7 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import WesalLogo from "@/components/brand/WesalLogo";
-import { ADMIN_MANAGEMENT_PATH, ADMIN_SUBSCRIPTIONS_PATH } from "@/lib/account-profile-path";
+import {
+  ADMIN_MANAGEMENT_PATH,
+  ADMIN_MESSAGES_PATH,
+  ADMIN_SUBSCRIPTIONS_PATH,
+} from "@/lib/account-profile-path";
 import { useT } from "@/i18n";
 
 type AdminSidebarProps = {
@@ -29,6 +33,8 @@ export default function AdminSidebar({
     pathname === ADMIN_MANAGEMENT_PATH || pathname.startsWith(`${ADMIN_MANAGEMENT_PATH}/halls`);
   const subscriptionsActive =
     pathname === ADMIN_SUBSCRIPTIONS_PATH || pathname.startsWith(`${ADMIN_SUBSCRIPTIONS_PATH}/`);
+  const messagesActive =
+    pathname === ADMIN_MESSAGES_PATH || pathname.startsWith(`${ADMIN_MESSAGES_PATH}/`);
 
   return (
     <>
@@ -84,6 +90,24 @@ export default function AdminSidebar({
                 <span>{t("admin.nav.subscriptions")}</span>
               </Link>
             </li>
+            <li>
+              <Link
+                href={ADMIN_MESSAGES_PATH}
+                prefetch
+                className={`seeker-dash-sidebar-link${
+                  messagesActive ? " seeker-dash-sidebar-link--active" : ""
+                }`}
+                aria-current={messagesActive ? "page" : undefined}
+                data-testid="admin-nav-messages"
+                onClick={onNavigate}
+                onMouseEnter={() => router.prefetch(ADMIN_MESSAGES_PATH)}
+              >
+                <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+                  <MessagesIcon />
+                </span>
+                <span>{t("admin.nav.messages")}</span>
+              </Link>
+            </li>
           </ul>
         </nav>
 
@@ -134,6 +158,19 @@ function SubscriptionsIcon() {
       <rect x="3.5" y="6" width="17" height="12" rx="2" stroke="currentColor" strokeWidth="1.7" />
       <path d="M3.5 10h17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
       <path d="M8 14h3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MessagesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <path
+        d="M5 6.5h14a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5H10l-3.5 2.5V16.5H5A1.5 1.5 0 0 1 3.5 15V8A1.5 1.5 0 0 1 5 6.5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

@@ -22,8 +22,8 @@
   --wesal-ivory: #ffffff;
   --background: var(--wesal-cream);
   --foreground: var(--wesal-text);
-  /* Local stack â€” do not block on Google Fonts */
-  --font-wesal-sans: "Segoe UI", Tahoma, "Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif;
+  /* Site typeface: Cairo (+ system Arabic fallbacks) */
+  --font-wesal-sans: "Cairo", "Segoe UI", Tahoma, sans-serif;
 }
 
 .font-wesal-sans {
@@ -35,7 +35,7 @@
   --color-foreground: var(--foreground);
   --color-wesal-maroon: var(--wesal-maroon);
   --color-wesal-pink: var(--wesal-pink);
-  --font-sans: var(--font-wesal-sans), "Cairo", ui-sans-serif, sans-serif;
+  --font-sans: var(--font-wesal-sans);
 }
 
 body {
@@ -48,7 +48,7 @@ body {
     radial-gradient(ellipse 50% 35% at 0% 100%, rgba(196, 160, 92, 0.05), transparent 55%),
     linear-gradient(180deg, #ffffff 0%, var(--wesal-cream) 55%, #f8f3ee 100%);
   color: var(--foreground);
-  font-family: var(--font-wesal-sans), "Cairo", sans-serif;
+  font-family: var(--font-wesal-sans);
 }
 
 html.wesal-scroll-locked,
@@ -75,7 +75,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-wesal-sans), "Cairo", sans-serif;
+  font-family: var(--font-wesal-sans);
 }
 
 .container-wesal {
@@ -3763,7 +3763,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 /* Registration - account type selection (US-REG-01) */
 .wesal-register-screen {
   background-color: #fcf9f7;
-  font-family: var(--font-wesal-sans), "Cairo", ui-sans-serif, sans-serif;
+  font-family: var(--font-wesal-sans);
   -webkit-font-smoothing: subpixel-antialiased;
 }
 
@@ -5012,6 +5012,17 @@ html[dir="rtl"] .seeker-notify-panel {
   color: var(--seeker-muted);
   font-size: 0.92rem;
   line-height: 1.7;
+}
+
+@media (min-width: 900px) {
+  .admin-messages-workspace.seeker-messages-workspace {
+    grid-template-columns: minmax(17rem, 22rem) minmax(0, 1fr);
+    min-height: min(40rem, calc(100svh - 9rem));
+  }
+
+  .admin-messages-list.seeker-messages-list {
+    background: #f7f4f1;
+  }
 }
 
 .seeker-account-page {

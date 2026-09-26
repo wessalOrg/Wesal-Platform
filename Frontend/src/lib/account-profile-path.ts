@@ -29,6 +29,9 @@ export const ADMIN_MANAGEMENT_PATH = "/admin";
 /** Admin subscription overview. */
 export const ADMIN_SUBSCRIPTIONS_PATH = "/admin/subscriptions";
 
+/** Admin unified messaging (conversations + payment notices). */
+export const ADMIN_MESSAGES_PATH = "/admin/messages";
+
 export function adminHallSubmissionPath(hallId: string): string {
   return `${ADMIN_MANAGEMENT_PATH}/halls/${encodeURIComponent(hallId)}`;
 }
