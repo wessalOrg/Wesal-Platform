@@ -307,10 +307,10 @@ public class CommentServiceShould
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(_halls.Count);
 
-        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, string? detailedAddress, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>(_halls.Skip(skip).Take(take).ToList());
 
-        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default)
+        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, string? detailedAddress, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default)
             => Task.FromResult(_halls.Count);
 
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default)

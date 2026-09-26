@@ -34,6 +34,16 @@ public class HallsController : ControllerBase
         _hourlySlotService = hourlySlotService;
     }
 
+    /// <summary>
+    /// Public hall search (WESAL-TASK-7, Edit 7).
+    ///
+    /// All filters are optional and combine with AND. The location filters mirror the three
+    /// fields an owner fills in when creating a hall, with their distinct roles preserved:
+    /// <c>region</c> matches the Area (المنطقة) exactly, <c>area</c> partially matches the
+    /// list-backed Address (العنوان), and <c>detailedAddress</c> partially matches the
+    /// owner's free-text Detailed Address (العنوان التفصيلي). <c>area</c> deliberately does
+    /// not fall back to DetailedAddress, so supplying an area keeps its exact shipped meaning.
+    /// </summary>
     [HttpGet("search")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(PagedResult<HallListItemDto>), StatusCodes.Status200OK)]
@@ -41,6 +51,7 @@ public class HallsController : ControllerBase
         [FromQuery] string? name,
         [FromQuery] HallRegion? region,
         [FromQuery] string? area,
+        [FromQuery] string? detailedAddress,
         [FromQuery] DateOnly? date,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 12,
@@ -57,6 +68,7 @@ public class HallsController : ControllerBase
             Name = name,
             Region = region,
             Area = area,
+            DetailedAddress = detailedAddress,
             Date = date,
             PageNumber = pageNumber,
             PageSize = pageSize

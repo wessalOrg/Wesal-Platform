@@ -63,8 +63,8 @@ public class AdminHallServiceShould : IDisposable
         public Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(HallRegion region, int count, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(_ctx.Halls.Where(h => h.Region == region).Take(count).ToList());
         public Task<IReadOnlyList<Hall>> GetApprovedHallsPaginatedAsync(int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(_ctx.Halls.Skip(skip).Take(take).ToList());
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(_ctx.Halls.Count());
-        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(_ctx.Halls.Skip(skip).Take(take).ToList());
-        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default) => Task.FromResult(_ctx.Halls.Count());
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, string? detailedAddress, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(_ctx.Halls.Skip(skip).Take(take).ToList());
+        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, string? detailedAddress, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default) => Task.FromResult(_ctx.Halls.Count());
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallImage>>(_ctx.HallImages.Where(i => i.HallId == hallId).ToList());
     }
 

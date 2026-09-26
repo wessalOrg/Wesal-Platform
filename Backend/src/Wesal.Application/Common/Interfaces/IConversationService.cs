@@ -55,5 +55,14 @@ public interface IConversationService
 
     Task MarkAsReadAsync(Guid conversationId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Removes one conversation from the caller's own inbox (WESAL-TASK-6, Edit 6).
+    ///
+    /// Per-user and non-destructive: the conversation, its messages, and every other
+    /// participant's view are left exactly as they were. The thread reappears in the
+    /// caller's inbox automatically once a new message arrives after the hide.
+    /// </summary>
+    Task HideConversationAsync(Guid conversationId, CancellationToken cancellationToken = default);
+
     Task<UnreadCountResponse> GetUnreadCountAsync(CancellationToken cancellationToken = default);
 }

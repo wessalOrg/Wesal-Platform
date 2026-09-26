@@ -239,6 +239,44 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
     }
 
     [Fact]
+    public async Task SendAttachment_SeekerSendsImageToTheOwner_AndTheOwnerCanReadItBack()
+    {
+        // WESAL-TASK-6, Edit 6: attachments are not an owner/Admin-only feature. A seeker who
+        // opened a thread from the hall page can send a photo (a venue photo, a question about
+        // the hall) and the owner must be able to open it through the same protected endpoint.
+        const string SeekerId = "seeker-1";
+        var seeker = CreateHarness(SeekerId, [ApplicationRoles.RegisteredUser], conversationSenderId: SeekerId);
+
+        await Send(seeker.Service, Upload("venue.png"));
+        var messageId = Assert.Single(seeker.Messages.Committed).Id;
+
+        var owner = CreateHarness(OwnerId, [ApplicationRoles.HallOwner], conversationSenderId: SeekerId);
+        owner.Messages.Committed.AddRange(seeker.Messages.Committed);
+
+        var document = await owner.Service.GetMessageAttachmentAsync(ConversationId, messageId);
+
+        Assert.Equal("venue.png", document.FileName);
+        Assert.True(File.Exists(document.FullPath));
+    }
+
+    [Fact]
+    public async Task SendAttachment_SeekerCannotReadAnAttachmentFromSomebodyElsesThread()
+    {
+        // The same generic path must not widen access: a seeker is a participant of their own
+        // thread and nobody else's.
+        const string SeekerId = "seeker-1";
+        var seeker = CreateHarness(SeekerId, [ApplicationRoles.RegisteredUser], conversationSenderId: SeekerId);
+        await Send(seeker.Service, Upload("mine.png"));
+        var messageId = Assert.Single(seeker.Messages.Committed).Id;
+
+        var stranger = CreateHarness("seeker-2", [ApplicationRoles.RegisteredUser], conversationSenderId: SeekerId);
+        stranger.Messages.Committed.AddRange(seeker.Messages.Committed);
+
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => stranger.Service.GetMessageAttachmentAsync(ConversationId, messageId));
+    }
+
+    [Fact]
     public async Task GetAttachment_NonParticipant_ThrowsForbidden()
     {
         var owner = CreateHarness(OwnerId, [ApplicationRoles.HallOwner]);
@@ -833,6 +871,8 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
 
         public Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+        public Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
 
         public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
@@ -948,10 +988,10 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(0);
 
-        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, string? detailedAddress, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>([]);
 
-        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default)
+        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, string? detailedAddress, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
 
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default)

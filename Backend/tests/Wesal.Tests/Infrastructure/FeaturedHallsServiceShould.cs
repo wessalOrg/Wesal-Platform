@@ -256,6 +256,7 @@ public class FeaturedHallsServiceShould
             string? name,
             HallRegion? region,
             string? area,
+            string? detailedAddress,
             DateOnly? date,
             TimeOnly? startTime,
             int skip,
@@ -267,6 +268,7 @@ public class FeaturedHallsServiceShould
             string? name,
             HallRegion? region,
             string? area,
+            string? detailedAddress,
             DateOnly? date,
             TimeOnly? startTime,
             CancellationToken cancellationToken = default)

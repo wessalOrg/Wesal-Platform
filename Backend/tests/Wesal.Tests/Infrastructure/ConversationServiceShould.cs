@@ -424,6 +424,133 @@ public class ConversationServiceShould
             service.GetConversationAsync(Guid.NewGuid()));
     }
 
+    // --- WESAL-TASK-6, Edit 6: single seeker/owner thread + per-user soft delete ---
+
+    [Fact]
+    public async Task CreateConversation_SeekerContactingTheSameOwnerTwice_ReusesTheSameThread()
+    {
+        // A seeker who taps "Contact Owner" repeatedly must land in one thread, not a new one
+        // each time. This is the guarantee the owner relies on when replying to a question.
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        var first = await service.CreateConversationAsync(hall.Id);
+        var second = await service.CreateConversationAsync(hall.Id);
+
+        Assert.False(first.IsExisting);
+        Assert.True(second.IsExisting);
+        Assert.Equal(first.ConversationId, second.ConversationId);
+        Assert.Single(repository.Conversations);
+    }
+
+    [Fact]
+    public async Task CreateConversation_SeekerContactingTheSameOwnerAboutAnotherHall_OpensASeparateThread()
+    {
+        // Threading is per seeker + owner + hall. The same owner owns two halls, and the seeker's
+        // question about one of them must not be mixed into the other.
+        var firstHall = CreateApprovedHall("First Hall", "owner-1");
+        var secondHall = CreateApprovedHall("Second Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(firstHall, secondHall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        var first = await service.CreateConversationAsync(firstHall.Id);
+        var second = await service.CreateConversationAsync(secondHall.Id);
+
+        Assert.NotEqual(first.ConversationId, second.ConversationId);
+        Assert.Equal(2, repository.Conversations.Count);
+    }
+
+    [Fact]
+    public async Task HideConversation_Participant_HidesTheThreadForThemselfOnly()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var seeker = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+        var created = await seeker.CreateConversationAsync(hall.Id);
+
+        await seeker.HideConversationAsync(created.ConversationId);
+
+        var hidden = Assert.Single(repository.HiddenConversations);
+        Assert.Equal(created.ConversationId, hidden.ConversationId);
+        Assert.Equal("user-1", hidden.UserId);
+    }
+
+    [Fact]
+    public async Task HideConversation_HallOwner_CanHideTheThreadToo()
+    {
+        // Hiding is symmetric: the owner is equally entitled to clear a thread from their inbox.
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var seeker = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+        var created = await seeker.CreateConversationAsync(hall.Id);
+        var owner = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        await owner.HideConversationAsync(created.ConversationId);
+
+        Assert.Equal("owner-1", Assert.Single(repository.HiddenConversations).UserId);
+    }
+
+    [Fact]
+    public async Task HideConversation_NonParticipant_IsForbidden()
+    {
+        // A third party must never be able to remove somebody else's thread, not even by id.
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var seeker = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+        var created = await seeker.CreateConversationAsync(hall.Id);
+        var stranger = CreateService(repository, hallRepository, authenticated: true, userId: "user-2", roles: [ApplicationRoles.RegisteredUser]);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => stranger.HideConversationAsync(created.ConversationId));
+
+        Assert.Empty(repository.HiddenConversations);
+    }
+
+    [Fact]
+    public async Task HideConversation_Unauthenticated_ThrowsUnauthorized()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var anonymous = CreateService(repository, hallRepository, authenticated: false);
+
+        await Assert.ThrowsAsync<UnauthorizedException>(
+            () => anonymous.HideConversationAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task HideConversation_UnknownConversation_ThrowsNotFound()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var service = CreateService(repository, new FakeHallRepository(hall), authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.HideConversationAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task HideConversation_ConversationWhoseHallWasDeleted_ThrowsNotFound()
+    {
+        // A soft-deleted hall must not remain reachable through its threads.
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var seeker = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+        var created = await seeker.CreateConversationAsync(hall.Id);
+        // The real repository loads the hall alongside the thread; the fake only fills the
+        // navigation when a test needs the deleted-hall rule exercised.
+        repository.Conversations[0].Hall = hall;
+        hall.IsDeleted = true;
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "user-1", roles: [ApplicationRoles.RegisteredUser]);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.HideConversationAsync(created.ConversationId));
+    }
+
     private static Hall CreateApprovedHall(string name, string ownerId)
         => new()
         {
@@ -485,6 +612,15 @@ public class ConversationServiceShould
         }
 
         public Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public List<(Guid ConversationId, string UserId, DateTimeOffset HiddenAt)> HiddenConversations { get; } = [];
+
+        public Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default)
+        {
+            HiddenConversations.Add((conversationId, userId, hiddenAt));
+            return Task.CompletedTask;
+        }
+
         public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<Dictionary<Guid, bool>>(new Dictionary<Guid, bool>());
     }
@@ -547,10 +683,10 @@ public class ConversationServiceShould
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(_halls.Count);
 
-        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, string? detailedAddress, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>(_halls.Skip(skip).Take(take).ToList());
 
-        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default)
+        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, string? detailedAddress, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default)
             => Task.FromResult(_halls.Count);
 
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default)

@@ -326,6 +326,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.Property(state => state.LastReadAt).HasColumnType("timestamp with time zone");
 
+            entity.Property(state => state.HiddenAt).HasColumnType("timestamp with time zone");
+
             entity.HasOne(state => state.Conversation)
                 .WithMany()
                 .HasForeignKey(state => state.ConversationId)

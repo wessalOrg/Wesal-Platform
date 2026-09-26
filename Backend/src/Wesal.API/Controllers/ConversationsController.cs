@@ -178,6 +178,33 @@ public class ConversationsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Removes one conversation from the caller's OWN inbox (WESAL-TASK-6, Edit 6).
+    ///
+    /// Despite the verb, nothing is deleted. This is a per-user visibility toggle: the
+    /// conversation, all of its messages, and every other participant's view are left
+    /// exactly as they were. Other participants keep the thread in their inbox and can
+    /// still read the full history.
+    ///
+    /// The thread reappears in the caller's inbox automatically once a new message arrives
+    /// after this call, because a hide is recorded as a timestamp rather than a permanent
+    /// flag. The thread itself stays reachable by id, so a deep link still works — only
+    /// inbox membership changes. Idempotent; re-hiding simply hides it again.
+    /// </summary>
+    [HttpDelete("api/v{version:apiVersion}/conversations/{conversationId:guid}")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> HideConversation(
+        Guid conversationId,
+        CancellationToken cancellationToken)
+    {
+        await _conversationService.HideConversationAsync(conversationId, cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("api/v{version:apiVersion}/conversations/unread-count")]
     [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
     [ProducesResponseType(typeof(UnreadCountResponse), StatusCodes.Status200OK)]

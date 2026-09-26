@@ -25,6 +25,7 @@ public class HallSearchService : IHallSearchService
             request.Name,
             request.Region,
             request.Area,
+            request.DetailedAddress,
             request.Date,
             request.StartTime,
             skip,
@@ -35,6 +36,7 @@ public class HallSearchService : IHallSearchService
             request.Name,
             request.Region,
             request.Area,
+            request.DetailedAddress,
             request.Date,
             request.StartTime,
             cancellationToken);

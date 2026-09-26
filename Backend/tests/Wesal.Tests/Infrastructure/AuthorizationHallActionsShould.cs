@@ -34,8 +34,8 @@ public class AuthorizationHallActionsShould
         public Task<IReadOnlyList<Hall>> GetApprovedHallsAsync(int count, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Take(count).ToList());
         public Task<IReadOnlyList<Hall>> GetApprovedHallsPaginatedAsync(int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Skip(skip).Take(take).ToList());
         public Task<int> GetApprovedHallsCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(Halls.Count);
-        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Skip(skip).Take(take).ToList());
-        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default) => Task.FromResult(Halls.Count);
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(string? name, HallRegion? region, string? area, string? detailedAddress, DateOnly? date, TimeOnly? startTime, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Skip(skip).Take(take).ToList());
+        public Task<int> SearchApprovedHallsCountAsync(string? name, HallRegion? region, string? area, string? detailedAddress, DateOnly? date, TimeOnly? startTime, CancellationToken cancellationToken = default) => Task.FromResult(Halls.Count);
         public Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(HallRegion region, int count, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Hall>>(Halls.Where(h => h.Region == region).Take(count).ToList());
         public Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallImage>>([]);
     }
@@ -72,6 +72,7 @@ public class AuthorizationHallActionsShould
         public Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Conversation>>(Conversations.Where(c => c.SenderUserId == userId || c.HallOwnerId == userId).ToList());
         public Task<IReadOnlyList<UserDisplayInfo>> GetUserDisplayNamesAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<UserDisplayInfo>>(userIds.Select(id => new UserDisplayInfo { UserId = id, FullName = "User " + id }).ToList());
         public Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<Dictionary<Guid, bool>>(conversationIds.ToDictionary(id => id, _ => false));
     }

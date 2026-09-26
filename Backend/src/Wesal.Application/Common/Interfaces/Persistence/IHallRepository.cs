@@ -25,6 +25,7 @@ public interface IHallRepository
         string? name,
         HallRegion? region,
         string? area,
+        string? detailedAddress,
         DateOnly? date,
         TimeOnly? startTime,
         int skip,
@@ -35,6 +36,7 @@ public interface IHallRepository
         string? name,
         HallRegion? region,
         string? area,
+        string? detailedAddress,
         DateOnly? date,
         TimeOnly? startTime,
         CancellationToken cancellationToken = default);

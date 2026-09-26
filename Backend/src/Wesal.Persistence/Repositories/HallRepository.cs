@@ -65,12 +65,13 @@ public class HallRepository : IHallRepository
         string? name,
         HallRegion? region,
         string? area,
+        string? detailedAddress,
         DateOnly? date,
         TimeOnly? startTime,
         int skip,
         int take,
         CancellationToken cancellationToken = default)
-        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, date, startTime)
+        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, detailedAddress, date, startTime)
             .OrderByDescending(hall => hall.CreatedAt)
             .ThenBy(hall => hall.Name)
             .Skip(skip)
@@ -81,10 +82,11 @@ public class HallRepository : IHallRepository
         string? name,
         HallRegion? region,
         string? area,
+        string? detailedAddress,
         DateOnly? date,
         TimeOnly? startTime,
         CancellationToken cancellationToken = default)
-        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, date, startTime)
+        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, detailedAddress, date, startTime)
             .CountAsync(cancellationToken);
 
     public async Task<IReadOnlyList<HallImage>> GetHallImagesAsync(
@@ -111,6 +113,7 @@ public class HallRepository : IHallRepository
         string? name,
         HallRegion? region,
         string? area,
+        string? detailedAddress,
         DateOnly? date,
         TimeOnly? startTime)
     {
@@ -127,6 +130,30 @@ public class HallRepository : IHallRepository
         if (!string.IsNullOrWhiteSpace(area))
         {
             query = query.Where(hall => hall.Address.Contains(area));
+        }
+
+        if (!string.IsNullOrWhiteSpace(detailedAddress))
+        {
+            // WESAL-TASK-7, Edit 7: the owner's own free-text DetailedAddress — the landmark
+            // or directions they type — is the third location field, and is filterable in its
+            // own right.
+            //
+            // Deliberately a separate parameter rather than folded into `area`: folding it in
+            // would silently widen the meaning of a supplied area from "matches the
+            // list-backed Address" to "matches this free text too", changing shipped behaviour
+            // for every existing caller.
+            //
+            // Uses the same partial-match idiom, and therefore the same case behaviour, as the
+            // Name and Address filters above: matching is left to the database collation rather
+            // than forcing ToLower, which would be inconsistent with the shipped filters and
+            // would make the predicate non-sargable. The column carries no index today, exactly
+            // like Address, so this introduces no new indexing requirement.
+            // hall.DetailedAddress is a nullable column, so it is matched explicitly rather
+            // than dereferenced: a hall whose owner left the field empty simply does not match
+            // a detailed-address search, which is the same outcome EF would produce for a
+            // null-propagating comparison.
+            query = query.Where(hall => hall.DetailedAddress != null
+                && hall.DetailedAddress.Contains(detailedAddress));
         }
 
         if (date.HasValue)

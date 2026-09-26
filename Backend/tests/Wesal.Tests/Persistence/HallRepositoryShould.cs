@@ -44,8 +44,8 @@ public class HallRepositoryShould
         var repository = new HallRepository(context);
 
         var result = await repository.GetApprovedHallsAsync(10);
-        var searchResult = await repository.SearchApprovedHallsAsync(null, null, null, null, null, 0, 10);
-        var searchCount = await repository.SearchApprovedHallsCountAsync(null, null, null, null, null);
+        var searchResult = await repository.SearchApprovedHallsAsync(null, null, null, null, null, null, 0, 10);
+        var searchCount = await repository.SearchApprovedHallsCountAsync(null, null, null, null, null, null);
 
         Assert.Single(result);
         Assert.Equal(paid.Id, result[0].Id);

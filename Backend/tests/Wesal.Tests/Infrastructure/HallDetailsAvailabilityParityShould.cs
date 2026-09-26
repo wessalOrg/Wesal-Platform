@@ -279,12 +279,14 @@ public class HallDetailsAvailabilityParityShould
 
         public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
             string? name, HallRegion? region, string? area,
+            string? detailedAddress,
             DateOnly? date, TimeOnly? startTime,
             int skip, int take, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Hall>>([_hall]);
 
         public Task<int> SearchApprovedHallsCountAsync(
             string? name, HallRegion? region, string? area,
+            string? detailedAddress,
             DateOnly? date, TimeOnly? startTime,
             CancellationToken cancellationToken = default)
             => Task.FromResult(1);

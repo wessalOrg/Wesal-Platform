@@ -92,6 +92,27 @@ public class HallSearchServiceShould
     }
 
     [Fact]
+    public async Task SearchHallsAsync_DetailedAddressFilter_IsPassedToRepositorySeparatelyFromArea()
+    {
+        // WESAL-TASK-6, Edit 7: the new filter has to survive the trip through the service as its
+        // own value. Folding it into Area, or dropping it, would silently break the endpoint.
+        var repository = new FakeHallRepository();
+        repository.Halls.Add(CreateHall(name: "Hall A", createdAt: FixedNow));
+
+        var service = CreateService(repository);
+
+        await service.SearchHallsAsync(new HallSearchRequest
+        {
+            Area = "حي الرمال",
+            DetailedAddress = "شارع 8"
+        });
+
+        Assert.NotNull(repository.LastSearchRequest);
+        Assert.Equal("حي الرمال", repository.LastSearchRequest.Area);
+        Assert.Equal("شارع 8", repository.LastSearchRequest.DetailedAddress);
+    }
+
+    [Fact]
     public async Task SearchHallsAsync_MultipleFilters_UsesAndLogic()
     {
         var repository = new FakeHallRepository();
@@ -253,12 +274,13 @@ public class HallSearchServiceShould
 
         public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
             string? name, HallRegion? region, string? area,
+            string? detailedAddress,
             DateOnly? date, TimeOnly? startTime,
             int skip, int take, CancellationToken cancellationToken = default)
         {
             LastSearchRequest = new HallSearchRequest
             {
-                Name = name, Region = region, Area = area,
+                Name = name, Region = region, Area = area, DetailedAddress = detailedAddress,
                 Date = date, StartTime = startTime
             };
 
@@ -266,7 +288,9 @@ public class HallSearchServiceShould
                 .Where(h => h.Status == HallStatus.Approved && !h.IsDeleted)
                 .Where(h => name == null || h.Name.Contains(name))
                 .Where(h => !region.HasValue || h.Region == region.Value)
-                .Where(h => area == null || h.Address.Contains(area));
+                .Where(h => area == null || h.Address.Contains(area))
+                .Where(h => detailedAddress == null
+                    || (h.DetailedAddress != null && h.DetailedAddress.Contains(detailedAddress)));
 
             return Task.FromResult<IReadOnlyList<Hall>>(
                 query.OrderByDescending(h => h.CreatedAt).ThenBy(h => h.Name)
@@ -275,6 +299,7 @@ public class HallSearchServiceShould
 
         public Task<int> SearchApprovedHallsCountAsync(
             string? name, HallRegion? region, string? area,
+            string? detailedAddress,
             DateOnly? date, TimeOnly? startTime,
             CancellationToken cancellationToken = default)
         {

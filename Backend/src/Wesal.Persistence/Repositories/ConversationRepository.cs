@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -21,10 +22,31 @@ public sealed class ConversationRepository : IConversationRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Resolves the single seeker-to-owner thread for (hall, seeker) — the "Contact this
+    /// hall's owner" path (WESAL-TASK-6, Edit 6).
+    ///
+    /// The seeker/owner/hall relationship is the thread's real identity, so lookup keys on
+    /// (HallId, SenderUserId): the same seeker asking about the same hall always resolves to
+    /// the same thread, while asking about a different hall (or about a different owner's
+    /// hall) correctly gets its own thread.
+    ///
+    /// Ordering matters and is the same discipline already applied to
+    /// <see cref="GetByHallForOwnerAsync"/>. There is no unique constraint on
+    /// (HallId, SenderUserId) — the database cannot prevent two concurrent contact requests
+    /// from inserting — so an unordered FirstOrDefaultAsync would silently resolve to a
+    /// different thread on each call for a (hall, seeker) pair that somehow holds more than
+    /// one row. Ordering by CreatedAt then Id makes the oldest thread win deterministically,
+    /// so the resolved thread is stable across calls. Pre-existing duplicate rows are left
+    /// in place; nothing merges or deletes conversation history.
+    /// </summary>
     public async Task<Conversation?> GetByHallAndUserAsync(Guid hallId, string userId, CancellationToken cancellationToken = default)
     {
         return await _context.Conversations
-            .FirstOrDefaultAsync(c => c.HallId == hallId && c.SenderUserId == userId, cancellationToken);
+            .Where(c => c.HallId == hallId && c.SenderUserId == userId)
+            .OrderBy(c => c.CreatedAt)
+            .ThenBy(c => c.Id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <summary>
@@ -53,6 +75,55 @@ public sealed class ConversationRepository : IConversationRepository
             .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
     }
 
+    public async Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default)
+    {
+        var existing = await _context.ConversationReadStates
+            .FirstOrDefaultAsync(s => s.ConversationId == conversationId && s.UserId == userId, cancellationToken);
+
+        if (existing is null)
+        {
+            // Deliberately leaves LastReadAt at its default: hiding a thread is not reading
+            // it, so a conversation hidden before it was ever opened still counts as unread
+            // if it later re-appears through new activity.
+            _context.ConversationReadStates.Add(new ConversationReadState
+            {
+                ConversationId = conversationId,
+                UserId = userId,
+                HiddenAt = hiddenAt
+            });
+        }
+        else
+        {
+            // Re-hiding refreshes the watermark, so a thread that had un-hidden itself
+            // through new messages goes back out of this participant's inbox.
+            existing.HiddenAt = hiddenAt;
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// The per-user visibility rule (WESAL-TASK-6, Edit 6), shared by the inbox list, the
+    /// unread badge and the per-conversation unread flags so all three can never disagree.
+    ///
+    /// A conversation is hidden for <paramref name="userId"/> only while that participant has
+    /// a hide watermark AND no message has arrived since it. Because the watermark is a
+    /// timestamp rather than a flag, a new message un-hides the thread on its own: this is
+    /// the whole re-appear mechanism, with no extra state and nothing to reconcile.
+    /// </summary>
+    internal static Expression<Func<Conversation, bool>> VisibleToUser(
+        ApplicationDbContext context,
+        string userId)
+    {
+        return conversation => !context.ConversationReadStates.Any(state =>
+            state.ConversationId == conversation.Id
+            && state.UserId == userId
+            && state.HiddenAt != null
+            && !context.Messages.Any(message =>
+                message.ConversationId == conversation.Id
+                && message.CreatedAt > state.HiddenAt.Value));
+    }
+
     public async Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(
         string userId,
         CancellationToken cancellationToken = default)
@@ -62,6 +133,7 @@ public sealed class ConversationRepository : IConversationRepository
             .Include(c => c.Hall)
             .Where(c => c.SenderUserId == userId || c.HallOwnerId == userId)
             .Where(c => !c.Hall.IsDeleted)
+            .Where(VisibleToUser(_context, userId))
             .OrderByDescending(c => c.CreatedAt)
             .ThenByDescending(c => c.Id)
             .ToListAsync(cancellationToken);
@@ -110,6 +182,7 @@ public sealed class ConversationRepository : IConversationRepository
         return await _context.Conversations
             .AsNoTracking()
             .Where(c => (c.SenderUserId == userId || c.HallOwnerId == userId) && !c.Hall.IsDeleted)
+            .Where(VisibleToUser(_context, userId))
             .Where(c => _context.Messages
                 .Where(m => m.ConversationId == c.Id && m.SenderUserId != userId)
                 .Any(m => !_context.ConversationReadStates
@@ -131,6 +204,20 @@ public sealed class ConversationRepository : IConversationRepository
 
         var readStateMap = readStates.ToDictionary(s => s.ConversationId, s => s.LastReadAt);
 
+        // Same watermark rule as the inbox and the badge: a conversation this participant
+        // has hidden reports not-unread, so the flag can never advertise a thread that the
+        // list is deliberately not showing them.
+        var hiddenIds = await _context.ConversationReadStates
+            .AsNoTracking()
+            .Where(s => conversationIds.Contains(s.ConversationId)
+                && s.UserId == userId
+                && s.HiddenAt != null
+                && !_context.Messages.Any(m => m.ConversationId == s.ConversationId && m.CreatedAt > s.HiddenAt.Value))
+            .Select(s => s.ConversationId)
+            .ToListAsync(cancellationToken);
+
+        var hiddenSet = hiddenIds.ToHashSet();
+
         var latestMessages = await _context.Messages
             .AsNoTracking()
             .Where(m => conversationIds.Contains(m.ConversationId))
@@ -141,6 +228,12 @@ public sealed class ConversationRepository : IConversationRepository
         var result = new Dictionary<Guid, bool>();
         foreach (var convId in conversationIds)
         {
+            if (hiddenSet.Contains(convId))
+            {
+                result[convId] = false;
+                continue;
+            }
+
             var latest = latestMessages.FirstOrDefault(m => m.ConversationId == convId);
             if (latest is null)
             {

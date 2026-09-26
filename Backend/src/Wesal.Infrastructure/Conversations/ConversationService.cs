@@ -664,6 +664,63 @@ public sealed class ConversationService : IConversationService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        var (conversation, userId) = await GetParticipantConversationAsync(conversationId, cancellationToken);
+
+        try
+        {
+            await _conversationRepository.UpsertReadStateAsync(conversation.Id, userId, DateTimeOffset.UtcNow, cancellationToken);
+        }
+        catch (Exception ex) when (IsMissingTable(ex))
+        {
+            // ConversationReadStates table may not exist yet if migration is pending.
+        }
+    }
+
+    /// <summary>
+    /// Removes one conversation from the caller's own inbox (WESAL-TASK-6, Edit 6).
+    ///
+    /// Per-user and non-destructive. This records a hide watermark for the caller's own
+    /// participant row and touches nothing else: the conversation, every message, and every
+    /// other participant's inbox and history are unchanged. Because the watermark is a
+    /// timestamp, the thread reappears in the caller's inbox on its own as soon as a new
+    /// message arrives after it — see <see cref="ConversationReadState.HiddenAt"/>.
+    ///
+    /// Hiding is idempotent, and re-hiding a thread that had already re-appeared simply
+    /// moves the watermark forward and hides it again.
+    /// </summary>
+    public async Task HideConversationAsync(Guid conversationId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var (conversation, userId) = await GetParticipantConversationAsync(conversationId, cancellationToken);
+
+        try
+        {
+            await _conversationRepository.HideConversationAsync(
+                conversation.Id, userId, DateTimeOffset.UtcNow, cancellationToken);
+        }
+        catch (Exception ex) when (IsMissingTable(ex))
+        {
+            // Mirrors MarkAsReadAsync: a pending ConversationReadStates migration must not turn
+            // a hide into a 500. The hide is best-effort inbox state, never a data operation,
+            // so there is nothing to report and nothing at risk.
+        }
+    }
+
+    /// <summary>
+    /// The single per-conversation access rule (WESAL-TASK-6, Edit 6), shared by every
+    /// operation that acts on one conversation by id.
+    ///
+    /// It exists in one place deliberately: a participant is the thread's sender, the hall
+    /// owner, or an Admin, and a conversation whose hall has been deleted is reported as
+    /// not-found so a deleted hall cannot be probed through its threads. Authentication is
+    /// checked before the lookup so an anonymous caller cannot distinguish "no such
+    /// conversation" from "not allowed", and every caller gets exactly this rule.
+    /// </summary>
+    private async Task<(Conversation Conversation, string UserId)> GetParticipantConversationAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken)
+    {
         var userId = GetAuthenticatedUserId();
 
         var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
@@ -681,14 +738,7 @@ public sealed class ConversationService : IConversationService
             throw new ForbiddenException("You do not have access to this conversation.");
         }
 
-        try
-        {
-            await _conversationRepository.UpsertReadStateAsync(conversationId, userId, DateTimeOffset.UtcNow, cancellationToken);
-        }
-        catch (Exception ex) when (IsMissingTable(ex))
-        {
-            // ConversationReadStates table may not exist yet if migration is pending.
-        }
+        return (conversation, userId);
     }
 
     public async Task<UnreadCountResponse> GetUnreadCountAsync(CancellationToken cancellationToken = default)

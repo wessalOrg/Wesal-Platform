@@ -26,6 +26,17 @@ public interface IConversationRepository
 
     Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Removes one conversation from this participant's own inbox (WESAL-TASK-6, Edit 6).
+    ///
+    /// Per-user and non-destructive by contract: it records a hide watermark for
+    /// (conversationId, userId) and never deletes the conversation, its messages, or
+    /// anything belonging to another participant. Hiding the same conversation again
+    /// refreshes the watermark, which re-hides a thread that had un-hidden itself through
+    /// new activity.
+    /// </summary>
+    Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default);
+
     Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default);
 
     Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default);
