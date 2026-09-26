@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Domain.Constants;
 using Wesal.Infrastructure;
+using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Notifications;
 using Xunit;
 
@@ -105,5 +106,39 @@ public sealed class NotificationRegistrationShould
         // The SignalR event name is part of the published contract with the frontend, so a
         // rename is a deliberate edit rather than an accident.
         Assert.Equal("NotificationReceived", NotificationsHub.NotificationReceived);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // WESAL-TASK-12 (Edit 12): the rejection service gained a dependency on the chat-hub
+    // notifier so the rejection message reaches an open thread live. A missing or
+    // wrongly-scoped registration for that is invisible to a compile and to every other test:
+    // the service still constructs in isolation, and the only symptom in production is a 500
+    // on the first rejection a hall owner performs.
+    // ---------------------------------------------------------------------------------------
+
+    [Fact]
+    public void ConversationNotifier_IsRegisteredSoRejectionCanBePushedLive()
+    {
+        var services = BuildProductionServices();
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(IConversationNotifier));
+
+        Assert.Equal(typeof(ConversationNotifier), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
+    [Fact]
+    public void ConversationNotifier_IsConstructibleFromTheProductionContainer()
+    {
+        // The real proof that the new dependency is satisfiable: this resolves a live notifier
+        // from the actual production registrations (including the SignalR hub context it needs)
+        // rather than asserting on descriptors alone.
+        var services = BuildProductionServices();
+        services.AddSignalR();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetService<IConversationNotifier>());
     }
 }

@@ -1,6 +1,8 @@
 using Wesal.Application.Common.Interfaces;
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Notifications;
+using Wesal.Infrastructure.Conversations;
 
 namespace Wesal.Tests.TestDoubles;
 
@@ -101,3 +103,35 @@ public sealed record RenderedNotification(
     string RecipientUserId,
     Language Language,
     NotificationContent Content);
+
+/// <summary>
+/// Records every message pushed over the chat hub, so a test can assert that a message which
+/// was merely persisted also became <i>live</i> for an open thread, without standing up SignalR.
+/// </summary>
+public sealed class RecordingConversationNotifier : IConversationNotifier
+{
+    public List<MessageSentEvent> Sent { get; } = new();
+
+    /// <summary>
+    /// When set, the notifier throws this instead of succeeding. Used to prove that a realtime
+    /// failure cannot roll back work that has already been persisted.
+    /// </summary>
+    public Exception? ThrowOnNotify { get; set; }
+
+    public Task NotifyMessageSentAsync(MessageSentEvent message, CancellationToken cancellationToken = default)
+    {
+        if (ThrowOnNotify is not null)
+        {
+            throw ThrowOnNotify;
+        }
+
+        Sent.Add(message);
+        return Task.CompletedTask;
+    }
+
+    public MessageSentEvent Single() =>
+        Sent.Count == 1
+            ? Sent[0]
+            : throw new InvalidOperationException(
+                $"Expected exactly 1 pushed message but found {Sent.Count}.");
+}

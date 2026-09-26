@@ -481,6 +481,230 @@ public class BookingRejectionServiceShould
             rejectionMessage.Content);
     }
 
+    // ---------------------------------------------------------------------------------------
+    // WESAL-TASK-12 (Edit 12): the rejection message must become LIVE over the chat hub, not
+    // merely exist in history. Before this, a seeker who already had the thread open saw
+    // nothing at all until they manually refetched, which quietly defeated the whole point of
+    // telling them "contact the hall owner".
+    // ---------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task RejectBooking_PushesRejectionMessageOverChatHub()
+    {
+        var scenario = Scenario();
+
+        await scenario.Service.RejectBookingAsync(
+            scenario.Hall.Id,
+            scenario.Booking.Id,
+            new RejectBookingRequestDto { Reason = "Not available" });
+
+        var conversation = Assert.Single(scenario.Conversations);
+        var persisted = Assert.Single(scenario.Messages);
+        var pushed = scenario.ConversationNotifier.Single();
+
+        Assert.Equal(conversation.Id, pushed.ConversationId);
+        Assert.Equal(persisted.Id, pushed.MessageId);
+        Assert.Equal(OwnerId, pushed.SenderUserId);
+        Assert.Equal($"Name of {OwnerId}", pushed.SenderName);
+        Assert.Equal(persisted.Content, pushed.Content);
+        Assert.False(pushed.HasAttachment);
+        Assert.Null(pushed.AttachmentUrl);
+    }
+
+    [Fact]
+    public async Task RejectBooking_PushesTheSameLocalizedTextItPersisted()
+    {
+        // The durable thread record and the live push must never disagree about what the
+        // requester was told, including the reason.
+        var scenario = Scenario();
+
+        await scenario.Service.RejectBookingAsync(
+            scenario.Hall.Id,
+            scenario.Booking.Id,
+            new RejectBookingRequestDto { Reason = "Booked by another customer" });
+
+        var persisted = Assert.Single(scenario.Messages);
+        var pushed = scenario.ConversationNotifier.Single();
+
+        Assert.Equal(
+            "لم تتم الموافقة على طلب حجزك لصالة Grand Hall. سبب الرفض: Booked by another customer",
+            pushed.Content);
+        Assert.Equal(persisted.Content, pushed.Content);
+    }
+
+    [Fact]
+    public async Task RejectBooking_PushHappensAfterTheMessageIsDurable()
+    {
+        // A live push is only trustworthy if the message can be fetched by the recipient, so
+        // the push must never be able to precede persistence.
+        var scenario = Scenario();
+
+        await scenario.Service.RejectBookingAsync(
+            scenario.Hall.Id,
+            scenario.Booking.Id,
+            new RejectBookingRequestDto { Reason = "Not available" });
+
+        var conversation = Assert.Single(scenario.Conversations);
+        var pushed = scenario.ConversationNotifier.Single();
+
+        var retrievable = await scenario.MessageRepository.GetByConversationAsync(conversation.Id);
+        Assert.Contains(retrievable, m => m.Id == pushed.MessageId);
+    }
+
+    [Fact]
+    public async Task RejectBooking_DoesNotPushWhenMessageWasAlreadyDelivered()
+    {
+        // A repeated rejection must not replay the message into an open thread.
+        var scenario = Scenario();
+        var request = new RejectBookingRequestDto { Reason = "Not available" };
+
+        await scenario.Service.RejectBookingAsync(scenario.Hall.Id, scenario.Booking.Id, request);
+        var afterFirst = scenario.ConversationNotifier.Sent.Count;
+
+        var second = await scenario.Service.RejectBookingAsync(scenario.Hall.Id, scenario.Booking.Id, request);
+
+        Assert.True(second.IsAlreadyRejected);
+        Assert.Equal(afterFirst, scenario.ConversationNotifier.Sent.Count);
+    }
+
+    [Fact]
+    public async Task RejectBooking_ChatHubPushFailure_StillCompletesRejection()
+    {
+        // Best-effort contract: the message is already committed, so a realtime failure must
+        // degrade to "the seeker sees it on next load", never to a lost or failed rejection.
+        var scenario = Scenario();
+        scenario.ConversationNotifier.ThrowOnNotify = new InvalidOperationException("hub is down");
+
+        var result = await scenario.Service.RejectBookingAsync(
+            scenario.Hall.Id,
+            scenario.Booking.Id,
+            new RejectBookingRequestDto { Reason = "Not available" });
+
+        Assert.Equal(BookingStatus.Rejected, scenario.Booking.Status);
+        Assert.Equal("Not available", scenario.Booking.RejectionReason);
+        Assert.NotNull(scenario.Booking.RejectionMessageId);
+        Assert.Equal("Not available", result.RejectionReason);
+        Assert.Single(scenario.Messages);
+        Assert.Empty(scenario.ConversationNotifier.Sent);
+    }
+
+    [Fact]
+    public async Task RejectBooking_ChatHubPushCancelled_PropagatesCancellation()
+    {
+        // A caller-driven cancellation is not a best-effort failure; it must still surface so
+        // the request actually stops.
+        var scenario = Scenario();
+        scenario.ConversationNotifier.ThrowOnNotify = new OperationCanceledException();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            scenario.Service.RejectBookingAsync(
+                scenario.Hall.Id,
+                scenario.Booking.Id,
+                new RejectBookingRequestDto { Reason = "Not available" }));
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // WESAL-TASK-12 (Edit 12): the reason has to fit. The reason is wrapped in a localized
+    // sentence that is persisted as a conversation message, and BOTH columns cap at 1000
+    // characters, so an over-long reason used to fail as an unhandled database error *after*
+    // the booking had already been rejected.
+    // ---------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task RejectBooking_ReasonAtTheLimit_IsAccepted()
+    {
+        var scenario = Scenario();
+        var reason = new string('a', BookingRejectionReasons.MaximumLength);
+
+        var result = await scenario.Service.RejectBookingAsync(
+            scenario.Hall.Id,
+            scenario.Booking.Id,
+            new RejectBookingRequestDto { Reason = reason });
+
+        Assert.Equal(BookingStatus.Rejected, scenario.Booking.Status);
+        Assert.Equal(reason, scenario.Booking.RejectionReason);
+        Assert.Equal(BookingRejectionNotificationStatus.Delivered, result.NotificationStatus);
+    }
+
+    [Fact]
+    public async Task RejectBooking_ReasonAtTheLimit_StillFitsTheMessageColumn()
+    {
+        // The real reason the limit exists: reason + localized wrapper must stay inside the
+        // message column so the write cannot overflow.
+        var scenario = Scenario();
+        var reason = new string('a', BookingRejectionReasons.MaximumLength);
+
+        await scenario.Service.RejectBookingAsync(
+            scenario.Hall.Id,
+            scenario.Booking.Id,
+            new RejectBookingRequestDto { Reason = reason });
+
+        var message = Assert.Single(scenario.Messages);
+        var content = Assert.IsType<string>(message.Content);
+        Assert.Contains(reason, content);
+        Assert.True(
+            content.Length <= 1000,
+            $"The rejection message was {content.Length} characters, which would overflow the 1000-character message column.");
+    }
+
+    [Fact]
+    public async Task RejectBooking_ReasonOverTheLimit_IsRefusedBeforeAnythingIsWritten()
+    {
+        var scenario = Scenario();
+        var reason = new string('a', BookingRejectionReasons.MaximumLength + 1);
+
+        var error = await Assert.ThrowsAsync<ValidationException>(() =>
+            scenario.Service.RejectBookingAsync(
+                scenario.Hall.Id,
+                scenario.Booking.Id,
+                new RejectBookingRequestDto { Reason = reason }));
+
+        Assert.Contains($"{BookingRejectionReasons.MaximumLength}", error.Message, StringComparison.Ordinal);
+
+        // The refusal has to happen before any state change, otherwise the requester is left
+        // with a rejected booking and a half-written thread.
+        Assert.NotEqual(BookingStatus.Rejected, scenario.Booking.Status);
+        Assert.Null(scenario.Booking.RejectionReason);
+        Assert.Null(scenario.Booking.RejectionMessageId);
+        Assert.Empty(scenario.Messages);
+        Assert.Empty(scenario.Conversations);
+    }
+
+    [Fact]
+    public async Task RejectBooking_ReasonOverTheLimit_IsRefusedEvenWhenPaddedWithWhitespace()
+    {
+        // The limit is measured on the trimmed reason, because the trimmed value is what
+        // actually reaches the columns. Padding therefore cannot smuggle extra content past
+        // the bound and overflow the message column.
+        var scenario = Scenario();
+        var reason = "   " + new string('a', BookingRejectionReasons.MaximumLength + 1) + "   ";
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            scenario.Service.RejectBookingAsync(
+                scenario.Hall.Id,
+                scenario.Booking.Id,
+                new RejectBookingRequestDto { Reason = reason }));
+
+        Assert.Empty(scenario.Messages);
+    }
+
+    [Fact]
+    public async Task RejectBooking_ReasonAtTheLimitWithPadding_IsAcceptedAndStoredTrimmed()
+    {
+        // The mirror image: padding must not be able to trigger a rejection either, since it
+        // is discarded before the reason is stored or shown to the requester.
+        var scenario = Scenario();
+        var reason = new string('a', BookingRejectionReasons.MaximumLength);
+
+        await scenario.Service.RejectBookingAsync(
+            scenario.Hall.Id,
+            scenario.Booking.Id,
+            new RejectBookingRequestDto { Reason = $"   {reason}   " });
+
+        Assert.Equal(BookingStatus.Rejected, scenario.Booking.Status);
+        Assert.Equal(reason, scenario.Booking.RejectionReason);
+    }
+
     private static ScenarioContext Scenario(
         IReadOnlyList<Booking>? bookings = null,
         string? userId = OwnerId,
@@ -497,6 +721,7 @@ public class BookingRejectionServiceShould
             MessageRepository = new FakeMessageRepository(),
             UnitOfWork = null!,
             CurrentUser = currentUser,
+            ConversationNotifier = new RecordingConversationNotifier(),
             Service = null!
         };
 
@@ -508,10 +733,11 @@ public class BookingRejectionServiceShould
             context.BookingRepository,
             context.ConversationRepository,
             context.MessageRepository,
-                context.UnitOfWork,
-                context.CurrentUser,
-                new FakeNotificationService(),
-                new RecordingNotificationDispatcher());
+            context.UnitOfWork,
+            context.CurrentUser,
+            new FakeNotificationService(),
+            new RecordingNotificationDispatcher(),
+            context.ConversationNotifier);
 
         return context;
     }
@@ -566,6 +792,8 @@ public class BookingRejectionServiceShould
         public required FakeUnitOfWork UnitOfWork { get; set; }
 
         public required FakeCurrentUserService CurrentUser { get; init; }
+
+        public required RecordingConversationNotifier ConversationNotifier { get; init; }
 
         public required BookingRejectionService Service { get; set; }
 
@@ -666,7 +894,14 @@ public class BookingRejectionServiceShould
             => Task.FromResult<IReadOnlyList<Conversation>>(Conversations.Where(c => c.SenderUserId == userId || c.HallOwnerId == userId).ToList());
 
         public Task<IReadOnlyList<UserDisplayInfo>> GetUserDisplayNamesAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<UserDisplayInfo>>([]);
+            => Task.FromResult<IReadOnlyList<UserDisplayInfo>>(
+                userIds
+                    .Select(id => new UserDisplayInfo
+                    {
+                        UserId = id,
+                        FullName = $"Name of {id}"
+                    })
+                    .ToList());
 
         public Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default) => Task.CompletedTask;

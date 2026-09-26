@@ -200,7 +200,8 @@ public class HourlyBookingLifecycleShould : IDisposable
             UnitOfWork(),
             currentUser,
             new FakeNotificationService(),
-            new RecordingNotificationDispatcher());
+            new RecordingNotificationDispatcher(),
+            new RecordingConversationNotifier());
 
     private BookingDeletionService Deletion(ICurrentUserService currentUser)
         => new(BookingRepo(), UnitOfWork(), currentUser);

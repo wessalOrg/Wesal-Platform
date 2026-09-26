@@ -7,6 +7,7 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Domain.Notifications;
+using Wesal.Infrastructure.Conversations;
 
 namespace Wesal.Infrastructure.Bookings;
 
@@ -19,6 +20,7 @@ public sealed class BookingRejectionService : IBookingRejectionService
     private readonly ICurrentUserService _currentUser;
     private readonly INotificationService _notificationService;
     private readonly INotificationDispatcher _notificationDispatcher;
+    private readonly IConversationNotifier _conversationNotifier;
 
     public BookingRejectionService(
         IBookingRepository bookingRepository,
@@ -27,7 +29,8 @@ public sealed class BookingRejectionService : IBookingRejectionService
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         INotificationService notificationService,
-        INotificationDispatcher notificationDispatcher)
+        INotificationDispatcher notificationDispatcher,
+        IConversationNotifier conversationNotifier)
     {
         _bookingRepository = bookingRepository;
         _conversationRepository = conversationRepository;
@@ -36,6 +39,7 @@ public sealed class BookingRejectionService : IBookingRejectionService
         _currentUser = currentUser;
         _notificationService = notificationService;
         _notificationDispatcher = notificationDispatcher;
+        _conversationNotifier = conversationNotifier;
     }
 
     public async Task<RejectBookingResultDto> RejectBookingAsync(
@@ -51,6 +55,18 @@ public sealed class BookingRejectionService : IBookingRejectionService
         if (string.IsNullOrWhiteSpace(request.Reason))
         {
             throw new ValidationException("A rejection reason is required.");
+        }
+
+        // WESAL-TASK-12 (Edit 12): the request validator already caps the reason for HTTP
+        // callers, but the service is reachable directly and is where the database write
+        // actually happens. Enforcing the bound here too means an over-long reason is refused
+        // before any state changes, instead of failing as a database error after the booking
+        // has already been rejected. The reason is wrapped in a localized sentence that is
+        // persisted as a conversation message, whose own column is the same 1000 characters.
+        if (request.Reason.Trim().Length > BookingRejectionReasons.MaximumLength)
+        {
+            throw new ValidationException(
+                $"The rejection reason cannot exceed {BookingRejectionReasons.MaximumLength} characters.");
         }
 
         var booking = await _bookingRepository.GetByIdWithHallAsync(bookingId, cancellationToken);
@@ -195,6 +211,13 @@ public sealed class BookingRejectionService : IBookingRejectionService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // WESAL-TASK-12 (Edit 12): push the rejection into the open thread over the chat hub.
+        // Previously this message was persisted but never pushed, so a seeker who already had
+        // the conversation open saw nothing at all until they manually refetched. This is the
+        // same realtime path a hand-typed message takes, so the open thread, the inbox unread
+        // badge, and the persisted history all agree.
+        await PushRejectionMessageAsync(conversation.Id, message, hall.OwnerId, cancellationToken);
+
         // WESAL-TASK-12 (Edit 12): the click-through resolves to this very thread, which was
         // just created on demand if the seeker had never messaged this owner before. So
         // "contact the hall owner" always opens a real, writable conversation instead of
@@ -205,6 +228,50 @@ public sealed class BookingRejectionService : IBookingRejectionService
             BookingNotificationValues.ForBooking(booking, reason: booking.RejectionReason?.Trim()),
             conversation.Id.ToString(),
             cancellationToken);
+    }
+
+    /// <summary>
+    /// Best-effort realtime push of the rejection message, mirroring
+    /// <c>ConversationService</c>'s own push. The message is already committed at this point, so
+    /// a realtime failure must never fail the rejection or roll it back.
+    /// </summary>
+    private async Task PushRejectionMessageAsync(
+        Guid conversationId,
+        Message message,
+        string ownerId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var users = await _conversationRepository.GetUserDisplayNamesAsync([ownerId], cancellationToken);
+            var senderName = users.FirstOrDefault(info => info.UserId == ownerId)?.FullName ?? string.Empty;
+
+            await _conversationNotifier.NotifyMessageSentAsync(
+                new MessageSentEvent
+                {
+                    MessageId = message.Id,
+                    ConversationId = conversationId,
+                    SenderUserId = message.SenderUserId,
+                    SenderName = senderName,
+                    Content = message.Content ?? string.Empty,
+                    SentAt = message.CreatedAt,
+                    HasAttachment = false,
+                    AttachmentUrl = null,
+                    AttachmentContentType = null,
+                    AttachmentFileName = null
+                },
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // The rejection is already persisted and readable via thread retrieval, so a failed
+            // realtime push degrades to "the seeker sees it on next load", never to a lost
+            // rejection.
+        }
     }
 
     /// <summary>
