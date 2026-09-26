@@ -84,6 +84,60 @@ public class ProfileServiceShould : IDisposable
         await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetProfileAsync());
     }
 
+    /// <summary>
+    /// WESAL-TASK-9 (Edit 9): the seeker profile response must carry the caller's own
+    /// identity id.
+    ///
+    /// The web client maps the profile payload with
+    /// <c>id: String(data.id ?? data.userId ?? "self")</c> and then writes that value
+    /// back into stored auth state via <c>patchStoredUser({ id: profile.id })</c>. While
+    /// the response omitted the id, the client silently fell back to the literal
+    /// sentinel string "self" and persisted it as the signed-in user's id, corrupting
+    /// the stored identity (and the session key derived from it) for every seeker whose
+    /// profile loaded. Returning the real id is what stops that fallback.
+    /// </summary>
+    [Fact]
+    public async Task GetProfile_ReturnsCallersOwnUserId_SoClientsNeverFallBackToSentinel()
+    {
+        var user = await CreateUserAsync("selfid@example.com", "+970599000011", ApplicationRoles.RegisteredUser);
+
+        var service = new ProfileService(_userManager, new FakeCurrentUser(user.Id, true, ApplicationRoles.RegisteredUser));
+        var result = await service.GetProfileAsync();
+
+        Assert.Equal(user.Id, result.Id);
+
+        // The exact client mapping, over the same camelCase JSON that ASP.NET Core emits:
+        // a missing id collapses to the truthy sentinel "self", which is what previously
+        // poisoned stored auth state.
+        var options = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
+        var payload = System.Text.Json.JsonSerializer.Serialize(result, options);
+        using var document = System.Text.Json.JsonDocument.Parse(payload);
+        var mapped = document.RootElement.TryGetProperty("id", out var idElement)
+            ? idElement.GetString()
+            : null;
+
+        Assert.False(string.IsNullOrWhiteSpace(mapped));
+        Assert.NotEqual("self", mapped);
+    }
+
+    /// <summary>
+    /// WESAL-TASK-9 (Edit 9): the id must be the caller's own id only. Returning another
+    /// user's id here would be an identity leak, so this pins the value to the
+    /// authenticated subject rather than to any client-supplied input.
+    /// </summary>
+    [Fact]
+    public async Task GetProfile_Id_IsAlwaysTheAuthenticatedUsersOwnId()
+    {
+        var caller = await CreateUserAsync("caller@example.com", "+970599000012", ApplicationRoles.RegisteredUser);
+        var other = await CreateUserAsync("other@example.com", "+970599000013", ApplicationRoles.RegisteredUser);
+
+        var service = new ProfileService(_userManager, new FakeCurrentUser(caller.Id, true, ApplicationRoles.RegisteredUser));
+        var result = await service.GetProfileAsync();
+
+        Assert.Equal(caller.Id, result.Id);
+        Assert.NotEqual(other.Id, result.Id);
+    }
+
     [Fact]
     public async Task UpdateProfile_Unauthenticated_ThrowsUnauthorized()
     {

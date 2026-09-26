@@ -23,6 +23,7 @@ public sealed class ProfileService : IProfileService
         var user = await GetCurrentUserAsync(cancellationToken);
         return new ProfileResponse
         {
+            Id = user.Id,
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
             PhoneNumber = user.PhoneNumber ?? string.Empty,
@@ -128,6 +129,7 @@ public sealed class ProfileService : IProfileService
 
         return new ProfileResponse
         {
+            Id = updated.Id,
             FullName = updated.FullName,
             Email = updated.Email ?? string.Empty,
             PhoneNumber = updated.PhoneNumber ?? string.Empty,
