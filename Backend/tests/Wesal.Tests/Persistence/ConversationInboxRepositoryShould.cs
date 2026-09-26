@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Domain.Entities;
 using Wesal.Infrastructure.Identity;
@@ -353,6 +354,162 @@ public class ConversationInboxRepositoryShould
 
         Assert.Contains("ConversationReadStates", sql);
         Assert.Contains("Messages", sql);
+    }
+
+    // ======================================================================================
+    // WESAL-TASK-10 (Edit 10): the read state has a composite primary key of
+    // (ConversationId, UserId), and both writers read-then-insert. Two requests that both saw
+    // "no row" therefore both inserted, and the second SaveChanges failed on the key. Nothing
+    // handled that, so a double-tapped "mark as read" - or a read racing a hide - surfaced as an
+    // unhandled 500. These tests pin the recovery: the losing insert is dropped and the same
+    // change is applied to the row that won.
+    // ======================================================================================
+
+    [Fact]
+    public async Task UpsertReadStateAsync_LosingTheInsertRace_AppliesToTheWinningRow()
+    {
+        var store = new SharedInMemoryStore();
+        await using var context = store.CreateContext();
+        var hall = SeedHall(context, "Hall", isDeleted: false);
+        var conversation = SeedConversation(context, hall.Id, "seeker-1", "owner-1");
+        var readAt = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+
+        // The competing request commits the same composite key through its own context first.
+        var repository = new ConversationRepository(
+            store.CreateContext(intercept: new LostInsertRaceInterceptor(store, readAt)));
+
+        await repository.UpsertReadStateAsync(conversation.Id, "seeker-1", readAt);
+
+        await using var verify = store.CreateContext();
+        var state = await verify.ConversationReadStates
+            .SingleAsync(s => s.ConversationId == conversation.Id && s.UserId == "seeker-1");
+
+        Assert.Equal(readAt, state.LastReadAt);
+        _ = hall;
+    }
+
+    [Fact]
+    public async Task HideConversationAsync_LosingTheInsertRace_AppliesToTheWinningRow()
+    {
+        var store = new SharedInMemoryStore();
+        await using var context = store.CreateContext();
+        var hall = SeedHall(context, "Hall", isDeleted: false);
+        var conversation = SeedConversation(context, hall.Id, "seeker-1", "owner-1");
+        var hiddenAt = new DateTimeOffset(2026, 3, 2, 9, 30, 0, TimeSpan.Zero);
+
+        // The competing request hides the same thread first; our hide must not fail, it must
+        // land on the row that already exists.
+        var repository = new ConversationRepository(
+            store.CreateContext(intercept: new LostInsertRaceInterceptor(store, hiddenAt)));
+
+        await repository.HideConversationAsync(conversation.Id, "seeker-1", hiddenAt);
+
+        await using var verify = store.CreateContext();
+        var state = await verify.ConversationReadStates
+            .SingleAsync(s => s.ConversationId == conversation.Id && s.UserId == "seeker-1");
+
+        Assert.Equal(hiddenAt, state.HiddenAt);
+        _ = hall;
+    }
+
+    [Fact]
+    public async Task UpsertReadStateAsync_WithoutTheRace_StillInsertsOneRow()
+    {
+        // The recovery must not have changed the ordinary path.
+        var store = new SharedInMemoryStore();
+        await using var context = store.CreateContext();
+        var hall = SeedHall(context, "Hall", isDeleted: false);
+        var conversation = SeedConversation(context, hall.Id, "seeker-1", "owner-1");
+        var readAt = DateTimeOffset.UtcNow;
+        var repository = new ConversationRepository(context);
+
+        await repository.UpsertReadStateAsync(conversation.Id, "seeker-1", readAt);
+        await repository.UpsertReadStateAsync(conversation.Id, "seeker-1", readAt.AddMinutes(1));
+
+        var rows = await context.ConversationReadStates
+            .Where(s => s.ConversationId == conversation.Id && s.UserId == "seeker-1")
+            .ToListAsync();
+
+        Assert.Single(rows);
+        Assert.Equal(readAt.AddMinutes(1), rows[0].LastReadAt);
+        _ = hall;
+    }
+
+    /// <summary>
+    /// Two <see cref="ApplicationDbContext"/> instances over one named in-memory store, so a
+    /// test can model a genuinely separate request committing a row underneath another one.
+    /// </summary>
+    private sealed class SharedInMemoryStore
+    {
+        private readonly string _name = Guid.NewGuid().ToString();
+
+        public ApplicationDbContext CreateContext(IInterceptor? intercept = null)
+        {
+            var builder = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseInMemoryDatabase(_name);
+
+            if (intercept is not null)
+            {
+                builder.AddInterceptors(intercept);
+            }
+
+            return new ApplicationDbContext(builder.Options);
+        }
+
+        public void InsertCompetingReadState(Guid conversationId, string userId, DateTimeOffset watermark)
+        {
+            using var competing = CreateContext();
+            competing.ConversationReadStates.Add(new ConversationReadState
+            {
+                ConversationId = conversationId,
+                UserId = userId,
+                LastReadAt = watermark,
+                HiddenAt = watermark
+            });
+            competing.SaveChanges();
+        }
+    }
+
+    /// <summary>
+    /// Models losing the insert race on the composite key: just before the save, a separate
+    /// request commits the same (ConversationId, UserId) row, and this save is then failed the
+    /// way Postgres fails it (SQLSTATE 23505).
+    /// </summary>
+    private sealed class LostInsertRaceInterceptor : SaveChangesInterceptor
+    {
+        private readonly SharedInMemoryStore _store;
+        private readonly DateTimeOffset _watermark;
+        private bool _armed = true;
+
+        public LostInsertRaceInterceptor(SharedInMemoryStore store, DateTimeOffset watermark)
+        {
+            _store = store;
+            _watermark = watermark;
+        }
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            var added = eventData.Context!.ChangeTracker
+                .Entries<ConversationReadState>()
+                .FirstOrDefault(entry => entry.State == EntityState.Added);
+
+            if (_armed && added is not null)
+            {
+                _armed = false;
+
+                // The competing request wins, then our insert fails on the primary key.
+                _store.InsertCompetingReadState(added.Entity.ConversationId, added.Entity.UserId, _watermark);
+
+                throw new DbUpdateException(
+                    "An error occurred while saving the entity changes.",
+                    new Exception("23505 duplicate key value violates unique constraint \"PK_ConversationReadStates\""));
+            }
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
     }
 
     private static Message SeedMessage(

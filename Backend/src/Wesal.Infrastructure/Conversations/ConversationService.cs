@@ -59,6 +59,17 @@ public sealed class ConversationService : IConversationService
 
         EnsureNotSelfContact(hall);
 
+        // WESAL-TASK-10 (Edit 10): Hall.OwnerId is nullable but Conversation.HallOwnerId maps to
+        // a NOT NULL column. The null-forgiving "!" only silenced the compiler, so an approved
+        // hall with no owner produced a row the database refuses, surfacing as an unhandled
+        // 500. Guard it the same way BookingRejectionService, BookingAcceptanceService and
+        // AdminHallReviewService already do. Without an owner there is nobody to talk to, so
+        // the hall is simply not contactable.
+        if (string.IsNullOrWhiteSpace(hall.OwnerId))
+        {
+            throw new NotFoundException(nameof(Hall), hallId);
+        }
+
         var senderUserId = _currentUser.UserId!;
 
         var existing = await _conversationRepository.GetByHallAndUserAsync(hallId, senderUserId, cancellationToken);
@@ -148,7 +159,13 @@ public sealed class ConversationService : IConversationService
 
         var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
 
-        if (conversation is null)
+        // WESAL-TASK-10 (Edit 10): every sibling per-conversation path treats a soft-deleted
+        // hall's thread as gone. This one checked only that the conversation existed, so it
+        // answered 200 with an empty HallName while still echoing the hall id and both
+        // participant ids, and the same resource reported differently depending on which
+        // endpoint was used. EnsureOwnerMessagingAccess cannot compensate: it deliberately
+        // allows deleted halls, so the gate has to be here.
+        if (conversation is null || conversation.Hall?.IsDeleted == true)
         {
             throw new NotFoundException(nameof(Conversation), conversationId);
         }
@@ -301,7 +318,18 @@ public sealed class ConversationService : IConversationService
         cancellationToken.ThrowIfCancellationRequested();
 
         EnsureAuthenticated();
+
+        // WESAL-TASK-10 (Edit 10): a JSON body of literal null binds to a null DTO, and
+        // ValidateActionFilter skips null arguments, so no validator runs. Dereferencing it
+        // anyway threw a NullReferenceException, which the middleware has no arm for, so the
+        // caller got a 500 for a malformed request.
+        if (request is null)
+        {
+            throw new ValidationException("A message body is required.");
+        }
+
         ValidateMessageContent(request.Content);
+        ValidateClientRequestId(request.ClientRequestId);
 
         var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
 
@@ -424,6 +452,11 @@ public sealed class ConversationService : IConversationService
         EnsureOwnerMessagingAccess(conversation);
 
         var normalizedRequestId = string.IsNullOrWhiteSpace(clientRequestId) ? null : clientRequestId;
+
+        // WESAL-TASK-10 (Edit 10): bound the key before it is used or written. This arrives as
+        // a raw form field, so unlike the text path no validator ever saw it, and an over-long
+        // value produced an unhandled database error at the insert.
+        ValidateClientRequestId(normalizedRequestId);
 
         if (normalizedRequestId is not null)
         {
@@ -655,6 +688,32 @@ public sealed class ConversationService : IConversationService
         if (content.Trim().Length > 1000)
         {
             throw new ValidationException("Message content must not exceed 1000 characters.");
+        }
+    }
+
+    /// <summary>
+    /// WESAL-TASK-10 (Edit 10): bounds the idempotency key for BOTH send paths.
+    /// </summary>
+    /// <remarks>
+    /// The text path relied solely on <c>SendMessageRequestValidator</c>, which only runs for a
+    /// non-null DTO over HTTP. The attachment path takes the value as a raw form field that no
+    /// validator covers, so nothing bounded it at all and an over-long key reached the insert and
+    /// came back as an unhandled database error. Enforcing it here means the limit is a property
+    /// of the service rather than of whichever filter happened to run, and the two endpoints
+    /// cannot drift apart again. A blank key is not an idempotency key and stays allowed — it is
+    /// normalised to null by the caller.
+    /// </remarks>
+    private static void ValidateClientRequestId(string? clientRequestId)
+    {
+        if (string.IsNullOrWhiteSpace(clientRequestId))
+        {
+            return;
+        }
+
+        if (clientRequestId.Trim().Length > MessageLimits.MaximumClientRequestIdLength)
+        {
+            throw new ValidationException(
+                $"Client request identifier must not exceed {MessageLimits.MaximumClientRequestIdLength} characters.");
         }
     }
 

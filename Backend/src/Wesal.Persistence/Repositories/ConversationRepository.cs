@@ -104,29 +104,109 @@ public sealed class ConversationRepository : IConversationRepository
 
     public async Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default)
     {
-        var existing = await _context.ConversationReadStates
+        await SaveReadStateAsync(
+            conversationId,
+            userId,
+            state =>
+            {
+                // Re-hiding refreshes the watermark, so a thread that had un-hidden itself
+                // through new messages goes back out of this participant's inbox.
+                state.HiddenAt = hiddenAt;
+            },
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// WESAL-TASK-10 (Edit 10): applies a change to this participant's read-state row, creating
+    /// it when it does not exist yet.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>ConversationReadState</c> has a composite primary key of (ConversationId, UserId).
+    /// Reading the row and then inserting it is therefore a race: two requests that both observe
+    /// "no row" — a double-tapped "mark as read", or a read racing a hide — both insert, and the
+    /// second <c>SaveChangesAsync</c> fails on the key. That exception was not handled anywhere,
+    /// so an ordinary client gesture surfaced as an unhandled 500.
+    /// </para>
+    /// <para>
+    /// On losing that race the losing insert is detached and the same change is applied to the
+    /// row that won, which is exactly the state the caller asked for. The message-send path
+    /// already recovers from the same race on its own unique index, so this keeps the two
+    /// consistent.
+    /// </para>
+    /// </remarks>
+    private async Task SaveReadStateAsync(
+        Guid conversationId,
+        string userId,
+        Action<ConversationReadState> applyChange,
+        CancellationToken cancellationToken)
+    {
+        var existing = await FindReadStateAsync(conversationId, userId, cancellationToken);
+
+        if (existing is not null)
+        {
+            applyChange(existing);
+            await _context.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        var candidate = new ConversationReadState
+        {
+            ConversationId = conversationId,
+            UserId = userId
+        };
+
+        // A brand-new row deliberately leaves LastReadAt at its default: hiding a thread is not
+        // reading it, so a conversation hidden before it was ever opened still counts as unread
+        // if it later re-appears through new activity.
+        applyChange(candidate);
+        _context.ConversationReadStates.Add(candidate);
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            _context.Entry(candidate).State = EntityState.Detached;
+
+            var winner = await FindReadStateAsync(conversationId, userId, cancellationToken);
+
+            if (winner is null)
+            {
+                throw;
+            }
+
+            applyChange(winner);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private Task<ConversationReadState?> FindReadStateAsync(
+        Guid conversationId,
+        string userId,
+        CancellationToken cancellationToken)
+        => _context.ConversationReadStates
             .FirstOrDefaultAsync(s => s.ConversationId == conversationId && s.UserId == userId, cancellationToken);
 
-        if (existing is null)
+    /// <summary>
+    /// WESAL-TASK-10 (Edit 10): recognises a Postgres unique-constraint violation (SQLSTATE
+    /// 23505) on the exception or its inner exception, matching how the message-send path
+    /// detects the same condition.
+    /// </summary>
+    private static bool IsUniqueViolation(Exception exception)
+    {
+        const string uniqueViolation = "23505";
+
+        for (var current = exception; current is not null; current = current.InnerException)
         {
-            // Deliberately leaves LastReadAt at its default: hiding a thread is not reading
-            // it, so a conversation hidden before it was ever opened still counts as unread
-            // if it later re-appears through new activity.
-            _context.ConversationReadStates.Add(new ConversationReadState
+            if (current.Message.Contains(uniqueViolation, StringComparison.Ordinal))
             {
-                ConversationId = conversationId,
-                UserId = userId,
-                HiddenAt = hiddenAt
-            });
-        }
-        else
-        {
-            // Re-hiding refreshes the watermark, so a thread that had un-hidden itself
-            // through new messages goes back out of this participant's inbox.
-            existing.HiddenAt = hiddenAt;
+                return true;
+            }
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        return false;
     }
 
     /// <summary>
@@ -184,24 +264,19 @@ public sealed class ConversationRepository : IConversationRepository
 
     public async Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default)
     {
-        var existing = await _context.ConversationReadStates
-            .FirstOrDefaultAsync(s => s.ConversationId == conversationId && s.UserId == userId, cancellationToken);
-
-        if (existing is null)
-        {
-            _context.ConversationReadStates.Add(new ConversationReadState
+        await SaveReadStateAsync(
+            conversationId,
+            userId,
+            state =>
             {
-                ConversationId = conversationId,
-                UserId = userId,
-                LastReadAt = lastReadAt
-            });
-        }
-        else if (lastReadAt > existing.LastReadAt)
-        {
-            existing.LastReadAt = lastReadAt;
-        }
-
-        await _context.SaveChangesAsync(cancellationToken);
+                // Last read only ever moves forward, so a delayed request cannot un-read a
+                // thread that a later one already read.
+                if (lastReadAt > state.LastReadAt)
+                {
+                    state.LastReadAt = lastReadAt;
+                }
+            },
+            cancellationToken);
     }
 
     public async Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default)
