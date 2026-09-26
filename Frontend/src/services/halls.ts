@@ -16,7 +16,11 @@ import {
   isHallPubliclyUnavailable,
 } from "@/lib/hall-access";
 import { isHallLockedApiError } from "@/lib/hall-locked-error";
-import { resolveMediaUrl } from "@/lib/hall-media-url";
+import {
+  extractPhotoUrls,
+  firstMediaReference,
+  resolveMediaUrl,
+} from "@/lib/hall-media-url";
 import { mapDeleteHallResult } from "@/lib/owner-delete-hall";
 import { isSystemLockedApiError } from "@/lib/system-locked-error";
 import {
@@ -65,7 +69,10 @@ type ApiFeaturedHall = {
   id?: string;
   hallName?: string;
   name?: string;
+  /** List/featured DTOs (`FeaturedHallDto.MainImage`). */
   mainImage?: string | null;
+  /** Details DTO (`HallDetailsDto.MainImageUrl`) — cover, often not in photos. */
+  mainImageUrl?: string | null;
   imageUrl?: string;
   region?: string;
   address?: string;
@@ -88,6 +95,8 @@ type ApiFeaturedHall = {
   amenities?: string[];
   gallery?: string[];
   images?: string[];
+  /** Details DTO gallery (`HallDetailsDto.Photos`). */
+  photos?: Array<{ id?: string; url?: string | null }>;
   contactPhone?: string | null;
   ownerPhone?: string | null;
   isOwner?: boolean;
@@ -237,7 +246,10 @@ function mapApiHall(hall: ApiFeaturedHall, index: number): FeaturedHall {
   return {
     id: String(id),
     name,
-    imageUrl: resolveHallImage(hall.mainImage ?? hall.imageUrl, index),
+    imageUrl: resolveHallImage(
+      firstMediaReference(hall.mainImage, hall.mainImageUrl, hall.imageUrl),
+      index,
+    ),
     priceLabel:
       hall.priceLabel ??
       (hall.price != null ? `${hall.price} / يوم` : fallback.priceLabel),
@@ -360,7 +372,11 @@ function resolveGalleryImages(
   mainImage: string,
   index: number,
 ): string[] {
-  const raw = [...(hall.gallery ?? []), ...(hall.images ?? [])]
+  const raw = [
+    ...extractPhotoUrls(hall.photos),
+    ...(hall.gallery ?? []),
+    ...(hall.images ?? []),
+  ]
     .map((item) => item?.trim())
     .filter(Boolean) as string[];
 
@@ -368,6 +384,7 @@ function resolveGalleryImages(
     resolveHallImage(item, index + imageIndex),
   );
 
+  // Cover first — MainImageUrl is often absent from Photos[].
   const unique = Array.from(new Set([mainImage, ...resolved]));
   return unique.filter(Boolean);
 }
@@ -385,7 +402,16 @@ function isHallActive(hall: ApiFeaturedHall): boolean {
 function mapApiHallDetail(hall: ApiFeaturedHall, index: number): HallDetail {
   const id = String(hall.hallId ?? hall.id ?? "");
   const fallback = getHallDetailsFallback(id) ?? HALL_DETAILS_FALLBACK["1"];
-  const mainImageUrl = resolveHallImage(hall.mainImage ?? hall.imageUrl, index);
+  const photoUrls = extractPhotoUrls(hall.photos);
+  const mainImageUrl = resolveHallImage(
+    firstMediaReference(
+      hall.mainImage,
+      hall.mainImageUrl,
+      hall.imageUrl,
+      photoUrls[0],
+    ),
+    index,
+  );
   const availabilityDays =
     mapAvailabilityDays(hall.availability).length > 0
       ? mapAvailabilityDays(hall.availability)
@@ -790,16 +816,18 @@ function mapReviews(
 function mapApiHallDetails(raw: ApiHallDetails): HallDetails {
   const fallback = findHallDetailsFallback(String(raw.hallId ?? raw.id ?? ""));
   const id = String(raw.hallId ?? raw.id ?? fallback?.id ?? "");
-  const photosUrls =
-    raw.photos
-      ?.map((p) => p.url)
-      .filter((url): url is string => Boolean(url)) ?? [];
+  const photosUrls = extractPhotoUrls(raw.photos);
   const galleryRaw = [...photosUrls, ...(raw.images ?? []), ...(raw.gallery ?? [])];
   const gallery = galleryRaw
     .map((entry, index) => mapImageEntry(entry, index))
     .filter((url): url is string => Boolean(url));
   const main = resolveHallImage(
-    raw.mainImage ?? raw.mainImageUrl ?? raw.imageUrl ?? photosUrls[0] ?? null,
+    firstMediaReference(
+      raw.mainImage,
+      raw.mainImageUrl,
+      raw.imageUrl,
+      photosUrls[0],
+    ),
     0,
   );
   const images = Array.from(

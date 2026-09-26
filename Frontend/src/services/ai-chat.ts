@@ -1,6 +1,6 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
-import { resolveMediaUrl } from "@/lib/hall-media-url";
+import { firstMediaReference, resolveMediaUrl } from "@/lib/hall-media-url";
 import { isBrowserOffline } from "@/services/ai-assistant";
 import type {
   AiChatTextLang,
@@ -47,6 +47,9 @@ type AssistantHallDetailsDto = {
   price?: number | null;
   contactPhone?: string | null;
   status?: string | null;
+  /** HallDetailsDto.MainImageUrl — cover, often not duplicated in photos. */
+  mainImageUrl?: string | null;
+  mainImage?: string | null;
   photos?: { id?: string; url?: string }[] | null;
 };
 type AssistantAvailabilityPeriodDto = {
@@ -193,7 +196,13 @@ function mapHallDetails(details: AssistantHallDetailsDto | null | undefined): Ai
     address: readTrimmed(details.address),
     capacity: typeof details.capacity === "number" ? details.capacity : null,
     price: typeof details.price === "number" ? details.price : null,
-    mainImage: resolveMediaUrl(readTrimmed(details.photos?.[0]?.url) ?? ""),
+    mainImage: resolveMediaUrl(
+      firstMediaReference(
+        details.mainImageUrl,
+        details.mainImage,
+        details.photos?.[0]?.url,
+      ) ?? "",
+    ),
     isAvailable: details.status === "Approved",
     unavailableReason: null,
   };

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import WesalBrandLockup from "@/components/brand/WesalBrandLockup";
+import { useAddHallCta } from "@/hooks/useAddHallCta";
 import { useT } from "@/i18n";
 
 const QUICK_LINKS = [
@@ -15,7 +16,6 @@ const QUICK_LINKS = [
 const ACCOUNT_LINKS = [
   { href: "/register", labelKey: "nav.register" },
   { href: "/login", labelKey: "nav.login" },
-  { href: "/register?type=owner", labelKey: "footer.registerHall" },
 ] as const;
 
 const SUPPORT_LINKS = [
@@ -26,6 +26,7 @@ const SUPPORT_LINKS = [
 
 export default function Footer() {
   const t = useT();
+  const addHall = useAddHallCta();
 
   return (
     <footer className="wesal-footer relative isolate overflow-hidden border-t border-[var(--wesal-border)]">
@@ -52,7 +53,7 @@ export default function Footer() {
               <SocialLink href="https://www.facebook.com" label={t("footer.facebook")}>
                 <FacebookIcon />
               </SocialLink>
-              <SocialLink href="https://www.instagram.com" label={t("footer.instagram")}>
+              <SocialLink href="https://www.instagram.com/wesal_gaza/" label={t("footer.instagram")}>
                 <InstagramIcon />
               </SocialLink>
               <SocialLink href="https://wa.me/970595988398" label={t("footer.whatsapp")}>
@@ -94,6 +95,19 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link
+                  href={addHall.href}
+                  className="transition-colors hover:text-[var(--wesal-maroon)]"
+                  aria-disabled={!addHall.isReady || undefined}
+                  data-testid="footer-add-hall-cta"
+                  onClick={addHall.guardClick}
+                  onMouseEnter={addHall.prefetch}
+                  onFocus={addHall.prefetch}
+                >
+                  {t("footer.registerHall")}
+                </Link>
+              </li>
             </ul>
 
             <h3 className="mt-4 text-xs font-extrabold text-[var(--wesal-maroon)] sm:text-sm">

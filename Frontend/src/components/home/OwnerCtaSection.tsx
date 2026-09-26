@@ -5,11 +5,13 @@ import Image from "next/image";
 import LangDir from "@/components/layout/LangDir";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import Reveal from "@/components/ui/Reveal";
+import { useAddHallCta } from "@/hooks/useAddHallCta";
 import { useT } from "@/i18n";
 import { langToDir } from "@/lib/language";
 
 export default function OwnerCtaSection() {
   const t = useT();
+  const { href, isReady, guardClick, prefetch } = useAddHallCta();
 
   return (
     <section className="owner-cta relative isolate overflow-hidden py-16 sm:py-20">
@@ -30,7 +32,15 @@ export default function OwnerCtaSection() {
           </p>
 
           <div className="owner-cta-line mt-7 flex flex-wrap gap-3">
-            <Link href="/register?type=owner" className="btn-primary gap-2 px-6 py-3">
+            <Link
+              href={href}
+              className="btn-primary gap-2 px-6 py-3"
+              aria-disabled={!isReady || undefined}
+              data-testid="home-add-hall-cta"
+              onClick={guardClick}
+              onMouseEnter={prefetch}
+              onFocus={prefetch}
+            >
               {t("home.owner.ctaPrimary")}
             </Link>
             <Link href="/#benefits" className="btn-outline px-6 py-3">

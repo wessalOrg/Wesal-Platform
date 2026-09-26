@@ -6,6 +6,42 @@ export function apiMediaOrigin(): string {
 }
 
 /**
+ * First non-empty media reference from backend field candidates.
+ * Prefer cover fields (`mainImage` / `mainImageUrl`) before gallery photos —
+ * cover is often stored only on MainImageUrl and is NOT duplicated in Photos.
+ */
+export function firstMediaReference(
+  ...candidates: Array<string | null | undefined>
+): string | null {
+  for (const candidate of candidates) {
+    const value = candidate?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+/** Extract URL strings from backend photo/gallery entries (`{ url }` or plain string). */
+export function extractPhotoUrls(
+  photos:
+    | Array<{ url?: string | null } | string | null | undefined>
+    | null
+    | undefined,
+): string[] {
+  if (!photos?.length) return [];
+  const urls: string[] = [];
+  for (const entry of photos) {
+    if (typeof entry === "string") {
+      const value = entry.trim();
+      if (value) urls.push(value);
+      continue;
+    }
+    const value = entry?.url?.trim();
+    if (value) urls.push(value);
+  }
+  return urls;
+}
+
+/**
  * Resolves a persisted hall media URL into a browser-ready URL.
  *
  * The backend stores and returns hall image paths as API-relative URLs
