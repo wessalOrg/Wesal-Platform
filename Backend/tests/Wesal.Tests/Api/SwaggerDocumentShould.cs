@@ -28,6 +28,7 @@ public class SwaggerDocumentShould
     private const string AttachmentPath = "/api/v{version}/conversations/{conversationId}/messages/attachment";
     private const string CreateHallPath = "/api/v{version}/owner/halls";
     private const string IdentityDocumentPath = "/api/v{version}/owner/profile/identity-document";
+    private const string AcceptBookingPath = "/api/v{version}/halls/{hallId}/bookings/{bookingId}/accept";
     private const string ConfirmBookingPaymentPath = "/api/v{version}/halls/{hallId}/bookings/{bookingId}/payment/confirmed";
 
     /// <summary>
@@ -67,6 +68,23 @@ public class SwaggerDocumentShould
         var document = BuildDocument();
 
         Assert.Contains(ConfirmBookingPaymentPath, document.Paths.Keys);
+    }
+
+    [Fact]
+    public void AcceptBookingEndpoint_DeclaresItsDepositBodyAsRequired()
+    {
+        // WESAL-TASK-8 (Edit 8) made the deposit body mandatory. ASP.NET Core already rejects an
+        // empty body at runtime, but Swashbuckle only reports "required" when the parameter says
+        // so, and a spec that calls the body optional produces clients that get a surprise 400.
+        var document = BuildDocument();
+
+        var accept = document.Paths[AcceptBookingPath].Operations[OperationType.Post];
+
+        Assert.True(accept.RequestBody.Required);
+        Assert.Contains("application/json", accept.RequestBody.Content.Keys);
+
+        var bodySchema = accept.RequestBody.Content["application/json"].Schema;
+        Assert.Equal("AcceptBookingRequestDto", bodySchema.Reference?.Id);
     }
 
     [Fact]

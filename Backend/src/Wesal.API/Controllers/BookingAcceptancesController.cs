@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
@@ -55,7 +56,7 @@ public class BookingAcceptancesController : ControllerBase
     public async Task<ActionResult<AcceptBookingResultDto>> AcceptBooking(
         Guid hallId,
         Guid bookingId,
-        [FromBody] AcceptBookingRequestDto request,
+        [FromBody][BindRequired] AcceptBookingRequestDto request,
         CancellationToken cancellationToken)
     {
         var result = await _bookingAcceptanceService.AcceptBookingAsync(
