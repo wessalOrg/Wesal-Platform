@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import HallBookingDateList from "@/components/halls/HallBookingDateList";
 import HallBookingPeriodList from "@/components/halls/HallBookingPeriodList";
 import CreatedBookingCancelList from "@/components/bookings/CreatedBookingCancelList";
+import HallUnavailableDialog from "@/components/halls/HallUnavailableDialog";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { useBookingInteraction } from "@/hooks/useBookingInteraction";
 import { useBookingRequestForm } from "@/hooks/useBookingRequestForm";
@@ -23,6 +24,13 @@ type HallBookingPanelProps = {
   onClose: () => void;
   onSubmitted?: (result: BookingRequestResult) => void;
 };
+
+function isHallLockedBookingError(errorKey: string | null): boolean {
+  return (
+    errorKey === "halls.booking.blockedBody" ||
+    errorKey === "hall.unavailable.message"
+  );
+}
 
 export default function HallBookingPanel({
   open,
@@ -56,6 +64,10 @@ export default function HallBookingPanel({
     success: Boolean(form.success),
     errorKey: form.errorKey,
   });
+  const [dismissedLockedKey, setDismissedLockedKey] = useState<string | null>(null);
+  const hallLocked = isHallLockedBookingError(form.errorKey);
+  const lockedDialogOpen =
+    hallLocked && form.errorKey != null && form.errorKey !== dismissedLockedKey;
 
   useEffect(() => {
     if (!open) return;
@@ -82,11 +94,12 @@ export default function HallBookingPanel({
     })
     .map((period) => period.label);
 
-  const errorText = form.errorKey
-    ? form.errorKey.startsWith("errors.") || form.errorKey.startsWith("halls.")
-      ? t(form.errorKey)
-      : form.errorKey
-    : null;
+  const errorText =
+    form.errorKey && !hallLocked
+      ? form.errorKey.startsWith("errors.") || form.errorKey.startsWith("halls.")
+        ? t(form.errorKey)
+        : form.errorKey
+      : null;
 
   const footerHint =
     interaction.phase === "all_unavailable"
@@ -243,7 +256,7 @@ export default function HallBookingPanel({
                 <button
                   type="button"
                   onClick={() => void form.submit()}
-                  disabled={interaction.submitDisabled}
+                  disabled={interaction.submitDisabled || hallLocked}
                   className="btn-primary min-h-11 w-full disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-12"
                   aria-busy={form.submitting}
                   data-testid="hall-booking-confirm"
@@ -262,6 +275,16 @@ export default function HallBookingPanel({
           </div>
         </div>
       </div>
+      <HallUnavailableDialog
+        open={lockedDialogOpen}
+        title={t("halls.booking.blockedTitle")}
+        body={t("halls.booking.blockedBody")}
+        onClose={() => {
+          setDismissedLockedKey(form.errorKey);
+          onClose();
+        }}
+        testId="hall-booking-blocked-dialog"
+      />
     </div>
   );
 }

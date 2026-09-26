@@ -13,7 +13,8 @@ import HallInlineBookingSection, {
 } from "@/components/halls/HallInlineBookingSection";
 import HallQuickInfo from "@/components/halls/HallQuickInfo";
 import HallReviewsSection from "@/components/halls/HallReviewsSection";
-import HallUnavailableBanner from "@/components/halls/HallUnavailableBanner";
+import HallUnavailableDialog from "@/components/halls/HallUnavailableDialog";
+import HallUnavailableOverlay from "@/components/halls/HallUnavailableOverlay";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useBookButtonBehavior } from "@/hooks/useBookButtonBehavior";
 import { useHallAvailabilityInvalidation } from "@/hooks/useHallAvailabilityInvalidation";
@@ -47,6 +48,11 @@ const EMPTY_SELECTION: HallInlineBookingSelection = {
   errorText: null,
 };
 
+function isLockedBookingMessage(message: string | null, lockedCopy: string): boolean {
+  if (!message) return false;
+  return message === lockedCopy;
+}
+
 export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   const t = useT();
   const lang = useUiLang();
@@ -61,12 +67,16 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   const [reviews, setReviews] = useState<HallReview[]>([]);
   const [bookingSelection, setBookingSelection] =
     useState<HallInlineBookingSelection>(EMPTY_SELECTION);
+  const [dismissedBookingLockKey, setDismissedBookingLockKey] = useState<string | null>(
+    null,
+  );
   const bookIntentHandled = useRef(false);
 
   const [prevHallId, setPrevHallId] = useState(hallId);
   if (prevHallId !== hallId) {
     setPrevHallId(hallId);
     setBookingSelection(EMPTY_SELECTION);
+    setDismissedBookingLockKey(null);
   }
 
   const [prevReviewsScope, setPrevReviewsScope] = useState<string>(
@@ -82,6 +92,15 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   const { canBook, isGuest, authReady } = permissions;
   const shouldOpenBooking = hasBookingIntent(searchParams);
   const showBookingUi = Boolean(canBook && !unavailable && !isOwnHall);
+  const lockedBookingCopy = t("halls.booking.blockedBody");
+  const bookingLocked = isLockedBookingMessage(
+    bookingSelection.errorText,
+    lockedBookingCopy,
+  );
+  const bookingLockedOpen =
+    bookingLocked &&
+    bookingSelection.errorText != null &&
+    bookingSelection.errorText !== dismissedBookingLockKey;
 
   useEffect(() => {
     return () => resetBodyScrollLock();
@@ -183,6 +202,25 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
   }
 
   const viewHall = localizeHallDetail(hall, lang);
+
+  if (unavailable) {
+    return (
+      <div className="hall-details-page relative min-w-0 pb-12 sm:pb-16">
+        <div className="pointer-events-none select-none blur-[2px] opacity-55" aria-hidden="true">
+          <HallHeroGallery
+            images={viewHall.gallery}
+            hallName={viewHall.name}
+            description={viewHall.description}
+          />
+          <div className="mt-6">
+            <HallQuickInfo hall={viewHall} />
+          </div>
+        </div>
+        <HallUnavailableOverlay hallName={viewHall.name} />
+      </div>
+    );
+  }
+
   return (
     <div className="hall-details-page min-w-0 space-y-6 pb-12 sm:space-y-8 sm:pb-16">
       {usingFallback ? (
@@ -200,8 +238,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           </button>
         </div>
       ) : null}
-
-      {unavailable ? <HallUnavailableBanner hallName={viewHall.name} /> : null}
 
       <HallHeroGallery
         images={viewHall.gallery}
@@ -297,10 +333,10 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
                   }
                   handleBook();
                 }}
-                confirmDisabled={!bookingSelection.canConfirm}
+                confirmDisabled={!bookingSelection.canConfirm || bookingLocked}
                 confirmPending={bookingSelection.submitting}
                 confirmSuccess={bookingSelection.success}
-                confirmError={bookingSelection.errorText}
+                confirmError={bookingLocked ? null : bookingSelection.errorText}
                 disabled={unavailable}
                 bookPending={!authReady}
                 isGuest={isGuest}
@@ -327,10 +363,10 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
                 }
                 handleBook();
               }}
-              confirmDisabled={!bookingSelection.canConfirm}
+              confirmDisabled={!bookingSelection.canConfirm || bookingLocked}
               confirmPending={bookingSelection.submitting}
               confirmSuccess={bookingSelection.success}
-              confirmError={bookingSelection.errorText}
+              confirmError={bookingLocked ? null : bookingSelection.errorText}
               disabled={unavailable}
               bookPending={!authReady}
               isGuest={isGuest}
@@ -365,6 +401,14 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           }}
         />
       </div>
+
+      <HallUnavailableDialog
+        open={bookingLockedOpen}
+        title={t("halls.booking.blockedTitle")}
+        body={t("halls.booking.blockedBody")}
+        onClose={() => setDismissedBookingLockKey(bookingSelection.errorText)}
+        testId="hall-details-booking-blocked-dialog"
+      />
     </div>
   );
 }

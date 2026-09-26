@@ -1,6 +1,7 @@
 "use client";
 
 import SystemLockedState from "@/components/halls/SystemLockedState";
+import OwnerHallAdminLockedNotice from "@/components/halls/OwnerHallAdminLockedNotice";
 import { useT } from "@/i18n";
 import { hallLockedMessageKey, type BookingDataLockReason } from "@/lib/hall-access";
 
@@ -13,6 +14,10 @@ export default function HallLockedState({ reason }: HallLockedStateProps) {
 
   if (reason === "system") {
     return <SystemLockedState />;
+  }
+
+  if (reason === "admin") {
+    return <OwnerHallAdminLockedNotice />;
   }
 
   return (

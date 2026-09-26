@@ -11,7 +11,9 @@ import HallGallery from "@/components/halls/HallGallery";
 import HallCommentList from "@/components/halls/HallCommentList";
 import HallCommentPanel from "@/components/halls/HallCommentPanel";
 import HallGuestFeedbackPrompt from "@/components/halls/HallGuestFeedbackPrompt";
+import HallLockedBadge from "@/components/halls/HallLockedBadge";
 import HallRatingPanel from "@/components/halls/HallRatingPanel";
+import HallUnavailableDialog from "@/components/halls/HallUnavailableDialog";
 import { DEMO_HALL_REVIEWS, findHallDetailsFallback } from "@/constants/hallDetailsFallback";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useHallPermissions } from "@/hooks/useHallPermissions";
@@ -41,6 +43,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   const [warning, setWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingBlockedOpen, setBookingBlockedOpen] = useState(false);
   const { canBook, canContactOwner, isGuest, isOwnHall } = useHallPermissions(hall);
   const [prevCanBook, setPrevCanBook] = useState(canBook);
   if (prevCanBook !== canBook && !canBook) {
@@ -155,14 +158,32 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
 
   if (status === "unavailable") {
     return shell(
-      <StateCard
-        testId="hall-unavailable-state"
-        title={t("halls.details.unavailableTitle")}
-        description={message ?? t("halls.details.unavailableDesc")}
-        onClose={close}
-        closeLabel={t("common.close")}
-        backLabel={t("common.backToHalls")}
-      />,
+      <div
+        className="wesal-modal-scroll flex max-h-[100dvh] w-full flex-col items-center justify-center overflow-y-auto rounded-t-[1.75rem] bg-white px-5 py-10 text-center shadow-[0_24px_80px_rgba(60,35,30,0.18)] sm:max-h-[92dvh] sm:rounded-[1.75rem] sm:px-6"
+        data-testid="hall-unavailable-state"
+        role="status"
+      >
+        <span
+          className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#f8e9ea] text-[#c62828]"
+          aria-hidden="true"
+        >
+          <LockGlyph />
+        </span>
+        <h1 className="mt-3 text-xl font-extrabold text-[var(--wesal-text)] sm:text-2xl">
+          {t("halls.details.unavailableTitle")}
+        </h1>
+        <p className="mt-2 max-w-sm text-sm leading-7 text-[var(--wesal-muted)]">
+          {message ?? t("halls.details.unavailableDesc")}
+        </p>
+        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <button type="button" className="btn-primary !bg-[var(--wesal-maroon-dark)]" onClick={close}>
+            {t("common.ok")}
+          </button>
+          <Link href="/halls" className="btn-outline">
+            {t("common.backToHalls")}
+          </Link>
+        </div>
+      </div>,
     );
   }
 
@@ -208,13 +229,29 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
         </button>
 
         <div className="hidden h-full w-1/2 shrink-0 overflow-y-auto overscroll-contain bg-white p-6 lg:block">
-          <HallGallery hallName={viewHall.name} images={viewHall.images} />
+          <div className="relative">
+            {!viewHall.isAvailable ? (
+              <HallLockedBadge
+                variant="public"
+                className="absolute start-3 top-3 z-10"
+              />
+            ) : null}
+            <HallGallery hallName={viewHall.name} images={viewHall.images} />
+          </div>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:w-1/2 lg:min-w-0">
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="shrink-0 bg-white px-3 pb-2 pt-3 sm:px-5 sm:pt-5 lg:hidden">
-          <HallGallery hallName={viewHall.name} images={viewHall.images} />
+          <div className="relative">
+            {!viewHall.isAvailable ? (
+              <HallLockedBadge
+                variant="public"
+                className="absolute start-3 top-3 z-10"
+              />
+            ) : null}
+            <HallGallery hallName={viewHall.name} images={viewHall.images} />
+          </div>
         </div>
         <div className="px-4 pb-4 sm:px-6 lg:h-full lg:px-8 lg:pb-6 lg:pt-8">
           {warning ? (
@@ -369,19 +406,11 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             >
               {t("halls.details.ownerBanner")}
             </p>
-          ) : !viewHall.isAvailable ? (
-            <p
-              className="mt-6 rounded-2xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-start text-sm leading-7 text-[var(--wesal-muted)]"
-              data-testid="hall-actions-unavailable"
-              role="status"
-            >
-              {t("halls.details.unavailableActions")}
-            </p>
           ) : null}
         </div>
         </div>
 
-          {!isOwnHall && viewHall.isAvailable && (isGuest || canContactOwner || canBook) ? (
+          {!isOwnHall && (isGuest || canContactOwner || canBook) ? (
             <div
               className="shrink-0 border-t border-[var(--wesal-border)] bg-white px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8"
               data-testid="hall-actions"
@@ -390,13 +419,21 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                 <div className="flex gap-2 sm:gap-3">
                   <Link
                     href={`/login?redirect=/halls/${viewHall.id}&intent=book`}
-                    className="btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px]"
+                    className={`btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px] ${
+                      !viewHall.isAvailable ? "!opacity-50 pointer-events-none" : ""
+                    }`}
+                    aria-disabled={!viewHall.isAvailable || undefined}
+                    tabIndex={!viewHall.isAvailable ? -1 : undefined}
                   >
                     {t("nav.login")}
                   </Link>
                   <Link
                     href={`/register?redirect=/halls/${viewHall.id}&intent=book`}
-                    className="btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px]"
+                    className={`btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px] ${
+                      !viewHall.isAvailable ? "!opacity-50 pointer-events-none" : ""
+                    }`}
+                    aria-disabled={!viewHall.isAvailable || undefined}
+                    tabIndex={!viewHall.isAvailable ? -1 : undefined}
                   >
                     {t("nav.register")}
                   </Link>
@@ -416,9 +453,16 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                   {canBook ? (
                     <button
                       type="button"
-                      className="btn-primary min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:!min-h-12 sm:!text-[15px]"
+                      className={`btn-primary min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:!min-h-12 sm:!text-[15px] ${
+                        !viewHall.isAvailable ? "!opacity-50" : ""
+                      }`}
                       data-testid="hall-book-button"
+                      aria-disabled={!viewHall.isAvailable || undefined}
                       onClick={() => {
+                        if (!viewHall.isAvailable) {
+                          setBookingBlockedOpen(true);
+                          return;
+                        }
                         setBookingOpen(true);
                       }}
                     >
@@ -430,6 +474,13 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             </div>
           ) : null}
         </div>
+        <HallUnavailableDialog
+          open={bookingBlockedOpen}
+          title={t("halls.booking.blockedTitle")}
+          body={t("halls.booking.blockedBody")}
+          onClose={() => setBookingBlockedOpen(false)}
+          testId="hall-popup-booking-blocked-dialog"
+        />
       </article>,
     );
 }
@@ -520,6 +571,20 @@ function CloseIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LockGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden="true">
+      <rect x="6" y="10" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M8.5 10V8a3.5 3.5 0 0 1 7 0v2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

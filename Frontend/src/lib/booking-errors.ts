@@ -1,4 +1,6 @@
 import { ApiError } from "@/lib/api-error";
+import { isHallLockedApiError } from "@/lib/hall-locked-error";
+import { isSystemLockedApiError } from "@/lib/system-locked-error";
 import type { BookingErrorKind, BookingFieldErrors } from "@/types/booking";
 
 export class BookingError extends ApiError {
@@ -32,7 +34,13 @@ export function bookingMessageKey(kind: BookingErrorKind): string {
   if (kind === "not_found") return "errors.booking.notFound";
   if (kind === "conflict") return "errors.booking.conflict";
   if (kind === "validation") return "errors.booking.validation";
+  if (kind === "hall_locked") return "halls.booking.blockedBody";
   return "errors.booking.generic";
+}
+
+export function isBookingHallLockedError(error: unknown): boolean {
+  if (error instanceof BookingError) return error.kind === "hall_locked";
+  return isHallLockedApiError(error) || isSystemLockedApiError(error);
 }
 
 function firstErrorMessage(value: unknown): string | undefined {
@@ -76,6 +84,12 @@ function localizeBookingFieldMessage(message: string): string {
 export function toBookingError(err: unknown, fallback = "errors.booking.generic"): BookingError {
   if (err instanceof BookingError) return err;
   if (err instanceof ApiError) {
+    if (isHallLockedApiError(err) || isSystemLockedApiError(err)) {
+      return new BookingError("halls.booking.blockedBody", err.status, {
+        kind: "hall_locked",
+        details: err.details,
+      });
+    }
     const fields = fieldErrorsFromUnknown(err.details);
     const kind = kindFromStatus(err.status);
     const message =

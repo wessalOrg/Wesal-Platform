@@ -9,6 +9,7 @@ const en: MessageCatalog = {
   "brand.tagline":
     "Wedding hall booking in Gaza — search, compare, and book with confidence for a hall that fits your day.",
   "common.close": "Close",
+  "common.ok": "OK",
   "common.changesSaved": "Changes saved.",
   "common.yes": "Yes",
   "common.no": "No",
@@ -191,8 +192,8 @@ const en: MessageCatalog = {
   "halls.details.reviewsCount": "reviews",
   "halls.details.basedOn": "Based on {count} ratings",
   "halls.details.ratingAria": "Rating {rating} out of 5",
-  "halls.details.unavailableTitle": "Hall unavailable",
-  "halls.details.unavailableDesc": "This hall is not available to view right now.",
+  "halls.details.unavailableTitle": "This hall is currently unavailable",
+  "halls.details.unavailableDesc": "Unfortunately, this hall is currently unavailable",
   "halls.details.errorTitle": "Could not load",
   "halls.details.errorDesc": "Something went wrong while loading hall details.",
   "halls.details.notFound": "The requested hall was not found.",
@@ -202,7 +203,7 @@ const en: MessageCatalog = {
   "halls.details.ownerBanner":
     "You own this hall — contact and booking actions are hidden on your own listing.",
   "halls.details.unavailableActions":
-    "This hall is unavailable or locked, so contact and booking are disabled.",
+    "Unfortunately, this hall is currently unavailable",
   "halls.details.guestBookingHint":
     "Create an account or log in to pick a booking date and period. Tapping “Book” will take you to registration and keep this hall saved.",
   "halls.details.bookNow": "Book now",
@@ -230,7 +231,15 @@ const en: MessageCatalog = {
   "halls.contact.guestHint": "To contact the owner, log in or",
   "halls.contact.createAccount": "create an account",
   "halls.contact.unavailable":
-    "This hall is unavailable or locked, so a conversation cannot be started.",
+    "Unfortunately, this hall is currently unavailable",
+  "halls.contact.blockedTitle": "Cannot start the conversation",
+  "halls.contact.blockedBody":
+    "Unfortunately, this hall is currently unavailable, so messages cannot be sent to it.",
+  "halls.booking.blockedTitle": "Cannot complete the booking",
+  "halls.booking.blockedBody": "Unfortunately, this hall is currently unavailable",
+  "hall.locked.badge.public": "Currently unavailable",
+  "hall.locked.badge.owner": "Locked",
+  "hall.unavailable.message": "Unfortunately, this hall is currently unavailable",
   "halls.contact.restricted":
     "Your account is not allowed to message hall owners.",
   "halls.contact.opening": "Opening conversation…",
@@ -1476,7 +1485,10 @@ const en: MessageCatalog = {
   "admin.subscriptions.errors.network": "Could not reach the server. Check your connection and try again.",
   "owner.hallAccess.locked.title": "Access restricted",
   "owner.hallAccess.locked.admin":
-    "This hall is currently locked by the administration. Booking, calendar, and messaging data are unavailable until the lock is removed.",
+    "This hall has been closed by the administration, so you cannot manage or edit its data.",
+  "owner.hallAccess.adminLocked.title": "You cannot manage this hall right now",
+  "owner.hallAccess.adminLocked.body":
+    "This hall has been closed by the administration, so you cannot manage or edit its data.",
   "owner.hallAccess.locked.system":
     "Access to hall management has been temporarily restricted because the subscription cycle ended and payment for the next cycle has not been confirmed.",
   "owner.hallAccess.locked.both":

@@ -14,6 +14,7 @@ import { ApiError } from "@/lib/api-error";
 
 const SYSTEM_LOCKED_CODES = new Set([
   "systemlocked",
+  "hallsystemlocked",
   "subscriptionexpired",
   "subscriptioncycleended",
   "cycleended",
@@ -68,7 +69,9 @@ export function isSystemLockedApiError(error: unknown): boolean {
   const nested = extensionCode(error);
   if (nested && SYSTEM_LOCKED_CODES.has(nested)) return true;
 
-  if (error.status !== 403) return false;
+  // Backend system-lock denials are BusinessRuleException → 422 (HallSystemLocked).
+  // Keep 403 text heuristics for older payloads.
+  if (error.status !== 403 && error.status !== 422) return false;
 
   const blob = blobFromApiError(error);
   return SYSTEM_LOCKED_HINTS.some((hint) => blob.includes(hint));

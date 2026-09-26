@@ -80,4 +80,5 @@ export type HallDetailsLoadStatus =
   | "ready"
   | "error"
   | "payment_required"
-  | "system_locked";
+  | "system_locked"
+  | "admin_locked";

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
+import HallLockedBadge from "@/components/halls/HallLockedBadge";
+import OwnerHallAdminLockedNotice from "@/components/halls/OwnerHallAdminLockedNotice";
 import PaymentStatusBadge from "@/components/halls/PaymentStatusBadge";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
 import { useAddHallInitiation } from "@/hooks/useAddHallInitiation";
@@ -111,33 +113,61 @@ export default function OwnerHallsPage() {
         <ul className="seeker-home-booking-list" data-testid="owner-halls-page-list">
           {halls.map((hall) => {
             const name = localizeHallName(hall.id, hall.name, lang);
+            const adminLocked = hall.adminLocked;
             return (
             <li key={hall.id} className="seeker-home-booking-row">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-semibold text-[var(--wesal-text)]">{name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-[var(--wesal-text)]">{name}</p>
+                    {adminLocked ? <HallLockedBadge variant="owner" /> : null}
+                  </div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <HallApprovalStatusBadge status={hall.status} />
                     <PaymentStatusBadge status={hall.paymentStatus} />
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={ownerHallPath(hall.id)}
-                    className="seeker-home-soft-btn"
-                    prefetch
-                  >
-                    {t("owner.hallsPage.manage")}
-                  </Link>
-                  <Link
-                    href={ownerHallNotificationsPath(hall.id)}
-                    className="seeker-home-soft-btn"
-                    prefetch
-                  >
-                    {t("owner.hallsPage.requests")}
-                  </Link>
+                  {adminLocked ? (
+                    <>
+                      <span
+                        className="seeker-home-soft-btn pointer-events-none opacity-50"
+                        aria-disabled="true"
+                      >
+                        {t("owner.hallsPage.manage")}
+                      </span>
+                      <span
+                        className="seeker-home-soft-btn pointer-events-none opacity-50"
+                        aria-disabled="true"
+                      >
+                        {t("owner.hallsPage.requests")}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href={ownerHallPath(hall.id)}
+                        className="seeker-home-soft-btn"
+                        prefetch
+                      >
+                        {t("owner.hallsPage.manage")}
+                      </Link>
+                      <Link
+                        href={ownerHallNotificationsPath(hall.id)}
+                        className="seeker-home-soft-btn"
+                        prefetch
+                      >
+                        {t("owner.hallsPage.requests")}
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
+              {adminLocked ? (
+                <div className="mt-3">
+                  <OwnerHallAdminLockedNotice />
+                </div>
+              ) : null}
             </li>
             );
           })}

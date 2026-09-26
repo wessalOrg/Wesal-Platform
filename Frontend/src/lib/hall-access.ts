@@ -198,6 +198,19 @@ export function canAccessDashboard(access: HallAccessState): boolean {
   return getManagementAccess(access).allowed;
 }
 
+/** Public seeker actions (book / contact) are blocked by Admin or System lock only. */
+export function canBookHall(access: HallAccessState): boolean {
+  return !access.adminLocked && !access.systemLocked;
+}
+
+export function canMessageHall(access: HallAccessState): boolean {
+  return canBookHall(access);
+}
+
+export function isHallPubliclyUnavailable(access: HallAccessState): boolean {
+  return access.adminLocked || access.systemLocked;
+}
+
 export function bookingDataLockReason(access: HallAccessState): BookingDataLockReason | null {
   const result = getManagementAccess(access);
   if (result.allowed) return null;

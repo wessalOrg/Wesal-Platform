@@ -84,6 +84,16 @@ export function applyOwnedHallSystemLocked(hallId: string): void {
   });
 }
 
+export function applyOwnedHallAdminLocked(hallId: string): void {
+  const id = hallId.trim();
+  if (!id) return;
+  setSnapshot({
+    halls: snapshot.halls.map((hall) =>
+      hall.id === id ? { ...hall, adminLocked: true } : hall,
+    ),
+  });
+}
+
 export function reportOwnedHallPaymentRequired(hallId: string): void {
   applyOwnedHallPaymentStatus(hallId, "Unpaid");
   notifyHallOwnerHallsChanged();
@@ -91,6 +101,11 @@ export function reportOwnedHallPaymentRequired(hallId: string): void {
 
 export function reportOwnedHallSystemLocked(hallId: string): void {
   applyOwnedHallSystemLocked(hallId);
+  notifyHallOwnerHallsChanged();
+}
+
+export function reportOwnedHallAdminLocked(hallId: string): void {
+  applyOwnedHallAdminLocked(hallId);
   notifyHallOwnerHallsChanged();
 }
 

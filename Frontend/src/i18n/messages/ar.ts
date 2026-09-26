@@ -6,6 +6,7 @@ const ar: MessageCatalog = {
   "brand.tagline":
     "منصة حجز قاعات الأفراح في غزة — ابحث، قارن، واحجز بثقة لتبدأ مناسبتك من مكان يليق بها.",
   "common.close": "إغلاق",
+  "common.ok": "حسناً",
   "common.changesSaved": "تم حفظ التغييرات.",
   "common.yes": "نعم",
   "common.no": "لا",
@@ -131,7 +132,7 @@ const ar: MessageCatalog = {
   "halls.catalog.loading": "جاري تحميل القاعات…",
   "halls.catalog.updating": "جاري تحديث النتائج…",
   "halls.catalog.name": "الاسم",
-  "halls.catalog.namePlaceholder": "اسم الصالة",
+  "halls.catalog.namePlaceholder": "اسم القاعة",
   "halls.catalog.area": "الحي / المنطقة",
   "halls.catalog.areaPlaceholder": "الرمال، النصر…",
   "halls.catalog.date": "التاريخ",
@@ -149,7 +150,7 @@ const ar: MessageCatalog = {
   "halls.catalog.sortTop": "الأعلى تقييماً",
   "halls.catalog.sortOpen": "صالات مفتوحة",
   "halls.catalog.sortClosed": "قاعات مغلقة",
-  "halls.catalog.found": "تم العثور على {count} صالة",
+  "halls.catalog.found": "تم العثور على {count} قاعة",
   "halls.catalog.empty": "لا توجد قاعات مطابقة لبحثك حالياً.",
   "halls.catalog.emptyApproved": "لا توجد قاعات معتمدة حالياً.",
   "halls.catalog.emptyPastHint":
@@ -188,8 +189,8 @@ const ar: MessageCatalog = {
   "halls.details.reviewsCount": "تقييم",
   "halls.details.basedOn": "بناءً على {count} تقييم",
   "halls.details.ratingAria": "التقييم {rating} من 5",
-  "halls.details.unavailableTitle": "القاعة غير متاحة",
-  "halls.details.unavailableDesc": "هذه القاعة غير متاحة للعرض حاليًا.",
+  "halls.details.unavailableTitle": "هذه القاعة غير متاحة حالياً",
+  "halls.details.unavailableDesc": "للأسف، هذه القاعة غير متاحة حالياً",
   "halls.details.errorTitle": "تعذر التحميل",
   "halls.details.errorDesc": "حدث خطأ أثناء تحميل تفاصيل القاعة.",
   "halls.details.notFound": "لم يتم العثور على القاعة المطلوبة.",
@@ -199,14 +200,14 @@ const ar: MessageCatalog = {
   "halls.details.ownerBanner":
     "هذا الحساب يملك هذه القاعة — لا يظهر زر التواصل أو الحجز عليها.",
   "halls.details.unavailableActions":
-    "هذه القاعة غير متاحة أو مقفلة حالياً، لذلك تم إيقاف التواصل والحجز.",
+    "للأسف، هذه القاعة غير متاحة حالياً",
   "halls.details.guestBookingHint":
     "يرجى إنشاء حساب أو تسجيل الدخول لاختيار تاريخ الحجز والفترة. عند الضغط على «اضغط للحجز» يتم التوجيه لصفحة التسجيل مع حفظ هذه القاعة.",
   "halls.details.bookNow": "احجز الآن",
   "halls.details.slotPrices": "أسعار الفترات",
   "halls.details.pressToBook": "اضغط للحجز",
   "halls.details.confirmBooking": "تأكيد الحجز",
-  "halls.details.contactOwner": "تواصل مع صاحب الصالة",
+  "halls.details.contactOwner": "تواصل مع صاحب القاعة",
   "halls.details.whatsappOwner": "تواصل معنا واتساب",
   "halls.details.bookingSummary": "ملخص الحجز",
   "halls.details.summaryDetails": "تفاصيل الحجز",
@@ -227,7 +228,15 @@ const ar: MessageCatalog = {
   "halls.contact.guestHint": "للتواصل يرجى تسجيل الدخول أو",
   "halls.contact.createAccount": "إنشاء حساب",
   "halls.contact.unavailable":
-    "القاعة غير متاحة أو مقفلة حالياً، ولا يمكن بدء محادثة.",
+    "للأسف، هذه القاعة غير متاحة حالياً",
+  "halls.contact.blockedTitle": "لا يمكن بدء المحادثة",
+  "halls.contact.blockedBody":
+    "للأسف، هذه القاعة غير متاحة حالياً، لذلك لا يمكن إرسال رسائل إليها.",
+  "halls.booking.blockedTitle": "لا يمكن إتمام الحجز",
+  "halls.booking.blockedBody": "للأسف، هذه القاعة غير متاحة حالياً",
+  "hall.locked.badge.public": "غير متاحة حالياً",
+  "hall.locked.badge.owner": "مقفلة",
+  "hall.unavailable.message": "للأسف، هذه القاعة غير متاحة حالياً",
   "halls.contact.restricted":
     "حسابك الحالي لا يسمح بمراسلة أصحاب القاعات.",
   "halls.contact.opening": "جاري فتح المحادثة…",
@@ -1421,7 +1430,10 @@ const ar: MessageCatalog = {
   "admin.subscriptions.errors.network": "تعذر الاتصال بالخادم. تحقق من الشبكة وحاول مرة أخرى.",
   "owner.hallAccess.locked.title": "الوصول مقيّد",
   "owner.hallAccess.locked.admin":
-    "هذه القاعة مقفلة حالياً من الإدارة. بيانات الحجز والتقويم والرسائل غير متاحة حتى يُرفع القفل.",
+    "تم إغلاق هذه القاعة من قبل الإدارة، لذلك لا يمكنك الدخول إلى إدارة بياناتها أو تعديلها.",
+  "owner.hallAccess.adminLocked.title": "لا يمكنك إدارة هذه القاعة حالياً",
+  "owner.hallAccess.adminLocked.body":
+    "تم إغلاق هذه القاعة من قبل الإدارة، لذلك لا يمكنك الدخول إلى إدارة بياناتها أو تعديلها.",
   "owner.hallAccess.locked.system":
     "تم تقييد الوصول إلى إدارة القاعة مؤقتاً لأن دورة الاشتراك انتهت ولم يُؤكَّد الدفع للدورة التالية.",
   "owner.hallAccess.locked.both":
