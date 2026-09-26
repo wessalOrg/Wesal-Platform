@@ -32,9 +32,28 @@ public class ConversationsController : ControllerBase
         return CreatedAtAction(nameof(GetConversation), new { version = "1", conversationId = response.ConversationId }, response);
     }
 
-    [HttpGet("api/v{version:apiVersion}/conversations/{conversationId:guid}")]
+    /// <summary>
+    /// General-purpose "Contact Admin" entry point for a Hall Owner (WESAL-TASK-11,
+    /// Edit 11). Resolves the owner's own owner/Admin thread for this hall, creating it if
+    /// it does not exist yet, so it is independent of the payment-notice trigger while
+    /// still landing in the exact same conversation the Admins reply in.
+    /// </summary>
+    [HttpPost("api/v{version:apiVersion}/halls/{hallId:guid}/conversations/contact-admin")]
     [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
-    [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ConversationResponse>> ContactAdmin(
+        Guid hallId,
+        CancellationToken cancellationToken)
+    {
+        var response = await _conversationService.ContactAdminAsync(hallId, cancellationToken);
+        return CreatedAtAction(nameof(GetConversation), new { version = "1", conversationId = response.ConversationId }, response);
+    }
+
+    [HttpGet("api/v{version:apiVersion}/conversations/{conversationId:guid}")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]    [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

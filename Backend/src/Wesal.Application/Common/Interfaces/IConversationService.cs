@@ -20,6 +20,23 @@ public interface IConversationService
 {
     Task<ConversationResponse> CreateConversationAsync(Guid hallId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Opens (or resolves) the Hall Owner's own owner/Admin thread for one of their halls
+    /// (WESAL-TASK-11, Edit 11).
+    ///
+    /// This is a general-purpose entry point, deliberately independent of the
+    /// payment-notice trigger: before it, the thread only came into existence as a side
+    /// effect of an Admin action, so an owner who had not yet received any notice had
+    /// nothing to open. It reuses Edit 4's deterministic (HallId, HallOwnerId) resolution
+    /// so the thread is always the SAME one the payment notice and every other Admin
+    /// message use, never a second parallel conversation.
+    ///
+    /// Only the owner of the hall may call this. Edit 4's unpaid carve-out still applies:
+    /// an Approved-but-unpaid owner can reach the Admin, because that thread is exactly
+    /// where the subscription is settled. A locked hall is still refused.
+    /// </summary>
+    Task<ConversationResponse> ContactAdminAsync(Guid hallId, CancellationToken cancellationToken = default);
+
     Task<ConversationResponse> GetConversationAsync(Guid conversationId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ConversationSummaryResponse>> GetMyConversationsAsync(CancellationToken cancellationToken = default);

@@ -80,10 +80,68 @@ public sealed class ConversationService : IConversationService
         return MapToResponse(conversation, hall.Name, isExisting: false);
     }
 
-    public async Task<ConversationResponse> GetConversationAsync(
-        Guid conversationId,
+    /// <inheritdoc />
+    public async Task<ConversationResponse> ContactAdminAsync(
+        Guid hallId,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        EnsureAuthenticated();
+        EnsureRegisteredUserOrHallOwner();
+
+        var hall = await _hallRepository.GetHallByIdAsync(hallId, cancellationToken);
+
+        if (hall is null || hall.IsDeleted)
+        {
+            throw new NotFoundException(nameof(Hall), hallId);
+        }
+
+        var ownerId = _currentUser.UserId!;
+
+        // Edit 11: only the owner of THIS hall may open its owner/Admin thread. Without
+        // this any authenticated user could mint an owner/Admin thread for a hall they do
+        // not own and then post into it.
+        if (!string.Equals(ownerId, hall.OwnerId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ForbiddenException("Only the hall owner can open the conversation with the platform support.");
+        }
+
+        // Edit 4's deterministic (HallId, HallOwnerId) resolution, reused verbatim so a
+        // "Contact Admin" click can never fork a second thread away from the one the
+        // payment notice and every other Admin message already use.
+        var existing = await _conversationRepository.GetByHallForOwnerAsync(hallId, ownerId, cancellationToken);
+
+        if (existing is not null)
+        {
+            return MapToResponse(existing, hall.Name, isExisting: true);
+        }
+
+        // No Admin is logged in on the owner's side, yet the new thread still has to land
+        // in a real Admin's conversation list, so resolve a stable Admin id for the
+        // counterparty slot. Falls back to the same sentinel the Admin-side services use.
+        var adminUserId = await _conversationRepository.GetAdminUserIdAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(adminUserId))
+        {
+            adminUserId = "admin";
+        }
+
+        var conversation = new Conversation
+        {
+            HallId = hallId,
+            SenderUserId = adminUserId,
+            HallOwnerId = ownerId
+        };
+
+        await _conversationRepository.AddAsync(conversation, cancellationToken);
+
+        return MapToResponse(conversation, hall.Name, isExisting: false);
+    }
+
+    public async Task<ConversationResponse> GetConversationAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken = default)    {
         cancellationToken.ThrowIfCancellationRequested();
 
         EnsureAuthenticated();

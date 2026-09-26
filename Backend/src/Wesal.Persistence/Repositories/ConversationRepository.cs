@@ -1,7 +1,9 @@
 using System.Linq.Expressions;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Persistence.Data;
 
@@ -20,6 +22,31 @@ public sealed class ConversationRepository : IConversationRepository
     {
         await _context.Conversations.AddAsync(conversation, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Picks a stable Admin id for the counterparty slot of an owner/Admin thread
+    /// (WESAL-TASK-11, Edit 11). Ordered by id so repeated calls always agree on the same
+    /// Admin rather than racing between several, mirroring the deterministic tie-break
+    /// already used by <see cref="GetByHallForOwnerAsync"/>.
+    /// </summary>
+    public async Task<string?> GetAdminUserIdAsync(CancellationToken cancellationToken = default)
+    {
+        var adminRoleId = await _context.Roles
+            .Where(role => role.Name == ApplicationRoles.Admin)
+            .Select(role => (string?)role.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (adminRoleId is null)
+        {
+            return null;
+        }
+
+        return await _context.UserRoles
+            .Where(userRole => userRole.RoleId == adminRoleId)
+            .OrderBy(userRole => userRole.UserId)
+            .Select(userRole => (string?)userRole.UserId)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <summary>

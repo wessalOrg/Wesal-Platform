@@ -553,6 +553,100 @@ public class ConversationServiceShould
         await Assert.ThrowsAsync<NotFoundException>(() => service.HideConversationAsync(created.ConversationId));
     }
 
+    /// <summary>
+    /// WESAL-TASK-11 (Edit 11): a Hall Owner needs a general-purpose "contact Admin"
+    /// entry point that is independent of the payment-notice trigger. Before this, the
+    /// owner/Admin thread only ever came into existence as a side effect of an Admin
+    /// action (approval, rejection, subscription, expiry), so an owner who had not yet
+    /// received any notice had no thread to open at all.
+    /// </summary>
+    [Fact]
+    public async Task ContactAdmin_Owner_CreatesTheOwnerAdminThread()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var result = await service.ContactAdminAsync(hall.Id);
+
+        Assert.Equal(hall.Id, result.HallId);
+        Assert.Equal("owner-1", result.OwnerUserId);
+        Assert.False(result.IsExisting);
+
+        var conversation = Assert.Single(repository.Conversations);
+        Assert.Equal(hall.Id, conversation.HallId);
+        Assert.Equal("owner-1", conversation.HallOwnerId);
+        // The counterparty slot must be a real Admin so the thread lands in an Admin's
+        // conversation list, rather than the owner being treated as the Admin side.
+        Assert.Equal("admin-1", conversation.SenderUserId);
+    }
+
+    /// <summary>
+    /// WESAL-TASK-11 (Edit 11): the whole point of the action is that it resolves to the
+    /// SAME deterministic thread the payment notice uses, so a "Contact Admin" click can
+    /// never fork a second conversation away from the one the Admin is replying in.
+    /// </summary>
+    [Fact]
+    public async Task ContactAdmin_ResolvesToTheExistingOwnerAdminThreadInsteadOfCreatingASecondOne()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var existing = new Conversation
+        {
+            Id = Guid.NewGuid(),
+            HallId = hall.Id,
+            HallOwnerId = "owner-1",
+            SenderUserId = "admin-7"
+        };
+        repository.Conversations.Add(existing);
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var result = await service.ContactAdminAsync(hall.Id);
+
+        Assert.Equal(existing.Id, result.ConversationId);
+        Assert.True(result.IsExisting);
+        Assert.Single(repository.Conversations);
+    }
+
+    /// <summary>
+    /// WESAL-TASK-11 (Edit 11): only the owner of the hall may open that hall's
+    /// owner/Admin thread. Without this, any authenticated user could mint (and then
+    /// post into) an owner/Admin thread for a hall they do not own.
+    /// </summary>
+    [Fact]
+    public async Task ContactAdmin_NonOwner_ThrowsForbidden()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "someone-else", roles: [ApplicationRoles.HallOwner]);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.ContactAdminAsync(hall.Id));
+        Assert.Empty(repository.Conversations);
+    }
+
+    /// <summary>
+    /// WESAL-TASK-11 (Edit 11): Edit 4's unpaid carve-out must keep working through the
+    /// new entry point. An owner whose hall is Approved but unpaid still has to be able
+    /// to reach the Admin, since that thread is where payment is discussed.
+    /// </summary>
+    [Fact]
+    public async Task ContactAdmin_ApprovedButUnpaidHall_StillResolves()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        hall.PaymentStatus = HallPaymentStatus.Unpaid;
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var result = await service.ContactAdminAsync(hall.Id);
+
+        Assert.Equal(hall.Id, result.HallId);
+        Assert.Single(repository.Conversations);
+    }
+
     private static Hall CreateApprovedHall(string name, string ownerId)
         => new()
         {
@@ -588,6 +682,18 @@ public class ConversationServiceShould
         public Task<Conversation?> GetByHallAndUserAsync(Guid hallId, string userId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Conversations.FirstOrDefault(c => c.HallId == hallId && c.SenderUserId == userId));
+        }
+
+        public Task<Conversation?> GetByHallForOwnerAsync(Guid hallId, string ownerId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Conversations.FirstOrDefault(c => c.HallId == hallId && c.HallOwnerId == ownerId));
+        }
+
+        public string? AdminUserId { get; set; } = "admin-1";
+
+        public Task<string?> GetAdminUserIdAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(AdminUserId);
         }
 
         public Task<Conversation?> GetByIdWithHallAsync(Guid conversationId, CancellationToken cancellationToken = default)

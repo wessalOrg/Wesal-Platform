@@ -14,6 +14,20 @@ public interface IConversationRepository
         return Task.FromResult<Conversation?>(null);
     }
 
+    /// <summary>
+    /// Resolves the id of a user holding the Admin role, used to fill the Admin
+    /// counterparty slot of an owner/Admin thread (WESAL-TASK-11, Edit 11).
+    ///
+    /// Admin-side services never need this: the acting Admin supplies their own id. It is
+    /// only needed when the OWNER opens the thread from their side, where no Admin is
+    /// logged in, yet the thread still has to land in a real Admin's conversation list.
+    /// Returns null when no Admin account exists.
+    /// </summary>
+    Task<string?> GetAdminUserIdAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<string?>(null);
+    }
+
     Task<Conversation?> GetByIdWithHallAsync(Guid conversationId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(
