@@ -282,8 +282,8 @@ public class OwnerController : ControllerBase
         [FromForm] string? OtherFeatures,
         [FromForm] TimeOnly? HourlySlotStart,
         [FromForm] TimeOnly? HourlySlotEnd,
-        [FromForm] IFormFile? MainPhoto,
-        [FromForm] IFormFile[]? Photos,
+        IFormFile? MainPhoto,
+        IFormFile[]? Photos,
         CancellationToken cancellationToken)
     {
         var photoUploads = Photos == null ? null : await Task.WhenAll(Photos.Select(async p =>
@@ -361,7 +361,7 @@ public class OwnerController : ControllerBase
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<IdentityDocumentUploadResult>> UploadIdentityDocument(
-        [FromForm] IFormFile file,
+        IFormFile file,
         CancellationToken cancellationToken)
     {
         using var ms = new MemoryStream();

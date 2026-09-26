@@ -112,7 +112,7 @@ public class ConversationsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SendMessageResponse>> SendAttachmentMessage(
         Guid conversationId,
-        [FromForm] IFormFile file,
+        IFormFile file,
         [FromForm] string? content,
         [FromForm] string? clientRequestId,
         CancellationToken cancellationToken)
