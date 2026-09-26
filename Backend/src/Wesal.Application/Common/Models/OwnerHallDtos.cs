@@ -25,6 +25,12 @@ public class OwnerHallDto
     /// WESAL-TASK-4 (Edit 4) removed the old ReceiptUploaded state.
     /// </summary>
     public HallPaymentStatus PaymentStatus { get; init; }
+
+    /// <summary>Manual Admin lock (FR-SUB-05 / Edit 16). Independent of SystemLocked.</summary>
+    public bool AdminLocked { get; init; }
+
+    /// <summary>Automatic subscription-cycle lock (FR-SUB-03). Independent of AdminLocked.</summary>
+    public bool SystemLocked { get; init; }
 }
 
 /// <summary>
@@ -83,6 +89,12 @@ public class OwnerHallDetailsDto
     /// Live subscription payment state of the hall (see <see cref="OwnerHallDto.PaymentStatus"/>).
     /// </summary>
     public HallPaymentStatus PaymentStatus { get; init; }
+
+    /// <summary>Manual Admin lock (FR-SUB-05 / Edit 16). Independent of SystemLocked.</summary>
+    public bool AdminLocked { get; init; }
+
+    /// <summary>Automatic subscription-cycle lock (FR-SUB-03). Independent of AdminLocked.</summary>
+    public bool SystemLocked { get; init; }
 
     public IReadOnlyList<OwnerHallPhotoDto> Photos { get; init; } = [];
 }

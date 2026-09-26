@@ -42,6 +42,8 @@ export type FeaturedHall = {
   bookedPeriodsSummary?: string | null;
   /** Day + 2 periods with Booked/Available — shown in popup */
   availabilityDays?: HallAvailabilityDay[];
+  /** Public lock / soft-delete flag when API still returns the card. */
+  isAvailable?: boolean;
 };
 
 export type HallAmenity = {

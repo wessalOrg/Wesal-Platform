@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { GoldStar } from "@/components/ui/GoldStar";
+import HallLockedBadge from "@/components/halls/HallLockedBadge";
 import HallMedia from "@/components/halls/HallMedia";
 import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useUiLang } from "@/components/layout/LanguageProvider";
@@ -35,6 +36,7 @@ export default function CatalogHallCard({
   const lang = useUiLang();
   const permissions = useHallPermissions();
   const bookHref = catalogBookHref(hall.id, permissions);
+  const hallUnavailable = hall.isAvailable === false;
   const name = localizeHallName(hall.id, hall.name, lang);
   const location = localizeLocation(hall.location, lang);
   const priceLabel = localizePriceLabel(hall.priceLabel, lang);
@@ -80,6 +82,12 @@ export default function CatalogHallCard({
             priority={index < 2}
           />
         </button>
+        {hallUnavailable ? (
+          <HallLockedBadge
+            variant="public"
+            className="absolute start-3 top-3 z-10"
+          />
+        ) : null}
         {priceLabel ? (
           <span className="hall-price-badge absolute bottom-3 start-3 z-10">
             {formatPriceLabel(priceLabel)}
@@ -146,7 +154,7 @@ export default function CatalogHallCard({
               </span>
             ))}
           </div>
-          {showBookButton && bookHref ? (
+          {showBookButton && bookHref && !hallUnavailable ? (
             <Link
               href={bookHref}
               className="btn-primary !min-h-9 shrink-0 !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b]"
@@ -154,6 +162,16 @@ export default function CatalogHallCard({
             >
               {t("halls.catalog.bookNow")}
             </Link>
+          ) : null}
+          {showBookButton && hallUnavailable ? (
+            <button
+              type="button"
+              className="btn-primary !min-h-9 shrink-0 !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] !opacity-50"
+              disabled
+              aria-disabled="true"
+            >
+              {t("halls.catalog.bookNow")}
+            </button>
           ) : null}
         </div>
       </div>

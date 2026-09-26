@@ -47,6 +47,7 @@ export type BookingErrorKind =
   | "conflict"
   | "validation"
   | "not_found"
+  | "hall_locked"
   | "generic";
 
 export type BookingFieldErrors = {

@@ -2,11 +2,14 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import HallUnavailableDialog from "@/components/halls/HallUnavailableDialog";
 import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useProtectedHallError } from "@/hooks/useProtectedHallError";
 import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useT } from "@/i18n";
 import { isUnauthorizedApiError } from "@/lib/api-error";
+import { isHallLockedApiError } from "@/lib/hall-locked-error";
+import { isSystemLockedApiError } from "@/lib/system-locked-error";
 import {
   conversationErrorMessage,
   createHallConversation,
@@ -35,12 +38,15 @@ export default function HallContactButton({
   const inbox = useOptionalMessagesInbox();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blockedOpen, setBlockedOpen] = useState(false);
   const inFlight = useRef(false);
 
   const loginHref = `/login?redirect=/halls/${hallId}&intent=contact`;
 
   async function startConversation() {
-    if (!isAvailable || !canContactOwner || inFlight.current || submitting) return;
+    if (!isAvailable || !canContactOwner || inFlight.current || submitting) {
+      return;
+    }
     inFlight.current = true;
     setSubmitting(true);
     setError(null);
@@ -54,6 +60,11 @@ export default function HallContactButton({
       }
       router.push(`/messages/${thread.conversationId}`);
     } catch (err) {
+      if (isHallLockedApiError(err) || isSystemLockedApiError(err)) {
+        setBlockedOpen(true);
+        setError(null);
+        return;
+      }
       const message = await handleProtectedError(err, conversationErrorMessage);
       if (isUnauthorizedApiError(err)) {
         router.push(loginHref);
@@ -83,12 +94,22 @@ export default function HallContactButton({
   if (!isAvailable) {
     return (
       <div className="min-w-0 flex-1">
-        <button type="button" className={CONTACT_BUTTON_CLASS} disabled data-testid="hall-contact-button">
+        <button
+          type="button"
+          className={`${CONTACT_BUTTON_CLASS} !opacity-50`}
+          aria-disabled="true"
+          data-testid="hall-contact-button"
+          onClick={() => setBlockedOpen(true)}
+        >
           {t("halls.contact.cta")}
         </button>
-        <p className="mt-2 text-start text-xs leading-5 text-[#a86267]" data-testid="hall-contact-unavailable" role="status">
-          {t("halls.contact.unavailable")}
-        </p>
+        <HallUnavailableDialog
+          open={blockedOpen}
+          title={t("halls.contact.blockedTitle")}
+          body={t("halls.contact.blockedBody")}
+          onClose={() => setBlockedOpen(false)}
+          testId="hall-contact-blocked-dialog"
+        />
       </div>
     );
   }
@@ -98,19 +119,26 @@ export default function HallContactButton({
       <button
         type="button"
         className={CONTACT_BUTTON_CLASS}
-        data-testid="hall-contact-button"
-        aria-label={t("halls.contact.aria")}
         disabled={submitting}
-        aria-busy={submitting}
-        onClick={() => void startConversation()}
+        data-testid="hall-contact-button"
+        onClick={() => {
+          void startConversation();
+        }}
       >
-        {submitting ? t("halls.contact.opening") : t("halls.contact.cta")}
+        {submitting ? t("common.loading") : t("halls.contact.cta")}
       </button>
       {error ? (
-        <p className="mt-2 text-start text-xs leading-5 text-[#a86267]" data-testid="hall-contact-error" role="alert">
+        <p className="mt-2 text-start text-xs leading-5 text-[#a86267]" role="alert">
           {error}
         </p>
       ) : null}
+      <HallUnavailableDialog
+        open={blockedOpen}
+        title={t("halls.contact.blockedTitle")}
+        body={t("halls.contact.blockedBody")}
+        onClose={() => setBlockedOpen(false)}
+        testId="hall-contact-blocked-dialog"
+      />
     </div>
   );
 }

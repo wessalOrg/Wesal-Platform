@@ -11,8 +11,14 @@ import { getDefaultHallAmenities } from "@/lib/amenities";
 import { parseDateIso } from "@/lib/booking-date";
 import { parseBookingPeriodType } from "@/lib/booking-period";
 import { toDeleteHallError } from "@/lib/delete-hall-errors";
+import {
+  hallAccessFromUnknown,
+  isHallPubliclyUnavailable,
+} from "@/lib/hall-access";
+import { isHallLockedApiError } from "@/lib/hall-locked-error";
 import { resolveMediaUrl } from "@/lib/hall-media-url";
 import { mapDeleteHallResult } from "@/lib/owner-delete-hall";
+import { isSystemLockedApiError } from "@/lib/system-locked-error";
 import {
   REGION_API_PARAMS,
   type DeleteHallResult,
@@ -87,6 +93,15 @@ type ApiFeaturedHall = {
   isOwner?: boolean;
   status?: number | string;
   isActive?: boolean;
+  isAvailable?: boolean;
+  adminLocked?: boolean;
+  AdminLocked?: boolean;
+  isAdminLocked?: boolean;
+  IsAdminLocked?: boolean;
+  systemLocked?: boolean;
+  SystemLocked?: boolean;
+  isSystemLocked?: boolean;
+  IsSystemLocked?: boolean;
   availability?: ApiAvailabilityDay[];
   bookingPeriods?: ApiPeriod[];
 };
@@ -236,6 +251,7 @@ function mapApiHall(hall: ApiFeaturedHall, index: number): FeaturedHall {
     bookedPeriodsSummary:
       summarizeBooked(availabilityDays) ?? fallback.bookedPeriodsSummary ?? null,
     availabilityDays,
+    isAvailable: isHallActive(hall) && !isHallPubliclyUnavailable(hallAccessFromUnknown(hall)),
   };
 }
 
@@ -357,7 +373,9 @@ function resolveGalleryImages(
 }
 
 function isHallActive(hall: ApiFeaturedHall): boolean {
+  if (isHallPubliclyUnavailable(hallAccessFromUnknown(hall))) return false;
   if (hall.isActive === false) return false;
+  if (hall.isAvailable === false) return false;
   if (hall.status == null) return true;
   if (typeof hall.status === "number") return hall.status === 1;
   const normalized = hall.status.toLowerCase();
@@ -428,6 +446,17 @@ export async function fetchHallDetails(id: string): Promise<HallDetailsLoadResul
 
     return { status: "success", hall, source: "api" };
   } catch (err) {
+    if (isHallLockedApiError(err) || isSystemLockedApiError(err)) {
+      if (fallback) {
+        return {
+          status: "unavailable",
+          hall: { ...fallback, isActive: false },
+          source: "fallback",
+        };
+      }
+      return { status: "not_found", source: "api" };
+    }
+
     if (fallback) {
       if (!fallback.isActive) {
         return { status: "unavailable", hall: fallback, source: "fallback" };
@@ -669,6 +698,14 @@ type ApiHallDetails = {
   isAvailable?: boolean;
   isDeleted?: boolean;
   isOwner?: boolean;
+  adminLocked?: boolean;
+  AdminLocked?: boolean;
+  isAdminLocked?: boolean;
+  IsAdminLocked?: boolean;
+  systemLocked?: boolean;
+  SystemLocked?: boolean;
+  isSystemLocked?: boolean;
+  IsSystemLocked?: boolean;
   availability?: ApiAvailabilityDay[];
 };
 
@@ -714,6 +751,7 @@ function mapImageEntry(
 }
 
 function isHallUnavailable(raw: ApiHallDetails): boolean {
+  if (isHallPubliclyUnavailable(hallAccessFromUnknown(raw))) return true;
   if (raw.isAvailable === false || raw.isDeleted === true) return true;
   if (raw.status == null) return false;
   if (typeof raw.status === "number") return raw.status !== 1;
@@ -823,6 +861,13 @@ export async function fetchHallById(id: string): Promise<HallByIdLoadResult> {
     const message =
       err instanceof Error ? err.message : t("errors.hallLoad");
     const local = findHallDetailsFallback(hallId);
+
+    if (isHallLockedApiError(err) || isSystemLockedApiError(err)) {
+      return {
+        status: "unavailable",
+        message: t("hall.unavailable.message"),
+      };
+    }
 
     if (status === 404 || status === 410) {
       if (local) {

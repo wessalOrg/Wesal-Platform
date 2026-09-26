@@ -13,6 +13,7 @@ import { mapHallDetailsToEditForm } from "@/lib/hall-owner-hall-management-mappe
 import { mapHallFormToUpdateHallRequest } from "@/lib/hall-owner-hall-update-mapper";
 import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
 import { isPaymentRequiredApiError } from "@/lib/payment-required-error";
+import { isHallLockedApiError } from "@/lib/hall-locked-error";
 import { isSystemLockedApiError } from "@/lib/system-locked-error";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
 import {
@@ -20,6 +21,7 @@ import {
   updateOwnerHall,
 } from "@/services/hall-owner-hall-management";
 import {
+  reportOwnedHallAdminLocked,
   reportOwnedHallPaymentRequired,
   reportOwnedHallSystemLocked,
 } from "@/hooks/useHallOwnerHalls";
@@ -105,6 +107,14 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
         setLoadErrorKey(null);
         setLoadStatus("payment_required");
         reportOwnedHallPaymentRequired(requestHallId);
+        return;
+      }
+      if (isHallLockedApiError(err)) {
+        setDetails(null);
+        setValues(null);
+        setLoadErrorKey(null);
+        setLoadStatus("admin_locked");
+        reportOwnedHallAdminLocked(requestHallId);
         return;
       }
       if (isSystemLockedApiError(err)) {
@@ -290,6 +300,13 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
         return false;
       }
 
+      if (isHallLockedApiError(err)) {
+        reportOwnedHallAdminLocked(targetHallId);
+        setFormError(null);
+        setSubmitStatus("idle");
+        return false;
+      }
+
       if (isSystemLockedApiError(err)) {
         reportOwnedHallSystemLocked(targetHallId);
         setFormError(null);
@@ -339,6 +356,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     isLoadError: loadStatus === "error" && !isStaleSelection,
     isPaymentRequired: loadStatus === "payment_required",
     isSystemLocked: loadStatus === "system_locked",
+    isAdminLocked: loadStatus === "admin_locked",
     isSubmitting: submitStatus === "submitting",
     isSuccess: submitStatus === "success" && detailsMatchSelection,
     canEdit,

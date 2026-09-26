@@ -17,6 +17,7 @@ import { useSelectedOwnerHall } from "@/hooks/useSelectedOwnerHall";
 import {
   canAccessCalendar,
   getManagementAccess,
+  hallAccessFromFlags,
   hallAccessFromHall,
   mergeHallAccess,
   UNLOCKED_HALL_ACCESS,
@@ -46,9 +47,7 @@ export default function HallOwnerHallManagementView({
   const listAccess = selectedHall ? hallAccessFromHall(selectedHall) : UNLOCKED_HALL_ACCESS;
   const listManagement = getManagementAccess(listAccess);
   const listBlocksProtected =
-    isListReady &&
-    listManagement.allowed === false &&
-    listManagement.reason !== "ADMIN_LOCKED";
+    isListReady && listManagement.allowed === false;
   const detailsEnabled = !listBlocksProtected && (isKnownOwnedHall || !isListReady);
 
   const {
@@ -60,6 +59,7 @@ export default function HallOwnerHallManagementView({
     isLoadError,
     isPaymentRequired,
     isSystemLocked,
+    isAdminLocked,
     loadErrorKey,
     isSubmitting,
     isSuccess,
@@ -76,16 +76,12 @@ export default function HallOwnerHallManagementView({
   const access = mergeHallAccess(
     details ? hallAccessFromHall(details) : undefined,
     selectedHall ? hallAccessFromHall(selectedHall) : undefined,
+    hallAccessFromFlags(isAdminLocked, isSystemLocked, {
+      paymentStatus: isPaymentRequired ? "Unpaid" : undefined,
+    }),
   );
   const management = getManagementAccess(access);
-  const blockedReason =
-    isPaymentRequired
-      ? "PAYMENT_REQUIRED"
-      : isSystemLocked
-        ? "SYSTEM_LOCKED"
-        : !management.allowed && management.reason !== "ADMIN_LOCKED"
-          ? management.reason
-          : null;
+  const blockedReason = !management.allowed ? management.reason : null;
 
   if (isListReady && !isKnownOwnedHall) {
     return (
@@ -116,7 +112,10 @@ export default function HallOwnerHallManagementView({
         data-testid={
           blockedReason === "PAYMENT_REQUIRED"
             ? "owner-hall-management-payment-pending"
-            : "owner-hall-management-system-locked"
+            : blockedReason === "ADMIN_LOCKED" ||
+                blockedReason === "ADMIN_AND_SYSTEM_LOCKED"
+              ? "owner-hall-management-admin-locked"
+              : "owner-hall-management-system-locked"
         }
         data-hall-id={hallId}
       >
