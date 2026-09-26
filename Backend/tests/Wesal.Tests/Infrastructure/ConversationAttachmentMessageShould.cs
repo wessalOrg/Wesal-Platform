@@ -86,6 +86,51 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
         public required FakeDocumentStorage Storage { get; init; }
     }
 
+    /// <summary>
+    /// Posts a payment proof through the real send path and returns the message id, so the
+    /// download tests exercise a genuine stored file rather than a hand-built <see cref="Message"/>.
+    /// </summary>
+    private static async Task<Guid> PostProofAsAdminAsync(
+        string? userId,
+        IReadOnlyList<string> roles,
+        HallPaymentStatus payment,
+        bool adminLocked,
+        bool systemLocked,
+        FakeMessageRepository messages,
+        FakeDocumentStorage storage)
+    {
+        var hall = new Hall
+        {
+            Id = HallId,
+            Status = HallStatus.Approved,
+            PaymentStatus = payment,
+            IsAdminLocked = adminLocked,
+            SystemLocked = systemLocked
+        };
+
+        var service = new ConversationService(
+            new FakeConversationRepository(
+                new Conversation
+                {
+                    Id = ConversationId,
+                    HallId = HallId,
+                    SenderUserId = AdminId,
+                    HallOwnerId = OwnerId,
+                    Hall = hall
+                }),
+            messages,
+            new FakeBookingRejectionService(),
+            new NoOpBookingAcceptanceService(),
+            new FakeHallRepository(),
+            new FakeCurrentUserService(userId, roles),
+            new FakeConversationNotifier(),
+            storage);
+
+        var sent = await service.SendAttachmentMessageAsync(ConversationId, Upload(), null, null);
+
+        return sent.MessageId;
+    }
+
     private Harness CreateHarness(
         string? userId,
         IReadOnlyList<string> roles,
@@ -581,6 +626,125 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
         var result = await Send(harness.Service, Upload());
 
         Assert.True(result.HasAttachment);
+    }
+
+    // --- WESAL-TASK-10, Edit 10 follow-up: the download half of the lock ---
+
+    /// <summary>
+    /// WESAL-TASK-10 (Edit 10 follow-up): a lock that blocks the thread, both send paths and
+    /// the conversation read must also block the ATTACHMENT DOWNLOAD. The image is the most
+    /// sensitive object in the whole feature — it is the payment proof — so a gate that
+    /// protects the text around it while leaving the file readable is not a lock at all.
+    /// These pin the download to exactly the same rule as every sibling endpoint.
+    /// </summary>
+    [Fact]
+    public async Task GetAttachment_UnpaidOwnerAdminLocked_IsBlocked()
+    {
+        var admin = CreateHarness(AdminId, [ApplicationRoles.Admin]);
+        var proofId = await PostProofAsAdminAsync(
+            AdminId, [ApplicationRoles.Admin],
+            HallPaymentStatus.Unpaid, adminLocked: true, systemLocked: false,
+            admin.Messages, admin.Storage);
+
+        var owner = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner],
+            payment: HallPaymentStatus.Unpaid, adminLocked: true,
+            storageRoot: admin.Storage.Root);
+        owner.Messages.Committed.AddRange(admin.Messages.Committed);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => owner.Service.GetMessageAttachmentAsync(ConversationId, proofId));
+
+        Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);
+    }
+
+    [Fact]
+    public async Task GetAttachment_PaidOwnerAdminLocked_IsBlocked()
+    {
+        var admin = CreateHarness(AdminId, [ApplicationRoles.Admin]);
+        var proofId = await PostProofAsAdminAsync(
+            AdminId, [ApplicationRoles.Admin],
+            HallPaymentStatus.Paid, adminLocked: true, systemLocked: false,
+            admin.Messages, admin.Storage);
+
+        var owner = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner],
+            payment: HallPaymentStatus.Paid, adminLocked: true,
+            storageRoot: admin.Storage.Root);
+        owner.Messages.Committed.AddRange(admin.Messages.Committed);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => owner.Service.GetMessageAttachmentAsync(ConversationId, proofId));
+
+        Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);
+    }
+
+    [Fact]
+    public async Task GetAttachment_PaidOwnerSystemLocked_ReportsSystemLock()
+    {
+        var admin = CreateHarness(AdminId, [ApplicationRoles.Admin]);
+        var proofId = await PostProofAsAdminAsync(
+            AdminId, [ApplicationRoles.Admin],
+            HallPaymentStatus.Paid, adminLocked: false, systemLocked: true,
+            admin.Messages, admin.Storage);
+
+        var owner = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner],
+            payment: HallPaymentStatus.Paid, systemLocked: true,
+            storageRoot: admin.Storage.Root);
+        owner.Messages.Committed.AddRange(admin.Messages.Committed);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => owner.Service.GetMessageAttachmentAsync(ConversationId, proofId));
+
+        Assert.Equal(HallManagementAccess.HallSystemLockedCode, ex.Code);
+    }
+
+    /// <summary>
+    /// The Edit 4 carve-out has to keep working on the download path too, otherwise the fix
+    /// above would lock the owner out of the payment thread at the exact moment they need to
+    /// see the Admin's payment notice.
+    /// </summary>
+    [Fact]
+    public async Task GetAttachment_UnpaidOwner_CanStillReadTheProofInTheirOwnPaymentThread()
+    {
+        var admin = CreateHarness(AdminId, [ApplicationRoles.Admin]);
+        var proofId = await PostProofAsAdminAsync(
+            AdminId, [ApplicationRoles.Admin],
+            HallPaymentStatus.Unpaid, adminLocked: false, systemLocked: false,
+            admin.Messages, admin.Storage);
+
+        var owner = CreateHarness(
+            OwnerId, [ApplicationRoles.HallOwner],
+            payment: HallPaymentStatus.Unpaid,
+            storageRoot: admin.Storage.Root);
+        owner.Messages.Committed.AddRange(admin.Messages.Committed);
+
+        var document = await owner.Service.GetMessageAttachmentAsync(ConversationId, proofId);
+
+        Assert.Equal("proof.png", document.FileName);
+    }
+
+    [Fact]
+    public async Task GetAttachment_Admin_StillReadsTheProofOnALockedHall()
+    {
+        // The lock is an owner-side restriction; it must not stop the Admin who is waiting
+        // for the proof from opening it.
+        var admin = CreateHarness(AdminId, [ApplicationRoles.Admin]);
+        var proofId = await PostProofAsAdminAsync(
+            AdminId, [ApplicationRoles.Admin],
+            HallPaymentStatus.Unpaid, adminLocked: true, systemLocked: false,
+            admin.Messages, admin.Storage);
+
+        var lockedAdmin = CreateHarness(
+            AdminId, [ApplicationRoles.Admin],
+            payment: HallPaymentStatus.Unpaid, adminLocked: true,
+            storageRoot: admin.Storage.Root);
+        lockedAdmin.Messages.Committed.AddRange(admin.Messages.Committed);
+
+        var document = await lockedAdmin.Service.GetMessageAttachmentAsync(ConversationId, proofId);
+
+        Assert.Equal("proof.png", document.FileName);
     }
 
     [Fact]

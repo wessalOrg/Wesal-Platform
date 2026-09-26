@@ -1,6 +1,7 @@
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Common;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
@@ -645,6 +646,129 @@ public class ConversationServiceShould
 
         Assert.Equal(hall.Id, result.HallId);
         Assert.Single(repository.Conversations);
+    }
+
+    /// <summary>
+    /// WESAL-TASK-10 (Edit 10 follow-up): <c>IConversationService.ContactAdminAsync</c> has
+    /// always documented "A locked hall is still refused", but the method contained no
+    /// <c>IsAdminLocked</c>/<c>SystemLocked</c> check at all, so an owner whose hall was
+    /// locked by an Admin could still open the owner/Admin thread. That is the same partial
+    /// lock as the attachment download: the read, the sends and the hub refused the owner,
+    /// but this entry point let the thread be (re)opened anyway. The contract is what the
+    /// code should have done, so the code is fixed to match the contract.
+    /// </summary>
+    [Fact]
+    public async Task ContactAdmin_AdminLockedHall_ThrowsHallLocked()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        hall.IsAdminLocked = true;
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.ContactAdminAsync(hall.Id));
+
+        Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);
+        Assert.Empty(repository.Conversations);
+    }
+
+    [Fact]
+    public async Task ContactAdmin_SystemLockedHall_ReportsTheLock()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        hall.SystemLocked = true;
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.ContactAdminAsync(hall.Id));
+
+        Assert.Equal(HallManagementAccess.HallSystemLockedCode, ex.Code);
+        Assert.Empty(repository.Conversations);
+    }
+
+    /// <summary>
+    /// A locked hall must also refuse to RESOLVE an existing thread, not only refuse to
+    /// create one. Otherwise the owner simply reaches the locked thread through the "existing
+    /// thread" branch, which returns a conversation id and hands the client the same access
+    /// the fresh-create path would have refused.
+    /// </summary>
+    [Fact]
+    public async Task ContactAdmin_AdminLockedHall_RefusesToResolveAnExistingThreadToo()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        hall.IsAdminLocked = true;
+        var repository = new FakeConversationRepository();
+        repository.Conversations.Add(new Conversation
+        {
+            Id = Guid.NewGuid(),
+            HallId = hall.Id,
+            HallOwnerId = "owner-1",
+            SenderUserId = "admin-7"
+        });
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.ContactAdminAsync(hall.Id));
+
+        Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);
+    }
+
+    /// <summary>
+    /// The refusal is a LOCK refusal, not a payment refusal: the Edit 4 carve-out already
+    /// lets an unpaid owner through, so a paid-but-locked hall must report the lock code and
+    /// must not be reported as "payment required" (the reverse pairing would also be wrong).
+    /// </summary>
+    [Fact]
+    public async Task ContactAdmin_PaidButAdminLockedHall_ReportsTheLockNotPayment()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        hall.PaymentStatus = HallPaymentStatus.Paid;
+        hall.IsAdminLocked = true;
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.ContactAdminAsync(hall.Id));
+
+        Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);
+    }
+
+    /// <summary>
+    /// The carve-out must survive item 3: an Approved-but-UNPAID and UNLOCKED hall is the
+    /// ordinary pre-payment state and the owner has to keep reaching the Admin.
+    /// </summary>
+    [Fact]
+    public async Task ContactAdmin_UnpaidButUnlockedHall_IsStillAllowed()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        hall.PaymentStatus = HallPaymentStatus.Unpaid;
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "owner-1", roles: [ApplicationRoles.HallOwner]);
+
+        var result = await service.ContactAdminAsync(hall.Id);
+
+        Assert.Equal(hall.Id, result.HallId);
+    }
+
+    /// <summary>
+    /// WESAL-TASK-10 (Edit 10 follow-up): ownership is settled BEFORE the lock check, so a
+    /// stranger calling this action on somebody else's locked hall is refused as a
+    /// non-owner and learns nothing about that hall's lock state. Checking the lock first
+    /// would have turned this action into a lock-state oracle.
+    /// </summary>
+    [Fact]
+    public async Task ContactAdmin_NonOwnerOnALockedHall_IsRefusedAsNonOwnerNotAsLocked()
+    {
+        var hall = CreateApprovedHall("Test Hall", "owner-1");
+        hall.IsAdminLocked = true;
+        var repository = new FakeConversationRepository();
+        var hallRepository = new FakeHallRepository(hall);
+        var service = CreateService(repository, hallRepository, authenticated: true, userId: "someone-else", roles: [ApplicationRoles.HallOwner]);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.ContactAdminAsync(hall.Id));
+        Assert.Empty(repository.Conversations);
     }
 
     private static Hall CreateApprovedHall(string name, string ownerId)

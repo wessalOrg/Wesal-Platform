@@ -87,6 +87,10 @@ public static class DependencyInjection
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<IConversationNotifier, ConversationNotifier>();
+
+        // WESAL-TASK-10 (Edit 10 follow-up): the SignalR hub's access rules. Registered here so
+        // the hub cannot be constructed without them.
+        services.AddScoped<ConversationThreadGuard>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<INotificationNotifier, NotificationNotifier>();
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();

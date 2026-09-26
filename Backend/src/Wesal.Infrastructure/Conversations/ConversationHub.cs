@@ -1,32 +1,52 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Wesal.Application.Common.Interfaces;
-using Wesal.Application.Common.Interfaces.Persistence;
-using Wesal.Domain.Constants;
 
 namespace Wesal.Infrastructure.Conversations;
 
 [Authorize]
-public sealed class ConversationHub : Hub
+public class ConversationHub : Hub
 {
     public const string MessageReceived = "MessageReceived";
 
-    private readonly IConversationRepository _conversationRepository;
-    private readonly ICurrentUserService _currentUser;
+    private readonly ConversationThreadGuard _guard;
 
-    public ConversationHub(
-        IConversationRepository conversationRepository,
-        ICurrentUserService currentUser)
+    public ConversationHub(ConversationThreadGuard guard)
     {
-        _conversationRepository = conversationRepository;
-        _currentUser = currentUser;
+        _guard = guard;
     }
 
+    /// <summary>
+    /// WESAL-TASK-10 (Edit 10 follow-up): joining the live group is access to the thread, so
+    /// it runs the same rules as the HTTP endpoints. This used to check only membership, which
+    /// left a locked hall's owner receiving every live message on a thread they were refused
+    /// everywhere else. The rules live in <see cref="ConversationThreadGuard"/> /
+    /// <see cref="Domain.Common.ConversationAccess"/> and the business-rule failures are
+    /// translated into a <see cref="HubException"/> carrying the same reason code the HTTP
+    /// endpoints return, so the client can render the correct locked message.
+    /// </summary>
     public async Task JoinConversation(Guid conversationId, CancellationToken cancellationToken = default)
     {
-        if (!await IsParticipantAsync(conversationId, cancellationToken))
+        try
         {
-            throw new HubException("You are not a participant of this conversation.");
+            await _guard.RequireAccessibleThreadAsync(conversationId, cancellationToken);
+        }
+        catch (Domain.Exceptions.BusinessRuleException ex)
+        {
+            // SignalR surfaces the exception message to the caller; keep the reason code in it
+            // so a locked owner is told WHY rather than a generic "not a participant".
+            throw new HubException($"{ex.Code}: {ex.Message}");
+        }
+        catch (Domain.Exceptions.ForbiddenException ex)
+        {
+            throw new HubException(ex.Message);
+        }
+        catch (Domain.Exceptions.NotFoundException)
+        {
+            throw new HubException("Conversation not found.");
+        }
+        catch (Domain.Exceptions.UnauthorizedException ex)
+        {
+            throw new HubException(ex.Message);
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, conversationId.ToString(), cancellationToken);
@@ -35,26 +55,5 @@ public sealed class ConversationHub : Hub
     public async Task LeaveConversation(Guid conversationId, CancellationToken cancellationToken = default)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, conversationId.ToString(), cancellationToken);
-    }
-
-    private async Task<bool> IsParticipantAsync(Guid conversationId, CancellationToken cancellationToken)
-    {
-        var userId = _currentUser.UserId;
-
-        if (string.IsNullOrWhiteSpace(userId) || !_currentUser.IsAuthenticated)
-        {
-            return false;
-        }
-
-        var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
-
-        if (conversation is null || conversation.Hall?.IsDeleted == true)
-        {
-            return false;
-        }
-
-        return string.Equals(userId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(userId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase)
-            || _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
     }
 }

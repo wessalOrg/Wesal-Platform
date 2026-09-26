@@ -45,6 +45,62 @@ public class MessageInboxServiceShould
         Assert.Equal("Hall One", returned.HallName);
     }
 
+    /// <summary>
+    /// WESAL-TASK-10 (Edit 10 follow-up): <c>ConversationSummaryResponse.IsUnread</c> was
+    /// declared on the response but never assigned by its only construction site, so every
+    /// conversation in the inbox reported not-unread no matter what the repository said —
+    /// the field was dead. The repository already had a perfectly good
+    /// <c>GetUnreadStatusAsync</c> (also unused) to feed it. This pins that the summary now
+    /// reflects the repository's verdict, which Edit 14's unread-count work builds on.
+    /// </summary>
+    [Fact]
+    public async Task GetMyConversations_ReportsIsUnreadFromTheRepository()
+    {
+        var userId = "user-1";
+        var repository = new FakeConversationRepository();
+        var messageRepository = new FakeMessageRepository();
+        var conversation = CreateConversation(repository, hallId: Guid.NewGuid(), sender: userId, owner: "owner-1", hallName: "Hall One");
+        repository.UnreadStatus[conversation.Id] = true;
+        var service = CreateService(repository, messageRepository, authenticated: true, userId, roles: [ApplicationRoles.RegisteredUser]);
+
+        var result = await service.GetMyConversationsAsync();
+
+        Assert.True(Assert.Single(result).IsUnread);
+    }
+
+    [Fact]
+    public async Task GetMyConversations_ReportsReadConversationAsNotUnread()
+    {
+        var userId = "user-1";
+        var repository = new FakeConversationRepository();
+        var messageRepository = new FakeMessageRepository();
+        var conversation = CreateConversation(repository, hallId: Guid.NewGuid(), sender: userId, owner: "owner-1", hallName: "Hall One");
+        repository.UnreadStatus[conversation.Id] = false;
+        var service = CreateService(repository, messageRepository, authenticated: true, userId, roles: [ApplicationRoles.RegisteredUser]);
+
+        var result = await service.GetMyConversationsAsync();
+
+        Assert.False(Assert.Single(result).IsUnread);
+    }
+
+    /// <summary>
+    /// A conversation the repository has no verdict for must read as not-unread rather than
+    /// throwing: the summary list is a best-effort projection and a missing id is not an error.
+    /// </summary>
+    [Fact]
+    public async Task GetMyConversations_ConversationMissingFromTheUnreadMapIsNotUnread()
+    {
+        var userId = "user-1";
+        var repository = new FakeConversationRepository();
+        var messageRepository = new FakeMessageRepository();
+        CreateConversation(repository, hallId: Guid.NewGuid(), sender: userId, owner: "owner-1", hallName: "Hall One");
+        var service = CreateService(repository, messageRepository, authenticated: true, userId, roles: [ApplicationRoles.RegisteredUser]);
+
+        var result = await service.GetMyConversationsAsync();
+
+        Assert.False(Assert.Single(result).IsUnread);
+    }
+
     [Fact]
     public async Task GetMyConversations_NoConversations_ReturnsEmptyList()
     {
@@ -418,7 +474,12 @@ public class MessageInboxServiceShould
         public Task UpsertReadStateAsync(Guid conversationId, string userId, DateTimeOffset lastReadAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task HideConversationAsync(Guid conversationId, string userId, DateTimeOffset hiddenAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
-        public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default) => Task.FromResult<Dictionary<Guid, bool>>(new Dictionary<Guid, bool>());
+
+        /// <summary>Lets a test declare which conversations the repository reports unread.</summary>
+        public Dictionary<Guid, bool> UnreadStatus { get; } = [];
+
+        public Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)
+            => Task.FromResult(conversationIds.ToDictionary(id => id, id => UnreadStatus.GetValueOrDefault(id)));
     }
 
     private sealed class ThrowingConversationRepository : IConversationRepository

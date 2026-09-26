@@ -281,6 +281,13 @@ public sealed class ConversationRepository : IConversationRepository
 
     public async Task<int> GetUnreadConversationCountAsync(string userId, CancellationToken cancellationToken = default)
     {
+        // THE unread rule, half one: a conversation is unread when it holds at least one
+        // message from the OTHER PARTY that the caller's read watermark does not cover.
+        // GetUnreadStatusAsync below states the same rule per message. WESAL-TASK-10: these
+        // two used to disagree — this one counted only the other party's messages while the
+        // flag compared the watermark against the newest message WHOSEVER sent it, so a
+        // thread the user had just replied in showed a stale unread badge while the count
+        // said zero. The tests pin them together.
         return await _context.Conversations
             .AsNoTracking()
             .Where(c => (c.SenderUserId == userId || c.HallOwnerId == userId) && !c.Hall.IsDeleted)
@@ -299,13 +306,6 @@ public sealed class ConversationRepository : IConversationRepository
             return [];
         }
 
-        var readStates = await _context.ConversationReadStates
-            .AsNoTracking()
-            .Where(s => conversationIds.Contains(s.ConversationId) && s.UserId == userId)
-            .ToListAsync(cancellationToken);
-
-        var readStateMap = readStates.ToDictionary(s => s.ConversationId, s => s.LastReadAt);
-
         // Same watermark rule as the inbox and the badge: a conversation this participant
         // has hidden reports not-unread, so the flag can never advertise a thread that the
         // list is deliberately not showing them.
@@ -320,38 +320,23 @@ public sealed class ConversationRepository : IConversationRepository
 
         var hiddenSet = hiddenIds.ToHashSet();
 
-        var latestMessages = await _context.Messages
+        // THE unread rule, half two: the same per-message test as the count above, so a
+        // thread can never be counted in one query and not the other. Only the other
+        // party's messages can make a thread unread, so a conversation containing nothing
+        // but the caller's own messages reports not-unread.
+        var unreadIds = await _context.Messages
             .AsNoTracking()
-            .Where(m => conversationIds.Contains(m.ConversationId))
-            .GroupBy(m => m.ConversationId)
-            .Select(g => new { ConversationId = g.Key, LatestAt = g.Max(m => m.CreatedAt) })
+            .Where(m => conversationIds.Contains(m.ConversationId) && m.SenderUserId != userId)
+            .Where(m => !_context.ConversationReadStates
+                .Any(s => s.ConversationId == m.ConversationId && s.UserId == userId && s.LastReadAt >= m.CreatedAt))
+            .Select(m => m.ConversationId)
+            .Distinct()
             .ToListAsync(cancellationToken);
 
-        var result = new Dictionary<Guid, bool>();
-        foreach (var convId in conversationIds)
-        {
-            if (hiddenSet.Contains(convId))
-            {
-                result[convId] = false;
-                continue;
-            }
+        var unreadSet = unreadIds.ToHashSet();
 
-            var latest = latestMessages.FirstOrDefault(m => m.ConversationId == convId);
-            if (latest is null)
-            {
-                result[convId] = false;
-                continue;
-            }
-
-            if (!readStateMap.TryGetValue(convId, out var lastRead))
-            {
-                result[convId] = true;
-                continue;
-            }
-
-            result[convId] = latest.LatestAt > lastRead;
-        }
-
-        return result;
+        return conversationIds.ToDictionary(
+            conversationId => conversationId,
+            conversationId => !hiddenSet.Contains(conversationId) && unreadSet.Contains(conversationId));
     }
 }

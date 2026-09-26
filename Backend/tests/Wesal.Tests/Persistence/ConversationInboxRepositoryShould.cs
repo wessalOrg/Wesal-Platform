@@ -256,7 +256,19 @@ public class ConversationInboxRepositoryShould
         await repository.HideConversationAsync(conversation.Id, "seeker-1", DateTimeOffset.UtcNow);
 
         Assert.False((await repository.GetUnreadStatusAsync("seeker-1", [conversation.Id]))[conversation.Id]);
-        Assert.True((await repository.GetUnreadStatusAsync("owner-1", [conversation.Id]))[conversation.Id]);
+
+        // WESAL-TASK-10 (Edit 10 follow-up): this used to assert True. The only message in
+        // the thread was sent by owner-1, so for owner-1 the thread contains nothing they
+        // have not already seen and the correct answer is False — which is also what the
+        // badge count said all along. The old True was the divergent algorithm reporting a
+        // thread as unread on the strength of the caller's OWN message.
+        Assert.False((await repository.GetUnreadStatusAsync("owner-1", [conversation.Id]))[conversation.Id]);
+
+        // The flag and the badge must agree for both parties. owner-1: nothing unread, the
+        // only message was their own. seeker-1: nothing unread, the thread is hidden and no
+        // newer message has arrived to bring it back.
+        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("owner-1"));
+        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("seeker-1"));
     }
 
     [Fact]
@@ -530,6 +542,118 @@ public class ConversationInboxRepositoryShould
         context.Messages.Add(message);
         context.SaveChanges();
         return message;
+    }
+
+    /// <summary>
+    /// WESAL-TASK-10 (Edit 10 follow-up): the badge and the per-conversation flag were two
+    /// different implementations of "unread". The badge counts only messages sent BY THE
+    /// OTHER PARTY, while the flag looked at the latest message in the thread regardless of
+    /// who sent it. So a thread whose most recent message is the caller's own was reported
+    /// unread by the flag and not-unread by the badge — the list would advertise an unread
+    /// badge over a thread the user had just replied in. These pin the flag to the badge's
+    /// rule, which is the defensible one: unread means "an incoming message I have not seen".
+    /// </summary>
+    [Fact]
+    public async Task GetUnreadStatusAsync_ThreadEndingInTheCallersOwnMessageIsNotUnread()
+    {
+        await using var context = CreateContext();
+        var repository = new ConversationRepository(context);
+
+        var hall = SeedHall(context, "Hall", isDeleted: false);
+        var conversation = SeedConversation(context, hall.Id, "owner-1", "seeker-1");
+
+        var t0 = DateTimeOffset.UtcNow.AddMinutes(-10);
+        SeedMessage(context, conversation.Id, "owner-1", "incoming", t0);
+
+        // The caller opens the thread, which marks it read up to the incoming message...
+        context.ConversationReadStates.Add(new ConversationReadState
+        {
+            ConversationId = conversation.Id,
+            UserId = "seeker-1",
+            LastReadAt = t0
+        });
+        context.SaveChanges();
+
+        // ...and then replies. Their own reply is the newest message in the thread and is
+        // newer than their read watermark, which is exactly the shape that made the flag
+        // disagree with the badge.
+        SeedMessage(context, conversation.Id, "seeker-1", "my own reply", t0.AddMinutes(1));
+
+        var status = await repository.GetUnreadStatusAsync("seeker-1", [conversation.Id]);
+
+        Assert.False(status[conversation.Id]);
+        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("seeker-1"));
+    }
+
+    [Fact]
+    public async Task GetUnreadStatusAsync_ThreadOfOnlyMyOwnMessagesIsNotUnread()
+    {
+        await using var context = CreateContext();
+        var repository = new ConversationRepository(context);
+
+        var hall = SeedHall(context, "Hall", isDeleted: false);
+        var conversation = SeedConversation(context, hall.Id, "owner-1", "seeker-1");
+
+        // No incoming message at all, and no read state either.
+        var t0 = DateTimeOffset.UtcNow.AddMinutes(-10);
+        SeedMessage(context, conversation.Id, "seeker-1", "mine", t0);
+
+        var status = await repository.GetUnreadStatusAsync("seeker-1", [conversation.Id]);
+
+        Assert.False(status[conversation.Id]);
+        Assert.Equal(0, await repository.GetUnreadConversationCountAsync("seeker-1"));
+    }
+
+    /// <summary>
+    /// The converse guard: a genuinely newer INCOMING message must still be unread on both
+    /// algorithms, so unifying them did not accidentally mark real unread threads as read.
+    /// </summary>
+    [Fact]
+    public async Task GetUnreadStatusAsync_NewerIncomingMessageStaysUnreadOnBothAlgorithms()
+    {
+        await using var context = CreateContext();
+        var repository = new ConversationRepository(context);
+
+        var hall = SeedHall(context, "Hall", isDeleted: false);
+        var conversation = SeedConversation(context, hall.Id, "owner-1", "seeker-1");
+
+        var t0 = DateTimeOffset.UtcNow.AddMinutes(-10);
+        SeedMessage(context, conversation.Id, "owner-1", "incoming", t0);
+
+        context.ConversationReadStates.Add(new ConversationReadState
+        {
+            ConversationId = conversation.Id,
+            UserId = "seeker-1",
+            LastReadAt = t0.AddMinutes(-1)
+        });
+        context.SaveChanges();
+
+        var status = await repository.GetUnreadStatusAsync("seeker-1", [conversation.Id]);
+
+        Assert.True(status[conversation.Id]);
+        Assert.Equal(1, await repository.GetUnreadConversationCountAsync("seeker-1"));
+    }
+
+    /// <summary>
+    /// A read state that exists but has not yet reached a message still reports unread, and
+    /// so does an absent read state. This is the common "new thread" shape and both
+    /// algorithms must agree on it.
+    /// </summary>
+    [Fact]
+    public async Task GetUnreadStatusAsync_NoReadStateAndIncomingMessageIsUnread()
+    {
+        await using var context = CreateContext();
+        var repository = new ConversationRepository(context);
+
+        var hall = SeedHall(context, "Hall", isDeleted: false);
+        var conversation = SeedConversation(context, hall.Id, "owner-1", "seeker-1");
+
+        SeedMessage(context, conversation.Id, "owner-1", "incoming", DateTimeOffset.UtcNow.AddMinutes(-1));
+
+        var status = await repository.GetUnreadStatusAsync("seeker-1", [conversation.Id]);
+
+        Assert.True(status[conversation.Id]);
+        Assert.Equal(1, await repository.GetUnreadConversationCountAsync("seeker-1"));
     }
 
     private static Hall SeedHall(ApplicationDbContext context, string name, bool isDeleted)

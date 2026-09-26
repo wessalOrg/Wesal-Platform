@@ -112,11 +112,25 @@ public sealed class ConversationService : IConversationService
 
         // Edit 11: only the owner of THIS hall may open its owner/Admin thread. Without
         // this any authenticated user could mint an owner/Admin thread for a hall they do
-        // not own and then post into it.
+        // not own and then post into it. This stays AHEAD of the lock check below on
+        // purpose: ownership is an authorization question and must be settled first,
+        // otherwise a stranger could probe a hall's lock state by calling this action.
         if (!string.Equals(ownerId, hall.OwnerId, StringComparison.OrdinalIgnoreCase))
         {
             throw new ForbiddenException("Only the hall owner can open the conversation with the platform support.");
         }
+
+        // WESAL-TASK-10 (Edit 10 follow-up): the lock this interface has always documented
+        // ("A locked hall is still refused") was never enforced here, so a locked owner
+        // could still open the owner/Admin thread — the same partial lock as the attachment
+        // download. Delegated to the shared gate with isThreadOwner: true, because by this
+        // point the caller is verified as THIS hall's owner. Edit 4's unpaid carve-out
+        // therefore still lets an Approved-but-unpaid, unlocked owner reach the Admin, which
+        // is what that carve-out is for.
+        ConversationAccess.EnsureOwnerMessagingAccess(
+            hall,
+            isThreadOwner: true,
+            isAdmin: _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase));
 
         // Edit 4's deterministic (HallId, HallOwnerId) resolution, reused verbatim so a
         // "Contact Admin" click can never fork a second thread away from the one the
@@ -223,6 +237,12 @@ public sealed class ConversationService : IConversationService
         var nameLookup = (await _conversationRepository.GetUserDisplayNamesAsync(otherParticipantIds, cancellationToken))
             .ToDictionary(info => info.UserId, info => info.FullName, StringComparer.OrdinalIgnoreCase);
 
+        // WESAL-TASK-10 (Edit 10 follow-up): IsUnread was declared on the response and never
+        // assigned, so every row reported not-unread. The repository already computed exactly
+        // this (GetUnreadStatusAsync had no callers at all), and it now uses the same rule as
+        // the unread-count badge, so the per-row flag and the badge cannot disagree.
+        var unreadStatus = await _conversationRepository.GetUnreadStatusAsync(userId, conversationIds, cancellationToken);
+
         return conversations
             .OrderByDescending(conversation => latestByConversation.GetValueOrDefault(conversation.Id)?.CreatedAt ?? conversation.CreatedAt)
             .ThenByDescending(conversation => conversation.Id)
@@ -242,7 +262,8 @@ public sealed class ConversationService : IConversationService
                     LastMessageHasAttachment = latest?.HasAttachment ?? false,
                     LastMessageAt = latest?.CreatedAt,
                     MessageCount = messageCounts.GetValueOrDefault(conversation.Id),
-                    CreatedAt = conversation.CreatedAt
+                    CreatedAt = conversation.CreatedAt,
+                    IsUnread = unreadStatus.GetValueOrDefault(conversation.Id)
                 };
             })
             .ToList();
@@ -561,6 +582,12 @@ public sealed class ConversationService : IConversationService
         }
 
         EnsureParticipant(conversation, userId);
+
+        // WESAL-TASK-10 (Edit 10 follow-up): the download has to obey the same hall-messaging
+        // gate as the thread, both send paths and the conversation read. Without this a
+        // locked owner was refused everything around the payment proof and could still
+        // download the proof itself, which is the most sensitive object in the feature.
+        EnsureOwnerMessagingAccess(conversation);
 
         var message = await _messageRepository.GetByIdAsync(messageId, cancellationToken);
 
@@ -926,64 +953,14 @@ public sealed class ConversationService : IConversationService
     }
 
     /// <summary>
-    /// Hall-management messaging gate (US-ADMIN-05/07, FR-SUB-01/05): when the current
-    /// user is the OWNER of the conversation's hall, an Approved hall's messaging is
-    /// subject to <see cref="HallManagementAccess"/> (Admin lock, payment required,
-    /// system lock). PendingReview/Rejected hall threads stay open so the owner can
-    /// read and reply to review/rejection messages (US-ADMIN-03). Seekers and Admins
-    /// are never blocked by this gate.
-    ///
-    /// WESAL-TASK-4 (Edit 4) carves out one case: the owner of their own owner/Admin
-    /// thread may read it and post into it even when the hall is unpaid, because that
-    /// thread is exactly where the payment notice lives and where the payment proof is
-    /// sent. Without this the notice is unsendable AND unreadable at the precise moment
-    /// it is needed: the Admin asks for payment, then cannot let the owner answer.
-    ///
-    /// The carve-out is deliberately narrow — it applies only to the owner of this
-    /// conversation, only inside this thread, and only waives the PAYMENT requirement.
-    /// A manual Admin lock and the system lock still apply, so a locked hall is never
-    /// waived, and no other HallManagementAccess-gated action (hall management, hall
-    /// settings, owner booking actions) is affected: this gate guards conversation
-    /// access only. Seekers and Admins are unaffected, and a deleted hall is still
-    /// rejected earlier as not-found.
+    /// Hall-management messaging gate (US-ADMIN-05/07, FR-SUB-01/05), defined once in
+    /// <see cref="ConversationAccess"/> and shared with the SignalR hub and the live-push
+    /// filter. WESAL-TASK-10: it used to live only here, which let the hub and the
+    /// attachment download drift away from it.
     /// </summary>
     private void EnsureOwnerMessagingAccess(Conversation conversation)
-    {
-        if (_currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        var hall = conversation.Hall;
-
-        if (hall is null || hall.IsDeleted)
-        {
-            return;
-        }
-
-        var userId = _currentUser.UserId;
-
-        var isOwner = string.Equals(userId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase);
-
-        if (!isOwner)
-        {
-            return;
-        }
-
-        if (hall.Status != HallStatus.Approved)
-        {
-            return;
-        }
-
-        // Edit 4 carve-out: the owner may read and post in their own owner/Admin thread
-        // while the subscription is unpaid. Only the PAYMENT requirement is waived, so a
-        // lock still denies access and delegates to the shared guard to raise the correct
-        // locked reason rather than silently allowing access.
-        if (hall.PaymentStatus != HallPaymentStatus.Paid && !hall.IsAdminLocked && !hall.SystemLocked)
-        {
-            return;
-        }
-
-        HallManagementAccess.EnsureAllowed(hall);
-    }
+        => ConversationAccess.EnsureOwnerMessagingAccess(
+            conversation.Hall,
+            string.Equals(_currentUser.UserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase),
+            _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase));
 }

@@ -5,6 +5,7 @@ using Wesal.Domain.Constants;
 using Wesal.Infrastructure;
 using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Notifications;
+using Wesal.Persistence;
 using Xunit;
 
 namespace Wesal.Tests.Infrastructure;
@@ -45,6 +46,7 @@ public sealed class NotificationRegistrationShould
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IConfiguration>(configuration);
+        services.AddPersistence(configuration);
         services.AddInfrastructure(configuration);
 
         return services;
@@ -140,5 +142,46 @@ public sealed class NotificationRegistrationShould
         using var scope = provider.CreateScope();
 
         Assert.NotNull(scope.ServiceProvider.GetService<IConversationNotifier>());
+    }
+
+    /// <summary>
+    /// WESAL-TASK-10 (Edit 10 follow-up): the SignalR hub now takes the shared access guard
+    /// instead of resolving the repository and current user itself. If that guard were
+    /// unregistered, the failure mode is a runtime exception on the first JoinConversation
+    /// call rather than a startup error, so it is pinned here.
+    /// </summary>
+    [Fact]
+    public void ConversationThreadGuard_IsRegisteredAndResolvable()
+    {
+        var services = BuildProductionServices();
+        services.AddSignalR();
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(ConversationThreadGuard));
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetService<ConversationThreadGuard>());
+    }
+
+    /// <summary>
+    /// The hub must be constructible from the production container, which is the only thing
+    /// standing between a missing registration and a 500 on the first live join. SignalR does
+    /// not register hub classes in DI; its default activator creates them with
+    /// <c>ActivatorUtilities</c>, so that is exactly what is reproduced here.
+    /// </summary>
+    [Fact]
+    public void ConversationHub_IsConstructibleFromTheProductionContainer()
+    {
+        var services = BuildProductionServices();
+        services.AddSignalR();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        var hub = ActivatorUtilities.CreateInstance<ConversationHub>(scope.ServiceProvider);
+
+        Assert.NotNull(hub);
     }
 }
