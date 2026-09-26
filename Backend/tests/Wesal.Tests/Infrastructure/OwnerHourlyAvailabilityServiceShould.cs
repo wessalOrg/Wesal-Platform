@@ -14,6 +14,8 @@ using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
 
+using Wesal.Tests.TestDoubles;
+
 namespace Wesal.Tests.Infrastructure;
 
 /// <summary>
@@ -89,9 +91,11 @@ public class OwnerHourlyAvailabilityServiceShould : IDisposable
         => new(_userManager, currentUser, new OwnerDashboardRepository(_context),
             new BookingRepository(_context), new UnitOfWork(_context));
 
-    private HourlySlotService CreateSeekerService()
-        => new(new HallRepository(_context), new BookingRepository(_context),
-            new UnitOfWork(_context), new FakeCurrentUser("seeker-1", true, ApplicationRoles.RegisteredUser));
+       private HourlySlotService CreateSeekerService()
+           => new(new HallRepository(_context), new BookingRepository(_context),
+               new UnitOfWork(_context), new FakeCurrentUser("seeker-1", true, ApplicationRoles.RegisteredUser),
+               new RecordingOwnerBookingRequestNotifier());
+
 
     private static DateOnly Tomorrow() => DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
 

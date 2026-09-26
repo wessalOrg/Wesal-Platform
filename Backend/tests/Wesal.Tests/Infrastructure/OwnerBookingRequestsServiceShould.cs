@@ -220,7 +220,7 @@ public class OwnerBookingRequestsServiceShould : IDisposable
     }
 
     [Fact]
-    public async Task GetBookingRequests_OnlyPendingRequests_AreReturned()
+    public async Task GetBookingRequests_OnlyLiveRequests_AreReturned()
     {
         var owner = await CreateUserAsync("owner@example.com", "+970599200015", ApplicationRoles.HallOwner);
         var requester = await CreateUserAsync(
@@ -232,14 +232,17 @@ public class OwnerBookingRequestsServiceShould : IDisposable
         AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(10, 0), BookingStatus.Pending);
         AddBooking(hall, requester.Id, new DateOnly(2027, 6, 1), new TimeOnly(11, 0), BookingStatus.Accepted);
         AddBooking(hall, requester.Id, new DateOnly(2027, 6, 5), new TimeOnly(10, 0), BookingStatus.Rejected);
+        AddBooking(hall, requester.Id, new DateOnly(2027, 6, 5), new TimeOnly(11, 0), BookingStatus.Cancelled);
 
         var service = CreateService(new FakeCurrentUser(owner.Id, true));
 
         var result = await service.GetBookingRequestsAsync(hall.Id);
 
-        var item = Assert.Single(result);
-        Assert.Equal(BookingStatus.Pending, item.Status);
-        Assert.Contains(new TimeOnly(10, 0), item.SlotStarts);
+        // WESAL-TASK-8 (Edit 8): an approved request stays listed, because the owner still
+        // owes it a deposit confirmation. Only rejected and cancelled requests drop out.
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, item => item.Status == BookingStatus.Pending);
+        Assert.Contains(result, item => item.Status == BookingStatus.Accepted);
     }
 
     [Fact]

@@ -7,6 +7,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Infrastructure.OwnerDashboard;
 
 namespace Wesal.Infrastructure.Bookings;
 
@@ -25,17 +26,20 @@ public class HourlySlotService : IHourlySlotService
     private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IOwnerBookingRequestNotifier _ownerRequestNotifier;
 
     public HourlySlotService(
         IHallRepository hallRepository,
         IBookingRepository bookingRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IOwnerBookingRequestNotifier ownerRequestNotifier)
     {
         _hallRepository = hallRepository;
         _bookingRepository = bookingRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _ownerRequestNotifier = ownerRequestNotifier;
     }
 
     public async Task<HallHourlyCatalogDto> GetHourlyCatalogAsync(
@@ -77,22 +81,29 @@ public class HourlySlotService : IHourlySlotService
             };
         }
 
-        var bookedRows = await _bookingRepository.GetHourlySlotsAsync(hallId, date, cancellationToken);
+        var heldRows = await _bookingRepository.GetHourlySlotsAsync(hallId, date, cancellationToken);
 
-        var bookedStarts = bookedRows
-            .Where(row => row.Status == HallSlotStatus.Booked)
-            .Select(row => row.StartTime)
-            .ToHashSet();
+        // WESAL-TASK-8 (Edit 8): track the status of every hour the hall has a row for,
+        // because both Booked (paid) and Reserved (held by a live request awaiting payment)
+        // are unavailable to a seeker. Reserving is not the same as being booked, so the
+        // status is carried through to the response and the seeker can tell a paid hour
+        // from a merely held one.
+        var heldByStatus = heldRows.ToDictionary(row => row.StartTime, row => row.Status);
 
         var slots = new List<HallHourlySlotDto>();
 
         foreach (var (start, end) in BuildHourlyWindow(hall))
         {
-            var isBooked = bookedStarts.Contains(start);
+            var status = heldByStatus.TryGetValue(start, out var heldStatus)
+                ? heldStatus
+                : HallSlotStatus.Available;
 
-            if (isBooked && !hall.ShowBookedSlots)
+            var isUnavailable = status != HallSlotStatus.Available;
+
+            if (isUnavailable && !hall.ShowBookedSlots)
             {
-                // ShowBookedSlots OFF: booked hours are omitted entirely.
+                // ShowBookedSlots OFF: unavailable hours are omitted entirely, whether they
+                // are booked or merely reserved. The seeker gets no trace of them.
                 continue;
             }
 
@@ -100,7 +111,7 @@ public class HourlySlotService : IHourlySlotService
             {
                 StartTime = start,
                 EndTime = end,
-                Status = isBooked ? HallSlotStatus.Booked : HallSlotStatus.Available
+                Status = status
             });
         }
 
@@ -202,16 +213,19 @@ public class HourlySlotService : IHourlySlotService
                     $"The hall is not available on {request.Date:yyyy-MM-dd} (the day is blocked). Please choose another day.");
             }
 
-            // All requested hours are reserved together. A partial result means at least
-            // one hour was already taken, so the whole booking is refused and the
-            // transaction rolls back the hours taken earlier in the loop.
-            var reserved = await _bookingRepository.ReserveHourlySlotsAsync(
+            // WESAL-TASK-8 (Edit 8): all requested hours are claimed together as Reserved.
+            // The hours are protected exactly like booked ones, so a partial result means at
+            // least one hour is already held - by a booked booking or by another live
+            // request - and the whole request is refused, rolling back the hours taken
+            // earlier in the loop. Nothing is officially booked yet: the hours become
+            // Booked only once the owner confirms the deposit.
+            var claimed = await _bookingRepository.ReserveHourlySlotsAsync(
                 hall.Id,
                 request.Date,
                 slotStarts,
                 cancellationToken);
 
-            if (reserved != slotStarts.Count)
+            if (claimed != slotStarts.Count)
             {
                 var requestedDate = request.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
@@ -220,7 +234,7 @@ public class HourlySlotService : IHourlySlotService
                     slotStarts.Select(start => start.ToString("HH:mm", CultureInfo.InvariantCulture)));
 
                 throw new ConflictException(
-                    $"The {requestedTimes} slot(s) on {requestedDate} are already booked. Please choose another slot.");
+                    $"The {requestedTimes} slot(s) on {requestedDate} are no longer available. Please choose another slot.");
             }
 
             var created = new Booking
@@ -246,6 +260,13 @@ public class HourlySlotService : IHourlySlotService
             return created;
         }, cancellationToken);
 
+        // WESAL-TASK-8 (Edit 8): tell the owner a request arrived. This happens after the
+        // transaction has committed and is best-effort, exactly like the cancellation
+        // notice, so a SignalR hiccup can neither roll back the request nor fail the
+        // seeker's call. The owner id comes from the hall loaded above (trusted backend
+        // data), never from the request body.
+        await NotifyOwnerOfRequestAsync(hall, booking, cancellationToken);
+
         return new HourlyBookingResultDto
         {
             BookingId = booking.Id,
@@ -255,6 +276,53 @@ public class HourlySlotService : IHourlySlotService
             TimeRange = booking.HourlyTimeRange,
             Status = booking.Status
         };
+    }
+
+    /// <summary>
+    /// Pushes the new request to the Hall Owner's dashboard group (US-OWNER-10). The
+    /// requester name is the persisted booking name, never a client-supplied identity.
+    /// Delivery failures are swallowed because the request itself is already committed.
+    /// </summary>
+    private async Task NotifyOwnerOfRequestAsync(
+        Hall hall,
+        Booking booking,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(hall.OwnerId))
+        {
+            return;
+        }
+
+        try
+        {
+            await _ownerRequestNotifier.NotifyBookingRequestReceivedAsync(
+                hall.OwnerId,
+                new OwnerBookingRequestNotificationEvent
+                {
+                    BookingRequestId = booking.Id,
+                    HallId = booking.HallId,
+                    HallName = hall.Name,
+                    RequestedDate = booking.Date,
+                    SlotStarts = booking.Slots
+                        .OrderBy(slot => slot.StartTime)
+                        .Select(slot => slot.StartTime)
+                        .ToList(),
+                    TimeRange = booking.HourlyTimeRange,
+                    RequesterUserId = booking.RequesterUserId,
+                    RequesterName = string.IsNullOrWhiteSpace(booking.NameOnBooking)
+                        ? booking.RequesterUserId
+                        : booking.NameOnBooking.Trim(),
+                    OccurredAt = booking.CreatedAt
+                },
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+        }
     }
 
     private static IEnumerable<(TimeOnly Start, TimeOnly End)> BuildHourlyWindow(Hall hall)

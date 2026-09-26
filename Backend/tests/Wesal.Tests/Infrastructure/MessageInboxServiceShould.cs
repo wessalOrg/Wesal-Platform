@@ -7,6 +7,8 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Conversations;
 
+using Wesal.Tests.TestDoubles;
+
 namespace Wesal.Tests.Infrastructure;
 
 public class MessageInboxServiceShould
@@ -362,7 +364,7 @@ public class MessageInboxServiceShould
     {
         var effectiveUserId = authenticated ? userId ?? "test-user-1" : null;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? []);
-        return new ConversationService(conversationRepository, messageRepository, new FakeBookingRejectionService(), new FakeHallRepository(), currentUser, new FakeConversationNotifier(), new FakeDocumentStorage());
+        return new ConversationService(conversationRepository, messageRepository, new FakeBookingRejectionService(), new NoOpBookingAcceptanceService(), new FakeHallRepository(), currentUser, new FakeConversationNotifier(), new FakeDocumentStorage());
     }
 
     private sealed class FakeConversationRepository : IConversationRepository

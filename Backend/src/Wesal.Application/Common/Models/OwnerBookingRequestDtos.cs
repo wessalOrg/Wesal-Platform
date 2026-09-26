@@ -30,4 +30,18 @@ public sealed class OwnerBookingRequestDto
     public BookingStatus Status { get; init; }
 
     public DateTimeOffset RequestedAt { get; init; }
+
+    /// <summary>
+    /// WESAL-TASK-8 (Edit 8): the deposit the owner set when approving. Null while the
+    /// request is still Pending, because the amount does not exist until approval. This is
+    /// what the owner is waiting to receive, and what the requester is expected to pay.
+    /// </summary>
+    public decimal? DepositAmount { get; init; }
+
+    /// <summary>
+    /// WESAL-TASK-8 (Edit 8): when the owner confirmed receiving the deposit, or null while
+    /// it is still outstanding. Non-null means the hours are officially Booked and the
+    /// booking can no longer be rejected or cancelled.
+    /// </summary>
+    public DateTimeOffset? DepositPaymentConfirmedAt { get; init; }
 }

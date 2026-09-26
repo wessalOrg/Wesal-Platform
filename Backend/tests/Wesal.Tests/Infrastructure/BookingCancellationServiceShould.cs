@@ -120,10 +120,15 @@ public class BookingCancellationServiceShould
     }
 
     [Fact]
-    public async Task CancelBooking_AcceptedBooking_ThrowsConflict()
+    public async Task CancelBooking_PaidBooking_ThrowsConflict()
     {
+        // WESAL-TASK-8 (Edit 8) replaces the old rule "Accepted can never be cancelled" with
+        // "only a confirmed deposit locks the booking". See the two Accepted tests at the end
+        // of this file for the unpaid/paid pair.
         var scenario = Scenario();
         scenario.Booking.Status = BookingStatus.Accepted;
+        scenario.Booking.DepositAmount = 500m;
+        scenario.Booking.DepositPaymentConfirmedAt = DateTimeOffset.UtcNow;
 
         await Assert.ThrowsAsync<ConflictException>(() =>
             scenario.Service.CancelBookingAsync(scenario.Hall.Id, scenario.Booking.Id));
@@ -327,6 +332,48 @@ public class BookingCancellationServiceShould
         Assert.Single(scenario.Messages);
     }
 
+    // ---------------------------------------------------------------------------------
+    // WESAL-TASK-8 (Edit 8): the deposit-pending state is cancellable; a paid one is not.
+    // ---------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task CancelBooking_AcceptedWithUnconfirmedDeposit_SucceedsAndReleasesTheHours()
+    {
+        var hall = Hall();
+        var booking = CreateBooking(hall, RequesterId, BookingStatus.Accepted, depositAmount: 500m);
+        var scenario = Scenario([booking]);
+
+        var result = await scenario.Service.CancelBookingAsync(hall.Id, booking.Id);
+
+        // The requester can walk away from an approved booking they never paid for, which is
+        // why those hours must come back to the hall rather than stay reserved.
+        Assert.Equal(BookingStatus.Cancelled, result.Status);
+        Assert.Equal(BookingStatus.Cancelled, booking.Status);
+        Assert.Contains(booking.Id, scenario.BookingRepository.ReleasedBookings);
+    }
+
+    [Fact]
+    public async Task CancelBooking_AcceptedWithConfirmedPayment_ThrowsConflict()
+    {
+        var hall = Hall();
+        var confirmedAt = DateTimeOffset.UtcNow;
+        var booking = CreateBooking(
+            hall,
+            RequesterId,
+            BookingStatus.Accepted,
+            depositAmount: 500m,
+            depositPaymentConfirmedAt: confirmedAt);
+        var scenario = Scenario([booking]);
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            scenario.Service.CancelBookingAsync(hall.Id, booking.Id));
+
+        // The money has changed hands, so neither the booking nor its hours may move.
+        Assert.Equal(BookingStatus.Accepted, booking.Status);
+        Assert.Equal(confirmedAt, booking.DepositPaymentConfirmedAt);
+        Assert.Empty(scenario.BookingRepository.ReleasedBookings);
+    }
+
     private static ScenarioContext Scenario(
         IReadOnlyList<Booking>? bookings = null,
         string? userId = RequesterId,
@@ -374,7 +421,12 @@ public class BookingCancellationServiceShould
             OwnerId = HallOwnerId
         };
 
-    private static Booking CreateBooking(Hall hall, string requesterId, BookingStatus status = BookingStatus.Pending)
+    private static Booking CreateBooking(
+        Hall hall,
+        string requesterId,
+        BookingStatus status = BookingStatus.Pending,
+        decimal? depositAmount = null,
+        DateTimeOffset? depositPaymentConfirmedAt = null)
         => new()
         {
             Id = Guid.NewGuid(),
@@ -390,7 +442,9 @@ public class BookingCancellationServiceShould
                     EndTime = new TimeOnly(11, 0)
                 }
             ],
-            Status = status
+            Status = status,
+            DepositAmount = depositAmount,
+            DepositPaymentConfirmedAt = depositPaymentConfirmedAt
         };
 
     private sealed class ScenarioContext
@@ -489,9 +543,12 @@ public class BookingCancellationServiceShould
         {
             var booking = _bookings.FirstOrDefault(b => b.Id == bookingId);
 
+            // WESAL-TASK-8 (Edit 8): mirrors the real conditional UPDATE. An approved booking
+            // with the deposit still outstanding is cancellable; a confirmed payment is not.
             if (booking is null
                 || !string.Equals(booking.RequesterUserId, requesterUserId, StringComparison.Ordinal)
-                || booking.Status != BookingStatus.Pending
+                || (booking.Status != BookingStatus.Pending && booking.Status != BookingStatus.Accepted)
+                || booking.DepositPaymentConfirmedAt is not null
                 || ForceZeroConditionalUpdate)
             {
                 return Task.FromResult(0);

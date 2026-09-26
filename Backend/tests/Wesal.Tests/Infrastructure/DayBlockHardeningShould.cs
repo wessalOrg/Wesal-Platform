@@ -20,6 +20,8 @@ using Wesal.Persistence.Data;
 using Wesal.Persistence.Migrations;
 using Wesal.Persistence.Repositories;
 
+using Wesal.Tests.TestDoubles;
+
 namespace Wesal.Tests.Infrastructure;
 
 public class DayBlockHardeningShould : IDisposable
@@ -165,7 +167,7 @@ public class DayBlockHardeningShould : IDisposable
             HallRepo(),
             BookingRepo(),
             UnitOfWork(),
-            new FakeCurrentUser(seekerId, true, ApplicationRoles.RegisteredUser));
+            new FakeCurrentUser(seekerId, true, ApplicationRoles.RegisteredUser), new RecordingOwnerBookingRequestNotifier());
 
     private OwnerHourlyAvailabilityService OwnerHourly(string ownerId)
         => new(

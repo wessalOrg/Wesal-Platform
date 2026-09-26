@@ -85,14 +85,20 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
             return null;
         }
 
-        var pending = await (
+        // WESAL-TASK-8 (Edit 8): the owner acts on two kinds of live request, so both must
+        // be listed. Pending needs a review decision, and Accepted needs the payment
+        // confirmation that officially books it. Filtering to Pending alone would hide an
+        // approved request the moment it was approved, leaving the owner no way to confirm
+        // the deposit they asked for and stranding the booking's held hours.
+        var open = await (
             from booking in _context.Bookings
                 .AsNoTracking()
                 .Include(booking => booking.Slots)
             join requester in _context.Users.AsNoTracking()
                 on booking.RequesterUserId equals requester.Id
             where booking.HallId == hallId
-                && booking.Status == BookingStatus.Pending
+                && (booking.Status == BookingStatus.Pending
+                    || booking.Status == BookingStatus.Accepted)
             orderby booking.Date, booking.CreatedAt, booking.Id
             select new
             {
@@ -101,7 +107,7 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
             })
             .ToListAsync(cancellationToken);
 
-        return pending
+        return open
             .Select(row => new OwnerBookingRequestDto
             {
                 BookingRequestId = row.Booking.Id,
@@ -115,7 +121,9 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
                 RequesterUserId = row.Booking.RequesterUserId,
                 RequesterName = row.RequesterName,
                 Status = row.Booking.Status,
-                RequestedAt = row.Booking.CreatedAt
+                RequestedAt = row.Booking.CreatedAt,
+                DepositAmount = row.Booking.DepositAmount,
+                DepositPaymentConfirmedAt = row.Booking.DepositPaymentConfirmedAt
             })
             .ToList();
     }

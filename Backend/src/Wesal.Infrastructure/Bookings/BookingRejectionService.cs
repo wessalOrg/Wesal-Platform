@@ -64,6 +64,17 @@ public sealed class BookingRejectionService : IBookingRejectionService
             return MapToResult(booking, isAlreadyRejected: true);
         }
 
+        // WESAL-TASK-8 (Edit 8): a booking whose deposit the owner already confirmed can no
+        // longer be rejected. The money has changed hands, so releasing the hours would
+        // quietly hand a paid requester's slot to someone else. The confirmation is the
+        // decision point, and it is recorded on the booking, not inferred from the status:
+        // an approved booking is otherwise still rejectable.
+        if (booking.DepositPaymentConfirmedAt is not null)
+        {
+            throw new ConflictException(
+                "The deposit for this booking was already confirmed, so the request can no longer be rejected.");
+        }
+
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             booking.Status = BookingStatus.Rejected;

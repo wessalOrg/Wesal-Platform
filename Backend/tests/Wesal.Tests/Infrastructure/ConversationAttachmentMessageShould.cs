@@ -9,6 +9,8 @@ using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Conversations;
 using Wesal.Infrastructure.Documents;
 
+using Wesal.Tests.TestDoubles;
+
 namespace Wesal.Tests.Infrastructure;
 
 /// <summary>
@@ -124,6 +126,7 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
             conversationRepository,
             messages,
             new FakeBookingRejectionService(),
+            new NoOpBookingAcceptanceService(),
             new FakeHallRepository(),
             new FakeCurrentUserService(userId, roles),
             notifier,
@@ -313,6 +316,7 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
             repository,
             harness.Messages,
             new FakeBookingRejectionService(),
+            new NoOpBookingAcceptanceService(),
             new FakeHallRepository(),
             new FakeCurrentUserService(OwnerId, [ApplicationRoles.HallOwner]),
             new FakeConversationNotifier(),

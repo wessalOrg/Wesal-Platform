@@ -206,6 +206,52 @@ public class BookingRejectionServiceShould
     }
 
     [Fact]
+    public async Task RejectBooking_AcceptedWithUnconfirmedDeposit_SucceedsAndReleasesTheHours()
+    {
+        // WESAL-TASK-8 (Edit 8): approving a request is not a commitment to keep it. Until the
+        // owner confirms the money, an approved booking may still be rejected, and the hours
+        // must return to the hall.
+        var hall = Hall();
+        var booking = CreateBooking(hall, RequesterId, BookingStatus.Accepted, depositAmount: 500m);
+        var scenario = Scenario([booking]);
+
+        var result = await scenario.Service.RejectBookingAsync(
+            hall.Id,
+            booking.Id,
+            new RejectBookingRequestDto { Reason = "Deposit never received" });
+
+        Assert.False(result.IsAlreadyRejected);
+        Assert.Equal(BookingStatus.Rejected, booking.Status);
+        Assert.Contains(booking.Id, scenario.BookingRepository.ReleasedBookings);
+    }
+
+    [Fact]
+    public async Task RejectBooking_AcceptedWithConfirmedPayment_ThrowsConflictAndKeepsBooking()
+    {
+        // Once the deposit is confirmed the owner has been paid, so rejecting would strand a
+        // paying requester. This guard is the money-safety half of Edit 8.
+        var hall = Hall();
+        var confirmedAt = DateTimeOffset.UtcNow;
+        var booking = CreateBooking(
+            hall,
+            RequesterId,
+            BookingStatus.Accepted,
+            depositAmount: 500m,
+            depositPaymentConfirmedAt: confirmedAt);
+        var scenario = Scenario([booking]);
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            scenario.Service.RejectBookingAsync(
+                hall.Id,
+                booking.Id,
+                new RejectBookingRequestDto { Reason = "Changed my mind" }));
+
+        Assert.Equal(BookingStatus.Accepted, booking.Status);
+        Assert.Equal(confirmedAt, booking.DepositPaymentConfirmedAt);
+        Assert.Empty(scenario.BookingRepository.ReleasedBookings);
+    }
+
+    [Fact]
     public async Task RejectBooking_AlreadyRejected_ReturnsExistingWithoutDuplicateMessage()
     {
         var scenario = Scenario();
@@ -472,7 +518,12 @@ public class BookingRejectionServiceShould
             OwnerId = OwnerId
         };
 
-    private static Booking CreateBooking(Hall hall, string requesterId)
+    private static Booking CreateBooking(
+        Hall hall,
+        string requesterId,
+        BookingStatus status = BookingStatus.Pending,
+        decimal? depositAmount = null,
+        DateTimeOffset? depositPaymentConfirmedAt = null)
         => new()
         {
             Id = Guid.NewGuid(),
@@ -488,7 +539,9 @@ public class BookingRejectionServiceShould
                     EndTime = new TimeOnly(11, 0)
                 }
             ],
-            Status = BookingStatus.Pending
+            Status = status,
+            DepositAmount = depositAmount,
+            DepositPaymentConfirmedAt = depositPaymentConfirmedAt
         };
 
     private sealed class ScenarioContext

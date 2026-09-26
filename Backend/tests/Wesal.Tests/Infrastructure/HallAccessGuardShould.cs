@@ -17,6 +17,8 @@ using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
 
+using Wesal.Tests.TestDoubles;
+
 namespace Wesal.Tests.Infrastructure;
 
 public class HallAccessGuardShould : IDisposable
@@ -405,6 +407,7 @@ public class HallAccessGuardShould : IDisposable
             new FakeConversationRepository(conversation),
             new FakeMessageRepository(),
             new FakeBookingRejectionService(),
+            new NoOpBookingAcceptanceService(),
             new FakeHallRepository(),
             new FakeCurrentUser(conversation.HallOwnerId, [ApplicationRoles.HallOwner]),
             new FakeConversationNotifier(),
@@ -430,11 +433,13 @@ public class HallAccessGuardShould : IDisposable
         Photos = []
     };
 
-    private HourlySlotService BuildHourlySlotService() => new(
-        new HallRepository(_context),
-        new BookingRepository(_context),
-        new UnitOfWork(_context),
-        new FakeCurrentUser("seeker-1", [ApplicationRoles.RegisteredUser]));
+       private HourlySlotService BuildHourlySlotService() => new(
+           new HallRepository(_context),
+           new BookingRepository(_context),
+           new UnitOfWork(_context),
+           new FakeCurrentUser("seeker-1", [ApplicationRoles.RegisteredUser]),
+           new RecordingOwnerBookingRequestNotifier());
+
 
     private sealed class FakeCurrentUser : ICurrentUserService
     {

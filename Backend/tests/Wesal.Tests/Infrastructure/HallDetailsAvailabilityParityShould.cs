@@ -7,6 +7,8 @@ using Wesal.Domain.Enums;
 using Wesal.Infrastructure.Bookings;
 using Wesal.Infrastructure.Halls;
 
+using Wesal.Tests.TestDoubles;
+
 namespace Wesal.Tests.Infrastructure;
 
 /// <summary>
@@ -163,11 +165,13 @@ public class HallDetailsAvailabilityParityShould
     {        var halls = new StubHallRepository(hall);
         var bookings = new StubBookingRepository(bookedStarts, dayOpen);
         var currentUser = new StubCurrentUserService();
-        var hourlySlots = new HourlySlotService(
-            halls,
-            bookings,
-            new StubUnitOfWork(),
-            currentUser);
+           var hourlySlots = new HourlySlotService(
+               halls,
+               bookings,
+               new StubUnitOfWork(),
+               currentUser,
+               new RecordingOwnerBookingRequestNotifier());
+
 
         var details = new HallDetailsService(
             halls,

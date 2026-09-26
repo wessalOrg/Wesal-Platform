@@ -15,6 +15,7 @@ public sealed class ConversationService : IConversationService
     private readonly IConversationRepository _conversationRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IBookingRejectionService _bookingRejectionService;
+    private readonly IBookingAcceptanceService _bookingAcceptanceService;
     private readonly IHallRepository _hallRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IConversationNotifier _notifier;
@@ -24,6 +25,7 @@ public sealed class ConversationService : IConversationService
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository,
         IBookingRejectionService bookingRejectionService,
+        IBookingAcceptanceService bookingAcceptanceService,
         IHallRepository hallRepository,
         ICurrentUserService currentUser,
         IConversationNotifier notifier,
@@ -32,6 +34,7 @@ public sealed class ConversationService : IConversationService
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
         _bookingRejectionService = bookingRejectionService;
+        _bookingAcceptanceService = bookingAcceptanceService;
         _hallRepository = hallRepository;
         _currentUser = currentUser;
         _notifier = notifier;
@@ -114,7 +117,7 @@ public sealed class ConversationService : IConversationService
 
         var userId = GetAuthenticatedUserId();
 
-        await DeliverPendingRejectionNotificationsAsync(cancellationToken);
+        await DeliverPendingBookingNotificationsAsync(cancellationToken);
 
         var conversations = await _conversationRepository.GetParticipantConversationsAsync(userId, cancellationToken);
 
@@ -178,7 +181,7 @@ public sealed class ConversationService : IConversationService
 
         var userId = GetAuthenticatedUserId();
 
-        await DeliverPendingRejectionNotificationsAsync(cancellationToken);
+        await DeliverPendingBookingNotificationsAsync(cancellationToken);
 
         var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
 
@@ -623,10 +626,14 @@ public sealed class ConversationService : IConversationService
         };
     }
 
-    private async Task DeliverPendingRejectionNotificationsAsync(CancellationToken cancellationToken)
+    private async Task DeliverPendingBookingNotificationsAsync(CancellationToken cancellationToken)
     {
         try
         {
+            // WESAL-TASK-8 (Edit 8): the approval notice is retried the same way as the
+            // rejection notice, so a requester who never received it still gets it on a
+            // later read of their conversations.
+            await _bookingAcceptanceService.DeliverPendingAcceptanceNotificationsAsync(cancellationToken);
             await _bookingRejectionService.DeliverPendingRejectionNotificationsAsync(cancellationToken);
         }
         catch (OperationCanceledException)

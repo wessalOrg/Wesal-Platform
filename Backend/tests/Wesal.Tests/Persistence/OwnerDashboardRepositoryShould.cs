@@ -357,7 +357,7 @@ public class OwnerDashboardRepositoryShould
     }
 
     [Fact]
-    public async Task GetBookingRequests_ExcludesNonPendingAndOtherHallsRequests()
+    public async Task GetBookingRequests_ExcludesFinalizedAndOtherHallsRequests()
     {
         await using var context = CreateContext();
         var ownerId = Guid.NewGuid().ToString();
@@ -370,6 +370,7 @@ public class OwnerDashboardRepositoryShould
             CreateBooking(hallA.Id, requesterId, new DateOnly(2027, 6, 1), new TimeOnly(10, 0), BookingStatus.Pending),
             CreateBooking(hallA.Id, requesterId, new DateOnly(2027, 6, 1), new TimeOnly(16, 0), BookingStatus.Accepted),
             CreateBooking(hallA.Id, requesterId, new DateOnly(2027, 6, 5), new TimeOnly(10, 0), BookingStatus.Rejected),
+            CreateBooking(hallA.Id, requesterId, new DateOnly(2027, 6, 6), new TimeOnly(10, 0), BookingStatus.Cancelled),
             CreateBooking(hallB.Id, requesterId, new DateOnly(2027, 6, 1), new TimeOnly(10, 0), BookingStatus.Pending));
         await context.SaveChangesAsync();
 
@@ -377,9 +378,50 @@ public class OwnerDashboardRepositoryShould
 
         var result = await repository.GetBookingRequestsAsync(hallA.Id, ownerId);
 
-        var item = Assert.Single(result!);
-        Assert.Equal(BookingStatus.Pending, item.Status);
-        Assert.Equal([new TimeOnly(10, 0)], item.SlotStarts);
+        // WESAL-TASK-8 (Edit 8): both live states are listed. Pending needs a review
+        // decision and Accepted needs the deposit confirmation, so an owner must still see
+        // an approved request in order to finish it. Rejected, cancelled and other halls'
+        // requests stay out.
+        Assert.Equal(2, result!.Count);
+        Assert.Contains(result, item => item.Status == BookingStatus.Pending);
+        Assert.Contains(result, item => item.Status == BookingStatus.Accepted);
+        Assert.DoesNotContain(result, item => item is { Status: BookingStatus.Rejected or BookingStatus.Cancelled });
+    }
+
+    [Fact]
+    public async Task GetBookingRequests_CarriesTheDepositAndItsConfirmationState()
+    {
+        await using var context = CreateContext();
+        var ownerId = Guid.NewGuid().ToString();
+        var requesterId = Guid.NewGuid().ToString();
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "Grand Hall", OwnerId = ownerId, Status = HallStatus.Approved };
+        context.Halls.Add(hall);
+        context.Users.Add(new ApplicationUser { Id = requesterId, UserName = "requester", FullName = "Depositor" });
+        context.Bookings.AddRange(
+            CreateBooking(hall.Id, requesterId, new DateOnly(2027, 6, 1), new TimeOnly(10, 0), BookingStatus.Pending),
+            CreateBooking(
+                hall.Id,
+                requesterId,
+                new DateOnly(2027, 6, 2),
+                new TimeOnly(10, 0),
+                BookingStatus.Accepted,
+                depositAmount: 750m,
+                depositPaymentConfirmedAt: null));
+        await context.SaveChangesAsync();
+
+        var repository = new OwnerDashboardRepository(context);
+
+        var result = await repository.GetBookingRequestsAsync(hall.Id, ownerId);
+
+        // The owner needs the amount they are waiting to receive, and needs to see that it is
+        // still outstanding, in order to decide when to confirm it.
+        var pending = Assert.Single(result!, item => item.Status == BookingStatus.Pending);
+        Assert.Null(pending.DepositAmount);
+        Assert.Null(pending.DepositPaymentConfirmedAt);
+
+        var approved = Assert.Single(result!, item => item.Status == BookingStatus.Accepted);
+        Assert.Equal(750m, approved.DepositAmount);
+        Assert.Null(approved.DepositPaymentConfirmedAt);
     }
 
     [Fact]
@@ -413,7 +455,9 @@ public class OwnerDashboardRepositoryShould
         string requesterUserId,
         DateOnly date,
         TimeOnly slotStart,
-        BookingStatus status = BookingStatus.Pending)
+        BookingStatus status = BookingStatus.Pending,
+        decimal? depositAmount = null,
+        DateTimeOffset? depositPaymentConfirmedAt = null)
         => new()
         {
             HallId = hallId,
@@ -423,7 +467,9 @@ public class OwnerDashboardRepositoryShould
             [
                 new BookingSlot { StartTime = slotStart, EndTime = slotStart.AddHours(1) }
             ],
-            Status = status
+            Status = status,
+            DepositAmount = depositAmount,
+            DepositPaymentConfirmedAt = depositPaymentConfirmedAt
         };
 
     private static ApplicationDbContext CreateContext()

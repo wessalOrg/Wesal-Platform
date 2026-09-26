@@ -19,8 +19,9 @@ public class HallHourlyCatalogDto
 
     /// <summary>
     /// When the hall's ShowBookedSlots is ON: every hourly slot of the day window is
-    /// returned, booked ones marked Booked. When OFF: only available slots appear
-    /// (booked hours are hidden from seekers per owner preference).
+    /// returned, unavailable ones carrying their real status. When OFF: only available
+    /// slots appear, because both booked and reserved hours are hidden from seekers per
+    /// owner preference (WESAL-TASK-8).
     /// </summary>
     public IReadOnlyList<HallHourlySlotDto> Slots { get; init; } = [];
 }
@@ -34,8 +35,22 @@ public class HallHourlySlotDto
 
     public HallSlotStatus Status { get; init; } = HallSlotStatus.Available;
 
-    /// <summary>When this hourly slot is already booked (useful only when ShowBookedSlots=ON).</summary>
+    /// <summary>
+    /// When this hourly slot is officially booked and paid for (useful only when
+    /// ShowBookedSlots=ON). A Reserved slot is deliberately NOT reported as booked: it is
+    /// held by a live request whose deposit has not been confirmed, so nothing has been
+    /// paid for it yet. Use <see cref="IsSelectable"/> to decide whether a seeker can book
+    /// it, which covers both cases.
+    /// </summary>
     public bool IsBooked => Status == HallSlotStatus.Booked;
+
+    /// <summary>
+    /// WESAL-TASK-8 (Edit 8): whether a seeker may pick this hour right now. False for both
+    /// Booked and Reserved, so a held-but-unpaid hour is never offered and can never lead to
+    /// a conflict at booking time. This is the authoritative "can I book it" flag; clients
+    /// should not infer it from <see cref="IsBooked"/> alone.
+    /// </summary>
+    public bool IsSelectable => Status == HallSlotStatus.Available;
 }
 
 /// <summary>

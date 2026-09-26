@@ -26,18 +26,28 @@ public class BookingAcceptancesController : ControllerBase
     }
 
     /// <summary>
-    /// Accepts a pending booking request (US-OWNER-11). The request transitions
-    /// from Pending to Accepted; the period remains protected (reserved) so no
-    /// competing booking can take it. The period is NOT permanently marked as
-    /// Booked because the deposit workflow (US-BOOK-05) is not yet implemented.
+    /// Accepts a pending booking request (US-OWNER-11), stating the deposit
+    /// (عربون) the requester must pay. The request transitions from Pending to
+    /// Accepted and the deposit is recorded; the hours stay reserved so no
+    /// competing request can take them, and they are NOT marked Booked yet.
+    /// Booking the hall is a separate, deliberate step: the owner confirms the
+    /// deposit was received, which is when the hours become officially booked.
+    /// The requester is notified on the booking conversation with the amount due.
     /// Ownership and status eligibility are verified server-side from the JWT
     /// session and persisted records; the client cannot supply a trusted owner id.
     /// A race between accept and cancel is resolved atomically at the database
     /// level; exactly one wins and the loser receives a 409 Conflict.
     /// </summary>
+    /// <remarks>
+    /// WESAL-TASK-8 (Edit 8): a request body with <c>depositAmount</c> is now
+    /// required. Previously this endpoint took no body; that call shape is no
+    /// longer accepted, because an approval without a deposit amount is not a
+    /// complete approval.
+    /// </remarks>
     [HttpPost("accept")]
     [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
     [ProducesResponseType(typeof(AcceptBookingResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -45,9 +55,14 @@ public class BookingAcceptancesController : ControllerBase
     public async Task<ActionResult<AcceptBookingResultDto>> AcceptBooking(
         Guid hallId,
         Guid bookingId,
+        [FromBody] AcceptBookingRequestDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _bookingAcceptanceService.AcceptBookingAsync(hallId, bookingId, cancellationToken);
+        var result = await _bookingAcceptanceService.AcceptBookingAsync(
+            hallId,
+            bookingId,
+            request,
+            cancellationToken);
 
         return Ok(result);
     }

@@ -7,6 +7,8 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Bookings;
 
+using Wesal.Tests.TestDoubles;
+
 namespace Wesal.Tests.Infrastructure;
 
 /// <summary>
@@ -122,7 +124,7 @@ public class HourlySlotServiceShould
         var exception = await Assert.ThrowsAsync<ConflictException>(() =>
             service.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, new TimeOnly(10, 0))));
 
-        Assert.Contains("already booked", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no longer available", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(bookingRepository.AddedBookings);
     }
 
@@ -143,8 +145,102 @@ public class HourlySlotServiceShould
         var exception = await Assert.ThrowsAsync<ConflictException>(() =>
             service.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, new TimeOnly(10, 0))));
 
-        Assert.Contains("already booked", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no longer available", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(bookingRepository.AddedBookings);
+    }
+
+    [Fact]
+    public async Task CreateHourlyBookingAsync_NewRequest_ReservesTheHourWithoutBookingIt()
+    {
+        // WESAL-TASK-8 (Edit 8): submitting a request must not look like a paid booking. The
+        // hour is held as Reserved, and only the owner's deposit confirmation makes it Booked.
+        var hall = CreateHall("Approved Hall", showBookedSlots: true);
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+        var bookingRepository = new FakeBookingRepository();
+        var date = Tomorrow();
+
+        var service = CreateService(hallRepository, bookingRepository, registeredUser: true);
+
+        await service.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, new TimeOnly(10, 0)));
+
+        Assert.Equal(
+            HallSlotStatus.Reserved,
+            Assert.Single(bookingRepository.Slots).Status);
+    }
+
+    [Fact]
+    public async Task CreateHourlyBookingAsync_SecondSeekerWantsTheHeldHour_ThrowsConflict()
+    {
+        // The first request holds 10:00. A second seeker must not be able to land on the same
+        // hour just because the catalog hides unavailable slots (ShowBookedSlots OFF) - the
+        // claim itself is the guard, and the loser gets an explicit conflict.
+        var hall = CreateHall("Approved Hall", showBookedSlots: false);
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+        var bookingRepository = new FakeBookingRepository();
+        var date = Tomorrow();
+        bookingRepository.Slots.Add(NewSlot(hall.Id, date, new TimeOnly(10, 0), HallSlotStatus.Reserved));
+
+        var service = CreateService(hallRepository, bookingRepository, registeredUser: true);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(() =>
+            service.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, new TimeOnly(10, 0))));
+
+        Assert.Contains("no longer available", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(bookingRepository.AddedBookings);
+        Assert.Equal(
+            HallSlotStatus.Reserved,
+            Assert.Single(bookingRepository.Slots).Status);
+    }
+
+    [Fact]
+    public async Task CreateHourlyBookingAsync_TwoSeekersRaceForOneHour_ExactlyOneWins()
+    {
+        // Two requests created back to back against the same repository: the first claim takes
+        // the hour, the second is refused. This is the whole point of reserving separately
+        // from booking - no seeker can ever double-book an hour by asking twice.
+        var hall = CreateHall("Approved Hall", showBookedSlots: true);
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+        var bookingRepository = new FakeBookingRepository();
+        var date = Tomorrow();
+
+        var service = CreateService(hallRepository, bookingRepository, registeredUser: true);
+
+        await service.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, new TimeOnly(10, 0)));
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            service.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, new TimeOnly(10, 0))));
+
+        Assert.Single(bookingRepository.AddedBookings);
+        Assert.Equal(
+            HallSlotStatus.Reserved,
+            Assert.Single(bookingRepository.Slots).Status);
+    }
+
+    [Fact]
+    public async Task CreateHourlyBookingAsync_HallOwnerRequestingTheirOwnHall_ThrowsValidation()
+    {
+        // Regression guard for Edit 8: reserving an hour is now the first half of a two-step
+        // flow, and an owner must not be able to enter it for their own hall and then approve
+        // and pay themselves. The request itself has to be refused.
+        var hall = CreateHall("Approved Hall", showBookedSlots: true);
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+        var bookingRepository = new FakeBookingRepository();
+        var date = Tomorrow();
+
+        var service = CreateService(
+            hallRepository,
+            bookingRepository,
+            registeredUser: true,
+            userId: hall.OwnerId);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, new TimeOnly(10, 0))));
+
+        Assert.Empty(bookingRepository.AddedBookings);
+        Assert.Empty(bookingRepository.Slots);
     }
 
     [Fact]
@@ -152,7 +248,9 @@ public class HourlySlotServiceShould
     {
         var hall = CreateHall("Approved Hall", showBookedSlots: true);
         var hallRepository = new FakeHallRepository();
+
         hallRepository.Halls.Add(hall);
+
         var bookingRepository = new FakeBookingRepository();
         var date = Tomorrow();
 
@@ -169,8 +267,10 @@ public class HourlySlotServiceShould
         Assert.Equal(BookingStatus.Pending, booking.Status);
         Assert.Equal(booking.Id, result.BookingId);
         Assert.Equal(new TimeOnly(10, 0), Assert.Single(result.SlotStarts));
-        // The atomic reservation marked the slot booked.
-        Assert.Equal(HallSlotStatus.Booked, Assert.Single(bookingRepository.Slots).Status);
+        // WESAL-TASK-8 (Edit 8): the atomic claim now holds the hour as Reserved. It used to
+        // mark it Booked here, which made an unpaid request look like a paid one.
+        Assert.Equal(HallSlotStatus.Reserved, Assert.Single(bookingRepository.Slots).Status);
+
     }
 
     [Fact]
@@ -273,11 +373,13 @@ public class HourlySlotServiceShould
         hallRepository.Halls.Add(hall);
         var bookingRepository = new FakeBookingRepository();
 
-        var service = new HourlySlotService(
-            hallRepository,
-            bookingRepository,
-            new FakeUnitOfWork(),
-            new FakeCurrentUserService(null, authenticated: false));
+           var service = new HourlySlotService(
+               hallRepository,
+               bookingRepository,
+               new FakeUnitOfWork(),
+               new FakeCurrentUserService(null, authenticated: false),
+               new RecordingOwnerBookingRequestNotifier());
+
 
         await Assert.ThrowsAsync<UnauthorizedException>(() =>
             service.CreateHourlyBookingAsync(CreateRequest(hall.Id, Tomorrow(), new TimeOnly(10, 0))));
@@ -292,11 +394,13 @@ public class HourlySlotServiceShould
         var bookingRepository = new FakeBookingRepository();
 
         // Authenticated but not a RegisteredUser (e.g. the Guest role) -> Forbidden.
-        var service = new HourlySlotService(
-            hallRepository,
-            bookingRepository,
-            new FakeUnitOfWork(),
-            new FakeCurrentUserService("guest-1", authenticated: true, ApplicationRoles.Guest));
+           var service = new HourlySlotService(
+               hallRepository,
+               bookingRepository,
+               new FakeUnitOfWork(),
+               new FakeCurrentUserService("guest-1", authenticated: true, ApplicationRoles.Guest),
+               new RecordingOwnerBookingRequestNotifier());
+
 
         await Assert.ThrowsAsync<ForbiddenException>(() =>
             service.CreateHourlyBookingAsync(CreateRequest(hall.Id, Tomorrow(), new TimeOnly(10, 0))));
@@ -444,11 +548,13 @@ public class HourlySlotServiceShould
         var hallRepository = new FakeHallRepository();
         hallRepository.Halls.Add(hall);
 
-        var service = new HourlySlotService(
-            hallRepository,
-            new FakeBookingRepository(),
-            new FakeUnitOfWork(),
-            new FakeCurrentUserService("seeker-1", authenticated: true, ApplicationRoles.RegisteredUser));
+           var service = new HourlySlotService(
+               hallRepository,
+               new FakeBookingRepository(),
+               new FakeUnitOfWork(),
+               new FakeCurrentUserService("seeker-1", authenticated: true, ApplicationRoles.RegisteredUser),
+               new RecordingOwnerBookingRequestNotifier());
+
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             service.CreateHourlyBookingAsync(CreateRequest(hall.Id, Tomorrow(), new TimeOnly(10, 0))));
@@ -494,12 +600,16 @@ public class HourlySlotServiceShould
     private static HourlySlotService CreateService(
         FakeHallRepository hallRepository,
         FakeBookingRepository bookingRepository,
-        bool registeredUser = true)
-        => new(
-            hallRepository,
-            bookingRepository,
-            new FakeUnitOfWork(),
-            new FakeCurrentUserService("seeker-1", authenticated: true, registeredUser ? ApplicationRoles.RegisteredUser : ApplicationRoles.Guest));
+        bool registeredUser = true,
+        string? userId = null)
+           => new(
+               hallRepository,
+               bookingRepository,
+               new FakeUnitOfWork(),
+               new FakeCurrentUserService(userId ?? "seeker-1", authenticated: true, registeredUser ? ApplicationRoles.RegisteredUser : ApplicationRoles.Guest),
+               new RecordingOwnerBookingRequestNotifier());
+
+
 
     private sealed class FakeCurrentUserService : ICurrentUserService
     {
@@ -625,6 +735,9 @@ public class HourlySlotServiceShould
         {
             var reserved = 0;
 
+            // WESAL-TASK-8 (Edit 8): a request only *holds* its hours. It must mark them
+            // Reserved, never Booked, and it must refuse any hour that is already held or
+            // booked - which is what keeps two seekers from landing on the same slot.
             foreach (var startTime in startTimes)
             {
                 var existing = Slots.FirstOrDefault(slot =>
@@ -632,21 +745,22 @@ public class HourlySlotServiceShould
 
                 if (existing is null)
                 {
-                    Slots.Add(NewSlot(hallId, date, startTime, HallSlotStatus.Booked));
+                    Slots.Add(NewSlot(hallId, date, startTime, HallSlotStatus.Reserved));
                     reserved++;
                     continue;
                 }
 
-                if (existing.Status == HallSlotStatus.Booked)
+                if (existing.Status != HallSlotStatus.Available)
                 {
                     break;
                 }
 
-                existing.Status = HallSlotStatus.Booked;
+                existing.Status = HallSlotStatus.Reserved;
                 reserved++;
             }
 
             return Task.FromResult(reserved);
         }
+
     }
 }

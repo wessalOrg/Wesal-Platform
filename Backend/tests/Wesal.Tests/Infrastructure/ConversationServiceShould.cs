@@ -7,6 +7,8 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Conversations;
 
+using Wesal.Tests.TestDoubles;
+
 namespace Wesal.Tests.Infrastructure;
 
 public class ConversationServiceShould
@@ -570,7 +572,7 @@ public class ConversationServiceShould
     {
         var effectiveUserId = authenticated && userId is null ? "test-user-1" : userId;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? []);
-        return new ConversationService(conversationRepository, new FakeMessageRepository(), new FakeBookingRejectionService(), hallRepository, currentUser, new FakeConversationNotifier(), new FakeDocumentStorage());
+        return new ConversationService(conversationRepository, new FakeMessageRepository(), new FakeBookingRejectionService(), new NoOpBookingAcceptanceService(), hallRepository, currentUser, new FakeConversationNotifier(), new FakeDocumentStorage());
     }
 
     private sealed class FakeConversationRepository : IConversationRepository

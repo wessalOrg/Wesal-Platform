@@ -40,18 +40,38 @@ public sealed class BookingRepository : IBookingRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Booking>> GetPendingAcceptanceNotificationsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        // WESAL-TASK-8 (Edit 8): mirror of GetPendingRejectionNotificationsAsync - approved
+        // bookings that still owe the requester an approval notice. A booking whose notice
+        // already exists is skipped, so the retry cannot double-send.
+        return await _context.Bookings
+            .Include(booking => booking.Hall)
+            .Where(booking => booking.Status == BookingStatus.Accepted)
+            .Where(booking => booking.DepositAmount != null)
+            .Where(booking => booking.ApprovalMessageId == null)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<int> CancelPendingAsync(
         Guid bookingId,
         string requesterUserId,
         CancellationToken cancellationToken = default)
     {
+        // WESAL-TASK-8 (Edit 8): cancellation is allowed while the deposit is still
+        // outstanding, so an approved booking the requester never paid for can be called
+        // off and its reserved hours re-opened. Once the deposit is confirmed the money
+        // has changed hands and the row must no longer match, which is what blocks it.
         if (_context.Database.IsRelational())
         {
             return await _context.Bookings
                 .Where(booking =>
                     booking.Id == bookingId
                     && booking.RequesterUserId == requesterUserId
-                    && booking.Status == BookingStatus.Pending)
+                    && (booking.Status == BookingStatus.Pending
+                        || booking.Status == BookingStatus.Accepted)
+                    && booking.DepositPaymentConfirmedAt == null)
                 .ExecuteUpdateAsync(
                     set =>
                         set.SetProperty(booking => booking.Status, BookingStatus.Cancelled)
@@ -63,7 +83,9 @@ public sealed class BookingRepository : IBookingRepository
             .Where(booking =>
                 booking.Id == bookingId
                 && booking.RequesterUserId == requesterUserId
-                && booking.Status == BookingStatus.Pending)
+                && (booking.Status == BookingStatus.Pending
+                    || booking.Status == BookingStatus.Accepted)
+                && booking.DepositPaymentConfirmedAt == null)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (pending is null)
@@ -79,8 +101,15 @@ public sealed class BookingRepository : IBookingRepository
         return 1;
     }
 
+    /// <summary>
+    /// WESAL-TASK-8 (Edit 8): atomically flips a pending request to Accepted and records the
+    /// deposit the owner required in the same statement, so an approval can never be
+    /// persisted without the amount it is for. The row only matches while it is still
+    /// Pending, which is what resolves the accept-vs-cancel race.
+    /// </summary>
     public async Task<int> AcceptPendingAsync(
         Guid bookingId,
+        decimal depositAmount,
         CancellationToken cancellationToken = default)
     {
         if (_context.Database.IsRelational())
@@ -92,6 +121,7 @@ public sealed class BookingRepository : IBookingRepository
                 .ExecuteUpdateAsync(
                     set =>
                         set.SetProperty(booking => booking.Status, BookingStatus.Accepted)
+                            .SetProperty(booking => booking.DepositAmount, depositAmount)
                             .SetProperty(booking => booking.UpdatedAt, DateTimeOffset.UtcNow),
                     cancellationToken);
         }
@@ -108,7 +138,53 @@ public sealed class BookingRepository : IBookingRepository
         }
 
         pending.Status = BookingStatus.Accepted;
+        pending.DepositAmount = depositAmount;
         pending.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return 1;
+    }
+
+    /// <summary>
+    /// WESAL-TASK-8 (Edit 8): atomically stamps the moment the owner confirmed receiving the
+    /// deposit. The row only matches while it is Accepted and the confirmation is still
+    /// outstanding, so two concurrent confirmations cannot both win, and a booking that was
+    /// rejected or cancelled in the meantime can never be marked paid.
+    /// </summary>
+    public async Task<int> ConfirmDepositPaymentAsync(
+        Guid bookingId,
+        DateTimeOffset confirmedAt,
+        CancellationToken cancellationToken = default)
+    {
+        if (_context.Database.IsRelational())
+        {
+            return await _context.Bookings
+                .Where(booking =>
+                    booking.Id == bookingId
+                    && booking.Status == BookingStatus.Accepted
+                    && booking.DepositPaymentConfirmedAt == null)
+                .ExecuteUpdateAsync(
+                    set =>
+                        set.SetProperty(booking => booking.DepositPaymentConfirmedAt, confirmedAt)
+                            .SetProperty(booking => booking.UpdatedAt, DateTimeOffset.UtcNow),
+                    cancellationToken);
+        }
+
+        var approved = await _context.Bookings
+            .Where(booking =>
+                booking.Id == bookingId
+                && booking.Status == BookingStatus.Accepted
+                && booking.DepositPaymentConfirmedAt == null)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (approved is null)
+        {
+            return 0;
+        }
+
+        approved.DepositPaymentConfirmedAt = confirmedAt;
+        approved.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -179,6 +255,23 @@ public sealed class BookingRepository : IBookingRepository
             .ToListAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// WESAL-TASK-8 (Edit 8): claims every requested hourly slot for a new booking
+    /// request, moving each one Available -> Reserved.
+    /// <para>
+    /// A Reserved slot is protected exactly like a booked one, so a second request for the
+    /// same hours cannot take them while the first is still live. The conditional upsert is
+    /// the single point of control for that guarantee, because the unique index on
+    /// (HallId, Date, StartTime) allows only one row per hour: the update is allowed to
+    /// fire <c>only</c> when the row is still Available, so a slot that is Reserved or
+    /// Booked is never stolen.
+    /// </para>
+    /// <para>
+    /// Returns the number of slots actually claimed, which equals
+    /// <paramref name="startTimes"/> only when all of them were free. A partial result
+    /// must be treated as a conflict and rolled back.
+    /// </para>
+    /// </summary>
     public async Task<int> ReserveHourlySlotsAsync(
         Guid hallId,
         DateOnly date,
@@ -194,13 +287,13 @@ public sealed class BookingRepository : IBookingRepository
 
         foreach (var startTime in startTimes)
         {
-            var affected = await ReserveOneHourlySlotAsync(hallId, date, startTime, cancellationToken);
+            var affected = await ClaimOneHourlySlotAsync(hallId, date, startTime, cancellationToken);
 
             if (affected == 0)
             {
                 // A conflicting slot stops the walk. The caller runs this inside a
                 // transaction, so the slots already taken in this loop are rolled back and
-                // the booking is never persisted with a partially-reserved set of hours.
+                // the booking is never persisted with a partially-held set of hours.
                 return reserved;
             }
 
@@ -210,7 +303,45 @@ public sealed class BookingRepository : IBookingRepository
         return reserved;
     }
 
-    private async Task<int> ReserveOneHourlySlotAsync(
+    /// <summary>
+    /// WESAL-TASK-8 (Edit 8): the payment-confirmation trigger. Promotes the booking's
+    /// hours from Reserved to Booked, and only now are they officially booked.
+    /// <para>
+    /// The update fires only for a slot that is currently held (Reserved or already
+    /// Booked, which keeps the call idempotent). A slot that is Available means the booking
+    /// lost its hold - it was rejected or cancelled - so nothing is touched and the caller
+    /// sees a zero result and refuses to confirm.
+    /// </para>
+    /// </summary>
+    public async Task<int> ConfirmReservedHourlySlotsAsync(
+        Guid hallId,
+        DateOnly date,
+        IReadOnlyList<TimeOnly> startTimes,
+        CancellationToken cancellationToken = default)
+    {
+        if (startTimes.Count == 0)
+        {
+            return 0;
+        }
+
+        var confirmed = 0;
+
+        foreach (var startTime in startTimes)
+        {
+            var affected = await ConfirmOneHourlySlotAsync(hallId, date, startTime, cancellationToken);
+
+            if (affected == 0)
+            {
+                return confirmed;
+            }
+
+            confirmed++;
+        }
+
+        return confirmed;
+    }
+
+    private async Task<int> ClaimOneHourlySlotAsync(
         Guid hallId,
         DateOnly date,
         TimeOnly startTime,
@@ -218,20 +349,20 @@ public sealed class BookingRepository : IBookingRepository
     {
         if (_context.Database.IsRelational())
         {
-            // Single-statement conditional upsert so reserving a fresh
+            // Single-statement conditional upsert so claiming a fresh
             // (HallId, Date, StartTime) hourly slot succeeds atomically:
-            // - no row yet        -> inserted as Booked, 1 row affected
-            // - row Available     -> updated to Booked,  1 row affected
-            // - row already Booked -> WHERE excludes the update, 0 rows affected
+            // - no row yet        -> inserted as Reserved, 1 row affected
+            // - row Available     -> updated to Reserved,  1 row affected
+            // - row Reserved/Booked-> WHERE excludes the update, 0 rows affected
             return await _context.Database.ExecuteSqlInterpolatedAsync(
                 $"""
                 INSERT INTO wesal."HallSlotAvailabilities" ("Id", "HallId", "Date", "StartTime", "Status", "CreatedAt", "UpdatedAt")
-                VALUES ({Guid.NewGuid()}, {hallId}, {date}, {startTime}, {(int)HallSlotStatus.Booked}, {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow})
+                VALUES ({Guid.NewGuid()}, {hallId}, {date}, {startTime}, {(int)HallSlotStatus.Reserved}, {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow})
                 ON CONFLICT ("HallId", "Date", "StartTime")
                 DO UPDATE
-                SET "Status" = {(int)HallSlotStatus.Booked},
+                SET "Status" = {(int)HallSlotStatus.Reserved},
                     "UpdatedAt" = {DateTimeOffset.UtcNow}
-                WHERE wesal."HallSlotAvailabilities"."Status" <> {(int)HallSlotStatus.Booked};
+                WHERE wesal."HallSlotAvailabilities"."Status" = {(int)HallSlotStatus.Available};
                 """,
                 cancellationToken);
         }
@@ -248,7 +379,7 @@ public sealed class BookingRepository : IBookingRepository
                 HallId = hallId,
                 Date = date,
                 StartTime = startTime,
-                Status = HallSlotStatus.Booked
+                Status = HallSlotStatus.Reserved
             });
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -256,13 +387,60 @@ public sealed class BookingRepository : IBookingRepository
             return 1;
         }
 
-        if (existing.Status == HallSlotStatus.Booked)
+        // Any held slot blocks a new claim. Checking for "not Available" rather than
+        // "is Booked" is what keeps a Reserved slot from being stolen (WESAL-TASK-8).
+        if (existing.Status != HallSlotStatus.Available)
         {
             return 0;
         }
 
-        existing.Status = HallSlotStatus.Booked;
+        existing.Status = HallSlotStatus.Reserved;
         existing.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return 1;
+    }
+
+    private async Task<int> ConfirmOneHourlySlotAsync(
+        Guid hallId,
+        DateOnly date,
+        TimeOnly startTime,
+        CancellationToken cancellationToken)
+    {
+        if (_context.Database.IsRelational())
+        {
+            return await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                INSERT INTO wesal."HallSlotAvailabilities" ("Id", "HallId", "Date", "StartTime", "Status", "CreatedAt", "UpdatedAt")
+                VALUES ({Guid.NewGuid()}, {hallId}, {date}, {startTime}, {(int)HallSlotStatus.Booked}, {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow})
+                ON CONFLICT ("HallId", "Date", "StartTime")
+                DO UPDATE
+                SET "Status" = {(int)HallSlotStatus.Booked},
+                    "UpdatedAt" = {DateTimeOffset.UtcNow}
+                WHERE wesal."HallSlotAvailabilities"."Status" IN ({(int)HallSlotStatus.Reserved}, {(int)HallSlotStatus.Booked});
+                """,
+                cancellationToken);
+        }
+
+        var slot = await _context.HallSlotAvailabilities
+            .FirstOrDefaultAsync(
+                candidate => candidate.HallId == hallId && candidate.Date == date && candidate.StartTime == startTime,
+                cancellationToken);
+
+        if (slot is null)
+        {
+            return 0;
+        }
+
+        // An Available slot has lost its hold, so payment must not be confirmed onto it.
+        if (slot.Status == HallSlotStatus.Available)
+        {
+            return 0;
+        }
+
+        slot.Status = HallSlotStatus.Booked;
+        slot.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -397,14 +575,17 @@ public sealed class BookingRepository : IBookingRepository
     {
         if (_context.Database.IsRelational())
         {
-            // Only re-open a slot that is currently Booked; a missing row means the slot
-            // was never reserved, which is already "available" for the seeker catalog.
+            // Release any slot this booking was holding, which is Booked after payment
+            // confirmation and Reserved before it (WESAL-TASK-8). Matching on Booked alone
+            // would silently skip a Reserved slot and strand it forever, costing the hall
+            // that hour for good, so both held states are re-opened. A missing row means
+            // the slot was never held, which is already "available" for seekers.
             return await _context.HallSlotAvailabilities
                 .Where(slot =>
                     slot.HallId == hallId
                     && slot.Date == date
                     && slot.StartTime == startTime
-                    && slot.Status == HallSlotStatus.Booked)
+                    && slot.Status != HallSlotStatus.Available)
                 .ExecuteUpdateAsync(
                     set =>
                         set.SetProperty(slot => slot.Status, HallSlotStatus.Available)
@@ -420,7 +601,7 @@ public sealed class BookingRepository : IBookingRepository
                     && candidate.StartTime == startTime,
                 cancellationToken);
 
-        if (slot is null || slot.Status != HallSlotStatus.Booked)
+        if (slot is null || slot.Status == HallSlotStatus.Available)
         {
             return 0;
         }

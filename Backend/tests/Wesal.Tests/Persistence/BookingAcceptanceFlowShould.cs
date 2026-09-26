@@ -6,6 +6,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Application.Common.Models;
 using Wesal.Infrastructure.Bookings;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
@@ -18,7 +19,7 @@ public class BookingAcceptanceFlowShould
     private static readonly TimeOnly BookingStart = new(10, 0);
 
     [Fact]
-    public async Task Accept_PendingBooking_PersistsAcceptedAndKeepsHourlySlotProtected()
+    public async Task Accept_PendingBooking_PersistsAcceptedWithDeposit_AndLeavesHourReserved()
     {
         var databaseName = Guid.NewGuid().ToString();
         var hallId = Guid.NewGuid();
@@ -29,14 +30,15 @@ public class BookingAcceptanceFlowShould
             var hall = SeedHall(seedingContext, hallId);
             var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
             bookingId = booking.Id;
-            SeedSlotAvailability(seedingContext, hall, BookingDate, BookingStart, HallSlotStatus.Booked);
+            // WESAL-TASK-8 (Edit 8): a live request holds its hour as Reserved, not Booked.
+            SeedSlotAvailability(seedingContext, hall, BookingDate, BookingStart, HallSlotStatus.Reserved);
         }
 
         await using (var context = CreateContext(databaseName))
         {
             var service = CreateService(context, "owner-1", [ApplicationRoles.HallOwner]);
 
-            var result = await service.AcceptBookingAsync(hallId, bookingId);
+            var result = await service.AcceptBookingAsync(hallId, bookingId, Approval(750m));
 
             Assert.Equal(bookingId, result.BookingId);
             Assert.Equal(hallId, result.HallId);
@@ -44,6 +46,7 @@ public class BookingAcceptanceFlowShould
             Assert.Equal(BookingDate, result.Date);
             Assert.Equal(BookingStart, Assert.Single(result.SlotStarts));
             Assert.Equal(BookingStatus.Accepted, result.Status);
+            Assert.Equal(750m, result.DepositAmount);
 
             var booking = context.Bookings
                 .AsNoTracking()
@@ -54,14 +57,56 @@ public class BookingAcceptanceFlowShould
             Assert.Equal("user-1", booking.RequesterUserId);
             Assert.Equal(BookingDate, booking.Date);
             Assert.Equal(BookingStart, Assert.Single(booking.Slots).StartTime);
+            Assert.Equal(750m, booking.DepositAmount);
+
+            // The money has not been confirmed, so the hours must still be held rather than
+            // booked. Booking them here is exactly the behaviour this change removes.
+            Assert.Null(booking.DepositPaymentConfirmedAt);
 
             var availability = context.HallSlotAvailabilities.AsNoTracking().Single(candidate =>
                 candidate.HallId == hallId
                 && candidate.Date == BookingDate
                 && candidate.StartTime == BookingStart);
-            Assert.Equal(HallSlotStatus.Booked, availability.Status);
+            Assert.Equal(HallSlotStatus.Reserved, availability.Status);
         }
     }
+
+    [Fact]
+    public async Task Accept_WritesTheApprovalNoticeToTheRequesterConversation()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var hallId = Guid.NewGuid();
+        Guid bookingId;
+
+        await using (var seedingContext = CreateContext(databaseName))
+        {
+            var hall = SeedHall(seedingContext, hallId);
+            var booking = SeedBooking(seedingContext, hall, "user-1", BookingDate, BookingStart);
+            bookingId = booking.Id;
+        }
+
+        await using (var context = CreateContext(databaseName))
+        {
+            var service = CreateService(context, "owner-1", [ApplicationRoles.HallOwner]);
+
+            var result = await service.AcceptBookingAsync(hallId, bookingId, Approval(750m));
+
+            Assert.Equal(BookingAcceptanceNotificationStatus.Delivered, result.NotificationStatus);
+
+            var message = Assert.Single(context.Messages.AsNoTracking());
+            Assert.Equal("owner-1", message.SenderUserId);
+            Assert.Contains("750", message.Content);
+
+            // The requester/owner conversation is created on demand, so the notice and any
+            // later payment proof share one thread.
+            var conversation = Assert.Single(context.Conversations.AsNoTracking());
+            Assert.Equal(hallId, conversation.HallId);
+            Assert.Equal("user-1", conversation.SenderUserId);
+            Assert.Equal("owner-1", conversation.HallOwnerId);
+            Assert.Equal(conversation.Id, message.ConversationId);
+        }
+    }
+
 
     [Fact]
     public async Task Accept_OtherOwnersHall_ThrowsForbidden_AndStatusUnchanged()
@@ -82,7 +127,7 @@ public class BookingAcceptanceFlowShould
             var service = CreateService(context, "intruder-owner", [ApplicationRoles.HallOwner]);
 
             await Assert.ThrowsAsync<ForbiddenException>(() =>
-                service.AcceptBookingAsync(hallId, bookingId));
+                service.AcceptBookingAsync(hallId, bookingId, Approval()));
 
             var booking = context.Bookings.AsNoTracking().Single(candidate => candidate.Id == bookingId);
             Assert.Equal(BookingStatus.Pending, booking.Status);
@@ -114,7 +159,7 @@ public class BookingAcceptanceFlowShould
             var service = CreateService(context, "owner-1", [ApplicationRoles.HallOwner]);
 
             await Assert.ThrowsAsync<ConflictException>(() =>
-                service.AcceptBookingAsync(hallId, bookingId));
+                service.AcceptBookingAsync(hallId, bookingId, Approval()));
 
             var booking = context.Bookings.AsNoTracking().Single(candidate => candidate.Id == bookingId);
             Assert.Equal(BookingStatus.Rejected, booking.Status);
@@ -146,7 +191,7 @@ public class BookingAcceptanceFlowShould
             var service = CreateService(context, "owner-1", [ApplicationRoles.HallOwner]);
 
             await Assert.ThrowsAsync<ConflictException>(() =>
-                service.AcceptBookingAsync(hallId, bookingId));
+                service.AcceptBookingAsync(hallId, bookingId, Approval()));
 
             var booking = context.Bookings.AsNoTracking().Single(candidate => candidate.Id == bookingId);
             Assert.Equal(BookingStatus.Cancelled, booking.Status);
@@ -178,7 +223,7 @@ public class BookingAcceptanceFlowShould
             var service = CreateService(acceptContext, "owner-1", [ApplicationRoles.HallOwner]);
 
             var exception = await Assert.ThrowsAsync<ConflictException>(() =>
-                service.AcceptBookingAsync(hallId, bookingId));
+                service.AcceptBookingAsync(hallId, bookingId, Approval()));
 
             Assert.Contains("cancelled", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
@@ -190,12 +235,17 @@ public class BookingAcceptanceFlowShould
         }
     }
 
+    private static AcceptBookingRequestDto Approval(decimal amount = 500m)
+        => new() { DepositAmount = amount };
+
     private static BookingAcceptanceService CreateService(
         ApplicationDbContext context,
         string userId,
         string[] roles)
         => new(
             new BookingRepository(context),
+            new ConversationRepository(context),
+            new MessageRepository(context),
             new UnitOfWork(context),
             new FakeCurrentUserService(userId, roles));
 

@@ -7,6 +7,8 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Conversations;
 
+using Wesal.Tests.TestDoubles;
+
 namespace Wesal.Tests.Infrastructure;
 
 public class SendMessageServiceShould
@@ -291,6 +293,7 @@ public class SendMessageServiceShould
             conversationRepository,
             messageRepository,
             new FakeBookingRejectionService(),
+            new NoOpBookingAcceptanceService(),
             new FakeHallRepository(ConversationId, HallId),
             currentUser,
             notifier,

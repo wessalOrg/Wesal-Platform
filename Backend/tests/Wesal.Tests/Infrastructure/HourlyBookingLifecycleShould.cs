@@ -14,6 +14,8 @@ using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
 
+using Wesal.Tests.TestDoubles;
+
 namespace Wesal.Tests.Infrastructure;
 
 public class HourlyBookingLifecycleShould : IDisposable
@@ -146,7 +148,35 @@ public class HourlyBookingLifecycleShould : IDisposable
     private UnitOfWork UnitOfWork() => new(_context);
 
     private BookingAcceptanceService Acceptance(ICurrentUserService currentUser)
+        => new(
+            BookingRepo(),
+            new ConversationRepository(_context),
+            new MessageRepository(_context),
+            UnitOfWork(),
+            currentUser);
+
+    private BookingPaymentConfirmationService PaymentConfirmation(ICurrentUserService currentUser)
         => new(BookingRepo(), UnitOfWork(), currentUser);
+
+    /// <summary>
+    /// Approves with a deposit and then confirms the payment, which is the pair of owner
+    /// actions that takes a request all the way to officially booked.
+    /// </summary>
+    private async Task ApproveAndConfirmPayment(
+        Hall hall,
+        Booking booking,
+        string ownerId,
+        decimal deposit = 500m)
+    {
+        var owner = new FakeCurrentUser(ownerId, true, ApplicationRoles.HallOwner);
+
+        await Acceptance(owner).AcceptBookingAsync(
+            hall.Id,
+            booking.Id,
+            new AcceptBookingRequestDto { DepositAmount = deposit });
+
+        await PaymentConfirmation(owner).ConfirmPaymentAsync(hall.Id, booking.Id);
+    }
 
     private BookingCancellationService Cancellation(
         ICurrentUserService currentUser,
@@ -170,70 +200,149 @@ public class HourlyBookingLifecycleShould : IDisposable
     private BookingDeletionService Deletion(ICurrentUserService currentUser)
         => new(BookingRepo(), UnitOfWork(), currentUser);
 
-    private HourlySlotService Seeker()
-        => new(
-            new HallRepository(_context),
-            BookingRepo(),
-            UnitOfWork(),
-            new FakeCurrentUser("seeker-1", true, ApplicationRoles.RegisteredUser));
+       private HourlySlotService Seeker()
+           => new(
+               new HallRepository(_context),
+               BookingRepo(),
+               UnitOfWork(),
+               new FakeCurrentUser("seeker-1", true, ApplicationRoles.RegisteredUser),
+               new RecordingOwnerBookingRequestNotifier());
+
 
     [Fact]
-    public async Task AcceptHourlyBooking_MarksItsSlotBooked()
+    public async Task AcceptHourlyBooking_LeavesItsSlotReservedUntilPaymentIsConfirmed()
     {
         var owner = await CreateUserAsync("accept1@example.com", "+970599200001", ApplicationRoles.HallOwner);
         var hall = AddHall(owner.Id);
         var date = Tomorrow();
         var slot = new TimeOnly(14, 0);
-        AddSlot(hall, date, slot, HallSlotStatus.Available);
+        AddSlot(hall, date, slot, HallSlotStatus.Reserved);
         var booking = AddHourlyBooking(hall, date, slot);
 
         var result = await Acceptance(new FakeCurrentUser(owner.Id, true, ApplicationRoles.HallOwner))
-            .AcceptBookingAsync(hall.Id, booking.Id);
+            .AcceptBookingAsync(
+                hall.Id,
+                booking.Id,
+                new AcceptBookingRequestDto { DepositAmount = 500m });
 
         Assert.Equal(BookingStatus.Accepted, result.Status);
         Assert.Equal(slot, Assert.Single(result.SlotStarts));
-        Assert.Equal(HallSlotStatus.Booked, await SlotStatusAsync(hall, date, slot));
+        Assert.Equal(500m, result.DepositAmount);
+
+        // WESAL-TASK-8 (Edit 8): approval states what the requester must pay and nothing
+        // more. The hour stays held as Reserved, so the owner still has a deliberate second
+        // step before the hall is officially booked.
+        Assert.Equal(HallSlotStatus.Reserved, await SlotStatusAsync(hall, date, slot));
+        Assert.Null(result.DepositPaymentConfirmedAt);
+
         var persisted = await _context.Bookings.AsNoTracking().SingleAsync(b => b.Id == booking.Id);
+        Assert.Equal(BookingStatus.Accepted, persisted.Status);
+        Assert.Equal(500m, persisted.DepositAmount);
+        Assert.Null(persisted.DepositPaymentConfirmedAt);
+    }
+
+    [Fact]
+    public async Task ConfirmingPayment_MarksTheSlotBooked()
+    {
+        var owner = await CreateUserAsync("confirm1@example.com", "+970599200008", ApplicationRoles.HallOwner);
+        var hall = AddHall(owner.Id);
+        var date = Tomorrow();
+        var slot = new TimeOnly(14, 0);
+        AddSlot(hall, date, slot, HallSlotStatus.Reserved);
+        var booking = AddHourlyBooking(hall, date, slot);
+
+        await ApproveAndConfirmPayment(hall, booking, owner.Id, 400m);
+
+        // The payment confirmation is the single step that books the hall.
+        Assert.Equal(HallSlotStatus.Booked, await SlotStatusAsync(hall, date, slot));
+
+        var persisted = await _context.Bookings.AsNoTracking().SingleAsync(b => b.Id == booking.Id);
+        Assert.NotNull(persisted.DepositPaymentConfirmedAt);
         Assert.Equal(BookingStatus.Accepted, persisted.Status);
     }
 
     [Fact]
-    public async Task ShowBookedSlotsOn_AcceptedSlotAppearsAsBookedToSeekers()
+    public async Task ShowBookedSlotsOn_ConfirmedSlotAppearsAsBookedToSeekers()
     {
         var owner = await CreateUserAsync("shown1@example.com", "+970599200003", ApplicationRoles.HallOwner);
         var hall = AddHall(owner.Id, showBookedSlots: true);
         var date = Tomorrow();
         var slot = new TimeOnly(14, 0);
-        AddSlot(hall, date, slot, HallSlotStatus.Available);
+        AddSlot(hall, date, slot, HallSlotStatus.Reserved);
         var booking = AddHourlyBooking(hall, date, slot);
 
-        await Acceptance(new FakeCurrentUser(owner.Id, true, ApplicationRoles.HallOwner))
-            .AcceptBookingAsync(hall.Id, booking.Id);
+        await ApproveAndConfirmPayment(hall, booking, owner.Id);
 
         var catalog = await Seeker().GetHourlyCatalogAsync(hall.Id, date);
         var entry = Assert.Single(catalog.Slots, s => s.StartTime == slot);
         Assert.True(entry.IsBooked);
         Assert.Equal(HallSlotStatus.Booked, entry.Status);
+        Assert.False(entry.IsSelectable);
         Assert.True(catalog.DayOpen);
     }
 
     [Fact]
-    public async Task ShowBookedSlotsOff_AcceptedSlotIsHiddenFromSeekers()
+    public async Task ShowBookedSlotsOn_AcceptedButUnpaidSlotIsShownUnavailableNotBooked()
+    {
+        var owner = await CreateUserAsync("unpaid1@example.com", "+970599200009", ApplicationRoles.HallOwner);
+        var hall = AddHall(owner.Id, showBookedSlots: true);
+        var date = Tomorrow();
+        var slot = new TimeOnly(14, 0);
+        AddSlot(hall, date, slot, HallSlotStatus.Reserved);
+        var booking = AddHourlyBooking(hall, date, slot);
+
+        await Acceptance(new FakeCurrentUser(owner.Id, true, ApplicationRoles.HallOwner))
+            .AcceptBookingAsync(
+                hall.Id,
+                booking.Id,
+                new AcceptBookingRequestDto { DepositAmount = 250m });
+
+        var catalog = await Seeker().GetHourlyCatalogAsync(hall.Id, date);
+        var entry = Assert.Single(catalog.Slots, s => s.StartTime == slot);
+
+        // Reserved hours are disclosed as unavailable but never as booked, because nothing
+        // has been paid for them yet - and they can never be selected.
+        Assert.Equal(HallSlotStatus.Reserved, entry.Status);
+        Assert.False(entry.IsBooked);
+        Assert.False(entry.IsSelectable);
+    }
+
+    [Fact]
+    public async Task ShowBookedSlotsOff_ConfirmedSlotIsHiddenFromSeekers()
     {
         var owner = await CreateUserAsync("hidden1@example.com", "+970599200004", ApplicationRoles.HallOwner);
         var hall = AddHall(owner.Id, showBookedSlots: false);
         var date = Tomorrow();
         var slot = new TimeOnly(14, 0);
-        AddSlot(hall, date, slot, HallSlotStatus.Available);
+        AddSlot(hall, date, slot, HallSlotStatus.Reserved);
         var booking = AddHourlyBooking(hall, date, slot);
 
-        await Acceptance(new FakeCurrentUser(owner.Id, true, ApplicationRoles.HallOwner))
-            .AcceptBookingAsync(hall.Id, booking.Id);
+        await ApproveAndConfirmPayment(hall, booking, owner.Id);
 
         var catalog = await Seeker().GetHourlyCatalogAsync(hall.Id, date);
         Assert.DoesNotContain(catalog.Slots, s => s.StartTime == slot);
         Assert.True(catalog.DayOpen);
         Assert.NotEmpty(catalog.Slots);
+    }
+
+    [Fact]
+    public async Task ShowBookedSlotsOff_AcceptedButUnpaidSlotIsHiddenFromSeekers()
+    {
+        var owner = await CreateUserAsync("unpaid2@example.com", "+970599200010", ApplicationRoles.HallOwner);
+        var hall = AddHall(owner.Id, showBookedSlots: false);
+        var date = Tomorrow();
+        var slot = new TimeOnly(14, 0);
+        AddSlot(hall, date, slot, HallSlotStatus.Reserved);
+        var booking = AddHourlyBooking(hall, date, slot);
+
+        await Acceptance(new FakeCurrentUser(owner.Id, true, ApplicationRoles.HallOwner))
+            .AcceptBookingAsync(
+                hall.Id,
+                booking.Id,
+                new AcceptBookingRequestDto { DepositAmount = 250m });
+
+        var catalog = await Seeker().GetHourlyCatalogAsync(hall.Id, date);
+        Assert.DoesNotContain(catalog.Slots, s => s.StartTime == slot);
     }
 
     [Theory]
@@ -246,11 +355,10 @@ public class HourlyBookingLifecycleShould : IDisposable
         var hall = AddHall(owner.Id, showBookedSlots);
         var from = Tomorrow();
         var slot = new TimeOnly(14, 0);
-        AddSlot(hall, from, slot, HallSlotStatus.Available);
+        AddSlot(hall, from, slot, HallSlotStatus.Reserved);
         var booking = AddHourlyBooking(hall, from, slot);
 
-        await Acceptance(new FakeCurrentUser(owner.Id, true, ApplicationRoles.HallOwner))
-            .AcceptBookingAsync(hall.Id, booking.Id);
+        await ApproveAndConfirmPayment(hall, booking, owner.Id);
 
         var calendar = await Seeker().GetAvailabilityCalendarAsync(hall.Id, from, from.AddDays(2));
         var day = Assert.Single(calendar.Days, d => d.Date == from);

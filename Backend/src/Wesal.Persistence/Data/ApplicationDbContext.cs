@@ -289,11 +289,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.Property(booking => booking.RejectionReason).HasMaxLength(1000);
 
+            // WESAL-TASK-8 (Edit 8): the deposit the owner required at approval, and the
+            // moment the owner confirmed receiving it. Both are nullable because a booking
+            // that has not been approved yet carries neither, and the column type matches
+            // the existing money convention (numeric(12,2), as used by Hall.Price).
+            entity.Property(booking => booking.DepositAmount).HasColumnType("numeric(12,2)");
+
             entity.HasIndex(booking => new { booking.HallId, booking.RequesterUserId });
 
             entity.HasIndex(booking => new { booking.HallId, booking.Date, booking.Status });
 
             entity.HasIndex(booking => booking.RejectionMessageId).IsUnique();
+
+            // WESAL-TASK-8 (Edit 8): the approval notice is tracked exactly like the
+            // rejection notice, so its delivery is idempotent and retryable.
+            entity.HasIndex(booking => booking.ApprovalMessageId).IsUnique();
 
             entity.HasOne(booking => booking.Hall)
                 .WithMany()

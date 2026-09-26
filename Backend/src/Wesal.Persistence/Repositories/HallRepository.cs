@@ -182,11 +182,16 @@ public class HallRepository : IHallRepository
             // already taken. Independent of ShowBookedSlots for the same reason as the day
             // gate above: a booked hour is simply unavailable, and the seeker is never
             // told whether it is hidden or disclosed.
+            //
+            // WESAL-TASK-8 (Edit 8): a Reserved hour - held by a live request whose deposit
+            // is not confirmed yet - is equally unbookable, so it must be excluded too.
+            // Offering the hall here would only lead the seeker to a conflict at booking
+            // time, and the availability calendar would disagree with the booking result.
             query = query.Where(hall => !_context.HallSlotAvailabilities.Any(slot =>
                 slot.HallId == hall.Id
                 && slot.Date == selectedDate
                 && slot.StartTime == selectedStart
-                && slot.Status == HallSlotStatus.Booked));
+                && slot.Status != HallSlotStatus.Available));
         }
 
         return query;

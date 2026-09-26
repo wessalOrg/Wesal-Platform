@@ -28,6 +28,14 @@ public class SwaggerDocumentShould
     private const string AttachmentPath = "/api/v{version}/conversations/{conversationId}/messages/attachment";
     private const string CreateHallPath = "/api/v{version}/owner/halls";
     private const string IdentityDocumentPath = "/api/v{version}/owner/profile/identity-document";
+    private const string ConfirmBookingPaymentPath = "/api/v{version}/halls/{hallId}/bookings/{bookingId}/payment/confirmed";
+
+    /// <summary>
+    /// Total operations' paths. Guards against the document silently losing endpoints, and
+    /// pins the count so a new operation is a deliberate edit rather than a surprise.
+    /// 61 includes WESAL-TASK-8's owner deposit-confirmation endpoint.
+    /// </summary>
+    private const int ExpectedPathCount = 61;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -36,7 +44,7 @@ public class SwaggerDocumentShould
         // swagger JSON endpoint surfaced as HTTP 500.
         var document = BuildDocument();
 
-        Assert.Equal(60, document.Paths.Count);
+        Assert.Equal(ExpectedPathCount, document.Paths.Count);
     }
 
     [Fact]
@@ -49,6 +57,16 @@ public class SwaggerDocumentShould
         Assert.Contains(AttachmentPath, document.Paths.Keys);
         Assert.Contains(CreateHallPath, document.Paths.Keys);
         Assert.Contains(IdentityDocumentPath, document.Paths.Keys);
+    }
+
+    [Fact]
+    public void ConfirmBookingPaymentEndpoint_IsDocumented()
+    {
+        // WESAL-TASK-8 (Edit 8): the owner-facing payment confirmation is the step that
+        // officially books a hall, so it has to be visible in the published API surface.
+        var document = BuildDocument();
+
+        Assert.Contains(ConfirmBookingPaymentPath, document.Paths.Keys);
     }
 
     [Fact]

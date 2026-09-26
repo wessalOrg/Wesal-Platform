@@ -155,13 +155,36 @@ public class BookingRepositoryShould
     }
 
     [Fact]
-    public async Task CancelPendingAsync_Accepted_ReturnsZero()
+    public async Task CancelPendingAsync_AcceptedButUnpaid_Succeeds()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
         var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart, BookingStatus.Accepted);
+        booking.DepositAmount = 500m;
         var repository = new BookingRepository(context);
 
+        // WESAL-TASK-8 (Edit 8): an approved booking whose deposit was never confirmed is
+        // still the requester's to call off, and the row must actually move.
+        var affectedRows = await repository.CancelPendingAsync(booking.Id, booking.RequesterUserId);
+
+        Assert.Equal(1, affectedRows);
+        var stored = await repository.GetByIdWithHallAsync(booking.Id);
+        Assert.Equal(BookingStatus.Cancelled, stored!.Status);
+    }
+
+    [Fact]
+    public async Task CancelPendingAsync_AcceptedWithConfirmedPayment_ReturnsZero()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart, BookingStatus.Accepted);
+        booking.DepositAmount = 500m;
+        booking.DepositPaymentConfirmedAt = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync();
+        var repository = new BookingRepository(context);
+
+        // Once the owner confirmed the money, the booking is paid and cancelling it would
+        // hand a paid requester's slot to somebody else, so the row must not match.
         var affectedRows = await repository.CancelPendingAsync(booking.Id, booking.RequesterUserId);
 
         Assert.Equal(0, affectedRows);
@@ -263,7 +286,7 @@ public class BookingRepositoryShould
 
         await repository.CancelPendingAsync(booking.Id, booking.RequesterUserId);
 
-        var approvalRows = await repository.AcceptPendingAsync(booking.Id);
+        var approvalRows = await repository.AcceptPendingAsync(booking.Id, 500m);
 
         Assert.Equal(0, approvalRows);
         var stored = await repository.GetByIdWithHallAsync(booking.Id);
@@ -334,7 +357,7 @@ public class BookingRepositoryShould
     }
 
     [Fact]
-    public async Task ReserveHourlySlotsAsync_NoSlotRow_BooksAndReturnsOne()
+    public async Task ReserveHourlySlotsAsync_NoSlotRow_ReservesAndReturnsOne()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
@@ -347,11 +370,12 @@ public class BookingRepositoryShould
         Assert.Equal(hall.Id, stored.HallId);
         Assert.Equal(BookingDate, stored.Date);
         Assert.Equal(BookingStart, stored.StartTime);
-        Assert.Equal(HallSlotStatus.Booked, stored.Status);
+        // WESAL-TASK-8 (Edit 8): a claim holds the hour, it does not book it.
+        Assert.Equal(HallSlotStatus.Reserved, stored.Status);
     }
 
     [Fact]
-    public async Task ReserveHourlySlotsAsync_AvailableSlot_BooksAndReturnsOne()
+    public async Task ReserveHourlySlotsAsync_AvailableSlot_ReservesAndReturnsOne()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
@@ -362,7 +386,7 @@ public class BookingRepositoryShould
 
         Assert.Equal(1, affectedRows);
         var stored = await context.HallSlotAvailabilities.FindAsync(availability.Id);
-        Assert.Equal(HallSlotStatus.Booked, stored!.Status);
+        Assert.Equal(HallSlotStatus.Reserved, stored!.Status);
     }
 
     [Fact]
@@ -381,7 +405,79 @@ public class BookingRepositoryShould
     }
 
     [Fact]
-    public async Task ReserveHourlySlotsAsync_StopsAtFirstBookedSlot()
+    public async Task ReserveHourlySlotsAsync_ReservedSlot_ReturnsZero_SoALiveRequestCannotBeStolen()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var availability = SeedSlotAvailability(context, hall, BookingDate, BookingStart, HallSlotStatus.Reserved);
+        var repository = new BookingRepository(context);
+
+        // The double-booking guarantee depends on this: an hour that a live request is
+        // holding must be as unclaimable as a booked one, otherwise a second request could
+        // take a slot that is already promised to someone.
+        var affectedRows = await repository.ReserveHourlySlotsAsync(hall.Id, BookingDate, [BookingStart]);
+
+        Assert.Equal(0, affectedRows);
+        var stored = await context.HallSlotAvailabilities.FindAsync(availability.Id);
+        Assert.Equal(HallSlotStatus.Reserved, stored!.Status);
+    }
+
+    [Fact]
+    public async Task ConfirmReservedHourlySlotsAsync_ReservedSlot_BooksAndReturnsOne()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var availability = SeedSlotAvailability(context, hall, BookingDate, BookingStart, HallSlotStatus.Reserved);
+        var repository = new BookingRepository(context);
+
+        var affectedRows = await repository.ConfirmReservedHourlySlotsAsync(hall.Id, BookingDate, [BookingStart]);
+
+        Assert.Equal(1, affectedRows);
+        var stored = await context.HallSlotAvailabilities.FindAsync(availability.Id);
+        Assert.Equal(HallSlotStatus.Booked, stored!.Status);
+    }
+
+    [Fact]
+    public async Task ConfirmReservedHourlySlotsAsync_AvailableSlot_ReturnsZero_SoPaymentIsNeverBookedOntoAFreedHour()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var availability = SeedSlotAvailability(context, hall, BookingDate, BookingStart, HallSlotStatus.Available);
+        var repository = new BookingRepository(context);
+
+        // A released hour means the booking lost its hold, so confirming must refuse rather
+        // than hand the requester an hour somebody else is free to take.
+        var affectedRows = await repository.ConfirmReservedHourlySlotsAsync(hall.Id, BookingDate, [BookingStart]);
+
+        Assert.Equal(0, affectedRows);
+        var stored = await context.HallSlotAvailabilities.FindAsync(availability.Id);
+        Assert.Equal(HallSlotStatus.Available, stored!.Status);
+    }
+
+    [Fact]
+    public async Task ReleaseBookingSlotsAsync_ReservedSlot_ReopensIt_SoAnUnpaidHoldIsNotLost()
+    {
+        await using var context = CreateContext();
+        var hall = SeedHall(context);
+        var booking = SeedBooking(context, hall, "user-1", BookingDate, BookingStart);
+        var availability = SeedSlotAvailability(context, hall, BookingDate, BookingStart, HallSlotStatus.Reserved);
+        var repository = new BookingRepository(context);
+
+        // A rejected or cancelled request holds Reserved hours. Releasing only Booked rows
+        // would strand them forever and cost the hall that hour for good.
+        var affectedRows = await repository.ReleaseBookingSlotsAsync(
+            booking.Id,
+            booking.HallId,
+            booking.Date,
+            [BookingStart]);
+
+        Assert.Equal(1, affectedRows);
+        var stored = await context.HallSlotAvailabilities.FindAsync(availability.Id);
+        Assert.Equal(HallSlotStatus.Available, stored!.Status);
+    }
+
+    [Fact]
+    public async Task ReserveHourlySlotsAsync_StopsAtFirstUnavailableSlot()
     {
         await using var context = CreateContext();
         var hall = SeedHall(context);
@@ -392,7 +488,7 @@ public class BookingRepositoryShould
 
         Assert.Equal(1, affectedRows);
         Assert.Equal(HallSlotStatus.Booked, (await context.HallSlotAvailabilities.FindAsync(second.Id))!.Status);
-        Assert.Equal(HallSlotStatus.Booked, Assert.Single(context.HallSlotAvailabilities.Where(candidate => candidate.StartTime == BookingStart)).Status);
+        Assert.Equal(HallSlotStatus.Reserved, Assert.Single(context.HallSlotAvailabilities.Where(candidate => candidate.StartTime == BookingStart)).Status);
     }
 
     [Fact]

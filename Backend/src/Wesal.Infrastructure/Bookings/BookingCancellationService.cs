@@ -54,9 +54,20 @@ public sealed class BookingCancellationService : IBookingCancellationService
 
         EnsureRequesterOwnership(booking);
 
-        if (booking.Status != BookingStatus.Pending)
+        // WESAL-TASK-8 (Edit 8): an approved booking whose deposit has not been confirmed is
+        // still the requester's to call off, so cancellation now covers Accepted as well as
+        // Pending. Once the owner confirmed the deposit the booking is paid and the
+        // cancellation is refused: the money has changed hands, so releasing the hours
+        // would hand a paid requester's slot to someone else.
+        if (booking.Status is not (BookingStatus.Pending or BookingStatus.Accepted))
         {
             throw new ConflictException(BuildFinalizedMessage(booking.Status));
+        }
+
+        if (booking.DepositPaymentConfirmedAt is not null)
+        {
+            throw new ConflictException(
+                "The deposit for this booking was already confirmed, so the request can no longer be cancelled.");
         }
 
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
@@ -69,12 +80,14 @@ public sealed class BookingCancellationService : IBookingCancellationService
             if (updatedRows == 0)
             {
                 throw new ConflictException(
-                    "The booking request is no longer in the pending state and cannot be cancelled; it may have just been processed.");
+                    "The booking request is no longer cancellable; it may have just been processed, or its deposit may have been confirmed.");
             }
 
             // WESAL-TASK-1: release every hourly slot this booking held. A cancelled
             // booking may span any number of hours, so all of them are re-opened, except a
-            // slot another active booking still claims, whose protection is kept.
+            // slot another active booking still claims, whose protection is kept. Releasing
+            // covers the Reserved state too, which is what an unconfirmed approved booking
+            // is holding.
             await _bookingRepository.ReleaseBookingSlotsAsync(
                 booking.Id,
                 booking.HallId,
@@ -93,7 +106,7 @@ public sealed class BookingCancellationService : IBookingCancellationService
 
         // WESAL-TASK-1: tell the owner the request is gone, outside the transaction and
         // best-effort, so a SignalR hiccup can neither roll back the cancellation nor
-        // hide it from the owner's request list (which only ever shows Pending rows).
+        // hide it from the owner's request list (which only ever shows live rows).
         await NotifyOwnerAsync(booking, cancellationToken);
 
         return MapToResult(booking);
@@ -226,10 +239,11 @@ public sealed class BookingCancellationService : IBookingCancellationService
     private static string BuildFinalizedMessage(BookingStatus status)
         => status switch
         {
-            BookingStatus.Accepted => "The booking request was already accepted and cannot be cancelled.",
+            // WESAL-TASK-8 (Edit 8): Accepted is no longer final. It is the deposit-pending
+            // state, and the requester may still cancel it until the owner confirms payment.
             BookingStatus.Rejected => "The booking request was already rejected and cannot be cancelled.",
             BookingStatus.Cancelled => "The booking request has already been cancelled.",
-            _ => "The booking request is not pending and cannot be cancelled."
+            _ => "The booking request is not cancellable."
         };
 
     private static CancelBookingResultDto MapToResult(Booking booking)
