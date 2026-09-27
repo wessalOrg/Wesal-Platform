@@ -144,12 +144,13 @@ public sealed class ConversationService : IConversationService
 
         // No Admin is logged in on the owner's side, yet the new thread still has to land
         // in a real Admin's conversation list, so resolve a stable Admin id for the
-        // counterparty slot. Falls back to the same sentinel the Admin-side services use.
+        // counterparty slot. Falls back to the platform's Admin-side sentinel, which the
+        // shared Admin inbox (Edit 16) still recognises as Admin-side.
         var adminUserId = await _conversationRepository.GetAdminUserIdAsync(cancellationToken);
 
         if (string.IsNullOrWhiteSpace(adminUserId))
         {
-            adminUserId = "admin";
+            adminUserId = PlatformSenders.AdminFallback;
         }
 
         var conversation = new Conversation
@@ -208,7 +209,20 @@ public sealed class ConversationService : IConversationService
 
         await DeliverPendingBookingNotificationsAsync(cancellationToken);
 
-        var conversations = await _conversationRepository.GetParticipantConversationsAsync(userId, cancellationToken);
+        // WESAL-TASK-10, Edit 16: resolved once, up front, and handed to every query that has
+        // to agree on it — the list, the per-row unread flags and the displayed counterparty.
+        // Two of them consulting the role table separately could drift, and the whole point of
+        // a shared inbox is that they are describing the same audience.
+        var isAdmin = _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+
+        // Empty for a seeker or an owner, which is what keeps their query on the two-party
+        // rule that has always applied to them.
+        var adminUserIds = isAdmin
+            ? await _conversationRepository.GetAdminUserIdsAsync(cancellationToken)
+            : [];
+
+        var conversations = await _conversationRepository.GetParticipantConversationsAsync(
+            userId, isAdmin, adminUserIds, cancellationToken);
 
         if (conversations.Count == 0)
         {
@@ -229,10 +243,10 @@ public sealed class ConversationService : IConversationService
         // same rule (see GetUnreadConversationCountAsync), so the count of unread rows a user
         // can see always equals the badge.
         //
-        // Seekers and Admins are unaffected, and Edit 4's unpaid carve-out is untouched, so an
-        // Approved-but-unpaid owner keeps the row that shows them their payment thread.
-        var isAdmin = _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
-
+        // isAdmin and the Admin audience are already resolved above (Edit 16), so this filter
+        // stays the same single gate it has been. Seekers and Admins are unaffected, and Edit
+        // 4's unpaid carve-out is untouched, so an Approved-but-unpaid owner keeps the row
+        // that shows them their payment thread.
         conversations = conversations
             .Where(conversation => ConversationAccess.CanAccess(
                 conversation.Hall,
@@ -260,7 +274,7 @@ public sealed class ConversationService : IConversationService
             .ToDictionary(group => group.Key, group => group.Count());
 
         var otherParticipantIds = conversations
-            .Select(conversation => OtherParticipantId(conversation, userId))
+            .Select(conversation => OtherParticipantId(conversation, userId, isAdmin, adminUserIds))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -271,7 +285,8 @@ public sealed class ConversationService : IConversationService
         // assigned, so every row reported not-unread. The repository already computed exactly
         // this (GetUnreadStatusAsync had no callers at all), and it now uses the same rule as
         // the unread-count badge, so the per-row flag and the badge cannot disagree.
-        var unreadStatus = await _conversationRepository.GetUnreadStatusAsync(userId, conversationIds, cancellationToken);
+        var unreadStatus = await _conversationRepository.GetUnreadStatusAsync(
+            userId, isAdmin, adminUserIds, conversationIds, cancellationToken);
 
         return conversations
             .OrderByDescending(conversation => latestByConversation.GetValueOrDefault(conversation.Id)?.CreatedAt ?? conversation.CreatedAt)
@@ -279,7 +294,7 @@ public sealed class ConversationService : IConversationService
             .Select(conversation =>
             {
                 var latest = latestByConversation.GetValueOrDefault(conversation.Id);
-                var otherParticipantId = OtherParticipantId(conversation, userId);
+                var otherParticipantId = OtherParticipantId(conversation, userId, isAdmin, adminUserIds);
 
                 return new ConversationSummaryResponse
                 {
@@ -820,8 +835,34 @@ public sealed class ConversationService : IConversationService
         }
     }
 
-    private static string OtherParticipantId(Conversation conversation, string userId)
+    /// <summary>
+    /// Who the caller is talking to, for the inbox row's counterparty.
+    /// <para>
+    /// WESAL-TASK-10, Edit 16. This was a latent two-party assumption that only becomes wrong
+    /// once the Admin inbox is shared: the old rule returned <c>SenderUserId</c> to anybody who
+    /// was not the stored sender, so an Admin opening a shared owner/Admin thread was shown
+    /// <em>the colleague it happens to be filed under</em> as the other participant — the same
+    /// person as themselves, and never the owner they were trying to talk to. Shared
+    /// discoverability would have put that wrong name on every row of every Admin's inbox.
+    /// </para>
+    /// <para>
+    /// The fix is not a special case for the stored Admin; it follows from the thread kind. On
+    /// an Admin-side thread the counterpart is by definition the owner, whoever is looking. A
+    /// seeker/owner thread keeps the original rule untouched, which is correct for both of its
+    /// real shapes: the seeker who opened it, and the owner who was written to.
+    /// </para>
+    /// </summary>
+    private static string OtherParticipantId(
+        Conversation conversation,
+        string userId,
+        bool isAdmin,
+        IReadOnlyCollection<string> adminUserIds)
     {
+        if (isAdmin && ConversationAccess.IsAdminThread(conversation, adminUserIds))
+        {
+            return conversation.HallOwnerId;
+        }
+
         return string.Equals(userId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
             ? conversation.HallOwnerId
             : conversation.SenderUserId;

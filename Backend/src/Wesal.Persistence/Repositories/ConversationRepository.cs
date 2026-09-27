@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Common;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
@@ -48,6 +49,36 @@ public sealed class ConversationRepository : IConversationRepository
             .OrderBy(userRole => userRole.UserId)
             .Select(userRole => (string?)userRole.UserId)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Every user id that currently holds the Admin role (WESAL-TASK-10, Edit 16), ordered by
+    /// id purely so the result is stable and reproducible.
+    /// <para>
+    /// Distinct from <see cref="GetAdminUserIdAsync"/>, which deliberately returns only the
+    /// lowest-sorted Admin to fill one thread's counterparty column. That single id is the
+    /// root of the shared-inbox gap: a thread created by one Admin was invisible to the rest.
+    /// That method is unchanged and still load-bearing for thread RESOLUTION; this one defines
+    /// who may SEE and be PUSHED a thread.
+    /// </para>
+    /// </summary>
+    public async Task<IReadOnlyList<string>> GetAdminUserIdsAsync(CancellationToken cancellationToken = default)
+    {
+        var adminRoleId = await _context.Roles
+            .Where(role => role.Name == ApplicationRoles.Admin)
+            .Select(role => (string?)role.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (adminRoleId is null)
+        {
+            return [];
+        }
+
+        return await _context.UserRoles
+            .Where(userRole => userRole.RoleId == adminRoleId)
+            .OrderBy(userRole => userRole.UserId)
+            .Select(userRole => userRole.UserId)
+            .ToListAsync(cancellationToken);
     }
 
     /// <summary>
@@ -235,17 +266,73 @@ public sealed class ConversationRepository : IConversationRepository
     public async Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(
         string userId,
         CancellationToken cancellationToken = default)
+        => await GetParticipantConversationsAsync(userId, isAdmin: false, [], cancellationToken);
+
+    /// <summary>
+    /// The caller's inbox. For an Admin this is one shared queue covering every owner/Admin
+    /// conversation (WESAL-TASK-10, Edit 16), not just the threads naming that Admin.
+    /// </summary>
+    public async Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(
+        string userId,
+        bool isAdmin,
+        IReadOnlyCollection<string> adminUserIds,
+        CancellationToken cancellationToken = default)
     {
-        return await _context.Conversations
+        IQueryable<Conversation> query = _context.Conversations
             .AsNoTracking()
-            .Include(c => c.Hall)
-            .Where(c => c.SenderUserId == userId || c.HallOwnerId == userId)
+            .Include(c => c.Hall);
+
+        // THE shared-inbox rule, as ONE disjunction. This has to be an OR with the two per-user
+        // clauses, not a second filter chained onto them: (A OR B) AND (C) would keep only
+        // threads where the caller is a party AND the counterparty is Admin-side, which is
+        // almost the opposite of a shared inbox — it would drop every thread the caller
+        // legitimately already had, and drop shared threads where the caller is also the owner.
+        // Written as a single OR it is strictly additive, which is the property that matters:
+        // an Admin cannot lose a row they could previously see.
+        //
+        // The two PlatformSenders comparisons are not redundant with the role lookup: those
+        // sentinel values are how an owner-initiated thread and an automated platform notice
+        // name the Admin side when no real Admin can be resolved, and they hold no role. See
+        // ConversationAccess.IsAdminSide, which is the in-memory twin of this clause.
+        //
+        // This mirrors the production shape exactly:
+        //   WHERE SenderUserId = @me OR HallOwnerId = @me
+        //      OR SenderUserId = ANY(@admins) OR SenderUserId IN ('admin','system')
+        // which was validated read-only against the live database before being written.
+        if (isAdmin)
+        {
+            var audience = AudienceIncludingCaller(adminUserIds, userId);
+
+            query = query.Where(c => c.SenderUserId == userId
+                || c.HallOwnerId == userId
+                || audience.Contains(c.SenderUserId)
+                || c.SenderUserId == PlatformSenders.AdminFallback
+                || c.SenderUserId == PlatformSenders.System);
+        }
+        else
+        {
+            // A seeker's or an owner's query is byte-identical to the two-party rule that has
+            // always applied to them.
+            query = query.Where(c => c.SenderUserId == userId || c.HallOwnerId == userId);
+        }
+
+        return await query
             .Where(c => !c.Hall.IsDeleted)
             .Where(VisibleToUser(_context, userId))
             .OrderByDescending(c => c.CreatedAt)
             .ThenByDescending(c => c.Id)
             .ToListAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// The caller added to the Admin audience, without re-querying. See
+    /// <see cref="ResolveAdminAudienceAsync"/> for why the caller belongs in it; this overload
+    /// is for the call sites that were handed the audience by the service already.
+    /// </summary>
+    private static string[] AudienceIncludingCaller(
+        IReadOnlyCollection<string> adminUserIds,
+        string userId)
+        => adminUserIds.Append(userId).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
     public async Task<IReadOnlyList<UserDisplayInfo>> GetUserDisplayNamesAsync(
         IReadOnlyCollection<string> userIds,
@@ -282,6 +369,36 @@ public sealed class ConversationRepository : IConversationRepository
 
     public async Task<int> GetUnreadConversationCountAsync(string userId, bool isAdmin, CancellationToken cancellationToken = default)
     {
+        // WESAL-TASK-10, Edit 16: an Admin's inbox is shared, so the count is shared too, and
+        // it must select rows by the same disjunction the list uses or the badge would promise
+        // threads the list does not show — or, worse, agree numerically while selecting
+        // different rows.
+        IQueryable<Conversation> query = _context.Conversations
+            .AsNoTracking()
+            .Where(c => !c.Hall.IsDeleted);
+
+        IReadOnlyList<string> adminIds = [];
+
+        if (isAdmin)
+        {
+            adminIds = await ResolveAdminAudienceAsync(userId, isAdmin, cancellationToken);
+
+            var audience = adminIds.ToArray();
+
+            // One disjunction, for the same reason as the inbox list.
+            query = query.Where(c => c.SenderUserId == userId
+                || c.HallOwnerId == userId
+                || audience.Contains(c.SenderUserId)
+                || c.SenderUserId == PlatformSenders.AdminFallback
+                || c.SenderUserId == PlatformSenders.System);
+        }
+        else
+        {
+            query = query.Where(c => c.SenderUserId == userId || c.HallOwnerId == userId);
+        }
+
+        query = query.Where(VisibleToUser(_context, userId));
+
         // THE unread rule, half one: a conversation is unread when it holds at least one
         // message from the OTHER PARTY that the caller's read watermark does not cover.
         // GetUnreadStatusAsync below states the same rule per message. WESAL-TASK-10: these
@@ -289,10 +406,7 @@ public sealed class ConversationRepository : IConversationRepository
         // flag compared the watermark against the newest message WHOSEVER sent it, so a
         // thread the user had just replied in showed a stale unread badge while the count
         // said zero. The tests pin them together.
-        var query = _context.Conversations
-            .AsNoTracking()
-            .Where(c => (c.SenderUserId == userId || c.HallOwnerId == userId) && !c.Hall.IsDeleted)
-            .Where(VisibleToUser(_context, userId));
+        var incoming = IncomingMessageFilter(userId, isAdmin, adminIds);
 
         // WESAL-TASK-10, Edit 14: the count must not advertise a thread the caller cannot
         // open, or the badge counts something the inbox refuses to show.
@@ -317,13 +431,105 @@ public sealed class ConversationRepository : IConversationRepository
 
         return await query
             .Where(c => _context.Messages
-                .Where(m => m.ConversationId == c.Id && m.SenderUserId != userId)
+                .Where(m => m.ConversationId == c.Id)
+                .Where(incoming)
                 .Any(m => !_context.ConversationReadStates
                     .Any(s => s.ConversationId == c.Id && s.UserId == userId && s.LastReadAt >= m.CreatedAt)))
             .CountAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// The Admin audience for one caller: everyone the role table says is an Admin, plus the
+    /// caller themselves (WESAL-TASK-10, Edit 16).
+    /// <para>
+    /// The union is what makes this change strictly additive rather than a trade. Every
+    /// decision below is "is this sender on the Admin side", and the caller has already been
+    /// established as an Admin by the time <c>isAdmin</c> is true — so treating them as
+    /// Admin-side is always correct, and it removes the one way this could have made an Admin's
+    /// inbox SMALLER than it already was.
+    /// </para>
+    /// <para>
+    /// That failure mode was real, not theoretical: <c>isAdmin</c> comes from the caller's
+    /// claims while the role list comes from the database, and any disagreement between them
+    /// (a role lookup that returns nothing, a test double, an account whose role row is
+    /// missing) would otherwise have dropped rows the caller could previously see. The
+    /// caller's own threads still match the per-user clause regardless, but their own messages
+    /// also have to stop counting as incoming, which is the same union seen from the other
+    /// side.
+    /// </para>
+    /// </summary>
+    private async Task<string[]> ResolveAdminAudienceAsync(
+        string userId,
+        bool isAdmin,
+        CancellationToken cancellationToken)
+    {
+        if (!isAdmin)
+        {
+            return [];
+        }
+
+        var adminUserIds = await GetAdminUserIdsAsync(cancellationToken);
+
+        return adminUserIds
+            .Append(userId)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// "A message from the other party", as an expression the provider can translate
+    /// (WESAL-TASK-10, Edit 16).
+    /// <para>
+    /// For a seeker or an owner this stays exactly what it has always been: any message not
+    /// sent by the caller. Those threads are genuinely two-party, so the identity test is the
+    /// whole rule.
+    /// </para>
+    /// <para>
+    /// For an Admin the other party is any non-Admin sender — in practice the owner — and a
+    /// colleague's reply must not count, because nearly all traffic in these threads is
+    /// Admin-to-Admin and counting it as incoming would leave every Admin's badge permanently
+    /// lit with no information in it. The caller's own messages are excluded explicitly as well
+    /// as via the audience, which is what keeps an Admin who is also a thread owner from
+    /// marking their own words unread.
+    /// </para>
+    /// <para>
+    /// Built inline rather than through ConversationAccess.IsAdminSide because EF will not
+    /// translate a method call on a captured collection inside a Where; the two are pinned to
+    /// each other by the shared-inbox tests.
+    /// </para>
+    /// </summary>
+    private static Expression<Func<Message, bool>> IncomingMessageFilter(
+        string userId,
+        bool isAdmin,
+        IReadOnlyCollection<string> adminUserIds)
+    {
+        if (!isAdmin)
+        {
+            return m => m.SenderUserId != userId;
+        }
+
+        var adminIds = adminUserIds.ToArray();
+
+        return m => m.SenderUserId != userId
+            && !adminIds.Contains(m.SenderUserId)
+            && m.SenderUserId != PlatformSenders.AdminFallback
+            && m.SenderUserId != PlatformSenders.System;
+    }
+
     public async Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)
+        => await GetUnreadStatusAsync(userId, isAdmin: false, [], conversationIds, cancellationToken);
+
+    /// <summary>
+    /// Per-row unread flags, sharing half one of the rule with
+    /// <see cref="GetUnreadConversationCountAsync"/> so a row's flag and the badge can never
+    /// disagree (WESAL-TASK-10, Edit 16).
+    /// </summary>
+    public async Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(
+        string userId,
+        bool isAdmin,
+        IReadOnlyCollection<string> adminUserIds,
+        IReadOnlyCollection<Guid> conversationIds,
+        CancellationToken cancellationToken = default)
     {
         if (conversationIds.Count == 0)
         {
@@ -332,7 +538,8 @@ public sealed class ConversationRepository : IConversationRepository
 
         // Same watermark rule as the inbox and the badge: a conversation this participant
         // has hidden reports not-unread, so the flag can never advertise a thread that the
-        // list is deliberately not showing them.
+        // list is deliberately not showing them. Hiding stays per-user even in the shared
+        // Admin inbox, so this remains a statement about the caller alone.
         var hiddenIds = await _context.ConversationReadStates
             .AsNoTracking()
             .Where(s => conversationIds.Contains(s.ConversationId)
@@ -345,12 +552,17 @@ public sealed class ConversationRepository : IConversationRepository
         var hiddenSet = hiddenIds.ToHashSet();
 
         // THE unread rule, half two: the same per-message test as the count above, so a
-        // thread can never be counted in one query and not the other. Only the other
-        // party's messages can make a thread unread, so a conversation containing nothing
-        // but the caller's own messages reports not-unread.
+        // thread can never be counted in one query and not the other. For an Admin, "the other
+        // party" is the owner rather than "anybody who is not me", so a colleague's reply does
+        // not light this Admin's badge. The watermark compared against is still this Admin's
+        // OWN row: the inbox is shared but read state is personal, so the same thread can be
+        // read for one Admin and unread for another.
+        var incoming = IncomingMessageFilter(userId, isAdmin, adminUserIds);
+
         var unreadIds = await _context.Messages
             .AsNoTracking()
-            .Where(m => conversationIds.Contains(m.ConversationId) && m.SenderUserId != userId)
+            .Where(m => conversationIds.Contains(m.ConversationId))
+            .Where(incoming)
             .Where(m => !_context.ConversationReadStates
                 .Any(s => s.ConversationId == m.ConversationId && s.UserId == userId && s.LastReadAt >= m.CreatedAt))
             .Select(m => m.ConversationId)

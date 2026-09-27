@@ -28,7 +28,57 @@ public interface IConversationRepository
         return Task.FromResult<string?>(null);
     }
 
+    /// <summary>
+    /// Every user id that currently holds the Admin role (WESAL-TASK-10, Edit 16).
+    /// <para>
+    /// The shared-admin inbox needs the whole set, not the single deterministic id that
+    /// <see cref="GetAdminUserIdAsync"/> returns: that one is deliberately the LOWEST-sorted
+    /// Admin, used only to fill a thread's counterparty column, and it says nothing about who
+    /// else is an Admin. It is left exactly as it is.
+    /// </para>
+    /// <para>
+    /// Resolving the set once and passing it down (rather than letting each query run its own
+    /// role join) is what lets the inbox list, the unread rule, the row's displayed
+    /// counterparty and live delivery all agree on one audience. Empty means "no Admin
+    /// accounts exist", which is why the platform-sender values are also needed to recognise
+    /// an Admin-side thread.
+    /// </para>
+    /// </summary>
+    Task<IReadOnlyList<string>> GetAdminUserIdsAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyList<string>>([]);
+    }
+
     Task<Conversation?> GetByIdWithHallAsync(Guid conversationId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The caller's inbox, and for an Admin EVERY owner/Admin conversation (Edit 16).
+    /// <para>
+    /// An Admin's list is a single shared queue: an owner/Admin thread belongs to the Admin
+    /// ROLE, not to whichever Admin created it, so it is returned for every Admin. The two
+    /// per-user clauses are kept as well, so an Admin still sees threads they created
+    /// themselves and any conversation about a hall they own.
+    /// </para>
+    /// <para>
+    /// <paramref name="adminUserIds"/> comes from <see cref="GetAdminUserIdsAsync"/> and is
+    /// ignored when <paramref name="isAdmin"/> is false, so a seeker's or an owner's query is
+    /// byte-identical to the two-party rule that has always applied to them. Seeker/owner
+    /// threads are never shared: the extra clause only ever matches a counterparty that is
+    /// itself on the Admin side.
+    /// </para>
+    /// <para>
+    /// The default implementation defers to the two-party overload, so a test double that
+    /// only models per-user membership keeps its existing meaning.
+    /// </para>
+    /// </summary>
+    Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(
+        string userId,
+        bool isAdmin,
+        IReadOnlyCollection<string> adminUserIds,
+        CancellationToken cancellationToken = default)
+    {
+        return GetParticipantConversationsAsync(userId, cancellationToken);
+    }
 
     Task<IReadOnlyList<Conversation>> GetParticipantConversationsAsync(
         string userId,
@@ -53,14 +103,36 @@ public interface IConversationRepository
 
     /// The number of the caller's conversations that hold an unread incoming message.
     ///
-    /// <paramref name="isAdmin"/> is part of the signature because the count is a filtered
-    /// count, not a plain one: a conversation the caller is not allowed to read must not be
-    /// counted, or the badge advertises a thread that cannot be opened. The filter is the
-    /// same hall-messaging gate the inbox list applies, mirrored into LINQ here, and
-    /// <see cref="GetUnreadStatusAsync"/> is expected to be called with the same set of
-    /// conversations the list returns.
+    /// <paramref name="isAdmin"/> is part of the signature for two independent reasons. It is a
+    /// filtered count, not a plain one: a conversation the caller is not allowed to read must
+    /// not be counted, or the badge advertises a thread that cannot be opened, and the filter
+    /// is the same hall-messaging gate the inbox list applies, mirrored into LINQ here.
+    ///
+    /// It also decides <em>who counts as the other party</em> (WESAL-TASK-10, Edit 16). For an
+    /// Admin, "the other party" is any non-Admin sender — the owner — not merely "anybody who
+    /// is not me". The distinction is not cosmetic: Admin-side chatter is the overwhelming
+    /// majority of the traffic in these threads, and counting a colleague's reply as incoming
+    /// would leave every Admin's badge permanently lit by their own colleagues.
     /// </summary>
     Task<int> GetUnreadConversationCountAsync(string userId, bool isAdmin, CancellationToken cancellationToken = default);
+
+    /// Per-conversation unread flags for the caller's own inbox rows.
+    ///
+    /// WESAL-TASK-10, Edit 16: read state stays strictly per-user even though the Admin inbox is
+    /// shared, so two Admins can legitimately see the same thread as read and unread at the
+    /// same time. Hiding is likewise per-user ("my view of the queue"), which keeps this flag
+    /// consistent with the badge for the same caller. The default implementation defers to the
+    /// two-party overload, so a test double that does not model Admin sharing is unaffected.
+    /// </summary>
+    Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(
+        string userId,
+        bool isAdmin,
+        IReadOnlyCollection<string> adminUserIds,
+        IReadOnlyCollection<Guid> conversationIds,
+        CancellationToken cancellationToken = default)
+    {
+        return GetUnreadStatusAsync(userId, conversationIds, cancellationToken);
+    }
 
     Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default);
 }

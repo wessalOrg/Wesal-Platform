@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
@@ -543,10 +544,20 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         }
     }
 
+    /// <summary>
+    /// The acting Admin's own id, or the platform's Admin-side sentinel when there is no
+    /// authenticated caller (a background call, or a test harness).
+    /// <para>
+    /// WESAL-TASK-10, Edit 16: the fallback is <see cref="PlatformSenders.AdminFallback"/>
+    /// rather than a bare literal, because the shared Admin inbox classifies an owner/Admin
+    /// thread by recognising that value. Two copies of the string that must agree is exactly
+    /// how a thread silently stops being recognised as Admin-side later.
+    /// </para>
+    /// </summary>
     private string ResolveAdminUserId()
         => _currentUser.IsAuthenticated && !string.IsNullOrWhiteSpace(_currentUser.UserId)
             ? _currentUser.UserId
-            : "admin";
+            : PlatformSenders.AdminFallback;
 
     private async Task<bool> TryDeliverRejectionMessageAsync(
         Hall hall,

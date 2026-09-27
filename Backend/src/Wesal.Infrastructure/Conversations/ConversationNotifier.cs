@@ -26,6 +26,16 @@ namespace Wesal.Infrastructure.Conversations;
 /// (a moderator watching somebody else's thread) no longer receives live pushes for it. An
 /// Admin who IS the counterparty is unaffected, because the counterparty is always delivered
 /// to. Moderation can still read the thread over HTTP.
+/// </para>
+/// <para>
+/// WESAL-TASK-10, Edit 16 closed exactly that trade-off for the threads where it mattered.
+/// A live thread's counterparty is whichever single Admin created or last opened it, so an
+/// owner/Admin thread was pushed to one person and invisible to the rest of the team — the
+/// gap a shared inbox is about. On those threads delivery is now resolved to the whole Admin
+/// role. It is still per recipient and never a group broadcast, because the owner on the same
+/// thread remains the member the lock gate has to be able to withhold, which is the reason
+/// this class stopped using groups in the first place.
+/// </para>
 /// </remarks>
 public sealed class ConversationNotifier : IConversationNotifier
 {
@@ -51,7 +61,12 @@ public sealed class ConversationNotifier : IConversationNotifier
             return;
         }
 
-        foreach (var recipient in ResolveRecipients(conversation))
+        // WESAL-TASK-10, Edit 16: the Admin audience is resolved per notification rather than
+        // baked in, so a newly created Admin account is pushed to from its next message on
+        // without a redeploy.
+        var adminUserIds = await _conversationRepository.GetAdminUserIdsAsync(cancellationToken);
+
+        foreach (var recipient in ResolveRecipients(conversation, adminUserIds))
         {
             await _hubContext.Clients
                 .User(recipient)
@@ -60,31 +75,62 @@ public sealed class ConversationNotifier : IConversationNotifier
     }
 
     /// <summary>
-    /// The conversation's two parties, de-duplicated and filtered through the shared gate.
-    /// The hall owner is the only party the gate can ever withhold from, because the gate is
-    /// owner-side: the other party is either a seeker or an Admin, and neither is restricted.
+    /// Everyone entitled to a live push for this conversation (WESAL-TASK-10, Edit 16).
+    /// <para>
+    /// For an owner/Admin thread that is the hall owner plus EVERY Admin account, because the
+    /// Admin side of the conversation is a role rather than the one individual stored in
+    /// <c>SenderUserId</c>. For a seeker/owner thread it is unchanged: the two parties.
+    /// </para>
+    /// <para>
+    /// Still delivered per recipient, never by group broadcast, and the reason has not changed
+    /// since Edit 10: a group cannot exclude one member, and the hall owner on an owner/Admin
+    /// thread is exactly the member who must be withholdable. The lock gate therefore stays
+    /// applied to the owner here, individually, and every Admin — who that gate never restricts
+    /// — is resolved and sent to individually. That also keeps this correct on a multi-instance
+    /// deployment, where the connection being filtered may be held by another instance.
+    /// </para>
+    /// <para>
+    /// A disconnected Admin is simply not reached: <c>Clients.User</c> on an absent connection
+    /// is a no-op, so no connection tracking is needed to mean "every currently-connected
+    /// Admin".
+    /// </para>
     /// </summary>
-    private static IEnumerable<string> ResolveRecipients(Conversation conversation)
+    private static IEnumerable<string> ResolveRecipients(
+        Conversation conversation,
+        IReadOnlyCollection<string> adminUserIds)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var candidate in new[] { conversation.SenderUserId, conversation.HallOwnerId })
+        // The hall owner, always individually gated. isAdmin is false because this path cannot
+        // see the recipient's roles, and erring towards withholding from an owner who also
+        // holds the Admin role is the safe direction: they can still read and send over HTTP.
+        if (!string.IsNullOrWhiteSpace(conversation.HallOwnerId)
+            && seen.Add(conversation.HallOwnerId)
+            && ConversationAccess.CanAccess(conversation.Hall, isThreadOwner: true, isAdmin: false))
         {
-            if (string.IsNullOrWhiteSpace(candidate) || !seen.Add(candidate))
+            yield return conversation.HallOwnerId;
+        }
+
+        if (ConversationAccess.IsAdminThread(conversation, adminUserIds))
+        {
+            foreach (var adminUserId in adminUserIds)
             {
-                continue;
+                // A platform sender is never a delivery target, and the dedupe also covers an
+                // owner who happens to hold the Admin role, so nobody is messaged twice.
+                if (!string.IsNullOrWhiteSpace(adminUserId) && seen.Add(adminUserId))
+                {
+                    yield return adminUserId;
+                }
             }
 
-            var isThreadOwner = string.Equals(candidate, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase);
+            yield break;
+        }
 
-            // isAdmin is false because the push path cannot see the recipient's roles, and
-            // the only recipient this can affect is the hall owner. Erring towards
-            // withholding from an owner who also holds the Admin role is the safe direction:
-            // such a user can still read and send over HTTP, they simply stop being pushed to.
-            if (ConversationAccess.CanAccess(conversation.Hall, isThreadOwner, isAdmin: false))
-            {
-                yield return candidate;
-            }
+        // A seeker/owner thread: the seeker is the only other party and the gate never
+        // restricts them, so they are notified exactly as before this change.
+        if (!string.IsNullOrWhiteSpace(conversation.SenderUserId) && seen.Add(conversation.SenderUserId))
+        {
+            yield return conversation.SenderUserId;
         }
     }
 }

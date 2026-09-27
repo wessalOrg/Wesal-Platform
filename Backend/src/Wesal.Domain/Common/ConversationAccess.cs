@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
@@ -41,6 +43,51 @@ public static class ConversationAccess
         return string.Equals(userId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
             || string.Equals(userId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// Whether a sender id represents the platform's Admin side rather than an individual.
+    /// <para>
+    /// WESAL-TASK-10, Edit 16. This is the one definition of "the admin side of a
+    /// conversation", used by the shared inbox, the unread rule and live delivery, so the
+    /// three can never disagree about which threads are shared.
+    /// </para>
+    /// <para>
+    /// A conversation records its two parties as <c>SenderUserId</c> and <c>HallOwnerId</c>
+    /// with no type column, so the ROLE of the counterparty is the only thing that
+    /// distinguishes an owner/Admin thread from a seeker/owner thread. It is "the admin side"
+    /// when the counterparty either holds the Admin role or is one of the
+    /// <see cref="PlatformSenders"/> values — the second half is not redundant, because those
+    /// sentinels are how automated platform notices and owner-initiated threads name the
+    /// Admin side when no real Admin can be resolved, and they hold no role at all.
+    /// </para>
+    /// </summary>
+    public static bool IsAdminSide(string? senderUserId, IReadOnlyCollection<string>? adminUserIds)
+    {
+        if (string.IsNullOrWhiteSpace(senderUserId))
+        {
+            return false;
+        }
+
+        if (PlatformSenders.IsPlatformSender(senderUserId))
+        {
+            return true;
+        }
+
+        return adminUserIds is not null
+            && adminUserIds.Contains(senderUserId, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Whether this conversation is an owner/Admin thread, and therefore shared by every Admin
+    /// rather than belonging to the single Admin named in <c>SenderUserId</c>.
+    /// <para>
+    /// A seeker/owner thread — a seeker asking a hall owner a question, including the booking
+    /// acceptance, rejection and cancellation notices — returns false and is never shared,
+    /// never broadcast, and never included in another user's inbox.
+    /// </para>
+    /// </summary>
+    public static bool IsAdminThread(Conversation conversation, IReadOnlyCollection<string>? adminUserIds)
+        => IsAdminSide(conversation.SenderUserId, adminUserIds);
 
     /// <summary>
     /// Whether the current user may be told about new messages in this conversation right

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 
@@ -22,8 +23,14 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
     /// Synthetic sender used for system-originated inbox messages (e.g. the automatic
     /// non-payment lock notice). No real admin/owner account is required to deliver an
     /// in-app message; the owner is always a participant of the conversation.
+    /// <para>
+    /// WESAL-TASK-10, Edit 16: the value now comes from <see cref="PlatformSenders"/> because
+    /// the shared Admin inbox has to recognise this thread as Admin-side, and it recognises it
+    /// by this literal. The literal and the classifier cannot drift apart now. Same string,
+    /// so no stored conversation changes meaning.
+    /// </para>
     /// </summary>
-    public const string SystemSenderUserId = "system";
+    public const string SystemSenderUserId = PlatformSenders.System;
 
     private readonly IAdminDashboardRepository _adminDashboardRepository;
     private readonly IHallRepository _hallRepository;
