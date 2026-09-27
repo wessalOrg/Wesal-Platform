@@ -923,7 +923,8 @@ public class SharedAdminInboxShould : IDisposable
             new RecordingConversationNotifier(),
             new FakeCurrentUserService(adminUserId, [ApplicationRoles.Admin]),
             new DateTimeService(),
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<AdminSubscriptionService>.Instance);
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<AdminSubscriptionService>.Instance,
+            new FakeNotificationService());
 
     private sealed class FakeBookingRejectionService : IBookingRejectionService
     {

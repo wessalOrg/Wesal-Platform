@@ -49,13 +49,14 @@ public class SubscriptionExpiryLockServiceShould : IDisposable
         HallPaymentStatus payment = HallPaymentStatus.Paid,
         DateOnly? cycleEnd = null,
         bool systemLocked = false,
-        bool isAdminLocked = false)
+        bool isAdminLocked = false,
+        string? ownerId = null)
     {
         var hall = new Hall
         {
             Name = name,
             Region = HallRegion.Gaza,
-            OwnerId = "owner-1",
+            OwnerId = ownerId ?? "owner-1",
             Status = status,
             PaymentStatus = payment,
             SubscriptionCycleEnd = cycleEnd,
@@ -78,7 +79,8 @@ public class SubscriptionExpiryLockServiceShould : IDisposable
             new ConversationRepository(_context),
             new MessageRepository(_context),
             new FakeDateTime(),
-            NullLogger<SubscriptionExpiryLockService>.Instance);
+            NullLogger<SubscriptionExpiryLockService>.Instance,
+            new Wesal.Infrastructure.Notifications.NotificationService(_provider.GetRequiredService<UserManager<ApplicationUser>>()));
 
     // --- US-ADMIN-09: automatic expiry lock ---
 
@@ -101,7 +103,11 @@ public class SubscriptionExpiryLockServiceShould : IDisposable
         Assert.NotNull(message);
         Assert.Equal(hall.Id, message!.Conversation.HallId);
         Assert.Equal("owner-1", message.Conversation.HallOwnerId);
-        Assert.Contains("renew", message.Content, StringComparison.OrdinalIgnoreCase);
+        // WESAL-TASK-13 (Edit 13): the notice body now comes from the catalog in the owner's
+        // own language, and "owner-1" here is not a real user row, so the service correctly
+        // falls back to the platform default. Assert the durable facts (hall identity) and
+        // leave the language choice to LockNoticeBody_FollowsTheOwnersChosenLanguage.
+        Assert.Contains(hall.Name, message.Content);
     }
 
     [Fact]
@@ -191,6 +197,51 @@ public class SubscriptionExpiryLockServiceShould : IDisposable
         Assert.Equal(1, first);
         Assert.Equal(0, second);
         Assert.Equal(1, await _context.Messages.CountAsync(m => m.SenderUserId == SubscriptionExpiryLockService.SystemSenderUserId));
+    }
+
+    [Theory]
+    [InlineData(Language.English)]
+    [InlineData(Language.Arabic)]
+    public async Task LockNoticeBody_FollowsTheOwnersChosenLanguage(Language language)
+    {
+        // WESAL-TASK-13 (Edit 13): the automatic-lock notice used to be an English-only
+        // string, so an Arabic-speaking owner was told their hall had been restricted in a
+        // language they had not chosen. It now renders in the OWNER's stored language.
+        var owner = await CreateOwnerAsync("owner@example.com", "+970599100001", language);
+        var hall = AddHall("Grand Hall", cycleEnd: Today.AddDays(-1), ownerId: owner.Id);
+
+        Assert.Equal(1, await CreateService().LockExpiredCyclesAsync());
+
+        var message = await _context.Messages
+            .FirstOrDefaultAsync(m => m.SenderUserId == SubscriptionExpiryLockService.SystemSenderUserId);
+
+        Assert.NotNull(message);
+        Assert.Contains("Grand Hall", message!.Content, StringComparison.Ordinal);
+
+        if (language == Language.English)
+        {
+            Assert.Contains("renew", message.Content, StringComparison.OrdinalIgnoreCase);
+        }
+        else
+        {
+            Assert.Contains("تجديد", message.Content, StringComparison.Ordinal);
+        }
+    }
+
+    private async Task<ApplicationUser> CreateOwnerAsync(string email, string phone, Language language)
+    {
+        var userManager = _provider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = new ApplicationUser
+        {
+            FullName = "Hall Owner",
+            Email = email,
+            UserName = email,
+            PhoneNumber = phone,
+            PreferredLanguage = language
+        };
+
+        await userManager.CreateAsync(user, "Password123!");
+        return user;
     }
 
     public void Dispose()

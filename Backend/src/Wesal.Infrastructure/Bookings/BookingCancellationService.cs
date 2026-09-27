@@ -19,6 +19,7 @@ public sealed class BookingCancellationService : IBookingCancellationService
     private readonly ICurrentUserService _currentUser;
     private readonly OwnerDashboard.IOwnerBookingRequestNotifier _ownerNotifier;
     private readonly INotificationDispatcher _notificationDispatcher;
+    private readonly INotificationService _notificationService;
 
     public BookingCancellationService(
         IBookingRepository bookingRepository,
@@ -27,7 +28,8 @@ public sealed class BookingCancellationService : IBookingCancellationService
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         OwnerDashboard.IOwnerBookingRequestNotifier ownerNotifier,
-        INotificationDispatcher notificationDispatcher)
+        INotificationDispatcher notificationDispatcher,
+    INotificationService notificationService)
     {
         _bookingRepository = bookingRepository;
         _conversationRepository = conversationRepository;
@@ -36,6 +38,7 @@ public sealed class BookingCancellationService : IBookingCancellationService
         _currentUser = currentUser;
         _ownerNotifier = ownerNotifier;
         _notificationDispatcher = notificationDispatcher;
+        _notificationService = notificationService;
     }
 
     public async Task<CancelBookingResultDto> CancelBookingAsync(
@@ -228,26 +231,27 @@ public sealed class BookingCancellationService : IBookingCancellationService
             await _conversationRepository.AddAsync(conversation, cancellationToken);
         }
 
+        // WESAL-TASK-13 (Edit 13): rendered from the catalog in the REQUESTER's own stored
+        // language, so the durable record of their cancellation is not English-only.
+        var content = await _notificationService.BuildAsync(
+            NotificationKind.BookingCancelledForRequester,
+            booking.RequesterUserId,
+            new Dictionary<string, string?>
+            {
+                [NotificationTokens.HallName] = hall.Name,
+                [NotificationTokens.Date] = booking.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                [NotificationTokens.TimeRange] = booking.HourlyTimeRange
+            },
+            cancellationToken: cancellationToken);
+
         var message = new Message
         {
             ConversationId = conversation.Id,
             SenderUserId = booking.RequesterUserId,
-            Content = BuildCancellationContent(booking, hall)
+            Content = content.Body
         };
 
         await _messageRepository.AddAsync(message, cancellationToken);
-    }
-
-    /// <summary>
-    /// Builds the chat notice left on the requester/owner conversation thread. A booking
-    /// is always described by its real hourly range, so a multi-hour request reads as
-    /// "09:00 - 12:00" rather than naming a booking period that no longer exists.
-    /// </summary>
-    private static string BuildCancellationContent(Booking booking, Hall hall)
-    {
-        var requestedDate = booking.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-
-        return $"Your booking request for {hall.Name} on {requestedDate} for the {booking.HourlyTimeRange} slot was cancelled by the requester.";
     }
 
     private static string BuildFinalizedMessage(BookingStatus status)

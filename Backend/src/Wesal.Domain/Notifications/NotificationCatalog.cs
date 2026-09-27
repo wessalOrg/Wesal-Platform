@@ -50,6 +50,15 @@ public static class NotificationTokens
     public const string EndTime = "{EndTime}";
     public const string Amount = "{Amount}";
     public const string Reason = "{Reason}";
+
+    /// <summary>
+    /// A whole hourly range such as "09:00 - 12:00", for the notices that describe one
+    /// booking rather than a single clock time.
+    /// </summary>
+    public const string TimeRange = "{TimeRange}";
+
+    /// <summary>How many days remain before a subscription cycle ends.</summary>
+    public const string DaysRemaining = "{DaysRemaining}";
 }
 
 /// <summary>
@@ -95,7 +104,7 @@ public static class NotificationCatalog
 
             // 2b. Booking request sent -> the seeker who sent it.
             [NotificationKind.BookingRequestSentToRequester] = new NotificationTemplate(
-                ArabicTitle: "تم إرسال الطلب",
+                ArabicTitle: "تم إرسال طلب الحجز",
                 EnglishTitle: "Request Sent",
                 ArabicBody: "تم إرسال طلب حجزك إلى صاحب الصالة بانتظار المراجعة.",
                 EnglishBody: "Your booking request has been sent to the hall owner and is awaiting review.",
@@ -171,7 +180,54 @@ public static class NotificationCatalog
                 EnglishBody: "Your hall was rejected by the Wesal technical support for the following reason: \"" + NotificationTokens.Reason + "\"",
                 ArabicActionLabel: "التواصل مع الدعم",
                 EnglishActionLabel: "Contact support",
-                ActionTarget: NotificationActionTarget.Conversation)
+                ActionTarget: NotificationActionTarget.Conversation),
+
+            // 10. The requester cancelled their own booking. This notice exists on the durable
+            // thread only, so it is rendered in the REQUESTER's own language: the thread record
+            // and the thread they are looking at can then never be in two languages at once.
+            [NotificationKind.BookingCancelledForRequester] = new NotificationTemplate(
+                ArabicTitle: "تم إلغاء الحجز",
+                EnglishTitle: "Booking Cancelled",
+                ArabicBody: "تم إلغاء طلب حجزك في قاعة \"" + NotificationTokens.HallName + "\" بتاريخ " + NotificationTokens.Date + " من " + NotificationTokens.TimeRange + "، وذلك بناءً على طلبك.",
+                EnglishBody: "Your booking request for \"" + NotificationTokens.HallName + "\" on " + NotificationTokens.Date + " for " + NotificationTokens.TimeRange + " was cancelled at your request.",
+                ArabicActionLabel: "طلباتي",
+                EnglishActionLabel: "My bookings",
+                ActionTarget: NotificationActionTarget.MyBookings),
+
+            // 11. An Admin confirmed the owner's subscription payment.
+            //
+            // WESAL-TASK-13 follow-up: the wording used to tell the owner the hall had been
+            // "published to interested people". The publish step was removed with the legacy
+            // two-period model, so the sentence described something the platform no longer
+            // does. It is not repeated here, and the test pins that it stays out.
+            [NotificationKind.SubscriptionPaidForOwner] = new NotificationTemplate(
+                ArabicTitle: "تم تأكيد الدفع",
+                EnglishTitle: "Payment confirmed",
+                ArabicBody: "تم تأكيد دفع اشتراك قاعتك \"" + NotificationTokens.HallName + "\"، وتم تفعيلها. اشتراكك ساري حتى " + NotificationTokens.Date + ".",
+                EnglishBody: "Your subscription payment for \"" + NotificationTokens.HallName + "\" has been confirmed and your hall is now active. Your subscription is valid until " + NotificationTokens.Date + ".",
+                ArabicActionLabel: "قاعاتي",
+                EnglishActionLabel: "My halls",
+                ActionTarget: NotificationActionTarget.MyHalls),
+
+            // 12. The owner's subscription cycle ends soon.
+            [NotificationKind.SubscriptionExpiringForOwner] = new NotificationTemplate(
+                ArabicTitle: "اشتراكك على وشك الانتهاء",
+                EnglishTitle: "Subscription expiring",
+                ArabicBody: "ينتهي اشتراكك في قاعة \"" + NotificationTokens.HallName + "\" بتاريخ " + NotificationTokens.Date + " (متبقٍ " + NotificationTokens.DaysRemaining + " يومًا). يرجى تجديد اشتراكك للحفاظ على صلاحية إدارة هذه القاعة.",
+                EnglishBody: "Your subscription for \"" + NotificationTokens.HallName + "\" ends on " + NotificationTokens.Date + " (" + NotificationTokens.DaysRemaining + " days remaining). Please renew your subscription to keep management access to this hall active.",
+                ArabicActionLabel: "قاعاتي",
+                EnglishActionLabel: "My halls",
+                ActionTarget: NotificationActionTarget.MyHalls),
+
+            // 13. The owner's subscription cycle ended and the hall was automatically restricted.
+            [NotificationKind.SubscriptionExpiredForOwner] = new NotificationTemplate(
+                ArabicTitle: "انتهى اشتراكك",
+                EnglishTitle: "Subscription ended",
+                ArabicBody: "انتهى اشتراكك في قاعة \"" + NotificationTokens.HallName + "\" دون تجديد مؤكَّد. تم تقييد الوصول إلى هذه القاعة تلقائيًا. يرجى تجديد اشتراكك لإعادة تفعيل القاعة.",
+                EnglishBody: "Your subscription for \"" + NotificationTokens.HallName + "\" has ended without a confirmed renewal. Access to this hall has been automatically restricted. Please renew your subscription to reactivate the hall.",
+                ArabicActionLabel: "قاعاتي",
+                EnglishActionLabel: "My halls",
+                ActionTarget: NotificationActionTarget.MyHalls)
         };
 
     public static NotificationTemplate Get(NotificationKind kind)

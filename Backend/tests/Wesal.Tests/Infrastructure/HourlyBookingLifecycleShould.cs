@@ -190,7 +190,8 @@ public class HourlyBookingLifecycleShould : IDisposable
             UnitOfWork(),
             currentUser,
             notifier ?? new RecordingNotifier(),
-            new RecordingNotificationDispatcher());
+            new RecordingNotificationDispatcher(),
+            new FakeNotificationService());
 
     private BookingRejectionService Rejection(ICurrentUserService currentUser)
         => new(

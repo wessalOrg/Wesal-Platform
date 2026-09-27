@@ -49,14 +49,24 @@ public class SubscriptionExpiryWarningServiceShould : IDisposable
         _emailService = new FakeEmailService();
     }
 
-    private async Task<ApplicationUser> CreateOwnerAsync(string email, string phone)
+    private async Task<ApplicationUser> CreateOwnerAsync(string email, string phone, Language preferred = Language.English)
     {
         var userManager = _provider.GetRequiredService<UserManager<ApplicationUser>>();
-        var user = new ApplicationUser { FullName = "Hall Owner", Email = email, UserName = email, PhoneNumber = phone };
+        var user = new ApplicationUser { FullName = "Hall Owner", Email = email, UserName = email, PhoneNumber = phone, PreferredLanguage = preferred };
         await userManager.CreateAsync(user, "Password123!");
         await userManager.AddToRoleAsync(user, ApplicationRoles.HallOwner);
         return user;
     }
+
+    /// <summary>
+    /// WESAL-TASK-13 (Edit 13): the warning is now rendered through the real
+    /// <see cref="NotificationService"/>, so these tests resolve the owner's stored
+    /// language exactly as production does. The default here is English to keep the
+    /// existing content assertions readable; the language choice itself is covered by
+    /// <c>WarningBody_FollowsTheOwnersChosenLanguage</c>.
+    /// </summary>
+    private INotificationService NotificationService()
+        => new Wesal.Infrastructure.Notifications.NotificationService(_provider.GetRequiredService<UserManager<ApplicationUser>>());
 
     private Hall AddPaidHall(string ownerId, string name, DateOnly cycleEnd, DateOnly? warnedFor = null, int attempts = 0)
     {
@@ -88,7 +98,8 @@ public class SubscriptionExpiryWarningServiceShould : IDisposable
             Options.Create(new SubscriptionExpiryWarningOptions { IntervalMinutes = 1440, EscalationThreshold = 3 }),
             new UnitOfWork(_context),
             new FakeDateTime(),
-            NullLogger<SubscriptionExpiryWarningService>.Instance);
+            NullLogger<SubscriptionExpiryWarningService>.Instance,
+            NotificationService());
 
     private async Task<List<Message>> MessagesForAsync(Guid hallId)
     {
@@ -197,6 +208,36 @@ public class SubscriptionExpiryWarningServiceShould : IDisposable
         var message = (await MessagesForAsync(hall.Id)).Single();
         Assert.Contains(hall.Name, message.Content);
         Assert.Contains(Today.AddDays(3).ToString("yyyy-MM-dd"), message.Content);
+    }
+
+    [Theory]
+    [InlineData(Language.English)]
+    [InlineData(Language.Arabic)]
+    public async Task WarningBody_FollowsTheOwnersChosenLanguage(Language language)
+    {
+        // WESAL-TASK-13 (Edit 13): this notice used to be an English-only string built in
+        // place, so an Arabic-speaking owner was warned in a language they had not chosen.
+        // It now goes through the real NotificationService, which reads the OWNER's stored
+        // preference, so each owner is warned in the language they picked.
+        var owner = await CreateOwnerAsync("owner@example.com", "+970599100001", language);
+        var hall = AddPaidHall(owner.Id, "Grand Hall", Today.AddDays(3));
+
+        await CreateService().WarnCyclesEndingSoonAsync();
+
+        var message = (await MessagesForAsync(hall.Id)).Single();
+
+        if (language == Language.English)
+        {
+            Assert.Contains("renew", message.Content, StringComparison.OrdinalIgnoreCase);
+        }
+        else
+        {
+            Assert.Contains("تجديد", message.Content, StringComparison.Ordinal);
+        }
+
+        // The durable facts must be present in either language.
+        Assert.Contains(hall.Name, message.Content, StringComparison.Ordinal);
+        Assert.Contains(Today.AddDays(3).ToString("yyyy-MM-dd"), message.Content, StringComparison.Ordinal);
     }
 
     public void Dispose()

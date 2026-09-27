@@ -4,6 +4,7 @@ using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
+using Wesal.Domain.Notifications;
 
 namespace Wesal.Infrastructure.Admin;
 
@@ -39,6 +40,7 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
     private readonly IMessageRepository _messageRepository;
     private readonly IDateTime _dateTime;
     private readonly ILogger<SubscriptionExpiryLockService> _logger;
+    private readonly INotificationService _notificationService;
 
     public SubscriptionExpiryLockService(
         IAdminDashboardRepository adminDashboardRepository,
@@ -47,7 +49,8 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository,
         IDateTime dateTime,
-        ILogger<SubscriptionExpiryLockService> logger)
+        ILogger<SubscriptionExpiryLockService> logger,
+    INotificationService notificationService)
     {
         _adminDashboardRepository = adminDashboardRepository;
         _hallRepository = hallRepository;
@@ -56,6 +59,7 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
         _messageRepository = messageRepository;
         _dateTime = dateTime;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     public async Task<int> LockExpiredCyclesAsync(CancellationToken cancellationToken = default)
@@ -166,12 +170,23 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
             await _conversationRepository.AddAsync(conversation, cancellationToken);
         }
 
+        // WESAL-TASK-13 (Edit 13): this notice used to be English-only, so an Arabic-speaking
+        // owner was told their hall had been restricted in a language they had not chosen. It
+        // is now rendered from the catalog in the OWNER's own stored language.
+        var content = await _notificationService.BuildAsync(
+            NotificationKind.SubscriptionExpiredForOwner,
+            hall.OwnerId!,
+            new Dictionary<string, string?>
+            {
+                [NotificationTokens.HallName] = hall.Name
+            },
+            cancellationToken: cancellationToken);
+
         var message = new Message
         {
             ConversationId = conversation.Id,
             SenderUserId = SystemSenderUserId,
-            Content = $"Your subscription for \"{hall.Name}\" has ended without a confirmed renewal. "
-                + "Access to this hall has been automatically restricted. Please renew your subscription to reactivate the hall."
+            Content = content.Body
         };
 
         await _messageRepository.AddAsync(message, cancellationToken);

@@ -1,8 +1,10 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Domain.Entities;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Admin;
 
 namespace Wesal.Infrastructure.Warnings;
@@ -31,6 +33,7 @@ public sealed class SubscriptionExpiryWarningService : ISubscriptionExpiryWarnin
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDateTime _dateTime;
     private readonly ILogger<SubscriptionExpiryWarningService> _logger;
+    private readonly INotificationService _notificationService;
 
     public SubscriptionExpiryWarningService(
         IAdminDashboardRepository adminDashboardRepository,
@@ -40,7 +43,8 @@ public sealed class SubscriptionExpiryWarningService : ISubscriptionExpiryWarnin
         IOptions<SubscriptionExpiryWarningOptions> options,
         IUnitOfWork unitOfWork,
         IDateTime dateTime,
-        ILogger<SubscriptionExpiryWarningService> logger)
+        ILogger<SubscriptionExpiryWarningService> logger,
+    INotificationService notificationService)
     {
         _adminDashboardRepository = adminDashboardRepository;
         _conversationRepository = conversationRepository;
@@ -50,6 +54,7 @@ public sealed class SubscriptionExpiryWarningService : ISubscriptionExpiryWarnin
         _unitOfWork = unitOfWork;
         _dateTime = dateTime;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     public async Task<int> WarnCyclesEndingSoonAsync(CancellationToken cancellationToken = default)
@@ -148,12 +153,24 @@ public sealed class SubscriptionExpiryWarningService : ISubscriptionExpiryWarnin
             await _conversationRepository.AddAsync(conversation, cancellationToken);
         }
 
+        // WESAL-TASK-13 (Edit 13): rendered from the catalog in the OWNER's own stored
+        // language, so the renewal warning is not English-only any more.
+        var content = await _notificationService.BuildAsync(
+            NotificationKind.SubscriptionExpiringForOwner,
+            hall.OwnerId!,
+            new Dictionary<string, string?>
+            {
+                [NotificationTokens.HallName] = hall.Name,
+                [NotificationTokens.Date] = cycleEnd.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                [NotificationTokens.DaysRemaining] = daysRemaining.ToString(CultureInfo.InvariantCulture)
+            },
+            cancellationToken: cancellationToken);
+
         var message = new Message
         {
             ConversationId = conversation.Id,
             SenderUserId = SystemSenderUserId,
-            Content = $"Your subscription for \u0022{hall.Name}\u0022 ends on {cycleEnd.ToString("yyyy-MM-dd")} ({daysRemaining} days remaining). "
-                + "Please renew your subscription to keep management access to this hall active."
+            Content = content.Body
         };
 
         await _messageRepository.AddAsync(message, cancellationToken);

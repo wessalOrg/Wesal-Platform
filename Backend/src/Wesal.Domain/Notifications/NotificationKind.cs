@@ -37,7 +37,25 @@ public enum NotificationKind
     HallSubmittedForAdmin = 9,
 
     /// <summary>An Admin rejected the hall; the owner is told with the reason.</summary>
-    HallRejectedForOwner = 10
+    HallRejectedForOwner = 10,
+
+    /// <summary>
+    /// The requester cancelled their own booking, so a durable notice is left on the
+    /// requester/owner thread (WESAL-TASK-10, Edit 13 follow-up).
+    /// </summary>
+    BookingCancelledForRequester = 11,
+
+    /// <summary>An Admin confirmed the owner's subscription payment.</summary>
+    SubscriptionPaidForOwner = 12,
+
+    /// <summary>The owner's subscription cycle ends soon and needs renewing.</summary>
+    SubscriptionExpiringForOwner = 13,
+
+    /// <summary>
+    /// The owner's subscription cycle ended without a renewal, so the hall was
+    /// automatically restricted.
+    /// </summary>
+    SubscriptionExpiredForOwner = 14
 }
 
 /// <summary>

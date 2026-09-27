@@ -49,7 +49,7 @@ public class AdminSubscriptionServiceShould : IDisposable
         _context.Database.EnsureCreated();
     }
 
-    private void AddOwner(string id, string fullName, string phone, string email)
+    private void AddOwner(string id, string fullName, string phone, string email, Language language = Language.Arabic)
     {
         _context.Users.Add(new ApplicationUser
         {
@@ -59,7 +59,8 @@ public class AdminSubscriptionServiceShould : IDisposable
             Email = email,
             UserName = email,
             NormalizedEmail = email.ToUpperInvariant(),
-            NormalizedUserName = email.ToUpperInvariant()
+            NormalizedUserName = email.ToUpperInvariant(),
+            PreferredLanguage = language
         });
         _context.SaveChanges();
     }
@@ -113,7 +114,8 @@ public class AdminSubscriptionServiceShould : IDisposable
             new FakeConversationNotifier(),
             new FakeCurrentUser("admin-1", true, ApplicationRoles.Admin),
             new FakeDateTime(),
-            NullLogger<AdminSubscriptionService>.Instance);
+            NullLogger<AdminSubscriptionService>.Instance,
+            new Wesal.Infrastructure.Notifications.NotificationService(_provider.GetRequiredService<UserManager<ApplicationUser>>()));
 
     private sealed class FakeConversationNotifier : IConversationNotifier
     {
@@ -267,6 +269,35 @@ public class AdminSubscriptionServiceShould : IDisposable
         Assert.False(reloaded.SystemLocked);
         Assert.Equal(Today, reloaded.SubscriptionCycleStart);
         Assert.Equal(Today.AddDays(30), reloaded.SubscriptionCycleEnd);
+    }
+
+    [Theory]
+    [InlineData(Language.English)]
+    [InlineData(Language.Arabic)]
+    public async Task MarkPaid_ConfirmationNotice_FollowsTheOwnersChosenLanguage(Language language)
+    {
+        // WESAL-TASK-13 (Edit 13): this confirmation used to be a fixed Arabic sentence, so an
+        // English-speaking owner was never told their payment had landed in their own
+        // language. It now renders from the catalog in the OWNER's stored language.
+        AddOwner("owner-1", "Alaa Owner", "+970111", "alaa@example.com", language);
+        var hall = AddHall("My Hall", "owner-1", status: HallStatus.Approved, payment: HallPaymentStatus.Unpaid);
+
+        await CreateService().MarkSubscriptionPaidAsync(hall.Id);
+
+        var message = await _context.Messages.SingleAsync();
+
+        if (language == Language.English)
+        {
+            Assert.Contains("subscription", message.Content, StringComparison.OrdinalIgnoreCase);
+        }
+        else
+        {
+            Assert.Contains("اشتراك", message.Content, StringComparison.Ordinal);
+        }
+
+        // P4: the removed publish step must not be described back to the owner in any language.
+        Assert.DoesNotContain("ونشرها للمهتمين", message.Content, StringComparison.Ordinal);
+        Assert.Contains("My Hall", message.Content, StringComparison.Ordinal);
     }
 
     [Fact]

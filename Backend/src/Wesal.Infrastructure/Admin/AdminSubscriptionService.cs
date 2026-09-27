@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
@@ -6,6 +7,7 @@ using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.AiAssistant;
 using Wesal.Infrastructure.Conversations;
 
@@ -38,6 +40,7 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _dateTime;
     private readonly ILogger<AdminSubscriptionService> _logger;
+    private readonly INotificationService _notificationService;
 
     public AdminSubscriptionService(
         IAdminDashboardRepository adminDashboardRepository,
@@ -49,7 +52,8 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
         IConversationNotifier notifier,
         ICurrentUserService currentUser,
         IDateTime dateTime,
-        ILogger<AdminSubscriptionService> logger)
+        ILogger<AdminSubscriptionService> logger,
+        INotificationService notificationService)
     {
         _adminDashboardRepository = adminDashboardRepository;
         _hallRepository = hallRepository;
@@ -61,6 +65,7 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
         _currentUser = currentUser;
         _dateTime = dateTime;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     public async Task<IReadOnlyList<AdminSubscriptionOwnerGroupDto>> GetSubscriptionOverviewAsync(
@@ -173,19 +178,33 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
     /// <summary>
     /// Revokes a confirmed subscription payment (WESAL-TASK-4, Edit 4). This is a direct
     /// administrative action and is deliberately independent of any payment-proof message:
-    /// the Admin can set paid or not-paid at any time, with or without an uploaded proof.
+    /// the Admin can revoke a payment with or without an uploaded proof.
     ///
-    /// Semantics are the exact inverse of <see cref="MarkSubscriptionPaidAsync"/>: the
-    /// payment status becomes Unpaid and both cycle dates are cleared, so
-    /// <c>DaysRemaining</c> returns to <c>null</c> (never paid) on every read surface.
-    /// The idempotent no-op applies symmetrically — revoking an already-unpaid hall is a
-    /// no-op that never discards a partially-set cycle twice.
+    /// <para>
+    /// Semantics match <see cref="MarkSubscriptionPaidAsync"/>: the payment status becomes
+    /// Unpaid and both cycle dates are cleared, so <c>DaysRemaining</c> returns to
+    /// <c>null</c> (never paid) on every read surface. The idempotent no-op applies
+    /// symmetrically — revoking an already-unpaid hall is a no-op that never discards a
+    /// partially-set cycle twice.
+    /// </para>
     ///
+    /// <para>
+    /// Note that this is <b>not</b> the unconditional inverse of
+    /// <see cref="MarkSubscriptionPaidAsync"/>: marking paid additionally requires the hall
+    /// to be <see cref="HallStatus.Approved"/>, so a hall that was never approved can have its
+    /// payment revoked but cannot be marked paid in the first place. Revoking is still
+    /// accepted for any hall, approved or not, so an Admin can always undo a mistaken
+    /// confirmation. The Approved requirement is also what makes the "your hall is now
+    /// active" confirmation notice truthful: only an approved hall is ever told it is active.
+    /// </para>
+    ///
+    /// <para>
     /// Locks are intentionally left alone: <see cref="HallManagementAccess"/> evaluates
     /// the payment requirement BEFORE the system-lock requirement, so an unpaid hall is
     /// already blocked with the accurate <c>PaymentRequired</c> code, and forcing
     /// SystemLocked here would report two reasons for one condition. A manual Admin lock
     /// is never touched by any payment action.
+    /// </para>
     /// </summary>
     public async Task<AdminMarkPaidResultDto> MarkSubscriptionNotPaidAsync(
         Guid hallId,
@@ -273,11 +292,26 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
                 await _conversationRepository.AddAsync(conversation, cancellationToken);
             }
 
+            // WESAL-TASK-13 (Edit 13): rendered from the catalog in the OWNER's own stored
+            // language, so an English-speaking owner is no longer told their payment landed in
+            // Arabic only. The old fixed Arabic also claimed the hall was "published to
+            // interested people", which described the publish step removed with the legacy
+            // two-period model; the new wording does not mention it.
+            var content = await _notificationService.BuildAsync(
+                NotificationKind.SubscriptionPaidForOwner,
+                hall.OwnerId,
+                new Dictionary<string, string?>
+                {
+                    [NotificationTokens.HallName] = hall.Name,
+                    [NotificationTokens.Date] = hall.SubscriptionCycleEnd?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty
+                },
+                cancellationToken: cancellationToken);
+
             var message = new Message
             {
                 ConversationId = conversation.Id,
                 SenderUserId = adminUserId,
-                Content = $"تم تأكيد دفع اشتراك قاعتك «{hall.Name}»، وتم تفعيلها ونشرها للمهتمين. اشتراكك ساري حتى {hall.SubscriptionCycleEnd:yyyy-MM-dd}."
+                Content = content.Body
             };
 
             await _messageRepository.AddAsync(message, cancellationToken);

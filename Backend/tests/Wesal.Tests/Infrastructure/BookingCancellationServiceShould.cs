@@ -6,6 +6,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Bookings;
 using Wesal.Tests.TestDoubles;
 
@@ -54,6 +55,35 @@ public class BookingCancellationServiceShould
         Assert.Equal(scenario.Hall.Id, scenario.Booking.HallId);
         Assert.Equal(new DateOnly(2035, 6, 1), scenario.Booking.Date);
         Assert.Equal(new TimeOnly(10, 0), Assert.Single(scenario.Booking.Slots).StartTime);
+    }
+
+    [Theory]
+    [InlineData(Language.English)]
+    [InlineData(Language.Arabic)]
+    public async Task CancelBooking_ThreadNotice_FollowsTheRequestersChosenLanguage(Language language)
+    {
+        // WESAL-TASK-13 (Edit 13): the durable record of a cancellation used to be an
+        // English-only sentence, so an Arabic-speaking requester saw a notice in a language
+        // they had not chosen. It now renders from the catalog in the REQUESTER's language,
+        // which also keeps the thread they are reading in one language.
+        var scenario = Scenario();
+        scenario.Notifications.SetLanguage(RequesterId, language);
+
+        await scenario.Service.CancelBookingAsync(scenario.Hall.Id, scenario.Booking.Id);
+
+        var rendered = Assert.Single(scenario.Notifications.Rendered);
+        Assert.Equal(NotificationKind.BookingCancelledForRequester, rendered.Kind);
+        Assert.Equal(language, rendered.Language);
+        Assert.Equal(rendered.Content.Body, Assert.Single(scenario.Messages).Content);
+
+        if (language == Language.English)
+        {
+            Assert.Contains("cancelled", rendered.Content.Body, StringComparison.OrdinalIgnoreCase);
+        }
+        else
+        {
+            Assert.Contains("إلغاء", rendered.Content.Body, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -173,7 +203,13 @@ public class BookingCancellationServiceShould
         Assert.Contains(scenario.Hall.Name, message.Content);
         Assert.Contains("2035-06-01", message.Content);
         Assert.Contains("10:00 - 11:00", message.Content);
-        Assert.Contains("cancelled", message.Content, StringComparison.OrdinalIgnoreCase);
+
+        // WESAL-TASK-13 (Edit 13): the notice is no longer an English sentence, so this test
+        // no longer pins a language it is not about. Asserting the persisted body IS the
+        // catalog-rendered body is language-agnostic and also proves the single message on the
+        // shared thread is the localized one, not a second hardcoded copy.
+        var rendered = Assert.Single(scenario.Notifications.Rendered);
+        Assert.Equal(rendered.Content.Body, message.Content);
     }
 
     [Fact]
@@ -404,12 +440,14 @@ public class BookingCancellationServiceShould
             context.ConversationRepository,
             context.MessageRepository,
             context.UnitOfWork,
-                context.CurrentUser,
-                context.OwnerNotifier,
-                new RecordingNotificationDispatcher());
+            context.CurrentUser,
+            context.OwnerNotifier,
+            new RecordingNotificationDispatcher(),
+            context.Notifications);
 
         return context;
     }
+
 
     private static FakeCurrentUserService CurrentUser(string? userId, IReadOnlyList<string> roles)
         => new(userId, userId is not null, roles);
@@ -464,6 +502,8 @@ public class BookingCancellationServiceShould
         public required FakeOwnerBookingRequestNotifier OwnerNotifier { get; init; }
 
         public required BookingCancellationService Service { get; set; }
+
+        public FakeNotificationService Notifications { get; } = new();
 
         public IReadOnlyList<Booking> Bookings => BookingRepository.Bookings;
 

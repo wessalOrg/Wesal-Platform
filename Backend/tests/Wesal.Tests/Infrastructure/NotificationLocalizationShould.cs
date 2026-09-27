@@ -82,8 +82,8 @@ public sealed class NotificationLocalizationShould : IDisposable
     [Theory]
     // Login: "مرحبًا بك" / "Welcome", informational only, no action.
     [InlineData(NotificationKind.WelcomeLogin, "مرحبًا بك", "Welcome", null)]
-    // Request sent: "تم إرسال الطلب" / "Request Sent".
-    [InlineData(NotificationKind.BookingRequestSentToRequester, "تم إرسال الطلب", "Request Sent", "طلباتي")]
+    // Request sent: "تم إرسال طلب الحجز" / "Request Sent".
+    [InlineData(NotificationKind.BookingRequestSentToRequester, "تم إرسال طلب الحجز", "Request Sent", "طلباتي")]
     // Hall created: "تم إنشاء الصالة" / "Hall Created".
     [InlineData(NotificationKind.HallCreatedForOwner, "تم إنشاء الصالة", "Hall Created", "قاعاتي")]
     // Booking cancelled: "تم إلغاء الحجز" / "Booking Cancelled".
@@ -99,6 +99,46 @@ public sealed class NotificationLocalizationShould : IDisposable
         Assert.Equal(arabicTitle, template.ArabicTitle);
         Assert.Equal(englishTitle, template.EnglishTitle);
         Assert.Equal(arabicActionLabel, template.ArabicActionLabel);
+    }
+
+    // ---------------------------------------------------------------------
+    // 1b. The product's full title list, diffed title-by-title against the
+    // catalog. This is deliberately separate from the block above: that one
+    // pins only the subset the catalog originally hardcoded, while this one
+    // covers every title in the specification, so a later refactor that
+    // silently reworded a specified title fails here with the kind named.
+    // ---------------------------------------------------------------------
+
+    public static TheoryData<NotificationKind, string, string> SpecifiedTitles => new()
+    {
+        // "طلب حجز جديد" — new booking request, to the hall owner.
+        { NotificationKind.BookingRequestCreatedForOwner, "طلب حجز جديد", "New booking request" },
+        // "تم إرسال طلب الحجز" — request sent, to the requester.
+        { NotificationKind.BookingRequestSentToRequester, "تم إرسال طلب الحجز", "Request Sent" },
+        // "تم تأكيد حجزك 🎉" — booking accepted.
+        { NotificationKind.BookingAcceptedForRequester, "تم تأكيد حجزك 🎉", "Your booking is confirmed 🎉" },
+        // "تم رفض طلب الحجز الخاص بك لصالة \"{اسم الصالة}\"" — booking rejected.
+        // The specification writes the placeholder in Arabic; the catalog spells every
+        // placeholder with its canonical NotificationTokens name, so the substituted
+        // text a user reads is identical either way. Only the token NAME differs.
+        { NotificationKind.BookingRejectedForRequester, "تم رفض طلب الحجز الخاص بك لصالة \"" + NotificationTokens.HallName + "\"", "Your booking request for \"" + NotificationTokens.HallName + "\" was declined" },
+        // "تم إلغاء الحجز" — booking cancelled, to the hall owner.
+        { NotificationKind.BookingCancelledForOwner, "تم إلغاء الحجز", "Booking Cancelled" },
+        // "طلب صالة" — new hall submitted for review, to Admins.
+        { NotificationKind.HallSubmittedForAdmin, "طلب صالة", "Hall request" }
+    };
+
+    [Theory]
+    [MemberData(nameof(SpecifiedTitles))]
+    public void SpecifiedTitle_IsExactInBothLanguages_CoveringTheWholeTitleList(
+        NotificationKind kind,
+        string arabicTitle,
+        string englishTitle)
+    {
+        var template = NotificationCatalog.Get(kind);
+
+        Assert.Equal(arabicTitle, template.ArabicTitle);
+        Assert.Equal(englishTitle, template.EnglishTitle);
     }
 
     [Fact]
@@ -192,7 +232,9 @@ public sealed class NotificationLocalizationShould : IDisposable
             [NotificationTokens.StartTime] = "18:00",
             [NotificationTokens.EndTime] = "22:00",
             [NotificationTokens.Amount] = "500",
-            [NotificationTokens.Reason] = "Fully booked"
+            [NotificationTokens.Reason] = "Fully booked",
+            [NotificationTokens.TimeRange] = "18:00 - 22:00",
+            [NotificationTokens.DaysRemaining] = "3"
         };
 
         foreach (var kind in Enum.GetValues<NotificationKind>())
@@ -382,7 +424,9 @@ public sealed class NotificationLocalizationShould : IDisposable
             NotificationTokens.StartTime,
             NotificationTokens.EndTime,
             NotificationTokens.Amount,
-            NotificationTokens.Reason
+            NotificationTokens.Reason,
+            NotificationTokens.TimeRange,
+            NotificationTokens.DaysRemaining
         };
 
         foreach (var token in known)
@@ -408,6 +452,85 @@ public sealed class NotificationLocalizationShould : IDisposable
         {
             Notifications.Add((recipientUserId, notification));
             return Task.CompletedTask;
+        }
+    }
+
+    // --- WESAL-TASK-13 (Edit 13) follow-up: the four durable system notices that used to be
+    // hardcoded sentences in a single language. They are now catalog kinds, so the same
+    // "recipient's own language" contract as every other notification applies to them.
+
+    public static TheoryData<NotificationKind> PreviouslyHardcodedKinds =>
+    [
+        NotificationKind.BookingCancelledForRequester,
+        NotificationKind.SubscriptionPaidForOwner,
+        NotificationKind.SubscriptionExpiringForOwner,
+        NotificationKind.SubscriptionExpiredForOwner
+    ];
+
+    [Theory]
+    [MemberData(nameof(PreviouslyHardcodedKinds))]
+    public void PreviouslyHardcodedNotice_RendersDifferentlyPerLanguage(NotificationKind kind)
+    {
+        var values = new Dictionary<string, string?>
+        {
+            [NotificationTokens.HallName] = "Grand Hall",
+            [NotificationTokens.Date] = "2026-09-27",
+            [NotificationTokens.TimeRange] = "18:00 - 22:00",
+            [NotificationTokens.DaysRemaining] = "3"
+        };
+
+        var arabic = NotificationCatalog.Render(kind, Language.Arabic, values);
+        var english = NotificationCatalog.Render(kind, Language.English, values);
+
+        // The whole point of the change: one owner and the next may differ, and the old code
+        // forced the same sentence on everybody regardless of the language they picked.
+        Assert.NotEqual(arabic.Body, english.Body);
+        Assert.Contains("Grand Hall", arabic.Body, StringComparison.Ordinal);
+        Assert.Contains("Grand Hall", english.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SubscriptionPaidNotice_DoesNotClaimTheHallWasPublishedToInterestedPeople()
+    {
+        // P4: the publish step was removed with the legacy two-period model, so the notice
+        // must not describe it. Both languages are checked because the stale sentence only
+        // ever existed in Arabic, and the rest of the notice is now localized.
+        var values = new Dictionary<string, string?>
+        {
+            [NotificationTokens.HallName] = "Grand Hall",
+            [NotificationTokens.Date] = "2026-09-27"
+        };
+
+        var arabic = NotificationCatalog.Render(NotificationKind.SubscriptionPaidForOwner, Language.Arabic, values);
+        var english = NotificationCatalog.Render(NotificationKind.SubscriptionPaidForOwner, Language.English, values);
+
+        Assert.DoesNotContain("ونشرها للمهتمين", arabic.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("published", english.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-09-27", arabic.Body, StringComparison.Ordinal);
+        Assert.Contains("2026-09-27", english.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExpiryNotices_CarryTheRemainingDayCount()
+    {
+        var values = new Dictionary<string, string?>
+        {
+            [NotificationTokens.HallName] = "Grand Hall",
+            [NotificationTokens.Date] = "2026-09-27",
+            [NotificationTokens.DaysRemaining] = "3"
+        };
+
+        foreach (var kind in new[] { NotificationKind.SubscriptionExpiringForOwner, NotificationKind.SubscriptionExpiredForOwner })
+        {
+            var arabic = NotificationCatalog.Render(kind, Language.Arabic, values);
+            var english = NotificationCatalog.Render(kind, Language.English, values);
+
+            // DaysRemaining is not in the expired notice's template, so only the warning states it.
+            if (kind == NotificationKind.SubscriptionExpiringForOwner)
+            {
+                Assert.Contains("3", arabic.Body, StringComparison.Ordinal);
+                Assert.Contains("3", english.Body, StringComparison.Ordinal);
+            }
         }
     }
 
