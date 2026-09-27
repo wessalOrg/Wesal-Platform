@@ -38,9 +38,10 @@ public class SwaggerDocumentShould
     /// pins the count so a new operation is a deliberate edit rather than a surprise.
     /// 61 includes WESAL-TASK-8's owner deposit-confirmation endpoint; 62 adds
     /// WESAL-TASK-11's general-purpose owner "Contact Admin" action; 63 adds
-    /// WESAL-TASK-10 Edit 15's Admin "Message" thread-resolve endpoint.
+    /// WESAL-TASK-10 Edit 15's Admin "Message" thread-resolve endpoint; 64 adds
+    /// Edit 25's owner bookings-calendar endpoint.
     /// </summary>
-    private const int ExpectedPathCount = 63;
+    private const int ExpectedPathCount = 64;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()

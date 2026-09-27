@@ -99,6 +99,7 @@ public class OwnerHallServiceShould : IDisposable
             _userManager,
             currentUser,
             new OwnerDashboardRepository(_context),
+            new BookingRepository(_context),
             new UnitOfWork(_context));
 
     private static UpdateOwnerHallRequest CreateUpdateRequest() => new()

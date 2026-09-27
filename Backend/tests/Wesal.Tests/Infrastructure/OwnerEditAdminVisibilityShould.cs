@@ -98,7 +98,7 @@ public class OwnerEditAdminVisibilityShould : IDisposable
 
     private OwnerHallService CreateOwnerService(string userId)
         => new(_userManager, new FakeCurrentUser(userId, true, ApplicationRoles.HallOwner),
-            new OwnerDashboardRepository(_context), new UnitOfWork(_context));
+            new OwnerDashboardRepository(_context), new BookingRepository(_context), new UnitOfWork(_context));
 
     private AdminHallReviewService CreateAdminService()
         => new(new AdminDashboardRepository(_context), new HallRepository(_context), new UnitOfWork(_context),
@@ -255,7 +255,7 @@ public class OwnerEditAdminVisibilityShould : IDisposable
 
         var seekerService = new OwnerHallService(_userManager,
             new FakeCurrentUser(seeker.Id, true, ApplicationRoles.RegisteredUser),
-            new OwnerDashboardRepository(_context), new UnitOfWork(_context));
+            new OwnerDashboardRepository(_context), new BookingRepository(_context), new UnitOfWork(_context));
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             seekerService.UpdateOwnedHallAsync(hall.Id, EditRequest()));

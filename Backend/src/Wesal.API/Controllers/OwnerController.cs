@@ -173,6 +173,33 @@ public class OwnerController : ControllerBase
     }
 
     /// <summary>
+    /// Returns the dedicated bookings calendar for the authenticated Hall Owner's own
+    /// hall (Edit 25): every date in [fromDate, toDate] with its booked hours and the
+    /// per-day HasBookedHours indicator (Edit 23), so the frontend can render a
+    /// calendar independently from general hall data. Only live bookings (Pending or
+    /// Accepted) occupy hours; cancelled or rejected bookings never appear. The owner
+    /// is resolved exclusively from the authenticated session and the read is strictly
+    /// passive. A locked/suspended hall refuses this read like every other management
+    /// action.
+    /// </summary>
+    [HttpGet("halls/{hallId:guid}/bookings-calendar")]
+    [ProducesResponseType(typeof(OwnerBookingsCalendarDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OwnerBookingsCalendarDto>> GetOwnedHallBookingsCalendar(
+        Guid hallId,
+        [FromQuery] DateOnly fromDate,
+        [FromQuery] DateOnly toDate,
+        CancellationToken cancellationToken)
+    {
+        var calendar = await _ownerBookingRequestsService.GetBookingsCalendarAsync(
+            hallId, fromDate, toDate, cancellationToken);
+        return Ok(calendar);
+    }
+
+    /// <summary>
     /// Soft-deletes the authenticated Hall Owner's own hall (US-OWNER-16).
     /// Historical bookings/messages/conversations are preserved; the hall is
     /// removed from public visibility and new bookings are rejected.

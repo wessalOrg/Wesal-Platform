@@ -95,15 +95,19 @@ public sealed class ConversationHubAccessShould
     }
 
     [Fact]
-    public async Task Join_SeekerParticipant_JoinsOnALockedHall()
+    public async Task Join_SeekerParticipant_IsRefusedOnALockedHall()
     {
-        // The gate is owner-side only. A lock on the hall must not silence a seeker who is
-        // mid-booking with that owner.
+        // Edit 16: a user must not join or send in a thread concerning a manually
+        // locked/suspended (or system-locked) hall, with the same unavailable message
+        // used for bookings and HTTP message paths. The inbox already drops locked
+        // threads (Edit 14), so letting a seeker join the live group would be the same
+        // partial-enforcement bypass the gate exists to close. Admins still join.
         var hub = CreateHub(SeekerId, [ApplicationRoles.RegisteredUser], adminLocked: true);
 
-        await hub.JoinConversation(ConversationId);
+        var ex = await Assert.ThrowsAsync<HubException>(() => hub.JoinConversation(ConversationId));
 
-        Assert.Equal([ConversationId.ToString()], hub.JoinedGroups);
+        Assert.Contains("للأسف, هاي الصالة غير متاحة حاليا", ex.Message, StringComparison.Ordinal);
+        Assert.Empty(hub.JoinedGroups);
     }
 
     [Fact]

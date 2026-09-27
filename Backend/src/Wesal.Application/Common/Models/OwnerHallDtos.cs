@@ -84,6 +84,22 @@ public class OwnerHallDetailsDto
     /// </summary>
     public HallPaymentStatus PaymentStatus { get; init; }
 
+    /// <summary>
+    /// The hall's real operating/bookable window: seekers may only book whole
+    /// 60-minute hourly slots inside [HourlySlotStart, HourlySlotEnd). Null until the
+    /// owner configures it; the seeker catalog then falls back to 09:00-22:00.
+    /// </summary>
+    public TimeOnly? HourlySlotStart { get; init; }
+
+    /// <summary>End of the bookable window (exclusive). Null until the owner configures it.</summary>
+    public TimeOnly? HourlySlotEnd { get; init; }
+
+    /// <summary>
+    /// When true (default) seekers see booked hours as booked; when false booked hours
+    /// are hidden entirely and only available hours are returned.
+    /// </summary>
+    public bool ShowBookedSlots { get; init; }
+
     public IReadOnlyList<OwnerHallPhotoDto> Photos { get; init; } = [];
 }
 

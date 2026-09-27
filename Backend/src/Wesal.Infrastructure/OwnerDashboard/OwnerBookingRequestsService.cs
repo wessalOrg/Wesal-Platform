@@ -60,6 +60,75 @@ public sealed class OwnerBookingRequestsService : IOwnerBookingRequestsService
         return requests;
     }
 
+    public async Task<OwnerBookingsCalendarDto> GetBookingsCalendarAsync(
+        Guid hallId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (toDate < fromDate)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["toDate"] = ["The 'to' date must be on or after the 'from' date."]
+            });
+        }
+
+        var ownerId = await ResolveOwnerAsync(cancellationToken);
+
+        var hall = await _ownerDashboardRepository.GetOwnedHallAsync(hallId, ownerId, cancellationToken);
+
+        if (hall is null)
+        {
+            throw new NotFoundException(nameof(Hall), hallId);
+        }
+
+        HallManagementAccess.EnsureAllowed(hall);
+
+        var bookings = await _ownerDashboardRepository.GetActiveBookingsInRangeAsync(
+            hallId, ownerId, fromDate, toDate, cancellationToken);
+
+        if (bookings is null)
+        {
+            throw new NotFoundException(nameof(Hall), hallId);
+        }
+
+        var bookedByDate = bookings
+            .GroupBy(booking => booking.Date)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .SelectMany(booking => booking.Slots.Select(slot => slot.StartTime))
+                    .Distinct()
+                    .OrderBy(start => start)
+                    .ToList());
+
+        var days = new List<OwnerBookingsCalendarDayDto>();
+        for (var date = fromDate; date <= toDate; date = date.AddDays(1))
+        {
+            var bookedHours = bookedByDate.TryGetValue(date, out var hours)
+                ? hours
+                : [];
+
+            days.Add(new OwnerBookingsCalendarDayDto
+            {
+                Date = date,
+                HasBookedHours = bookedHours.Count > 0,
+                BookedHours = bookedHours
+            });
+        }
+
+        return new OwnerBookingsCalendarDto
+        {
+            HallId = hallId,
+            FromDate = fromDate,
+            ToDate = toDate,
+            Days = days
+        };
+    }
+
     private async Task<string> ResolveOwnerAsync(CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUser.UserId))

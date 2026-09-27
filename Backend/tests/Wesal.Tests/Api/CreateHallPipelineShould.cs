@@ -454,6 +454,9 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
     {
         public Task<IReadOnlyList<OwnerBookingRequestDto>> GetBookingRequestsAsync(Guid hallId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<OwnerBookingRequestDto>>([]);
+
+        public Task<OwnerBookingsCalendarDto> GetBookingsCalendarAsync(Guid hallId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
+            => Task.FromResult(new OwnerBookingsCalendarDto { HallId = hallId, FromDate = fromDate, ToDate = toDate });
     }
 
     private sealed class StubOwnerHourlyAvailabilityService : IOwnerHourlyAvailabilityService

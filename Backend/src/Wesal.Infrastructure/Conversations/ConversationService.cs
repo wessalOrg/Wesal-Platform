@@ -59,6 +59,14 @@ public sealed class ConversationService : IConversationService
 
         EnsureNotSelfContact(hall);
 
+        // Edit 16: a user must not start a hall thread concerning a manually
+        // locked/suspended (or system-locked) hall. Centralised on
+        // HallManagementAccess so bookings and messages share one guard and one
+        // unavailable message. Admins are never blocked.
+        HallManagementAccess.EnsureMessagingAllowed(
+            hall,
+            _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase));
+
         // WESAL-TASK-10 (Edit 10): Hall.OwnerId is nullable but Conversation.HallOwnerId maps to
         // a NOT NULL column. The null-forgiving "!" only silenced the compiler, so an approved
         // hall with no owner produced a row the database refuses, surfacing as an unhandled
@@ -422,6 +430,16 @@ public sealed class ConversationService : IConversationService
             throw new ForbiddenException("You do not have access to this conversation.");
         }
 
+        // Edit 16: a user must not send a message concerning a manually
+        // locked/suspended (or system-locked) hall. Same central guard and same
+        // unavailable message as bookings and conversation creation.
+        if (conversation.Hall is not null)
+        {
+            HallManagementAccess.EnsureMessagingAllowed(
+                conversation.Hall,
+                _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase));
+        }
+
         EnsureOwnerMessagingAccess(conversation);
 
         if (!string.IsNullOrWhiteSpace(request.ClientRequestId))
@@ -519,6 +537,14 @@ public sealed class ConversationService : IConversationService
         var senderUserId = _currentUser.UserId!;
 
         EnsureParticipant(conversation, senderUserId);
+
+        // Edit 16: same locked-hall send guard as the text path.
+        if (conversation.Hall is not null)
+        {
+            HallManagementAccess.EnsureMessagingAllowed(
+                conversation.Hall,
+                _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase));
+        }
 
         // The attachment is the subscription-payment proof the Admin asked for, so this is
         // the call that motivated the unpaid carve-out in EnsureOwnerMessagingAccess.

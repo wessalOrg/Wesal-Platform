@@ -128,6 +128,46 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
             .ToList();
     }
 
+    public async Task<IReadOnlyList<Booking>?> GetActiveBookingsInRangeAsync(
+        Guid hallId,
+        string ownerId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        // Ownership is enforced here exactly like GetBookingRequestsAsync: a caller
+        // can never see another owner's hall.
+        var belongsToOwner = await _context.Halls
+            .AsNoTracking()
+            .AnyAsync(hall =>
+                hall.Id == hallId
+                && hall.OwnerId == ownerId
+                && !hall.IsDeleted,
+                cancellationToken);
+
+        if (!belongsToOwner)
+        {
+            return null;
+        }
+
+        // Same "active" rule as BookingRepository.HasActiveBookingsOnDayAsync: only a
+        // Pending or Accepted booking holds its hours. Cancelled or rejected bookings
+        // freed their slots and must not paint the owner's calendar.
+        return await _context.Bookings
+            .AsNoTracking()
+            .Include(booking => booking.Slots)
+            .Where(booking =>
+                booking.HallId == hallId
+                && booking.Date >= fromDate
+                && booking.Date <= toDate
+                && (booking.Status == BookingStatus.Pending
+                    || booking.Status == BookingStatus.Accepted))
+            .OrderBy(booking => booking.Date)
+            .ThenBy(booking => booking.CreatedAt)
+            .ThenBy(booking => booking.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     private IQueryable<Hall> OwnedHallsQuery(string ownerId)
         => _context.Halls
             .AsNoTracking()

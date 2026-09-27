@@ -169,6 +169,7 @@ public class HallAccessGuardShould : IDisposable
             _userManager,
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
+            new BookingRepository(_context),
             new UnitOfWork(_context));
 
         var updated = await service.UpdateOwnedHallAsync(hall.Id, MinimalUpdateRequest());
@@ -189,6 +190,7 @@ public class HallAccessGuardShould : IDisposable
             _userManager,
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
+            new BookingRepository(_context),
             new UnitOfWork(_context));
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
@@ -205,6 +207,7 @@ public class HallAccessGuardShould : IDisposable
             _userManager,
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
+            new BookingRepository(_context),
             new UnitOfWork(_context));
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
@@ -221,6 +224,7 @@ public class HallAccessGuardShould : IDisposable
             _userManager,
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
+            new BookingRepository(_context),
             new UnitOfWork(_context));
 
         var result = await service.UpdateOwnedHallAsync(hall.Id, MinimalUpdateRequest());
@@ -241,6 +245,7 @@ public class HallAccessGuardShould : IDisposable
             _userManager,
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
+            new BookingRepository(_context),
             new UnitOfWork(_context));
 
         var result = await service.UpdateOwnedHallAsync(hall.Id, MinimalUpdateRequest());

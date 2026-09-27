@@ -29,17 +29,20 @@ public sealed class OwnerHallService : IOwnerHallService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICurrentUserService _currentUser;
     private readonly IOwnerDashboardRepository _ownerDashboardRepository;
+    private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public OwnerHallService(
         UserManager<ApplicationUser> userManager,
         ICurrentUserService currentUser,
         IOwnerDashboardRepository ownerDashboardRepository,
+        IBookingRepository bookingRepository,
         IUnitOfWork unitOfWork)
     {
         _userManager = userManager;
         _currentUser = currentUser;
         _ownerDashboardRepository = ownerDashboardRepository;
+        _bookingRepository = bookingRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -57,6 +60,10 @@ public sealed class OwnerHallService : IOwnerHallService
         {
             throw new NotFoundException(nameof(Hall), hallId);
         }
+
+        // Edit 16: a locked/suspended hall refuses owner access too, with the same
+        // central unavailable message used for bookings and messages.
+        HallManagementAccess.EnsureDataEditable(hall);
 
         return MapToDetails(hall);
     }
@@ -82,6 +89,14 @@ public sealed class OwnerHallService : IOwnerHallService
         // payment requirement is not one of them. Booking, availability and subscription
         // actions keep calling HallManagementAccess.EnsureAllowed and stay payment-gated.
         HallManagementAccess.EnsureDataEditable(hall);
+
+        // The hall-details update carries the same bookable-window fields as the
+        // dedicated hourly-settings endpoint, so it enforces the same rules: the
+        // *effective* window (request merged over persisted values) must be ordered
+        // whole hours, and narrowing it past a live booking is refused with the same
+        // ConflictException the hourly-settings path uses, so this endpoint can never
+        // strand an active booking by reshaping the window around it.
+        await EnsureWindowChangeAllowedAsync(hall, request, cancellationToken);
 
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
@@ -144,6 +159,44 @@ public sealed class OwnerHallService : IOwnerHallService
         }
 
         return _currentUser.UserId;
+    }
+
+    private async Task EnsureWindowChangeAllowedAsync(
+        Hall hall,
+        UpdateOwnerHallRequest request,
+        CancellationToken cancellationToken)
+    {
+        var windowChanged = (request.HourlySlotStart.HasValue && request.HourlySlotStart.Value != hall.HourlySlotStart)
+            || (request.HourlySlotEnd.HasValue && request.HourlySlotEnd.Value != hall.HourlySlotEnd);
+
+        if (!windowChanged)
+        {
+            return;
+        }
+
+        var effectiveStart = request.HourlySlotStart ?? hall.HourlySlotStart;
+        var effectiveEnd = request.HourlySlotEnd ?? hall.HourlySlotEnd;
+
+        // A null side means "no configured bound", which the seeker catalog resolves
+        // to the 09:00/22:00 defaults, so only a fully-specified effective window is
+        // ordered here; the FluentValidation rules already pin whole-hour values.
+        if (effectiveStart.HasValue && effectiveEnd.HasValue && effectiveStart.Value >= effectiveEnd.Value)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["HourlySlotEnd"] = ["HourlySlotEnd must be after HourlySlotStart."]
+            });
+        }
+
+        var windowStart = effectiveStart ?? new TimeOnly(9, 0);
+        var windowEnd = effectiveEnd ?? new TimeOnly(22, 0);
+
+        if (await _bookingRepository.HasActiveHourlyBookingsOutsideWindowAsync(
+            hall.Id, windowStart, windowEnd, cancellationToken))
+        {
+            throw new ConflictException(
+                $"The new bookable window would hide an hour that already has an active booking. Cancel or complete that booking first, or keep the window wide enough to include it.");
+        }
     }
 
     private void ApplyHallDetails(Hall hall, UpdateOwnerHallRequest request)
@@ -264,6 +317,9 @@ public sealed class OwnerHallService : IOwnerHallService
             Status = hall.Status,
             IsEditable = true,
             PaymentStatus = hall.PaymentStatus,
+            HourlySlotStart = hall.HourlySlotStart,
+            HourlySlotEnd = hall.HourlySlotEnd,
+            ShowBookedSlots = hall.ShowBookedSlots,
             Photos = hall.Images
                 .Where(image => !image.IsDeleted)
                 .OrderBy(image => image.DisplayOrder)
