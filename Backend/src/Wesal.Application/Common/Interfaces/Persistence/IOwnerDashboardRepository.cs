@@ -78,4 +78,20 @@ public interface IOwnerDashboardRepository
         Guid hallId,
         string ownerId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the live bookings (Pending or Accepted) with their hourly slots for a
+    /// non-deleted hall owned by a given user inside [fromDate, toDate] (Edit 25).
+    /// Ownership is filtered server-side like <see cref="GetBookingRequestsAsync"/>:
+    /// returns <see langword="null"/> when the hall does not exist, is deleted, or
+    /// belongs to another user (so the caller can surface a not-found response) and
+    /// an empty list when the hall is owned but has no live bookings in range.
+    /// Cancelled or rejected bookings occupy no hours and never appear.
+    /// </summary>
+    Task<IReadOnlyList<Booking>?> GetActiveBookingsInRangeAsync(
+        Guid hallId,
+        string ownerId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default);
 }

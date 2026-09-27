@@ -45,3 +45,46 @@ public sealed class OwnerBookingRequestDto
     /// </summary>
     public DateTimeOffset? DepositPaymentConfirmedAt { get; init; }
 }
+
+/// <summary>
+/// The authenticated Hall Owner's dedicated bookings calendar for one of their own
+/// halls (Edit 25). Unlike the pending-requests list, this covers every actively
+/// booked hour in the requested range, grouped by date, so the frontend can render
+/// a calendar independently from general hall data without joining other endpoints.
+/// Only live bookings (Pending or Accepted) occupy hours; cancelled, rejected, or
+/// deleted bookings never appear.
+/// </summary>
+public sealed class OwnerBookingsCalendarDto
+{
+    public Guid HallId { get; init; }
+
+    public DateOnly FromDate { get; init; }
+
+    public DateOnly ToDate { get; init; }
+
+    public IReadOnlyList<OwnerBookingsCalendarDayDto> Days { get; init; } = [];
+}
+
+/// <summary>
+/// One calendar day in <see cref="OwnerBookingsCalendarDto"/>. Days with no booked
+/// hours are still returned (with an empty <see cref="BookedHours"/>) so the
+/// frontend can render a continuous grid; <see cref="HasBookedHours"/> (Edit 23) is
+/// the authoritative per-day indicator and is true exactly when
+/// <see cref="BookedHours"/> is non-empty.
+/// </summary>
+public sealed class OwnerBookingsCalendarDayDto
+{
+    public DateOnly Date { get; init; }
+
+    /// <summary>
+    /// Whether this date contains any booked hours (Edit 23). True exactly when
+    /// <see cref="BookedHours"/> is non-empty.
+    /// </summary>
+    public bool HasBookedHours { get; init; }
+
+    /// <summary>
+    /// The booked whole-hour starts for this date (e.g. 09:00, 10:00), ordered
+    /// ascending and de-duplicated across all live bookings on the date.
+    /// </summary>
+    public IReadOnlyList<TimeOnly> BookedHours { get; init; } = [];
+}

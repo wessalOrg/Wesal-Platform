@@ -22,4 +22,18 @@ public interface IOwnerBookingRequestsService
     Task<IReadOnlyList<OwnerBookingRequestDto>> GetBookingRequestsAsync(
         Guid hallId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the dedicated bookings calendar for a hall owned by the authenticated
+    /// Hall Owner (Edit 25): every date in [fromDate, toDate] with its booked hours
+    /// and the per-day <c>HasBookedHours</c> indicator (Edit 23). Throws
+    /// UnauthorizedException when no valid owner session is present and
+    /// NotFoundException when the hall does not exist, is deleted, or belongs to
+    /// another owner. Like the sibling read, this is strictly passive.
+    /// </summary>
+    Task<OwnerBookingsCalendarDto> GetBookingsCalendarAsync(
+        Guid hallId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default);
 }

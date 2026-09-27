@@ -584,10 +584,12 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(
             () => Send(harness.Service, Upload()));
 
-        // Still blocked. The code is PaymentRequired rather than HallSystemLocked because
-        // HallManagementAccess evaluates the payment requirement before the system lock,
-        // so the carve-out (which delegates for any lock) surfaces the payment reason.
-        Assert.Equal(HallManagementAccess.PaymentRequiredCode, ex.Code);
+        // Still blocked. Edit 16 reports the lock itself (with the shared unavailable
+        // message) rather than the payment reason, because the lock dominates: the
+        // hall-level send guard evaluates the lock state before the owner messaging
+        // gate, exactly like the booking path.
+        Assert.Equal(HallManagementAccess.HallSystemLockedCode, ex.Code);
+        Assert.Equal(HallManagementAccess.HallUnavailableMessage, ex.Message);
     }
 
     [Fact]

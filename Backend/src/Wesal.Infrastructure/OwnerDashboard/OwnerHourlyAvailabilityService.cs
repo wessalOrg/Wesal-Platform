@@ -135,27 +135,14 @@ public sealed class OwnerHourlyAvailabilityService : IOwnerHourlyAvailabilitySer
             });
         }
 
-        if (request.ShowBookedSlots.HasValue)
-        {
-            hall.ShowBookedSlots = request.ShowBookedSlots.Value;
-        }
-
-        if (request.HourlySlotStart.HasValue)
-        {
-            hall.HourlySlotStart = request.HourlySlotStart.Value;
-        }
-
-        if (request.HourlySlotEnd.HasValue)
-        {
-            hall.HourlySlotEnd = request.HourlySlotEnd.Value;
-        }
-
         // WESAL-TASK-1 hardening: the seeker catalog is generated from the window bounds, so
         // narrowing the window would drop an already-booked hour out of the catalog while the
         // booking stayed real and active - invisible but still occupying that hour. Refuse the
         // change with the same ConflictException used when a day-block would orphan a live
         // booking, so an owner can never strand a booking by reshaping the window around it.
         // Only a window change can strand a booking, so an untouched window costs no query.
+        // This check runs BEFORE any mutation so a refused write leaves the tracked
+        // aggregate (and therefore the caller's unit of work) exactly as it was.
         if (request.HourlySlotStart.HasValue || request.HourlySlotEnd.HasValue)
         {
             var strandsBooking = await _bookingRepository.HasActiveHourlyBookingsOutsideWindowAsync(
@@ -169,6 +156,21 @@ public sealed class OwnerHourlyAvailabilityService : IOwnerHourlyAvailabilitySer
                 throw new ConflictException(
                     $"The new bookable window would hide an hour that already has an active booking. Cancel or complete that booking first, or keep the window wide enough to include it.");
             }
+        }
+
+        if (request.ShowBookedSlots.HasValue)
+        {
+            hall.ShowBookedSlots = request.ShowBookedSlots.Value;
+        }
+
+        if (request.HourlySlotStart.HasValue)
+        {
+            hall.HourlySlotStart = request.HourlySlotStart.Value;
+        }
+
+        if (request.HourlySlotEnd.HasValue)
+        {
+            hall.HourlySlotEnd = request.HourlySlotEnd.Value;
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -28,6 +28,15 @@ public static class HallManagementAccess
     public const string HallSystemLockedCode = "HallSystemLocked";
 
     /// <summary>
+    /// The single user-facing message returned whenever a manually locked/suspended
+    /// hall (or an automatically system-locked hall) refuses a booking, a message,
+    /// or an owner-management action (Edit 16). Centralised here so every guard
+    /// surfaces the identical wording instead of duplicating lock strings across
+    /// controllers and services.
+    /// </summary>
+    public const string HallUnavailableMessage = "للأسف, هاي الصالة غير متاحة حاليا";
+
+    /// <summary>
     /// Ensures the authenticated user may manage the given hall. Throws a
     /// <see cref="BusinessRuleException"/> carrying a distinct code when the hall is
     /// Admin locked, unpaid, or system locked.
@@ -38,7 +47,7 @@ public static class HallManagementAccess
         {
             throw new BusinessRuleException(
                 HallLockedCode,
-                "This hall has been locked by an administrator and its management features are currently unavailable.");
+                HallUnavailableMessage);
         }
 
         if (hall.PaymentStatus != HallPaymentStatus.Paid)
@@ -73,14 +82,14 @@ public static class HallManagementAccess
         {
             throw new BusinessRuleException(
                 HallLockedCode,
-                "This hall has been locked by an administrator and its management features are currently unavailable.");
+                HallUnavailableMessage);
         }
 
         if (hall.SystemLocked)
         {
             throw new BusinessRuleException(
                 HallSystemLockedCode,
-                "This hall's subscription cycle has ended without a confirmed renewal and has been automatically locked.");
+                HallUnavailableMessage);
         }
     }
 
@@ -97,14 +106,32 @@ public static class HallManagementAccess
         {
             throw new BusinessRuleException(
                 HallLockedCode,
-                "This hall is currently locked and cannot accept new booking requests.");
+                HallUnavailableMessage);
         }
 
         if (hall.SystemLocked)
         {
             throw new BusinessRuleException(
                 HallSystemLockedCode,
-                "This hall is currently locked and cannot accept new booking requests.");
+                HallUnavailableMessage);
         }
+    }
+
+    /// <summary>
+    /// Ensures a user may start or send a hall-specific message concerning the given
+    /// hall (Edit 16). A manually locked/suspended hall (or a system-locked one)
+    /// refuses new and existing hall threads with the same unavailable message used
+    /// for bookings, so seekers cannot probe or contact a suspended listing.
+    /// Admins are never blocked: they must still reach the owner about the lock.
+    /// Payment state is intentionally NOT evaluated here.
+    /// </summary>
+    public static void EnsureMessagingAllowed(Hall hall, bool isAdmin)
+    {
+        if (isAdmin)
+        {
+            return;
+        }
+
+        EnsureAcceptingBookings(hall);
     }
 }

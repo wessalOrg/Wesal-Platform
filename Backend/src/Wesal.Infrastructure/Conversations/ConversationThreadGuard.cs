@@ -62,6 +62,14 @@ public sealed class ConversationThreadGuard
             throw new ForbiddenException("You do not have access to this conversation.");
         }
 
+        // Edit 16: a user must not join or send in a thread concerning a manually
+        // locked/suspended (or system-locked) hall. Same central guard and same
+        // unavailable message as bookings and the HTTP message paths.
+        if (conversation.Hall is not null)
+        {
+            HallManagementAccess.EnsureMessagingAllowed(conversation.Hall, isAdmin);
+        }
+
         ConversationAccess.EnsureOwnerMessagingAccess(
             conversation.Hall,
             isThreadOwner: string.Equals(_currentUser.UserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase),
