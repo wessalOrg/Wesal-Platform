@@ -86,7 +86,8 @@ public class AdminMessageOwnerThreadShould : IDisposable
         var result = await CreateService().GetOwnerConversationAsync(hall.Id);
 
         Assert.Equal(hall.Id, result.HallId);
-        Assert.True(result.IsExisting is false or true);
+        // A PendingReview hall has no thread yet, so resolving it has to CREATE one.
+        Assert.False(result.IsExisting);
     }
 
     [Fact]
