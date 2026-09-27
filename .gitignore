@@ -41,3 +41,7 @@ wwwroot/uploads/*
 !wwwroot/uploads/.gitkeep
 .vercel
 .env*
+
+## Generated EF migration scripts (regenerate with dotnet ef migrations script)
+Backend/migration-script.sql
+
