@@ -260,8 +260,6 @@ public sealed class OwnerHallService : IOwnerHallService
             Status = hall.Status,
             IsEditable = true,
             PaymentStatus = hall.PaymentStatus,
-            AdminLocked = hall.IsAdminLocked,
-            SystemLocked = hall.SystemLocked,
             Photos = hall.Images
                 .Where(image => !image.IsDeleted)
                 .OrderBy(image => image.DisplayOrder)

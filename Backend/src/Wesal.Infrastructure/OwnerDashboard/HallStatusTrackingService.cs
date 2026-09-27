@@ -53,9 +53,7 @@ public sealed class HallStatusTrackingService : IHallStatusTrackingService
                 HallId = hall.Id,
                 HallName = hall.Name,
                 Status = hall.Status,
-                PaymentStatus = hall.PaymentStatus,
-                AdminLocked = hall.IsAdminLocked,
-                SystemLocked = hall.SystemLocked
+                PaymentStatus = hall.PaymentStatus
             })
             .ToList();
     }
