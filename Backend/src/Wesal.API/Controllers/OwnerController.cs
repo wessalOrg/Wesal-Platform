@@ -416,7 +416,8 @@ public class OwnerController : ControllerBase
     public async Task<IActionResult> GetIdentityDocument(CancellationToken cancellationToken)
     {
         var document = await _ownerIdentityService.GetIdentityDocumentAsync(cancellationToken);
-        return PhysicalFile(document.FullPath, document.ContentType);
+        return await Infrastructure.StoredDocumentResult.ServeAsync(
+            document.FullPath, document.ContentType, cancellationToken);
     }
 
 }

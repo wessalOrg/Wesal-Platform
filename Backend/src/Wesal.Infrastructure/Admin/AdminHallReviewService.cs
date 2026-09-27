@@ -126,7 +126,10 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
             OwnerFullName = row.OwnerFullName,
             OwnerPhoneNumber = row.OwnerPhoneNumber,
             OwnerEmail = row.OwnerEmail,
-            MainImageUrl = row.MainImageUrl,
+            // Edit 17: the admin review surface resolves the cover exactly like the
+            // public surfaces — stored cover first, then the first gallery photo — so a
+            // coverless hall with photos still shows a reliable image.
+            MainImageUrl = HallMediaUrl.ResolveCoverUrl(row.MainImageUrl, row.PhotoUrls),
             YouTubeVideoUrl = row.YouTubeVideoUrl,
             Features = row.Features,
             OtherFeatures = row.OtherFeatures,
