@@ -211,6 +211,7 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetOwnerIdentityDocument(string ownerId, CancellationToken cancellationToken)
     {
         var document = await _adminHallReviewService.GetOwnerIdentityDocumentAsync(ownerId, cancellationToken);
-        return PhysicalFile(document.FullPath, document.ContentType);
+        return await Infrastructure.StoredDocumentResult.ServeAsync(
+            document.FullPath, document.ContentType, cancellationToken);
     }
 }

@@ -99,6 +99,33 @@ public class HallRepository : IHallRepository
             .ThenBy(image => image.CreatedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyDictionary<Guid, string>> GetFirstGalleryImageUrlsAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (hallIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        // All non-deleted gallery URLs for the page in display order (one round-trip;
+        // galleries are small and pages are capped at 50), then the first per hall in
+        // memory. Blank URLs can never serve as a cover, so they are excluded up front.
+        var rows = await _context.HallImages
+            .AsNoTracking()
+            .Where(image => hallIds.Contains(image.HallId)
+                && !image.IsDeleted
+                && !string.IsNullOrWhiteSpace(image.Url))
+            .OrderBy(image => image.DisplayOrder)
+            .ThenBy(image => image.CreatedAt)
+            .Select(image => new { image.HallId, image.Url })
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.HallId)
+            .ToDictionary(group => group.Key, group => group.First().Url!);
+    }
+
     private IQueryable<Hall> ApprovedHallsQuery()
         => _context.Halls
             .AsNoTracking()

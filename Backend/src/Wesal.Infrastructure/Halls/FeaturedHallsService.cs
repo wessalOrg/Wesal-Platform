@@ -59,10 +59,15 @@ public class FeaturedHallsService : IFeaturedHallsService
         var fromDate = DateOnly.FromDateTime(_dateTime.Now.UtcDateTime);
         var toDate = fromDate.AddDays(AvailabilityDays - 1);
 
+        // Edits 18/29: same gallery-cover fallback as the listing surface.
+        var galleryCovers = await _hallRepository.GetFirstGalleryImageUrlsAsync(
+            halls.Select(hall => hall.Id).ToList(), cancellationToken);
+
         var featuredHalls = new List<FeaturedHallDto>(halls.Count);
         foreach (var hall in halls)
         {
-            featuredHalls.Add(await BuildFeaturedHallAsync(hall, fromDate, toDate, cancellationToken));
+            galleryCovers.TryGetValue(hall.Id, out var galleryUrl);
+            featuredHalls.Add(await BuildFeaturedHallAsync(hall, galleryUrl, fromDate, toDate, cancellationToken));
         }
 
         return featuredHalls;
@@ -70,6 +75,7 @@ public class FeaturedHallsService : IFeaturedHallsService
 
     private async Task<FeaturedHallDto> BuildFeaturedHallAsync(
         Hall hall,
+        string? galleryCoverUrl,
         DateOnly fromDate,
         DateOnly toDate,
         CancellationToken cancellationToken)
@@ -96,7 +102,9 @@ public class FeaturedHallsService : IFeaturedHallsService
         {
             HallId = hall.Id,
             HallName = hall.Name,
-            MainImage = hall.MainImageUrl,
+            MainImage = HallMediaUrl.ResolveCoverUrl(
+                hall.MainImageUrl,
+                galleryCoverUrl is null ? null : [galleryCoverUrl]),
             Region = HallDisplayNames.GetRegionDisplayName(hall.Region),
             Address = hall.Address,
             Capacity = hall.Capacity,

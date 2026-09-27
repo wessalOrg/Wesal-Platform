@@ -21,21 +21,43 @@ public class AdminDashboardRepository : IAdminDashboardRepository
         int take,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Halls
+        var rows = await _context.Halls
             .AsNoTracking()
             .Where(hall => hall.Status == HallStatus.PendingReview && !hall.IsDeleted)
             .OrderBy(hall => hall.CreatedAt)
             .ThenBy(hall => hall.Id)
             .Skip(skip)
             .Take(take)
-            .Select(hall => new AdminPendingHallDto
+            .Select(hall => new
             {
-                HallId = hall.Id,
-                Name = hall.Name,
-                ThumbnailUrl = hall.MainImageUrl,
-                SubmittedAt = hall.CreatedAt
+                hall.Id,
+                hall.Name,
+                hall.MainImageUrl,
+                hall.CreatedAt,
+                GalleryCoverUrl = _context.HallImages
+                    .Where(image => image.HallId == hall.Id
+                        && !image.IsDeleted
+                        && !string.IsNullOrWhiteSpace(image.Url))
+                    .OrderBy(image => image.DisplayOrder)
+                    .ThenBy(image => image.CreatedAt)
+                    .Select(image => image.Url)
+                    .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
+
+        // Edit 17: the pending queue shows the stored cover when present and the first
+        // gallery photo otherwise, so a coverless submission still has a thumbnail.
+        return rows
+            .Select(row => new AdminPendingHallDto
+            {
+                HallId = row.Id,
+                Name = row.Name,
+                ThumbnailUrl = !string.IsNullOrWhiteSpace(row.MainImageUrl)
+                    ? row.MainImageUrl
+                    : row.GalleryCoverUrl,
+                SubmittedAt = row.CreatedAt
+            })
+            .ToList();
     }
 
     public async Task<int> GetPendingHallsCountAsync(CancellationToken cancellationToken = default)

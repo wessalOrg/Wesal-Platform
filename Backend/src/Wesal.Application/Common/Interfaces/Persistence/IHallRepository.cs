@@ -43,6 +43,21 @@ public interface IHallRepository
 
     Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// First gallery image URL per hall (Edits 18/29): the cover fallback for card
+    /// endpoints when a hall's stored cover is blank. One query for the whole page, so
+    /// listings never pay N+1 image lookups. Halls without gallery photos are absent
+    /// from the result. Default implementation reports "no gallery photos" so the many
+    /// lightweight test doubles of this interface keep compiling unchanged.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, string>> GetFirstGalleryImageUrlsAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyDictionary<Guid, string>>(
+            new Dictionary<Guid, string>());
+    }
+
     Task<IReadOnlyList<HallFeature>> GetHallFeaturesAsync(
         IReadOnlyCollection<Guid> hallIds,
         CancellationToken cancellationToken = default)

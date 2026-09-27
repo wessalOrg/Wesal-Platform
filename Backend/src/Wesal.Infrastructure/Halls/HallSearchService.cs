@@ -41,12 +41,18 @@ public class HallSearchService : IHallSearchService
             request.StartTime,
             cancellationToken);
 
+        // Edits 18/29: same gallery-cover fallback as the listing surface.
+        var galleryCovers = await _hallRepository.GetFirstGalleryImageUrlsAsync(
+            halls.Select(hall => hall.Id).ToList(), cancellationToken);
+
         var items = halls
             .Select(hall => new HallListItemDto
             {
                 HallId = hall.Id,
                 HallName = hall.Name,
-                MainImage = hall.MainImageUrl,
+                MainImage = HallMediaUrl.ResolveCoverUrl(
+                    hall.MainImageUrl,
+                    galleryCovers.TryGetValue(hall.Id, out var galleryUrl) ? [galleryUrl] : null),
                 Region = HallDisplayNames.GetRegionDisplayName(hall.Region),
                 Address = hall.Address,
                 Capacity = hall.Capacity,

@@ -72,7 +72,14 @@ public class HallDetailsService : IHallDetailsService
             Price = hall.ShowPrice ? hall.Price : null,
             ShowPrice = hall.ShowPrice,
             ContactPhone = hall.ContactPhone,
-            MainImageUrl = hall.MainImageUrl,
+            // Edits 18/29: a blank stored cover falls back to the first gallery photo
+            // (already loaded for Photos below), so details never report a null image
+            // for a hall that has photos.
+            MainImageUrl = HallMediaUrl.ResolveCoverUrl(
+                hall.MainImageUrl,
+                images
+                    .Where(image => !string.IsNullOrWhiteSpace(image.Url))
+                    .Select(image => image.Url)),
             YouTubeVideoUrl = hall.YouTubeVideoUrl,
             HourlySlotStart = hall.HourlySlotStart,
             HourlySlotEnd = hall.HourlySlotEnd,

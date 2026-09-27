@@ -202,7 +202,10 @@ public sealed class OwnerHallService : IOwnerHallService
     private void ApplyHallDetails(Hall hall, UpdateOwnerHallRequest request)
     {
         hall.Name = request.Name.Trim();
-        hall.MainImageUrl = NormalizeOptional(request.MainImageUrl);
+        // Edits 18/29: the edit form resolves covers to absolute display URLs; persisting
+        // those verbatim pins the deployment origin into every stored image and breaks all
+        // of them on the next environment move. Normalize back to API-relative storage.
+        hall.MainImageUrl = HallMediaUrl.NormalizePersistedUrl(request.MainImageUrl);
         hall.ContactPhone = NormalizeOptional(request.ContactPhone);
         hall.Region = request.Region;
         hall.Description = NormalizeOptional(request.Description);
@@ -282,15 +285,28 @@ public sealed class OwnerHallService : IOwnerHallService
         }
 
         // New photos are registered through the repository (EF relationship fixup
-        // attaches them to the aggregate for the response mapping).
-        _ownerDashboardRepository.AddHallImages(photos
+        // attaches them to the aggregate for the response mapping). Gallery URLs get
+        // the same absolute-to-relative normalization as the cover (Edits 18/29).
+        var normalized = photos
             .Select(photo => new HallImage
             {
                 HallId = hall.Id,
-                Url = photo.Url.Trim(),
+                Url = HallMediaUrl.NormalizePersistedUrl(photo.Url) ?? photo.Url.Trim(),
                 DisplayOrder = photo.DisplayOrder
             })
-            .ToList());
+            .ToList();
+        _ownerDashboardRepository.AddHallImages(normalized);
+
+        // Write-time cover invariant (Edits 18/29): a blank cover with a non-empty
+        // gallery leaves every card endpoint with a null image, so default the cover
+        // to the first gallery photo instead of persisting a coverless hall.
+        if (string.IsNullOrWhiteSpace(hall.MainImageUrl))
+        {
+            hall.MainImageUrl = normalized
+                .OrderBy(image => image.DisplayOrder)
+                .Select(image => image.Url)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+        }
     }
 
     private static OwnerHallDetailsDto MapToDetails(Hall hall)
@@ -298,7 +314,13 @@ public sealed class OwnerHallService : IOwnerHallService
         {
             HallId = hall.Id,
             HallName = hall.Name,
-            MainImageUrl = hall.MainImageUrl,
+            MainImageUrl = HallMediaUrl.ResolveCoverUrl(
+                hall.MainImageUrl,
+                hall.Images
+                    .Where(image => !image.IsDeleted)
+                    .OrderBy(image => image.DisplayOrder)
+                    .ThenBy(image => image.CreatedAt)
+                    .Select(image => image.Url)),
             ContactPhone = hall.ContactPhone,
             Region = hall.Region,
             RegionDisplayName = HallDisplayNames.GetRegionDisplayName(hall.Region),
