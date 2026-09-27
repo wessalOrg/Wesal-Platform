@@ -5,6 +5,7 @@ export const BOOKING_ACCEPTED_EVENT = "wesal-booking-accepted";
 export const BOOKING_REJECTED_EVENT = "wesal-booking-rejected";
 export const BOOKING_PUBLISHED_EVENT = "wesal-booking-published";
 export const BOOKING_DELETED_EVENT = "wesal-booking-deleted";
+export const BOOKING_SUBMITTED_EVENT = "wesal-booking-submitted";
 export const OWNER_BOOKING_REJECTION_EVENT = "wesal:booking-rejection-notification";
 
 export type BookingCancelledDetail = {
@@ -12,6 +13,8 @@ export type BookingCancelledDetail = {
   hallId: string;
   date: string;
   period: string;
+  hallName?: string;
+  requesterName?: string;
 };
 
 export type BookingAcceptedDetail = {
@@ -19,6 +22,8 @@ export type BookingAcceptedDetail = {
   hallId: string;
   date: string;
   periods?: BookingPeriodType[];
+  hallName?: string;
+  depositAmount?: number | null;
 };
 
 export type BookingRejectedDetail = {
@@ -27,6 +32,17 @@ export type BookingRejectedDetail = {
   date: string;
   periods?: BookingPeriodType[];
   deferred?: boolean;
+  rejectionReason?: string;
+  hallName?: string;
+};
+
+export type BookingSubmittedDetail = {
+  hallId: string;
+  hallName: string;
+  date: string;
+  bookingId?: string;
+  periods?: BookingPeriodType[];
+  timeRange?: string;
 };
 
 export type BookingPublishedDetail = {
@@ -67,4 +83,9 @@ export function emitBookingPublished(detail: BookingPublishedDetail) {
 export function emitBookingDeleted(detail: BookingDeletedDetail) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(BOOKING_DELETED_EVENT, { detail }));
+}
+
+export function emitBookingSubmitted(detail: BookingSubmittedDetail) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(BOOKING_SUBMITTED_EVENT, { detail }));
 }

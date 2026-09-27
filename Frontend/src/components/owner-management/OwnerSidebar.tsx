@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import WesalLogo from "@/components/brand/WesalLogo";
 import AddHallEntryAction from "@/components/owner-management/AddHallEntryAction";
+import ContactAdminButton from "@/components/owner-management/ContactAdminButton";
 import HallOwnerHallsSection from "@/components/owner-management/halls/HallOwnerHallsSection";
 import {
   HALL_OWNER_DASHBOARD_NAV,
@@ -87,6 +88,9 @@ export default function OwnerSidebar({
                 </li>
               );
             })}
+            <li>
+              <ContactAdminButton variant="sidebar" onOpened={onNavigate} />
+            </li>
             <li>
               <AddHallEntryAction />
             </li>

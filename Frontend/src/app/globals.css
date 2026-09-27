@@ -2662,26 +2662,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   animation: hall-lightbox-panel-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@keyframes hall-booking-panel-in {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.hall-booking-overlay {
-  animation: hall-lightbox-in 220ms ease-out both;
-}
-
-.hall-booking-panel {
-  animation: hall-booking-panel-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* Hall Owner management workspace (US-OWNER-01) Ã¢â‚¬â€ responsive shell */
+/* Hall Owner management workspace (US-OWNER-01) — responsive shell */
 .owner-mgmt {
   position: relative;
   display: grid;
@@ -3128,41 +3109,9 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   color: var(--wesal-maroon);
 }
 
-.owner-hall-notifications,
-.owner-booking-request-list,
-.owner-booking-request-item,
-.owner-booking-request-periods {
+.owner-hall-notifications {
   min-width: 0;
   max-width: 100%;
-}
-
-@keyframes owner-booking-request-in {
-  from {
-    opacity: 0;
-    transform: translateY(0.5rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.owner-booking-request-list--animated > li {
-  animation: owner-booking-request-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--notify-i, 0) * 85ms);
-}
-
-.owner-booking-request-item {
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    border-color 180ms ease;
-}
-
-.owner-booking-request-item:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--wesal-maroon) 22%, white);
-  box-shadow: 0 12px 28px rgba(90, 55, 45, 0.1);
 }
 
 @media (max-width: 379px) {
@@ -3175,19 +3124,9 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   .owner-mgmt-sidebar {
     transition: none !important;
   }
-
-  .owner-booking-request-list--animated > li,
-  .owner-booking-request-item {
-    animation: none !important;
-    transition: none !important;
-  }
-
-  .owner-booking-request-item:hover {
-    transform: none;
-  }
 }
 
-/* US-OWNER-05/08 Ã¢â‚¬â€ Hall Owner halls list (multi-hall) */
+/* US-OWNER-05/08 — Hall Owner halls list (multi-hall) */
 .owner-mgmt-sidebar {
   display: flex;
   flex-direction: column;
@@ -3748,8 +3687,6 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 @media (prefers-reduced-motion: reduce) {
   .hall-lightbox,
   .hall-lightbox-panel,
-  .hall-booking-overlay,
-  .hall-booking-panel,
   .hall-amenity-item,
   .hall-amenity-icon,
   .hall-reviews-bar-fill {
@@ -4738,16 +4675,34 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   transform-origin: top center;
 }
 
-.seeker-notify-dot {
+.seeker-notify-dot,
+.seeker-notify-badge {
   position: absolute;
-  top: 0.55rem;
-  inset-inline-end: 0.6rem;
-  height: 0.52rem;
-  width: 0.52rem;
+  top: 0.4rem;
+  inset-inline-end: 0.42rem;
   border-radius: 999px;
-  background: var(--wesal-maroon, #c17b7f);
   box-shadow: 0 0 0 2px var(--wesal-white, #fff);
   animation: seeker-notify-dot-pulse 1.8s ease-in-out infinite;
+}
+
+.seeker-notify-dot {
+  height: 0.52rem;
+  width: 0.52rem;
+  background: var(--wesal-maroon, #c17b7f);
+}
+
+.seeker-notify-badge {
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.28rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--wesal-maroon, #c17b7f);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .seeker-notify-panel {
@@ -4905,6 +4860,139 @@ html[dir="rtl"] .seeker-notify-panel {
   font-size: 0.78rem;
   line-height: 1.6;
   color: var(--wesal-muted, #8a7a70);
+}
+
+.wesal-notify-item {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.wesal-notify-item--unread {
+  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 38%, white);
+}
+
+.wesal-notify-item-action {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.74rem;
+  font-weight: 750;
+  color: var(--wesal-maroon-dark, #a86267);
+}
+
+.wesal-notify-tone--success {
+  border-color: color-mix(in srgb, #1f8f5f 22%, white) !important;
+  background: color-mix(in srgb, #1f8f5f 12%, white) !important;
+  color: #1f8f5f !important;
+}
+
+.wesal-notify-tone--danger {
+  border-color: color-mix(in srgb, #c04545 22%, white) !important;
+  background: color-mix(in srgb, #c04545 12%, white) !important;
+  color: #b42318 !important;
+}
+
+.wesal-notify-tone--info {
+  border-color: color-mix(in srgb, #c9a227 28%, white) !important;
+  background: color-mix(in srgb, #1d4ed8 8%, #fff8e8) !important;
+  color: #1d4ed8 !important;
+}
+
+.wesal-notify-toast {
+  position: fixed;
+  z-index: 90;
+  inset-inline: 1rem;
+  bottom: 1.25rem;
+  display: flex;
+  max-width: 28rem;
+  margin-inline: auto;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 80%, white);
+  background: #fff;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 16px 40px rgba(90, 55, 45, 0.16);
+  animation: wesal-toast-in 220ms ease;
+  text-align: start;
+}
+
+@media (min-width: 640px) {
+  .wesal-notify-toast {
+    inset-inline-start: auto;
+    inset-inline-end: 1.5rem;
+    margin-inline: 0;
+    bottom: 1.5rem;
+  }
+}
+
+.wesal-notify-toast--success {
+  border-color: color-mix(in srgb, #1f8f5f 28%, white);
+}
+
+.wesal-notify-toast--danger {
+  border-color: color-mix(in srgb, #c04545 28%, white);
+}
+
+.wesal-notify-toast--info {
+  border-color: color-mix(in srgb, #c9a227 36%, white);
+}
+
+.wesal-notify-toast-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 2.1rem;
+  width: 2.1rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+}
+
+.wesal-notify-toast-copy {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.wesal-notify-toast-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--wesal-text);
+}
+
+.wesal-notify-toast-body {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--wesal-muted);
+}
+
+.wesal-notify-toast-action {
+  margin-top: 0.15rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: start;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: var(--wesal-maroon-dark);
+  cursor: pointer;
+}
+
+.wesal-notify-toast-close {
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 1.8rem;
+  width: 1.8rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wesal-muted);
+  cursor: pointer;
 }
 
 .seeker-notify-panel-foot {
@@ -6358,10 +6446,10 @@ html[dir="rtl"] .seeker-notify-panel {
   .seeker-dash-notify,
   .seeker-dash-notify-bell,
   .seeker-notify-dot,
+  .seeker-notify-badge,
   .seeker-notify-panel,
   .seeker-notify-list > li,
   .seeker-notifications-feed--animated > li,
-  .owner-booking-request-list--animated > li,
   .seeker-dash-userchip,
   .seeker-settings-card,
   .seeker-profile-card {

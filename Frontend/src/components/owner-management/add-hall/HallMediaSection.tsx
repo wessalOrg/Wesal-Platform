@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, type ChangeEvent } from "react";
+import HallImage from "@/components/halls/HallImage";
 import HallFormField, {
   hallFieldClassName,
 } from "@/components/owner-management/add-hall/HallFormField";
@@ -17,8 +18,10 @@ type HallMediaSectionProps = {
   disabled: boolean;
   onChange: (patch: Partial<HallRegistrationFormValues>) => void;
   resolveError: (value: string | undefined) => string | undefined;
-  /** Edit flow has no cover upload — show only the video link. */
+  /** Hide the cover picker (unused on some compact surfaces). */
   hideMainPhoto?: boolean;
+  /** Current saved cover, shown until a replacement file is picked. */
+  currentCoverUrl?: string | null;
 };
 
 export default function HallMediaSection({
@@ -28,6 +31,7 @@ export default function HallMediaSection({
   onChange,
   resolveError,
   hideMainPhoto = false,
+  currentCoverUrl = null,
 }: HallMediaSectionProps) {
   const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -113,7 +117,9 @@ export default function HallMediaSection({
               data-testid="owner-add-hall-main-photo-pick"
               onClick={() => inputRef.current?.click()}
             >
-              {t("owner.management.addHall.fields.mainPhotoPick")}
+              {currentCoverUrl || preview
+                ? t("owner.management.hallEdit.replaceCover")
+                : t("owner.management.addHall.fields.mainPhotoPick")}
             </button>
             {preview ? (
               <span className="inline-flex min-w-0 items-center gap-2">
@@ -133,6 +139,14 @@ export default function HallMediaSection({
                 >
                   {t("owner.management.addHall.fields.mainPhotoRemove")}
                 </button>
+              </span>
+            ) : currentCoverUrl ? (
+              <span className="relative inline-flex h-14 w-20 shrink-0 overflow-hidden rounded-lg border border-[var(--wesal-border)] bg-white/50">
+                <HallImage
+                  src={currentCoverUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               </span>
             ) : null}
           </div>

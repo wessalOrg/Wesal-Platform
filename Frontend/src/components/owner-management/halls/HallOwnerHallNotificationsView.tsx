@@ -17,6 +17,7 @@ import { useT } from "@/i18n";
 
 type HallOwnerHallNotificationsViewProps = {
   hallId: string;
+  requestId?: string | null;
 };
 
 /**
@@ -25,6 +26,7 @@ type HallOwnerHallNotificationsViewProps = {
  */
 export default function HallOwnerHallNotificationsView({
   hallId,
+  requestId = null,
 }: HallOwnerHallNotificationsViewProps) {
   const t = useT();
   const { isListReady, isKnownOwnedHall, selectedHall } =
@@ -86,7 +88,12 @@ export default function HallOwnerHallNotificationsView({
                 {t("owner.management.notifications.title")}
               </h3>
             </div>
-            <HallNotificationsView hallId={hallId} enabled={bookingEnabled} />
+            <HallNotificationsView
+              hallId={hallId}
+              enabled={bookingEnabled}
+              requestId={requestId}
+              hallName={hallName}
+            />
           </div>
 
           <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">

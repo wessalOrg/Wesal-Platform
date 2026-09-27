@@ -10,6 +10,7 @@ import {
 import { mapHallFormToCreateHallRequest } from "@/lib/hall-form-mapper";
 import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
 import { validateHallRegistrationForm } from "@/lib/hall-registration-validation";
+import { emitHallCreated } from "@/lib/hall-review-events";
 import { createHall } from "@/services/hall-registration";
 import { ApiError } from "@/lib/api-error";
 import {
@@ -44,24 +45,6 @@ export function useHallRegistrationForm(options: UseHallRegistrationFormOptions 
   const patchValues = useCallback(
     (patch: Partial<HallRegistrationFormValues>) => {
       setValues((current) => ({ ...current, ...patch }));
-      if (Object.keys(fieldErrors).length || formError || status === "success") {
-        setFieldErrors({});
-        setFormError(null);
-        if (status === "success" || status === "error") setStatus("idle");
-      }
-    },
-    [fieldErrors, formError, status],
-  );
-
-  const setPeriod = useCallback(
-    (
-      which: "firstPeriod" | "secondPeriod",
-      patch: Partial<HallRegistrationFormValues["firstPeriod"]>,
-    ) => {
-      setValues((current) => ({
-        ...current,
-        [which]: { ...current[which], ...patch },
-      }));
       if (Object.keys(fieldErrors).length || formError || status === "success") {
         setFieldErrors({});
         setFormError(null);
@@ -128,12 +111,14 @@ export function useHallRegistrationForm(options: UseHallRegistrationFormOptions 
       const formData = mapHallFormToCreateHallRequest(values, {
         initiationId: options.initiationId,
       });
-      await createHall(formData);
+      const created = await createHall(formData);
+      emitHallCreated({
+        hallId: created.hallId,
+        hallName: values.hallName.trim(),
+      });
       setStatus("success");
       setValues({
         ...EMPTY_HALL_REGISTRATION_VALUES,
-        firstPeriod: { startTime: "", endTime: "" },
-        secondPeriod: { startTime: "", endTime: "" },
         photos: [],
       });
       notifyHallOwnerHallsChanged();
@@ -167,7 +152,6 @@ export function useHallRegistrationForm(options: UseHallRegistrationFormOptions 
     isSubmitting: status === "submitting",
     isSuccess: status === "success",
     patchValues,
-    setPeriod,
     addPhotos,
     removePhoto,
     submit,

@@ -5,7 +5,6 @@ import { GoldStar, GoldStars } from "@/components/ui/GoldStar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import HallBookingPanel from "@/components/halls/HallBookingPanel";
 import HallContactButton from "@/components/halls/HallContactButton";
 import HallGallery from "@/components/halls/HallGallery";
 import HallCommentList from "@/components/halls/HallCommentList";
@@ -18,6 +17,7 @@ import { DEMO_HALL_REVIEWS, findHallDetailsFallback } from "@/constants/hallDeta
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useT } from "@/i18n";
+import { buildHallDetailsPath } from "@/lib/booking-intent";
 import { localizeHallDetails, localizePriceLabel } from "@/lib/localize-hall-display";
 import { fetchHallComments, mapCommentToReview } from "@/services/comments";
 import { fetchHallById } from "@/services/halls";
@@ -42,14 +42,8 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   const [message, setMessage] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingBlockedOpen, setBookingBlockedOpen] = useState(false);
   const { canBook, canContactOwner, isGuest, isOwnHall } = useHallPermissions(hall);
-  const [prevCanBook, setPrevCanBook] = useState(canBook);
-  if (prevCanBook !== canBook && !canBook) {
-    setPrevCanBook(canBook);
-    setBookingOpen(false);
-  }
 
   if (loadedId !== hallId) {
     setLoadedId(hallId);
@@ -268,9 +262,30 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             data-testid="hall-name-section"
           >
             <div className="min-w-0">
-              <h1 className="text-lg font-extrabold leading-8 break-words text-[var(--wesal-maroon)] sm:text-[1.65rem]">
-                {viewHall.name}
-              </h1>
+              <button
+                type="button"
+                className="block w-full text-start"
+                data-testid="hall-popup-title-link"
+                onClick={() => {
+                  onClose?.();
+                  router.push(buildHallDetailsPath(viewHall.id));
+                }}
+              >
+                <h1 className="text-lg font-extrabold leading-8 break-words text-[var(--wesal-maroon)] underline-offset-4 hover:underline sm:text-[1.65rem]">
+                  {viewHall.name}
+                </h1>
+              </button>
+              <button
+                type="button"
+                className="btn-outline mt-2 !min-h-10 !px-3 !text-sm"
+                data-testid="hall-popup-details-cta"
+                onClick={() => {
+                  onClose?.();
+                  router.push(buildHallDetailsPath(viewHall.id));
+                }}
+              >
+                {t("halls.popup.clickForDetails")}
+              </button>
               {viewHall.priceLabel ? (
                 <PriceLine
                   label={
@@ -331,17 +346,6 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                 ))}
               </ul>
             </section>
-          ) : null}
-
-          {canBook ? (
-            <HallBookingPanel
-              open={bookingOpen}
-              hallId={viewHall.id}
-              hallName={viewHall.name}
-              days={viewHall.availabilityDays ?? []}
-              canSubmit={canBook}
-              onClose={() => setBookingOpen(false)}
-            />
           ) : null}
 
           <section className="mt-7">
@@ -416,40 +420,44 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
               data-testid="hall-actions"
             >
               {isGuest ? (
-                <div className="flex gap-2 sm:gap-3">
-                  <Link
-                    href={`/login?redirect=/halls/${viewHall.id}&intent=book`}
-                    className={`btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px] ${
-                      !viewHall.isAvailable ? "!opacity-50 pointer-events-none" : ""
-                    }`}
-                    aria-disabled={!viewHall.isAvailable || undefined}
-                    tabIndex={!viewHall.isAvailable ? -1 : undefined}
-                  >
-                    {t("nav.login")}
-                  </Link>
-                  <Link
-                    href={`/register?redirect=/halls/${viewHall.id}&intent=book`}
-                    className={`btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px] ${
-                      !viewHall.isAvailable ? "!opacity-50 pointer-events-none" : ""
-                    }`}
-                    aria-disabled={!viewHall.isAvailable || undefined}
-                    tabIndex={!viewHall.isAvailable ? -1 : undefined}
-                  >
-                    {t("nav.register")}
-                  </Link>
+                <div className="flex flex-col gap-2 sm:gap-3">
+                  <HallContactButton
+                    hallId={viewHall.id}
+                    isOwnHall={false}
+                    isAvailable={viewHall.isAvailable}
+                    onOpened={onClose}
+                  />
+                  <div className="flex gap-2 sm:gap-3">
+                    <Link
+                      href={`/login?redirect=/halls/${viewHall.id}&intent=book`}
+                      className={`btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px] ${
+                        !viewHall.isAvailable ? "!opacity-50 pointer-events-none" : ""
+                      }`}
+                      aria-disabled={!viewHall.isAvailable || undefined}
+                      tabIndex={!viewHall.isAvailable ? -1 : undefined}
+                    >
+                      {t("nav.login")}
+                    </Link>
+                    <Link
+                      href={`/register?redirect=/halls/${viewHall.id}&intent=book`}
+                      className={`btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px] ${
+                        !viewHall.isAvailable ? "!opacity-50 pointer-events-none" : ""
+                      }`}
+                      aria-disabled={!viewHall.isAvailable || undefined}
+                      tabIndex={!viewHall.isAvailable ? -1 : undefined}
+                    >
+                      {t("nav.register")}
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 <div className="flex gap-2 sm:gap-3">
-                  {canContactOwner ? (
-                    <div className="min-w-0 flex-1">
-                      <HallContactButton
-                        hallId={viewHall.id}
-                        isOwnHall={false}
-                        isAvailable={viewHall.isAvailable}
-                        onOpened={onClose}
-                      />
-                    </div>
-                  ) : null}
+                  <HallContactButton
+                    hallId={viewHall.id}
+                    isOwnHall={false}
+                    isAvailable={viewHall.isAvailable}
+                    onOpened={onClose}
+                  />
                   {canBook ? (
                     <button
                       type="button"
@@ -463,7 +471,8 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                           setBookingBlockedOpen(true);
                           return;
                         }
-                        setBookingOpen(true);
+                        onClose?.();
+                        router.push(buildHallDetailsPath(viewHall.id, true));
                       }}
                     >
                       {t("halls.details.bookNow")}

@@ -11,7 +11,7 @@ import PublishActionButton from "@/components/halls/schedule/PublishActionButton
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 import { formatBookingDateLabel } from "@/lib/booking-date";
-import { bookingPeriodI18nKey } from "@/lib/booking-rejection-message";
+import { bookingWhenLabels } from "@/lib/booking-when-label";
 import { canDeleteBooking } from "@/lib/owner-delete-booking";
 import {
   cardDeletionState,
@@ -52,10 +52,10 @@ function ResponsiveScheduleCard({
   const dateLabel = booking.date
     ? formatBookingDateLabel(booking.date, locale)
     : t("owner.notifications.valueMissing");
-  const periodLabels =
-    booking.periods.length > 0
-      ? booking.periods.map((period) => t(bookingPeriodI18nKey(period)))
-      : [t("owner.notifications.valueMissing")];
+  const periodLabels = (() => {
+    const labels = bookingWhenLabels(booking, t, locale);
+    return labels.length > 0 ? labels : [t("owner.notifications.valueMissing")];
+  })();
   const published = booking.isPublished || booking.status === "FullyBooked";
   const showPublish = Boolean(onPublish) && canPublishBooking(booking);
   const showDelete = Boolean(onDelete) && canDeleteBooking(booking);

@@ -75,11 +75,17 @@ export default function HallOwnerProfileSection() {
   const profileState = useHallOwnerManagementProfile();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [draft, setDraft] = useState<ProfileDraft | null>(null);
+  const [draft, setDraft] = useState<ProfileDraft | null>(() =>
+    profileState.profile ? toDraft(profileState.profile) : null,
+  );
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [avatarDraft, setAvatarDraft] = useState<string | null>(null);
-  const [committedAvatar, setCommittedAvatar] = useState<string | null>(null);
+  const [committedAvatar, setCommittedAvatar] = useState<string | null>(() =>
+    profileState.profile ? readCommittedAvatar(profileState.profile.id) : null,
+  );
+  const [avatarDraft, setAvatarDraft] = useState<string | null>(() =>
+    profileState.profile ? readCommittedAvatar(profileState.profile.id) : null,
+  );
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
 

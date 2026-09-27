@@ -14,15 +14,18 @@ export type CalendarDayStatus =
   | "available"
   | "partial"
   | "booked"
+  | "blocked"
   | "past"
   | "empty";
 
 type HallMonthCalendarProps = {
-  days: HallAvailabilityDay[];
+  days?: HallAvailabilityDay[];
+  dayStatuses?: Record<string, CalendarDayStatus>;
   selectedDateIso: string | null;
   onSelect: (day: HallAvailabilityDay) => void;
   disabled?: boolean;
   locale: string;
+  legend?: "full" | "hourly";
 };
 
 type Cursor = { year: number; month: number };
@@ -39,8 +42,11 @@ function toCursor(iso: string): Cursor {
 function dayStatus(
   day: HallAvailabilityDay | undefined,
   iso: string,
+  overrides?: Record<string, CalendarDayStatus>,
 ): CalendarDayStatus {
   if (!isFutureBookingDate(iso)) return "past";
+  const override = overrides?.[iso];
+  if (override) return override;
   if (!day?.periods?.length) return "available";
   const booked = day.periods.filter((period) => period.status === "booked").length;
   if (booked === day.periods.length) return "booked";
@@ -60,11 +66,13 @@ function sameCursor(a: Cursor, b: Cursor): boolean {
 }
 
 export default function HallMonthCalendar({
-  days,
+  days = [],
+  dayStatuses,
   selectedDateIso,
   onSelect,
   disabled = false,
   locale,
+  legend = "full",
 }: HallMonthCalendarProps) {
   const t = useT();
 
@@ -82,11 +90,11 @@ export default function HallMonthCalendar({
     const firstAvailable = days.find((day) => {
       const iso = parseDateIso(day.dateIso);
       if (!iso || !isFutureBookingDate(iso)) return false;
-      const status = dayStatus(day, iso);
+      const status = dayStatus(day, iso, dayStatuses);
       return status === "available" || status === "partial";
     });
     return parseDateIso(firstAvailable?.dateIso) ?? utcTodayIso();
-  }, [days, selectedDateIso]);
+  }, [days, selectedDateIso, dayStatuses]);
 
   const [cursor, setCursor] = useState<Cursor>(() => toCursor(anchorIso));
   const [prevAnchorIso, setPrevAnchorIso] = useState(anchorIso);
@@ -129,7 +137,7 @@ export default function HallMonthCalendar({
         key: iso,
         dayNum,
         iso,
-        status: dayStatus(day, iso),
+        status: dayStatus(day, iso, dayStatuses),
         day,
       });
     }
@@ -144,7 +152,7 @@ export default function HallMonthCalendar({
     }
 
     return list;
-  }, [byIso, cursor.month, cursor.year]);
+  }, [byIso, cursor.month, cursor.year, dayStatuses]);
 
   const shiftMonth = (delta: number) => {
     setCursor((current) => {
@@ -155,8 +163,8 @@ export default function HallMonthCalendar({
 
   const selectIso = (iso: string, day?: HallAvailabilityDay) => {
     if (disabled || !isFutureBookingDate(iso)) return;
-    const status = dayStatus(day, iso);
-    if (status === "booked" || status === "past") return;
+    const status = dayStatus(day, iso, dayStatuses);
+    if (status === "booked" || status === "blocked" || status === "past") return;
 
     onSelect(
       day ?? {
@@ -197,13 +205,21 @@ export default function HallMonthCalendar({
             <span className="h-2.5 w-2.5 rounded-sm border border-[var(--wesal-border)] bg-white" />
             {t("halls.booking.legendAvailable")}
           </li>
+          {legend === "full" ? (
+            <>
+              <li className="inline-flex items-center gap-1.5">
+                <span className="hall-cal-legend-partial" aria-hidden="true" />
+                {t("halls.booking.legendPartial")}
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm bg-[#d9d0cb]" />
+                {t("halls.booking.legendBooked")}
+              </li>
+            </>
+          ) : null}
           <li className="inline-flex items-center gap-1.5">
-            <span className="hall-cal-legend-partial" aria-hidden="true" />
-            {t("halls.booking.legendPartial")}
-          </li>
-          <li className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-[#d9d0cb]" />
-            {t("halls.booking.legendBooked")}
+            <span className="h-2.5 w-2.5 rounded-sm bg-[#b9a8a0]" />
+            {t("halls.booking.legendBlocked")}
           </li>
         </ul>
       </div>
@@ -227,6 +243,7 @@ export default function HallMonthCalendar({
             !disabled &&
             (cell.status === "available" || cell.status === "partial");
           const isPartial = !selected && cell.status === "partial";
+          const isClosed = cell.status === "booked" || cell.status === "blocked";
 
           return (
             <button
@@ -238,7 +255,7 @@ export default function HallMonthCalendar({
                 "hall-cal-day relative inline-flex min-h-10 items-center justify-center overflow-hidden text-sm font-semibold transition sm:min-h-11",
                 selected
                   ? "hall-cal-day--selected rounded-full bg-[var(--wesal-maroon)] text-white shadow-[0_6px_14px_rgba(193,123,127,0.35)]"
-                  : cell.status === "booked"
+                  : isClosed
                     ? "cursor-not-allowed rounded-full bg-[#e8e1dc] text-[#9a8e87]"
                     : isPartial
                       ? "hall-cal-day--partial rounded-xl"

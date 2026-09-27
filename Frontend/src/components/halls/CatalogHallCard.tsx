@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { GoldStar } from "@/components/ui/GoldStar";
 import HallLockedBadge from "@/components/halls/HallLockedBadge";
 import HallMedia from "@/components/halls/HallMedia";
 import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
-import { buildRegisterRedirectPath } from "@/lib/auth-storage";
 import { buildHallDetailsPath } from "@/lib/booking-intent";
 import type { HallActionPermissions } from "@/lib/hall-action-permissions";
 import {
@@ -21,7 +21,7 @@ import type { FeaturedHall } from "@/types/hall";
 
 type CatalogHallCardProps = {
   hall: FeaturedHall;
-  onOpen: () => void;
+  onOpen?: () => void;
   showBookButton?: boolean;
   index?: number;
 };
@@ -34,7 +34,15 @@ export default function CatalogHallCard({
 }: CatalogHallCardProps) {
   const t = useT();
   const lang = useUiLang();
+  const router = useRouter();
   const permissions = useHallPermissions();
+  const openPopupOrDetails = () => {
+    if (onOpen) {
+      onOpen();
+      return;
+    }
+    router.push(buildHallDetailsPath(hall.id));
+  };
   const bookHref = catalogBookHref(hall.id, permissions);
   const hallUnavailable = hall.isAvailable === false;
   const name = localizeHallName(hall.id, hall.name, lang);
@@ -70,7 +78,7 @@ export default function CatalogHallCard({
       <div className="relative aspect-[4/3] overflow-hidden bg-[var(--wesal-pink)]">
         <button
           type="button"
-          onClick={onOpen}
+          onClick={openPopupOrDetails}
           className="absolute inset-0 cursor-pointer"
           aria-label={name}
         >
@@ -98,7 +106,7 @@ export default function CatalogHallCard({
       <div className="space-y-3 p-4">
         <button
           type="button"
-          onClick={onOpen}
+          onClick={openPopupOrDetails}
           className="block w-full cursor-pointer space-y-2.5 text-start"
         >
           <div className="flex items-start justify-between gap-3">
@@ -158,6 +166,7 @@ export default function CatalogHallCard({
             <Link
               href={bookHref}
               className="btn-primary !min-h-9 shrink-0 !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b]"
+              data-testid="hall-card-book-now"
               onClick={(event) => event.stopPropagation()}
             >
               {t("halls.catalog.bookNow")}
@@ -180,9 +189,10 @@ export default function CatalogHallCard({
 }
 
 function catalogBookHref(hallId: string, permissions: HallActionPermissions) {
-  if (!permissions.authReady) return null;
-  if (permissions.canBook) return buildHallDetailsPath(hallId, true);
-  if (permissions.isGuest) return buildRegisterRedirectPath(hallId);
+  if (!permissions.authReady) return buildHallDetailsPath(hallId, true);
+  if (permissions.canBook || permissions.isGuest) {
+    return buildHallDetailsPath(hallId, true);
+  }
   return null;
 }
 

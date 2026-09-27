@@ -1,35 +1,23 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
+import { getStoredAuth } from "@/lib/auth-storage";
 import { getAccessToken } from "@/lib/auth-token";
 import { ProfileError, toProfileError } from "@/lib/profile-errors";
+import { mapProfileDto } from "@/lib/profile-mapper";
 import { mockFetchProfile, mockUpdateProfile } from "@/services/profile-mock";
 import type { UpdateProfileInput, UserProfile } from "@/types/profile";
 
-type ProfileDto = {
-  id?: string;
-  userId?: string;
-  fullName?: string | null;
-  name?: string | null;
-  email?: string | null;
-  phoneNumber?: string | null;
-  phone?: string | null;
-  concurrencyStamp?: string | null;
-  version?: number;
-  isIdentityDocumentUploaded?: boolean | null;
-};
+function attachKnownUserId(profile: UserProfile): UserProfile {
+  if (profile.id && profile.id !== "self") return profile;
+  const storedId = getStoredAuth()?.user?.id?.trim();
+  if (storedId && storedId !== "self") {
+    return { ...profile, id: storedId };
+  }
+  return profile;
+}
 
-function mapProfile(data: ProfileDto): UserProfile {
-  const stamp =
-    (data.concurrencyStamp ?? "").trim() ||
-    (typeof data.version === "number" ? String(data.version) : "");
-  return {
-    id: String(data.id ?? data.userId ?? "self"),
-    fullName: (data.fullName ?? data.name ?? "").trim(),
-    email: (data.email ?? "").trim(),
-    phoneNumber: (data.phoneNumber ?? data.phone ?? "").trim(),
-    concurrencyStamp: stamp,
-    isIdentityDocumentUploaded: Boolean(data.isIdentityDocumentUploaded),
-  };
+function mapProfile(data: unknown): UserProfile {
+  return attachKnownUserId(mapProfileDto(data));
 }
 
 function raiseFromApi(err: unknown): never {
@@ -44,7 +32,7 @@ export function profileUsesMock(): boolean {
 
 export async function apiFetchProfile(): Promise<UserProfile> {
   try {
-    const { data } = await api.get<ProfileDto>("/profile", { timeout: 8000 });
+    const { data } = await api.get<unknown>("/profile", { timeout: 8000 });
     return mapProfile(data);
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {
@@ -56,7 +44,7 @@ export async function apiFetchProfile(): Promise<UserProfile> {
 
 export async function apiUpdateProfile(input: UpdateProfileInput): Promise<UserProfile> {
   try {
-    const { data } = await api.put<ProfileDto>(
+    const { data } = await api.put<unknown>(
       "/profile",
       {
         fullName: input.fullName,

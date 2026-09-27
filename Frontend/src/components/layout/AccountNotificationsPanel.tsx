@@ -3,15 +3,19 @@
 import Link from "next/link";
 import { useId, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import NotificationItem from "@/components/notifications/NotificationItem";
+import SeekerAcceptedBookingNotices from "@/components/bookings/SeekerAcceptedBookingNotices";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { SEEKER_NOTIFICATIONS_PATH } from "@/constants/seekerDashboardNav";
-import { SEEKER_NOTIFICATIONS } from "@/constants/seekerNotifications";
 import { useHallBookingRequests } from "@/hooks/useHallBookingRequests";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useUserBookings } from "@/hooks/useUserBookings";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { formatBookingDateLabel } from "@/lib/booking-date";
-import { bookingPeriodI18nKey } from "@/lib/booking-rejection-message";
+import { bookingWhenLabels } from "@/lib/booking-when-label";
 import {
+  ownerBookingsPath,
   ownerHallNotificationsPath,
   parseOwnerHallIdFromPathname,
 } from "@/lib/hall-owner-query-keys";
@@ -38,11 +42,13 @@ export default function AccountNotificationsPanel({
 
   if (!open) return null;
 
-  return identity.isHallOwner ? (
-    <OwnerNotificationsBody panelId={panelId} onClose={onClose} />
-  ) : (
-    <SeekerNotificationsBody panelId={panelId} onClose={onClose} />
-  );
+  if (identity.isAdmin) {
+    return <AdminNotificationsBody panelId={panelId} onClose={onClose} />;
+  }
+  if (identity.isHallOwner) {
+    return <OwnerNotificationsBody panelId={panelId} onClose={onClose} />;
+  }
+  return <SeekerNotificationsBody panelId={panelId} onClose={onClose} />;
 }
 
 function NotifyShell({
@@ -98,7 +104,10 @@ function SeekerNotificationsBody({
   onClose: () => void;
 }) {
   const t = useT();
-  const previewItems = SEEKER_NOTIFICATIONS.slice(0, 5);
+  const { items, openNotification } = useNotifications("seeker");
+  const { bookings } = useUserBookings();
+  const acceptedCount = bookings.filter((item) => item.status === "Accepted").length;
+  const previewItems = items.slice(0, 5);
 
   return (
     <NotifyShell
@@ -117,25 +126,66 @@ function SeekerNotificationsBody({
         </Link>
       }
     >
+      <SeekerAcceptedBookingNotices limit={5} onOpened={onClose} />
+      {previewItems.length === 0 && acceptedCount === 0 ? (
+        <li className="seeker-notify-empty">{t("notifications.empty")}</li>
+      ) : (
+        previewItems.map((item) => (
+          <li key={item.id}>
+            <NotificationItem
+              item={item}
+              onOpen={(next) => {
+                openNotification(next);
+                onClose();
+              }}
+            />
+          </li>
+        ))
+      )}
+    </NotifyShell>
+  );
+}
+
+function AdminNotificationsBody({
+  panelId,
+  onClose,
+}: {
+  panelId: string;
+  onClose: () => void;
+}) {
+  const t = useT();
+  const { items, openNotification } = useNotifications("admin");
+  const previewItems = items.slice(0, 5);
+
+  return (
+    <NotifyShell
+      panelId={panelId}
+      title={t("notifications.title")}
+      subtitle={t("notify.admin.subtitle")}
+      onClose={onClose}
+      footer={
+        <Link
+          href="/notifications"
+          className="seeker-notify-view-all"
+          data-testid="account-notifications-view-all"
+          onClick={onClose}
+        >
+          {t("seeker.notifications.viewAll")}
+        </Link>
+      }
+    >
       {previewItems.length === 0 ? (
         <li className="seeker-notify-empty">{t("notifications.empty")}</li>
       ) : (
         previewItems.map((item) => (
           <li key={item.id}>
-            <Link
-              href={item.href}
-              className="seeker-notify-item"
-              data-testid={`account-notification-${item.id}`}
-              onClick={onClose}
-            >
-              <span className="seeker-notify-item-icon" aria-hidden="true">
-                <BellMiniIcon />
-              </span>
-              <span className="seeker-notify-item-copy">
-                <span className="seeker-notify-item-title">{t(item.titleKey)}</span>
-                <span className="seeker-notify-item-body">{t(item.bodyKey)}</span>
-              </span>
-            </Link>
+            <NotificationItem
+              item={item}
+              onOpen={(next) => {
+                openNotification(next);
+                onClose();
+              }}
+            />
           </li>
         ))
       )}
@@ -159,10 +209,6 @@ function OwnerNotificationsBody({
       : null;
   const hallId = routeOwned ?? halls[0]?.id ?? null;
 
-  if (!hallId) {
-    return <OwnerEmptyPanel panelId={panelId} onClose={onClose} />;
-  }
-
   return (
     <OwnerHallNotificationsBody
       panelId={panelId}
@@ -172,43 +218,33 @@ function OwnerNotificationsBody({
   );
 }
 
-function OwnerEmptyPanel({
-  panelId,
-  onClose,
-}: {
-  panelId: string;
-  onClose: () => void;
-}) {
-  const t = useT();
-  return (
-    <NotifyShell
-      panelId={panelId}
-      title={t("owner.management.notifications.title")}
-      subtitle={t("owner.management.notifications.subtitle")}
-      onClose={onClose}
-    >
-      <li className="seeker-notify-empty">
-        {t("owner.management.notifications.empty")}
-      </li>
-    </NotifyShell>
-  );
-}
-
 function OwnerHallNotificationsBody({
   panelId,
   hallId,
   onClose,
 }: {
   panelId: string;
-  hallId: string;
+  hallId: string | null;
   onClose: () => void;
 }) {
   const t = useT();
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
-  const { requests, isLoading } = useHallBookingRequests(hallId);
-  const previewItems = requests.slice(0, 5);
-  const notificationsHref = ownerHallNotificationsPath(hallId);
+  const { halls } = useHallOwnerHalls();
+  const { items, openNotification } = useNotifications("owner");
+  const hallName = hallId
+    ? halls.find((hall) => hall.id === hallId)?.name?.trim() || ""
+    : "";
+  const { requests, isLoading } = useHallBookingRequests(hallId ?? "");
+  const activeRequests = hallId
+    ? requests.filter((item) => item.status === "Pending").slice(0, 4)
+    : [];
+  const previewItems = items.slice(0, 4);
+  const notificationsHref = hallId
+    ? ownerHallNotificationsPath(hallId)
+    : "/owner/bookings";
+  const empty =
+    previewItems.length === 0 && activeRequests.length === 0 && !isLoading;
 
   return (
     <NotifyShell
@@ -227,17 +263,28 @@ function OwnerHallNotificationsBody({
         </Link>
       }
     >
-      {isLoading && previewItems.length === 0 ? (
+      {previewItems.map((item) => (
+        <li key={item.id}>
+          <NotificationItem
+            item={item}
+            onOpen={(next) => {
+              openNotification(next);
+              onClose();
+            }}
+          />
+        </li>
+      ))}
+      {isLoading && activeRequests.length === 0 && previewItems.length === 0 ? (
         <li className="seeker-notify-empty">{t("common.loading")}</li>
-      ) : previewItems.length === 0 ? (
+      ) : empty ? (
         <li className="seeker-notify-empty">
           {t("owner.management.notifications.empty")}
         </li>
       ) : (
-        previewItems.map((item) => (
+        activeRequests.map((item) => (
           <li key={item.id}>
             <Link
-              href={notificationsHref}
+              href={ownerBookingsPath(item.id, hallId)}
               className="seeker-notify-item"
               data-testid={`account-notification-${item.id}`}
               onClick={onClose}
@@ -246,7 +293,9 @@ function OwnerHallNotificationsBody({
                 <BellMiniIcon />
               </span>
               <span className="seeker-notify-item-copy">
-                <span className="seeker-notify-item-title">{item.requesterName}</span>
+                <span className="seeker-notify-item-title">
+                  {hallName ? `${hallName} — ${item.requesterName}` : item.requesterName}
+                </span>
                 <span className="seeker-notify-item-body">
                   {formatRequestPreview(item, t, locale)}
                 </span>
@@ -261,17 +310,12 @@ function OwnerHallNotificationsBody({
 
 function formatRequestPreview(
   item: OwnerHallBookingRequest,
-  t: (key: string) => string,
+  translate: (key: string) => string,
   locale: string,
 ): string {
   const date = formatBookingDateLabel(item.date, locale);
-  const periods = item.periods
-    .map((period) => {
-      const key = bookingPeriodI18nKey(period);
-      return key ? t(key) : period;
-    })
-    .join(" · ");
-  return periods ? `${date} — ${periods}` : date;
+  const when = bookingWhenLabels(item, translate, locale).join(" · ");
+  return when ? `${date} — ${when}` : date;
 }
 
 function BellMiniIcon() {

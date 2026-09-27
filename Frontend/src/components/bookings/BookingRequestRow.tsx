@@ -2,8 +2,9 @@
 
 import { useT } from "@/i18n";
 import { formatBookingDateLabel } from "@/lib/booking-date";
-import { bookingPeriodI18nKey } from "@/lib/booking-rejection-message";
+import { bookingWhenLabels } from "@/lib/booking-when-label";
 import { bookingStatusMessageKey } from "@/lib/booking-status";
+import BookingPaymentNoticeButton from "@/components/bookings/BookingPaymentNoticeButton";
 import { useCancelInteraction } from "@/hooks/useCancelInteraction";
 import type { BookingViewport } from "@/hooks/useBookingViewport";
 import { useUiLang } from "@/components/layout/LanguageProvider";
@@ -17,6 +18,7 @@ type BookingRequestRowProps = {
   errorKey?: string | null;
   successId?: string | null;
   locked?: boolean;
+  highlighted?: boolean;
   viewport?: BookingViewport;
   onCancel?: (booking: UserBooking) => void;
   onDismissError?: () => void;
@@ -30,6 +32,7 @@ export default function BookingRequestRow({
   errorKey = null,
   successId = null,
   locked = false,
+  highlighted = false,
   viewport = "mobile",
   onCancel,
   onDismissError,
@@ -47,7 +50,7 @@ export default function BookingRequestRow({
     successId,
     locked,
   });
-  const periodKey = bookingPeriodI18nKey(booking.period);
+  const whenLabel = bookingWhenLabels(booking, t, locale).join(" · ");
   const compact = viewport === "mobile";
   const hallName =
     localizeHallName(booking.hallId, booking.hallName, lang) || t("common.hall");
@@ -59,11 +62,14 @@ export default function BookingRequestRow({
 
   return (
     <article
-      className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-3 shadow-[0_8px_20px_rgba(90,55,45,0.06)] sm:px-5 sm:py-4"
+      className={`rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-3 shadow-[0_8px_20px_rgba(90,55,45,0.06)] sm:px-5 sm:py-4 ${
+        highlighted ? "ring-2 ring-[var(--wesal-maroon)] ring-offset-2 ring-offset-white" : ""
+      }`}
       data-testid={`booking-row-${booking.bookingId}`}
       data-booking-status={booking.status}
       data-cancel-phase={ui.phase}
       data-booking-layout={viewport}
+      data-highlighted={highlighted ? "true" : undefined}
     >
       <div
         className={
@@ -78,8 +84,7 @@ export default function BookingRequestRow({
           </p>
           <p className="mt-1 text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm">
             {formatBookingDateLabel(booking.date, locale)}
-            {" · "}
-            {periodKey ? t(periodKey) : booking.period}
+            {whenLabel ? ` · ${whenLabel}` : ""}
           </p>
         </div>
 
@@ -98,6 +103,10 @@ export default function BookingRequestRow({
               </span>
             ) : null}
           </div>
+
+          {booking.status === "Accepted" ? (
+            <BookingPaymentNoticeButton booking={booking} compact={compact} />
+          ) : null}
 
           {ui.showCancel ? (
             <button
@@ -123,6 +132,16 @@ export default function BookingRequestRow({
           ) : null}
         </div>
       </div>
+
+      {booking.status === "Rejected" && booking.rejectionReason?.trim() ? (
+        <p
+          className="mt-3 rounded-xl bg-[#fbf4f2] px-3 py-2 text-sm leading-6 text-[var(--wesal-maroon-dark)]"
+          data-testid="booking-rejection-reason"
+        >
+          <span className="font-semibold">{t("bookings.rejectionReasonLabel")}</span>{" "}
+          {booking.rejectionReason.trim()}
+        </p>
+      ) : null}
 
       {ui.showCancelledNotice ? (
         <p

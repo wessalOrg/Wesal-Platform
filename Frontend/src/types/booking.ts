@@ -28,8 +28,13 @@ export type UserBooking = {
   hallId: string;
   hallName: string;
   date: string;
-  period: BookingPeriodType;
+  period?: BookingPeriodType;
+  slotStart?: string;
+  timeRange?: string;
   status: BookingStatus;
+  depositAmount?: number | null;
+  /** Present when the owner rejected and the reason reached this client. */
+  rejectionReason?: string | null;
 };
 
 export type CancelBookingResult = {
@@ -46,6 +51,7 @@ export type BookingErrorKind =
   | "forbidden"
   | "conflict"
   | "validation"
+  | "pending_limit"
   | "not_found"
   | "hall_locked"
   | "generic";

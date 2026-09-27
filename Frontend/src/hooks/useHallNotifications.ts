@@ -5,8 +5,10 @@ import { notificationErrorKind } from "@/lib/hall-notifications";
 import { parseBookingPeriodType } from "@/lib/booking-period";
 import {
   BOOKING_ACCEPTED_EVENT,
+  BOOKING_CANCELLED_EVENT,
   BOOKING_DELETED_EVENT,
   type BookingAcceptedDetail,
+  type BookingCancelledDetail,
   type BookingDeletedDetail,
 } from "@/lib/booking-events";
 import { subscribeOwnerBookingRequestEvents } from "@/services/booking-notification-realtime";
@@ -129,8 +131,32 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
       setItems((current) => current.filter((item) => item.id !== detail.bookingId));
     };
 
+    const onCancelled = (event: Event) => {
+      const detail = (event as CustomEvent<BookingCancelledDetail>).detail;
+      if (!detail?.bookingId) return;
+      if (detail.hallId && detail.hallId !== scopedId) return;
+      if (statusRef.current === "forbidden" || statusRef.current === "unauthorized") return;
+      setItems((current) =>
+        current.map((item) =>
+          item.id === detail.bookingId
+            ? {
+                ...item,
+                status: "Cancelled",
+                canPublish: false,
+                isPublished: false,
+                canDelete: false,
+              }
+            : item,
+        ),
+      );
+    };
+
     window.addEventListener(BOOKING_DELETED_EVENT, onDeleted);
-    return () => window.removeEventListener(BOOKING_DELETED_EVENT, onDeleted);
+    window.addEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
+    return () => {
+      window.removeEventListener(BOOKING_DELETED_EVENT, onDeleted);
+      window.removeEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
+    };
   }, [scopedId]);
 
   useEffect(() => {
@@ -182,7 +208,7 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
     if (!scopedId) return;
 
     return subscribeOwnerBookingRequestEvents((event) => {
-      if (event.replay) return;
+      if (event.replay || event.kind === "cancelled") return;
       if (event.hallId && event.hallId !== scopedId) return;
       if (statusRef.current === "forbidden" || statusRef.current === "unauthorized") return;
 
@@ -230,7 +256,10 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
         requesterUserId: "",
         date: result.date,
         periods: result.periods,
+        slotStarts: result.slotStarts,
+        timeRange: result.timeRange,
         status: result.status,
+        depositAmount: result.depositAmount,
         canPublish: true,
         isPublished: false,
         canDelete: true,

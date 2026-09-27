@@ -25,9 +25,13 @@ export type HallBookingNotification = {
   requesterUserId: string;
   date: string;
   periods: BookingPeriodType[];
+  slotStarts?: string[];
+  timeRange?: string;
   status: OwnerBookingRequestStatus | null;
   rejectionReason?: string;
-  /** Backend flag — do not infer from deposits on the client. */
+  depositAmount?: number | null;
+  depositPaymentConfirmedAt?: string | null;
+  /** True while accepted and the deposit is still outstanding. */
   canPublish: boolean;
   isPublished: boolean;
   /** Backend flag — do not infer deletion eligibility on the client. */
@@ -56,7 +60,10 @@ export type AcceptBookingResult = {
   hallId: string;
   date: string;
   periods: BookingPeriodType[];
+  slotStarts?: string[];
+  timeRange?: string;
   status: OwnerBookingRequestStatus;
+  depositAmount?: number | null;
 };
 
 export type PublishBookingResult = {

@@ -91,6 +91,13 @@ export function toAcceptBookingError(err: unknown): AcceptBookingError {
     });
   }
 
+  if (
+    status === 400 &&
+    (blob.includes("deposit") || blob.includes("عربون") || blob.includes("amount"))
+  ) {
+    return new AcceptBookingError("errors.owner.accept.deposit", status, { kind: "generic" });
+  }
+
   if (status === 409 || status === 400) {
     return new AcceptBookingError("errors.owner.accept.conflict", status, {
       kind: "conflict",

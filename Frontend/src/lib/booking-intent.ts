@@ -8,12 +8,22 @@ export function buildHallDetailsPath(
     : `/halls/${hallId}`;
 }
 
+export function buildHallContactPath(hallId: string): string {
+  return `/halls/${hallId}?intent=contact`;
+}
+
 export function hasBookingIntent(
   params: Pick<URLSearchParams, "get"> | { get: (key: string) => string | null },
 ): boolean {
   const action = params.get("action");
   const book = params.get("book");
   return action === "book" || book === "1";
+}
+
+export function hasContactIntent(
+  params: Pick<URLSearchParams, "get"> | { get: (key: string) => string | null },
+): boolean {
+  return params.get("intent") === "contact" || params.get("action") === "contact";
 }
 
 /** Append booking intent query if missing from a hall details path. */

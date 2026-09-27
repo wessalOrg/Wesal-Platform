@@ -2,7 +2,21 @@ import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
 import { t } from "@/i18n";
-import { mockFetchConversation, mockFetchInbox, mockFetchThread, mockSendMessage } from "@/services/conversations-mock";
+import {
+  mockCreateHallConversation,
+  mockFetchConversation,
+  mockFetchInbox,
+  mockFetchThread,
+  mockMarkConversationAsRead,
+  mockSendAttachment,
+  mockSendMessage,
+} from "@/services/conversations-mock";
+import {
+  mapInboxItemDto,
+  mapSendMessageDto,
+  mapThreadDto,
+  unwrapConversationList,
+} from "@/lib/conversation-mapper";
 import type { ConversationSummary, MessageThread, ThreadMessage } from "@/types/messages";
 
 export type { ConversationSummary, MessageThread, ThreadMessage };
@@ -25,28 +39,40 @@ export type ConversationThread = {
 
 type ConversationResponse = {
   conversationId?: string;
+  ConversationId?: string;
   id?: string;
+  Id?: string;
   hallId?: string;
+  HallId?: string;
   hallName?: string;
+  HallName?: string;
   initiatorUserId?: string;
+  InitiatorUserId?: string;
   ownerUserId?: string;
+  OwnerUserId?: string;
   createdAt?: string;
+  CreatedAt?: string;
   isExisting?: boolean;
+  IsExisting?: boolean;
 };
 
-function mapResponse(data: ConversationResponse, fallbackHallId: string): ConversationThread {
+function mapResponse(data: ConversationResponse | null | undefined, fallbackHallId: string): ConversationThread {
+  const dto = data ?? {};
   return {
-    conversationId: String(data.conversationId ?? data.id ?? ""),
-    hallId: String(data.hallId ?? fallbackHallId),
-    hallName: data.hallName?.trim() || t("common.hall"),
-    initiatorUserId: data.initiatorUserId ?? "",
-    ownerUserId: data.ownerUserId ?? "",
-    createdAt: data.createdAt ?? new Date().toISOString(),
-    isExisting: Boolean(data.isExisting),
+    conversationId: String(dto.conversationId ?? dto.ConversationId ?? dto.id ?? dto.Id ?? ""),
+    hallId: String(dto.hallId ?? dto.HallId ?? fallbackHallId),
+    hallName: (dto.hallName ?? dto.HallName)?.trim() || t("common.hall"),
+    initiatorUserId: dto.initiatorUserId ?? dto.InitiatorUserId ?? "",
+    ownerUserId: dto.ownerUserId ?? dto.OwnerUserId ?? "",
+    createdAt: dto.createdAt ?? dto.CreatedAt ?? new Date().toISOString(),
+    isExisting: Boolean(dto.isExisting ?? dto.IsExisting),
   };
 }
 
 export async function createHallConversation(hallId: string): Promise<ConversationThread> {
+  if (conversationsUseMock()) {
+    return mockCreateHallConversation(hallId);
+  }
   const { data } = await api.post<ConversationResponse>(
     `/halls/${hallId}/conversations`,
     undefined,
@@ -69,67 +95,16 @@ export async function fetchConversation(conversationId: string): Promise<Convers
   return mapResponse(data, "");
 }
 
-type InboxDto = {
-  conversationId?: string;
-  hallId?: string;
-  hallName?: string;
-  otherParticipantId?: string;
-  otherParticipantName?: string;
-  lastMessagePreview?: string;
-  lastMessageAt?: string | null;
-  messageCount?: number;
-  createdAt?: string;
-};
-
-type ThreadMessageDto = {
-  id?: string;
-  senderUserId?: string;
-  senderName?: string;
-  content?: string;
-  sentAt?: string;
-};
-
-type ThreadDto = {
-  conversationId?: string;
-  hallId?: string;
-  hallName?: string;
-  messages?: ThreadMessageDto[];
-};
-
-function mapInboxItem(data: InboxDto): ConversationSummary | null {
-  const conversationId = String(data.conversationId ?? "");
-  if (!conversationId) return null;
-  return {
-    conversationId,
-    hallId: String(data.hallId ?? ""),
-    hallName: (data.hallName ?? "").trim() || t("common.hall"),
-    otherParticipantId: data.otherParticipantId ?? "",
-    otherParticipantName: (data.otherParticipantName ?? "").trim() || t("common.user"),
-    lastMessagePreview: (data.lastMessagePreview ?? "").trim(),
-    lastMessageAt: data.lastMessageAt ?? null,
-    messageCount: typeof data.messageCount === "number" ? data.messageCount : 0,
-    createdAt: data.createdAt ?? new Date().toISOString(),
-  };
-}
-
-function mapThreadMessage(data: ThreadMessageDto): ThreadMessage | null {
-  const id = String(data.id ?? "");
-  const content = (data.content ?? "").trim();
-  if (!id || !content) return null;
-  return {
-    id,
-    senderUserId: data.senderUserId ?? "",
-    senderName: (data.senderName ?? "").trim() || t("common.user"),
-    content,
-    sentAt: data.sentAt ?? new Date().toISOString(),
-    delivery: "sent",
-  };
+function mapInboxItem(data: unknown): ConversationSummary | null {
+  return mapInboxItemDto(data);
 }
 
 export async function fetchInboxConversations(): Promise<ConversationSummary[]> {
   if (conversationsUseMock()) return mockFetchInbox();
-  const { data } = await api.get<InboxDto[]>("/conversations", { timeout: 8000 });
-  return (Array.isArray(data) ? data : []).map(mapInboxItem).filter((item): item is ConversationSummary => Boolean(item));
+  const { data } = await api.get<unknown>("/conversations", { timeout: 8000 });
+  return unwrapConversationList(data)
+    .map(mapInboxItem)
+    .filter((item): item is ConversationSummary => Boolean(item));
 }
 
 export async function fetchMyConversations(): Promise<ConversationSummary[]> {
@@ -138,28 +113,11 @@ export async function fetchMyConversations(): Promise<ConversationSummary[]> {
 
 export async function fetchConversationThread(conversationId: string): Promise<MessageThread> {
   if (conversationsUseMock()) return mockFetchThread(conversationId);
-  const { data } = await api.get<ThreadDto>(`/conversations/${conversationId}/messages`, {
+  const { data } = await api.get<unknown>(`/conversations/${conversationId}/messages`, {
     timeout: 8000,
   });
-  return {
-    conversationId: String(data.conversationId ?? conversationId),
-    hallId: String(data.hallId ?? ""),
-    hallName: (data.hallName ?? "").trim() || t("common.hall"),
-    messages: (data.messages ?? [])
-      .map(mapThreadMessage)
-      .filter((item): item is ThreadMessage => Boolean(item)),
-  };
+  return mapThreadDto(data, conversationId);
 }
-
-type SendMessageDto = {
-  messageId?: string;
-  conversationId?: string;
-  senderUserId?: string;
-  senderName?: string;
-  content?: string;
-  sentAt?: string;
-  isDuplicate?: boolean;
-};
 
 export async function sendConversationMessage(
   conversationId: string,
@@ -177,38 +135,76 @@ export async function sendConversationMessage(
     return mockSendMessage(conversationId, trimmed, clientRequestId);
   }
 
-  const { data } = await api.post<SendMessageDto>(
+  const { data } = await api.post<unknown>(
     `/conversations/${conversationId}/messages`,
     { content: trimmed, clientRequestId },
     { timeout: 8000 },
   );
-  const id = String(data.messageId ?? "");
-  if (!id) {
+  const mapped = mapSendMessageDto(data, trimmed, clientRequestId);
+  if (!mapped) {
     throw new ApiError(t("errors.send.failed"), 500);
   }
-  return {
-    id,
-    clientRequestId,
-    senderUserId: data.senderUserId ?? "",
-    senderName: (data.senderName ?? "").trim() || t("common.user"),
-    content: (data.content ?? trimmed).trim(),
-    sentAt: data.sentAt ?? new Date().toISOString(),
-    delivery: "sent",
-  };
+  return mapped;
+}
+
+export async function sendConversationAttachment(
+  conversationId: string,
+  file: File,
+  content: string,
+  clientRequestId: string,
+): Promise<ThreadMessage> {
+  const caption = content.trim();
+  if (caption.length > 1000) {
+    throw new ApiError(t("errors.send.tooLong"), 400);
+  }
+  if (conversationsUseMock()) {
+    return mockSendAttachment(conversationId, file, caption, clientRequestId);
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  if (caption) formData.append("content", caption);
+  formData.append("clientRequestId", clientRequestId);
+
+  const { data } = await api.post<unknown>(
+    `/conversations/${encodeURIComponent(conversationId)}/messages/attachment`,
+    formData,
+    {
+      timeout: 60000,
+      transformRequest: [
+        (body, headers) => {
+          if (typeof FormData !== "undefined" && body instanceof FormData) {
+            if (headers && typeof headers === "object") {
+              delete (headers as Record<string, unknown>)["Content-Type"];
+            }
+          }
+          return body;
+        },
+      ],
+    },
+  );
+  const mapped = mapSendMessageDto(data, caption, clientRequestId);
+  if (!mapped) {
+    throw new ApiError(t("errors.send.failed"), 500);
+  }
+  return { ...mapped, hasAttachment: true };
 }
 
 export type ConversationErrorScope = "start" | "inbox" | "thread" | "send";
 
 export async function fetchUnreadConversationCount(): Promise<number> {
   if (conversationsUseMock()) return 0;
-  const { data } = await api.get<{ unreadCount?: number }>("/conversations/unread-count", {
-    timeout: 8000,
-  });
-  return typeof data?.unreadCount === "number" ? data.unreadCount : 0;
+  const { data } = await api.get<unknown>("/conversations/unread-count", { timeout: 8000 });
+  const root = data && typeof data === "object" ? (data as { unreadCount?: unknown; UnreadCount?: unknown }) : null;
+  const count = root?.unreadCount ?? root?.UnreadCount;
+  return typeof count === "number" ? count : 0;
 }
 
 export async function markConversationAsRead(conversationId: string): Promise<void> {
-  if (conversationsUseMock()) return;
+  if (conversationsUseMock()) {
+    await mockMarkConversationAsRead(conversationId);
+    return;
+  }
   await api.post(`/conversations/${encodeURIComponent(conversationId)}/read`, undefined, {
     timeout: 8000,
   });

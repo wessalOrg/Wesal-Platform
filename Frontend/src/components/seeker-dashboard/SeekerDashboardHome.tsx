@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
-import { useUserIdentity } from "@/hooks/useUserIdentity";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { useUserBookings } from "@/hooks/useUserBookings";
-import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
+import ProfileHeroCard from "@/components/profile/ProfileHeroCard";
+import { useSeekerProfile } from "@/hooks/useSeekerProfile";
 import {
   SEEKER_ACCOUNT_PATH,
   SEEKER_BOOKINGS_PATH,
@@ -15,19 +13,12 @@ import { useT } from "@/i18n";
 import { isPendingCancelGroup } from "@/lib/booking-cancel-ui";
 import { localizeHallName } from "@/lib/localize-hall-display";
 
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
-  const letters = parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
-  return letters || "و";
-}
-
 export default function SeekerDashboardHome() {
   const t = useT();
   const lang = useUiLang();
-  const identity = useUserIdentity();
-  const profileState = useUserProfile();
-  const bookingsState = useUserBookings();
-  const avatarUrl = useProfileAvatarUrl([profileState.profile?.id]);
+  const profileState = useSeekerProfile();
+  const bookingsState = profileState.bookings;
+  const { display } = profileState;
 
   const stats = useMemo(() => {
     const list = bookingsState.bookings;
@@ -62,7 +53,7 @@ export default function SeekerDashboardHome() {
     );
   }
 
-  if (profileState.status === "error" && !profileState.profile && !identity.displayName) {
+  if (profileState.status === "error" && !profileState.profile && !display.fullName) {
     return (
       <section className="rounded-2xl bg-white p-6" data-testid="seeker-dashboard-error">
         <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">{t("seeker.title")}</h1>
@@ -74,11 +65,9 @@ export default function SeekerDashboardHome() {
     );
   }
 
-  const name =
-    profileState.profile?.fullName ||
-    identity.displayName ||
-    t("seeker.guestName");
+  const name = display.fullName || t("seeker.guestName");
   const statsPending = bookingsState.status === "loading" && bookingsState.bookings.length === 0;
+  const profilePending = profileState.status === "loading" && !profileState.profile;
 
   return (
     <div className="seeker-home" data-testid="seeker-dashboard-home">
@@ -101,11 +90,11 @@ export default function SeekerDashboardHome() {
 
         <div className="seeker-welcome-visual" aria-hidden="true">
           <div className="seeker-welcome-orb">
-            {avatarUrl ? (
+            {display.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- local data URL
-              <img src={avatarUrl} alt="" className="seeker-welcome-orb-img" />
+              <img src={display.avatarUrl} alt="" className="seeker-welcome-orb-img" />
             ) : (
-              <span>{initials(name)}</span>
+              <span>{display.initials}</span>
             )}
           </div>
           <Link href={SEEKER_ACCOUNT_PATH} className="seeker-welcome-badge" prefetch>
@@ -113,6 +102,23 @@ export default function SeekerDashboardHome() {
           </Link>
         </div>
       </section>
+
+      {profilePending ? (
+        <div
+          className="h-40 animate-pulse rounded-[1.35rem] bg-white/80"
+          aria-busy="true"
+          data-testid="seeker-profile-card-loading"
+        />
+      ) : (
+        <ProfileHeroCard
+          profile={profileState.profile}
+          fullName={display.fullName}
+          email={display.email}
+          phoneNumber={display.phoneNumber}
+          createdAt={display.createdAt}
+          avatarUrl={display.avatarUrl}
+        />
+      )}
 
       <section className="seeker-summary" aria-labelledby="seeker-summary-heading">
         <h2 id="seeker-summary-heading" className="seeker-home-section-title">

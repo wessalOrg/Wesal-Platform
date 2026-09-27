@@ -5,12 +5,12 @@ import AccountNotificationsPanel from "@/components/layout/AccountNotificationsP
 import { useDismissibleOverlay } from "@/hooks/useDismissibleOverlay";
 import { useHallBookingRequests } from "@/hooks/useHallBookingRequests";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
+import { useNotifications } from "@/hooks/useNotifications";
 import { parseOwnerHallIdFromPathname } from "@/lib/hall-owner-query-keys";
 import { useT } from "@/i18n";
 
 /**
- * Top-bar bell for incoming booking-request notifications (US-OWNER-09).
- * Prefers the hall from the current route; otherwise the first owned hall.
+ * Top-bar bell for owner platform notices + incoming booking requests.
  */
 export default function OwnerBookingNotificationsPopover() {
   const { halls } = useHallOwnerHalls();
@@ -22,44 +22,24 @@ export default function OwnerBookingNotificationsPopover() {
       : null;
   const hallId = routeOwned ?? halls[0]?.id ?? null;
 
-  if (!hallId) {
-    return <OwnerNotifyBellEmpty />;
-  }
-
-  return <OwnerNotifyBellWithHall hallId={hallId} />;
+  return <OwnerNotifyBell hallId={hallId} />;
 }
 
-function OwnerNotifyBellEmpty() {
-  const t = useT();
-  return (
-    <div className="seeker-notify-wrap">
-      <button
-        type="button"
-        className="seeker-dash-notify"
-        aria-label={t("owner.management.notifications.title")}
-        data-testid="owner-notifications-trigger"
-        disabled
-      >
-        <span className="seeker-dash-notify-bell" aria-hidden="true">
-          <BellIcon />
-        </span>
-      </button>
-    </div>
-  );
-}
-
-function OwnerNotifyBellWithHall({ hallId }: { hallId: string }) {
+function OwnerNotifyBell({ hallId }: { hallId: string | null }) {
   const t = useT();
   const { open, close, toggle, rootRef, panelId } = useDismissibleOverlay();
-  const { requests } = useHallBookingRequests(hallId);
-  const hasPending = requests.some((item) => item.status === "Pending");
+  const { unreadCount } = useNotifications("owner");
+  const { requests } = useHallBookingRequests(hallId ?? "");
+  const pendingCount = requests.filter((item) => item.status === "Pending").length;
+  const badgeCount = unreadCount + pendingCount;
+  const hasUnread = badgeCount > 0;
 
   return (
     <div ref={rootRef} className="seeker-notify-wrap">
       <button
         type="button"
         className={`seeker-dash-notify${open ? " seeker-dash-notify--open" : ""}${
-          hasPending ? " seeker-dash-notify--has-unread" : ""
+          hasUnread ? " seeker-dash-notify--has-unread" : ""
         }`}
         aria-label={t("owner.management.notifications.title")}
         aria-haspopup="dialog"
@@ -71,7 +51,11 @@ function OwnerNotifyBellWithHall({ hallId }: { hallId: string }) {
         <span className="seeker-dash-notify-bell" aria-hidden="true">
           <BellIcon />
         </span>
-        {hasPending ? <span className="seeker-notify-dot" aria-hidden="true" /> : null}
+        {hasUnread ? (
+          <span className="seeker-notify-badge" aria-hidden="true">
+            {badgeCount > 9 ? "9+" : badgeCount}
+          </span>
+        ) : null}
       </button>
 
       <AccountNotificationsPanel open={open} onClose={close} panelId={panelId} />

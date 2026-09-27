@@ -34,6 +34,7 @@ function readStore(): UserProfile | null {
       phoneNumber: parsed.phoneNumber,
       concurrencyStamp: stamp,
       isIdentityDocumentUploaded: Boolean(parsed.isIdentityDocumentUploaded),
+      createdAt: parsed.createdAt ?? null,
     };
   } catch {
     return null;

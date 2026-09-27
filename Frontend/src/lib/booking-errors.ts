@@ -1,6 +1,10 @@
 import { ApiError } from "@/lib/api-error";
 import { isHallLockedApiError } from "@/lib/hall-locked-error";
 import { isSystemLockedApiError } from "@/lib/system-locked-error";
+import {
+  isPendingLimitReachedApiError,
+  PENDING_LIMIT_MESSAGE_KEY,
+} from "@/lib/booking-pending-limit";
 import type { BookingErrorKind, BookingFieldErrors } from "@/types/booking";
 
 export class BookingError extends ApiError {
@@ -10,9 +14,14 @@ export class BookingError extends ApiError {
   constructor(
     message: string,
     status?: number,
-    extras?: { kind?: BookingErrorKind; fields?: BookingFieldErrors; details?: unknown },
+    extras?: {
+      kind?: BookingErrorKind;
+      fields?: BookingFieldErrors;
+      details?: unknown;
+      code?: string;
+    },
   ) {
-    super(message, status, {}, { details: extras?.details });
+    super(message, status, {}, { details: extras?.details, code: extras?.code });
     this.name = "BookingError";
     this.kind = extras?.kind ?? kindFromStatus(status);
     this.fields = extras?.fields ?? {};
@@ -35,6 +44,7 @@ export function bookingMessageKey(kind: BookingErrorKind): string {
   if (kind === "conflict") return "errors.booking.conflict";
   if (kind === "validation") return "errors.booking.validation";
   if (kind === "hall_locked") return "halls.booking.blockedBody";
+  if (kind === "pending_limit") return PENDING_LIMIT_MESSAGE_KEY;
   return "errors.booking.generic";
 }
 
@@ -62,7 +72,9 @@ export function fieldErrorsFromUnknown(data: unknown): BookingFieldErrors {
     if (!message) continue;
     const normalized = key.toLowerCase();
     if (normalized === "date") fields.date = localizeBookingFieldMessage(message);
-    if (normalized === "periods") fields.periods = localizeBookingFieldMessage(message);
+    if (normalized === "periods" || normalized === "slotstarts") {
+      fields.periods = localizeBookingFieldMessage(message);
+    }
   }
   return fields;
 }
@@ -88,6 +100,14 @@ export function toBookingError(err: unknown, fallback = "errors.booking.generic"
       return new BookingError("halls.booking.blockedBody", err.status, {
         kind: "hall_locked",
         details: err.details,
+        code: err.code,
+      });
+    }
+    if (isPendingLimitReachedApiError(err)) {
+      return new BookingError(PENDING_LIMIT_MESSAGE_KEY, err.status ?? 422, {
+        kind: "pending_limit",
+        details: err.details,
+        code: err.code ?? "PENDING_LIMIT_REACHED",
       });
     }
     const fields = fieldErrorsFromUnknown(err.details);
@@ -102,6 +122,7 @@ export function toBookingError(err: unknown, fallback = "errors.booking.generic"
       kind,
       fields,
       details: err.details,
+      code: err.code,
     });
   }
   return new BookingError(fallback);

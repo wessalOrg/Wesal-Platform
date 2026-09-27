@@ -191,7 +191,10 @@ export function canAccessCalendar(access: HallAccessState): boolean {
 }
 
 export function canAccessMessaging(access: HallAccessState): boolean {
-  return canAccessBookingData(access);
+  const result = getManagementAccess(access);
+  if (result.allowed) return true;
+  // Owner must still reach the Admin thread while payment is pending.
+  return result.reason === "PAYMENT_REQUIRED";
 }
 
 export function canAccessDashboard(access: HallAccessState): boolean {

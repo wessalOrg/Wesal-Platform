@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
+import SubscriptionPaymentNotice from "@/components/halls/subscription/SubscriptionPaymentNotice";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import {
   OWNER_ACCOUNT_PATH,
@@ -49,6 +51,18 @@ export default function OwnerDashboardHome() {
   const expiryWarnings =
     hallsState.status === "ready" || hallsState.halls.length > 0
       ? hallsState.halls.filter((item) => item.expiryWarning)
+      : [];
+  const paymentDueHalls =
+    hallsState.status === "ready" || hallsState.halls.length > 0
+      ? hallsState.halls.filter(
+          (item) => item.status === "Approved" && item.paymentStatus !== "Paid",
+        )
+      : [];
+  const paidHalls =
+    hallsState.status === "ready" || hallsState.halls.length > 0
+      ? hallsState.halls.filter(
+          (item) => item.status === "Approved" && item.paymentStatus === "Paid",
+        )
       : [];
 
   const recentHalls =
@@ -126,6 +140,45 @@ export default function OwnerDashboardHome() {
           </Link>
         </div>
       </section>
+
+      {paymentDueHalls.length > 0 ? (
+        <section
+          className="space-y-3"
+          aria-label={t("owner.subscription.paymentNotice.section")}
+          data-testid="owner-dashboard-payment-notices"
+        >
+          {paymentDueHalls.map((hall) => (
+            <SubscriptionPaymentNotice
+              key={hall.id}
+              hallId={hall.id}
+              hallName={localizeHallName(hall.id, hall.name, lang)}
+              paymentStatus={hall.paymentStatus}
+            />
+          ))}
+        </section>
+      ) : null}
+
+      {paidHalls.length > 0 ? (
+        <section
+          className="space-y-3"
+          aria-label={t("owner.subscription.activeSection")}
+          data-testid="owner-dashboard-active-subscriptions"
+        >
+          {paidHalls.map((hall) => (
+            <aside
+              key={hall.id}
+              className="rounded-2xl border border-[rgba(5,150,105,0.28)] bg-[rgba(5,150,105,0.06)] p-4 sm:p-5"
+            >
+              <p className="text-sm font-semibold text-[var(--wesal-text)]">
+                {localizeHallName(hall.id, hall.name, lang)}
+              </p>
+              <div className="mt-3">
+                <OwnerPaidSubscriptionDays hallId={hall.id} />
+              </div>
+            </aside>
+          ))}
+        </section>
+      ) : null}
 
       {expiryWarnings.length > 0 ? (
         <section

@@ -26,6 +26,7 @@ import {
   setStoredAuth,
 } from "@/lib/auth-storage";
 import { setAccessToken } from "@/lib/auth-token";
+import { HOURLY_DEMO_PATH, startHourlyDemoSession } from "@/lib/hourly-demo-session";
 import { isValidLoginEmail } from "@/lib/login-validation";
 import { loginAccount } from "@/services/auth";
 
@@ -313,6 +314,23 @@ export default function LoginFormCard({
           {pending ? t("auth.login.form.submitting") : t("auth.login.form.submit")}
         </button>
       </form>
+
+      <button
+        type="button"
+        className="btn-outline mt-3 w-full !min-h-11"
+        data-testid="hourly-demo-login"
+        onClick={() => {
+          const session = startHourlyDemoSession();
+          applyLocalSession(session);
+          markAuthNavigation();
+          navigateAfterAuth(router, redirectTo || HOURLY_DEMO_PATH);
+        }}
+      >
+        {t("auth.login.hourlyDemo")}
+      </button>
+      <p className="mt-2 text-center text-xs leading-5 text-[var(--wesal-muted)]">
+        {t("auth.login.hourlyDemoHint")}
+      </p>
 
       <p className="mt-4 text-center text-sm text-[var(--wesal-muted)]">
         {t("auth.login.noAccount")}{" "}

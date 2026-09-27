@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import UserBookingsList from "@/components/bookings/UserBookingsList";
 import { useT } from "@/i18n";
 
@@ -14,7 +15,13 @@ export default function SeekerBookingsPage() {
         </h1>
         <p className="mt-1 text-sm text-[var(--wesal-muted)]">{t("seeker.bookingsSubtitle")}</p>
       </header>
-      <UserBookingsList />
+      <Suspense
+        fallback={
+          <div className="h-28 animate-pulse rounded-2xl bg-white/80" aria-busy="true" />
+        }
+      >
+        <UserBookingsList />
+      </Suspense>
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   conversationErrorMessage,
   fetchConversationThread,
+  markConversationAsRead,
+  sendConversationAttachment,
   sendConversationMessage,
 } from "@/services/conversations";
 import { isForbiddenApiError } from "@/lib/api-error";
@@ -59,10 +61,11 @@ export function useConversationThread(
     void fetchConversationThread(conversationId)
       .then((data) => {
         if (cancelled) return;
-        const merged = mergeServerMessages(data.messages, localsRef.current[conversationId] ?? []);
+        const merged = mergeServerMessages(data?.messages ?? [], localsRef.current[conversationId] ?? []);
         localsRef.current[conversationId] = localsStillOpen(merged);
         setThread({ ...data, messages: merged });
         setStatus(merged.length === 0 ? "empty" : "ready");
+        void markConversationAsRead(conversationId).catch(() => undefined);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -106,7 +109,7 @@ export function useConversationThread(
   const send = useCallback(
     async (raw: string, currentUserId: string | null, senderName: string) => {
       if (!conversationId || !ownerKey) return false;
-      const content = raw.trim();
+      const content = (raw ?? "").trim();
       if (!content) return false;
 
       const clientRequestId = newClientRequestId();
@@ -159,6 +162,69 @@ export function useConversationThread(
     [applyIncoming, conversationId, ownerKey],
   );
 
+  const sendAttachment = useCallback(
+    async (file: File, raw: string, currentUserId: string | null, senderName: string) => {
+      if (!conversationId || !ownerKey) return false;
+      const content = (raw ?? "").trim();
+      const clientRequestId = newClientRequestId();
+      const localPreviewUrl = URL.createObjectURL(file);
+      const pending: ThreadMessage = {
+        id: `local:${clientRequestId}`,
+        clientRequestId,
+        senderUserId: currentUserId ?? "",
+        senderName,
+        content,
+        sentAt: new Date().toISOString(),
+        delivery: "pending",
+        hasAttachment: true,
+        attachmentFileName: file.name,
+        localPreviewUrl,
+      };
+      localsRef.current[conversationId] = upsertThreadMessage(
+        localsRef.current[conversationId] ?? [],
+        pending,
+      );
+      setThread((current) => {
+        if (!current || current.conversationId !== conversationId) {
+          return {
+            conversationId,
+            hallId: "",
+            hallName: "",
+            messages: [pending],
+          };
+        }
+        return { ...current, messages: upsertThreadMessage(current.messages, pending) };
+      });
+      setStatus("ready");
+
+      sendingRef.current.add(clientRequestId);
+      try {
+        const saved = await sendConversationAttachment(
+          conversationId,
+          file,
+          content,
+          clientRequestId,
+        );
+        applyIncoming({ ...saved, clientRequestId, localPreviewUrl }, conversationId);
+        return true;
+      } catch {
+        const failed: ThreadMessage = { ...pending, delivery: "failed" };
+        localsRef.current[conversationId] = upsertThreadMessage(
+          localsRef.current[conversationId] ?? [],
+          failed,
+        );
+        setThread((current) => {
+          if (!current || current.conversationId !== conversationId) return current;
+          return { ...current, messages: upsertThreadMessage(current.messages, failed) };
+        });
+        return false;
+      } finally {
+        sendingRef.current.delete(clientRequestId);
+      }
+    },
+    [applyIncoming, conversationId, ownerKey],
+  );
+
   const retrySend = useCallback(
     async (messageId: string) => {
       if (!conversationId || !ownerKey) return;
@@ -171,6 +237,7 @@ export function useConversationThread(
       );
       if (!current?.clientRequestId || current.delivery !== "failed") return;
       if (sendingRef.current.has(current.clientRequestId)) return;
+      if (current.hasAttachment && !(current.content ?? "").trim()) return;
 
       const pending: ThreadMessage = { ...current, delivery: "pending" };
       localsRef.current[conversationId] = upsertThreadMessage(
@@ -214,6 +281,7 @@ export function useConversationThread(
     retry: () => setRetryTick((n) => n + 1),
     applyIncoming,
     send,
+    sendAttachment,
     retrySend,
   };
 }

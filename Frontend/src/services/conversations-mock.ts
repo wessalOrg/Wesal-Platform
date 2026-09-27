@@ -70,6 +70,7 @@ const INBOX: ConversationSummary[] = [
     lastMessageAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
     messageCount: 2,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
+    isUnread: true,
   },
   {
     conversationId: "mock-convo-gold",
@@ -86,6 +87,7 @@ const INBOX: ConversationSummary[] = [
     lastMessageAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
     messageCount: 4,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(),
+    isUnread: true,
   },
   {
     conversationId: "mock-convo-royal",
@@ -97,6 +99,7 @@ const INBOX: ConversationSummary[] = [
     lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
     messageCount: 2,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    isUnread: false,
   },
 ];
 
@@ -196,12 +199,19 @@ const THREADS: Record<string, MessageThread> = {
 
 const sentByClientId = new Map<string, ThreadMessage>();
 
-function touchInbox(conversationId: string, preview: string, at: string) {
+function touchInbox(
+  conversationId: string,
+  preview: string,
+  at: string,
+  hasAttachment = false,
+) {
   const item = INBOX.find((row) => row.conversationId === conversationId);
   if (!item) return;
   item.lastMessagePreview = preview;
+  item.lastMessageHasAttachment = hasAttachment;
   item.lastMessageAt = at;
   item.messageCount += 1;
+  item.isUnread = true;
 }
 
 export async function mockFetchInbox(): Promise<ConversationSummary[]> {
@@ -296,4 +306,103 @@ export async function mockSendMessage(
   }, 900);
 
   return { ...message };
+}
+
+export async function mockSendAttachment(
+  conversationId: string,
+  file: File,
+  content: string,
+  clientRequestId: string,
+): Promise<ThreadMessage> {
+  await wait(LATENCY_MS);
+  const existing = sentByClientId.get(clientRequestId);
+  if (existing) return { ...existing };
+
+  const thread = THREADS[conversationId];
+  if (!thread) {
+    throw new ApiError(t("errors.conversation.missing"), 404);
+  }
+
+  const sentAt = new Date().toISOString();
+  const message: ThreadMessage = {
+    id: `mock-msg-${clientRequestId}`,
+    clientRequestId,
+    senderUserId: DEMO_USER_ID,
+    senderName: t("auth.stub.demoUser"),
+    content,
+    sentAt,
+    delivery: "sent",
+    hasAttachment: true,
+    attachmentFileName: file.name,
+    localPreviewUrl: URL.createObjectURL(file),
+  };
+  thread.messages = [...thread.messages, message];
+  sentByClientId.set(clientRequestId, message);
+  touchInbox(conversationId, content, sentAt, true);
+  emitMock(conversationId, message);
+  return { ...message };
+}
+
+export async function mockCreateHallConversation(hallId: string): Promise<{
+  conversationId: string;
+  hallId: string;
+  hallName: string;
+  initiatorUserId: string;
+  ownerUserId: string;
+  createdAt: string;
+  isExisting: boolean;
+}> {
+  await wait(LATENCY_MS);
+  const existing = INBOX.find((row) => row.hallId === hallId);
+  if (existing && THREADS[existing.conversationId]) {
+    return {
+      conversationId: existing.conversationId,
+      hallId: existing.hallId,
+      hallName: existing.hallName,
+      initiatorUserId: DEMO_USER_ID,
+      ownerUserId: existing.otherParticipantId,
+      createdAt: existing.createdAt,
+      isExisting: true,
+    };
+  }
+
+  const conversationId = `mock-convo-${hallId}`;
+  const hallName = t("common.hall");
+  const createdAt = new Date().toISOString();
+  if (!INBOX.some((row) => row.conversationId === conversationId)) {
+    INBOX.unshift({
+      conversationId,
+      hallId,
+      hallName,
+      otherParticipantId: `owner-${hallId}`,
+      otherParticipantName: hallName,
+      lastMessagePreview: "",
+      lastMessageAt: null,
+      messageCount: 0,
+      createdAt,
+      isUnread: false,
+    });
+  }
+  if (!THREADS[conversationId]) {
+    THREADS[conversationId] = {
+      conversationId,
+      hallId,
+      hallName,
+      messages: [],
+    };
+  }
+  return {
+    conversationId,
+    hallId,
+    hallName,
+    initiatorUserId: DEMO_USER_ID,
+    ownerUserId: `owner-${hallId}`,
+    createdAt,
+    isExisting: false,
+  };
+}
+
+export async function mockMarkConversationAsRead(conversationId: string): Promise<void> {
+  const item = INBOX.find((row) => row.conversationId === conversationId);
+  if (item) item.isUnread = false;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import HallDetailedAddressSelect from "@/components/owner-management/add-hall/HallDetailedAddressSelect";
+import HallAddressSelect from "@/components/owner-management/add-hall/HallAddressSelect";
 import HallFormField, {
   hallFieldClassName,
 } from "@/components/owner-management/add-hall/HallFormField";
@@ -33,7 +33,8 @@ export default function HallLocationSection({
   const regionError = resolveError(fieldErrors.region);
   const addressError = resolveError(fieldErrors.address);
   const detailedAddressError = resolveError(fieldErrors.detailedAddress);
-  const detailedAddresses = addressesFor(values.region);
+  const catalogAddresses = addressesFor(values.region);
+  const useAddressDropdown = Boolean(values.region) && catalogAddresses.length > 0;
 
   return (
     <HallFormSection
@@ -54,9 +55,7 @@ export default function HallLocationSection({
             hasError={Boolean(regionError)}
             aria-invalid={regionError ? true : undefined}
             aria-describedby={regionError ? "hall-region-error" : undefined}
-            onChange={(region) =>
-              onChange({ region, detailedAddress: "" })
-            }
+            onChange={(region) => onChange({ region, address: "" })}
           />
         </HallFormField>
 
@@ -68,19 +67,34 @@ export default function HallLocationSection({
             error={addressError}
             hint={t("owner.management.addHall.fields.addressHint")}
           >
-            <input
-              id="hall-address"
-              type="text"
-              autoComplete="street-address"
-              value={values.address}
-              disabled={disabled}
-              aria-invalid={addressError ? true : undefined}
-              aria-describedby={
-                addressError ? "hall-address-error" : "hall-address-hint"
-              }
-              onChange={(event) => onChange({ address: event.target.value })}
-              className={hallFieldClassName(Boolean(addressError))}
-            />
+            {useAddressDropdown ? (
+              <HallAddressSelect
+                id="hall-address"
+                value={values.address}
+                addresses={catalogAddresses}
+                disabled={disabled}
+                hasError={Boolean(addressError)}
+                aria-invalid={addressError ? true : undefined}
+                aria-describedby={
+                  addressError ? "hall-address-error" : "hall-address-hint"
+                }
+                onChange={(address) => onChange({ address })}
+              />
+            ) : (
+              <input
+                id="hall-address"
+                type="text"
+                autoComplete="street-address"
+                value={values.address}
+                disabled={disabled || !values.region}
+                aria-invalid={addressError ? true : undefined}
+                aria-describedby={
+                  addressError ? "hall-address-error" : "hall-address-hint"
+                }
+                onChange={(event) => onChange({ address: event.target.value })}
+                className={hallFieldClassName(Boolean(addressError))}
+              />
+            )}
           </HallFormField>
         </div>
 
@@ -91,19 +105,22 @@ export default function HallLocationSection({
             error={detailedAddressError}
             hint={t("owner.management.addHall.fields.detailedAddressHint")}
           >
-            <HallDetailedAddressSelect
+            <textarea
               id="hall-detailed-address"
+              rows={3}
               value={values.detailedAddress}
-              addresses={detailedAddresses}
-              disabled={disabled || !values.region}
-              hasError={Boolean(detailedAddressError)}
+              disabled={disabled}
               aria-invalid={detailedAddressError ? true : undefined}
               aria-describedby={
                 detailedAddressError
                   ? "hall-detailed-address-error"
                   : "hall-detailed-address-hint"
               }
-              onChange={(detailedAddress) => onChange({ detailedAddress })}
+              placeholder={t(
+                "owner.management.addHall.fields.detailedAddressPlaceholder",
+              )}
+              onChange={(event) => onChange({ detailedAddress: event.target.value })}
+              className={`${hallFieldClassName(Boolean(detailedAddressError))} min-h-[6.5rem] max-w-full resize-y break-words whitespace-pre-wrap`}
             />
           </HallFormField>
         </div>

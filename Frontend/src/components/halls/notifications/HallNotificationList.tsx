@@ -10,10 +10,15 @@ type HallNotificationListProps = {
   labelledBy?: string;
   acceptingId?: string | null;
   rejectingId?: string | null;
+  confirmingId?: string | null;
   acceptErrorById?: Record<string, string>;
   rejectErrorById?: Record<string, string>;
+  confirmErrorById?: Record<string, string>;
+  highlightedId?: string | null;
+  hallName?: string | null;
   onAccept?: (notification: HallBookingNotification) => void;
   onReject?: (notification: HallBookingNotification) => void;
+  onConfirmPayment?: (notification: HallBookingNotification) => void;
 };
 
 export default function HallNotificationList({
@@ -21,10 +26,15 @@ export default function HallNotificationList({
   labelledBy,
   acceptingId = null,
   rejectingId = null,
+  confirmingId = null,
   acceptErrorById = {},
   rejectErrorById = {},
+  confirmErrorById = {},
+  highlightedId = null,
+  hallName = null,
   onAccept,
   onReject,
+  onConfirmPayment,
 }: HallNotificationListProps) {
   const t = useT();
   const groups = groupOwnerNotifications(items);
@@ -45,7 +55,7 @@ export default function HallNotificationList({
       items: groups.handled,
     },
   ].filter((section) => section.items.length > 0);
-  const actionLocked = Boolean(acceptingId || rejectingId);
+  const actionLocked = Boolean(acceptingId || rejectingId || confirmingId);
 
   return (
     <div className="min-w-0 space-y-5" data-testid="hall-notifications-list" aria-labelledby={labelledBy}>
@@ -66,12 +76,18 @@ export default function HallNotificationList({
                     notification={item}
                     accepting={acceptingId === item.id}
                     rejecting={rejectingId === item.id}
+                    confirming={confirmingId === item.id}
                     acceptLocked={actionLocked && acceptingId !== item.id}
                     rejectLocked={actionLocked && rejectingId !== item.id}
+                    confirmLocked={actionLocked && confirmingId !== item.id}
                     acceptErrorKey={acceptErrorById[item.id] ?? null}
                     rejectErrorKey={rejectErrorById[item.id] ?? null}
+                    confirmErrorKey={confirmErrorById[item.id] ?? null}
+                    highlighted={highlightedId === item.id}
+                    hallName={hallName}
                     onAccept={onAccept}
                     onReject={onReject}
+                    onConfirmPayment={onConfirmPayment}
                   />
                 </li>
               ))}

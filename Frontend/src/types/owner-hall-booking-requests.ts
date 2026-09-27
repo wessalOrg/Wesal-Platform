@@ -5,9 +5,13 @@ export type OwnerHallBookingRequest = {
   id: string;
   hallId: string;
   requesterName: string;
+  requesterUserId?: string;
   date: string;
   periods: BookingPeriodType[];
+  slotStarts?: string[];
+  timeRange?: string;
   status: BookingStatus;
+  depositAmount?: number | null;
   createdAt: string | null;
 };
 

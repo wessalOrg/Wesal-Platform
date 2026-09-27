@@ -19,10 +19,6 @@ function isOptionalNonNegativeNumber(raw: string): boolean {
   return Number.isFinite(value) && value >= 0;
 }
 
-function isTimeValue(raw: string): boolean {
-  return /^\d{2}:\d{2}$/.test(raw.trim());
-}
-
 const YOUTUBE_URL_PATTERN =
   /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)[A-Za-z0-9_-]{6,30}(?:\?[^\s#]*)?(?:#[^\s]*)?$/i;
 
@@ -82,24 +78,6 @@ export function validateHallRegistrationForm(
 
   if (values.mainPhoto && !values.mainPhoto.type.startsWith("image/")) {
     errors.mainPhoto = "owner.management.addHall.errors.mainPhotoInvalid";
-  }
-
-  if (!isTimeValue(values.firstPeriod.startTime)) {
-    errors["firstPeriod.startTime"] =
-      "owner.management.addHall.errors.firstStartRequired";
-  }
-  if (!isTimeValue(values.firstPeriod.endTime)) {
-    errors["firstPeriod.endTime"] =
-      "owner.management.addHall.errors.firstEndRequired";
-  }
-
-  if (!isTimeValue(values.secondPeriod.startTime)) {
-    errors["secondPeriod.startTime"] =
-      "owner.management.addHall.errors.secondStartRequired";
-  }
-  if (!isTimeValue(values.secondPeriod.endTime)) {
-    errors["secondPeriod.endTime"] =
-      "owner.management.addHall.errors.secondEndRequired";
   }
 
   if (values.photos.length < 1 && !values.mainPhoto) {

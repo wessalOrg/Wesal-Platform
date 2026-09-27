@@ -9,6 +9,8 @@ export type UserProfile = {
   concurrencyStamp: string;
   /** True when the Hall Owner has uploaded an identity document (US-OWNER-30). */
   isIdentityDocumentUploaded: boolean;
+  /** Present only when the profile payload includes a join/created timestamp. */
+  createdAt?: string | null;
 };
 
 export type UpdateProfileInput = {

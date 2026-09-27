@@ -32,7 +32,7 @@ export function useRejectBookingRequest(options?: UseRejectBookingRequestOptions
   }, []);
 
   const reject = useCallback(
-    async (hallId: string, bookingId: string, reason: string) => {
+    async (hallId: string, bookingId: string, reason: string, hallName?: string | null) => {
       const id = bookingId.trim();
       if (!id || inFlightRef.current) return null;
 
@@ -49,6 +49,8 @@ export function useRejectBookingRequest(options?: UseRejectBookingRequestOptions
           date: result.date,
           periods: result.periods,
           deferred: result.notificationDeferred,
+          rejectionReason: result.rejectionReason,
+          hallName: hallName?.trim() || undefined,
         });
         return result;
       } catch (err) {

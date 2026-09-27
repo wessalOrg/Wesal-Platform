@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
 import HallLockedBadge from "@/components/halls/HallLockedBadge";
 import OwnerHallAdminLockedNotice from "@/components/halls/OwnerHallAdminLockedNotice";
 import PaymentStatusBadge from "@/components/halls/PaymentStatusBadge";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
+import SubscriptionPaymentNotice from "@/components/halls/subscription/SubscriptionPaymentNotice";
 import { useAddHallInitiation } from "@/hooks/useAddHallInitiation";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useUiLang } from "@/components/layout/LanguageProvider";
@@ -25,6 +27,12 @@ export default function OwnerHallsPage() {
 
   const showError = status === "error" && halls.length === 0;
   const expiryWarnings = halls.filter((item) => item.expiryWarning);
+  const paymentDueHalls = halls.filter(
+    (item) => item.status === "Approved" && item.paymentStatus !== "Paid",
+  );
+  const paidHalls = halls.filter(
+    (item) => item.status === "Approved" && item.paymentStatus === "Paid",
+  );
 
   return (
     <div className="seeker-home" data-testid="owner-halls-page">
@@ -49,6 +57,45 @@ export default function OwnerHallsPage() {
           </div>
         </div>
       </section>
+
+      {paymentDueHalls.length > 0 ? (
+        <section
+          className="space-y-3"
+          aria-label={t("owner.subscription.paymentNotice.section")}
+          data-testid="owner-halls-payment-notices"
+        >
+          {paymentDueHalls.map((hall) => (
+            <SubscriptionPaymentNotice
+              key={hall.id}
+              hallId={hall.id}
+              hallName={localizeHallName(hall.id, hall.name, lang)}
+              paymentStatus={hall.paymentStatus}
+            />
+          ))}
+        </section>
+      ) : null}
+
+      {paidHalls.length > 0 ? (
+        <section
+          className="space-y-3"
+          aria-label={t("owner.subscription.activeSection")}
+          data-testid="owner-halls-active-subscriptions"
+        >
+          {paidHalls.map((hall) => (
+            <aside
+              key={hall.id}
+              className="rounded-2xl border border-[rgba(5,150,105,0.28)] bg-[rgba(5,150,105,0.06)] p-4 sm:p-5"
+            >
+              <p className="text-sm font-semibold text-[var(--wesal-text)]">
+                {localizeHallName(hall.id, hall.name, lang)}
+              </p>
+              <div className="mt-3">
+                <OwnerPaidSubscriptionDays hallId={hall.id} />
+              </div>
+            </aside>
+          ))}
+        </section>
+      ) : null}
 
       {expiryWarnings.length > 0 ? (
         <section
@@ -126,6 +173,11 @@ export default function OwnerHallsPage() {
                     <HallApprovalStatusBadge status={hall.status} />
                     <PaymentStatusBadge status={hall.paymentStatus} />
                   </div>
+                  {hall.status === "Approved" && hall.paymentStatus === "Paid" ? (
+                    <div className="mt-3">
+                      <OwnerPaidSubscriptionDays hallId={hall.id} />
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {adminLocked ? (

@@ -1,8 +1,8 @@
 "use client";
 
 import AccountNotificationsPanel from "@/components/layout/AccountNotificationsPanel";
-import { SEEKER_NOTIFICATIONS } from "@/constants/seekerNotifications";
 import { useDismissibleOverlay } from "@/hooks/useDismissibleOverlay";
+import { useNotifications } from "@/hooks/useNotifications";
 import { useT } from "@/i18n";
 
 /**
@@ -11,14 +11,14 @@ import { useT } from "@/i18n";
 export default function SeekerNotificationsPopover() {
   const t = useT();
   const { open, close, toggle, rootRef, panelId } = useDismissibleOverlay();
-  const hasPreview = SEEKER_NOTIFICATIONS.length > 0;
+  const { unreadCount, hasUnread } = useNotifications("seeker");
 
   return (
     <div ref={rootRef} className="seeker-notify-wrap">
       <button
         type="button"
         className={`seeker-dash-notify${open ? " seeker-dash-notify--open" : ""}${
-          hasPreview ? " seeker-dash-notify--has-unread" : ""
+          hasUnread ? " seeker-dash-notify--has-unread" : ""
         }`}
         aria-label={t("nav.notifications")}
         aria-haspopup="dialog"
@@ -30,7 +30,11 @@ export default function SeekerNotificationsPopover() {
         <span className="seeker-dash-notify-bell" aria-hidden="true">
           <BellIcon />
         </span>
-        {hasPreview ? <span className="seeker-notify-dot" aria-hidden="true" /> : null}
+        {hasUnread ? (
+          <span className="seeker-notify-badge" aria-hidden="true">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        ) : null}
       </button>
 
       <AccountNotificationsPanel open={open} onClose={close} panelId={panelId} />

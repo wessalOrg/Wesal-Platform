@@ -95,7 +95,7 @@ export default function SubscriptionExpiryWarningCard({
           </>
         ) : (
           <p className="mt-3 text-[0.82rem] leading-6 text-[var(--wesal-muted)]">
-            {originalContent.trim() || t("messages.subscriptionExpiry.unavailable")}
+            {(originalContent ?? "").trim() || t("messages.subscriptionExpiry.unavailable")}
           </p>
         )}
 

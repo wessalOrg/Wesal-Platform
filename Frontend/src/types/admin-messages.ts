@@ -15,6 +15,7 @@ export type AdminMessageItem = {
   ownerName: string;
   conversationId: string | null;
   preview: string;
+  lastMessageHasAttachment?: boolean;
   lastMessageAt: string | null;
   createdAt: string;
   /** True when the source API marks the thread unread (when available). */

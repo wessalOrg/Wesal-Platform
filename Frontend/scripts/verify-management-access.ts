@@ -81,7 +81,7 @@ function testManagementPolicy() {
   assert.equal(canAccessDashboard(approvedUnpaid), false);
   assert.equal(canAccessCalendar(approvedUnpaid), false);
   assert.equal(canAccessBookingData(approvedUnpaid), false);
-  assert.equal(canAccessMessaging(approvedUnpaid), false);
+  assert.equal(canAccessMessaging(approvedUnpaid), true);
 
   const paidAdmin = access({ paymentStatus: "Paid", adminLocked: true });
   assert.deepEqual(getManagementAccess(paidAdmin), {

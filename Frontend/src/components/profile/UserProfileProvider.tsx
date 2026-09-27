@@ -46,8 +46,9 @@ function publishIdentity(
   applyIdentity: (patch: { userName?: string | null }) => void,
 ) {
   applyIdentity({ userName: profile.fullName });
+  const knownId = profile.id.trim();
   patchStoredUser({
-    id: profile.id,
+    ...(knownId && knownId !== "self" ? { id: knownId } : {}),
     name: profile.fullName,
     email: profile.email,
     phone: profile.phoneNumber,

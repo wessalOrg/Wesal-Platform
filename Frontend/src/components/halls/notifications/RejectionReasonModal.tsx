@@ -64,6 +64,7 @@ export default function RejectionReasonModal({
 
   if (!open) return null;
 
+  const canSubmit = Boolean(reason.trim()) && !busy;
   const validationText = issue ? t(rejectionReasonMessageKey(issue)) : null;
   const apiError =
     errorKey && (errorKey.startsWith("errors.") || errorKey.startsWith("owner."))
@@ -167,14 +168,14 @@ export default function RejectionReasonModal({
                 if (!busy) onClose();
               }}
             >
-              {t("common.close")}
+              {t("owner.notifications.cancel")}
             </button>
             <button
               type="submit"
               className="btn-primary min-h-11 w-full gap-2 sm:w-auto"
-              disabled={busy}
+              disabled={!canSubmit}
               aria-busy={busy || undefined}
-              aria-disabled={busy || undefined}
+              aria-disabled={!canSubmit || undefined}
               data-testid="hall-rejection-confirm"
             >
               {busy ? (

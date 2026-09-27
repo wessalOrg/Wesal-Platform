@@ -20,6 +20,8 @@ import { useMessageDrafts } from "@/hooks/useMessageDrafts";
 import { useThreadDeliverySync } from "@/hooks/useThreadDeliverySync";
 import { getCurrentUserId } from "@/lib/current-user";
 import { refreshUnreadCount } from "@/hooks/useUnreadCount";
+import { applyBookingAcceptanceFromMessage } from "@/lib/apply-booking-acceptance-from-message";
+import { applyBookingRejectionFromMessage } from "@/lib/apply-booking-rejection-from-message";
 import { markConversationAsRead } from "@/services/conversations";
 import type { ConversationSummary, InboxStatus, MessageThread, ThreadStatus } from "@/types/messages";
 
@@ -39,8 +41,9 @@ type MessagesInboxContextValue = {
   draft: string;
   setDraft: (value: string) => void;
   sendMessage: (text: string) => Promise<boolean>;
+  sendAttachment: (file: File, text: string) => Promise<boolean>;
   retrySend: (messageId: string) => void;
-  openInbox: (conversationId?: string) => void;
+  openInbox: (conversationId?: string, draft?: string) => void;
   closeInbox: () => void;
   toggleInbox: () => void;
   selectConversation: (conversationId: string | null) => void;
@@ -76,7 +79,10 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
 
   const sessionReady = ownerKey === seenOwnerKey;
   const isEmbeddedInbox =
-    pathname === "/profile/messages" || pathname.startsWith("/profile/messages/");
+    pathname === "/profile/messages" ||
+    pathname.startsWith("/profile/messages/") ||
+    pathname === "/owner/messages" ||
+    pathname.startsWith("/owner/messages/");
   const isMessagesRoute = pathname === "/messages" || pathname.startsWith("/messages/");
   const inboxActive = Boolean(sessionReady && ownerKey && (isOpen || isEmbeddedInbox || isMessagesRoute));
   const inbox = useInboxConversations(ownerKey, inboxActive);
@@ -96,15 +102,28 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   );
   const applyIncoming = threadState.applyIncoming;
   const sendThreadMessage = threadState.send;
+  const sendThreadAttachment = threadState.sendAttachment;
   const retryThreadSend = threadState.retrySend;
   const applyPreview = inbox.applyPreview;
+  const markLocalRead = inbox.markLocalRead;
+  const refreshInbox = inbox.refresh;
 
   useConversationRealtime(
     sessionReady && ownerKey && threadFetchEnabled ? selectedId : null,
     ownerKey,
     (payload) => {
+      if (!payload?.conversationId || !payload.message) return;
       applyIncoming(payload.message, payload.conversationId);
-      applyPreview(payload.conversationId, payload.message.content, payload.message.sentAt);
+      applyPreview(
+        payload.conversationId,
+        payload.message.content,
+        payload.message.sentAt,
+        false,
+        Boolean(payload.message.hasAttachment),
+      );
+      applyBookingRejectionFromMessage(payload.message.content);
+      applyBookingAcceptanceFromMessage(payload.message.content);
+      void markConversationAsRead(payload.conversationId).catch(() => undefined);
     },
   );
 
@@ -113,8 +132,18 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
     ownerKey,
     threadState.status === "ready" || threadState.status === "empty",
     (message, conversationId) => {
+      if (!conversationId || !message) return;
       applyIncoming(message, conversationId);
-      applyPreview(conversationId, message.content, message.sentAt);
+      applyPreview(
+        conversationId,
+        message.content,
+        message.sentAt,
+        false,
+        Boolean(message.hasAttachment),
+      );
+      applyBookingRejectionFromMessage(message.content);
+      applyBookingAcceptanceFromMessage(message.content);
+      void markConversationAsRead(conversationId).catch(() => undefined);
     },
   );
 
@@ -137,22 +166,36 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
     };
   }, [ownerKey, selectedId, threadFetchEnabled, threadState.status]);
 
+  useEffect(() => {
+    const hallName = threadState.thread?.hallName ?? "";
+    for (const message of threadState.thread?.messages ?? []) {
+      applyBookingRejectionFromMessage(message.content, hallName);
+      applyBookingAcceptanceFromMessage(message.content, hallName);
+    }
+  }, [threadState.thread]);
+
   const closeInbox = useCallback(() => {
     setIsOpen(false);
   }, []);
 
   const selectConversation = useCallback((conversationId: string | null) => {
     setSelectedId(conversationId);
-  }, []);
+    if (conversationId) markLocalRead(conversationId);
+  }, [markLocalRead]);
 
   const openInbox = useCallback(
-    (conversationId?: string) => {
+    (conversationId?: string, draft?: string) => {
       if (!canUseMessaging) return;
-      if (conversationId) setSelectedId(conversationId);
+      if (conversationId) {
+        setSelectedId(conversationId);
+        markLocalRead(conversationId);
+        if (draft?.trim()) persistDraft(conversationId, draft.trim());
+      }
       setIsOpen(true);
       setRefreshEpoch((n) => n + 1);
+      refreshInbox();
     },
-    [canUseMessaging],
+    [canUseMessaging, markLocalRead, persistDraft, refreshInbox],
   );
 
   const toggleInbox = useCallback(() => {
@@ -180,7 +223,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       persistDraft(selectedId, "");
       const sent = await sendThreadMessage(text, currentUserId, displayName || "");
       if (sent) {
-        applyPreview(selectedId, text.trim(), new Date().toISOString());
+        applyPreview(selectedId, text.trim(), new Date().toISOString(), false);
       } else {
         restoreDraft(selectedId, text);
       }
@@ -196,6 +239,38 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       selectedHallAccess,
       selectedId,
       sendThreadMessage,
+    ],
+  );
+
+  const sendAttachment = useCallback(
+    async (file: File, text: string) => {
+      if (!selectedId) return false;
+      if (isHallOwner && !canAccessMessaging(selectedHallAccess)) return false;
+      persistDraft(selectedId, "");
+      const sent = await sendThreadAttachment(file, text, currentUserId, displayName || "");
+      if (sent) {
+        applyPreview(
+          selectedId,
+          text.trim(),
+          new Date().toISOString(),
+          false,
+          true,
+        );
+      } else {
+        restoreDraft(selectedId, text);
+      }
+      return sent;
+    },
+    [
+      applyPreview,
+      currentUserId,
+      displayName,
+      isHallOwner,
+      persistDraft,
+      restoreDraft,
+      selectedHallAccess,
+      selectedId,
+      sendThreadAttachment,
     ],
   );
 
@@ -223,6 +298,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       draft: draftFor(selectedId),
       setDraft,
       sendMessage,
+      sendAttachment,
       retrySend,
       openInbox,
       closeInbox,
@@ -245,6 +321,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       draftFor,
       setDraft,
       sendMessage,
+      sendAttachment,
       retrySend,
       openInbox,
       closeInbox,

@@ -27,7 +27,7 @@ export function hallUpdateSubmitErrorMessage(error: unknown): string {
 
 /**
  * wesal-api: BusinessRuleException → HTTP 422 + code HallNotEditable
- * when Status == PendingReview (IsEditable == false).
+ * when the hall is admin/system locked (approval status is not a lock).
  */
 export function isHallNotEditableApiError(error: unknown): boolean {
   if (!(error instanceof ApiError)) return false;

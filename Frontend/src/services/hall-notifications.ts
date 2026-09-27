@@ -56,6 +56,7 @@ export async function fetchHallBookingNotifications(
 export async function acceptHallBookingRequest(
   hallId: string,
   bookingId: string,
+  depositAmount: number,
 ): Promise<AcceptBookingResult> {
   const hall = hallId.trim();
   const booking = bookingId.trim();
@@ -66,7 +67,7 @@ export async function acceptHallBookingRequest(
   try {
     const { data } = await api.post<unknown>(
       `/halls/${hall}/bookings/${booking}/accept`,
-      undefined,
+      { depositAmount },
       { timeout: 10000 },
     );
     return mapAcceptBookingResult(data, hall, booking);
@@ -117,8 +118,8 @@ export async function publishHallBooking(
   }
 
   try {
-    const { data } = await api.post<unknown>(
-      `/halls/${hall}/bookings/${booking}/publish`,
+    const { data } = await api.put<unknown>(
+      `/halls/${hall}/bookings/${booking}/payment/confirmed`,
       undefined,
       { timeout: 10000 },
     );

@@ -1,21 +1,21 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { ADMIN_MANAGEMENT_PATH, HALL_OWNER_MANAGEMENT_PATH } from "@/lib/account-profile-path";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 
-const LANDING_PATH = "/";
-
 export default function RegularUserProfileGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { ready, authenticated, isHallOwner, isAdmin } = useUserIdentity();
 
   useEffect(() => {
     if (!ready) return;
 
     if (!authenticated) {
-      router.replace(LANDING_PATH);
+      const next = pathname?.startsWith("/profile") ? pathname : "/profile";
+      router.replace(`/login?redirect=${encodeURIComponent(next)}`);
       return;
     }
 
@@ -27,7 +27,7 @@ export default function RegularUserProfileGuard({ children }: { children: ReactN
     if (isHallOwner) {
       router.replace(HALL_OWNER_MANAGEMENT_PATH);
     }
-  }, [ready, authenticated, isHallOwner, isAdmin, router]);
+  }, [ready, authenticated, isHallOwner, isAdmin, pathname, router]);
 
   if (!ready || !authenticated || isHallOwner || isAdmin) {
     return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { conversationTimeValue } from "@/lib/conversation-mapper";
 import { conversationErrorMessage, fetchInboxConversations } from "@/services/conversations";
 import type { ConversationSummary, InboxStatus } from "@/types/messages";
 
@@ -45,21 +46,48 @@ export function useInboxConversations(ownerKey: string | null, active: boolean) 
     };
   }, [ownerKey, active, retryTick]);
 
-  const applyPreview = useCallback((conversationId: string, preview: string, at: string) => {
+  const refresh = useCallback(() => {
+    if (!ownerKey) return;
+    void fetchInboxConversations()
+      .then((items) => {
+        setConversations(items);
+        setStatus(items.length === 0 ? "empty" : "ready");
+        setError(null);
+      })
+      .catch(() => undefined);
+  }, [ownerKey]);
+
+  const markLocalRead = useCallback((conversationId: string) => {
+    setConversations((current) =>
+      current.map((item) =>
+        item.conversationId === conversationId ? { ...item, isUnread: false } : item,
+      ),
+    );
+  }, []);
+
+  const applyPreview = useCallback((
+    conversationId: string,
+    preview: string,
+    at: string,
+    unread = true,
+    hasAttachment = false,
+  ) => {
     setConversations((current) => {
       const next = current.map((item) =>
         item.conversationId === conversationId
           ? {
               ...item,
               lastMessagePreview: preview,
+              lastMessageHasAttachment: hasAttachment,
               lastMessageAt: at,
+              isUnread: unread,
             }
           : item,
       );
       return [...next].sort(
         (left, right) =>
-          Date.parse(right.lastMessageAt ?? right.createdAt) -
-          Date.parse(left.lastMessageAt ?? left.createdAt),
+          conversationTimeValue(right.lastMessageAt ?? right.createdAt) -
+          conversationTimeValue(left.lastMessageAt ?? left.createdAt),
       );
     });
     setStatus((current) => (current === "empty" ? "ready" : current));
@@ -70,6 +98,8 @@ export function useInboxConversations(ownerKey: string | null, active: boolean) 
     conversations,
     error,
     retry: () => setRetryTick((n) => n + 1),
+    refresh,
     applyPreview,
+    markLocalRead,
   };
 }

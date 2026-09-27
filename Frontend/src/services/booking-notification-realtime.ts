@@ -9,6 +9,7 @@ export const OWNER_BOOKING_REQUEST_EVENT = "wesal:booking-request-notification";
 
 const HUB_EVENTS = [
   "BookingRequestReceived",
+  "BookingRequestCancelled",
   "BookingRequestCreated",
   "NewBookingRequest",
   "OwnerBookingNotification",

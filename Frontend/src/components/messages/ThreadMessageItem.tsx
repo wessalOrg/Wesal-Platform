@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import BookingRejectionCard from "@/components/messages/BookingRejectionCard";
+import ChatImageLightbox from "@/components/messages/ChatImageLightbox";
 import SubscriptionExpiryWarningCard from "@/components/messages/SubscriptionExpiryWarningCard";
 import { useBookingRejectionMessage } from "@/hooks/useBookingRejectionMessage";
+import { useMessageAttachment } from "@/hooks/useMessageAttachment";
 import { useSubscriptionExpiryWarningMessage } from "@/hooks/useSubscriptionExpiryWarningMessage";
 import { useT } from "@/i18n";
+import { isChatImageUrl, paymentReceiptNoticeCaption, safeMessageText } from "@/lib/chat-image-message";
 import { formatRelativeTime } from "@/lib/relative-time";
 import type { ThreadMessage } from "@/types/messages";
 
@@ -12,7 +16,9 @@ type ThreadMessageItemProps = {
   message: ThreadMessage;
   own: boolean;
   retrying: boolean;
+  hallId?: string | null;
   hallName: string;
+  conversationId?: string | null;
   arriving?: boolean;
   onRetrySend: (messageId: string) => void;
 };
@@ -22,11 +28,12 @@ export default function ThreadMessageItem({
   own,
   retrying,
   hallName,
+  conversationId,
   arriving = false,
   onRetrySend,
 }: ThreadMessageItemProps) {
-  const classified = useBookingRejectionMessage(message.content, hallName);
-  const expiryWarning = useSubscriptionExpiryWarningMessage(message.content, hallName);
+  const classified = useBookingRejectionMessage(safeMessageText(message?.content), hallName ?? "");
+  const expiryWarning = useSubscriptionExpiryWarningMessage(safeMessageText(message?.content), hallName ?? "");
 
   if (expiryWarning.kind === "subscription_expiry_warning") {
     return (
@@ -51,7 +58,13 @@ export default function ThreadMessageItem({
   }
 
   return (
-    <ThreadBubble message={message} own={own} retrying={retrying} onRetrySend={onRetrySend} />
+    <ThreadBubble
+      message={message}
+      own={own}
+      retrying={retrying}
+      conversationId={conversationId}
+      onRetrySend={onRetrySend}
+    />
   );
 }
 
@@ -59,11 +72,13 @@ function ThreadBubble({
   message,
   own,
   retrying,
+  conversationId,
   onRetrySend,
 }: {
   message: ThreadMessage;
   own: boolean;
   retrying: boolean;
+  conversationId?: string | null;
   onRetrySend: (messageId: string) => void;
 }) {
   const t = useT();
@@ -88,7 +103,7 @@ function ThreadBubble({
               : "overflow-hidden rounded-2xl rounded-es-md border border-[var(--wesal-border)] bg-white px-3.5 py-2.5 text-[0.82rem] leading-6 break-words whitespace-pre-wrap [overflow-wrap:anywhere] text-[var(--wesal-text)]"
           }
         >
-          {message.content}
+          <ThreadBubbleBody message={message} conversationId={conversationId} />
         </div>
         {pending ? (
           <p className={`mt-1 text-[0.65rem] text-[var(--wesal-muted)] ${own ? "text-end" : "text-start"}`}>
@@ -112,5 +127,94 @@ function ThreadBubble({
         )}
       </div>
     </article>
+  );
+}
+
+function ThreadBubbleBody({
+  message,
+  conversationId,
+}: {
+  message: ThreadMessage;
+  conversationId?: string | null;
+}) {
+  const text = safeMessageText(message?.content);
+  const caption = message.hasAttachment
+    ? text.trim()
+    : paymentReceiptNoticeCaption(text) || text;
+
+  if (message.hasAttachment || message.localPreviewUrl) {
+    return (
+      <ChatAttachmentBubble
+        conversationId={conversationId ?? null}
+        messageId={message.id}
+        rawUrl={message.attachmentUrl}
+        localPreviewUrl={message.localPreviewUrl}
+        caption={caption}
+      />
+    );
+  }
+
+  if (isChatImageUrl(text)) {
+    return <ChatImageBubble src={text.trim()} />;
+  }
+
+  return text;
+}
+
+function ChatAttachmentBubble({
+  conversationId,
+  messageId,
+  rawUrl,
+  localPreviewUrl,
+  caption,
+}: {
+  conversationId: string | null;
+  messageId: string;
+  rawUrl?: string | null;
+  localPreviewUrl?: string | null;
+  caption: string;
+}) {
+  const t = useT();
+  const remote = useMessageAttachment(
+    conversationId,
+    messageId.startsWith("local:") ? null : messageId,
+    Boolean(conversationId) && !messageId.startsWith("local:"),
+    rawUrl,
+  );
+  const src = localPreviewUrl || remote.url;
+
+  return (
+    <div className="space-y-2">
+      {src ? (
+        <ChatImageBubble src={src} />
+      ) : remote.status === "error" ? (
+        <p>{t("messages.imagePreview")}</p>
+      ) : (
+        <p>{t("messages.imagePreview")}</p>
+      )}
+      {caption ? <p>{caption}</p> : null}
+    </div>
+  );
+}
+
+function ChatImageBubble({ src }: { src: string }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        className="-mx-1 -my-1 block overflow-hidden rounded-xl"
+        onClick={() => setOpen(true)}
+        data-testid="chat-image-thumb"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- remote / uploaded chat image */}
+        <img src={src} alt={t("messages.imagePreview")} className="max-h-56 w-full object-cover" />
+      </button>
+      {open ? (
+        <ChatImageLightbox src={src} alt={t("messages.imageLightbox")} onClose={() => setOpen(false)} />
+      ) : null}
+    </>
   );
 }

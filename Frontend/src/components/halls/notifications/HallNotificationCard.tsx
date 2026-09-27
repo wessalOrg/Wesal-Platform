@@ -8,7 +8,8 @@ import RejectionStatusBadge from "@/components/halls/notifications/RejectionStat
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 import { formatBookingDateLabel } from "@/lib/booking-date";
-import { bookingPeriodI18nKey } from "@/lib/booking-rejection-message";
+import { formatDepositAmount } from "@/lib/booking-deposits";
+import { bookingWhenLabels } from "@/lib/booking-when-label";
 import {
   acceptFeedbackKind,
   cardAcceptanceState,
@@ -20,24 +21,36 @@ type HallNotificationCardProps = {
   notification: HallBookingNotification;
   accepting?: boolean;
   rejecting?: boolean;
+  confirming?: boolean;
   acceptLocked?: boolean;
   rejectLocked?: boolean;
+  confirmLocked?: boolean;
   acceptErrorKey?: string | null;
   rejectErrorKey?: string | null;
+  confirmErrorKey?: string | null;
+  highlighted?: boolean;
+  hallName?: string | null;
   onAccept?: (notification: HallBookingNotification) => void;
   onReject?: (notification: HallBookingNotification) => void;
+  onConfirmPayment?: (notification: HallBookingNotification) => void;
 };
 
 export default function HallNotificationCard({
   notification,
   accepting = false,
   rejecting = false,
+  confirming = false,
   acceptLocked = false,
   rejectLocked = false,
+  confirmLocked = false,
   acceptErrorKey = null,
   rejectErrorKey = null,
+  confirmErrorKey = null,
+  highlighted = false,
+  hallName = null,
   onAccept,
   onReject,
+  onConfirmPayment,
 }: HallNotificationCardProps) {
   const t = useT();
   const lang = useUiLang();
@@ -46,15 +59,22 @@ export default function HallNotificationCard({
   const dateLabel = notification.date
     ? formatBookingDateLabel(notification.date, locale)
     : t("owner.notifications.valueMissing");
-  const periodLabels =
-    notification.periods.length > 0
-      ? notification.periods.map((period) => t(bookingPeriodI18nKey(period)))
-      : [t("owner.notifications.valueMissing")];
+  const periodLabels = bookingWhenLabels(notification, t, locale);
+  const whenLabels =
+    periodLabels.length > 0 ? periodLabels : [t("owner.notifications.valueMissing")];
   const showAccept = Boolean(onAccept) && canAcceptBookingRequest(notification.status);
   const showReject = Boolean(onReject) && canRejectBookingRequest(notification.status);
+  const showConfirm =
+    Boolean(onConfirmPayment) && notification.status === "AcceptedPendingDeposit";
   const errorId = `hall-notification-action-error-${notification.id}`;
-  const feedback = acceptFeedbackKind(acceptErrorKey) ?? acceptFeedbackKind(rejectErrorKey);
-  const errorText = translateError(t, acceptErrorKey) ?? translateError(t, rejectErrorKey);
+  const feedback =
+    acceptFeedbackKind(acceptErrorKey) ??
+    acceptFeedbackKind(rejectErrorKey) ??
+    acceptFeedbackKind(confirmErrorKey);
+  const errorText =
+    translateError(t, acceptErrorKey) ??
+    translateError(t, rejectErrorKey) ??
+    translateError(t, confirmErrorKey);
   const showCancelled = notification.status === "Cancelled";
   const showFinalized =
     notification.status === "Rejected" || notification.status === "FullyBooked";
@@ -66,15 +86,25 @@ export default function HallNotificationCard({
 
   return (
     <article
-      className={`hall-notification-card min-w-0 overflow-hidden rounded-2xl border bg-white px-3.5 py-3 shadow-[0_8px_20px_rgba(90,55,45,0.06)] sm:px-4 sm:py-3.5 ${cardTone(visualState)}`}
+      className={`hall-notification-card min-w-0 overflow-hidden rounded-2xl border bg-white px-3.5 py-3 shadow-[0_8px_20px_rgba(90,55,45,0.06)] sm:px-4 sm:py-3.5 ${cardTone(visualState)} ${
+        highlighted
+          ? "ring-2 ring-[var(--wesal-maroon)] ring-offset-2 ring-offset-white"
+          : ""
+      }`}
       data-testid="hall-notification-card"
       data-notification-id={notification.id}
       data-notification-status={notification.status ?? "unknown"}
       data-acceptance-state={visualState}
-      aria-busy={accepting || rejecting || undefined}
+      data-highlighted={highlighted ? "true" : undefined}
+      aria-busy={accepting || rejecting || confirming || undefined}
     >
       <div className="flex min-w-0 items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0 flex-1 overflow-hidden">
+          {hallName ? (
+            <p className="mb-1 truncate text-[0.68rem] font-semibold text-[var(--wesal-maroon)]">
+              {hallName}
+            </p>
+          ) : null}
           <p className="text-[0.68rem] font-medium text-[var(--wesal-muted)]">
             {t("owner.notifications.requester")}
           </p>
@@ -109,7 +139,7 @@ export default function HallNotificationCard({
             {t("owner.notifications.periods")}
           </dt>
           <dd className="mt-1 flex min-w-0 flex-wrap gap-1.5">
-            {periodLabels.map((label, index) => (
+            {whenLabels.map((label, index) => (
               <span
                 key={`${notification.id}-${label}-${index}`}
                 className="max-w-full break-words rounded-full bg-[var(--wesal-pink-soft)] px-2.5 py-1 text-[0.72rem] font-semibold leading-5 text-[var(--wesal-text)] [overflow-wrap:anywhere]"
@@ -127,9 +157,12 @@ export default function HallNotificationCard({
           className="mt-3 text-[0.75rem] leading-5 text-[#8a6a2a]"
           data-testid="owner-deposit-hint"
           role="status"
-          title={t("owner.notifications.depositHint")}
         >
-          {t("owner.notifications.depositHint")}
+          {notification.depositAmount != null
+            ? t("owner.notifications.depositDue", {
+                amount: formatDepositAmount(notification.depositAmount),
+              })
+            : t("owner.notifications.depositHint")}
         </p>
       ) : null}
 
@@ -148,13 +181,13 @@ export default function HallNotificationCard({
         <AcceptanceFeedback id={errorId} kind="generic" message={errorText} />
       ) : null}
 
-      {showAccept || showReject ? (
+      {showAccept || showReject || showConfirm ? (
         <div className="hall-request-actions mt-3">
           {showReject ? (
             <RejectActionButton
               bookingId={notification.id}
               busy={rejecting}
-              disabled={rejectLocked || accepting}
+              disabled={rejectLocked || accepting || confirming}
               describedBy={errorText ? errorId : undefined}
               onClick={() => onReject?.(notification)}
             />
@@ -163,10 +196,24 @@ export default function HallNotificationCard({
             <AcceptActionButton
               bookingId={notification.id}
               busy={accepting}
-              disabled={acceptLocked || rejecting}
+              disabled={acceptLocked || rejecting || confirming}
               describedBy={errorText || showCancelled ? errorId : undefined}
               onClick={() => onAccept?.(notification)}
             />
+          ) : null}
+          {showConfirm ? (
+            <button
+              type="button"
+              className="btn-primary hall-accept-btn min-h-11"
+              data-testid={`hall-notification-confirm-payment-${notification.id}`}
+              disabled={confirmLocked || accepting || rejecting}
+              aria-busy={confirming || undefined}
+              onClick={() => onConfirmPayment?.(notification)}
+            >
+              {confirming
+                ? t("owner.notifications.confirmingPayment")
+                : t("owner.notifications.confirmPayment")}
+            </button>
           ) : null}
         </div>
       ) : null}

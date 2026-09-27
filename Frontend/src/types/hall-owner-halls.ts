@@ -12,6 +12,8 @@ export type HallOwnerHall = {
   status: HallApprovalStatus;
   paymentStatus: HallPaymentStatus;
   paymentReceiptUploadedAt: string | null;
+  daysRemaining: number | null;
+  subscriptionExpiresAt: string | null;
   expiryWarning: HallExpiryWarning | null;
   adminLocked: boolean;
   systemLocked: boolean;

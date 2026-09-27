@@ -29,7 +29,7 @@ export default function AdminMessageComposer({
 }: AdminMessageComposerProps) {
   const t = useT();
   const fieldRef = useRef<HTMLTextAreaElement>(null);
-  const trimmed = value.trim();
+  const trimmed = (value ?? "").trim();
   const canSend = !disabled && trimmed.length > 0 && trimmed.length <= MAX_LENGTH;
 
   useLayoutEffect(() => {

@@ -7,6 +7,10 @@ import {
   isForbiddenApiError,
   isUnauthorizedApiError,
 } from "@/lib/api-error";
+import {
+  BOOKING_CANCELLED_EVENT,
+  type BookingCancelledDetail,
+} from "@/lib/booking-events";
 import { fetchOwnerHallBookingRequests } from "@/services/owner-hall-booking-requests";
 import type {
   OwnerHallBookingRequest,
@@ -74,8 +78,14 @@ export function useHallBookingRequests(hallId: string) {
 
   const load = useCallback(
     async (mode: "initial" | "refresh" = "initial") => {
+      const requestHallId = hallId.trim();
+      if (!requestHallId) {
+        setRequests([]);
+        setStatus("ready");
+        setIsRefreshing(false);
+        return;
+      }
       const generation = ++generationRef.current;
-      const requestHallId = hallId;
 
       const soft =
         mode === "refresh" && hasLoadedForHallRef.current === requestHallId;
@@ -130,6 +140,12 @@ export function useHallBookingRequests(hallId: string) {
 
   useEffect(() => {
     generationRef.current += 1;
+    if (!hallId.trim()) {
+      setRequests([]);
+      setStatus("ready");
+      setIsRefreshing(false);
+      return;
+    }
     const timer = window.setTimeout(() => {
       void load("initial");
     }, 0);
@@ -137,12 +153,31 @@ export function useHallBookingRequests(hallId: string) {
       window.clearTimeout(timer);
       generationRef.current += 1;
     };
-  }, [load]);
+  }, [hallId, load]);
 
   const refetch = useCallback(() => {
     void load(
       hasLoadedForHallRef.current === hallId ? "refresh" : "initial",
     );
+  }, [hallId, load]);
+
+  useEffect(() => {
+    if (!hallId.trim()) return;
+    const onCancelled = (event: Event) => {
+      const detail = (event as CustomEvent<BookingCancelledDetail>).detail;
+      if (!detail?.bookingId) return;
+      if (detail.hallId && detail.hallId !== hallId) return;
+      setRequests((current) =>
+        current
+          .map((item) =>
+            item.id === detail.bookingId ? { ...item, status: "Cancelled" as const } : item,
+          )
+          .filter((item) => item.status !== "Cancelled"),
+      );
+      void load("refresh");
+    };
+    window.addEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
+    return () => window.removeEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
   }, [hallId, load]);
 
   return {

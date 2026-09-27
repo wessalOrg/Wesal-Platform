@@ -3,6 +3,13 @@ import { REGULAR_PROFILE_PATH } from "@/lib/account-profile-path";
 export const SEEKER_DASHBOARD_PATH = REGULAR_PROFILE_PATH;
 export const SEEKER_ACCOUNT_PATH = `${REGULAR_PROFILE_PATH}/account`;
 export const SEEKER_BOOKINGS_PATH = `${REGULAR_PROFILE_PATH}/bookings`;
+
+export function seekerBookingContactPath(bookingId: string): string {
+  const id = bookingId.trim();
+  return id
+    ? `${SEEKER_BOOKINGS_PATH}?booking_id=${encodeURIComponent(id)}&intent=contact`
+    : SEEKER_BOOKINGS_PATH;
+}
 export const SEEKER_NOTIFICATIONS_PATH = `${REGULAR_PROFILE_PATH}/notifications`;
 export const SEEKER_MESSAGES_PATH = `${REGULAR_PROFILE_PATH}/messages`;
 

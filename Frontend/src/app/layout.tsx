@@ -3,6 +3,8 @@ import { Cairo } from "next/font/google";
 import { AiAssistantProvider } from "@/components/assistant/AiAssistantProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import HallOwnerAudioAlerts from "@/components/halls/notifications/HallOwnerAudioAlerts";
+import NotificationEventsBridge from "@/components/notifications/NotificationEventsBridge";
+import NotificationToastHost from "@/components/notifications/NotificationToastHost";
 import { AudioPermissionProvider } from "@/hooks/useAudioPermission";
 import MessagesInboxPanelHost from "@/components/messages/MessagesInboxPanelHost";
 import { MessagesInboxProvider } from "@/components/messages/MessagesInboxProvider";
@@ -57,7 +59,9 @@ export default function RootLayout({
             <UserProfileProvider>
               <LanguageProvider>
                 <MessagesInboxProvider>
+                  <NotificationEventsBridge />
                   <AiAssistantProvider>{children}</AiAssistantProvider>
+                  <NotificationToastHost />
                   <MessagesInboxPanelHost />
                 </MessagesInboxProvider>
               </LanguageProvider>

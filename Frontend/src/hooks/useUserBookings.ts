@@ -2,13 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCancelBooking } from "@/hooks/useCancelBooking";
-import { BOOKING_CANCELLED_EVENT, type BookingCancelledDetail } from "@/lib/booking-events";
+import {
+  BOOKING_ACCEPTED_EVENT,
+  BOOKING_CANCELLED_EVENT,
+  BOOKING_REJECTED_EVENT,
+  type BookingAcceptedDetail,
+  type BookingCancelledDetail,
+  type BookingRejectedDetail,
+} from "@/lib/booking-events";
 import { canCancelBooking } from "@/lib/booking-status";
 import {
   loadRememberedBookings,
   patchRememberedBooking,
   rememberUserBookings,
   replaceRememberedBookings,
+  USER_BOOKINGS_CHANGED_EVENT,
 } from "@/lib/user-bookings-store";
 import { fetchMyBookings } from "@/services/bookings";
 import type { BookingStatus, UserBooking } from "@/types/booking";
@@ -90,17 +98,29 @@ export function useUserBookings() {
     return () => window.clearTimeout(timer);
   }, [reload]);
 
-  const applyStatus = useCallback((bookingId: string, next: BookingStatus) => {
+  const applyStatus = useCallback((
+    bookingId: string,
+    next: BookingStatus,
+    extra?: { rejectionReason?: string | null; depositAmount?: number | null },
+  ) => {
+    const reason = extra?.rejectionReason?.trim();
     setBookings((current) => {
       const updated = current.map((item) =>
-        item.bookingId === bookingId ? { ...item, status: next } : item,
+        item.bookingId === bookingId
+          ? {
+              ...item,
+              status: next,
+              ...(reason ? { rejectionReason: reason } : {}),
+              ...(extra && "depositAmount" in extra ? { depositAmount: extra.depositAmount } : {}),
+            }
+          : item,
       );
       if (sharedCache) {
         sharedCache = { bookings: updated, fetchedAt: sharedCache.fetchedAt };
       }
       return updated;
     });
-    patchRememberedBooking(bookingId, next);
+    patchRememberedBooking(bookingId, next, extra);
   }, []);
 
   useEffect(() => {
@@ -109,8 +129,33 @@ export function useUserBookings() {
       if (!detail?.bookingId) return;
       applyStatus(detail.bookingId, "Cancelled");
     };
+    const onRejected = (event: Event) => {
+      const detail = (event as CustomEvent<BookingRejectedDetail>).detail;
+      if (!detail?.bookingId) return;
+      applyStatus(detail.bookingId, "Rejected", { rejectionReason: detail.rejectionReason });
+    };
+    const onAccepted = (event: Event) => {
+      const detail = (event as CustomEvent<BookingAcceptedDetail>).detail;
+      if (!detail?.bookingId) return;
+      applyStatus(detail.bookingId, "Accepted", { depositAmount: detail.depositAmount });
+    };
+    const onRemembered = () => {
+      const next = loadRememberedBookings();
+      setBookings(next);
+      if (sharedCache) {
+        sharedCache = { bookings: next, fetchedAt: sharedCache.fetchedAt };
+      }
+    };
     window.addEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
-    return () => window.removeEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
+    window.addEventListener(BOOKING_REJECTED_EVENT, onRejected);
+    window.addEventListener(BOOKING_ACCEPTED_EVENT, onAccepted);
+    window.addEventListener(USER_BOOKINGS_CHANGED_EVENT, onRemembered);
+    return () => {
+      window.removeEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
+      window.removeEventListener(BOOKING_REJECTED_EVENT, onRejected);
+      window.removeEventListener(BOOKING_ACCEPTED_EVENT, onAccepted);
+      window.removeEventListener(USER_BOOKINGS_CHANGED_EVENT, onRemembered);
+    };
   }, [applyStatus]);
 
   const cancelBooking = useCallback(

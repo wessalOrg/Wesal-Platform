@@ -10,7 +10,10 @@ export type HallSubscriptionBilling = {
 export type HallSubscription = {
   hallId: string;
   status: HallSubscriptionStatus;
+  subscriptionStatus: HallSubscriptionStatus;
+  isPaid: boolean;
   billing: HallSubscriptionBilling | null;
+  subscriptionExpiresAt: string | null;
   daysRemaining: number | null;
   expiryWarningDispatched: boolean;
 };
