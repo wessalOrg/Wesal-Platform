@@ -32,6 +32,10 @@ export type OwnerHallBookingRequestDto = {
   requestedPeriod?: string | number | null;
   periods?: Array<string | number | null> | null;
   bookingPeriods?: Array<string | number | null> | null;
+  slotStarts?: Array<string | null> | null;
+  timeRange?: string | null;
+  requesterUserId?: string | null;
+  depositAmount?: unknown;
   status?: string | number | null;
   createdAt?: string | null;
   requestedAt?: string | null;
@@ -93,10 +97,6 @@ function readPeriods(dto: OwnerHallBookingRequestDto): BookingPeriodType[] {
   return single ? [single] : [];
 }
 
-export function mapOwnerHallBookingRequestDto(
-  dto: OwnerHallBookingRequestDto,
-  fallbackHallId: string,
-): OwnerHallBookingRequest | null {
 function readSlotStarts(dto: OwnerHallBookingRequestDto): string[] {
   if (!Array.isArray(dto.slotStarts)) return [];
   const starts: string[] = [];
@@ -131,7 +131,7 @@ export function mapOwnerHallBookingRequestDto(
     timeRange: timeRange || undefined,
     status: parseBookingStatus(dto.status),
     depositAmount: parseDepositAmount(dto.depositAmount),
-        : null,
+    createdAt: dto.createdAt ?? dto.requestedAt ?? null,
   };
 }
 

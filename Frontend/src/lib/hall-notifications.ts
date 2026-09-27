@@ -4,6 +4,7 @@ import { parseDepositAmount } from "@/lib/booking-deposits";
 import { parseBookingPeriodType } from "@/lib/booking-period";
 import { normalizeTimeOnly } from "@/lib/hourly-slots";
 import { parseCanDeleteFlag } from "@/lib/owner-delete-booking";
+import { parseCanPublishFlag, parsePublishedFlag } from "@/lib/owner-publish-booking";
 import {
   parseOwnerBookingRequestStatus,
   statusAfterOwnerAccept,
@@ -53,6 +54,8 @@ type NotificationDto = {
   isPublished?: unknown;
   published?: unknown;
   publicationStatus?: unknown;
+  alreadyPublished?: unknown;
+  isAlreadyPublished?: unknown;
   canDelete?: unknown;
   isDeletable?: unknown;
   eligibleForDeletion?: unknown;
@@ -148,8 +151,12 @@ export function mapHallBookingNotification(
     requesterUserId: asText(data.requesterUserId || data.userId),
     date: date ?? asText(data.date ?? data.requestedDate),
     periods: periodsFromDto(data),
+    slotStarts: slotStartsFromDto(data),
+    timeRange: asText(data.timeRange) || undefined,
     status,
     rejectionReason: asText(data.rejectionReason || data.reason) || undefined,
+    depositAmount: parseDepositAmount(data.depositAmount),
+    depositPaymentConfirmedAt: confirmedAtFromDto(data.depositPaymentConfirmedAt),
     canPublish,
     isPublished,
     canDelete: parseCanDeleteFlag(data),
@@ -178,7 +185,10 @@ export function mapAcceptBookingResult(
     hallId: mapped?.hallId || hallId,
     date: mapped?.date ?? "",
     periods: mapped?.periods ?? [],
+    slotStarts: mapped?.slotStarts,
+    timeRange: mapped?.timeRange,
     status: statusAfterOwnerAccept(),
+    depositAmount: mapped?.depositAmount ?? parseDepositAmount(data.depositAmount),
   };
 }
 
@@ -187,13 +197,7 @@ export function mapPublishBookingResult(
   hallId: string,
   bookingId: string,
 ): PublishBookingResult {
-  const data = unwrapAcceptPayload(payload) as NotificationDto & {
-    alreadyPublished?: unknown;
-    slotStarts: mapped?.slotStarts,
-    timeRange: mapped?.timeRange,
-    status: statusAfterOwnerAccept(),
-    depositAmount: mapped?.depositAmount ?? parseDepositAmount(data.depositAmount),
-  };
+  const data = unwrapAcceptPayload(payload);
   const mapped = mapHallBookingNotification(data, hallId, 0);
   const period = parseBookingPeriodType(data.period);
   const periods =
