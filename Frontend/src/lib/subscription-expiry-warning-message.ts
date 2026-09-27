@@ -80,7 +80,7 @@ export function parseSubscriptionExpiryWarningMessage(
   content: string,
   fallbackHallName = "",
 ): ClassifiedExpiryWarningContent {
-  const text = content.trim();
+  const text = typeof content === "string" ? content.trim() : "";
   if (!text) return { kind: "text" };
 
   const fromJson = parseJsonWarning(text);

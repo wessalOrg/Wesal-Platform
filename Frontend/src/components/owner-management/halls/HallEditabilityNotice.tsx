@@ -7,18 +7,15 @@ type HallEditabilityNoticeProps = {
   editability: HallEditability;
 };
 
-/** Locked / Under Review are business states — not technical errors. */
+/** Admin/system lock is a business state — approval status never freezes the form. */
 export default function HallEditabilityNotice({
   editability,
 }: HallEditabilityNoticeProps) {
   const t = useT();
 
-  if (editability === "editable") return null;
+  if (editability !== "locked") return null;
 
-  const messageKey =
-    editability === "underReview"
-      ? "owner.management.hallEdit.underReviewNotice"
-      : "owner.management.hallEdit.lockedNotice";
+  const messageKey = "owner.management.hallEdit.lockedNotice";
 
   return (
     <div

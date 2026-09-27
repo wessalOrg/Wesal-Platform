@@ -20,6 +20,8 @@ import {
   getRegisterPasswordIssue,
   REGISTER_LIMITS,
 } from "@/lib/register-validation";
+import { isHallOwnerAccountType } from "@/lib/account-role";
+import { notifySeekerWelcome } from "@/lib/platform-notifications-store";
 import { registerAccount } from "@/services/auth";
 
 type RegisterFormCardProps = {
@@ -248,13 +250,17 @@ export default function RegisterFormCard({
 
     setPending(true);
     try {
-      await registerAccount({
+      const result = await registerAccount({
         fullName: fullName.trim(),
         email: email.trim(),
         password,
         confirmPassword,
         accountType: resolvedAccountType,
       });
+
+      if (!isHallOwnerAccountType(resolvedAccountType) && !isHallOwnerAccountType(result.accountType)) {
+        notifySeekerWelcome(result.id);
+      }
 
       clearStoredAccountType();
       setSuccess(true);

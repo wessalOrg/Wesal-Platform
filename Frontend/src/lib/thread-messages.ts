@@ -1,3 +1,4 @@
+import { conversationTimeValue } from "@/lib/conversation-mapper";
 import { isSameUserId } from "@/lib/current-user";
 import type { ThreadMessage } from "@/types/messages";
 
@@ -5,8 +6,9 @@ function mergeMessage(current: ThreadMessage, incoming: ThreadMessage): ThreadMe
   return {
     ...current,
     ...incoming,
-    senderName: incoming.senderName.trim() || current.senderName,
-    senderUserId: incoming.senderUserId || current.senderUserId,
+    senderName: (incoming.senderName ?? "").trim() || current.senderName || "",
+    senderUserId: incoming.senderUserId || current.senderUserId || "",
+    content: incoming.content ?? current.content ?? "",
     clientRequestId: current.clientRequestId ?? incoming.clientRequestId,
     delivery: incoming.delivery ?? current.delivery ?? "sent",
   };
@@ -14,13 +16,14 @@ function mergeMessage(current: ThreadMessage, incoming: ThreadMessage): ThreadMe
 
 export function sortThreadMessages(messages: ThreadMessage[]): ThreadMessage[] {
   return [...messages].sort((left, right) => {
-    const time = Date.parse(left.sentAt) - Date.parse(right.sentAt);
+    const time = conversationTimeValue(left.sentAt) - conversationTimeValue(right.sentAt);
     if (time !== 0) return time;
     return left.id.localeCompare(right.id);
   });
 }
 
 export function upsertThreadMessage(messages: ThreadMessage[], incoming: ThreadMessage): ThreadMessage[] {
+  if (!incoming?.id) return Array.isArray(messages) ? messages : [];
   const byId = messages.findIndex((item) => item.id === incoming.id);
   if (byId >= 0) {
     const next = [...messages];
@@ -56,7 +59,8 @@ export function mergeServerMessages(
   server: ThreadMessage[],
   extras: ThreadMessage[],
 ): ThreadMessage[] {
-  let next = server.map((item) => ({ ...item, delivery: item.delivery ?? ("sent" as const) }));
+  const source = Array.isArray(server) ? server : [];
+  let next = source.map((item) => ({ ...item, delivery: item.delivery ?? ("sent" as const) }));
   for (const extra of extras) {
     next = upsertThreadMessage(next, extra);
   }

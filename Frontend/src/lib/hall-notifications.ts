@@ -1,7 +1,8 @@
 import { ApiError } from "@/lib/api-error";
 import { parseDateIso } from "@/lib/booking-date";
+import { parseDepositAmount } from "@/lib/booking-deposits";
 import { parseBookingPeriodType } from "@/lib/booking-period";
-import { parseCanPublishFlag, parsePublishedFlag } from "@/lib/owner-publish-booking";
+import { normalizeTimeOnly } from "@/lib/hourly-slots";
 import { parseCanDeleteFlag } from "@/lib/owner-delete-booking";
 import {
   parseOwnerBookingRequestStatus,
@@ -35,9 +36,13 @@ type NotificationDto = {
   requestedPeriod?: number | string;
   period?: number | string;
   periods?: unknown;
+  slotStarts?: unknown;
+  timeRange?: string;
   status?: string | number;
   rejectionReason?: string;
   reason?: string;
+  depositAmount?: unknown;
+  depositPaymentConfirmedAt?: unknown;
   canPublish?: unknown;
   isPublishable?: unknown;
   eligibleForPublication?: unknown;
@@ -98,6 +103,22 @@ function periodsFromDto(data: NotificationDto): BookingPeriodType[] {
   if (single && !collected.includes(single)) collected.push(single);
 
   return collected;
+}
+
+function slotStartsFromDto(data: NotificationDto): string[] {
+  if (!Array.isArray(data.slotStarts)) return [];
+  const starts: string[] = [];
+  for (const item of data.slotStarts) {
+    const normalized = normalizeTimeOnly(item);
+    if (normalized && !starts.includes(normalized)) starts.push(normalized);
+  }
+  return starts;
+}
+
+function confirmedAtFromDto(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed && trimmed !== "0001-01-01T00:00:00+00:00" ? trimmed : null;
 }
 
 export function mapHallBookingNotification(
@@ -168,7 +189,10 @@ export function mapPublishBookingResult(
 ): PublishBookingResult {
   const data = unwrapAcceptPayload(payload) as NotificationDto & {
     alreadyPublished?: unknown;
-    isAlreadyPublished?: unknown;
+    slotStarts: mapped?.slotStarts,
+    timeRange: mapped?.timeRange,
+    status: statusAfterOwnerAccept(),
+    depositAmount: mapped?.depositAmount ?? parseDepositAmount(data.depositAmount),
   };
   const mapped = mapHallBookingNotification(data, hallId, 0);
   const period = parseBookingPeriodType(data.period);

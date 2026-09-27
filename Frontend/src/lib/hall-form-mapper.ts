@@ -13,11 +13,9 @@ import { normalizeRegisterPhone } from "@/lib/register-validation";
  *   name, contactPhone, region (HallRegion enum name), address, detailedAddress?,
  *   description, capacity, price? (omit when empty), youtubeVideoUrl?,
  *   features (JSON string[] in one field — the controller splits it), otherFeatures?,
- *   firstPeriodStart, firstPeriodEnd, secondPeriodStart, secondPeriodEnd,
  *   mainPhoto (single file, cover promoted to MainImageUrl), photos (repeat)
  *
  * Region values: NorthGaza | Gaza | MiddleArea | SouthGaza (enum names).
- * Period times: HH:mm (TimeOnly-compatible).
  */
 export const CREATE_HALL_PATH = "/owner/halls";
 
@@ -60,11 +58,6 @@ export function mapHallFormToCreateHallRequest(
   if (values.features.length > 0) {
     formData.append("features", JSON.stringify(values.features));
   }
-
-  formData.append("firstPeriodStart", values.firstPeriod.startTime.trim());
-  formData.append("firstPeriodEnd", values.firstPeriod.endTime.trim());
-  formData.append("secondPeriodStart", values.secondPeriod.startTime.trim());
-  formData.append("secondPeriodEnd", values.secondPeriod.endTime.trim());
 
   if (values.mainPhoto) {
     formData.append("mainPhoto", values.mainPhoto, values.mainPhoto.name);

@@ -1,5 +1,6 @@
 "use client";
 
+import ActiveSubscriptionDays from "@/components/halls/subscription/ActiveSubscriptionDays";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
 import SubscriptionStatusBadge from "@/components/halls/subscription/SubscriptionStatusBadge";
 import { useUiLang } from "@/components/layout/LanguageProvider";
@@ -48,6 +49,12 @@ export default function SubscriptionReadyPanel({
           <SubscriptionStatusBadge status={subscription.status} />
         </div>
       </div>
+
+      {subscription.status === "active" && subscription.daysRemaining != null ? (
+        <div className="mt-3">
+          <ActiveSubscriptionDays daysRemaining={subscription.daysRemaining} />
+        </div>
+      ) : null}
 
       {billing ? (
         <dl className="mt-3 rounded-xl bg-[var(--wesal-pink-soft)] px-3.5 py-3 text-sm">

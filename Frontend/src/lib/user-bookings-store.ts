@@ -3,6 +3,12 @@ import { parseBookingPeriodType } from "@/lib/booking-period";
 import { parseBookingStatus } from "@/lib/booking-status";
 
 const STORAGE_KEY = "wesal-user-bookings";
+export const USER_BOOKINGS_CHANGED_EVENT = "wesal-user-bookings-changed";
+
+function notifyBookingsChanged() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(USER_BOOKINGS_CHANGED_EVENT));
+}
 
 function canUseStorage() {
   return typeof window !== "undefined";
@@ -34,14 +40,28 @@ function mapStoredBooking(value: unknown): UserBooking | null {
   const period = parseBookingPeriodType(item.period);
   const bookingId = String(item.bookingId ?? "").trim();
   const hallId = String(item.hallId ?? "").trim();
-  if (!bookingId || !hallId || !period) return null;
+  const slotStart = typeof item.slotStart === "string" ? item.slotStart.trim() : "";
+  const timeRange = typeof item.timeRange === "string" ? item.timeRange.trim() : "";
+  if (!bookingId || !hallId) return null;
+  if (!period && !slotStart && !timeRange) return null;
+  const depositAmount =
+    typeof item.depositAmount === "number" && Number.isFinite(item.depositAmount)
+      ? item.depositAmount
+      : null;
   return {
     bookingId,
     hallId,
     hallName: String(item.hallName ?? "").trim(),
     date: String(item.date ?? ""),
-    period,
+    period: period ?? undefined,
+    slotStart: slotStart || undefined,
+    timeRange: timeRange || undefined,
     status: parseBookingStatus(item.status),
+    depositAmount,
+    rejectionReason:
+      typeof item.rejectionReason === "string" && item.rejectionReason.trim()
+        ? item.rejectionReason.trim()
+        : undefined,
   };
 }
 
@@ -58,6 +78,7 @@ export function rememberUserBookings(next: UserBooking[]) {
     else merged.unshift(booking);
   }
   writeAll(merged);
+  notifyBookingsChanged();
 }
 
 /** Replace the remembered list after a full API fetch. */
@@ -80,10 +101,46 @@ export function rememberBookingsFromResult(result: BookingRequestResult) {
   );
 }
 
-export function patchRememberedBooking(bookingId: string, status: BookingStatus) {
+export function patchRememberedBooking(
+  bookingId: string,
+  status: BookingStatus,
+  extra?: { rejectionReason?: string | null; depositAmount?: number | null },
+) {
+  const reason = extra?.rejectionReason?.trim();
   writeAll(
-    readAll().map((item) => (item.bookingId === bookingId ? { ...item, status } : item)),
+    readAll().map((item) =>
+      item.bookingId === bookingId
+        ? {
+            ...item,
+            status,
+            ...(reason ? { rejectionReason: reason } : {}),
+            ...(extra && "depositAmount" in extra ? { depositAmount: extra.depositAmount } : {}),
+          }
+        : item,
+    ),
   );
+  notifyBookingsChanged();
+}
+
+export function rememberBookingRejection(match: {
+  hallName?: string | null;
+  date?: string | null;
+  period?: string | null;
+  reason: string;
+}): void {
+  const reason = match.reason.trim();
+  const date = match.date?.trim() ?? "";
+  if (!reason || !date) return;
+  const period = parseBookingPeriodType(match.period);
+
+  writeAll(
+    readAll().map((item) => {
+      if (item.date !== date) return item;
+      if (period && item.period !== period) return item;
+      return { ...item, status: "Rejected", rejectionReason: reason };
+    }),
+  );
+  notifyBookingsChanged();
 }
 
 export function bookingsFromResult(result: BookingRequestResult): UserBooking[] {

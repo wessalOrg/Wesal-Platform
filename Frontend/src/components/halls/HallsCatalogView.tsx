@@ -1,35 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import CatalogHallCard from "@/components/halls/CatalogHallCard";
-import RegionFilterBar from "@/components/home/RegionFilterBar";
+import HallsFilterBar from "@/components/halls/HallsFilterBar";
+import { useHallFilters, hasActiveHallFilters, serializeHallFilters } from "@/hooks/useHallFilters";
 import { usePublicHallsRevalidation } from "@/hooks/usePublicHallsRevalidation";
 import { useT } from "@/i18n";
-import { fetchCatalogHalls, filterCatalogHalls } from "@/services/halls";
-import {
-  REGION_OPTIONS,
-  type FeaturedHall,
-  type HallRegion,
-} from "@/types/hall";
+import { fetchCatalogHalls, fetchSearchHalls, filterCatalogHalls } from "@/services/halls";
+import type { FeaturedHall } from "@/types/hall";
 
 const HallDetailsView = dynamic(
   () => import("@/components/halls/HallDetailsView"),
   { ssr: false },
 );
 
-type SearchDraft = {
-  q: string;
-  region: HallRegion;
-};
-
-const EMPTY_SEARCH: SearchDraft = {
-  q: "",
-  region: "all",
-};
-
 const PAGE_SIZE = 6;
+const SEARCH_PAGE_SIZE = 50;
 const PAGE_BTN_CLASS =
   "flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-[var(--wesal-gold)]/60 bg-[var(--wesal-maroon)]/25 text-sm font-bold text-[var(--wesal-maroon)] shadow-[0_8px_22px_rgba(193,123,127,0.18)] transition hover:border-[var(--wesal-gold)] hover:bg-[var(--wesal-maroon)] hover:text-white disabled:cursor-not-allowed disabled:border-[var(--wesal-gold)]/25 disabled:bg-white/40 disabled:text-[var(--wesal-maroon)]/35 disabled:shadow-none";
 const PAGE_NUM_ACTIVE_CLASS =
@@ -51,46 +38,26 @@ function getPageItems(pageCount: number, current: number): (number | "ellipsis")
   return items;
 }
 
-function isHallRegion(value: string): value is HallRegion {
-  return REGION_OPTIONS.some((option) => option.id === value);
-}
-
-function parseFiltersFromQuery(params: URLSearchParams): SearchDraft {
-  const q =
-    params.get("q") ?? params.get("name") ?? params.get("area") ?? "";
-  const region = params.get("region") ?? "all";
-  return {
-    q,
-    region: isHallRegion(region) ? region : "all",
-  };
-}
-
-function serializeFiltersToQuery(filters: SearchDraft): string {
-  const params = new URLSearchParams();
-  if (filters.q.trim()) params.set("q", filters.q.trim());
-  if (filters.region !== "all") params.set("region", filters.region);
-  return params.toString();
-}
-
-function isSearchActive(filters: SearchDraft): boolean {
-  return Boolean(filters.q.trim()) || filters.region !== "all";
-}
-
 export default function HallsCatalogView() {
   const t = useT();
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<SearchDraft>(() =>
-    parseFiltersFromQuery(searchParams),
-  );
+  const {
+    filters,
+    detailedDraft,
+    addresses,
+    hasActiveFilters,
+    setRegion,
+    setAddress,
+    setDetailedAddress,
+    resetFilters,
+  } = useHallFilters();
   const [halls, setHalls] = useState<FeaturedHall[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [errorKind, setErrorKind] = useState<"catalog" | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const filterKey = serializeFiltersToQuery(filters);
+  const filterKey = serializeHallFilters(filters);
+  const serverFilterKey = `${filters.region}|${filters.address}|${filters.detailedAddress}`;
   const [paging, setPaging] = useState({ key: filterKey, page: 0 });
   if (paging.key !== filterKey) {
     setPaging({ key: filterKey, page: 0 });
@@ -103,32 +70,11 @@ export default function HallsCatalogView() {
   const gridRef = useRef<HTMLDivElement>(null);
   const isFirstLoad = useRef(true);
 
-  const queryString = searchParams.toString();
-
   const requestRevalidate = useCallback(() => {
     setReloadKey((key) => key + 1);
   }, []);
 
   usePublicHallsRevalidation(requestRevalidate);
-
-  useEffect(() => {
-    const fromUrl = parseFiltersFromQuery(new URLSearchParams(queryString));
-    // URL is an external store (back/forward); keep local filters in sync.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFilters((current) =>
-      serializeFiltersToQuery(current) === serializeFiltersToQuery(fromUrl)
-        ? current
-        : fromUrl,
-    );
-  }, [queryString]);
-
-  useEffect(() => {
-    const nextQuery = serializeFiltersToQuery(filters);
-    if (nextQuery === queryString) return;
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
-      scroll: false,
-    });
-  }, [filters, pathname, queryString, router]);
 
   useEffect(() => {
     let active = true;
@@ -138,30 +84,49 @@ export default function HallsCatalogView() {
       setIsRefreshing(true);
     }
 
-    void fetchCatalogHalls().then((result) => {
+    const useSearch = hasActiveHallFilters(filters);
+
+    void (async () => {
+      const result = useSearch
+        ? await fetchSearchHalls({
+            region: filters.region,
+            address: filters.address,
+            detailedAddress: filters.detailedAddress,
+            pageSize: SEARCH_PAGE_SIZE,
+          })
+        : await fetchCatalogHalls();
+
+      const resolved =
+        useSearch && result.source !== "api" ? await fetchCatalogHalls() : result;
+
       if (!active) return;
       isFirstLoad.current = false;
 
-      setHalls(result.halls);
-      if (result.source === "api") {
+      setHalls(resolved.halls);
+      if (resolved.source === "api") {
         setError(null);
         setErrorKind(null);
       } else {
-        setError(result.error ?? t("halls.catalog.connectionError"));
+        setError(resolved.error ?? t("halls.catalog.connectionError"));
         setErrorKind("catalog");
       }
 
       setStatus("ready");
       setIsRefreshing(false);
-    });
+    })();
 
     return () => {
       active = false;
     };
-  }, [reloadKey, t]);
+  }, [filters.address, filters.detailedAddress, filters.region, reloadKey, serverFilterKey, t]);
 
   const filtered = useMemo(
-    () => filterCatalogHalls(halls, filters),
+    () =>
+      filterCatalogHalls(halls, {
+        region: filters.region,
+        address: filters.address,
+        detailedAddress: filters.detailedAddress,
+      }),
     [halls, filters],
   );
 
@@ -179,63 +144,21 @@ export default function HallsCatalogView() {
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const updateQuery = (value: string) => {
-    setFilters((current) => ({ ...current, q: value }));
-  };
-
-  const clearAllFilters = () => {
-    setFilters(EMPTY_SEARCH);
-  };
-
-  const hasActiveFilters = isSearchActive(filters);
-
   return (
     <div className="container-wesal py-8 sm:py-10" data-testid="halls-catalog">
-      <form
-        className="rounded-xl border border-[var(--wesal-border)] bg-white p-2 shadow-[0_8px_24px_rgba(90,55,45,0.06)]"
-        onSubmit={(event) => {
-          event.preventDefault();
-        }}
-        role="search"
-        aria-label={t("halls.catalog.searchAria")}
-      >
-        <div className="flex items-center gap-2">
-          <label className="sr-only" htmlFor="halls-catalog-search">
-            {t("halls.catalog.searchAria")}
-          </label>
-          <input
-            id="halls-catalog-search"
-            type="search"
-            value={filters.q}
-            onChange={(event) => updateQuery(event.target.value)}
-            placeholder={t("halls.catalog.searchPlaceholder")}
-            autoComplete="off"
-            className="h-11 min-w-0 flex-1 rounded-md border-0 bg-transparent px-3 text-sm font-medium text-[var(--wesal-text)] outline-none placeholder:text-[var(--wesal-muted)]"
-          />
-          {filters.q ? (
-            <button
-              type="button"
-              onClick={() => updateQuery("")}
-              className="shrink-0 rounded-md px-3 py-2 text-sm font-semibold text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)]"
-            >
-              {t("halls.catalog.clearFilters")}
-            </button>
-          ) : null}
-          <button type="submit" className="btn-primary h-11 shrink-0 gap-2 rounded-md px-5">
-            <SearchIcon />
-            {t("halls.catalog.search")}
-          </button>
-        </div>
-      </form>
+      <HallsFilterBar
+        region={filters.region}
+        address={filters.address}
+        detailedAddress={detailedDraft}
+        addresses={addresses}
+        hasActiveFilters={hasActiveFilters}
+        onRegionChange={setRegion}
+        onAddressChange={setAddress}
+        onDetailedAddressChange={setDetailedAddress}
+        onReset={resetFilters}
+      />
 
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-4 sm:mt-10">
-        <RegionFilterBar
-          className=""
-          value={filters.region}
-          onChange={(region) =>
-            setFilters((current) => ({ ...current, region }))
-          }
-        />
+      <div className="mt-8 flex flex-wrap items-center justify-end gap-4 sm:mt-10">
         <p className="inline-flex items-center gap-2 text-sm font-medium text-[var(--wesal-maroon)]">
           {status === "loading" || isRefreshing ? (
             <>
@@ -333,21 +256,21 @@ export default function HallsCatalogView() {
         >
           <p className="font-semibold text-[var(--wesal-text)]">
             {hasActiveFilters
-              ? t("halls.catalog.empty")
+              ? t("halls.catalog.emptyLocation")
               : t("halls.catalog.emptyApproved")}
           </p>
-          <p className="mt-2 text-sm text-[var(--wesal-muted)]">
-            {hasActiveFilters
-              ? t("halls.catalog.emptyFilterHint")
-              : t("halls.catalog.emptyLaterHint")}
-          </p>
+          {hasActiveFilters ? null : (
+            <p className="mt-2 text-sm text-[var(--wesal-muted)]">
+              {t("halls.catalog.emptyLaterHint")}
+            </p>
+          )}
           {hasActiveFilters ? (
             <button
               type="button"
               className="btn-outline mt-5"
-              onClick={clearAllFilters}
+              onClick={resetFilters}
             >
-              {t("halls.catalog.clearFilters")}
+              {t("halls.catalog.resetFilters")}
             </button>
           ) : null}
         </div>
@@ -449,15 +372,6 @@ function Chevron({ dir }: { dir: "left" | "right" }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M16 16l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }

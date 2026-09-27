@@ -33,7 +33,7 @@ export default function BookingRejectionCard({
   const hallName =
     localizeHallName("", details.hallName, lang).trim() ||
     t("messages.rejection.valueMissing");
-  const reason = details.reason.trim() || t("messages.rejection.reasonMissing");
+  const reason = (details.reason ?? "").trim() || t("messages.rejection.reasonMissing");
 
   return (
     <article
@@ -70,7 +70,7 @@ export default function BookingRejectionCard({
             <p className="text-[0.82rem] leading-6 text-[var(--wesal-muted)]">
               {t("messages.rejection.unavailable")}
             </p>
-            {originalContent.trim() ? (
+            {(originalContent ?? "").trim() ? (
               <ExpandableCopy text={originalContent} />
             ) : null}
           </div>

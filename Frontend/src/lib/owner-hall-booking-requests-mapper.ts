@@ -1,5 +1,7 @@
 import { parseDateIso } from "@/lib/booking-date";
+import { parseDepositAmount } from "@/lib/booking-deposits";
 import { parseBookingStatus } from "@/lib/booking-status";
+import { normalizeTimeOnly } from "@/lib/hourly-slots";
 import type { BookingPeriodType } from "@/types/booking";
 import type { OwnerHallBookingRequest } from "@/types/owner-hall-booking-requests";
 
@@ -95,24 +97,40 @@ export function mapOwnerHallBookingRequestDto(
   dto: OwnerHallBookingRequestDto,
   fallbackHallId: string,
 ): OwnerHallBookingRequest | null {
+function readSlotStarts(dto: OwnerHallBookingRequestDto): string[] {
+  if (!Array.isArray(dto.slotStarts)) return [];
+  const starts: string[] = [];
+  for (const item of dto.slotStarts) {
+    const normalized = normalizeTimeOnly(item);
+    if (normalized && !starts.includes(normalized)) starts.push(normalized);
+  }
+  return starts;
+}
+
+export function mapOwnerHallBookingRequestDto(
+  dto: OwnerHallBookingRequestDto,
+  fallbackHallId: string,
+): OwnerHallBookingRequest | null {
   const id = readId(dto);
   if (!id) return null;
   const date = parseDateIso(dto.date ?? dto.requestedDate);
   if (!date) return null;
   const periods = readPeriods(dto);
-  if (periods.length === 0) return null;
+  const slotStarts = readSlotStarts(dto);
+  const timeRange = String(dto.timeRange ?? "").trim();
+  if (periods.length === 0 && slotStarts.length === 0 && !timeRange) return null;
 
   return {
     id,
     hallId: String(dto.hallId ?? "").trim() || fallbackHallId,
     requesterName: readRequesterName(dto),
+    requesterUserId: String(dto.requesterUserId ?? "").trim() || undefined,
     date,
     periods,
+    slotStarts,
+    timeRange: timeRange || undefined,
     status: parseBookingStatus(dto.status),
-    createdAt: dto.createdAt
-      ? String(dto.createdAt).trim() || null
-      : dto.requestedAt
-        ? String(dto.requestedAt).trim() || null
+    depositAmount: parseDepositAmount(dto.depositAmount),
         : null,
   };
 }

@@ -1,4 +1,3 @@
-import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
 import { toHallPaymentStatus } from "@/constants/hallPaymentStatus";
 import {
   fromHallRegionApi,
@@ -12,7 +11,6 @@ import type {
   HallEditability,
   HallOwnerHallDetails,
 } from "@/types/hall-owner-hall-management";
-import { EMPTY_BOOKING_PERIOD } from "@/types/hall-registration";
 
 /**
  * wesal-api US-OWNER-07 contract:
@@ -28,12 +26,6 @@ export type OwnerHallPhotoDto = {
   id?: string | null;
   url?: string | null;
   displayOrder?: number | null;
-};
-
-export type OwnerHallBookingPeriodDto = {
-  type?: string | number | null;
-  startTime?: string | null;
-  endTime?: string | null;
 };
 
 export type OwnerHallDetailsDto = {
@@ -64,46 +56,7 @@ export type OwnerHallDetailsDto = {
   systemLocked?: boolean | null;
   isSystemLocked?: boolean | null;
   photos?: OwnerHallPhotoDto[] | null;
-  bookingPeriods?: OwnerHallBookingPeriodDto[] | null;
 };
-
-function normalizeTime(raw: string | null | undefined): string {
-  const value = String(raw ?? "").trim();
-  if (!value) return "";
-  const match = value.match(/^(\d{2}:\d{2})/);
-  return match ? match[1] : value;
-}
-
-function parsePeriodType(raw: string | number | null | undefined): "first" | "second" | null {
-  if (raw === 0 || raw === "0") return "first";
-  if (raw === 1 || raw === "1") return "second";
-  const normalized = String(raw ?? "")
-    .replace(/[\s_-]/g, "")
-    .toLowerCase();
-  if (normalized === "firstperiod" || normalized === "first") return "first";
-  if (normalized === "secondperiod" || normalized === "second") return "second";
-  return null;
-}
-
-function readPeriods(dto: OwnerHallDetailsDto): {
-  firstPeriod: { startTime: string; endTime: string };
-  secondPeriod: { startTime: string; endTime: string };
-} {
-  const firstPeriod = { ...EMPTY_BOOKING_PERIOD };
-  const secondPeriod = { ...EMPTY_BOOKING_PERIOD };
-  const list = Array.isArray(dto.bookingPeriods) ? dto.bookingPeriods : [];
-  for (const item of list) {
-    const which = parsePeriodType(item.type);
-    if (!which) continue;
-    const period = {
-      startTime: normalizeTime(item.startTime),
-      endTime: normalizeTime(item.endTime),
-    };
-    if (which === "first") Object.assign(firstPeriod, period);
-    else Object.assign(secondPeriod, period);
-  }
-  return { firstPeriod, secondPeriod };
-}
 
 function mapPhoto(dto: OwnerHallPhotoDto, index: number): ExistingHallPhoto | null {
   const url = String(dto.url ?? "").trim();
@@ -144,17 +97,12 @@ function mapPhotos(dto: OwnerHallDetailsDto): ExistingHallPhoto[] {
 }
 
 /**
- * Backend: IsEditable = Status != PendingReview.
- * PendingReview → underReview; otherwise editable when IsEditable is true/omitted.
+ * Backend: IsEditable is independent of approval status (Pending/Approved/Rejected).
  */
 export function resolveHallEditability(
   dto: OwnerHallDetailsDto,
-  status: HallApprovalStatus,
 ): HallEditability {
-  if (status === "Pending") return "underReview";
   if (dto.isEditable === false) return "locked";
-  if (dto.isEditable === true) return "editable";
-  // Match backend default: anything not PendingReview is editable.
   return "editable";
 }
 
@@ -188,7 +136,6 @@ export function mapOwnerHallDetailsDto(
   const status =
     mapBackendHallStatus(String(dto.status ?? "")) ?? "Pending";
   const access = hallAccessFromUnknown(dto);
-  const periods = readPeriods(dto);
   const region =
     fromHallRegionApi(dto.regionDisplayName) ||
     fromHallRegionApi(dto.region);
@@ -197,7 +144,7 @@ export function mapOwnerHallDetailsDto(
     id,
     name: String(dto.hallName ?? "").trim() || "—",
     status,
-    editability: resolveHallEditability(dto, status),
+    editability: resolveHallEditability(dto),
     contactPhone: String(dto.contactPhone ?? "").trim(),
     region,
     address: String(dto.address ?? "").trim(),
@@ -221,8 +168,6 @@ export function mapOwnerHallDetailsDto(
       ? resolveOwnerMediaUrl(String(dto.mainImageUrl))
       : null,
     photos: mapPhotos(dto),
-    firstPeriod: periods.firstPeriod,
-    secondPeriod: periods.secondPeriod,
     adminLocked: access.adminLocked,
     systemLocked: access.systemLocked,
   };
@@ -246,15 +191,9 @@ export function mapHallDetailsToEditForm(
     youtubeVideoUrl: details.youtubeVideoUrl,
     features: [...details.features],
     otherFeatures: details.otherFeatures,
-    firstPeriod: {
-      startTime: details.firstPeriod.startTime || EMPTY_BOOKING_PERIOD.startTime,
-      endTime: details.firstPeriod.endTime || EMPTY_BOOKING_PERIOD.endTime,
-    },
-    secondPeriod: {
-      startTime: details.secondPeriod.startTime || EMPTY_BOOKING_PERIOD.startTime,
-      endTime: details.secondPeriod.endTime || EMPTY_BOOKING_PERIOD.endTime,
-    },
     existingPhotos: [...details.photos],
     coverPhotoUrl: details.mainImageUrl ?? (details.photos[0]?.url ?? null),
+    mainPhoto: null,
+    photos: [],
   };
 }

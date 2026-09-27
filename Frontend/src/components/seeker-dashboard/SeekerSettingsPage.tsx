@@ -71,12 +71,18 @@ export default function SeekerSettingsPage() {
   const profileState = useUserProfile();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [draft, setDraft] = useState<ProfileDraft | null>(null);
+  const [draft, setDraft] = useState<ProfileDraft | null>(() =>
+    profileState.profile ? toDraft(profileState.profile) : null,
+  );
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   /** Pending pick — not written until Save. */
-  const [avatarDraft, setAvatarDraft] = useState<string | null>(null);
-  const [committedAvatar, setCommittedAvatar] = useState<string | null>(null);
+  const [committedAvatar, setCommittedAvatar] = useState<string | null>(() =>
+    profileState.profile ? readCommittedAvatar(profileState.profile.id) : null,
+  );
+  const [avatarDraft, setAvatarDraft] = useState<string | null>(() =>
+    profileState.profile ? readCommittedAvatar(profileState.profile.id) : null,
+  );
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
 
@@ -113,16 +119,6 @@ export default function SeekerSettingsPage() {
     setToastMessage(null);
   }, []);
 
-  if (!profileState.authReady || profileState.status === "loading" || !draft) {
-    return (
-      <div
-        className="h-72 animate-pulse rounded-3xl bg-white/80"
-        aria-busy="true"
-        data-testid="seeker-settings-loading"
-      />
-    );
-  }
-
   if (profileState.status === "unauthorized") {
     return (
       <section className="seeker-settings-card" data-testid="seeker-settings-unauthorized">
@@ -135,7 +131,7 @@ export default function SeekerSettingsPage() {
     );
   }
 
-  if (profileState.status === "error" || !profileState.profile) {
+  if (profileState.status === "error" && !profileState.profile) {
     return (
       <section className="seeker-settings-card" data-testid="seeker-settings-error">
         <h1 className="seeker-settings-title">{t("seeker.nav.account")}</h1>
@@ -144,6 +140,16 @@ export default function SeekerSettingsPage() {
           {t("common.retry")}
         </button>
       </section>
+    );
+  }
+
+  if (!profileState.authReady || profileState.status === "loading" || !draft || !profileState.profile) {
+    return (
+      <div
+        className="h-72 animate-pulse rounded-3xl bg-white/80"
+        aria-busy="true"
+        data-testid="seeker-settings-loading"
+      />
     );
   }
 
@@ -231,7 +237,13 @@ export default function SeekerSettingsPage() {
         <p className="seeker-settings-lead">{t("profile.subtitle")}</p>
       </header>
 
-      <ProfileHeroCard profile={profile} />
+      <ProfileHeroCard
+        profile={profile}
+        fullName={profile.fullName}
+        email={profile.email}
+        phoneNumber={profile.phoneNumber}
+        createdAt={profile.createdAt}
+      />
 
       <div className="seeker-settings-split">
         <section className="seeker-settings-card" data-testid="seeker-settings-profile">

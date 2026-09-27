@@ -1,8 +1,10 @@
 "use client";
 
 import { type FormEvent } from "react";
-import BookingPeriodsSection from "@/components/owner-management/add-hall/BookingPeriodsSection";
+import OwnerHourlyControls from "@/components/halls/hourly/OwnerHourlyControls";
+import HallFormSection from "@/components/owner-management/add-hall/HallFormSection";
 import HallBasicInfoSection from "@/components/owner-management/add-hall/HallBasicInfoSection";
+import HallDescriptionSection from "@/components/owner-management/add-hall/HallDescriptionSection";
 import HallFeaturesSection from "@/components/owner-management/add-hall/HallFeaturesSection";
 import HallFormActions from "@/components/owner-management/add-hall/HallFormActions";
 import HallLocationSection from "@/components/owner-management/add-hall/HallLocationSection";
@@ -18,6 +20,7 @@ import type {
 import type { HallRegistrationFormValues } from "@/types/hall-registration";
 
 type HallManagementFormProps = {
+  hallId: string;
   values: HallEditFormValues;
   fieldErrors: HallEditFieldErrors;
   formError: string | null;
@@ -26,12 +29,10 @@ type HallManagementFormProps = {
   isSuccess: boolean;
   controlsDisabled: boolean;
   onPatch: (patch: Partial<HallEditFormValues>) => void;
-  onChangePeriod: (
-    which: "firstPeriod" | "secondPeriod",
-    patch: Partial<HallEditFormValues["firstPeriod"]>,
-  ) => void;
   onRemoveExistingPhoto: (photoId: string) => void;
   onSetCover: (url: string) => void;
+  onAddNewPhotos: (files: FileList | File[]) => void;
+  onRemoveNewPhoto: (index: number) => void;
   onSubmit: () => void;
 };
 
@@ -58,10 +59,8 @@ function toSectionValues(values: HallEditFormValues): HallRegistrationFormValues
     youtubeVideoUrl: values.youtubeVideoUrl,
     features: values.features,
     otherFeatures: values.otherFeatures,
-    firstPeriod: values.firstPeriod,
-    secondPeriod: values.secondPeriod,
-    photos: [],
-    mainPhoto: null,
+    photos: values.photos,
+    mainPhoto: values.mainPhoto,
   };
 }
 
@@ -72,7 +71,7 @@ function interactionState(
   formError: string | null,
   editability: HallEditability,
 ): string {
-  if (editability !== "editable") return editability;
+  if (editability === "locked") return editability;
   if (isSubmitting) return "submitting";
   if (isSuccess) return "success";
   if (hasFieldErrors) return "validationError";
@@ -84,6 +83,7 @@ function interactionState(
  * Presentational edit form — reuses US-OWNER-04 sections; photos are management-specific.
  */
 export default function HallManagementForm({
+  hallId,
   values,
   fieldErrors,
   formError,
@@ -92,15 +92,16 @@ export default function HallManagementForm({
   isSuccess,
   controlsDisabled,
   onPatch,
-  onChangePeriod,
   onRemoveExistingPhoto,
   onSetCover,
+  onAddNewPhotos,
+  onRemoveNewPhoto,
   onSubmit,
 }: HallManagementFormProps) {
   const t = useT();
   const resolveError = (value: string | undefined) => resolveMessage(t, value);
   const sectionValues = toSectionValues(values);
-  const canSubmit = editability === "editable";
+  const canSubmit = editability !== "locked";
   const state = interactionState(
     isSubmitting,
     isSuccess,
@@ -147,6 +148,14 @@ export default function HallManagementForm({
           resolveError={resolveError}
         />
 
+        <HallDescriptionSection
+          values={sectionValues}
+          fieldErrors={fieldErrors}
+          disabled={controlsDisabled}
+          onChange={(patch) => onPatch(patch)}
+          resolveError={resolveError}
+        />
+
         <HallFeaturesSection
           values={sectionValues}
           fieldErrors={fieldErrors}
@@ -161,26 +170,29 @@ export default function HallManagementForm({
           disabled={controlsDisabled}
           onChange={(patch) => onPatch(patch)}
           resolveError={resolveError}
-          hideMainPhoto
+          currentCoverUrl={values.coverPhotoUrl}
         />
 
         <HallManagementPhotosSection
           existingPhotos={values.existingPhotos}
+          newPhotos={values.photos}
           coverPhotoUrl={values.coverPhotoUrl}
           fieldErrors={fieldErrors}
           disabled={controlsDisabled}
           onRemoveExisting={onRemoveExistingPhoto}
           onSetCover={onSetCover}
+          onAddNew={onAddNewPhotos}
+          onRemoveNew={onRemoveNewPhoto}
           resolveError={resolveError}
         />
 
-        <BookingPeriodsSection
-          values={sectionValues}
-          fieldErrors={fieldErrors}
-          disabled={controlsDisabled}
-          onChangePeriod={onChangePeriod}
-          resolveError={resolveError}
-        />
+        <HallFormSection
+          id="hall-hourly-settings-heading"
+          title={t("owner.hourly.title")}
+          description={t("owner.hourly.settingsHint")}
+        >
+          <OwnerHourlyControls hallId={hallId} disabled={controlsDisabled} />
+        </HallFormSection>
       </div>
 
       <HallFormActions

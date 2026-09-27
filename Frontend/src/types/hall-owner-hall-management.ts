@@ -2,12 +2,14 @@ import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
 import type { HallPaymentStatus } from "@/constants/hallPaymentStatus";
 import type { HallRegion } from "@/constants/hallRegions";
 import type {
-  BookingPeriodFormValues,
   HallRegistrationFieldErrors,
   HallRegistrationFieldPath,
 } from "@/types/hall-registration";
 
-/** Backend-driven edit gate — never infer from Approved alone as the full rule. */
+/**
+ * Backend-driven edit gate. Approval status is never a lock.
+ * `underReview` is kept for older cached payloads and is treated as editable.
+ */
 export type HallEditability = "editable" | "locked" | "underReview";
 
 export type ExistingHallPhoto = {
@@ -39,8 +41,6 @@ export type HallOwnerHallDetails = {
   hasPaymentReceipt: boolean;
   mainImageUrl: string | null;
   photos: ExistingHallPhoto[];
-  firstPeriod: BookingPeriodFormValues;
-  secondPeriod: BookingPeriodFormValues;
   adminLocked: boolean;
   systemLocked: boolean;
 };
@@ -58,11 +58,13 @@ export type HallEditFormValues = {
   youtubeVideoUrl: string;
   features: string[];
   otherFeatures: string;
-  firstPeriod: BookingPeriodFormValues;
-  secondPeriod: BookingPeriodFormValues;
   existingPhotos: ExistingHallPhoto[];
   /** URL of the existing photo used as the cover (mainImageUrl on PUT). */
   coverPhotoUrl: string | null;
+  /** Replacement cover file — tracked separately from existing media IDs. */
+  mainPhoto: File | null;
+  /** Newly picked gallery files — never mixed with existing photo IDs. */
+  photos: File[];
 };
 
 export type HallEditFieldErrors = HallRegistrationFieldErrors;

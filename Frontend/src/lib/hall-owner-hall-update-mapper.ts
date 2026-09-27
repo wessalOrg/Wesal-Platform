@@ -1,4 +1,4 @@
-import { toHallRegionApi, toTimeOnlyApi } from "@/lib/hall-owner-api-region";
+import { toHallRegionApi } from "@/lib/hall-owner-api-region";
 import { toOwnerPhotoApiUrl } from "@/lib/hall-owner-hall-management-mapper";
 import { normalizeRegisterPhone } from "@/lib/register-validation";
 import type { HallEditFormValues } from "@/types/hall-owner-hall-management";
@@ -8,15 +8,9 @@ export type UpdateOwnerHallPhotoDto = {
   displayOrder: number;
 };
 
-export type UpdateOwnerHallBookingPeriodDto = {
-  type: "FirstPeriod" | "SecondPeriod";
-  startTime: string;
-  endTime: string;
-};
-
 /**
  * wesal-api UpdateOwnerHallRequest (JSON).
- * Photos are URLs only — new File uploads are not part of this contract.
+ * New files are sent on the same PUT as multipart (`payload` + mainPhoto + photos).
  */
 export type UpdateOwnerHallRequest = {
   name: string;
@@ -33,7 +27,6 @@ export type UpdateOwnerHallRequest = {
   features: string[];
   otherFeatures: string | null;
   photos: UpdateOwnerHallPhotoDto[];
-  bookingPeriods: UpdateOwnerHallBookingPeriodDto[];
 };
 
 /**
@@ -72,17 +65,5 @@ export function mapHallFormToUpdateHallRequest(
     features: values.features,
     otherFeatures: values.otherFeatures.trim() || null,
     photos,
-    bookingPeriods: [
-      {
-        type: "FirstPeriod",
-        startTime: toTimeOnlyApi(values.firstPeriod.startTime),
-        endTime: toTimeOnlyApi(values.firstPeriod.endTime),
-      },
-      {
-        type: "SecondPeriod",
-        startTime: toTimeOnlyApi(values.secondPeriod.startTime),
-        endTime: toTimeOnlyApi(values.secondPeriod.endTime),
-      },
-    ],
   };
 }

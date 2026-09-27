@@ -1,12 +1,10 @@
 import api from "@/lib/api";
-import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
 import { toBookingError } from "@/lib/booking-errors";
 import { parseBookingPeriodType } from "@/lib/booking-period";
 import {
   mockCancelBookingRequest,
   mockFetchMyBookings,
-  mockFetchPeriodAvailability,
   mockSubmitBookingRequest,
 } from "@/services/bookings-mock";
 import {
@@ -16,8 +14,8 @@ import {
 } from "@/lib/user-bookings-store";
 import { parseBookingStatus } from "@/lib/booking-status";
 import { toCancelBookingError } from "@/lib/booking-cancel-errors";
-import { emitBookingCancelled } from "@/lib/booking-events";
-import { mapAvailabilityDays } from "@/services/halls";
+import { emitBookingCancelled, emitBookingSubmitted } from "@/lib/booking-events";
+import { getStoredAuth } from "@/lib/auth-storage";
 import type {
   BookingRequestInput,
   BookingRequestResult,
@@ -25,7 +23,6 @@ import type {
   CreatedBooking,
   UserBooking,
 } from "@/types/booking";
-import type { HallAvailabilityDay, HallDayPeriod } from "@/types/hall";
 
 /** Live JWT talks to POST /bookings. Demo stub login stays on the mock store. */
 export function bookingsUseMock(): boolean {
@@ -46,20 +43,6 @@ type ApiBookingResult = {
   requesterUserId?: string;
   status?: string;
   periods?: ApiCreatedBooking[];
-};
-
-type HallAvailabilityPayload = {
-  availability?: Array<{
-    date?: string;
-    periods?: Array<{
-      periodType?: number | string;
-      periodName?: string;
-      startTime?: string;
-      endTime?: string;
-      status?: number | string;
-    }>;
-  }>;
-  data?: HallAvailabilityPayload;
 };
 
 function mapCreatedPeriod(item: ApiCreatedBooking): CreatedBooking | null {
@@ -100,6 +83,13 @@ export async function submitBookingRequest(
   if (bookingsUseMock()) {
     const result = await mockSubmitBookingRequest(input);
     rememberBookingsFromResult(result);
+    emitBookingSubmitted({
+      hallId: result.hallId,
+      hallName: result.hallName,
+      date: result.date,
+      bookingId: result.periods[0]?.bookingId,
+      periods: result.periods.map((item) => item.period),
+    });
     return result;
   }
 
@@ -115,6 +105,13 @@ export async function submitBookingRequest(
     );
     const result = mapResult(data ?? {}, input);
     rememberBookingsFromResult(result);
+    emitBookingSubmitted({
+      hallId: result.hallId,
+      hallName: result.hallName,
+      date: result.date,
+      bookingId: result.periods[0]?.bookingId,
+      periods: result.periods.map((item) => item.period),
+    });
     return result;
   } catch (err) {
     throw toBookingError(err);
@@ -158,6 +155,8 @@ export async function cancelBookingRequest(
       hallId: result.hallId,
       date: result.date,
       period: result.period,
+      hallName: result.hallName,
+      requesterName: getStoredAuth()?.user?.name?.trim() || "",
     });
     return result;
   }
@@ -183,45 +182,11 @@ export async function cancelBookingRequest(
       hallId: result.hallId,
       date: result.date,
       period: result.period,
+      hallName: result.hallName,
+      requesterName: getStoredAuth()?.user?.name?.trim() || "",
     });
     return result;
   } catch (err) {
     throw toCancelBookingError(err);
-  }
-}
-
-function unwrapHallAvailability(payload: HallAvailabilityPayload): HallAvailabilityPayload {
-  if (payload?.data && typeof payload.data === "object") return payload.data;
-  return payload ?? {};
-}
-
-/**
- * There is no dedicated per-date availability endpoint. Fresh period state
- * comes from GET /halls/{id} (Availability on hall details).
- */
-export async function fetchPeriodAvailability(
-  hallId: string,
-  dateIso: string,
-  seedDays: HallAvailabilityDay[],
-): Promise<HallDayPeriod[]> {
-  if (bookingsUseMock()) {
-    return mockFetchPeriodAvailability(hallId, dateIso, seedDays);
-  }
-
-  try {
-    const { data } = await api.get<HallAvailabilityPayload>(`/halls/${hallId}`, {
-      timeout: 8000,
-    });
-    const days = mapAvailabilityDays(unwrapHallAvailability(data).availability);
-    const day = days.find((item) => item.dateIso === dateIso);
-    if (day?.periods?.length) return day.periods;
-
-    const seeded = seedDays.find((item) => item.dateIso === dateIso);
-    return seeded?.periods ?? [];
-  } catch (err) {
-    if (err instanceof ApiError) {
-      throw toBookingError(err, "errors.booking.availability");
-    }
-    throw toBookingError(err, "errors.booking.availability");
   }
 }

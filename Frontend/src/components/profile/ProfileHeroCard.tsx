@@ -7,6 +7,7 @@ import {
   readProfileAvatar,
   resolveProfileAvatarUserIds,
 } from "@/lib/profile-avatar";
+import { memberSinceYear } from "@/lib/profile-mapper";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
@@ -22,17 +23,38 @@ function readFirstAvatar(profileId: string): string | null {
   return null;
 }
 
+type ProfileHeroCardProps = {
+  profile?: UserProfile | null;
+  fullName?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
+  createdAt?: string | null;
+  avatarUrl?: string | null;
+};
+
 export default function ProfileHeroCard({
   profile,
-}: {
-  profile: UserProfile;
-}) {
+  fullName,
+  email,
+  phoneNumber,
+  createdAt,
+  avatarUrl: avatarUrlProp,
+}: ProfileHeroCardProps) {
   const t = useT();
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const name = (fullName ?? profile?.fullName)?.trim() || "";
+  const mail = (email ?? profile?.email)?.trim() || "";
+  const phone = (phoneNumber ?? profile?.phoneNumber)?.trim() || "";
+  const joined = memberSinceYear(createdAt ?? profile?.createdAt);
+  const profileId = profile?.id ?? "";
+  const [storedAvatar, setStoredAvatar] = useState<string | null>(null);
 
   useEffect(() => {
-    const ids = new Set(resolveProfileAvatarUserIds(profile.id));
-    const refresh = () => setAvatarUrl(readFirstAvatar(profile.id));
+    if (!profileId) {
+      setStoredAvatar(null);
+      return;
+    }
+    const ids = new Set(resolveProfileAvatarUserIds(profileId));
+    const refresh = () => setStoredAvatar(readFirstAvatar(profileId));
     refresh();
 
     const onAvatar = (event: Event) => {
@@ -42,7 +64,9 @@ export default function ProfileHeroCard({
     };
     window.addEventListener("wesal:profile-avatar", onAvatar);
     return () => window.removeEventListener("wesal:profile-avatar", onAvatar);
-  }, [profile.id]);
+  }, [profileId]);
+
+  const avatarUrl = avatarUrlProp || storedAvatar;
 
   return (
     <section className="seeker-profile-card" data-testid="profile-page">
@@ -53,27 +77,30 @@ export default function ProfileHeroCard({
               // eslint-disable-next-line @next/next/no-img-element -- local data URL
               <img src={avatarUrl} alt="" className="seeker-profile-card-avatar-img" />
             ) : (
-              <span>{initials(profile.fullName)}</span>
+              <span>{initials(name)}</span>
             )}
           </div>
         </div>
 
         <div className="seeker-profile-card-meta">
           <div className="seeker-profile-card-name-row">
-            <h2 className="seeker-profile-card-name">{profile.fullName}</h2>
+            <h2 className="seeker-profile-card-name">{name || t("profile.unspecified")}</h2>
           </div>
-          <p className="seeker-profile-card-member">
-            <span className="seeker-profile-card-member-icon" aria-hidden="true">
-              <ShieldIcon />
-            </span>
-            <span>{t("profile.memberSince", { year: "2023" })}</span>
-          </p>
+          {joined ? (
+            <p className="seeker-profile-card-member">
+              <span className="seeker-profile-card-member-icon" aria-hidden="true">
+                <ShieldIcon />
+              </span>
+              <span>{t("profile.memberSince", { year: joined })}</span>
+            </p>
+          ) : null}
         </div>
       </div>
 
       <div className="seeker-profile-card-facts">
-        <ProfileFact label={t("profile.phone")} value={profile.phoneNumber} dir="ltr" />
-        <ProfileFact label={t("profile.email")} value={profile.email} dir="ltr" />
+        <ProfileFact label={t("profile.fullName")} value={name} />
+        <ProfileFact label={t("profile.phone")} value={phone} dir="ltr" />
+        <ProfileFact label={t("profile.email")} value={mail} dir="ltr" />
       </div>
     </section>
   );
@@ -88,11 +115,17 @@ function ProfileFact({
   value: string;
   dir?: "ltr" | "rtl";
 }) {
+  const t = useT();
+  const empty = !value.trim();
   return (
     <div className="seeker-profile-fact">
       <p className="seeker-profile-fact-label">{label}</p>
-      <p className="seeker-profile-fact-value" dir={dir || "auto"}>
-        {value || "—"}
+      <p
+        className={`seeker-profile-fact-value ${empty ? "text-[var(--wesal-muted)]" : ""}`}
+        dir={empty ? "auto" : dir || "auto"}
+        data-empty={empty ? "true" : undefined}
+      >
+        {empty ? t("profile.unspecified") : value}
       </p>
     </div>
   );

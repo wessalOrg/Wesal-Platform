@@ -2,6 +2,7 @@ import HallOwnerHallNotificationsView from "@/components/owner-management/halls/
 
 type OwnerHallNotificationsPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ request_id?: string }>;
 };
 
 /**
@@ -9,7 +10,11 @@ type OwnerHallNotificationsPageProps = {
  */
 export default async function OwnerHallNotificationsPage({
   params,
+  searchParams,
 }: OwnerHallNotificationsPageProps) {
   const { id } = await params;
-  return <HallOwnerHallNotificationsView key={id} hallId={id} />;
+  const query = await searchParams;
+  return (
+    <HallOwnerHallNotificationsView key={id} hallId={id} requestId={query.request_id} />
+  );
 }

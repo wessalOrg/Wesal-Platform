@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import BookingPendingLimitAlert from "@/components/bookings/BookingPendingLimitAlert";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/i18n";
+import { isPendingLimitErrorKey } from "@/lib/booking-pending-limit";
+import { HOURLY_DEMO_PATH, startHourlyDemoSession } from "@/lib/hourly-demo-session";
 import type { HallSlotPrice } from "@/types/hall";
 
 type HallActionCardProps = {
@@ -19,6 +24,7 @@ type HallActionCardProps = {
   confirmPending?: boolean;
   confirmSuccess?: boolean;
   confirmError?: string | null;
+  confirmErrorKey?: string | null;
   disabled?: boolean;
   bookPending?: boolean;
   isGuest?: boolean;
@@ -81,6 +87,7 @@ export default function HallActionCard({
   confirmPending = false,
   confirmSuccess = false,
   confirmError = null,
+  confirmErrorKey = null,
   disabled = false,
   bookPending = false,
   isGuest = false,
@@ -90,6 +97,8 @@ export default function HallActionCard({
   onGuestAuthNavigate,
 }: HallActionCardProps) {
   const t = useT();
+  const router = useRouter();
+  const { applyLocalSession } = useAuth();
   const showGuestAuth = isGuest && !disabled;
   const price = priceSummary?.trim() || fallbackPrice(slotPrices);
   const dateValue = selectedDateLabel?.trim() || t("halls.details.summaryPickDate");
@@ -165,7 +174,9 @@ export default function HallActionCard({
         </p>
       ) : null}
 
-      {confirmError ? (
+      {isPendingLimitErrorKey(confirmErrorKey) ? (
+        <BookingPendingLimitAlert className="mt-4" />
+      ) : confirmError ? (
         <p
           className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700"
           role="alert"
@@ -206,21 +217,34 @@ export default function HallActionCard({
           ) : null}
 
           {showGuestAuth ? (
-            <div className="grid grid-cols-2 gap-2">
-              <Link
-                href={loginHref}
-                onClick={onGuestAuthNavigate}
-                className="btn-outline w-full text-center text-xs sm:text-sm"
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href={loginHref}
+                  onClick={onGuestAuthNavigate}
+                  className="btn-outline w-full text-center text-xs sm:text-sm"
+                >
+                  {t("nav.login")}
+                </Link>
+                <Link
+                  href={registerHref}
+                  onClick={onGuestAuthNavigate}
+                  className="btn-outline w-full text-center text-xs sm:text-sm"
+                >
+                  {t("nav.register")}
+                </Link>
+              </div>
+              <button
+                type="button"
+                className="btn-outline w-full text-xs sm:text-sm"
+                data-testid="hourly-demo-start"
+                onClick={() => {
+                  applyLocalSession(startHourlyDemoSession());
+                  router.push(HOURLY_DEMO_PATH);
+                }}
               >
-                {t("nav.login")}
-              </Link>
-              <Link
-                href={registerHref}
-                onClick={onGuestAuthNavigate}
-                className="btn-outline w-full text-center text-xs sm:text-sm"
-              >
-                {t("nav.register")}
-              </Link>
+                {t("halls.hourly.tryDemo")}
+              </button>
             </div>
           ) : null}
         </div>

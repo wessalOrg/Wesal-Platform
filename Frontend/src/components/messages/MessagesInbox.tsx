@@ -1,78 +1,83 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useEffect } from "react";
+import ConversationList from "@/components/messages/ConversationList";
+import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
+import MessageThreadView from "@/components/messages/MessageThreadView";
+import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
+import OwnerConfirmPaymentBar from "@/components/messages/OwnerConfirmPaymentBar";
+import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import { useAccountAccess } from "@/hooks/useAccountAccess";
+import { useAdminChat } from "@/hooks/useAdminChat";
 import { useT } from "@/i18n";
-import { ApiError } from "@/lib/api-error";
-import { conversationHallLabel } from "@/lib/conversation-display";
 import {
-  conversationErrorMessage,
-  fetchMyConversations,
-  type ConversationSummary,
-} from "@/services/conversations";
+  conversationHallLabel,
+  conversationPeerRoleLabel,
+  conversationPreviewSubtitle,
+  conversationPreviewTitle,
+} from "@/lib/conversation-display";
 
-type FetchStatus = "idle" | "loading" | "ready" | "error";
+type MessagesInboxProps = {
+  initialConversationId?: string;
+};
 
-export default function MessagesInbox() {
+export default function MessagesInbox({ initialConversationId }: MessagesInboxProps) {
   const t = useT();
   const lang = useUiLang();
-  const { session, status: authStatus } = useAuth();
-  const [fetchStatus, setFetchStatus] = useState<FetchStatus>("idle");
-  const [items, setItems] = useState<ConversationSummary[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const isGuest = authStatus === "ready" && !session.isAuthenticated;
-  const canFetch = authStatus === "ready" && session.isAuthenticated;
+  const { ready, authenticated, isHallOwner, isAdmin } = useAccountAccess();
+  const {
+    selectedId,
+    canUseMessaging,
+    currentUserId,
+    inboxStatus,
+    conversations,
+    inboxError,
+    retryInbox,
+    threadStatus,
+    thread,
+    threadError,
+    retryThread,
+    draft,
+    setDraft,
+    sendMessage,
+    sendAttachment,
+    retrySend,
+    selectConversation,
+  } = useMessagesInbox();
+  const adminChat = useAdminChat({
+    conversations,
+    selectedId,
+    inboxStatus,
+    selectConversation,
+    sendMessage,
+    sendAttachment,
+  });
 
   useEffect(() => {
-    if (!canFetch) return;
+    if (!authenticated || !initialConversationId) return;
+    selectConversation(initialConversationId);
+  }, [authenticated, initialConversationId, selectConversation]);
 
-    let active = true;
-    queueMicrotask(() => {
-      if (active) setFetchStatus("loading");
-    });
+  const selected = conversations.find((item) => item.conversationId === selectedId) ?? null;
+  const showThread = Boolean(selectedId);
+  const threadTitle = selected
+    ? conversationPreviewTitle(selected, lang)
+    : thread
+      ? conversationHallLabel(thread, lang)
+      : t("messages.title");
+  const threadSubtitle = selected
+    ? conversationPreviewSubtitle(selected, lang)
+    : thread && conversationHallLabel(thread, lang) !== threadTitle
+      ? conversationHallLabel(thread, lang)
+      : null;
+  const threadBadge = conversationPeerRoleLabel({
+    viewerIsHallOwner: isHallOwner,
+    viewerIsAdmin: isAdmin,
+  });
 
-    void fetchMyConversations()
-      .then((next) => {
-        if (!active) return;
-        setItems(next.filter((item) => item.conversationId));
-        setFetchStatus("ready");
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (err instanceof ApiError && err.status === 401) {
-          setFetchStatus("idle");
-          return;
-        }
-        setMessage(conversationErrorMessage(err));
-        setFetchStatus("error");
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [canFetch]);
-
-  if (isGuest) {
-    return (
-      <section
-        className="rounded-2xl bg-white p-6 shadow-[0_12px_30px_rgba(90,55,45,0.08)]"
-        data-testid="messages-inbox-unauthorized"
-      >
-        <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">{t("messages.inboxTitle")}</h1>
-        <p className="mt-3 text-sm leading-7 text-[var(--wesal-muted)]">
-          {t("messages.loginRequired")}
-        </p>
-        <Link href="/login?redirect=/messages" className="btn-primary mt-5">
-          {t("messages.goLogin")}
-        </Link>
-      </section>
-    );
-  }
-
-  if (authStatus === "loading" || fetchStatus === "idle" || fetchStatus === "loading") {
+  if (!ready) {
     return (
       <div
         className="h-64 animate-pulse rounded-2xl bg-white"
@@ -82,57 +87,111 @@ export default function MessagesInbox() {
     );
   }
 
-  if (fetchStatus === "error") {
+  if (!authenticated || !canUseMessaging) {
     return (
       <section
         className="rounded-2xl bg-white p-6 shadow-[0_12px_30px_rgba(90,55,45,0.08)]"
-        data-testid="messages-inbox-error"
+        data-testid="messages-inbox-unauthorized"
       >
-        <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">{t("messages.inboxError")}</h1>
+        <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">{t("messages.inboxTitle")}</h1>
         <p className="mt-3 text-sm leading-7 text-[var(--wesal-muted)]">
-          {message ?? t("messages.inboxError")}
+          {t("messages.loginRequired")}
         </p>
-        <Link href="/halls" className="btn-outline mt-5">
-          {t("common.backToHalls")}
+        <Link
+          href={`/login?redirect=${encodeURIComponent(initialConversationId ? `/messages/${initialConversationId}` : "/messages")}`}
+          className="btn-primary mt-5"
+        >
+          {t("messages.goLogin")}
         </Link>
       </section>
     );
   }
 
   return (
+    <MessagesErrorBoundary>
     <section
-      className="rounded-2xl bg-white p-6 shadow-[0_12px_30px_rgba(90,55,45,0.08)]"
-      data-testid="messages-inbox"
+      className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_30px_rgba(90,55,45,0.08)]"
+      data-testid={initialConversationId ? "messages-thread" : "messages-inbox"}
     >
-      <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">{t("messages.inboxTitle")}</h1>
-      <p className="mt-2 text-sm leading-7 text-[var(--wesal-muted)]">{t("messages.inboxSubtitle")}</p>
+      <header className="border-b border-[var(--wesal-border)] px-5 py-4">
+        <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">{t("messages.inboxTitle")}</h1>
+        <p className="mt-1 text-sm leading-7 text-[var(--wesal-muted)]">{t("messages.inboxSubtitle")}</p>
+      </header>
 
-      {items.length === 0 ? (
-        <div className="mt-8 rounded-xl border border-dashed border-[var(--wesal-border)] px-4 py-8 text-center">
-          <p className="text-sm text-[var(--wesal-muted)]">{t("messages.inboxEmpty")}</p>
-          <Link href="/halls" className="btn-primary mt-5 inline-flex min-h-11">
-            {t("common.backToHalls")}
-          </Link>
+      <div className="seeker-messages-workspace !min-h-[min(36rem,calc(100svh-10rem))] !rounded-none !border-0 !shadow-none">
+        <div
+          className={`seeker-messages-list${showThread ? " seeker-messages-list--hidden-mobile" : ""}`}
+        >
+          <ConversationList
+            status={inboxStatus}
+            conversations={conversations}
+            selectedId={selectedId}
+            error={inboxError}
+            onSelect={selectConversation}
+            onRetry={retryInbox}
+            variant="page"
+          />
         </div>
-      ) : (
-        <ul className="mt-6 divide-y divide-[var(--wesal-border)]">
-          {items.map((item) => (
-            <li key={item.conversationId}>
-              <Link
-                href={`/messages/${item.conversationId}`}
-                className="flex flex-col gap-1 py-4 transition hover:text-[var(--wesal-maroon)]"
-              >
-                <span className="font-semibold text-[var(--wesal-text)]">
-                  {conversationHallLabel(item, lang)}
-                </span>
-                <span className="text-sm text-[var(--wesal-muted)]">
-                  {item.lastMessagePreview || item.otherParticipantName}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+
+        <div
+          className={`seeker-messages-thread${showThread ? " seeker-messages-thread--open" : " seeker-messages-thread--empty"}`}
+        >
+          {showThread ? (
+            <ProtectedHallMessageThread hallId={selected?.hallId ?? thread?.hallId}>
+              <MessageThreadView
+                status={threadStatus}
+                thread={thread}
+                error={threadError}
+                title={threadTitle}
+                subtitle={threadSubtitle}
+                badge={threadBadge}
+                currentUserId={currentUserId}
+                onRetryLoad={retryThread}
+                onRetrySend={retrySend}
+                onSend={(text) => {
+                  void adminChat.sendWithAttachment(text);
+                }}
+                draft={draft}
+                onDraftChange={setDraft}
+                composerEnabled={
+                  Boolean(selectedId) &&
+                  threadStatus !== "loading" &&
+                  threadStatus !== "error" &&
+                  threadStatus !== "idle"
+                }
+                onBack={() => selectConversation(null)}
+                conversationId={selectedId}
+                variant="page"
+                notice={
+                  <>
+                    {isHallOwner ? (
+                      <OwnerConfirmPaymentBar
+                        hallId={selected?.hallId ?? thread?.hallId}
+                        requesterUserId={selected?.otherParticipantId}
+                      />
+                    ) : null}
+                    {adminChat.errorKey ? (
+                      <p role="alert" className="text-sm text-[#a86267]">
+                        {t(adminChat.errorKey)}
+                      </p>
+                    ) : null}
+                  </>
+                }
+                attachmentPreviewUrl={adminChat.attachmentPreviewUrl}
+                attachmentName={adminChat.attachmentName}
+                attachmentBusy={adminChat.attachmentBusy}
+                onPickAttachment={adminChat.pickAttachment}
+                onClearAttachment={adminChat.clearAttachment}
+              />
+            </ProtectedHallMessageThread>
+          ) : (
+            <div className="seeker-messages-placeholder" data-testid="messages-inbox-placeholder">
+              <p>{t("messages.selectConversation")}</p>
+            </div>
+          )}
+        </div>
+      </div>
     </section>
+    </MessagesErrorBoundary>
   );
 }

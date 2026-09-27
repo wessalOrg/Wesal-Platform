@@ -1,6 +1,7 @@
 import { getAuthPersistenceStore } from "@/lib/auth-persist";
 import { clearAccessToken } from "@/lib/auth-token";
 import {
+  buildHallContactPath,
   buildHallDetailsPath,
   withBookingIntent,
 } from "@/lib/booking-intent";
@@ -112,6 +113,11 @@ export function buildLoginRedirectPath(hallId: string, withBookingIntent = false
   return withBookingIntent ? `${base}&action=book` : base;
 }
 
+export function buildContactLoginRedirectPath(hallId: string): string {
+  const hallPath = buildHallContactPath(hallId);
+  return `/login?redirect=${encodeURIComponent(hallPath)}&intent=contact`;
+}
+
 /** Persists hall context so booking can resume after registration/login. */
 export function saveBookingHallContext(hallId: string): void {
   if (typeof window === "undefined") return;
@@ -159,9 +165,15 @@ export function resolveAuthRedirect(
     actionParam === "book" ||
     path.includes("action=book") ||
     path.includes("book=1");
+  const wantsContact =
+    actionParam === "contact" ||
+    path.includes("intent=contact") ||
+    path.includes("action=contact");
 
   const basePath = path.split("?")[0] ?? path;
-  return wantsBooking ? withBookingIntent(basePath) : path;
+  if (wantsBooking) return withBookingIntent(basePath);
+  if (wantsContact) return `${basePath}?intent=contact`;
+  return path;
 }
 
 /** Allow only in-app relative paths like `/halls/1` — reject absolute/protocol URLs. */

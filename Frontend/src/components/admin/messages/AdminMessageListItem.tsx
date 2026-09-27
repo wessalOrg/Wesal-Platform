@@ -49,7 +49,7 @@ export default function AdminMessageListItem({
     item.ownerName.trim() ||
     t("common.hall");
   const preview =
-    conversationListPreview(item.preview) ||
+    conversationListPreview(item.preview, Boolean(item.lastMessageHasAttachment)) ||
     item.preview.trim() ||
     t("messages.previewEmpty");
   const time = formatListTime(item.lastMessageAt ?? item.createdAt, locale);

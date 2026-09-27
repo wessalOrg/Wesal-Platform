@@ -10,7 +10,6 @@ import {
 } from "@/lib/hall-owner-hall-edit-errors";
 import { validateHallEditForm } from "@/lib/hall-owner-hall-edit-validation";
 import { mapHallDetailsToEditForm } from "@/lib/hall-owner-hall-management-mapper";
-import { mapHallFormToUpdateHallRequest } from "@/lib/hall-owner-hall-update-mapper";
 import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
 import { isPaymentRequiredApiError } from "@/lib/payment-required-error";
 import { isHallLockedApiError } from "@/lib/hall-locked-error";
@@ -157,7 +156,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
 
   const detailsMatchSelection = details?.id === hallId;
   const canEdit =
-    detailsMatchSelection && details?.editability === "editable";
+    detailsMatchSelection && details?.editability !== "locked";
   const controlsDisabled =
     !canEdit ||
     submitStatus === "submitting" ||
@@ -186,39 +185,25 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     [clearFeedback, fieldErrors, formError, submitStatus],
   );
 
-  const setPeriod = useCallback(
-    (
-      which: "firstPeriod" | "secondPeriod",
-      patch: Partial<HallEditFormValues["firstPeriod"]>,
-    ) => {
-      setValues((current) =>
-        current
-          ? { ...current, [which]: { ...current[which], ...patch } }
-          : current,
-      );
-      if (
-        Object.keys(fieldErrors).length ||
-        formError ||
-        submitStatus === "success"
-      ) {
-        clearFeedback();
-      }
-    },
-    [clearFeedback, fieldErrors, formError, submitStatus],
-  );
-
   const removeExistingPhoto = useCallback(
     (photoId: string) => {
-      setValues((current) =>
-        current
-          ? {
-              ...current,
-              existingPhotos: current.existingPhotos.filter(
-                (photo) => photo.id !== photoId,
-              ),
-            }
-          : current,
-      );
+      setValues((current) => {
+        if (!current) return current;
+        const removed = current.existingPhotos.find((photo) => photo.id === photoId);
+        const existingPhotos = current.existingPhotos.filter(
+          (photo) => photo.id !== photoId,
+        );
+        const coverRemoved = Boolean(
+          removed && current.coverPhotoUrl === removed.url,
+        );
+        return {
+          ...current,
+          existingPhotos,
+          coverPhotoUrl: coverRemoved
+            ? (existingPhotos[0]?.url ?? null)
+            : current.coverPhotoUrl,
+        };
+      });
       clearFeedback();
     },
     [clearFeedback],
@@ -228,7 +213,38 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     (url: string) => {
       setValues((current) =>
         current
-          ? { ...current, coverPhotoUrl: url }
+          ? { ...current, coverPhotoUrl: url, mainPhoto: null }
+          : current,
+      );
+      clearFeedback();
+    },
+    [clearFeedback],
+  );
+
+  const addNewPhotos = useCallback(
+    (files: FileList | File[]) => {
+      const next = Array.from(files).filter((file) =>
+        file.type.startsWith("image/"),
+      );
+      if (next.length === 0) return;
+      setValues((current) =>
+        current
+          ? { ...current, photos: [...current.photos, ...next] }
+          : current,
+      );
+      clearFeedback();
+    },
+    [clearFeedback],
+  );
+
+  const removeNewPhoto = useCallback(
+    (index: number) => {
+      setValues((current) =>
+        current
+          ? {
+              ...current,
+              photos: current.photos.filter((_, itemIndex) => itemIndex !== index),
+            }
           : current,
       );
       clearFeedback();
@@ -241,7 +257,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     if (!values || !details) return false;
     // Never submit Hall A payload against Hall B route.
     if (details.id !== hallId) return false;
-    if (details.editability !== "editable") {
+    if (details.editability === "locked") {
       setFormError("owner.management.hallEdit.errors.notEditable");
       setSubmitStatus("error");
       return false;
@@ -266,8 +282,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
       submitGeneration !== loadGenerationRef.current || targetHallId !== hallId;
 
     try {
-      const body = mapHallFormToUpdateHallRequest(values);
-      const updated = await updateOwnerHall(targetHallId, body);
+      const updated = await updateOwnerHall(targetHallId, values);
       if (isSubmitStale()) return false;
 
       if (updated) {
@@ -363,9 +378,10 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     controlsDisabled,
     reload: load,
     patchValues,
-    setPeriod,
     removeExistingPhoto,
     setCoverPhoto,
+    addNewPhotos,
+    removeNewPhoto,
     submit,
   };
 }

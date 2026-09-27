@@ -3,18 +3,21 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import HallLockedState from "@/components/halls/HallLockedState";
+import AcceptConfirmModal from "@/components/halls/notifications/AcceptConfirmModal";
 import HallNotificationEmptyState from "@/components/halls/notifications/HallNotificationEmptyState";
 import HallNotificationErrorState from "@/components/halls/notifications/HallNotificationErrorState";
 import HallNotificationList from "@/components/halls/notifications/HallNotificationList";
 import HallNotificationSkeleton from "@/components/halls/notifications/HallNotificationSkeleton";
 import RejectionReasonModal from "@/components/halls/notifications/RejectionReasonModal";
+import SuccessToast from "@/components/ui/SuccessToast";
 import { useHallNotifications } from "@/hooks/useHallNotifications";
 import { useAcceptBookingRequest } from "@/hooks/useAcceptBookingRequest";
+import { usePublishBooking } from "@/hooks/usePublishBooking";
 import { useRejectBookingRequest } from "@/hooks/useRejectBookingRequest";
 import { useRememberHistoricalBookingAlerts } from "@/hooks/useBookingRequestAudio";
 import { useT } from "@/i18n";
 import { formatBookingDateLabel } from "@/lib/booking-date";
-import { bookingPeriodI18nKey } from "@/lib/booking-rejection-message";
+import { bookingWhenLabels } from "@/lib/booking-when-label";
 import {
   BOOKING_PUBLISHED_EVENT,
   BOOKING_REJECTED_EVENT,
@@ -29,6 +32,8 @@ import type { HallBookingNotification } from "@/types/hall-notifications";
 type HallNotificationsViewProps = {
   hallId: string;
   enabled?: boolean;
+  requestId?: string | null;
+  hallName?: string | null;
 };
 
 /**
@@ -37,6 +42,8 @@ type HallNotificationsViewProps = {
 export default function HallNotificationsView({
   hallId,
   enabled = true,
+  requestId = null,
+  hallName = null,
 }: HallNotificationsViewProps) {
   const t = useT();
   const lang = useUiLang();
@@ -44,14 +51,23 @@ export default function HallNotificationsView({
   const notifications = useHallNotifications(hallId, enabled);
   const { applyPublished, applyStatus } = notifications;
   const [rejectTarget, setRejectTarget] = useState<HallBookingNotification | null>(null);
+  const [acceptTarget, setAcceptTarget] = useState<HallBookingNotification | null>(null);
+  const [acceptToast, setAcceptToast] = useState(false);
+  const [rejectToast, setRejectToast] = useState(false);
+  const highlightedId = requestId?.trim() || null;
   const accept = useAcceptBookingRequest({
     onAccepted: notifications.applyAccepted,
+    onStatusSync: notifications.applyStatus,
+  });
+  const confirmPayment = usePublishBooking({
+    onPublished: notifications.applyPublished,
     onStatusSync: notifications.applyStatus,
   });
   const reject = useRejectBookingRequest({
     onRejected: (result) => {
       notifications.applyRejected(result);
       setRejectTarget(null);
+      setRejectToast(true);
     },
     onStatusSync: (bookingId, status) => {
       notifications.applyStatus(bookingId, status);
@@ -62,6 +78,15 @@ export default function HallNotificationsView({
     notifications.items,
     enabled && (notifications.status === "ready" || notifications.status === "empty"),
   );
+
+  useEffect(() => {
+    if (!enabled || !highlightedId) return;
+    if (notifications.status !== "ready") return;
+    const node = document.querySelector<HTMLElement>(
+      `[data-notification-id="${CSS.escape(highlightedId)}"]`,
+    );
+    node?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [enabled, highlightedId, notifications.items, notifications.status]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -107,8 +132,13 @@ export default function HallNotificationsView({
   const rejectDateLabel = rejectTarget?.date
     ? formatBookingDateLabel(rejectTarget.date, locale)
     : undefined;
-  const rejectPeriodLabels =
-    rejectTarget?.periods.map((period) => t(bookingPeriodI18nKey(period))) ?? [];
+  const rejectPeriodLabels = rejectTarget
+    ? bookingWhenLabels(rejectTarget, t, locale)
+    : [];
+  const acceptDateLabel = acceptTarget?.date
+    ? formatBookingDateLabel(acceptTarget.date, locale)
+    : undefined;
+  const acceptPeriodLabels = acceptTarget ? bookingWhenLabels(acceptTarget, t, locale) : [];
 
   if (!enabled) return null;
 
@@ -123,6 +153,7 @@ export default function HallNotificationsView({
         notifications.status === "loading" ||
         Boolean(accept.acceptingId) ||
         Boolean(reject.rejectingId) ||
+        Boolean(confirmPayment.publishingId) ||
         undefined
       }
     >
@@ -140,12 +171,17 @@ export default function HallNotificationsView({
           items={notifications.items}
           acceptingId={accept.acceptingId}
           rejectingId={reject.rejectingId}
+          confirmingId={confirmPayment.publishingId}
           acceptErrorById={accept.errorById}
           rejectErrorById={reject.errorById}
-          onAccept={(item) => {
-            void accept.accept(item.hallId || hallId, item.id);
-          }}
+          confirmErrorById={confirmPayment.errorById}
+          highlightedId={highlightedId}
+          hallName={hallName}
+          onAccept={setAcceptTarget}
           onReject={setRejectTarget}
+          onConfirmPayment={(item) => {
+            void confirmPayment.publish(item.hallId || hallId, item.id);
+          }}
         />
       ) : null}
 
@@ -183,6 +219,29 @@ export default function HallNotificationsView({
         />
       ) : null}
 
+      <AcceptConfirmModal
+        open={Boolean(acceptTarget)}
+        busy={Boolean(acceptTarget && accept.acceptingId === acceptTarget.id)}
+        errorKey={acceptTarget ? accept.errorById[acceptTarget.id] ?? null : null}
+        requesterName={acceptTarget?.requesterName.trim() || t("common.user")}
+        dateLabel={acceptDateLabel}
+        periodLabels={acceptPeriodLabels}
+        hallName={hallName}
+        onClose={() => {
+          if (!accept.acceptingId) setAcceptTarget(null);
+        }}
+        onConfirm={(depositAmount) => {
+          if (!acceptTarget) return;
+          void accept
+            .accept(acceptTarget.hallId || hallId, acceptTarget.id, depositAmount, hallName)
+            .then((result) => {
+              if (!result) return;
+              setAcceptTarget(null);
+              setAcceptToast(true);
+            });
+        }}
+      />
+
       <RejectionReasonModal
         open={Boolean(rejectTarget)}
         busy={Boolean(rejectTarget && reject.rejectingId === rejectTarget.id)}
@@ -194,8 +253,19 @@ export default function HallNotificationsView({
         }}
         onConfirm={(reason) => {
           if (!rejectTarget) return;
-          void reject.reject(rejectTarget.hallId || hallId, rejectTarget.id, reason);
+          void reject.reject(rejectTarget.hallId || hallId, rejectTarget.id, reason, hallName);
         }}
+      />
+
+      <SuccessToast
+        open={acceptToast}
+        message={t("owner.notifications.acceptSuccess")}
+        onClose={() => setAcceptToast(false)}
+      />
+      <SuccessToast
+        open={rejectToast}
+        message={t("owner.notifications.rejectSuccess")}
+        onClose={() => setRejectToast(false)}
       />
     </div>
   );

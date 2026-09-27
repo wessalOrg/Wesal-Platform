@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { emitHallRejected } from "@/lib/hall-review-events";
 import { toRejectHallError } from "@/lib/admin-reject-hall-errors";
 import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
@@ -37,6 +38,11 @@ export function useRejectHall(options?: UseRejectHallOptions) {
 
     try {
       const result = await rejectAdminHall(id, request);
+      emitHallRejected({
+        hallId: result.hallId,
+        hallName: result.hallName,
+        reason: request.reason,
+      });
       notifyPublicHallsChanged();
       notifyHallOwnerHallsChanged();
       onRejectedRef.current?.(result);

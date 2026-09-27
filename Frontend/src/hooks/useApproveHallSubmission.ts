@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toApproveHallError } from "@/lib/admin-approve-hall-errors";
+import { emitHallApproved } from "@/lib/hall-review-events";
 import { notifyPublicHallsChanged } from "@/lib/public-halls-events";
 import { approveAdminHall } from "@/services/admin-halls";
 import type { AdminHallApprovalResult } from "@/types/admin-halls";
@@ -33,6 +34,10 @@ export function useApproveHallSubmission(options?: UseApproveHallSubmissionOptio
 
     try {
       const result = await approveAdminHall(id);
+      emitHallApproved({
+        hallId: result.hallId,
+        hallName: result.hallName,
+      });
       notifyPublicHallsChanged();
       onApprovedRef.current?.(result);
       return result;

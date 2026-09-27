@@ -1,7 +1,8 @@
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
+import { mapRealtimeMessageDto } from "@/lib/conversation-mapper";
 import { subscribeMockMessages } from "@/services/conversations-mock";
 import { getAccessToken } from "@/lib/auth-token";
-import type { IncomingRealtimeMessage, ThreadMessage } from "@/types/messages";
+import type { IncomingRealtimeMessage } from "@/types/messages";
 
 type MessageHandler = (payload: IncomingRealtimeMessage) => void;
 
@@ -9,15 +10,6 @@ function usesMockRealtime(): boolean {
   const token = getAccessToken();
   return !token || token.startsWith("stub-");
 }
-
-type MessageReceivedDto = {
-  messageId?: string;
-  conversationId?: string;
-  senderUserId?: string;
-  senderName?: string;
-  content?: string;
-  sentAt?: string;
-};
 
 function conversationHubUrl(): string {
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5298/api/v1";
@@ -28,20 +20,8 @@ function conversationHubUrl(): string {
   }
 }
 
-function mapRealtime(data: MessageReceivedDto): IncomingRealtimeMessage | null {
-  const conversationId = String(data.conversationId ?? "");
-  const id = String(data.messageId ?? "");
-  const content = (data.content ?? "").trim();
-  if (!conversationId || !id || !content) return null;
-  const message: ThreadMessage = {
-    id,
-    senderUserId: data.senderUserId ?? "",
-    senderName: (data.senderName ?? "").trim() || "",
-    content,
-    sentAt: data.sentAt ?? new Date().toISOString(),
-    delivery: "sent",
-  };
-  return { conversationId, message };
+function mapRealtime(data: unknown): IncomingRealtimeMessage | null {
+  return mapRealtimeMessageDto(data);
 }
 
 const handlersByConversation = new Map<string, Set<MessageHandler>>();
@@ -53,7 +33,7 @@ let connectedToken: string | null = null;
 function bindHubEvents(hub: HubConnection) {
   if (boundConnection === hub) return;
   boundConnection = hub;
-  hub.on("MessageReceived", (raw: MessageReceivedDto) => {
+  hub.on("MessageReceived", (raw: unknown) => {
     const payload = mapRealtime(raw);
     if (!payload) return;
     handlersByConversation.get(payload.conversationId)?.forEach((handler) => handler(payload));

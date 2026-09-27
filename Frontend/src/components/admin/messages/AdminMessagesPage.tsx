@@ -4,6 +4,7 @@ import AdminMessageFilters from "@/components/admin/messages/AdminMessageFilters
 import AdminMessageList from "@/components/admin/messages/AdminMessageList";
 import AdminMessageSearch from "@/components/admin/messages/AdminMessageSearch";
 import AdminMessageThreadView from "@/components/admin/messages/AdminMessageThreadView";
+import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAdminMessages } from "@/hooks/useAdminMessages";
 import { useT } from "@/i18n";
@@ -24,8 +25,9 @@ export default function AdminMessagesPage() {
       state.selectedItem.ownerName ||
       t("admin.messages.title")
     : t("admin.messages.title");
-  const subtitle = state.selectedItem?.ownerName.trim()
-    ? t("admin.messages.ownerLabel", { name: state.selectedItem.ownerName.trim() })
+  const ownerName = state.selectedItem?.ownerName?.trim() || "";
+  const subtitle = ownerName
+    ? t("admin.messages.ownerLabel", { name: ownerName })
     : null;
 
   return (
@@ -70,6 +72,7 @@ export default function AdminMessagesPage() {
           className={`seeker-messages-thread${showThread ? " seeker-messages-thread--open" : " seeker-messages-thread--empty"}`}
         >
           {showThread && state.selectedItem ? (
+            <MessagesErrorBoundary>
             <AdminMessageThreadView
               status={state.threadStatus}
               thread={state.thread}
@@ -95,6 +98,7 @@ export default function AdminMessagesPage() {
                 state.thread?.conversationId || state.selectedItem.conversationId
               }
             />
+            </MessagesErrorBoundary>
           ) : (
             <div
               className="seeker-messages-placeholder"

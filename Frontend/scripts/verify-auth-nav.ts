@@ -64,6 +64,7 @@ function testResolveLoginDestination() {
   assert.equal(resolveLoginDestination("HallOwner"), "/owner");
   assert.equal(resolveLoginDestination("HallOwner", "/profile"), "/owner");
   assert.equal(resolveLoginDestination("HallOwner", "/owner/halls"), "/owner/halls");
+  assert.equal(resolveLoginDestination("HallOwner", "/halls/h1?intent=contact", "contact"), "/halls/h1?intent=contact");
   assert.equal(resolveLoginDestination("RegisteredUser"), "/");
   assert.equal(resolveLoginDestination("RegisteredUser", "/profile"), "/profile");
   console.log("ok  resolveLoginDestination");

@@ -58,7 +58,9 @@ export default function ConversationList({
 
   return (
     <ul className="space-y-1 p-2" data-testid="inbox-conversation-list">
-      {conversations.map((conversation) => (
+      {conversations
+        .filter((conversation) => conversation?.conversationId)
+        .map((conversation) => (
         <li key={conversation.conversationId}>
           <ConversationListItem
             conversation={conversation}

@@ -1,8 +1,10 @@
 import { BookingError } from "@/lib/booking-errors";
+import {
+  MAX_PENDING_BOOKING_REQUESTS,
+  PENDING_LIMIT_ERROR_CODE,
+  PENDING_LIMIT_MESSAGE_KEY,
+} from "@/lib/booking-pending-limit";
 import { finalizedCancelMessageKey } from "@/lib/booking-cancel-errors";
-import { ensureAvailabilityDateIso } from "@/lib/booking-date";
-import { inferBookingPeriodType } from "@/lib/booking-period";
-import { t } from "@/i18n";
 import type {
   BookingPeriodType,
   BookingRequestInput,
@@ -11,7 +13,6 @@ import type {
   CancelBookingResult,
   UserBooking,
 } from "@/types/booking";
-import type { HallAvailabilityDay, HallDayPeriod } from "@/types/hall";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -66,6 +67,7 @@ function seedMockBookings() {
       date: "2026-09-12",
       period: "SecondPeriod",
       status: "Rejected",
+      rejectionReason: "القاعة غير متاحة في هذا الوقت لظروف صيانة.",
     },
     {
       bookingId: "mock-cancelled-1",
@@ -79,57 +81,23 @@ function seedMockBookings() {
   for (const item of samples) mockBookings.set(item.bookingId, item);
 }
 
-function defaultPeriods(): HallDayPeriod[] {
-  return [
-    {
-      periodType: "FirstPeriod",
-      label: t("halls.period.first"),
-      time: "12:00 – 15:00",
-      status: "available",
-    },
-    {
-      periodType: "SecondPeriod",
-      label: t("halls.period.second"),
-      time: "16:00 – 20:00",
-      status: "available",
-    },
-  ];
-}
-
-function overlayReservations(
-  hallId: string,
-  dateIso: string,
-  periods: HallDayPeriod[],
-): HallDayPeriod[] {
-  return periods.map((period) => {
-    const type = period.periodType ?? inferBookingPeriodType(period);
-    if (!type) return period;
-    if (reserved.has(reservationKey(hallId, dateIso, type))) {
-      return { ...period, periodType: type, status: "booked" };
-    }
-    return { ...period, periodType: type };
-  });
-}
-
-export function mockFetchPeriodAvailability(
-  hallId: string,
-  dateIso: string,
-  seedDays: HallAvailabilityDay[],
-): Promise<HallDayPeriod[]> {
-  const days = ensureAvailabilityDateIso(seedDays);
-  const day = days.find((item) => item.dateIso === dateIso);
-  const periods = overlayReservations(
-    hallId,
-    dateIso,
-    day?.periods?.length ? day.periods : defaultPeriods(),
-  );
-  return delay(220).then(() => periods);
+function countPendingMockBookings(): number {
+  seedMockBookings();
+  return Array.from(mockBookings.values()).filter((item) => item.status === "Pending").length;
 }
 
 export async function mockSubmitBookingRequest(
   input: BookingRequestInput,
 ): Promise<BookingRequestResult> {
   await delay(420);
+
+  const incoming = new Set(input.periods).size;
+  if (countPendingMockBookings() + incoming > MAX_PENDING_BOOKING_REQUESTS) {
+    throw new BookingError(PENDING_LIMIT_MESSAGE_KEY, 422, {
+      kind: "pending_limit",
+      code: PENDING_LIMIT_ERROR_CODE,
+    });
+  }
 
   for (const period of input.periods) {
     if (reserved.has(reservationKey(input.hallId, input.date, period))) {
@@ -199,7 +167,9 @@ export async function mockCancelBookingRequest(
     });
   }
 
-  reserved.delete(reservationKey(booking.hallId, booking.date, booking.period));
+  if (booking.period) {
+    reserved.delete(reservationKey(booking.hallId, booking.date, booking.period));
+  }
   const cancelled: UserBooking = { ...booking, status: "Cancelled" };
   mockBookings.set(bookingId, cancelled);
 
@@ -208,7 +178,7 @@ export async function mockCancelBookingRequest(
     hallId: cancelled.hallId,
     hallName: cancelled.hallName,
     date: cancelled.date,
-    period: cancelled.period,
+    period: cancelled.period ?? "FirstPeriod",
     status: "Cancelled",
   };
 }

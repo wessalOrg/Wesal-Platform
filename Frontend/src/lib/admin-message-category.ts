@@ -34,7 +34,7 @@ export function classifyAdminMessageCategory(
     return "payment_notice";
   }
 
-  const text = preview.trim();
+  const text = (preview ?? "").trim();
   if (!text) return "conversation";
 
   if (isSubscriptionExpiryWarningContent(text)) return "payment_notice";

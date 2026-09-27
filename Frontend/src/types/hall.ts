@@ -34,6 +34,8 @@ export type FeaturedHall = {
   rating?: number | null;
   reviewCount?: number | null;
   location: string;
+  address?: string;
+  detailedAddress?: string | null;
   capacity: number;
   capacityMax?: number | null;
   tags?: string[];

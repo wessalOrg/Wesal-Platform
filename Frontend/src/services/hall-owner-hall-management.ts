@@ -6,8 +6,40 @@ import {
   OWNER_HALL_DETAILS_PATH,
   UPDATE_OWNER_HALL_PATH,
 } from "@/lib/hall-owner-hall-management-mapper";
-import type { UpdateOwnerHallRequest } from "@/lib/hall-owner-hall-update-mapper";
-import type { HallOwnerHallDetails } from "@/types/hall-owner-hall-management";
+import {
+  mapHallFormToUpdateHallRequest,
+  type UpdateOwnerHallRequest,
+} from "@/lib/hall-owner-hall-update-mapper";
+import type {
+  HallEditFormValues,
+  HallOwnerHallDetails,
+} from "@/types/hall-owner-hall-management";
+
+function toUpdateHallFormData(
+  values: HallEditFormValues,
+  body: UpdateOwnerHallRequest,
+): FormData {
+  const formData = new FormData();
+  formData.append("payload", JSON.stringify(body));
+  if (values.mainPhoto) {
+    formData.append("mainPhoto", values.mainPhoto, values.mainPhoto.name);
+  }
+  for (const photo of values.photos) {
+    formData.append("photos", photo, photo.name);
+  }
+  return formData;
+}
+
+function dropJsonContentType() {
+  return [
+    (body: unknown, headers: Record<string, unknown>) => {
+      if (typeof FormData !== "undefined" && body instanceof FormData) {
+        delete headers["Content-Type"];
+      }
+      return body;
+    },
+  ];
+}
 
 function ownerHallManagementUsesMock(): boolean {
   const token = getAccessToken();
@@ -26,7 +58,7 @@ const DEMO_HALL_META: Record<
   "demo-hall-pending": {
     name: "قاعة الأمل",
     status: "Pending",
-    editability: "underReview",
+    editability: "editable",
   },
   "demo-hall-rejected": {
     name: "قاعة الياسمين",
@@ -39,7 +71,7 @@ function buildDemoHallDetails(hallId: string): HallOwnerHallDetails {
   const meta = DEMO_HALL_META[hallId] ?? {
     name: "قاعة تجريبية",
     status: "Pending" as const,
-    editability: "underReview" as const,
+    editability: "editable" as const,
   };
 
   return {
@@ -63,8 +95,6 @@ function buildDemoHallDetails(hallId: string): HallOwnerHallDetails {
     hasPaymentReceipt: false,
     mainImageUrl: null,
     photos: [],
-    firstPeriod: { startTime: "10:00", endTime: "14:00" },
-    secondPeriod: { startTime: "16:00", endTime: "22:00" },
     adminLocked: false,
     systemLocked: false,
   };
@@ -102,36 +132,63 @@ export async function fetchOwnerHallDetails(
 }
 
 /**
- * Updates an owned hall via JSON UpdateOwnerHallRequest (wesal-api US-OWNER-07).
- * PUT /api/v1/owner/halls/{hallId}  application/json
+ * Updates an owned hall (wesal-api US-OWNER-07).
+ * PUT /api/v1/owner/halls/{hallId}
+ * JSON when only existing photo URLs change; multipart when new cover/gallery files are picked.
  */
 export async function updateOwnerHall(
   hallId: string,
-  body: UpdateOwnerHallRequest,
+  values: HallEditFormValues,
 ): Promise<HallOwnerHallDetails | null> {
+  const body = mapHallFormToUpdateHallRequest(values);
+  const hasNewFiles = Boolean(values.mainPhoto) || values.photos.length > 0;
+
   if (ownerHallManagementUsesMock()) {
     const current = buildDemoHallDetails(hallId);
+    const keptPhotos = values.existingPhotos.map((photo) => ({
+      id: photo.id,
+      url: photo.url,
+      apiUrl: photo.apiUrl,
+    }));
+    const addedPhotos = values.photos.map((file, index) => ({
+      id: `new-${file.name}-${file.lastModified}-${index}`,
+      url: URL.createObjectURL(file),
+    }));
+    const coverUrl = values.mainPhoto
+      ? URL.createObjectURL(values.mainPhoto)
+      : values.coverPhotoUrl ?? addedPhotos[0]?.url ?? keptPhotos[0]?.url ?? null;
     return {
       ...current,
       name: body.name?.trim() || current.name,
       contactPhone: body.contactPhone?.trim() || current.contactPhone,
       address: body.address?.trim() || current.address,
+      detailedAddress: body.detailedAddress?.trim() || current.detailedAddress,
       description: body.description?.trim() || current.description,
       capacity:
         typeof body.capacity === "number" ? body.capacity : current.capacity,
       price: typeof body.price === "number" ? body.price : current.price,
+      youtubeVideoUrl:
+        body.youtubeVideoUrl?.trim() || current.youtubeVideoUrl,
+      photos: [...keptPhotos, ...addedPhotos],
+      mainImageUrl: coverUrl,
+      editability: current.editability === "locked" ? "locked" : "editable",
     };
   }
 
   try {
-    const { data, status } = await api.put<unknown>(
-      UPDATE_OWNER_HALL_PATH(hallId),
-      body,
-      {
-        timeout: 30000,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+    const { data, status } = hasNewFiles
+      ? await api.put<unknown>(
+          UPDATE_OWNER_HALL_PATH(hallId),
+          toUpdateHallFormData(values, body),
+          {
+            timeout: 30000,
+            transformRequest: dropJsonContentType(),
+          },
+        )
+      : await api.put<unknown>(UPDATE_OWNER_HALL_PATH(hallId), body, {
+          timeout: 30000,
+          headers: { "Content-Type": "application/json" },
+        });
 
     if (status === 204 || data === "" || data == null) {
       return null;

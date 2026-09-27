@@ -19,6 +19,7 @@ type MessageThreadViewProps = {
   error: string | null;
   title: string;
   subtitle?: string | null;
+  badge?: string | null;
   currentUserId: string | null;
   onRetryLoad: () => void;
   onRetrySend: (messageId: string) => void;
@@ -31,6 +32,11 @@ type MessageThreadViewProps = {
   conversationId?: string | null;
   variant?: "page" | "widget";
   notice?: ReactNode;
+  attachmentPreviewUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentBusy?: boolean;
+  onPickAttachment?: (file: File) => void;
+  onClearAttachment?: () => void;
 };
 
 export default function MessageThreadView({
@@ -39,6 +45,7 @@ export default function MessageThreadView({
   error,
   title,
   subtitle,
+  badge,
   currentUserId,
   onRetryLoad,
   onRetrySend,
@@ -51,6 +58,11 @@ export default function MessageThreadView({
   conversationId,
   variant = "page",
   notice,
+  attachmentPreviewUrl,
+  attachmentName,
+  attachmentBusy,
+  onPickAttachment,
+  onClearAttachment,
 }: MessageThreadViewProps) {
   const t = useT();
   const lang = useUiLang();
@@ -94,7 +106,14 @@ export default function MessageThreadView({
         ) : null}
         <div className="min-w-0 flex-1">
           <p className="text-[0.68rem] font-semibold text-[var(--wesal-gold)]">{t("messages.title")}</p>
-          <h2 className="mt-0.5 truncate text-base font-bold text-[var(--wesal-maroon)]">{title}</h2>
+          <div className="mt-0.5 flex min-w-0 items-center gap-2">
+            <h2 className="truncate text-base font-bold text-[var(--wesal-maroon)]">{title}</h2>
+            {badge ? (
+              <span className="shrink-0 rounded-full border border-[var(--wesal-border)] px-2 py-0.5 text-[0.65rem] font-semibold text-[var(--wesal-muted)]">
+                {badge}
+              </span>
+            ) : null}
+          </div>
           {subtitle ? (
             <p className="truncate text-xs text-[var(--wesal-muted)]">{subtitle}</p>
           ) : null}
@@ -145,13 +164,15 @@ export default function MessageThreadView({
           ) : null}
 
           {status !== "loading" && status !== "error" && status !== "idle"
-            ? messages.map((message) => (
+            ? messages.filter((message) => message?.id).map((message) => (
                 <ThreadMessageItem
                   key={message.id}
                   message={message}
                   own={isSameUserId(message.senderUserId, currentUserId)}
                   retrying={isRetrying(message)}
+                  hallId={thread?.hallId}
                   hallName={localizedHallName}
+                  conversationId={conversationId ?? thread?.conversationId}
                   arriving={arrivingId === message.id}
                   onRetrySend={(id) => {
                     markRetrying(id);
@@ -181,6 +202,11 @@ export default function MessageThreadView({
         onChange={onDraftChange}
         onSend={onSend}
         variant={variant}
+        attachmentPreviewUrl={attachmentPreviewUrl}
+        attachmentName={attachmentName}
+        attachmentBusy={attachmentBusy}
+        onPickAttachment={onPickAttachment}
+        onClearAttachment={onClearAttachment}
       />
     </section>
   );

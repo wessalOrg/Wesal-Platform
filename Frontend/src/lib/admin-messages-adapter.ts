@@ -33,6 +33,7 @@ export function conversationToAdminMessageItem(
     ownerName: conversation.otherParticipantName,
     conversationId: conversation.conversationId,
     preview: conversation.lastMessagePreview,
+    lastMessageHasAttachment: Boolean(conversation.lastMessageHasAttachment),
     lastMessageAt: conversation.lastMessageAt,
     createdAt: conversation.createdAt,
     isUnread,

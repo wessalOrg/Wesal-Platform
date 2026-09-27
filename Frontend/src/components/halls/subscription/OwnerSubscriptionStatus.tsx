@@ -2,7 +2,7 @@
 
 import SubscriptionErrorBoundary from "@/components/halls/subscription/SubscriptionErrorBoundary";
 import SubscriptionStatusCard from "@/components/halls/subscription/SubscriptionStatusCard";
-import { useHallSubscriptionStatus } from "@/hooks/useHallSubscriptionStatus";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useT } from "@/i18n";
 
 type OwnerSubscriptionStatusProps = {
@@ -15,7 +15,7 @@ export default function OwnerSubscriptionStatus({
   hallName,
 }: OwnerSubscriptionStatusProps) {
   const t = useT();
-  const { status, subscription, errorKey, retry } = useHallSubscriptionStatus(hallId, true);
+  const { status, subscription, errorKey, retry } = useSubscription(hallId, true);
 
   return (
     <SubscriptionErrorBoundary>

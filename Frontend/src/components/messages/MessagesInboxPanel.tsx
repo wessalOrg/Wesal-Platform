@@ -10,14 +10,19 @@ import {
 } from "react";
 import Link from "next/link";
 import ConversationList from "@/components/messages/ConversationList";
+import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
+import OwnerConfirmPaymentBar from "@/components/messages/OwnerConfirmPaymentBar";
 import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import { useAdminChat } from "@/hooks/useAdminChat";
+import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useT } from "@/i18n";
 import { floatingPanelBounds } from "@/lib/floating-panel-bounds";
 import {
   conversationHallLabel,
+  conversationPeerRoleLabel,
   conversationPreviewSubtitle,
   conversationPreviewTitle,
 } from "@/lib/conversation-display";
@@ -72,6 +77,7 @@ function storePanelSize(size: PanelSize): void {
 export default function MessagesInboxPanel() {
   const t = useT();
   const lang = useUiLang();
+  const { isHallOwner, isAdmin } = useAccountAccess();
   const {
     isOpen,
     selectedId,
@@ -88,10 +94,19 @@ export default function MessagesInboxPanel() {
     draft,
     setDraft,
     sendMessage,
+    sendAttachment,
     retrySend,
     closeInbox,
     selectConversation,
   } = useMessagesInbox();
+  const adminChat = useAdminChat({
+    conversations,
+    selectedId,
+    inboxStatus,
+    selectConversation,
+    sendMessage,
+    sendAttachment,
+  });
 
   const panelRef = useRef<HTMLDivElement>(null);
   const userSizeRef = useRef<PanelSize | null>(readStoredPanelSize());
@@ -297,11 +312,16 @@ export default function MessagesInboxPanel() {
     : thread && conversationHallLabel(thread, lang) !== threadTitle
       ? conversationHallLabel(thread, lang)
       : null;
+  const threadBadge = conversationPeerRoleLabel({
+    viewerIsHallOwner: isHallOwner,
+    viewerIsAdmin: isAdmin,
+  });
 
   const iconBtnClass =
     "inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--wesal-maroon)]/45 bg-white text-[var(--wesal-maroon)] shadow-[0_4px_12px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white";
 
   return (
+    <MessagesErrorBoundary>
     <div
       className="fixed inset-0 z-[106]"
       role="presentation"
@@ -395,11 +415,12 @@ export default function MessagesInboxPanel() {
                 error={threadError}
                 title={threadTitle}
                 subtitle={threadSubtitle}
+                badge={showThread ? threadBadge : null}
                 currentUserId={currentUserId}
                 onRetryLoad={retryThread}
                 onRetrySend={retrySend}
                 onSend={(text) => {
-                  void sendMessage(text);
+                  void adminChat.sendWithAttachment(text);
                 }}
                 draft={draft}
                 onDraftChange={setDraft}
@@ -412,6 +433,26 @@ export default function MessagesInboxPanel() {
                 onBack={() => selectConversation(null)}
                 conversationId={selectedId}
                 variant="widget"
+                notice={
+                  <>
+                    {isHallOwner ? (
+                      <OwnerConfirmPaymentBar
+                        hallId={selected?.hallId ?? thread?.hallId}
+                        requesterUserId={selected?.otherParticipantId}
+                      />
+                    ) : null}
+                    {adminChat.errorKey ? (
+                      <p role="alert" className="text-sm text-[#a86267]">
+                        {t(adminChat.errorKey)}
+                      </p>
+                    ) : null}
+                  </>
+                }
+                attachmentPreviewUrl={adminChat.attachmentPreviewUrl}
+                attachmentName={adminChat.attachmentName}
+                attachmentBusy={adminChat.attachmentBusy}
+                onPickAttachment={adminChat.pickAttachment}
+                onClearAttachment={adminChat.clearAttachment}
               />
               </ProtectedHallMessageThread>
             </div>
@@ -419,6 +460,7 @@ export default function MessagesInboxPanel() {
         )}
       </div>
     </div>
+    </MessagesErrorBoundary>
   );
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import NavbarNotificationsButton from "@/components/layout/NavbarNotificationsButton";
 import MobileSidebarTrigger from "@/components/owner-management/MobileSidebarTrigger";
 import AdminOwnerMessagePanelHost from "@/components/admin/halls/AdminOwnerMessagePanelHost";
 import { AdminOwnerMessageProvider } from "@/components/admin/halls/AdminOwnerMessageProvider";
@@ -80,6 +81,7 @@ export default function AdminManagementShell({
           </div>
 
           <div className="seeker-dash-topbar-end">
+            <NavbarNotificationsButton />
             <LanguageSwitcher iconOnly className="seeker-dash-lang" />
             <span className="seeker-dash-userchip">
               <span className="seeker-dash-userchip-avatar" aria-hidden="true">

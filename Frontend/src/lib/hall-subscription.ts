@@ -110,6 +110,8 @@ function billingFromDto(data: Record<string, unknown>): HallSubscriptionBilling 
     data.expiresAt,
     data.expiryDate,
     data.validUntil,
+    data.subscriptionExpiresAt,
+    data.subscription_expires_at,
   ]);
   if (expiration) return { kind: "expiration", iso: expiration };
 
@@ -141,13 +143,30 @@ export function mapHallSubscription(payload: unknown, hallId: string): HallSubsc
   }
 
   const billing = billingFromDto(data);
-  const cycleEnd = billing?.iso ?? firstDate([data.subscriptionCycleEnd]);
-  const remaining = asInt(data.daysRemaining) ?? (cycleEnd ? utcDaysRemaining(cycleEnd) : null);
+  const cycleEnd =
+    billing?.iso ??
+    firstDate([
+      data.subscriptionCycleEnd,
+      data.subscriptionExpiresAt,
+      data.subscription_expires_at,
+    ]);
+  const remaining =
+    asInt(data.daysRemaining ?? data.days_remaining) ??
+    (cycleEnd ? utcDaysRemaining(cycleEnd) : null);
+  const paidFlag = data.isPaid ?? data.is_paid ?? data.paid;
+  const isPaid =
+    status === "active" ||
+    (paidFlag !== undefined && paidFlag !== null && paidFlag !== ""
+      ? asBool(paidFlag)
+      : false);
 
   return {
     hallId: asText(data.hallId) || asText(data.id) || hallId.trim(),
     status,
+    subscriptionStatus: status,
+    isPaid,
     billing,
+    subscriptionExpiresAt: cycleEnd,
     daysRemaining: remaining,
     expiryWarningDispatched: asBool(data.expiryWarningDispatched),
   };

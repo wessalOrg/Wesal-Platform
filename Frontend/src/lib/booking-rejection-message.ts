@@ -72,7 +72,7 @@ export function parseBookingRejectionMessage(
   content: string,
   fallbackHallName = "",
 ): ClassifiedThreadContent {
-  const text = content.trim();
+  const text = typeof content === "string" ? content.trim() : "";
   if (!text) return { kind: "text" };
 
   const fromJson = parseJsonRejection(text);

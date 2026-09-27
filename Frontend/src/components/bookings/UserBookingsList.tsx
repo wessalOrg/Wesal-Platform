@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import BookingRequestRow from "@/components/bookings/BookingRequestRow";
 import CancelBookingDialog from "@/components/bookings/CancelBookingDialog";
+import { useBookingOwnerChat } from "@/hooks/useBookingOwnerChat";
 import { useBookingViewport } from "@/hooks/useBookingViewport";
 import { useUserBookings } from "@/hooks/useUserBookings";
 import { useT } from "@/i18n";
@@ -16,8 +18,30 @@ type UserBookingsListProps = {
 export default function UserBookingsList({ compact = false }: UserBookingsListProps) {
   const t = useT();
   const viewport = useBookingViewport();
+  const searchParams = useSearchParams();
+  const focusBookingId = searchParams.get("booking_id")?.trim() || null;
+  const contactIntent = searchParams.get("intent") === "contact";
   const bookingsState = useUserBookings();
+  const { openForBooking } = useBookingOwnerChat();
+  const openedContactRef = useRef<string | null>(null);
   const [pendingCancel, setPendingCancel] = useState<UserBooking | null>(null);
+
+  useEffect(() => {
+    if (!focusBookingId) return;
+    const node = document.querySelector<HTMLElement>(
+      `[data-testid="booking-row-${CSS.escape(focusBookingId)}"]`,
+    );
+    node?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusBookingId, bookingsState.bookings]);
+
+  useEffect(() => {
+    if (!contactIntent || !focusBookingId) return;
+    if (openedContactRef.current === focusBookingId) return;
+    const booking = bookingsState.bookings.find((item) => item.bookingId === focusBookingId);
+    if (!booking || booking.status !== "Accepted") return;
+    openedContactRef.current = focusBookingId;
+    void openForBooking(booking);
+  }, [bookingsState.bookings, contactIntent, focusBookingId, openForBooking]);
 
   if (bookingsState.status === "loading") {
     return (
@@ -67,6 +91,7 @@ export default function UserBookingsList({ compact = false }: UserBookingsListPr
                     booking={booking}
                     bookingsState={bookingsState}
                     viewport={viewport}
+                    highlighted={focusBookingId === booking.bookingId}
                     onAskCancel={setPendingCancel}
                   />
                 </li>
@@ -81,6 +106,7 @@ export default function UserBookingsList({ compact = false }: UserBookingsListPr
                     booking={booking}
                     bookingsState={bookingsState}
                     viewport={viewport}
+                    highlighted={focusBookingId === booking.bookingId}
                     onAskCancel={setPendingCancel}
                   />
                 </li>
@@ -111,11 +137,13 @@ function BookingRow({
   booking,
   bookingsState,
   viewport,
+  highlighted,
   onAskCancel,
 }: {
   booking: UserBooking;
   bookingsState: ReturnType<typeof useUserBookings>;
   viewport: ReturnType<typeof useBookingViewport>;
+  highlighted: boolean;
   onAskCancel: (booking: UserBooking) => void;
 }) {
   return (
@@ -126,6 +154,7 @@ function BookingRow({
       errorKey={bookingsState.cancelError}
       successId={bookingsState.cancelSuccessId}
       locked={bookingsState.isCancelLocked(booking.bookingId)}
+      highlighted={highlighted}
       viewport={viewport}
       onCancel={onAskCancel}
       onDismissError={bookingsState.resetCancelFeedback}

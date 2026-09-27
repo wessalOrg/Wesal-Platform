@@ -60,7 +60,7 @@ function paymentCardCopy(message: ThreadMessage, hallName: string, fallbackTitle
       body: parsed.details.text || message.content,
     };
   }
-  const text = message.content.trim();
+  const text = (message.content ?? "").trim();
   const firstLine = text.split(/\n/)[0]?.trim() || fallbackTitle;
   const rest = text.slice(firstLine.length).trim();
   return {
@@ -90,7 +90,7 @@ export default function AdminMessageThreadView({
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const localizedHallName = thread ? conversationHallLabel(thread, lang) : title;
-  const messages = thread?.messages ?? [];
+  const messages = (thread?.messages ?? []).filter((message) => message?.id);
   const lastMessage = messages[messages.length - 1];
   const { scrollerRef, unseenCount, unseenRejection, onScroll, scrollToLatest } = useThreadScroll(
     conversationId ?? thread?.conversationId ?? null,
@@ -109,8 +109,9 @@ export default function AdminMessageThreadView({
       message,
       showDay: Boolean(key && key !== prevKey),
       isPayment:
+        !message.hasAttachment &&
         classifyAdminMessageCategory(message.content, message.senderUserId) ===
-        "payment_notice",
+          "payment_notice",
     };
   });
 
@@ -222,6 +223,7 @@ export default function AdminMessageThreadView({
                         own={isSameUserId(message.senderUserId, currentUserId)}
                         retrying={isRetrying(message)}
                         hallName={localizedHallName}
+                        conversationId={conversationId ?? thread?.conversationId}
                         arriving={arrivingId === message.id}
                         onRetrySend={(id) => {
                           markRetrying(id);

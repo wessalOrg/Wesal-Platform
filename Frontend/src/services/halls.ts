@@ -256,6 +256,8 @@ function mapApiHall(hall: ApiFeaturedHall, index: number): FeaturedHall {
     rating: hall.rating ?? fallback.rating,
     reviewCount: hall.reviewCount ?? fallback.reviewCount,
     location,
+    address: hall.address ?? location,
+    detailedAddress: hall.detailedAddress ?? null,
     capacity: hall.capacity ?? fallback.capacity,
     capacityMax: fallback.capacityMax ?? null,
     tags: hall.tags ?? fallback.tags,
@@ -540,9 +542,12 @@ export async function fetchCatalogHalls(): Promise<FeaturedHallsLoadResult> {
 export type HallSearchFilters = {
   name?: string;
   area?: string;
+  address?: string;
+  detailedAddress?: string;
   region?: HallRegion;
   date?: string;
   period?: HallBookingPeriodFilter;
+  pageSize?: number;
 };
 
 export function filterCatalogHalls(
@@ -550,7 +555,8 @@ export function filterCatalogHalls(
   filters: HallSearchFilters,
 ): FeaturedHall[] {
   const name = filters.name?.trim() ?? "";
-  const area = filters.area?.trim() ?? "";
+  const address = (filters.address ?? filters.area)?.trim() ?? "";
+  const detailedAddress = filters.detailedAddress?.trim() ?? "";
   const region = filters.region ?? "all";
   const date = filters.date?.trim() ?? "";
   const period = filters.period ?? "all";
@@ -559,7 +565,10 @@ export function filterCatalogHalls(
 
   return halls.filter((hall) => {
     if (name && !includesLoose(hall.name, name)) return false;
-    if (area && !includesLoose(hall.location, area)) return false;
+    if (address && !includesLoose(hall.address ?? hall.location, address)) return false;
+    if (detailedAddress && !includesLoose(hall.detailedAddress ?? "", detailedAddress)) {
+      return false;
+    }
     if (region !== "all" && hall.region !== region) return false;
     if (!matchesDateAndPeriod(hall, date, period)) return false;
     return true;
@@ -572,16 +581,21 @@ export async function fetchSearchHalls(
 ): Promise<FeaturedHallsLoadResult> {
   const params: Record<string, string> = {};
   if (filters.name?.trim()) params.name = filters.name.trim();
-  if (filters.area?.trim()) params.area = filters.area.trim();
+  const area = (filters.address ?? filters.area)?.trim();
+  if (area) params.area = area;
+  if (filters.detailedAddress?.trim()) {
+    params.detailedAddress = filters.detailedAddress.trim();
+  }
   if (filters.region && filters.region !== "all") {
     params.region = REGION_API_PARAMS[filters.region];
+  }
+  if (filters.pageSize && filters.pageSize > 0) {
+    params.pageSize = String(filters.pageSize);
   }
   const dateIso = filters.date?.trim()
     ? parseTypedDateToIso(filters.date)
     : null;
   if (dateIso) params.date = dateIso;
-  if (filters.period === "first") params.period = "FirstPeriod";
-  if (filters.period === "second") params.period = "SecondPeriod";
 
   try {
     const { data } = await api.get<FeaturedResponse>("/halls/search", {

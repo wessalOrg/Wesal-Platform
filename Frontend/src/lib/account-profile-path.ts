@@ -67,9 +67,9 @@ export function resolveLoginDestination(
   }
   if (isHallOwnerRole(role)) {
     const requested = resolveAuthRedirect(redirectParam, actionParam);
-    return requested.startsWith(HALL_OWNER_MANAGEMENT_PATH)
-      ? requested
-      : HALL_OWNER_MANAGEMENT_PATH;
+    if (requested.startsWith(HALL_OWNER_MANAGEMENT_PATH)) return requested;
+    if (requested.startsWith("/halls/")) return requested;
+    return HALL_OWNER_MANAGEMENT_PATH;
   }
   return resolveAuthRedirect(redirectParam, actionParam);
 }

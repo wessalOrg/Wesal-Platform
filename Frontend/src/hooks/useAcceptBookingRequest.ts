@@ -32,7 +32,12 @@ export function useAcceptBookingRequest(options?: UseAcceptBookingRequestOptions
   }, []);
 
   const accept = useCallback(
-    async (hallId: string, bookingId: string) => {
+    async (
+      hallId: string,
+      bookingId: string,
+      depositAmount: number,
+      hallName?: string | null,
+    ) => {
       const id = bookingId.trim();
       if (!id || inFlightRef.current) return null;
 
@@ -41,13 +46,15 @@ export function useAcceptBookingRequest(options?: UseAcceptBookingRequestOptions
       clearError(id);
 
       try {
-        const result = await acceptHallBookingRequest(hallId, id);
+        const result = await acceptHallBookingRequest(hallId, id, depositAmount);
         onAcceptedRef.current?.(result);
         emitBookingAccepted({
           bookingId: result.bookingId,
           hallId: result.hallId,
           date: result.date,
           periods: result.periods,
+          hallName: hallName?.trim() || undefined,
+          depositAmount: result.depositAmount ?? depositAmount,
         });
         return result;
       } catch (err) {

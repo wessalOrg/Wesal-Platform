@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import AudioControlToggle from "@/components/halls/notifications/AudioControlToggle";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import MobileSidebarTrigger from "@/components/owner-management/MobileSidebarTrigger";
+import ContactAdminButton from "@/components/owner-management/ContactAdminButton";
 import OwnerBookingNotificationsPopover from "@/components/owner-management/OwnerBookingNotificationsPopover";
 import OwnerSidebar from "@/components/owner-management/OwnerSidebar";
 import { useOptionalUserProfileStore } from "@/components/profile/UserProfileProvider";
@@ -130,6 +131,7 @@ export default function HallOwnerManagementShell({
             <span className="hidden min-[400px]:inline-flex">
               <AudioControlToggle variant="nav" />
             </span>
+            <ContactAdminButton variant="header" />
             <OwnerBookingNotificationsPopover />
             <Link href={OWNER_ACCOUNT_PATH} className="seeker-dash-userchip" prefetch>
               <span className="seeker-dash-userchip-avatar" aria-hidden="true">

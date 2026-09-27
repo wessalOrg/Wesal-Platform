@@ -19,6 +19,7 @@ const FIELD_ALIASES: Record<string, HallRegistrationFieldPath> = {
   phonenumber: "ownerPhone",
   region: "region",
   address: "address",
+  addressinvalid: "address",
   detailedaddress: "detailedAddress",
   detailedaddressinvalid: "detailedAddress",
   description: "description",
@@ -34,20 +35,6 @@ const FIELD_ALIASES: Record<string, HallRegistrationFieldPath> = {
   photos: "photos",
   photo: "photos",
   images: "photos",
-  firstperiod: "firstPeriod",
-  firstperiodstart: "firstPeriod.startTime",
-  firstperiodstarttime: "firstPeriod.startTime",
-  firstperiodend: "firstPeriod.endTime",
-  firstperiodendtime: "firstPeriod.endTime",
-  bookingperiods0starttime: "firstPeriod.startTime",
-  bookingperiods0endtime: "firstPeriod.endTime",
-  bookingperiods1starttime: "secondPeriod.startTime",
-  bookingperiods1endtime: "secondPeriod.endTime",
-  secondperiod: "secondPeriod",
-  secondperiodstart: "secondPeriod.startTime",
-  secondperiodstarttime: "secondPeriod.startTime",
-  secondperiodend: "secondPeriod.endTime",
-  secondperiodendtime: "secondPeriod.endTime",
 };
 
 function normalizeAliasKey(key: string): string {

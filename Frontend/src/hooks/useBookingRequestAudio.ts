@@ -30,7 +30,7 @@ export function useBookingRequestAudio(enabled: boolean) {
     const audio = getAudioNotificationService();
     const unsubscribe = subscribeOwnerBookingRequestEvents((event) => {
       if (!enabledRef.current) return;
-      if (event.replay) {
+      if (event.replay || event.kind === "cancelled") {
         rememberBookingAlertIds([event.id]);
         return;
       }

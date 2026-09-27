@@ -1,10 +1,5 @@
 import type { HallRegion } from "@/constants/hallRegions";
 
-export type BookingPeriodFormValues = {
-  startTime: string;
-  endTime: string;
-};
-
 export type HallRegistrationFormValues = {
   hallName: string;
   ownerPhone: string;
@@ -28,8 +23,6 @@ export type HallRegistrationFormValues = {
   otherFeatures: string;
   /** Optional cover photo (`CreateHallRequest.MainPhoto`) promoted to MainImageUrl. */
   mainPhoto: File | null;
-  firstPeriod: BookingPeriodFormValues;
-  secondPeriod: BookingPeriodFormValues;
   photos: File[];
 };
 
@@ -46,13 +39,7 @@ export type HallRegistrationFieldPath =
   | "features"
   | "otherFeatures"
   | "mainPhoto"
-  | "firstPeriod.startTime"
-  | "firstPeriod.endTime"
-  | "secondPeriod.startTime"
-  | "secondPeriod.endTime"
-  | "photos"
-  | "firstPeriod"
-  | "secondPeriod";
+  | "photos";
 
 export type HallRegistrationFieldErrors = Partial<
   Record<HallRegistrationFieldPath, string>
@@ -68,11 +55,6 @@ export type CreateHallResult = {
   hallId: string | null;
 };
 
-export const EMPTY_BOOKING_PERIOD: BookingPeriodFormValues = {
-  startTime: "",
-  endTime: "",
-};
-
 export const EMPTY_HALL_REGISTRATION_VALUES: HallRegistrationFormValues = {
   hallName: "",
   ownerPhone: "",
@@ -86,7 +68,5 @@ export const EMPTY_HALL_REGISTRATION_VALUES: HallRegistrationFormValues = {
   features: [],
   otherFeatures: "",
   mainPhoto: null,
-  firstPeriod: { ...EMPTY_BOOKING_PERIOD },
-  secondPeriod: { ...EMPTY_BOOKING_PERIOD },
   photos: [],
 };

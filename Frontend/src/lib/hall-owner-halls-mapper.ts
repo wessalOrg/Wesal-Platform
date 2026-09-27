@@ -107,6 +107,8 @@ export function mapHallOwnerHallDto(dto: HallOwnerHallDto): HallOwnerHall | null
   const status = mapBackendHallStatus(readRawStatus(dto));
   if (!status) return null;
   const access = hallAccessFromUnknown(dto);
+  const cycleEnd = parseDateIso(dto.subscriptionCycleEnd);
+  const remaining = asInt(dto.daysRemaining) ?? (cycleEnd ? utcDaysRemaining(cycleEnd) : null);
   return {
     id,
     name: readName(dto),
@@ -114,6 +116,8 @@ export function mapHallOwnerHallDto(dto: HallOwnerHallDto): HallOwnerHall | null
     paymentStatus: toHallPaymentStatus(dto.paymentStatus) ?? "Unpaid",
     paymentReceiptUploadedAt:
       String(dto.paymentReceiptUploadedAt ?? "").trim() || null,
+    daysRemaining: remaining,
+    subscriptionExpiresAt: cycleEnd,
     expiryWarning: mapExpiryWarning(dto),
     adminLocked: access.adminLocked,
     systemLocked: access.systemLocked,

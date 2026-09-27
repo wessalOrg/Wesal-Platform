@@ -181,6 +181,7 @@ export function useAdminMessages() {
                   lastMessageAt: at,
                   messageCount: 1,
                   createdAt: at,
+                  isUnread: false,
                 },
                 ...current,
               ];

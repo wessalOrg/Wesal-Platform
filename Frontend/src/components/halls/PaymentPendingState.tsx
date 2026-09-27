@@ -1,9 +1,31 @@
 "use client";
 
+import SubscriptionPaymentNotice from "@/components/halls/subscription/SubscriptionPaymentNotice";
+import type { HallPaymentStatus } from "@/constants/hallPaymentStatus";
 import { useT } from "@/i18n";
 
-export default function PaymentPendingState() {
+type PaymentPendingStateProps = {
+  hallId?: string;
+  hallName?: string;
+  paymentStatus?: HallPaymentStatus;
+};
+
+export default function PaymentPendingState({
+  hallId,
+  hallName,
+  paymentStatus = "Unpaid",
+}: PaymentPendingStateProps) {
   const t = useT();
+
+  if (hallId) {
+    return (
+      <SubscriptionPaymentNotice
+        hallId={hallId}
+        hallName={hallName ?? ""}
+        paymentStatus={paymentStatus}
+      />
+    );
+  }
 
   return (
     <section

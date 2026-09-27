@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import NotificationsFeed from "@/components/notifications/NotificationsFeed";
 import { useT } from "@/i18n";
 
 export default function NotificationsView() {
@@ -45,9 +46,9 @@ export default function NotificationsView() {
       <p className="mt-2 text-sm leading-7 text-[var(--wesal-muted)]">
         {t("notifications.subtitle")}
       </p>
-      <p className="mt-8 text-sm leading-7 text-[var(--wesal-text)]">
-        {t("notifications.empty")}
-      </p>
+      <div className="mt-6">
+        <NotificationsFeed />
+      </div>
     </section>
   );
 }
