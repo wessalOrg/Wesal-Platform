@@ -575,4 +575,68 @@ public sealed class ConversationRepository : IConversationRepository
             conversationId => conversationId,
             conversationId => !hiddenSet.Contains(conversationId) && unreadSet.Contains(conversationId));
     }
+
+    public async Task<Dictionary<Guid, int>> GetUnreadMessageCountsAsync(
+        string userId,
+        IReadOnlyCollection<Guid> conversationIds,
+        CancellationToken cancellationToken = default)
+        => await GetUnreadMessageCountsAsync(userId, isAdmin: false, [], conversationIds, cancellationToken);
+
+    /// <summary>
+    /// The numeric counterpart to <see cref="GetUnreadStatusAsync(string, bool,
+    /// IReadOnlyCollection{string}, IReadOnlyCollection{Guid}, CancellationToken)"/>, built
+    /// from the identical rule (WESAL-TASK-10, Edit 14).
+    /// <para>
+    /// The only difference is the terminal operator: where the flag asks <c>Any</c> whether
+    /// one qualifying message exists, this asks how many qualify. Everything upstream of that
+    /// — the hidden-thread exclusion, the incoming-message filter, and the caller's own
+    /// per-user watermark — is the same expression, so a row is unread exactly when this
+    /// count is greater than zero.
+    /// </para>
+    /// </summary>
+    public async Task<Dictionary<Guid, int>> GetUnreadMessageCountsAsync(
+        string userId,
+        bool isAdmin,
+        IReadOnlyCollection<string> adminUserIds,
+        IReadOnlyCollection<Guid> conversationIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (conversationIds.Count == 0)
+        {
+            return [];
+        }
+
+        var hiddenIds = await _context.ConversationReadStates
+            .AsNoTracking()
+            .Where(s => conversationIds.Contains(s.ConversationId)
+                && s.UserId == userId
+                && s.HiddenAt != null
+                && !_context.Messages.Any(m => m.ConversationId == s.ConversationId && m.CreatedAt > s.HiddenAt.Value))
+            .Select(s => s.ConversationId)
+            .ToListAsync(cancellationToken);
+
+        var hiddenSet = hiddenIds.ToHashSet();
+
+        var incoming = IncomingMessageFilter(userId, isAdmin, adminUserIds);
+
+        var counts = await _context.Messages
+            .AsNoTracking()
+            .Where(m => conversationIds.Contains(m.ConversationId))
+            .Where(incoming)
+            .Where(m => !_context.ConversationReadStates
+                .Any(s => s.ConversationId == m.ConversationId && s.UserId == userId && s.LastReadAt >= m.CreatedAt))
+            .GroupBy(m => m.ConversationId)
+            .Select(group => new { ConversationId = group.Key, Count = group.Count() })
+            .ToListAsync(cancellationToken);
+
+        var countLookup = counts.ToDictionary(entry => entry.ConversationId, entry => entry.Count);
+
+        return conversationIds.ToDictionary(
+            conversationId => conversationId,
+            // A hidden thread reports zero rather than disappearing, so the number a client
+            // renders can never contradict the boolean it renders beside it.
+            conversationId => hiddenSet.Contains(conversationId)
+                ? 0
+                : countLookup.GetValueOrDefault(conversationId));
+    }
 }

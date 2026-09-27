@@ -135,4 +135,46 @@ public interface IConversationRepository
     }
 
     Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// How many messages are unread for the caller in each of the given conversations
+    /// (WESAL-TASK-10, Edit 14).
+    /// <para>
+    /// This is the numeric counterpart to the boolean <see cref="GetUnreadStatusAsync(string,
+    /// IReadOnlyCollection{Guid}, CancellationToken)"/>, computed from the very same rule so
+    /// the two can never disagree: a conversation is unread here exactly when that flag is
+    /// true, and it is 0 exactly when the flag is false. A conversation absent from the
+    /// returned dictionary therefore means "nothing unread", not "unknown".
+    /// </para>
+    /// <para>
+    /// Like the flag, it is per-user even though the Admin inbox is shared, and it is
+    /// deliberately expressed as a count of the OTHER party's messages only, so opening and
+    /// reading a thread drains exactly the messages the caller saw arrive.
+    /// </para>
+    /// </summary>
+    Task<Dictionary<Guid, int>> GetUnreadMessageCountsAsync(
+        string userId,
+        IReadOnlyCollection<Guid> conversationIds,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new Dictionary<Guid, int>());
+    }
+
+    /// <summary>
+    /// The Admin-aware overload of
+    /// <see cref="GetUnreadMessageCountsAsync(string, IReadOnlyCollection{Guid}, CancellationToken)"/>,
+    /// which decides who counts as the other party: for an Admin that is the hall owner rather
+    /// than "anybody who is not me", so a colleague's reply never inflates this Admin's count.
+    /// The default implementation defers to the two-party overload, so a test double that does
+    /// not model Admin sharing is unaffected.
+    /// </summary>
+    Task<Dictionary<Guid, int>> GetUnreadMessageCountsAsync(
+        string userId,
+        bool isAdmin,
+        IReadOnlyCollection<string> adminUserIds,
+        IReadOnlyCollection<Guid> conversationIds,
+        CancellationToken cancellationToken = default)
+    {
+        return GetUnreadMessageCountsAsync(userId, conversationIds, cancellationToken);
+    }
 }

@@ -25,6 +25,15 @@ public sealed class ConversationSummaryResponse
 
     public int MessageCount { get; init; }
 
+    /// <summary>
+    /// How many of those messages are still unread for the caller specifically
+    /// (WESAL-TASK-10, Edit 14). This is not the same as <see cref="IsUnread"/>: that flag
+    /// answers "is anything unread", this answers "how much". It is zero for a thread the
+    /// caller has read, and it is per-user even though the Admin inbox is shared, so two
+    /// Admins can legitimately see different numbers for the same thread.
+    /// </summary>
+    public int UnreadMessageCount { get; init; }
+
     public DateTimeOffset CreatedAt { get; init; }
 
     public bool IsUnread { get; init; }

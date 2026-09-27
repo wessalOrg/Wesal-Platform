@@ -288,6 +288,12 @@ public sealed class ConversationService : IConversationService
         var unreadStatus = await _conversationRepository.GetUnreadStatusAsync(
             userId, isAdmin, adminUserIds, conversationIds, cancellationToken);
 
+        // WESAL-TASK-10 (Edit 14): the flag above answers "is anything unread"; a client that
+        // wants a number next to it needs this. It is computed by the same rule, so
+        // IsUnread == (UnreadMessageCount > 0) holds for every row by construction.
+        var unreadCounts = await _conversationRepository.GetUnreadMessageCountsAsync(
+            userId, isAdmin, adminUserIds, conversationIds, cancellationToken);
+
         return conversations
             .OrderByDescending(conversation => latestByConversation.GetValueOrDefault(conversation.Id)?.CreatedAt ?? conversation.CreatedAt)
             .ThenByDescending(conversation => conversation.Id)
@@ -307,6 +313,7 @@ public sealed class ConversationService : IConversationService
                     LastMessageHasAttachment = latest?.HasAttachment ?? false,
                     LastMessageAt = latest?.CreatedAt,
                     MessageCount = messageCounts.GetValueOrDefault(conversation.Id),
+                    UnreadMessageCount = unreadCounts.GetValueOrDefault(conversation.Id),
                     CreatedAt = conversation.CreatedAt,
                     IsUnread = unreadStatus.GetValueOrDefault(conversation.Id)
                 };

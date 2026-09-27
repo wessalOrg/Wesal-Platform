@@ -295,6 +295,140 @@ public class ConversationUnreadCountVerificationShould
         Assert.Equal(1, await repository.GetUnreadConversationCountAsync("owner-1", isAdmin: false));
     }
 
+    /// <summary>
+    /// Edit 14 added a per-conversation NUMERIC unread count beside the boolean flag, so a
+    /// client can render "3" rather than only a dot. Two independent implementations of one
+    /// rule drift, exactly as the boolean and the badge did before, so the property worth
+    /// pinning is that the two views of the same rule can never disagree: a row is flagged
+    /// unread if and only if its count is greater than zero, for every row, in a scenario
+    /// that mixes every branch at once.
+    /// </summary>
+    [Fact]
+    public async Task UnreadMessageCount_IsZeroExactlyWhenTheRowIsNotFlaggedUnread()
+    {
+        await using var context = CreateContext();
+        var repository = new ConversationRepository(context);
+
+        var t0 = DateTimeOffset.UtcNow.AddHours(-2);
+
+        // 1. Three unread incoming messages: the count must be 3, not 1 and not 0.
+        var hallA = SeedHall(context, "ThreeUnread", isDeleted: false);
+        var three = SeedConversation(context, hallA.Id, "owner-1", "seeker-1");
+        SeedMessage(context, three.Id, "owner-1", "one", t0);
+        SeedMessage(context, three.Id, "owner-1", "two", t0.AddMinutes(1));
+        SeedMessage(context, three.Id, "owner-1", "three", t0.AddMinutes(2));
+
+        // 2. Fully read.
+        var hallB = SeedHall(context, "AllRead", isDeleted: false);
+        var allRead = SeedConversation(context, hallB.Id, "owner-1", "seeker-1");
+        SeedMessage(context, allRead.Id, "owner-1", "seen", t0);
+        context.ConversationReadStates.Add(new ConversationReadState
+        {
+            ConversationId = allRead.Id,
+            UserId = "seeker-1",
+            LastReadAt = t0.AddMinutes(1)
+        });
+        context.SaveChanges();
+
+        // 3. Partially read: one message before the watermark, one after it. This is the case
+        //    a boolean cannot express and the whole reason the number exists.
+        var hallC = SeedHall(context, "PartlyRead", isDeleted: false);
+        var partly = SeedConversation(context, hallC.Id, "owner-1", "seeker-1");
+        SeedMessage(context, partly.Id, "owner-1", "already read", t0);
+        SeedMessage(context, partly.Id, "owner-1", "still unread", t0.AddMinutes(5));
+        context.ConversationReadStates.Add(new ConversationReadState
+        {
+            ConversationId = partly.Id,
+            UserId = "seeker-1",
+            LastReadAt = t0.AddMinutes(1)
+        });
+        context.SaveChanges();
+
+        // 4. Only the caller's own messages: nothing arrived from the other party.
+        var hallD = SeedHall(context, "OwnMessages", isDeleted: false);
+        var own = SeedConversation(context, hallD.Id, "owner-1", "seeker-1");
+        SeedMessage(context, own.Id, "seeker-1", "my own message", t0);
+
+        // 5. Hidden while an unread message is still inside it: not advertised at all.
+        var hallE = SeedHall(context, "HiddenUnread", isDeleted: false);
+        var hidden = SeedConversation(context, hallE.Id, "owner-1", "seeker-1");
+        SeedMessage(context, hidden.Id, "owner-1", "unread but hidden", t0);
+        context.ConversationReadStates.Add(new ConversationReadState
+        {
+            ConversationId = hidden.Id,
+            UserId = "seeker-1",
+            HiddenAt = t0.AddMinutes(1)
+        });
+        context.SaveChanges();
+
+        var inbox = await repository.GetParticipantConversationsAsync("seeker-1");
+        var ids = inbox.Select(c => c.Id).ToList();
+        var flags = await repository.GetUnreadStatusAsync("seeker-1", ids);
+        var counts = await repository.GetUnreadMessageCountsAsync("seeker-1", ids);
+
+        // Every row the list returned is present in both views, so nothing is silently absent.
+        Assert.Equal(ids.Count, flags.Count);
+        Assert.Equal(ids.Count, counts.Count);
+
+        Assert.Equal(3, counts[three.Id]);
+        Assert.Equal(0, counts[allRead.Id]);
+        Assert.Equal(1, counts[partly.Id]);
+        Assert.Equal(0, counts[own.Id]);
+
+        // The invariant, asserted per row so a failure names the row that drifted.
+        foreach (var id in ids)
+        {
+            Assert.Equal(flags[id], counts[id] > 0);
+        }
+
+        // A hidden thread is absent from the list, so it cannot advertise a number either.
+        Assert.DoesNotContain(inbox, c => c.Id == hidden.Id);
+    }
+
+    /// <summary>
+    /// The same invariant from the Admin side of a SHARED inbox: read state is per-user even
+    /// though every Admin sees the same thread, so two Admins must legitimately get different
+    /// numbers for one thread. A shared count would break that, so it is pinned explicitly.
+    /// </summary>
+    [Fact]
+    public async Task UnreadMessageCount_StaysPerAdmin_EvenThoughTheInboxIsShared()
+    {
+        await using var context = CreateContext();
+        var repository = new ConversationRepository(context);
+
+        var t0 = DateTimeOffset.UtcNow.AddHours(-2);
+
+        var hall = SeedHall(context, "Shared", isDeleted: false);
+        var thread = SeedConversation(context, hall.Id, "owner-1", "admin-1");
+        SeedMessage(context, thread.Id, "owner-1", "first", t0);
+        SeedMessage(context, thread.Id, "owner-1", "second", t0.AddMinutes(1));
+        SeedMessage(context, thread.Id, "owner-1", "third", t0.AddMinutes(2));
+
+        // admin-1 has read all three; admin-2 has read none of them.
+        context.ConversationReadStates.Add(new ConversationReadState
+        {
+            ConversationId = thread.Id,
+            UserId = "admin-1",
+            LastReadAt = t0.AddMinutes(3)
+        });
+        context.SaveChanges();
+
+        var adminIds = new[] { "admin-1", "admin-2" };
+        var ids = new[] { thread.Id };
+
+        var readerCounts = await repository.GetUnreadMessageCountsAsync("admin-1", isAdmin: true, adminIds, ids);
+        var otherCounts = await repository.GetUnreadMessageCountsAsync("admin-2", isAdmin: true, adminIds, ids);
+
+        Assert.Equal(0, readerCounts[thread.Id]);
+        Assert.Equal(3, otherCounts[thread.Id]);
+
+        var readerFlags = await repository.GetUnreadStatusAsync("admin-1", isAdmin: true, adminIds, ids);
+        var otherFlags = await repository.GetUnreadStatusAsync("admin-2", isAdmin: true, adminIds, ids);
+
+        Assert.False(readerFlags[thread.Id]);
+        Assert.True(otherFlags[thread.Id]);
+    }
+
     private static Hall SeedHall(
         ApplicationDbContext context,
         string name,
