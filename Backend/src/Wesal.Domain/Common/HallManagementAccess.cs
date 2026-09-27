@@ -57,6 +57,34 @@ public static class HallManagementAccess
     }
 
     /// <summary>
+    /// Ensures the owner may still EDIT this hall's own data (WESAL-TASK-2+3, Edit 3).
+    /// <para>
+    /// This is deliberately weaker than <see cref="EnsureAllowed"/>: it keeps the two
+    /// authoritative holds (an Admin lock and an automatic subscription-cycle lock) but
+    /// drops the payment requirement, so an owner whose subscription has lapsed can still
+    /// correct their hall's name, photos, address and description at any time. Paying is a
+    /// separate concern, enforced by the booking, availability and subscription paths that
+    /// still call <see cref="EnsureAllowed"/>.
+    /// </para>
+    /// </summary>
+    public static void EnsureDataEditable(Hall hall)
+    {
+        if (hall.IsAdminLocked)
+        {
+            throw new BusinessRuleException(
+                HallLockedCode,
+                "This hall has been locked by an administrator and its management features are currently unavailable.");
+        }
+
+        if (hall.SystemLocked)
+        {
+            throw new BusinessRuleException(
+                HallSystemLockedCode,
+                "This hall's subscription cycle has ended without a confirmed renewal and has been automatically locked.");
+        }
+    }
+
+    /// <summary>
     /// Ensures a hall is still able to accept new booking requests at submission time
     /// (FR-BOOK-01, US-ADMIN-05). A locked hall (Admin lock or system lock) must not
     /// receive new booking requests. Payment state is intentionally NOT evaluated here:

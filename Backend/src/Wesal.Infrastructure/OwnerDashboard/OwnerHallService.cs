@@ -77,7 +77,11 @@ public sealed class OwnerHallService : IOwnerHallService
             throw new NotFoundException(nameof(Hall), hallId);
         }
 
-        HallManagementAccess.EnsureAllowed(hall);
+        // WESAL-TASK-2+3 (Edit 3): the owner may edit their hall's own data at any time and
+        // at any approval status. Only the two authoritative holds still refuse the edit; the
+        // payment requirement is not one of them. Booking, availability and subscription
+        // actions keep calling HallManagementAccess.EnsureAllowed and stay payment-gated.
+        HallManagementAccess.EnsureDataEditable(hall);
 
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {

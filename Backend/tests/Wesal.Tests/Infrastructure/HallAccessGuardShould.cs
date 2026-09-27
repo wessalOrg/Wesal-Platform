@@ -156,8 +156,13 @@ public class HallAccessGuardShould : IDisposable
     // --- US-ADMIN-07: owner management blocked when unpaid ---
 
     [Fact]
-    public async Task UpdateHall_ApprovedUnpaid_ThrowsPaymentRequired()
+    public async Task UpdateHall_ApprovedUnpaid_Succeeds_BecausePaymentIsNotADataEditGate()
     {
+        // WESAL-TASK-2+3 (Edit 3): the owner may edit their hall's own data at any time and at
+        // any approval status, so an unpaid hall is still editable. This used to throw
+        // PaymentRequired; the relaxation is deliberately scoped to hall DATA, and the pin
+        // below ("SetDayBlock_ApprovedUnpaid_ThrowsPaymentRequired") keeps the payment gate
+        // on the management actions that still require it.
         var owner = await CreateOwnerAsync("owner@example.com");
         var hall = AddHall(owner.Id, "Grand Hall", payment: HallPaymentStatus.Unpaid);
         var service = new OwnerHallService(
@@ -166,9 +171,13 @@ public class HallAccessGuardShould : IDisposable
             new OwnerDashboardRepository(_context),
             new UnitOfWork(_context));
 
-        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            service.UpdateOwnedHallAsync(hall.Id, MinimalUpdateRequest()));
-        Assert.Equal(HallManagementAccess.PaymentRequiredCode, ex.Code);
+        var updated = await service.UpdateOwnedHallAsync(hall.Id, MinimalUpdateRequest());
+
+        // MinimalUpdateRequest carries the same hall name, so assert on the address, which
+        // really changed, to prove the edit was applied rather than silently skipped.
+        Assert.Equal("حي الشجاعية", updated.Address);
+        var reloaded = await _context.Halls.FindAsync(hall.Id);
+        Assert.Equal("حي الشجاعية", reloaded!.Address);
     }
 
     [Fact]
@@ -319,6 +328,31 @@ public class HallAccessGuardShould : IDisposable
                 IsOpen = false
             }));
         Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);
+    }
+
+    [Fact]
+    public async Task SetDayBlock_ApprovedUnpaid_ThrowsPaymentRequired()
+    {
+        // The counterpart to UpdateHall_ApprovedUnpaid_Succeeds: relaxing the payment gate for
+        // hall DATA must not leak into the management actions. Day-blocking is bookable
+        // inventory, so it still goes through HallManagementAccess.EnsureAllowed. This is the
+        // pin that stops the relaxation from quietly spreading.
+        var owner = await CreateOwnerAsync("owner@example.com");
+        var hall = AddHall(owner.Id, "Grand Hall", payment: HallPaymentStatus.Unpaid);
+        var service = new OwnerHourlyAvailabilityService(
+            _userManager,
+            new FakeCurrentUser(owner.Id),
+            new OwnerDashboardRepository(_context),
+            new BookingRepository(_context),
+            new UnitOfWork(_context));
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.SetDayBlockAsync(hall.Id, new OwnerDayBlockRequest
+            {
+                Date = new DateOnly(2026, 9, 1),
+                IsOpen = false
+            }));
+        Assert.Equal(HallManagementAccess.PaymentRequiredCode, ex.Code);
     }
 
     // --- US-ADMIN-05/07: owner messaging blocked only on Approved halls ---

@@ -281,19 +281,27 @@ public class OwnerEditAdminVisibilityShould : IDisposable
     }
 
     [Fact]
-    public async Task OwnerEdit_StillBlockedByPaymentAndLockGates()
+    public async Task OwnerEdit_IsAllowedWhileUnpaid_AndStillBlockedByTheTwoLocks()
     {
-        // WESAL-TASK-2+3 removed only the approval-status gate. The shipped Task-1
-        // subscription gates must still reject the edit.
+        // WESAL-TASK-2+3 (Edit 3) read literally: the owner may edit their hall's own data
+        // "at any time, regardless of whether approved or not yet approved". The payment
+        // requirement is NOT part of that guarantee, so an unpaid hall is still editable.
+        // The two authoritative holds still refuse the edit.
         var owner = await CreateUserAsync("owner-locked@example.com", ApplicationRoles.HallOwner, "+970599100009");
 
-        var unpaid = AddHall(owner.Id, " unpaid", HallStatus.Approved);
+        // --- payment does NOT block a data edit ---
+        var unpaid = AddHall(owner.Id, "unpaid", HallStatus.Approved);
         unpaid.PaymentStatus = HallPaymentStatus.Unpaid;
         _context.SaveChanges();
-        var unpaidError = await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            CreateOwnerService(owner.Id).UpdateOwnedHallAsync(unpaid.Id, EditRequest()));
-        Assert.Equal(HallManagementAccess.PaymentRequiredCode, unpaidError.Code);
 
+        var updated = await CreateOwnerService(owner.Id).UpdateOwnedHallAsync(unpaid.Id, EditRequest());
+        Assert.Equal("قاعة النخبة المحدثة", updated.HallName);
+
+        var persisted = await _context.Halls.AsNoTracking().SingleAsync(h => h.Id == unpaid.Id);
+        Assert.Equal("قاعة النخبة المحدثة", persisted.Name);
+        Assert.Equal("حي الرمال", persisted.Address);
+
+        // --- an Admin lock still blocks it ---
         var adminLocked = AddHall(owner.Id, "locked", HallStatus.Approved);
         adminLocked.IsAdminLocked = true;
         _context.SaveChanges();
@@ -301,10 +309,22 @@ public class OwnerEditAdminVisibilityShould : IDisposable
             CreateOwnerService(owner.Id).UpdateOwnedHallAsync(adminLocked.Id, EditRequest()));
         Assert.Equal(HallManagementAccess.HallLockedCode, lockedError.Code);
 
-        // And the failed edits persisted nothing.
-        var untouched = await _context.Halls.AsNoTracking().SingleAsync(h => h.Id == adminLocked.Id);
-        Assert.Equal("locked", untouched.Name);
-        Assert.Equal("حي الشجاعية", untouched.Address);
+        // --- and so does an automatic subscription-cycle lock ---
+        var systemLocked = AddHall(owner.Id, "system locked", HallStatus.Approved);
+        systemLocked.SystemLocked = true;
+        _context.SaveChanges();
+        var systemLockedError = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            CreateOwnerService(owner.Id).UpdateOwnedHallAsync(systemLocked.Id, EditRequest()));
+        Assert.Equal(HallManagementAccess.HallSystemLockedCode, systemLockedError.Code);
+
+        // And the refused edits persisted nothing.
+        var untouchedLocked = await _context.Halls.AsNoTracking().SingleAsync(h => h.Id == adminLocked.Id);
+        Assert.Equal("locked", untouchedLocked.Name);
+        Assert.Equal("حي الشجاعية", untouchedLocked.Address);
+
+        var untouchedSystem = await _context.Halls.AsNoTracking().SingleAsync(h => h.Id == systemLocked.Id);
+        Assert.Equal("system locked", untouchedSystem.Name);
+        Assert.Equal("حي الشجاعية", untouchedSystem.Address);
     }
 
     public void Dispose()
