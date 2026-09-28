@@ -180,7 +180,10 @@ public class ConversationsController : ControllerBase
         var document = await _conversationService.GetMessageAttachmentAsync(
             conversationId, messageId, cancellationToken);
 
-        return PhysicalFile(document.FullPath, document.ContentType, document.FileName);
+        // Final audit: same race-safe streaming as identity documents, so a file that
+        // vanished after the service check is a proper 404, never an unrelated 500.
+        return await Infrastructure.StoredDocumentResult.ServeAsync(
+            document.FullPath, document.ContentType, cancellationToken, document.FileName);
     }
 
     [HttpPost("api/v{version:apiVersion}/conversations/{conversationId:guid}/read")]

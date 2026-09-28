@@ -362,8 +362,8 @@ public class HourlySlotService : IHourlySlotService
 
     private static IEnumerable<(TimeOnly Start, TimeOnly End)> BuildHourlyWindow(Hall hall)
     {
-        var start = hall.HourlySlotStart ?? new TimeOnly(9, 0);
-        var end = hall.HourlySlotEnd ?? new TimeOnly(22, 0);
+        var start = HallBookingWindow.EffectiveStart(hall);
+        var end = HallBookingWindow.EffectiveEnd(hall);
 
         for (var current = start; current < end; current = current.AddHours(1))
         {
@@ -387,8 +387,8 @@ public class HourlySlotService : IHourlySlotService
             });
         }
 
-        var start = hall.HourlySlotStart ?? new TimeOnly(9, 0);
-        var end = hall.HourlySlotEnd ?? new TimeOnly(22, 0);
+        var start = HallBookingWindow.EffectiveStart(hall);
+        var end = HallBookingWindow.EffectiveEnd(hall);
 
         var slotStarts = requested.Distinct().OrderBy(slot => slot).ToList();
 
