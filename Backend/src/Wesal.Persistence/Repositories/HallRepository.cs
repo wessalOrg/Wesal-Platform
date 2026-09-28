@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Domain.Common;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Persistence.Data;
@@ -204,6 +205,17 @@ public class HallRepository : IHallRepository
         {
             var selectedDate = date.Value;
             var selectedStart = startTime.Value;
+
+            // Final audit: the hall's own bookable window governs search too. A seeker
+            // asking for an hour outside the window must not be offered the hall at all;
+            // without this, search and booking disagree (booking rejects outside-window
+            // hours outright). Unconfigured bounds fall back to the shared defaults, the
+            // same values the catalog and booking paths use.
+            var defaultStart = HallBookingWindow.DefaultStart;
+            var defaultEnd = HallBookingWindow.DefaultEnd;
+            query = query.Where(hall =>
+                (hall.HourlySlotStart ?? defaultStart) <= selectedStart
+                && selectedStart < (hall.HourlySlotEnd ?? defaultEnd));
 
             // A seeker asking for a concrete hour must not be offered a hall whose slot is
             // already taken. Independent of ShowBookedSlots for the same reason as the day

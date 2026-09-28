@@ -345,8 +345,8 @@ public sealed class OwnerHallService : IOwnerHallService
             });
         }
 
-        var windowStart = effectiveStart ?? new TimeOnly(9, 0);
-        var windowEnd = effectiveEnd ?? new TimeOnly(22, 0);
+        var windowStart = effectiveStart ?? HallBookingWindow.DefaultStart;
+        var windowEnd = effectiveEnd ?? HallBookingWindow.DefaultEnd;
 
         if (await _bookingRepository.HasActiveHourlyBookingsOutsideWindowAsync(
             hall.Id, windowStart, windowEnd, cancellationToken))

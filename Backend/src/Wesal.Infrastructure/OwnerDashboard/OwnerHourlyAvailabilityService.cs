@@ -184,8 +184,8 @@ public sealed class OwnerHourlyAvailabilityService : IOwnerHourlyAvailabilitySer
         };
     }
 
-    private static readonly TimeOnly DefaultWindowStart = new(9, 0);
-    private static readonly TimeOnly DefaultWindowEnd = new(22, 0);
+    private static readonly TimeOnly DefaultWindowStart = HallBookingWindow.DefaultStart;
+    private static readonly TimeOnly DefaultWindowEnd = HallBookingWindow.DefaultEnd;
 
     private async Task<string> ResolveOwnerAsync(CancellationToken cancellationToken)
     {
