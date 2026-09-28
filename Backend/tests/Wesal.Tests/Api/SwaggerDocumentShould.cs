@@ -40,9 +40,9 @@ public class SwaggerDocumentShould
     /// WESAL-TASK-11's general-purpose owner "Contact Admin" action; 63 adds
     /// WESAL-TASK-10 Edit 15's Admin "Message" thread-resolve endpoint; 64 adds
     /// Edit 25's owner bookings-calendar endpoint; 65 adds Edit 22's comment
-    /// edit/delete path.
+    /// edit/delete path; 66 adds Edit 26's rejected-halls queue endpoint.
     /// </summary>
-    private const int ExpectedPathCount = 65;
+    private const int ExpectedPathCount = 66;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()

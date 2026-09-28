@@ -96,6 +96,22 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         return PagedResult<AdminPendingHallDto>.Create(items, page, pageSize, totalCount);
     }
 
+    public async Task<PagedResult<AdminPendingHallDto>> GetRejectedHallsAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        page = page <= 0 ? 1 : page;
+        pageSize = pageSize <= 0 ? 10 : pageSize;
+
+        var items = await _adminDashboardRepository.GetRejectedHallsAsync((page - 1) * pageSize, pageSize, cancellationToken);
+        var totalCount = await _adminDashboardRepository.GetRejectedHallsCountAsync(cancellationToken);
+
+        return PagedResult<AdminPendingHallDto>.Create(items, page, pageSize, totalCount);
+    }
+
     public async Task<AdminHallDetailDto> GetAdminHallDetailAsync(
         Guid hallId,
         CancellationToken cancellationToken = default)

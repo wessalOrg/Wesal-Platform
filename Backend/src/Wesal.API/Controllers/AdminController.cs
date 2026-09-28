@@ -52,6 +52,24 @@ public class AdminController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Rejected halls queue (Edit 26): paged, same shape as the pending queue, so the
+    /// Admin can review owner corrections independently of new submissions. Rejected
+    /// halls stay a distinct <c>HallStatus</c> and never merge into the pending list.
+    /// </summary>
+    [HttpGet("rejected")]
+    [ProducesResponseType(typeof(PagedResult<AdminPendingHallDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<PagedResult<AdminPendingHallDto>>> GetRejectedHalls(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _adminHallReviewService.GetRejectedHallsAsync(page, pageSize, cancellationToken);
+        return Ok(response);
+    }
+
     [HttpGet("{hallId:guid}")]
     [ProducesResponseType(typeof(AdminHallDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

@@ -17,6 +17,18 @@ public interface IAdminDashboardRepository
 
     Task<int> GetPendingHallsCountAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Rejected halls queue (Edit 26): same row shape and cover fallback as
+    /// <see cref="GetPendingHallsAsync"/>, filtered to <c>Rejected</c> so the Admin can
+    /// review corrections independently of pending submissions.
+    /// </summary>
+    Task<IReadOnlyList<AdminPendingHallDto>> GetRejectedHallsAsync(
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    Task<int> GetRejectedHallsCountAsync(CancellationToken cancellationToken = default);
+
     Task<AdminHallDetailRow?> GetHallDetailForAdminAsync(
         Guid hallId,
         CancellationToken cancellationToken = default);
