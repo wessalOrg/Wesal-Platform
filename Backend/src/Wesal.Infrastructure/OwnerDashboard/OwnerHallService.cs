@@ -30,6 +30,7 @@ public sealed class OwnerHallService : IOwnerHallService
     private readonly ICurrentUserService _currentUser;
     private readonly IOwnerDashboardRepository _ownerDashboardRepository;
     private readonly IBookingRepository _bookingRepository;
+    private readonly IHallMediaStorage _mediaStorage;
     private readonly IUnitOfWork _unitOfWork;
 
     public OwnerHallService(
@@ -37,12 +38,14 @@ public sealed class OwnerHallService : IOwnerHallService
         ICurrentUserService currentUser,
         IOwnerDashboardRepository ownerDashboardRepository,
         IBookingRepository bookingRepository,
+        IHallMediaStorage mediaStorage,
         IUnitOfWork unitOfWork)
     {
         _userManager = userManager;
         _currentUser = currentUser;
         _ownerDashboardRepository = ownerDashboardRepository;
         _bookingRepository = bookingRepository;
+        _mediaStorage = mediaStorage;
         _unitOfWork = unitOfWork;
     }
 
@@ -90,28 +93,58 @@ public sealed class OwnerHallService : IOwnerHallService
         // actions keep calling HallManagementAccess.EnsureAllowed and stay payment-gated.
         HallManagementAccess.EnsureDataEditable(hall);
 
-        // The hall-details update carries the same bookable-window fields as the
-        // dedicated hourly-settings endpoint, so it enforces the same rules: the
-        // *effective* window (request merged over persisted values) must be ordered
-        // whole hours, and narrowing it past a live booking is refused with the same
-        // ConflictException the hourly-settings path uses, so this endpoint can never
-        // strand an active booking by reshaping the window around it.
-        await EnsureWindowChangeAllowedAsync(hall, request, cancellationToken);
+        // Edit 24: newly uploaded files are persisted and merged into the request BEFORE
+        // any validation runs, so a save that replaces every existing photo with fresh
+        // uploads validates against the real (merged) gallery instead of failing the
+        // "at least one photo" rule on the URL-only payload.
+        var (effectiveRequest, savedPaths) = await MergeUploadedPhotosAsync(hall.Id, request, cancellationToken);
 
-        await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        try
         {
-            ApplyHallDetails(hall, request);
+            EnsureValidMergedGallery(request, effectiveRequest);
 
-            // Resubmission (FR-ADM-01, US-ADMIN-03): editing a Rejected hall re-queues
-            // it for review. Editing an Approved or PendingReview hall never changes
-            // its approval state.
-            if (hall.Status == HallStatus.Rejected)
+            // The hall-details update carries the same bookable-window fields as the
+            // dedicated hourly-settings endpoint, so it enforces the same rules: the
+            // *effective* window (request merged over persisted values) must be ordered
+            // whole hours, and narrowing it past a live booking is refused with the same
+            // ConflictException the hourly-settings path uses, so this endpoint can never
+            // strand an active booking by reshaping the window around it.
+            await EnsureWindowChangeAllowedAsync(hall, effectiveRequest, cancellationToken);
+
+            await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
-                hall.Status = HallStatus.PendingReview;
+                ApplyHallDetails(hall, effectiveRequest);
+
+                // Resubmission (FR-ADM-01, US-ADMIN-03): editing a Rejected hall re-queues
+                // it for review. Editing an Approved or PendingReview hall never changes
+                // its approval state.
+                if (hall.Status == HallStatus.Rejected)
+                {
+                    hall.Status = HallStatus.PendingReview;
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }, cancellationToken);
+        }
+        catch
+        {
+            // A refused write must not orphan freshly saved uploads on disk.
+            foreach (var path in savedPaths)
+            {
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                    }
+                }
+                catch
+                {
+                }
             }
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-        }, cancellationToken);
+            throw;
+        }
 
         return MapToDetails(hall);
     }
@@ -159,6 +192,130 @@ public sealed class OwnerHallService : IOwnerHallService
         }
 
         return _currentUser.UserId;
+    }
+
+    /// <summary>
+    /// Persists newly uploaded photos and merges them into an effective request
+    /// (Edit 24): an uploaded cover wins <see cref="UpdateOwnerHallRequest.MainImageUrl"/>
+    /// and uploaded gallery files are appended to <see cref="UpdateOwnerHallRequest.Photos"/>
+    /// with continuing display order. Returns the request unchanged when no uploads
+    /// accompany it (pure JSON path).
+    /// </summary>
+    private async Task<(UpdateOwnerHallRequest Effective, List<string> SavedPaths)> MergeUploadedPhotosAsync(
+        Guid hallId,
+        UpdateOwnerHallRequest request,
+        CancellationToken cancellationToken)
+    {
+        var savedPaths = new List<string>();
+
+        var hasCoverUpload = request.MainPhoto is not null && request.MainPhoto.Content.Length > 0;
+        var galleryUploads = request.NewPhotos
+            ?.Where(upload => upload is not null)
+            .ToList() ?? [];
+
+        if (!hasCoverUpload && galleryUploads.Count == 0)
+        {
+            return (request, savedPaths);
+        }
+
+        string? uploadedCoverUrl = null;
+        if (hasCoverUpload)
+        {
+            HallPhotoUploadValidator.EnsureValidImage(request.MainPhoto!, "MainPhoto");
+            uploadedCoverUrl = await SaveUploadedPhotoAsync(hallId, request.MainPhoto!, savedPaths, cancellationToken);
+        }
+
+        var mergedPhotos = request.Photos.ToList();
+        var nextOrder = mergedPhotos.Count == 0
+            ? 0
+            : mergedPhotos.Max(photo => photo.DisplayOrder) + 1;
+        foreach (var upload in galleryUploads)
+        {
+            HallPhotoUploadValidator.EnsureValidImage(upload, "Photos");
+            var url = await SaveUploadedPhotoAsync(hallId, upload, savedPaths, cancellationToken);
+            mergedPhotos.Add(new UpdateOwnerHallPhotoDto { Url = url, DisplayOrder = nextOrder++ });
+        }
+
+        return (new UpdateOwnerHallRequest
+        {
+            Name = request.Name,
+            MainImageUrl = uploadedCoverUrl ?? request.MainImageUrl,
+            ContactPhone = request.ContactPhone,
+            Region = request.Region,
+            Address = request.Address,
+            DetailedAddress = request.DetailedAddress,
+            Description = request.Description,
+            Capacity = request.Capacity,
+            Price = request.Price,
+            ShowPrice = request.ShowPrice,
+            YouTubeVideoUrl = request.YouTubeVideoUrl,
+            Features = request.Features,
+            OtherFeatures = request.OtherFeatures,
+            Photos = mergedPhotos,
+            HourlySlotStart = request.HourlySlotStart,
+            HourlySlotEnd = request.HourlySlotEnd,
+            MainPhoto = request.MainPhoto,
+            NewPhotos = request.NewPhotos
+        }, savedPaths);
+    }
+
+    private async Task<string> SaveUploadedPhotoAsync(
+        Guid hallId,
+        HallPhotoUpload upload,
+        List<string> savedPaths,
+        CancellationToken cancellationToken)
+    {
+        var directory = _mediaStorage.HallsUploadDirectory(hallId);
+        Directory.CreateDirectory(directory);
+
+        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(upload.FileName).ToLowerInvariant()}";
+        var fullPath = Path.Combine(directory, fileName);
+        await File.WriteAllBytesAsync(fullPath, upload.Content, cancellationToken);
+        savedPaths.Add(fullPath);
+
+        return $"/uploads/halls/{hallId}/{fileName}";
+    }
+
+    /// <summary>
+    /// Validates the merged gallery, and only when the request carries uploads
+    /// (Edit 24). The remaining field rules stay where they belong — the Fluent
+    /// validator at the API boundary (which sees the same payload on both content-type
+    /// paths) and the service's own nuanced guards below. A blanket re-validation here
+    /// would wrongly reject unchanged legacy addresses (which <see cref="ApplyAddress"/>
+    /// deliberately tolerates) and would mask the <c>AddressNotInRegion</c> business
+    /// rule with a generic validation error; and a gallery rule on upload-free calls
+    /// would reject the minimal payloads the pre-existing service contract accepts.
+    /// Failures surface as <see cref="ValidationException"/> (400) with the same
+    /// messages the boundary validator uses.
+    /// </summary>
+    private static void EnsureValidMergedGallery(
+        UpdateOwnerHallRequest request,
+        UpdateOwnerHallRequest effectiveRequest)
+    {
+        var suppliedUploads = request.MainPhoto is not null
+            || (request.NewPhotos?.Count ?? 0) > 0;
+
+        if (!suppliedUploads)
+        {
+            return;
+        }
+
+        if (effectiveRequest.Photos.Count == 0)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["Photos"] = ["At least one photo is required."]
+            });
+        }
+
+        if (effectiveRequest.Photos.Select(photo => photo.DisplayOrder).Distinct().Count()
+            != effectiveRequest.Photos.Count)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["Photos"] = ["Photo display orders must not contain duplicates."]
+            });
+        }
     }
 
     private async Task EnsureWindowChangeAllowedAsync(

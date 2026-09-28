@@ -155,6 +155,20 @@ public class UpdateOwnerHallRequest
     public TimeOnly? HourlySlotStart { get; init; }
 
     public TimeOnly? HourlySlotEnd { get; init; }
+
+    /// <summary>
+    /// New cover photo bytes (Edit 24). Populated by the controller from the multipart
+    /// <c>mainPhoto</c> file part; always null on the JSON path. When present it wins
+    /// the cover, mirroring hall creation.
+    /// </summary>
+    public HallPhotoUpload? MainPhoto { get; init; }
+
+    /// <summary>
+    /// New gallery photo bytes (Edit 24). Populated by the controller from the
+    /// multipart <c>photos</c> file parts; always null on the JSON path. Appended to
+    /// <see cref="Photos"/> with continuing display order.
+    /// </summary>
+    public IReadOnlyList<HallPhotoUpload>? NewPhotos { get; init; }
 }
 
 public class UpdateOwnerHallPhotoDto

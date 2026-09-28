@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -12,6 +13,7 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Bookings;
 using Wesal.Infrastructure.Conversations;
+using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
@@ -123,6 +125,7 @@ public class HourlyWorkingHoursLockAndCalendarShould : IDisposable
     private OwnerHallService CreateOwnerHallService(string ownerId)
         => new(_userManager, new FakeCurrentUser(ownerId, true, ApplicationRoles.HallOwner),
             new OwnerDashboardRepository(_context), new BookingRepository(_context),
+            new HallMediaStorage(Options.Create(new HallMediaOptions())),
             new UnitOfWork(_context));
 
     private ConversationService CreateConversationService(string userId, string role)

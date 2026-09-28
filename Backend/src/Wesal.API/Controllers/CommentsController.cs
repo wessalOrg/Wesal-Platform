@@ -45,4 +45,42 @@ public class CommentsController : ControllerBase
         var comments = await _commentService.GetHallCommentsAsync(hallId, cancellationToken);
         return Ok(comments);
     }
+
+    /// <summary>
+    /// Author-owned comment edit (Edit 22): only the comment's author may change its
+    /// content, validated with the same rules as creation.
+    /// </summary>
+    [HttpPut("{commentId:guid}")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(CommentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CommentResponse>> UpdateComment(
+        Guid commentId,
+        [FromBody] UpdateCommentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _commentService.UpdateCommentAsync(commentId, request, cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Author-owned comment deletion (Edit 22): soft-deletes, so the comment no longer
+    /// appears in normal retrieval.
+    /// </summary>
+    [HttpDelete("{commentId:guid}")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteComment(
+        Guid commentId,
+        CancellationToken cancellationToken)
+    {
+        await _commentService.DeleteCommentAsync(commentId, cancellationToken);
+        return NoContent();
+    }
 }

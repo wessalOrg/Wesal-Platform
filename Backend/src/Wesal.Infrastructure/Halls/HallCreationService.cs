@@ -21,10 +21,6 @@ public class HallCreationService : IHallCreationService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly INotificationDispatcher _notificationDispatcher;
 
-    private static readonly string[] PermittedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-    private static readonly string[] PermittedMimeTypes = new[] { "image/jpeg", "image/png", "image/webp" };
-    private const long MaxFileSize = 5 * 1024 * 1024; // 5MB
-
     public HallCreationService(
         ICurrentUserService currentUser,
         IHallRepository hallRepository,
@@ -87,46 +83,25 @@ public class HallCreationService : IHallCreationService
                 throw new ValidationException(new Dictionary<string, string[]> { ["Features"] = new[] { $"The feature \"{feature}\" is not in the predefined feature list." } });
         }
 
-        // Photo validation before persistence
+        // Photo validation before persistence (shared gallery rules, Edit 24).
         var validatedPhotos = new List<(string OriginalName, string Extension, string MimeType, byte[] Content)>();
         if (request.Photos != null)
         {
             foreach (var photo in request.Photos)
             {
-                if (photo == null || photo.Content.Length == 0)
+                if (photo is null)
                     throw new ValidationException(new Dictionary<string, string[]> { ["Photos"] = new[] { "Invalid photo." } });
-                if (photo.Content.Length > MaxFileSize)
-                    throw new ValidationException(new Dictionary<string, string[]> { ["Photos"] = new[] { "Photo size must not exceed 5MB." } });
 
-                var ext = Path.GetExtension(photo.FileName).ToLowerInvariant();
-                if (!PermittedExtensions.Contains(ext))
-                    throw new ValidationException(new Dictionary<string, string[]> { ["Photos"] = new[] { $"Photo extension '{ext}' is not permitted." } });
+                HallPhotoUploadValidator.EnsureValidImage(photo, "Photos");
 
-                if (!PermittedMimeTypes.Contains(photo.ContentType.ToLowerInvariant()))
-                    throw new ValidationException(new Dictionary<string, string[]> { ["Photos"] = new[] { $"Photo MIME type '{photo.ContentType}' is not permitted." } });
-
-                var content = photo.Content;
-                // Basic file signature check
-                if (!IsValidImageSignature(content, photo.ContentType))
-                    throw new ValidationException(new Dictionary<string, string[]> { ["Photos"] = new[] { "Invalid image file." } });
-
-                validatedPhotos.Add((photo.FileName, ext, photo.ContentType, content));
+                validatedPhotos.Add((photo.FileName, Path.GetExtension(photo.FileName).ToLowerInvariant(), photo.ContentType, photo.Content));
             }
         }
 
         // The cover photo is validated with the same rules as the gallery.
         if (request.MainPhoto != null && request.MainPhoto.Content.Length > 0)
         {
-            if (request.MainPhoto.Content.Length > MaxFileSize)
-                throw new ValidationException(new Dictionary<string, string[]> { ["MainPhoto"] = new[] { "Photo size must not exceed 5MB." } });
-
-            var ext = Path.GetExtension(request.MainPhoto.FileName).ToLowerInvariant();
-            if (!PermittedExtensions.Contains(ext))
-                throw new ValidationException(new Dictionary<string, string[]> { ["MainPhoto"] = new[] { $"Photo extension '{ext}' is not permitted." } });
-            if (!PermittedMimeTypes.Contains(request.MainPhoto.ContentType.ToLowerInvariant()))
-                throw new ValidationException(new Dictionary<string, string[]> { ["MainPhoto"] = new[] { $"Photo MIME type '{request.MainPhoto.ContentType}' is not permitted." } });
-            if (!IsValidImageSignature(request.MainPhoto.Content, request.MainPhoto.ContentType))
-                throw new ValidationException(new Dictionary<string, string[]> { ["MainPhoto"] = new[] { "Invalid image file." } });
+            HallPhotoUploadValidator.EnsureValidImage(request.MainPhoto, "MainPhoto");
         }
 
         var hall = new Hall
@@ -310,19 +285,5 @@ public class HallCreationService : IHallCreationService
             case "southgaza": region = HallRegion.SouthGaza; return true;
             default: region = default; return false;
         }
-    }
-
-    private static bool IsValidImageSignature(byte[] content, string mimeType)
-    {
-        if (content.Length < 4) return false;
-        // JPEG: FF D8 FF
-        if (mimeType == "image/jpeg" && content[0] == 0xFF && content[1] == 0xD8 && content[2] == 0xFF) return true;
-        // PNG: 89 50 4E 47
-        if (mimeType == "image/png" && content[0] == 0x89 && content[1] == 0x50 && content[2] == 0x4E && content[3] == 0x47) return true;
-        // WEBP: RIFF....WEBP
-        if (mimeType == "image/webp" && content.Length >= 12 && content[0] == 0x52 && content[1] == 0x49 && content[2] == 0x46 && content[3] == 0x46 && content[8] == 0x57 && content[9] == 0x45 && content[10] == 0x42 && content[11] == 0x50) return true;
-        // Allow jpg with jpeg mime
-        if (mimeType == "image/jpeg" || mimeType == "image/jpg") return true;
-        return false;
     }
 }

@@ -1,6 +1,8 @@
 using Wesal.Application.Common.Interfaces;
+using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
+using Wesal.Domain.Entities;
 using Wesal.Infrastructure.Sessions;
 
 namespace Wesal.Tests.Infrastructure;
@@ -8,11 +10,11 @@ namespace Wesal.Tests.Infrastructure;
 public class SessionServiceShould
 {
     [Fact]
-    public void GetSession_Guest_ReturnsUnauthenticatedState()
+    public async Task GetSession_Guest_ReturnsUnauthenticatedState()
     {
         var service = CreateService(authenticated: false);
 
-        var result = service.GetSession();
+        var result = await service.GetSessionAsync();
 
         Assert.False(result.IsAuthenticated);
         Assert.Null(result.Role);
@@ -20,14 +22,14 @@ public class SessionServiceShould
     }
 
     [Fact]
-    public void GetSession_RegisteredUser_ReturnsAuthenticatedState()
+    public async Task GetSession_RegisteredUser_ReturnsAuthenticatedState()
     {
         var service = CreateService(
             authenticated: true,
             userName: "mohammed",
             roles: [ApplicationRoles.RegisteredUser]);
 
-        var result = service.GetSession();
+        var result = await service.GetSessionAsync();
 
         Assert.True(result.IsAuthenticated);
         Assert.Equal(ApplicationRoles.RegisteredUser, result.Role);
@@ -35,14 +37,14 @@ public class SessionServiceShould
     }
 
     [Fact]
-    public void GetSession_HallOwner_ReturnsHallOwnerRole()
+    public async Task GetSession_HallOwner_ReturnsHallOwnerRole()
     {
         var service = CreateService(
             authenticated: true,
             userName: "ahmed",
             roles: [ApplicationRoles.HallOwner]);
 
-        var result = service.GetSession();
+        var result = await service.GetSessionAsync();
 
         Assert.True(result.IsAuthenticated);
         Assert.Equal(ApplicationRoles.HallOwner, result.Role);
@@ -50,14 +52,14 @@ public class SessionServiceShould
     }
 
     [Fact]
-    public void GetSession_Admin_ReturnsAdminRole()
+    public async Task GetSession_Admin_ReturnsAdminRole()
     {
         var service = CreateService(
             authenticated: true,
             userName: "admin",
             roles: [ApplicationRoles.Admin]);
 
-        var result = service.GetSession();
+        var result = await service.GetSessionAsync();
 
         Assert.True(result.IsAuthenticated);
         Assert.Equal(ApplicationRoles.Admin, result.Role);
@@ -65,42 +67,42 @@ public class SessionServiceShould
     }
 
     [Fact]
-    public void GetSession_AdminWithMultipleRoles_ReturnsAdminAsPrimary()
+    public async Task GetSession_AdminWithMultipleRoles_ReturnsAdminAsPrimary()
     {
         var service = CreateService(
             authenticated: true,
             userName: "admin",
             roles: [ApplicationRoles.RegisteredUser, ApplicationRoles.Admin]);
 
-        var result = service.GetSession();
+        var result = await service.GetSessionAsync();
 
         Assert.True(result.IsAuthenticated);
         Assert.Equal(ApplicationRoles.Admin, result.Role);
     }
 
     [Fact]
-    public void GetSession_HallOwnerWithRegisteredUser_ReturnsHallOwnerAsPrimary()
+    public async Task GetSession_HallOwnerWithRegisteredUser_ReturnsHallOwnerAsPrimary()
     {
         var service = CreateService(
             authenticated: true,
             userName: "owner",
             roles: [ApplicationRoles.RegisteredUser, ApplicationRoles.HallOwner]);
 
-        var result = service.GetSession();
+        var result = await service.GetSessionAsync();
 
         Assert.True(result.IsAuthenticated);
         Assert.Equal(ApplicationRoles.HallOwner, result.Role);
     }
 
     [Fact]
-    public void GetSession_AuthenticatedWithNoRoles_ReturnsNullRole()
+    public async Task GetSession_AuthenticatedWithNoRoles_ReturnsNullRole()
     {
         var service = CreateService(
             authenticated: true,
             userName: "user",
             roles: []);
 
-        var result = service.GetSession();
+        var result = await service.GetSessionAsync();
 
         Assert.True(result.IsAuthenticated);
         Assert.Null(result.Role);
@@ -108,11 +110,11 @@ public class SessionServiceShould
     }
 
     [Fact]
-    public void GetSession_Guest_DoesNotExposeSensitiveData()
+    public async Task GetSession_Guest_DoesNotExposeSensitiveData()
     {
         var service = CreateService(authenticated: false);
 
-        var result = service.GetSession();
+        var result = await service.GetSessionAsync();
 
         var json = System.Text.Json.JsonSerializer.Serialize(result);
         Assert.DoesNotContain("password", json, StringComparison.OrdinalIgnoreCase);
@@ -122,14 +124,14 @@ public class SessionServiceShould
     }
 
     [Fact]
-    public void GetSession_Authenticated_DoesNotExposeSensitiveData()
+    public async Task GetSession_Authenticated_DoesNotExposeSensitiveData()
     {
         var service = CreateService(
             authenticated: true,
             userName: "mohammed",
             roles: [ApplicationRoles.RegisteredUser]);
 
-        var result = service.GetSession();
+        var result = await service.GetSessionAsync();
 
         var json = System.Text.Json.JsonSerializer.Serialize(result);
         Assert.DoesNotContain("password", json, StringComparison.OrdinalIgnoreCase);
@@ -141,41 +143,110 @@ public class SessionServiceShould
     }
 
     [Fact]
-    public void GetSession_CaseInsensitiveRoleMatch()
+    public async Task GetSession_CaseInsensitiveRoleMatch()
     {
         var service = CreateService(
             authenticated: true,
             userName: "user",
             roles: ["admin"]);
 
-        var result = service.GetSession();
+        var result = await service.GetSessionAsync();
 
         Assert.Equal(ApplicationRoles.Admin, result.Role);
     }
 
     [Fact]
-    public void GetSession_RespondsToCurrentUserState()
+    public async Task GetSession_RespondsToCurrentUserState()
     {
         var service = CreateService(
             authenticated: true,
             userName: "user1",
             roles: [ApplicationRoles.RegisteredUser]);
 
-        var result1 = service.GetSession();
+        var result1 = await service.GetSessionAsync();
         Assert.True(result1.IsAuthenticated);
 
         var service2 = CreateService(authenticated: false);
-        var result2 = service2.GetSession();
+        var result2 = await service2.GetSessionAsync();
         Assert.False(result2.IsAuthenticated);
+    }
+
+    [Fact]
+    public async Task GetSession_Guest_ReportsNoOwnership()
+    {
+        var service = CreateService(authenticated: false);
+
+        var result = await service.GetSessionAsync();
+
+        Assert.False(result.IsHallOwner);
+        Assert.False(result.OwnsHall);
+    }
+
+    [Fact]
+    public async Task GetSession_HallOwnerWithHalls_ReportsOwnership()
+    {
+        var service = CreateService(
+            authenticated: true,
+            userName: "ahmed",
+            roles: [ApplicationRoles.HallOwner],
+            hallCount: 2);
+
+        var result = await service.GetSessionAsync();
+
+        Assert.True(result.IsHallOwner);
+        Assert.True(result.OwnsHall);
+    }
+
+    [Fact]
+    public async Task GetSession_SeekerWithoutHalls_ReportsNoOwnership()
+    {
+        var service = CreateService(
+            authenticated: true,
+            userName: "mohammed",
+            roles: [ApplicationRoles.RegisteredUser]);
+
+        var result = await service.GetSessionAsync();
+
+        Assert.False(result.IsHallOwner);
+        Assert.False(result.OwnsHall);
     }
 
     private static SessionService CreateService(
         bool authenticated,
         string? userName = null,
-        IReadOnlyList<string>? roles = null)
+        IReadOnlyList<string>? roles = null,
+        int hallCount = 0)
     {
         var currentUser = new FakeCurrentUserService(authenticated, userName, roles ?? []);
-        return new SessionService(currentUser);
+        return new SessionService(currentUser, new FakeOwnerDashboardRepository(hallCount));
+    }
+
+    private sealed class FakeOwnerDashboardRepository(int hallCount) : IOwnerDashboardRepository
+    {
+        public Task<int> GetHallCountByOwnerAsync(string ownerId, CancellationToken cancellationToken = default)
+            => Task.FromResult(hallCount);
+
+        public Task<IReadOnlyList<Hall>> GetOwnedHallsAsync(string ownerId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Hall>>([]);
+
+        public Task<Hall?> GetOwnedHallWithDetailsAsync(Guid hallId, string ownerId, CancellationToken cancellationToken = default)
+            => Task.FromResult<Hall?>(null);
+
+        public Task<Hall?> GetOwnedHallForUpdateAsync(Guid hallId, string ownerId, CancellationToken cancellationToken = default)
+            => Task.FromResult<Hall?>(null);
+
+        public void AddHallImages(IEnumerable<HallImage> images)
+        {
+        }
+
+        public Task<Hall?> GetOwnedHallAsync(Guid hallId, string ownerId, CancellationToken cancellationToken = default)
+            => Task.FromResult<Hall?>(null);
+
+        public Task<IReadOnlyList<OwnerBookingRequestDto>?> GetBookingRequestsAsync(Guid hallId, string ownerId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<OwnerBookingRequestDto>?>(null);
+
+        public Task<IReadOnlyList<Booking>?> GetActiveBookingsInRangeAsync(Guid hallId, string ownerId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Booking>?>(null);
     }
 
     private sealed class FakeCurrentUserService : ICurrentUserService

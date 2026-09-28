@@ -69,6 +69,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
         {
             entity.Property(user => user.FullName).HasMaxLength(150);
             entity.Property(user => user.IdentityDocumentUrl).HasMaxLength(500);
+            entity.Property(user => user.ProfilePictureUrl).HasMaxLength(500);
             entity.Property(user => user.IdentityDocumentUploadedAt).HasColumnType("timestamp with time zone");
             entity.HasIndex(user => user.PhoneNumber).IsUnique().HasFilter("\"PhoneNumber\" IS NOT NULL");
         });

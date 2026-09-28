@@ -21,6 +21,11 @@ public class ProfileResponse
     public string ConcurrencyStamp { get; init; } = string.Empty;
 
     /// <summary>
+    /// The user's profile picture URL when one is set (Edit 22); null otherwise.
+    /// </summary>
+    public string? ProfilePictureUrl { get; init; }
+
+    /// <summary>
     /// True when the Hall Owner has uploaded an identity document. The document is
     /// mandatory before the owner can create a hall, so the profile UI can show the
     /// completion state (US-OWNER-30).

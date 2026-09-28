@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Common;
@@ -12,6 +13,7 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Admin;
 using Wesal.Infrastructure.Conversations;
+using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
@@ -98,7 +100,8 @@ public class OwnerEditAdminVisibilityShould : IDisposable
 
     private OwnerHallService CreateOwnerService(string userId)
         => new(_userManager, new FakeCurrentUser(userId, true, ApplicationRoles.HallOwner),
-            new OwnerDashboardRepository(_context), new BookingRepository(_context), new UnitOfWork(_context));
+            new OwnerDashboardRepository(_context), new BookingRepository(_context),
+            new HallMediaStorage(Options.Create(new HallMediaOptions())), new UnitOfWork(_context));
 
     private AdminHallReviewService CreateAdminService()
         => new(new AdminDashboardRepository(_context), new HallRepository(_context), new UnitOfWork(_context),
@@ -255,7 +258,8 @@ public class OwnerEditAdminVisibilityShould : IDisposable
 
         var seekerService = new OwnerHallService(_userManager,
             new FakeCurrentUser(seeker.Id, true, ApplicationRoles.RegisteredUser),
-            new OwnerDashboardRepository(_context), new BookingRepository(_context), new UnitOfWork(_context));
+            new OwnerDashboardRepository(_context), new BookingRepository(_context),
+            new HallMediaStorage(Options.Create(new HallMediaOptions())), new UnitOfWork(_context));
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             seekerService.UpdateOwnedHallAsync(hall.Id, EditRequest()));
