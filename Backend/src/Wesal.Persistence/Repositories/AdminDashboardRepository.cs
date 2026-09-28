@@ -66,6 +66,56 @@ public class AdminDashboardRepository : IAdminDashboardRepository
             .CountAsync(hall => hall.Status == HallStatus.PendingReview && !hall.IsDeleted, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<AdminPendingHallDto>> GetRejectedHallsAsync(
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        // Edit 26: same projection (including the gallery-cover fallback) as the pending
+        // queue, filtered to Rejected so corrections are reviewable on their own.
+        var rows = await _context.Halls
+            .AsNoTracking()
+            .Where(hall => hall.Status == HallStatus.Rejected && !hall.IsDeleted)
+            .OrderBy(hall => hall.CreatedAt)
+            .ThenBy(hall => hall.Id)
+            .Skip(skip)
+            .Take(take)
+            .Select(hall => new
+            {
+                hall.Id,
+                hall.Name,
+                hall.MainImageUrl,
+                hall.CreatedAt,
+                GalleryCoverUrl = _context.HallImages
+                    .Where(image => image.HallId == hall.Id
+                        && !image.IsDeleted
+                        && !string.IsNullOrWhiteSpace(image.Url))
+                    .OrderBy(image => image.DisplayOrder)
+                    .ThenBy(image => image.CreatedAt)
+                    .Select(image => image.Url)
+                    .FirstOrDefault()
+            })
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(row => new AdminPendingHallDto
+            {
+                HallId = row.Id,
+                Name = row.Name,
+                ThumbnailUrl = !string.IsNullOrWhiteSpace(row.MainImageUrl)
+                    ? row.MainImageUrl
+                    : row.GalleryCoverUrl,
+                SubmittedAt = row.CreatedAt
+            })
+            .ToList();
+    }
+
+    public async Task<int> GetRejectedHallsCountAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Halls
+            .CountAsync(hall => hall.Status == HallStatus.Rejected && !hall.IsDeleted, cancellationToken);
+    }
+
     public async Task<AdminHallDetailRow?> GetHallDetailForAdminAsync(
         Guid hallId,
         CancellationToken cancellationToken = default)

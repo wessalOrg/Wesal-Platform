@@ -13,6 +13,15 @@ public interface IAdminHallReviewService
         int pageSize,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Rejected halls queue (Edit 26): paged, same shape as the pending queue, so the
+    /// Admin can review owner corrections independently of new submissions.
+    /// </summary>
+    Task<PagedResult<AdminPendingHallDto>> GetRejectedHallsAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task<AdminHallDetailDto> GetAdminHallDetailAsync(
         Guid hallId,
         CancellationToken cancellationToken = default);

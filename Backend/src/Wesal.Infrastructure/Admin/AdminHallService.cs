@@ -10,14 +10,17 @@ using Wesal.Infrastructure.Conversations;
 namespace Wesal.Infrastructure.Admin;
 
 /// <summary>
-/// Approves a hall submission (US-ADMIN-02, FR-ADM-03). Approval ONLY changes the
-/// HallStatus from PendingReview to Approved — it never touches PaymentStatus and never
-/// starts a SubscriptionCycle (that is exclusively US-ADMIN-10 / FR-SUB-04). The action
-/// is idempotent: approving an already-Approved hall is a no-op that returns 200 without
-/// delivering a duplicate owner notification. On the first approval the owner receives
-/// an in-app confirmation stating that management features stay locked until payment is
-/// confirmed (US-ADMIN-07). Approval triggers search re-indexing post-commit; indexing
-/// failure never rolls back the approval (the hall is already visible through the
+/// Approves a hall submission (US-ADMIN-02, FR-ADM-03, Edit 26). Approval ONLY changes
+/// the HallStatus to Approved — it never touches PaymentStatus and never starts a
+/// SubscriptionCycle (that is exclusively US-ADMIN-10 / FR-SUB-04). Both PendingReview
+/// and Rejected halls can be approved: a rejection the owner corrected (or one the
+/// Admin issued by mistake) returns to Approved through this same action, reusing the
+/// identical indexing and owner-notification flow. The action is idempotent: approving
+/// an already-Approved hall is a no-op that returns 200 without delivering a duplicate
+/// owner notification. On the first approval the owner receives an in-app confirmation
+/// stating that management features stay locked until payment is confirmed
+/// (US-ADMIN-07). Approval triggers search re-indexing post-commit; indexing failure
+/// never rolls back the approval (the hall is already visible through the
 /// approved-halls queries, which are driven by the persisted Status flag).
 /// </summary>
 public class AdminHallService : IAdminHallService
@@ -73,7 +76,10 @@ public class AdminHallService : IAdminHallService
             return new HallApprovalResponse { HallId = hall.Id, HallName = hall.Name, Status = hall.Status, ApprovedAt = hall.UpdatedAt ?? hall.CreatedAt };
         }
 
-        if (hall.Status != HallStatus.PendingReview)
+        // Edit 26: a corrected (or mistakenly) rejected hall returns to Approved through
+        // the same action as a pending submission. Any other non-approved status keeps
+        // the previous refusal so approval can never mint an unexpected state.
+        if (hall.Status != HallStatus.PendingReview && hall.Status != HallStatus.Rejected)
             throw new BusinessRuleException("HallNotPending", $"Hall with status {hall.Status} cannot be approved.");
 
         hall.Status = HallStatus.Approved;
