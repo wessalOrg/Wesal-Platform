@@ -103,6 +103,10 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         builder.Services.AddScoped<IHallInitiationService, StubHallInitiationService>();
         builder.Services.AddScoped<IHallStatusTrackingService, StubHallStatusTrackingService>();
         builder.Services.AddScoped<IOwnerHallService, StubOwnerHallService>();
+        // The trimmed container does not run AddApplication()'s assembly scan, so the
+        // update endpoint's explicitly-injected validator is registered directly,
+        // mirroring production.
+        builder.Services.AddScoped<FluentValidation.IValidator<Wesal.Application.Common.Models.UpdateOwnerHallRequest>, Wesal.Application.Common.Validation.UpdateOwnerHallRequestValidator>();
         builder.Services.AddScoped<IOwnerBookingRequestsService, StubOwnerBookingRequestsService>();
         builder.Services.AddScoped<IOwnerHourlyAvailabilityService, StubOwnerHourlyAvailabilityService>();
         builder.Services.AddScoped<IHallSubscriptionService, StubHallSubscriptionService>();

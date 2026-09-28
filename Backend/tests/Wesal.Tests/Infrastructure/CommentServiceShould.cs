@@ -276,10 +276,29 @@ public class CommentServiceShould
         public Task<IReadOnlyList<Comment>> GetByHallIdAsync(Guid hallId, CancellationToken cancellationToken = default)
         {
             var filtered = Comments
-                .Where(c => c.HallId == hallId)
+                .Where(c => c.HallId == hallId && !c.IsDeleted)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToList();
             return Task.FromResult<IReadOnlyList<Comment>>(filtered);
+        }
+
+        public Task<IReadOnlyList<CommentAuthorRow>> GetByHallIdWithAuthorsAsync(Guid hallId, CancellationToken cancellationToken = default)
+        {
+            IReadOnlyList<CommentAuthorRow> rows = Comments
+                .Where(c => c.HallId == hallId && !c.IsDeleted)
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new CommentAuthorRow
+                {
+                    CommentId = c.Id,
+                    HallId = c.HallId,
+                    Content = c.Content,
+                    AuthorUserId = c.UserId,
+                    AuthorFullName = null,
+                    AuthorProfilePictureUrl = null,
+                    CreatedAt = c.CreatedAt
+                })
+                .ToList();
+            return Task.FromResult(rows);
         }
     }
 

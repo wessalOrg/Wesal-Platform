@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -12,6 +13,7 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Bookings;
 using Wesal.Infrastructure.Conversations;
+using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
@@ -170,6 +172,7 @@ public class HallAccessGuardShould : IDisposable
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
             new BookingRepository(_context),
+            new HallMediaStorage(Options.Create(new HallMediaOptions())),
             new UnitOfWork(_context));
 
         var updated = await service.UpdateOwnedHallAsync(hall.Id, MinimalUpdateRequest());
@@ -191,6 +194,7 @@ public class HallAccessGuardShould : IDisposable
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
             new BookingRepository(_context),
+            new HallMediaStorage(Options.Create(new HallMediaOptions())),
             new UnitOfWork(_context));
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
@@ -208,6 +212,7 @@ public class HallAccessGuardShould : IDisposable
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
             new BookingRepository(_context),
+            new HallMediaStorage(Options.Create(new HallMediaOptions())),
             new UnitOfWork(_context));
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
@@ -225,6 +230,7 @@ public class HallAccessGuardShould : IDisposable
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
             new BookingRepository(_context),
+            new HallMediaStorage(Options.Create(new HallMediaOptions())),
             new UnitOfWork(_context));
 
         var result = await service.UpdateOwnedHallAsync(hall.Id, MinimalUpdateRequest());
@@ -246,6 +252,7 @@ public class HallAccessGuardShould : IDisposable
             new FakeCurrentUser(owner.Id),
             new OwnerDashboardRepository(_context),
             new BookingRepository(_context),
+            new HallMediaStorage(Options.Create(new HallMediaOptions())),
             new UnitOfWork(_context));
 
         var result = await service.UpdateOwnedHallAsync(hall.Id, MinimalUpdateRequest());

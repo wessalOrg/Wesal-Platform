@@ -17,4 +17,10 @@ public class ApplicationUser : IdentityUser
     public string? IdentityDocumentUrl { get; set; }
 
     public DateTimeOffset? IdentityDocumentUploadedAt { get; set; }
+
+    /// <summary>
+    /// Optional profile picture URL of the user (Edit 22). Null when the user never set
+    /// one; surfaced read-only on profile and comment responses whenever present.
+    /// </summary>
+    public string? ProfilePictureUrl { get; set; }
 }

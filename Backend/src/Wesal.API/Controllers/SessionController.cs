@@ -21,9 +21,9 @@ public class SessionController : ControllerBase
     [HttpGet]
     [AllowAnonymous]
     [ProducesResponseType(typeof(SessionResponse), StatusCodes.Status200OK)]
-    public ActionResult<SessionResponse> GetSession()
+    public async Task<ActionResult<SessionResponse>> GetSession(CancellationToken cancellationToken)
     {
-        var response = _sessionService.GetSession();
+        var response = await _sessionService.GetSessionAsync(cancellationToken);
         return Ok(response);
     }
 }

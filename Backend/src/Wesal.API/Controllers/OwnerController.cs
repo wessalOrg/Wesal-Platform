@@ -1,5 +1,7 @@
 using Asp.Versioning;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
@@ -28,6 +30,7 @@ public class OwnerController : ControllerBase
     private readonly IOwnerHourlyAvailabilityService _ownerHourlyAvailabilityService;
     private readonly IHallSubscriptionService _hallSubscriptionService;
     private readonly IOwnerIdentityService _ownerIdentityService;
+    private readonly IValidator<UpdateOwnerHallRequest> _updateHallValidator;
 
     public OwnerController(
         IOwnerSidebarService sidebarService,
@@ -38,7 +41,8 @@ public class OwnerController : ControllerBase
         IOwnerBookingRequestsService ownerBookingRequestsService,
         IOwnerHourlyAvailabilityService ownerHourlyAvailabilityService,
         IHallSubscriptionService hallSubscriptionService,
-        IOwnerIdentityService ownerIdentityService)
+        IOwnerIdentityService ownerIdentityService,
+        IValidator<UpdateOwnerHallRequest> updateHallValidator)
     {
         _sidebarService = sidebarService;
         _hallCreationService = hallCreationService;
@@ -49,6 +53,7 @@ public class OwnerController : ControllerBase
         _ownerHourlyAvailabilityService = ownerHourlyAvailabilityService;
         _hallSubscriptionService = hallSubscriptionService;
         _ownerIdentityService = ownerIdentityService;
+        _updateHallValidator = updateHallValidator;
     }
 
     /// <summary>
@@ -133,8 +138,17 @@ public class OwnerController : ControllerBase
     /// from the request. Editing is rejected while the hall is under Admin review
     /// (PendingReview), surfacing a clear locked/pending message instead of applying
     /// changes.
+    ///
+    /// Edit 24: accepts the same payload as either <c>application/json</c>
+    /// (<see cref="UpdateOwnerHallRequest"/>) or <c>multipart/form-data</c> carrying a
+    /// <c>payload</c> JSON part plus <c>mainPhoto</c>/<c>photos</c> file parts. The JSON-only
+    /// binding used to reject every file-carrying save with a binding failure even though
+    /// the submitted values were valid, which clients surfaced as a false validation
+    /// error. Uploaded files are validated, persisted and merged server-side before the
+    /// shared request validation runs, so both shapes accept and reject identically.
     /// </summary>
     [HttpPut("halls/{hallId:guid}")]
+    [Consumes("application/json", "multipart/form-data")]
     [ProducesResponseType(typeof(OwnerHallDetailsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -143,11 +157,156 @@ public class OwnerController : ControllerBase
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<OwnerHallDetailsDto>> UpdateOwnedHall(
         Guid hallId,
-        [FromBody] UpdateOwnerHallRequest request,
         CancellationToken cancellationToken)
     {
+        var request = Request.HasFormContentType
+            ? await ReadMultipartUpdateRequestAsync(cancellationToken)
+            : await ReadJsonUpdateRequestAsync(cancellationToken);
+
+        // The action takes no DTO parameter (it accepts two content types), so the
+        // validation filter has nothing to inspect: the boundary validation it used to
+        // perform runs here explicitly, with the identical validator and the identical
+        // 400 shape, on both paths. When uploads accompany the request, the gallery
+        // ("Photos") rules are evaluated against the merged gallery in the service —
+        // which is the only place that sees the fresh files — so exact-"Photos" failures
+        // on the URL-only payload are deferred there instead of falsely rejecting a
+        // save that replaces the whole gallery with uploads.
+        var hasUploads = request.MainPhoto is not null || (request.NewPhotos?.Count ?? 0) > 0;
+        var validation = await _updateHallValidator.ValidateAsync(request, cancellationToken);
+        var errors = validation.Errors
+            .GroupBy(error => error.PropertyName)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(error => error.ErrorMessage).ToArray());
+        if (hasUploads)
+        {
+            errors.Remove("Photos");
+        }
+
+        if (errors.Count > 0)
+        {
+            return BadRequest(new ValidationProblemDetails(errors)
+            {
+                Title = "Validation failed",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
         var details = await _ownerHallService.UpdateOwnedHallAsync(hallId, request, cancellationToken);
         return Ok(details);
+    }
+
+    private static readonly System.Text.Json.JsonSerializerOptions UpdateRequestJsonOptions =
+        new(System.Text.Json.JsonSerializerDefaults.Web);
+
+    private async Task<UpdateOwnerHallRequest> ReadJsonUpdateRequestAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await Request.ReadFromJsonAsync<UpdateOwnerHallRequest>(
+                    UpdateRequestJsonOptions,
+                    cancellationToken)
+                ?? throw new Wesal.Domain.Exceptions.ValidationException("A hall update body is required.");
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            throw new Wesal.Domain.Exceptions.ValidationException($"The hall update body is not valid JSON: {ex.Message}");
+        }
+    }
+
+    private async Task<UpdateOwnerHallRequest> ReadMultipartUpdateRequestAsync(CancellationToken cancellationToken)
+    {
+        var payload = Request.Form["payload"].ToString();
+
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            throw new Wesal.Domain.Exceptions.ValidationException(new Dictionary<string, string[]>
+            {
+                ["payload"] = ["The multipart update must carry a 'payload' part with the hall update JSON."]
+            });
+        }
+
+        UpdateOwnerHallRequest parsed;
+        try
+        {
+            parsed = System.Text.Json.JsonSerializer.Deserialize<UpdateOwnerHallRequest>(
+                    payload,
+                    UpdateRequestJsonOptions)
+                ?? throw new Wesal.Domain.Exceptions.ValidationException("The 'payload' part must contain the hall update JSON.");
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            throw new Wesal.Domain.Exceptions.ValidationException($"The 'payload' part is not valid JSON: {ex.Message}");
+        }
+
+        // UpdateOwnerHallRequest is a class, so the uploads are carried by a copy;
+        // the parsed payload itself is never mutated.
+        return new UpdateOwnerHallRequest
+        {
+            Name = parsed.Name,
+            MainImageUrl = parsed.MainImageUrl,
+            ContactPhone = parsed.ContactPhone,
+            Region = parsed.Region,
+            Address = parsed.Address,
+            DetailedAddress = parsed.DetailedAddress,
+            Description = parsed.Description,
+            Capacity = parsed.Capacity,
+            Price = parsed.Price,
+            ShowPrice = parsed.ShowPrice,
+            YouTubeVideoUrl = parsed.YouTubeVideoUrl,
+            Features = parsed.Features,
+            OtherFeatures = parsed.OtherFeatures,
+            Photos = parsed.Photos,
+            HourlySlotStart = parsed.HourlySlotStart,
+            HourlySlotEnd = parsed.HourlySlotEnd,
+            MainPhoto = await ReadUploadAsync(Request.Form.Files.GetFile("mainPhoto"), cancellationToken),
+            NewPhotos = await ReadUploadsAsync(Request.Form.Files.GetFiles("photos"), cancellationToken)
+        };
+    }
+
+    private static async Task<HallPhotoUpload?> ReadUploadAsync(
+        IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        // Zero-byte parts are preserved (not dropped) so an empty gallery upload is
+        // properly rejected as "Invalid photo." downstream instead of silently
+        // vanishing and changing which gallery the merge validates.
+        if (file is null)
+        {
+            return null;
+        }
+
+        using var stream = new MemoryStream();
+        await file.CopyToAsync(stream, cancellationToken);
+
+        return new HallPhotoUpload
+        {
+            FileName = file.FileName,
+            ContentType = file.ContentType,
+            Content = stream.ToArray()
+        };
+    }
+
+    private static async Task<IReadOnlyList<HallPhotoUpload>?> ReadUploadsAsync(
+        IReadOnlyList<IFormFile> files,
+        CancellationToken cancellationToken)
+    {
+        if (files.Count == 0)
+        {
+            return null;
+        }
+
+        var uploads = new List<HallPhotoUpload>(files.Count);
+        foreach (var file in files)
+        {
+            var upload = await ReadUploadAsync(file, cancellationToken);
+            if (upload is not null)
+            {
+                uploads.Add(upload);
+            }
+        }
+
+        return uploads;
     }
 
     /// <summary>
