@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
-import { HALL_OWNER_MESSAGES_PATH } from "@/lib/account-profile-path";
 import { parseOwnerHallIdFromPathname, ownerAdminMessagesPath } from "@/lib/hall-owner-query-keys";
 import { pickOwnerAdminConversation } from "@/lib/owner-admin-conversation";
 import { fetchInboxConversations } from "@/services/conversations";
@@ -23,12 +22,6 @@ async function loadOwnerInbox(): Promise<ConversationSummary[]> {
   return items;
 }
 
-export type ContactAdminTarget = {
-  hallId: string | null;
-  conversationId: string | null;
-  href: string;
-};
-
 function pickHallId(
   halls: Array<{ id: string; paymentStatus?: string }>,
   pathname: string,
@@ -42,17 +35,14 @@ function pickHallId(
 }
 
 /**
- * Opens the existing owner ↔ admin inbox thread (Edit 4).
+ * Resolves the owner ↔ Admin inbox thread (Edit 4) for the Contact Admin link.
  * Does not create a conversation — no owner-side admin-create API exists.
  */
 export function useContactAdmin() {
-  const router = useRouter();
   const pathname = usePathname();
   const { isHallOwner } = useAccountAccess();
-  const { halls, isLoading: hallsLoading } = useHallOwnerHalls();
+  const { halls } = useHallOwnerHalls();
   const inbox = useOptionalMessagesInbox();
-  const [busy, setBusy] = useState(false);
-  const [errorKey, setErrorKey] = useState<string | null>(null);
   const [fetched, setFetched] = useState<ConversationSummary[] | null>(null);
 
   const preferredHallId = useMemo(
@@ -79,54 +69,20 @@ export function useContactAdmin() {
   }, [isHallOwner]);
 
   const conversations = inbox?.conversations?.length ? inbox.conversations : fetched ?? [];
+  const adminConversation = useMemo(
+    () => pickOwnerAdminConversation(conversations, preferredHallId),
+    [conversations, preferredHallId],
+  );
 
-  const unread = useMemo(() => {
-    if (!preferredHallId) return conversations.some((item) => item.isUnread);
-    const needle = preferredHallId.toLowerCase();
-    return conversations.some(
-      (item) => item.isUnread && (item.hallId ?? "").toLowerCase() === needle,
-    );
-  }, [conversations, preferredHallId]);
-
-  const resolveTarget = useCallback(async (): Promise<ContactAdminTarget> => {
-    const hallId = preferredHallId;
-    const conversationId =
-      pickOwnerAdminConversation(conversations, hallId)?.conversationId ?? null;
-    return {
-      hallId,
-      conversationId,
-      href: hallId
-        ? ownerAdminMessagesPath(hallId, conversationId)
-        : HALL_OWNER_MESSAGES_PATH,
-    };
-  }, [conversations, preferredHallId]);
-
-  const open = useCallback(async () => {
-    if (!isHallOwner || busy) return null;
-    setBusy(true);
-    setErrorKey(null);
-    try {
-      const target = await resolveTarget();
-      if (pathname.startsWith("/owner/messages")) {
-        router.replace(target.href);
-      } else {
-        router.push(target.href);
-      }
-      return target;
-    } catch {
-      setErrorKey("owner.contactAdmin.error");
-      router.push(HALL_OWNER_MESSAGES_PATH);
-      return null;
-    } finally {
-      setBusy(false);
-    }
-  }, [busy, isHallOwner, pathname, resolveTarget, router]);
+  const href = useMemo(
+    () => ownerAdminMessagesPath(preferredHallId, adminConversation?.conversationId ?? null),
+    [adminConversation?.conversationId, preferredHallId],
+  );
 
   return {
-    open,
-    busy: busy || hallsLoading,
-    errorKey,
-    unread,
+    href,
+    unread: Boolean(adminConversation?.isUnread),
     preferredHallId,
+    conversationId: adminConversation?.conversationId ?? null,
   };
 }

@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { Suspense, type MouseEvent } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useContactAdmin } from "@/hooks/useContactAdmin";
 import { useT } from "@/i18n";
 
@@ -8,60 +11,89 @@ type ContactAdminButtonProps = {
   onOpened?: () => void;
 };
 
-export default function ContactAdminButton({
+export default function ContactAdminButton(props: ContactAdminButtonProps) {
+  return (
+    <Suspense fallback={<ContactAdminButtonFace {...props} active={false} href="/owner/messages?contact=admin" unread={false} />}>
+      <ContactAdminButtonReady {...props} />
+    </Suspense>
+  );
+}
+
+function ContactAdminButtonReady(props: ContactAdminButtonProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { href, unread } = useContactAdmin();
+  const active =
+    pathname.startsWith("/owner/messages") && searchParams.get("contact") === "admin";
+
+  return (
+    <ContactAdminButtonFace
+      {...props}
+      href={href}
+      unread={unread}
+      active={active}
+      onClick={() => {
+        props.onOpened?.();
+      }}
+    />
+  );
+}
+
+function ContactAdminButtonFace({
   variant = "sidebar",
-  onOpened,
-}: ContactAdminButtonProps) {
+  href,
+  unread,
+  active,
+  onClick,
+}: ContactAdminButtonProps & {
+  href: string;
+  unread: boolean;
+  active: boolean;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+}) {
   const t = useT();
-  const { open, busy, errorKey, unread } = useContactAdmin();
-  const label = busy ? t("owner.contactAdmin.opening") : t("owner.nav.contactAdmin");
+  const router = useRouter();
+  const label = t("owner.nav.contactAdmin");
 
   if (variant === "header") {
     return (
       <div className="relative">
-        <button
-          type="button"
+        <Link
+          href={href}
+          prefetch
           className="seeker-dash-notify"
-          disabled={busy}
-          aria-busy={busy}
           aria-label={label}
+          aria-current={active ? "page" : undefined}
           data-testid="owner-contact-admin-header"
-          onClick={() => {
-            void open().then((target) => {
-              if (target) onOpened?.();
-            });
-          }}
+          onClick={onClick}
+          onMouseEnter={() => router.prefetch(href)}
+          onFocus={() => router.prefetch(href)}
         >
           <span className="seeker-dash-notify-bell" aria-hidden="true">
-            <HeadsetIcon />
+            <ContactAdminIcon />
           </span>
           {unread ? <span className="seeker-notify-dot" aria-hidden="true" /> : null}
-        </button>
-        {errorKey ? (
-          <p className="sr-only" role="alert">
-            {t(errorKey)}
-          </p>
-        ) : null}
+        </Link>
       </div>
     );
   }
 
   return (
     <div>
-      <button
-        type="button"
-        className="seeker-dash-sidebar-link w-full"
-        disabled={busy}
-        aria-busy={busy}
+      <Link
+        href={href}
+        prefetch
+        className={`seeker-dash-sidebar-link w-full${
+          active ? " seeker-dash-sidebar-link--active" : ""
+        }`}
+        aria-current={active ? "page" : undefined}
         data-testid="owner-contact-admin-nav"
-        onClick={() => {
-          void open().then((target) => {
-            if (target) onOpened?.();
-          });
-        }}
+        onClick={onClick}
+        onMouseEnter={() => router.prefetch(href)}
+        onFocus={() => router.prefetch(href)}
       >
         <span className="seeker-dash-sidebar-icon" aria-hidden="true">
-          <HeadsetIcon />
+          <ContactAdminIcon />
         </span>
         <span>
           {label}
@@ -72,36 +104,39 @@ export default function ContactAdminButton({
             />
           ) : null}
         </span>
-      </button>
-      {errorKey ? (
-        <p className="mt-1 px-3 text-xs leading-5 text-[#a86267]" role="alert">
-          {t(errorKey)}
-        </p>
-      ) : null}
+      </Link>
     </div>
   );
 }
 
-function HeadsetIcon() {
+function ContactAdminIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <circle cx="6.2" cy="8" r="2.45" stroke="currentColor" strokeWidth="1.7" />
       <path
-        d="M4.5 12a7.5 7.5 0 0 1 15 0v5.2A2.3 2.3 0 0 1 17.2 19.5h-1.4"
+        d="M2.55 17.6c.4-2.55 1.8-4 3.65-4s3.25 1.45 3.65 4"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      <circle cx="17.8" cy="8" r="2.45" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M14.15 17.6c.4-2.55 1.8-4 3.65-4s3.25 1.45 3.65 4"
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinecap="round"
       />
       <path
-        d="M4.5 13.5v3A1.8 1.8 0 0 0 6.3 18.3h.4A1.8 1.8 0 0 0 8.5 16.5v-2A1.8 1.8 0 0 0 6.7 12.7h-.4A1.8 1.8 0 0 0 4.5 14.5v-1Z"
+        d="M9.55 6.35h1.9M9.75 8.45h1.35"
         stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
+        strokeWidth="1.55"
+        strokeLinecap="round"
       />
       <path
-        d="M19.5 13.5v3A1.8 1.8 0 0 1 17.7 18.3h-.4A1.8 1.8 0 0 1 15.5 16.5v-2A1.8 1.8 0 0 1 17.3 12.7h.4A1.8 1.8 0 0 1 19.5 14.5v-1Z"
+        d="M14.45 6.35h-1.9M14.25 8.45h-1.35"
         stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
+        strokeWidth="1.55"
+        strokeLinecap="round"
       />
     </svg>
   );

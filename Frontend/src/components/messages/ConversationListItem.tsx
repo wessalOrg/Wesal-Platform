@@ -11,6 +11,7 @@ import {
   conversationPeerRoleLabel,
   conversationPreviewTitle,
 } from "@/lib/conversation-display";
+import { isOwnerAdminConversation } from "@/lib/owner-admin-conversation";
 import type { ConversationSummary } from "@/types/messages";
 
 type ConversationListItemProps = {
@@ -34,6 +35,7 @@ export default function ConversationListItem({
   const role = conversationPeerRoleLabel({
     viewerIsHallOwner: isHallOwner,
     viewerIsAdmin: isAdmin,
+    peerIsAdmin: isHallOwner && isOwnerAdminConversation(conversation),
   });
   const preview = conversationListPreview(
     conversation.lastMessagePreview,

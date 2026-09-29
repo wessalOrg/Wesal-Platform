@@ -80,6 +80,7 @@ function SeekerAcceptedNoticeButton({
                 : "—",
           })}
         </span>
+        <span className="wesal-notify-item-action">{t("notify.bookingAccepted.action")}</span>
       </span>
     </button>
   );

@@ -79,7 +79,12 @@ function mapStored(value: unknown): PlatformNotification | null {
   const type = item.type;
   if (!id || !type) return null;
   const metadata = (item.metadata ?? {}) as PlatformNotificationMetadata;
-  const action_url = resolveNotificationActionUrl(type, metadata, item.action_url);
+  const action_url = resolveNotificationActionUrl(
+    type,
+    metadata,
+    item.action_url,
+    item.audience === "owner" || item.audience === "admin" ? item.audience : "seeker",
+  );
   const body = String(item.body ?? item.message ?? "");
   return {
     id,
@@ -112,7 +117,12 @@ export function hydratePlatformNotification(item: PlatformNotification): Platfor
     body,
     message: body,
     action_label,
-    action_url: resolveNotificationActionUrl(item.type, item.metadata, item.action_url),
+    action_url: resolveNotificationActionUrl(
+      item.type,
+      item.metadata,
+      item.action_url,
+      item.audience,
+    ),
   };
 }
 
@@ -162,7 +172,12 @@ export function pushPlatformNotification(
     title,
     body,
     message: body,
-    action_url: resolveNotificationActionUrl(input.type, metadata, input.action_url),
+    action_url: resolveNotificationActionUrl(
+      input.type,
+      metadata,
+      input.action_url,
+      input.audience,
+    ),
     action_label,
     metadata,
     is_read: false,

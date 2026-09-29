@@ -3,7 +3,7 @@
 import ProfileField from "@/components/profile/ProfileField";
 import ProfileHeroCard from "@/components/profile/ProfileHeroCard";
 import SuccessToast from "@/components/ui/SuccessToast";
-import { useUserProfile } from "@/hooks/useUserProfile";
+import { useSeekerProfile } from "@/hooks/useSeekerProfile";
 import { useT } from "@/i18n";
 import {
   readImageFileAsDataUrl,
@@ -68,7 +68,8 @@ const EMPTY_PASSWORD: ChangePasswordInput = {
 /** Account page: view card first, then edit forms below. */
 export default function SeekerSettingsPage() {
   const t = useT();
-  const profileState = useUserProfile();
+  const profileState = useSeekerProfile();
+  const { display } = profileState;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [draft, setDraft] = useState<ProfileDraft | null>(() =>
@@ -103,6 +104,17 @@ export default function SeekerSettingsPage() {
     }
   }
 
+  if (
+    !draft &&
+    (display.fullName || display.email || display.phoneNumber)
+  ) {
+    setDraft({
+      fullName: display.fullName,
+      email: display.email,
+      phoneNumber: display.phoneNumber,
+    });
+  }
+
   const profileDirty = useMemo(() => {
     if (!draft || !profileState.profile) return false;
     return (
@@ -131,7 +143,16 @@ export default function SeekerSettingsPage() {
     );
   }
 
-  if (profileState.status === "error" && !profileState.profile) {
+  if (profileState.status === "forbidden") {
+    return (
+      <section className="seeker-settings-card" data-testid="seeker-settings-forbidden">
+        <h1 className="seeker-settings-title">{t("seeker.nav.account")}</h1>
+        <p className="seeker-settings-lead">{t("profile.loginRequired")}</p>
+      </section>
+    );
+  }
+
+  if (profileState.status === "error" && !profileState.profile && !display.fullName && !display.email) {
     return (
       <section className="seeker-settings-card" data-testid="seeker-settings-error">
         <h1 className="seeker-settings-title">{t("seeker.nav.account")}</h1>
@@ -143,7 +164,7 @@ export default function SeekerSettingsPage() {
     );
   }
 
-  if (!profileState.authReady || profileState.status === "loading" || !draft || !profileState.profile) {
+  if (!profileState.authReady && !display.fullName && !display.email) {
     return (
       <div
         className="h-72 animate-pulse rounded-3xl bg-white/80"
@@ -154,16 +175,26 @@ export default function SeekerSettingsPage() {
   }
 
   const profile = profileState.profile;
+  const liveDraft: ProfileDraft = draft ?? {
+    fullName: display.fullName,
+    email: display.email,
+    phoneNumber: display.phoneNumber,
+  };
 
   const patchProfile = (patch: Partial<ProfileDraft>) => {
     setProfileSuccess(false);
     profileState.clearFormFeedback();
-    setDraft((current) => (current ? { ...current, ...patch } : current));
+    setDraft((current) => ({
+      fullName: current?.fullName ?? display.fullName,
+      email: current?.email ?? display.email,
+      phoneNumber: current?.phoneNumber ?? display.phoneNumber,
+      ...patch,
+    }));
   };
 
   const onSaveProfile = async (event: FormEvent) => {
     event.preventDefault();
-    if (!dirty || profileState.saving) return;
+    if (!dirty || profileState.saving || !profile || !draft) return;
 
     let ok = true;
     if (profileDirty) {
@@ -239,11 +270,21 @@ export default function SeekerSettingsPage() {
 
       <ProfileHeroCard
         profile={profile}
-        fullName={profile.fullName}
-        email={profile.email}
-        phoneNumber={profile.phoneNumber}
-        createdAt={profile.createdAt}
+        fullName={display.fullName || profile?.fullName}
+        email={display.email || profile?.email}
+        phoneNumber={display.phoneNumber || profile?.phoneNumber}
+        createdAt={display.createdAt || profile?.createdAt}
+        avatarUrl={display.avatarUrl}
       />
+
+      {profileState.status === "error" && !profile ? (
+        <section className="seeker-settings-card" data-testid="seeker-settings-error-banner">
+          <p className="seeker-settings-lead">{t("errors.profile.load")}</p>
+          <button type="button" className="btn-outline mt-4" onClick={profileState.reload}>
+            {t("common.retry")}
+          </button>
+        </section>
+      ) : null}
 
       <div className="seeker-settings-split">
         <section className="seeker-settings-card" data-testid="seeker-settings-profile">
@@ -256,7 +297,7 @@ export default function SeekerSettingsPage() {
                 // eslint-disable-next-line @next/next/no-img-element -- local data URL preview
                 <img src={avatarDraft} alt="" className="seeker-settings-avatar-img" />
               ) : (
-                <span>{initials(draft.fullName || profile.fullName)}</span>
+                <span>{initials(liveDraft.fullName || display.fullName)}</span>
               )}
             </div>
 
@@ -329,7 +370,7 @@ export default function SeekerSettingsPage() {
               <ProfileField
                 id="settings-full-name"
                 label={t("profile.fullName")}
-                value={draft.fullName}
+                value={liveDraft.fullName}
                 error={resolveMessage(t, profileState.fieldErrors.fullName)}
                 disabled={profileState.saving}
                 autoComplete="name"
@@ -339,7 +380,7 @@ export default function SeekerSettingsPage() {
                 id="settings-phone"
                 label={t("profile.phone")}
                 type="tel"
-                value={draft.phoneNumber}
+                value={liveDraft.phoneNumber}
                 error={resolveMessage(t, profileState.fieldErrors.phoneNumber)}
                 disabled={profileState.saving}
                 autoComplete="tel"
@@ -350,7 +391,7 @@ export default function SeekerSettingsPage() {
                 id="settings-email"
                 label={t("profile.email")}
                 type="email"
-                value={draft.email}
+                value={liveDraft.email}
                 error={resolveMessage(t, profileState.fieldErrors.email)}
                 disabled={profileState.saving}
                 autoComplete="email"
@@ -363,7 +404,7 @@ export default function SeekerSettingsPage() {
               <button
                 type="submit"
                 className="btn-primary min-h-11"
-                disabled={profileState.saving || !dirty}
+                disabled={profileState.saving || !dirty || !profile}
                 data-testid="seeker-settings-profile-save"
               >
                 {profileState.saving ? t("profile.saving") : t("profile.save")}

@@ -315,8 +315,6 @@ const ar: MessageCatalog = {
     "تعذر الاتصال بالخادم. يرجى التحقق من الإنترنت ثم المحاولة مرة أخرى.",
   "auth.login.form.error.generic": "تعذر تسجيل الدخول. يرجى التحقق من البيانات ثم المحاولة مرة أخرى.",
   "auth.login.noAccount": "ليس لديك حساب ؟",
-  "auth.login.hourlyDemo": "تجربة الحجز بالساعة (بدون حساب)",
-  "auth.login.hourlyDemoHint": "جلسة تجريبية محلية فقط، إلى أن يصبح الباك جاهزاً.",
   "auth.login.registerLink": "إنشاء حساب",
   "auth.login.forgotPassword": "هل نسيت كلمة المرور؟",
   "auth.forgotPassword.title": "إعادة تعيين كلمة المرور",
@@ -448,6 +446,10 @@ const ar: MessageCatalog = {
   "notify.bookingSubmitted.title": "تم إرسال طلب الحجز",
   "notify.bookingSubmitted.body":
     "تم إرسال طلب حجزك إلى صاحب الصالة بانتظار المراجعة.",
+  "notify.ownerBookingRequest.title": "طلب حجز جديد",
+  "notify.ownerBookingRequest.body":
+    "طلب {userName} حجز صالة \"{hallName}\" بتاريخ {date}.",
+  "notify.ownerBookingRequest.action": "عرض تفاصيل الطلب",
   "notify.bookingAccepted.title": "تم تأكيد حجزك 🎉",
   "notify.bookingAccepted.body":
     "تم قبول طلب حجزك في صالة \"{hallName}\" بتاريخ {date} — {period}. يُطلب دفع عربون قدره {amount}.",
@@ -1299,7 +1301,6 @@ const ar: MessageCatalog = {
   "halls.hourly.confirmTitle": "تأكيد هذه الساعة",
   "halls.hourly.fullName": "الاسم الكامل",
   "halls.hourly.success": "تم إرسال طلب الحجز.",
-  "halls.hourly.tryDemo": "تجربة الحجز (محلي)",
   "errors.hourly.nameRequired": "أدخلي الاسم الكامل.",
   "errors.hourly.dayBlocked": "هذا اليوم مغلق من صاحب القاعة.",
   "errors.hourly.slotBooked":
@@ -1316,6 +1317,7 @@ const ar: MessageCatalog = {
   "owner.hourly.pickDate": "اختاري يوماً أولاً.",
   "owner.hourly.dayBlocked": "تم تعليم اليوم كمغلق.",
   "owner.hourly.dayUnblocked": "اليوم متاح من جديد.",
+  "owner.hourly.blockOccupied": "لا يمكن إغلاق هذا اليوم لأن عليه حجز قائم.",
   "owner.hourly.visibilitySaved": "تم حفظ إعداد الظهور.",
   "owner.hourly.saveFailed": "تعذر حفظ هذا الإعداد.",
   "owner.hourly.blockedList": "الأيام المغلقة",

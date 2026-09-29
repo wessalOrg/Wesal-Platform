@@ -39,11 +39,12 @@ export default function AdminHallDeleteControls({
       {!confirmOpen ? (
         <button
           type="button"
-          className="btn-outline min-h-11 w-full min-w-0 border-[#b42318] text-[#b42318] hover:bg-[#fdecea] sm:w-auto sm:min-w-[8.5rem]"
+          className="btn-outline inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 sm:w-auto sm:min-w-[8.5rem]"
           disabled={deleteState.pending}
           data-testid="admin-hall-delete"
           onClick={() => setConfirmOpen(true)}
         >
+          <TrashIcon />
           {t("admin.delete.submit")}
         </button>
       ) : (
@@ -76,5 +77,25 @@ export default function AdminHallDeleteControls({
         </div>
       )}
     </div>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      className="h-4 w-4 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16" />
+      <path d="M9 7V5.4A1.4 1.4 0 0 1 10.4 4h3.2A1.4 1.4 0 0 1 15 5.4V7" />
+      <path d="M6.4 7l.8 12.2A1.6 1.6 0 0 0 8.8 21h6.4a1.6 1.6 0 0 0 1.6-1.8L17.6 7" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
   );
 }

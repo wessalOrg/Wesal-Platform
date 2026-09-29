@@ -5,6 +5,9 @@ import type { WesalRole } from "@/types/session";
 /** Regular User profile portal. */
 export const REGULAR_PROFILE_PATH = "/profile";
 
+/** Regular User messages. */
+export const REGULAR_MESSAGES_PATH = `${REGULAR_PROFILE_PATH}/messages`;
+
 /** Hall Owner dashboard workspace (home + management). */
 export const HALL_OWNER_MANAGEMENT_PATH = "/owner";
 
@@ -48,6 +51,22 @@ export function getAccountProfilePath(
   return isHallOwnerRole(role)
     ? HALL_OWNER_MANAGEMENT_PATH
     : REGULAR_PROFILE_PATH;
+}
+
+/** Role-aware Messages destination — same pages the dashboards use. */
+export function getAccountMessagesPath(
+  role: WesalRole | null | undefined,
+): string {
+  if (isAdminRole(role)) return ADMIN_MESSAGES_PATH;
+  return isHallOwnerRole(role) ? HALL_OWNER_MESSAGES_PATH : REGULAR_MESSAGES_PATH;
+}
+
+export function isAccountMessagesActive(
+  pathname: string,
+  role: WesalRole | null | undefined,
+): boolean {
+  const href = getAccountMessagesPath(role);
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 /**

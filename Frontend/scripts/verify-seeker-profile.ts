@@ -86,11 +86,13 @@ function testUiSurfaces() {
   assert.match(home, /display\.phoneNumber/);
   assert.doesNotMatch(home, /2023/);
 
+  assert.match(settings, /useSeekerProfile/);
   assert.match(settings, /status === "error" && !profileState\.profile/);
   assert.match(settings, /ProfileHeroCard/);
   assert.match(settings, /profile\.fullName/);
   assert.match(settings, /profile\.email/);
   assert.match(settings, /profile\.phoneNumber/);
+  assert.match(settings, /display\.fullName/);
 
   assert.match(card, /profile\.fullName/);
   assert.match(card, /profile\.phone/);

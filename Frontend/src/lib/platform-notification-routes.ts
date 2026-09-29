@@ -9,10 +9,12 @@ import {
 } from "@/constants/seekerDashboardNav";
 import {
   ownerAdminMessagesPath,
+  ownerBookingsPath,
   ownerHallNotificationsPath,
 } from "@/lib/hall-owner-query-keys";
 import { formatRelativeTime } from "@/lib/relative-time";
 import type {
+  NotificationAudience,
   PlatformNotification,
   PlatformNotificationType,
 } from "@/types/platform-notification";
@@ -21,17 +23,27 @@ export function resolveNotificationActionUrl(
   type: PlatformNotificationType,
   metadata: PlatformNotification["metadata"] = {},
   actionUrl?: string | null,
+  audience?: NotificationAudience,
 ): string {
   const explicit = actionUrl?.trim();
-  if (explicit) return explicit;
-
   const hallId = metadata.hall_id?.trim() || "";
   const bookingId = metadata.booking_id?.trim() || "";
+  const staleOwnerBookingHref =
+    type === "booking_submitted" &&
+    audience === "owner" &&
+    (explicit === SEEKER_BOOKINGS_PATH ||
+      explicit.startsWith(`${SEEKER_BOOKINGS_PATH}?`));
+  if (explicit && !staleOwnerBookingHref) return explicit;
 
   switch (type) {
     case "welcome":
       return "/halls";
     case "booking_submitted":
+      if (audience === "owner") {
+        return hallId
+          ? ownerHallNotificationsPath(hallId, bookingId || null)
+          : ownerBookingsPath(bookingId || null);
+      }
       return SEEKER_BOOKINGS_PATH;
     case "booking_accepted":
     case "booking_rejected":

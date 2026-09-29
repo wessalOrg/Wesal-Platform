@@ -56,7 +56,12 @@ export function useNotifications(audienceOverride?: NotificationAudience) {
   const openNotification = useCallback(
     (item: PlatformNotification) => {
       markPlatformNotificationRead(item.id);
-      const href = resolveNotificationActionUrl(item.type, item.metadata, item.action_url);
+      const href = resolveNotificationActionUrl(
+        item.type,
+        item.metadata,
+        item.action_url,
+        item.audience,
+      );
       if (href) router.push(href);
     },
     [router],

@@ -323,7 +323,7 @@ export default function MessagesInboxPanel() {
   return (
     <MessagesErrorBoundary>
     <div
-      className="fixed inset-0 z-[106]"
+      className="fixed inset-0 z-[200]"
       role="presentation"
       data-testid="messages-inbox-overlay"
     >

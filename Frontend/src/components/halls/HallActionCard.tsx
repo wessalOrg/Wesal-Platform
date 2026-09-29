@@ -1,12 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import BookingPendingLimitAlert from "@/components/bookings/BookingPendingLimitAlert";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/i18n";
 import { isPendingLimitErrorKey } from "@/lib/booking-pending-limit";
-import { HOURLY_DEMO_PATH, startHourlyDemoSession } from "@/lib/hourly-demo-session";
 import type { HallSlotPrice } from "@/types/hall";
 
 type HallActionCardProps = {
@@ -97,8 +94,6 @@ export default function HallActionCard({
   onGuestAuthNavigate,
 }: HallActionCardProps) {
   const t = useT();
-  const router = useRouter();
-  const { applyLocalSession } = useAuth();
   const showGuestAuth = isGuest && !disabled;
   const price = priceSummary?.trim() || fallbackPrice(slotPrices);
   const dateValue = selectedDateLabel?.trim() || t("halls.details.summaryPickDate");
@@ -110,7 +105,7 @@ export default function HallActionCard({
 
   return (
     <aside
-      className="hall-action-card hall-section-card hall-booking-summary relative flex h-full w-full flex-col"
+      className="hall-action-card hall-section-card hall-booking-summary relative flex w-full flex-col"
       data-testid="hall-action-card"
     >
       <h2 className="hall-section-title">{t("halls.details.bookingSummary")}</h2>
@@ -234,17 +229,6 @@ export default function HallActionCard({
                   {t("nav.register")}
                 </Link>
               </div>
-              <button
-                type="button"
-                className="btn-outline w-full text-xs sm:text-sm"
-                data-testid="hourly-demo-start"
-                onClick={() => {
-                  applyLocalSession(startHourlyDemoSession());
-                  router.push(HOURLY_DEMO_PATH);
-                }}
-              >
-                {t("halls.hourly.tryDemo")}
-              </button>
             </div>
           ) : null}
         </div>

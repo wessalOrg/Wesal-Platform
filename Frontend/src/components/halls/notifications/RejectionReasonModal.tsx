@@ -36,10 +36,12 @@ export default function RejectionReasonModal({
   const [reason, setReason] = useState("");
   const [issue, setIssue] = useState<"required" | "tooLong" | null>(null);
   const [prevOpen, setPrevOpen] = useState(open);
-  if (prevOpen !== open && !open) {
+  if (prevOpen !== open) {
     setPrevOpen(open);
-    setReason("");
-    setIssue(null);
+    if (!open) {
+      setReason("");
+      setIssue(null);
+    }
   }
 
   useEffect(() => {

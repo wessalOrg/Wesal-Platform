@@ -313,7 +313,7 @@ export default function AdminOwnerMessagePanel() {
     "inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--wesal-maroon)]/45 bg-white text-[var(--wesal-maroon)] shadow-[0_4px_12px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white";
 
   return (
-    <div className="fixed inset-0 z-[107]" role="presentation" data-testid="admin-owner-message-overlay">
+    <div className="fixed inset-0 z-[200]" role="presentation" data-testid="admin-owner-message-overlay">
       <button
         type="button"
         className="absolute inset-0 cursor-default bg-black/20"

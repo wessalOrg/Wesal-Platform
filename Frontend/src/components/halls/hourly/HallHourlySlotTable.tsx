@@ -50,10 +50,10 @@ export default function HallHourlySlotTable({
                     className={[
                       "inline-flex min-h-9 items-center gap-2 rounded-xl px-3 text-xs font-semibold transition",
                       booked
-                        ? "cursor-not-allowed bg-[#fdecea] text-[#b42318]"
+                        ? "cursor-not-allowed bg-[#fdecea] text-[#dc4c4c] ring-1 ring-[#f5c2c0]"
                         : selected
                           ? "bg-[var(--wesal-maroon)] text-white"
-                          : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100",
+                          : "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100",
                     ].join(" ")}
                     data-testid={`hourly-slot-${slot.start}`}
                     data-slot-status={slot.status}

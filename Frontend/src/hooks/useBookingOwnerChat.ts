@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useStartHallConversation } from "@/hooks/useStartHallConversation";
 import { useT } from "@/i18n";
@@ -26,7 +25,6 @@ function newClientRequestId(): string {
 export function useBookingOwnerChat() {
   const t = useT();
   const lang = useUiLang();
-  const inbox = useOptionalMessagesInbox();
   const { start, starting, error } = useStartHallConversation();
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -55,15 +53,13 @@ export function useBookingOwnerChat() {
       setBusyId(booking.bookingId);
       try {
         const draft = contextFor(booking);
-        const thread = await start(booking.hallId);
+        const thread = await start(booking.hallId, { draft });
         if (!thread) return null;
-        if (thread.isExisting) {
-          inbox?.openInbox(thread.conversationId, draft);
-        } else {
+        if (!thread.isExisting) {
           try {
             await sendConversationMessage(thread.conversationId, draft, newClientRequestId());
           } catch {
-            inbox?.openInbox(thread.conversationId, draft);
+            /* composer still has the draft from start() */
           }
         }
         return thread;
@@ -71,7 +67,7 @@ export function useBookingOwnerChat() {
         setBusyId(null);
       }
     },
-    [busyId, contextFor, inbox, start, starting],
+    [busyId, contextFor, start, starting],
   );
 
   return {

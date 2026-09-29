@@ -298,7 +298,7 @@ export default function AdminHallSubmissionDetailView({
             hallId={hall.hallId}
             hallName={hall.name}
             ownerName={hall.ownerFullName}
-            variant="soft"
+            variant="primary"
           />
           <AdminHallPaidControls
             hallId={hall.hallId}
@@ -322,7 +322,7 @@ export default function AdminHallSubmissionDetailView({
             systemLocked={hall.systemLocked}
             lockBadgeVisible={hall.lockBadgeVisible}
             showBadge={false}
-            variant="soft"
+            variant="primary"
             onUnlocked={(result) => {
               detail.applyLockState(result.adminLocked, result.systemLocked);
             }}
@@ -330,7 +330,7 @@ export default function AdminHallSubmissionDetailView({
           <AdminHallLockControls
             hallId={hall.hallId}
             adminLocked={hall.adminLocked}
-            variant="soft"
+            variant="primary"
             onLocked={(result) => {
               detail.applyLockState(result.adminLocked, hall.systemLocked);
               setToastKey("admin.lock.success");
