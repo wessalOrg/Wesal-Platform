@@ -31,6 +31,7 @@ export function resolveNotificationActionUrl(
   const staleOwnerBookingHref =
     type === "booking_submitted" &&
     audience === "owner" &&
+    typeof explicit === "string" &&
     (explicit === SEEKER_BOOKINGS_PATH ||
       explicit.startsWith(`${SEEKER_BOOKINGS_PATH}?`));
   if (explicit && !staleOwnerBookingHref) return explicit;
