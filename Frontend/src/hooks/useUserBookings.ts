@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCancelBooking } from "@/hooks/useCancelBooking";
 import {
   BOOKING_ACCEPTED_EVENT,
   BOOKING_CANCELLED_EVENT,
   BOOKING_REJECTED_EVENT,
+  emitBookingAccepted,
   type BookingAcceptedDetail,
   type BookingCancelledDetail,
   type BookingRejectedDetail,
@@ -63,6 +64,8 @@ export function useUserBookings() {
   const [bookings, setBookings] = useState<UserBooking[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const cancellation = useCancelBooking();
+  const knownStatusRef = useRef<Map<string, BookingStatus>>(new Map());
+  const primedRef = useRef(false);
 
   const reload = useCallback(async (opts?: { force?: boolean }) => {
     if (!opts?.force && isCacheFresh() && sharedCache) {
@@ -157,6 +160,40 @@ export function useUserBookings() {
       window.removeEventListener(USER_BOOKINGS_CHANGED_EVENT, onRemembered);
     };
   }, [applyStatus]);
+
+  useEffect(() => {
+    const known = knownStatusRef.current;
+    if (!primedRef.current) {
+      for (const item of bookings) {
+        known.set(item.bookingId, item.status);
+      }
+      primedRef.current = bookings.length > 0 || status === "ready";
+      return;
+    }
+    for (const item of bookings) {
+      const previous = known.get(item.bookingId);
+      if (previous === "Pending" && item.status === "Accepted") {
+        emitBookingAccepted({
+          bookingId: item.bookingId,
+          hallId: item.hallId,
+          date: item.date,
+          periods: item.period ? [item.period] : [],
+          hallName: item.hallName,
+          depositAmount: item.depositAmount,
+        });
+      }
+      known.set(item.bookingId, item.status);
+    }
+  }, [bookings, status]);
+
+  useEffect(() => {
+    const hasPending = bookings.some((item) => item.status === "Pending");
+    if (!hasPending) return;
+    const timer = window.setInterval(() => {
+      void reload({ force: true });
+    }, 12_000);
+    return () => window.clearInterval(timer);
+  }, [bookings, reload]);
 
   const cancelBooking = useCallback(
     async (booking: UserBooking) => {

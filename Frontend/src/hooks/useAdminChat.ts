@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { isAcceptedChatImage } from "@/lib/chat-image-message";
-import { pickOwnerAdminConversation } from "@/lib/owner-admin-conversation";
+import {
+  isOwnerAdminConversation,
+  pickOwnerAdminConversation,
+} from "@/lib/owner-admin-conversation";
 import type { ConversationSummary, InboxStatus } from "@/types/messages";
 
 type UseAdminChatOptions = {
@@ -16,19 +19,22 @@ type UseAdminChatOptions = {
   sendAttachment?: (file: File, text: string) => Promise<boolean>;
   focusHallId?: string | null;
   focusConversationId?: string | null;
+  focusAdmin?: boolean;
 };
 
 function readWindowFocus(pathname: string): {
   hallId: string | null;
   conversationId: string | null;
+  contactAdmin: boolean;
 } {
   if (typeof window === "undefined" || !pathname.startsWith("/owner/messages")) {
-    return { hallId: null, conversationId: null };
+    return { hallId: null, conversationId: null, contactAdmin: false };
   }
   const query = new URLSearchParams(window.location.search);
   return {
     hallId: query.get("hallId")?.trim() || null,
     conversationId: query.get("conversation_id")?.trim() || null,
+    contactAdmin: query.get("contact") === "admin",
   };
 }
 
@@ -45,6 +51,7 @@ export function useAdminChat({
   sendAttachment,
   focusHallId: focusHallIdProp,
   focusConversationId: focusConversationIdProp,
+  focusAdmin: focusAdminProp,
 }: UseAdminChatOptions) {
   const pathname = usePathname();
   const { isHallOwner } = useAccountAccess();
@@ -52,27 +59,51 @@ export function useAdminChat({
   const focusHallId = focusHallIdProp !== undefined ? focusHallIdProp : fromWindow.hallId;
   const focusConversationId =
     focusConversationIdProp !== undefined ? focusConversationIdProp : fromWindow.conversationId;
+  const focusAdmin = focusAdminProp !== undefined ? focusAdminProp : fromWindow.contactAdmin;
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
 
   const matchedConversation = useMemo(() => {
+    if (focusAdmin) {
+      const admin = pickOwnerAdminConversation(conversations, focusHallId);
+      if (admin) return admin;
+      if (!focusConversationId) return null;
+      const byId =
+        conversations.find((item) => item.conversationId === focusConversationId) ?? null;
+      if (byId && isOwnerAdminConversation(byId, conversations)) return byId;
+      return null;
+    }
     if (focusConversationId) {
-      const exact = conversations.find((item) => item.conversationId === focusConversationId);
-      if (exact) return exact;
+      return (
+        conversations.find((item) => item.conversationId === focusConversationId) ?? null
+      );
     }
     if (!focusHallId) return null;
     return pickOwnerAdminConversation(conversations, focusHallId);
-  }, [conversations, focusConversationId, focusHallId]);
+  }, [conversations, focusAdmin, focusConversationId, focusHallId]);
 
   useEffect(() => {
-    if (!isHallOwner || (!focusHallId && !focusConversationId)) return;
+    if (focusAdmin) {
+      if (!isHallOwner) return;
+      if (inboxStatus !== "ready" && inboxStatus !== "empty") return;
+      if (!matchedConversation) return;
+      if (selectedId === matchedConversation.conversationId) return;
+      selectConversation(matchedConversation.conversationId);
+      return;
+    }
+    if (focusConversationId) {
+      if (selectedId !== focusConversationId) selectConversation(focusConversationId);
+      return;
+    }
+    if (!isHallOwner || !focusHallId) return;
     if (inboxStatus !== "ready" && inboxStatus !== "empty") return;
     if (!matchedConversation) return;
     if (selectedId === matchedConversation.conversationId) return;
     selectConversation(matchedConversation.conversationId);
   }, [
+    focusAdmin,
     focusConversationId,
     focusHallId,
     inboxStatus,
@@ -87,7 +118,7 @@ export function useAdminChat({
 
   const missingConversation =
     isHallOwner &&
-    Boolean(focusHallId || focusConversationId) &&
+    Boolean(focusAdmin || focusHallId || focusConversationId) &&
     !selectedId &&
     (inboxStatus === "ready" || inboxStatus === "empty") &&
     !matchedConversation;

@@ -3374,6 +3374,92 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   width: 100%;
 }
 
+.hall-details-phone-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.hall-details-phone-row--cta-only,
+.hall-details-phone-row--phone-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 640px) {
+  .hall-details-phone-row--cta-only,
+  .hall-details-phone-row--phone-only {
+    grid-template-columns: minmax(0, 50%);
+  }
+
+  .hall-details-phone-row--cta-only {
+    justify-items: end;
+  }
+
+  .hall-details-phone-row--phone-only {
+    justify-items: start;
+  }
+}
+
+.hall-details-phone-chip {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  margin: 0;
+  padding-inline: 1.15rem;
+  border-radius: 0.75rem;
+  border: 1.5px solid var(--wesal-maroon);
+  background: #fff;
+  color: var(--wesal-maroon);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.hall-details-phone-chip span {
+  font-weight: 700;
+}
+
+.hall-details-booking-row {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .hall-details-booking-row {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+
+  .hall-details-booking-row--summary-only {
+    grid-template-columns: minmax(0, 20rem);
+    justify-content: end;
+  }
+}
+
+.hall-details-booking-row > * {
+  min-width: 0;
+}
+
+.hall-details-booking-calendar,
+.hall-details-booking-summary {
+  min-width: 0;
+}
+
+.hall-details-booking-calendar .hall-inline-booking,
+.hall-details-booking-summary .hall-action-card {
+  width: 100%;
+}
+
+.hall-inline-booking {
+  display: flex;
+  flex-direction: column;
+}
+
 .hall-section-title {
   margin: 0;
   font-size: 1.05rem;
@@ -3651,8 +3737,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   inset: 0;
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--wesal-pink) 88%, white) 0% 50%,
-    #d8d2cd 50% 100%
+    #a7f3d0 0% 50%,
+    #f5c2c0 50% 100%
   );
 }
 
@@ -3679,8 +3765,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   border-radius: 0.15rem;
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--wesal-pink) 88%, white) 0% 50%,
-    #d8d2cd 50% 100%
+    #a7f3d0 0% 50%,
+    #f5c2c0 50% 100%
   );
 }
 

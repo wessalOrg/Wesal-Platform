@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, type MouseEvent, type ReactNode } from "react";
-import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import AudioControlToggle from "@/components/halls/notifications/AudioControlToggle";
+import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useDismissibleOverlay } from "@/hooks/useDismissibleOverlay";
 import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { useT } from "@/i18n";
 import {
+  getAccountMessagesPath,
   getAccountProfilePath,
+  isAccountMessagesActive,
   isAccountProfileActive,
 } from "@/lib/account-profile-path";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
@@ -48,6 +50,7 @@ export default function AuthAccountMenu({
 }: AuthAccountMenuProps) {
   const t = useT();
   const pathname = usePathname();
+  const router = useRouter();
   const { open, setOpen, close, toggle, rootRef, panelId: menuId } =
     useDismissibleOverlay();
   const [confirmLogout, setConfirmLogout] = useState(false);
@@ -69,22 +72,24 @@ export default function AuthAccountMenu({
   const menuLabel = t("nav.accountMenu");
   const profileHref = getAccountProfilePath(identity.role);
   const profileActive = isAccountProfileActive(pathname, identity.role);
-
-  const openMessages = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (!inbox?.canUseMessaging) {
-      close();
-      onNavigate?.();
-      return;
-    }
-    event.preventDefault();
-    inbox.openInbox();
-    close();
-    onNavigate?.();
-  };
+  const messagesHref = getAccountMessagesPath(identity.role);
+  const messagesActive =
+    Boolean(inbox?.isOpen) || isAccountMessagesActive(pathname, identity.role);
 
   const go = () => {
     close();
     onNavigate?.();
+  };
+
+  const openMessages = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    go();
+    if (inbox?.canUseMessaging) {
+      inbox.openInbox();
+      return;
+    }
+    router.push(messagesHref);
   };
 
   const menu = (
@@ -125,12 +130,13 @@ export default function AuthAccountMenu({
           <ProfileIcon />
         </MenuLink>
         <MenuLink
-          href="/messages"
+          href={messagesHref}
           label={messagesLabel}
           description={t("nav.messagesHint")}
-          active={pathname === "/messages" || pathname.startsWith("/messages/")}
+          active={messagesActive}
           badgeCount={messagesUnread}
           badgeLabel={t("messages.unreadCount", { count: messagesUnread })}
+          testId="navbar-account-messages"
           onClick={openMessages}
         >
           <MessageIcon />
@@ -211,6 +217,7 @@ function MenuLink({
   active,
   badgeCount = 0,
   badgeLabel,
+  testId,
   onClick,
   children,
 }: {
@@ -220,6 +227,7 @@ function MenuLink({
   active: boolean;
   badgeCount?: number;
   badgeLabel?: string;
+  testId?: string;
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
   children: ReactNode;
 }) {
@@ -227,6 +235,7 @@ function MenuLink({
     <Link
       href={href}
       role="menuitem"
+      data-testid={testId}
       onClick={onClick}
       className={`wesal-account-menu-item ${active ? "wesal-account-menu-item--active" : ""}`}
     >

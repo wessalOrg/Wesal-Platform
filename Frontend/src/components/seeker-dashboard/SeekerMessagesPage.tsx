@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
+import OwnerConfirmPaymentBar from "@/components/messages/OwnerConfirmPaymentBar";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { SEEKER_MESSAGES_PATH } from "@/constants/seekerDashboardNav";
@@ -19,6 +20,7 @@ import {
   conversationPreviewSubtitle,
   conversationPreviewTitle,
 } from "@/lib/conversation-display";
+import { isOwnerAdminConversation } from "@/lib/owner-admin-conversation";
 
 /** Messages workspace embedded in the seeker dashboard shell. */
 export default function SeekerMessagesPage() {
@@ -27,12 +29,10 @@ export default function SeekerMessagesPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isHallOwner, isAdmin } = useAccountAccess();
-  const ownerFocusHallId = pathname.startsWith("/owner/messages")
-    ? searchParams.get("hallId")?.trim() || null
-    : null;
-  const ownerFocusConversationId = pathname.startsWith("/owner/messages")
-    ? searchParams.get("conversation_id")?.trim() || null
-    : null;
+  const focusHallId = searchParams.get("hallId")?.trim() || null;
+  const focusConversationId = searchParams.get("conversation_id")?.trim() || null;
+  const ownerContactAdmin =
+    pathname.startsWith("/owner/messages") && searchParams.get("contact") === "admin";
   const {
     selectedId,
     canUseMessaging,
@@ -59,15 +59,16 @@ export default function SeekerMessagesPage() {
     selectConversation,
     sendMessage,
     sendAttachment,
-    focusHallId: ownerFocusHallId,
-    focusConversationId: ownerFocusConversationId,
+    focusHallId: isHallOwner ? focusHallId : null,
+    focusConversationId,
+    focusAdmin: ownerContactAdmin,
   });
 
   useEffect(() => {
-    return () => {
-      selectConversation(null);
-    };
-  }, [selectConversation]);
+    if (!focusConversationId || ownerContactAdmin) return;
+    if (selectedId === focusConversationId) return;
+    selectConversation(focusConversationId);
+  }, [focusConversationId, ownerContactAdmin, selectedId, selectConversation]);
 
   const selected = conversations.find((item) => item.conversationId === selectedId) ?? null;
   const showThread = Boolean(selectedId);
@@ -84,14 +85,21 @@ export default function SeekerMessagesPage() {
   const threadBadge = conversationPeerRoleLabel({
     viewerIsHallOwner: isHallOwner,
     viewerIsAdmin: isAdmin,
+    peerIsAdmin: selected
+      ? isOwnerAdminConversation(selected, conversations)
+      : ownerContactAdmin,
   });
 
   return (
     <MessagesErrorBoundary>
     <div className="seeker-messages" data-testid="seeker-messages-page">
       <header className="seeker-settings-header">
-        <h1 className="seeker-settings-title">{t("seeker.nav.messages")}</h1>
-        <p className="seeker-settings-lead">{t("seeker.messages.subtitle")}</p>
+        <h1 className="seeker-settings-title">
+          {ownerContactAdmin ? t("owner.nav.contactAdmin") : t("seeker.nav.messages")}
+        </h1>
+        {ownerContactAdmin ? null : (
+          <p className="seeker-settings-lead">{t("seeker.messages.subtitle")}</p>
+        )}
       </header>
 
       {!canUseMessaging ? (
@@ -150,11 +158,19 @@ export default function SeekerMessagesPage() {
                 conversationId={selectedId}
                 variant="page"
                 notice={
-                  adminChat.errorKey ? (
-                    <p role="alert" className="seeker-settings-alert text-sm">
-                      {t(adminChat.errorKey)}
-                    </p>
-                  ) : null
+                  <>
+                    {isHallOwner ? (
+                      <OwnerConfirmPaymentBar
+                        hallId={selected?.hallId ?? thread?.hallId}
+                        requesterUserId={selected?.otherParticipantId}
+                      />
+                    ) : null}
+                    {adminChat.errorKey ? (
+                      <p role="alert" className="seeker-settings-alert text-sm">
+                        {t(adminChat.errorKey)}
+                      </p>
+                    ) : null}
+                  </>
                 }
                 attachmentPreviewUrl={adminChat.attachmentPreviewUrl}
                 attachmentName={adminChat.attachmentName}

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { t } from "@/i18n";
 import { formatBookingDateLabel } from "@/lib/booking-date";
+import { formatDepositAmount } from "@/lib/booking-deposits";
 import {
   BOOKING_ACCEPTED_EVENT,
   BOOKING_CANCELLED_EVENT,
@@ -29,6 +30,10 @@ import {
   notifySeekerWelcome,
   pushPlatformNotification,
 } from "@/lib/platform-notifications-store";
+import {
+  ownerBookingsPath,
+  ownerHallNotificationsPath,
+} from "@/lib/hall-owner-query-keys";
 import { subscribeOwnerBookingRequestEvents } from "@/services/booking-notification-realtime";
 import { loadRememberedBookings } from "@/lib/user-bookings-store";
 
@@ -93,7 +98,7 @@ export default function NotificationEventsBridge() {
       const date = formatBookingDateLabel(detail.date, locale());
       const period = formatPeriods(detail.periods) || t("halls.period.generic");
       const amount =
-        detail.depositAmount != null ? String(detail.depositAmount) : "—";
+        detail.depositAmount != null ? formatDepositAmount(detail.depositAmount) : "—";
       pushPlatformNotification({
         type: "booking_accepted",
         audience: "seeker",
@@ -231,14 +236,40 @@ export default function NotificationEventsBridge() {
     window.addEventListener(HALL_APPROVED_EVENT, onHallApproved);
     window.addEventListener(HALL_REJECTED_EVENT, onHallRejected);
     const unsubscribeOwnerRealtime = subscribeOwnerBookingRequestEvents((event) => {
-      if (event.replay || event.kind !== "cancelled" || !event.id) return;
-      emitBookingCancelled({
-        bookingId: event.id,
-        hallId: event.hallId,
-        date: event.date ?? "",
-        period: event.timeRange || event.period || "",
-        hallName: event.hallName,
-        requesterName: event.requesterName,
+      if (event.replay || !event.id) return;
+      if (event.kind === "cancelled") {
+        emitBookingCancelled({
+          bookingId: event.id,
+          hallId: event.hallId,
+          date: event.date ?? "",
+          period: event.timeRange || event.period || "",
+          hallName: event.hallName,
+          requesterName: event.requesterName,
+        });
+        return;
+      }
+
+      const hallName = event.hallName?.trim() || t("common.hall");
+      const userName = event.requesterName?.trim() || t("common.user");
+      const date = event.date ? formatBookingDateLabel(event.date, locale()) : "";
+      pushPlatformNotification({
+        type: "booking_submitted",
+        audience: "owner",
+        titleKey: "notify.ownerBookingRequest.title",
+        bodyKey: "notify.ownerBookingRequest.body",
+        actionLabelKey: "notify.ownerBookingRequest.action",
+        params: { hallName, userName, date },
+        action_url: event.hallId
+          ? ownerHallNotificationsPath(event.hallId, event.id)
+          : ownerBookingsPath(event.id),
+        metadata: {
+          hall_id: event.hallId || undefined,
+          booking_id: event.id,
+          hall_name: hallName,
+          user_name: userName,
+          date: event.date,
+          period: event.timeRange || event.period,
+        },
       });
     });
     return () => {

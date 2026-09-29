@@ -4,11 +4,10 @@ import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useProtectedHallError } from "@/hooks/useProtectedHallError";
-import { HALL_OWNER_MESSAGES_PATH } from "@/lib/account-profile-path";
+import { conversationMessagesPath } from "@/constants/seekerDashboardNav";
 import { isUnauthorizedApiError } from "@/lib/api-error";
 import { buildContactLoginRedirectPath } from "@/lib/auth-storage";
 import { isHallLockedApiError } from "@/lib/hall-locked-error";
-import { isHallOwnerRole } from "@/lib/account-role";
 import { isSystemLockedApiError } from "@/lib/system-locked-error";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
@@ -41,14 +40,21 @@ export function useStartHallConversation() {
       setBlocked(false);
       try {
         const thread = await createHallConversation(hallId);
-        options?.onOpened?.();
         if (inbox?.canUseMessaging) {
-          inbox.openInbox(thread.conversationId, options?.draft);
-        } else if (isHallOwnerRole(session.role)) {
-          router.push(`${HALL_OWNER_MESSAGES_PATH}?hallId=${encodeURIComponent(thread.hallId)}`);
-        } else {
-          router.push(`/messages/${thread.conversationId}`);
+          if (options?.draft?.trim()) {
+            inbox.openInbox(thread.conversationId, options.draft);
+            inbox.closeInbox();
+          } else {
+            inbox.selectConversation(thread.conversationId);
+          }
         }
+        options?.onOpened?.();
+        router.push(
+          conversationMessagesPath(session.role, {
+            conversationId: thread.conversationId,
+            hallId: thread.hallId || hallId,
+          }),
+        );
         return thread;
       } catch (err) {
         if (isHallLockedApiError(err) || isSystemLockedApiError(err)) {

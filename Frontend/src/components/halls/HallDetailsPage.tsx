@@ -139,7 +139,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
     contactIntentHandled.current = true;
     queueMicrotask(() => {
-      router.replace(buildHallDetailsPath(hallId), { scroll: false });
       void startContact(hallId);
     });
   }, [
@@ -149,7 +148,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     state.phase,
     hall,
     hallId,
-    router,
     startContact,
   ]);
 
@@ -249,16 +247,32 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
         </section>
       ) : null}
 
-      {viewHall.ownerPhone ? (
-        <p
-          className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-3 text-sm leading-6 text-[var(--wesal-text)]"
-          data-testid="hall-contact-phone"
+      {viewHall.ownerPhone || !isOwnHall ? (
+        <div
+          className={`hall-details-phone-row${
+            viewHall.ownerPhone && !isOwnHall
+              ? ""
+              : viewHall.ownerPhone
+                ? " hall-details-phone-row--phone-only"
+                : " hall-details-phone-row--cta-only"
+          }`}
+          data-testid="hall-contact-phone-row"
         >
-          {t("halls.details.contactPhone")}:{" "}
-          <span className="font-semibold" dir="ltr">
-            {viewHall.ownerPhone}
-          </span>
-        </p>
+          {viewHall.ownerPhone ? (
+            <p className="hall-details-phone-chip" data-testid="hall-contact-phone">
+              {t("halls.details.contactPhone")}:{" "}
+              <span dir="ltr">{viewHall.ownerPhone}</span>
+            </p>
+          ) : null}
+          {!isOwnHall ? (
+            <HallContactButton
+              hallId={viewHall.id}
+              isOwnHall={isOwnHall}
+              isAvailable={!unavailable}
+              variant="bubble"
+            />
+          ) : null}
+        </div>
       ) : null}
 
       {viewHall.detailedAddress ? (
@@ -300,9 +314,13 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
       <HallYouTubeEmbed url={viewHall.youtubeVideoUrl} />
 
       <div className="hall-details-body min-w-0 space-y-5 lg:space-y-6">
-        <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-stretch lg:gap-5">
+        <div
+          className={`hall-details-booking-row${
+            showCalendar ? "" : " hall-details-booking-row--summary-only"
+          }`}
+        >
           {showCalendar ? (
-            <div className="order-2 min-w-0 w-full flex-1 lg:order-1">
+            <div className="hall-details-booking-calendar order-2 lg:order-1">
               <HallHourlyBookingSection
                 hallId={viewHall.id}
                 hallName={viewHall.name}
@@ -310,16 +328,11 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
               />
             </div>
           ) : null}
-          <div className={`order-1 w-full shrink-0 lg:order-2 ${showCalendar ? "lg:w-[17.5rem]" : "max-w-[20rem] lg:ms-auto"}`}>
-            {!isOwnHall ? (
-              <div className="mb-3">
-                <HallContactButton
-                  hallId={viewHall.id}
-                  isOwnHall={isOwnHall}
-                  isAvailable={!unavailable}
-                />
-              </div>
-            ) : null}
+          <div
+            className={`hall-details-booking-summary order-1 lg:order-2 ${
+              showCalendar ? "" : "max-w-[20rem] lg:ms-auto"
+            }`}
+          >
             <HallActionCard
               hallName={viewHall.name}
               capacity={viewHall.capacity}

@@ -318,8 +318,6 @@ const en: MessageCatalog = {
     "Could not reach the server. Check your connection and try again.",
   "auth.login.form.error.generic": "Could not sign in. Check your details and try again.",
   "auth.login.noAccount": "Don't have an account?",
-  "auth.login.hourlyDemo": "Try hourly booking (no account)",
-  "auth.login.hourlyDemoHint": "Local demo session only, until the backend is ready.",
   "auth.login.registerLink": "Create an account",
   "auth.login.forgotPassword": "Forgot your password?",
   "auth.forgotPassword.title": "Reset your password",
@@ -454,6 +452,10 @@ const en: MessageCatalog = {
   "notify.bookingSubmitted.title": "Booking request sent",
   "notify.bookingSubmitted.body":
     "Your booking request was sent to the hall owner and is awaiting review.",
+  "notify.ownerBookingRequest.title": "New booking request",
+  "notify.ownerBookingRequest.body":
+    "{userName} requested \"{hallName}\" on {date}.",
+  "notify.ownerBookingRequest.action": "Open request details",
   "notify.bookingAccepted.title": "Your booking is confirmed 🎉",
   "notify.bookingAccepted.body":
     "Your booking request at \"{hallName}\" on {date} — {period} was approved. A deposit of {amount} is required.",
@@ -1353,7 +1355,6 @@ const en: MessageCatalog = {
   "halls.hourly.confirmTitle": "Confirm this hour",
   "halls.hourly.fullName": "Full name",
   "halls.hourly.success": "Your booking request was sent.",
-  "halls.hourly.tryDemo": "Try booking (local)",
   "errors.hourly.nameRequired": "Enter your full name.",
   "errors.hourly.dayBlocked": "This day is closed by the hall owner.",
   "errors.hourly.slotBooked":
@@ -1370,6 +1371,7 @@ const en: MessageCatalog = {
   "owner.hourly.pickDate": "Pick a day first.",
   "owner.hourly.dayBlocked": "The day was marked closed.",
   "owner.hourly.dayUnblocked": "The day is available again.",
+  "owner.hourly.blockOccupied": "This day cannot be closed because it already has an active booking.",
   "owner.hourly.visibilitySaved": "Visibility setting saved.",
   "owner.hourly.saveFailed": "Could not save this setting.",
   "owner.hourly.blockedList": "Closed days",

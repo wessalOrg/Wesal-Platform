@@ -11,6 +11,8 @@ import {
   BOOKING_CANCELLED_EVENT,
   type BookingCancelledDetail,
 } from "@/lib/booking-events";
+import { parseBookingPeriodType } from "@/lib/booking-period";
+import { subscribeOwnerBookingRequestEvents } from "@/services/booking-notification-realtime";
 import { fetchOwnerHallBookingRequests } from "@/services/owner-hall-booking-requests";
 import type {
   OwnerHallBookingRequest,
@@ -177,7 +179,33 @@ export function useHallBookingRequests(hallId: string) {
       void load("refresh");
     };
     window.addEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
-    return () => window.removeEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
+    const unsubscribeRealtime = subscribeOwnerBookingRequestEvents((event) => {
+      if (event.replay || event.kind === "cancelled" || !event.id) return;
+      if (event.hallId && event.hallId !== hallId) return;
+      const period = parseBookingPeriodType(event.period);
+      setRequests((current) => {
+        if (current.some((item) => item.id === event.id)) return current;
+        return [
+          {
+            id: event.id,
+            hallId: event.hallId || hallId,
+            requesterName: event.requesterName ?? "",
+            date: event.date ?? "",
+            periods: period ? [period] : [],
+            timeRange: event.timeRange,
+            status: "Pending",
+            createdAt: new Date().toISOString(),
+          },
+          ...current,
+        ];
+      });
+      setStatus("ready");
+      void load("refresh");
+    });
+    return () => {
+      window.removeEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
+      unsubscribeRealtime();
+    };
   }, [hallId, load]);
 
   return {

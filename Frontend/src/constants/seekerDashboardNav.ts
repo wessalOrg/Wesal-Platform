@@ -1,4 +1,6 @@
-import { REGULAR_PROFILE_PATH } from "@/lib/account-profile-path";
+import { HALL_OWNER_MESSAGES_PATH, REGULAR_PROFILE_PATH } from "@/lib/account-profile-path";
+import { isHallOwnerRole } from "@/lib/account-role";
+import type { WesalRole } from "@/types/session";
 
 export const SEEKER_DASHBOARD_PATH = REGULAR_PROFILE_PATH;
 export const SEEKER_ACCOUNT_PATH = `${REGULAR_PROFILE_PATH}/account`;
@@ -12,6 +14,21 @@ export function seekerBookingContactPath(bookingId: string): string {
 }
 export const SEEKER_NOTIFICATIONS_PATH = `${REGULAR_PROFILE_PATH}/notifications`;
 export const SEEKER_MESSAGES_PATH = `${REGULAR_PROFILE_PATH}/messages`;
+
+/** Messages page URL for a hall thread (seeker or owner-as-booker). */
+export function conversationMessagesPath(
+  role: WesalRole | null | undefined,
+  options: { conversationId?: string | null; hallId?: string | null } = {},
+): string {
+  const params = new URLSearchParams();
+  if (options.hallId?.trim()) params.set("hallId", options.hallId.trim());
+  if (options.conversationId?.trim()) {
+    params.set("conversation_id", options.conversationId.trim());
+  }
+  const base = isHallOwnerRole(role) ? HALL_OWNER_MESSAGES_PATH : SEEKER_MESSAGES_PATH;
+  const query = params.toString();
+  return query ? `${base}?${query}` : base;
+}
 
 /** @deprecated Merged into account — kept as alias for old links. */
 export const SEEKER_SETTINGS_PATH = SEEKER_ACCOUNT_PATH;

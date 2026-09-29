@@ -35,10 +35,10 @@ export function ownerAdminMessagesPath(
   conversationId?: string | null,
 ): string {
   const params = new URLSearchParams();
+  params.set("contact", "admin");
   if (hallId?.trim()) params.set("hallId", hallId.trim());
   if (conversationId?.trim()) params.set("conversation_id", conversationId.trim());
-  const query = params.toString();
-  return query ? `/owner/messages?${query}` : "/owner/messages";
+  return `/owner/messages?${params.toString()}`;
 }
 
 export function ownerHallNotificationsPath(

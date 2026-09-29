@@ -202,7 +202,7 @@ export default function HallMonthCalendar({
 
         <ul className="flex flex-wrap items-center gap-3 text-[0.7rem] text-[var(--wesal-muted)]">
           <li className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm border border-[var(--wesal-border)] bg-white" />
+            <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />
             {t("halls.booking.legendAvailable")}
           </li>
           {legend === "full" ? (
@@ -212,15 +212,16 @@ export default function HallMonthCalendar({
                 {t("halls.booking.legendPartial")}
               </li>
               <li className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm bg-[#d9d0cb]" />
+                <span className="h-2.5 w-2.5 rounded-sm bg-[#dc4c4c]" />
                 {t("halls.booking.legendBooked")}
               </li>
             </>
-          ) : null}
-          <li className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-[#b9a8a0]" />
-            {t("halls.booking.legendBlocked")}
-          </li>
+          ) : (
+            <li className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm bg-[#dc4c4c]" />
+              {t("halls.booking.legendBooked")}
+            </li>
+          )}
         </ul>
       </div>
 
@@ -256,11 +257,11 @@ export default function HallMonthCalendar({
                 selected
                   ? "hall-cal-day--selected rounded-full bg-[var(--wesal-maroon)] text-white shadow-[0_6px_14px_rgba(193,123,127,0.35)]"
                   : isClosed
-                    ? "cursor-not-allowed rounded-full bg-[#e8e1dc] text-[#9a8e87]"
+                    ? "cursor-not-allowed rounded-full bg-[#fdecea] text-[#b42318]"
                     : isPartial
                       ? "hall-cal-day--partial rounded-xl"
                       : cell.status === "available"
-                        ? "rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
+                        ? "rounded-full bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
                         : "cursor-default rounded-full text-[#c5bbb4]",
               ].join(" ")}
               aria-pressed={selected}

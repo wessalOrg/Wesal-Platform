@@ -53,7 +53,9 @@ export function conversationAvatarInitials(name: string): string {
 export function conversationPeerRoleLabel(options: {
   viewerIsHallOwner: boolean;
   viewerIsAdmin: boolean;
+  peerIsAdmin?: boolean;
 }): string {
+  if (options.peerIsAdmin) return t("messages.role.admin");
   if (options.viewerIsAdmin) return t("messages.role.owner");
   if (options.viewerIsHallOwner) return t("messages.role.user");
   return t("messages.role.owner");

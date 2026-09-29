@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import HallUnavailableDialog from "@/components/halls/HallUnavailableDialog";
 import { useHallPermissions } from "@/hooks/useHallPermissions";
@@ -8,14 +8,18 @@ import { useStartHallConversation } from "@/hooks/useStartHallConversation";
 import { useT } from "@/i18n";
 import { buildContactLoginRedirectPath } from "@/lib/auth-storage";
 
-const CONTACT_BUTTON_CLASS =
+const CONTACT_BAR_CLASS =
   "btn-primary inline-flex w-full items-center justify-center gap-2 !min-h-11 !rounded-xl !px-3 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px]";
+
+const CONTACT_PAGE_CLASS =
+  "btn-primary min-h-11 h-full w-full gap-2 whitespace-nowrap";
 
 type HallContactButtonProps = {
   hallId: string;
   isOwnHall?: boolean;
   isAvailable?: boolean;
   onOpened?: () => void;
+  variant?: "bar" | "bubble";
 };
 
 export default function HallContactButton({
@@ -23,19 +27,23 @@ export default function HallContactButton({
   isOwnHall = false,
   isAvailable = true,
   onOpened,
+  variant = "bar",
 }: HallContactButtonProps) {
   const t = useT();
   const { authReady, isGuest, canContactOwner } = useHallPermissions({ isOwner: isOwnHall });
   const { start, starting, error, blocked, dismissBlocked } = useStartHallConversation();
   const [unavailableOpen, setUnavailableOpen] = useState(false);
   const loginHref = buildContactLoginRedirectPath(hallId);
+  const bubble = variant === "bubble";
+  const label = starting ? t("halls.contact.opening") : t("halls.contact.cta");
+  const wrapClass = bubble ? "relative min-w-0 h-full w-full" : "min-w-0 flex-1";
 
   if (!authReady) {
     return (
-      <div className="min-w-0 flex-1">
-        <button type="button" className={CONTACT_BUTTON_CLASS} disabled>
+      <div className={wrapClass}>
+        <ContactFace variant={variant} className={bubble ? undefined : CONTACT_BAR_CLASS} disabled>
           …
-        </button>
+        </ContactFace>
       </div>
     );
   }
@@ -46,17 +54,16 @@ export default function HallContactButton({
 
   if (!isAvailable) {
     return (
-      <div className="min-w-0 flex-1">
-        <button
-          type="button"
-          className={`${CONTACT_BUTTON_CLASS} !opacity-50`}
-          aria-disabled="true"
-          data-testid="hall-contact-button"
+      <div className={wrapClass}>
+        <ContactFace
+          variant={variant}
+          className={bubble ? undefined : `${CONTACT_BAR_CLASS} !opacity-50`}
+          ariaDisabled
+          testId
           onClick={() => setUnavailableOpen(true)}
         >
-          <ChatIcon />
           {t("halls.contact.cta")}
-        </button>
+        </ContactFace>
         <HallUnavailableDialog
           open={unavailableOpen}
           title={t("halls.contact.blockedTitle")}
@@ -69,32 +76,31 @@ export default function HallContactButton({
   }
 
   return (
-    <div className="min-w-0 flex-1">
+    <div className={wrapClass}>
       {isGuest ? (
-        <Link
+        <ContactFace
+          variant={variant}
           href={loginHref}
-          className={CONTACT_BUTTON_CLASS}
-          data-testid="hall-contact-button"
-          aria-label={t("halls.contact.aria")}
+          className={bubble ? undefined : CONTACT_BAR_CLASS}
+          ariaLabel={t("halls.contact.aria")}
+          testId
         >
-          <ChatIcon />
           {t("halls.contact.cta")}
-        </Link>
+        </ContactFace>
       ) : (
-        <button
-          type="button"
-          className={CONTACT_BUTTON_CLASS}
-          data-testid="hall-contact-button"
-          aria-label={t("halls.contact.aria")}
+        <ContactFace
+          variant={variant}
+          className={bubble ? undefined : CONTACT_BAR_CLASS}
+          ariaLabel={t("halls.contact.aria")}
+          testId
           disabled={starting}
-          aria-busy={starting}
+          busy={starting}
           onClick={() => {
             void start(hallId, { onOpened, loginHref });
           }}
         >
-          <ChatIcon />
-          {starting ? t("halls.contact.opening") : t("halls.contact.cta")}
-        </button>
+          {label}
+        </ContactFace>
       )}
       {error ? (
         <p className="mt-2 text-start text-xs leading-5 text-[#a86267]" role="alert">
@@ -109,6 +115,68 @@ export default function HallContactButton({
         testId="hall-contact-blocked-dialog"
       />
     </div>
+  );
+}
+
+function ContactFace({
+  variant,
+  className,
+  children,
+  href,
+  disabled,
+  ariaDisabled,
+  busy,
+  ariaLabel,
+  testId,
+  onClick,
+}: {
+  variant: "bar" | "bubble";
+  className?: string;
+  children: ReactNode;
+  href?: string;
+  disabled?: boolean;
+  ariaDisabled?: boolean;
+  busy?: boolean;
+  ariaLabel?: string;
+  testId?: boolean;
+  onClick?: () => void;
+}) {
+  const bubble = variant === "bubble";
+  const classes = bubble ? CONTACT_PAGE_CLASS : className;
+  const inner = (
+    <>
+      <ChatIcon />
+      {children}
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={classes}
+        data-testid={testId ? "hall-contact-button" : undefined}
+        aria-label={ariaLabel}
+        onClick={onClick}
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={classes}
+      data-testid={testId ? "hall-contact-button" : undefined}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      aria-disabled={ariaDisabled || undefined}
+      aria-busy={busy || undefined}
+      onClick={onClick}
+    >
+      {inner}
+    </button>
   );
 }
 
