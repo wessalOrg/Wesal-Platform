@@ -7,7 +7,8 @@ import { ApiError } from "@/lib/api-error";
  * already-coded Frontend contract from add-hall initiation:
  *   - error.code / extensions.code of PaymentRequired (and close aliases)
  *   - HTTP 402, which that existing helper treats as subscription/payment blocked
- *   - 403 only when the payload text/code is explicitly payment-related
+ *   - 403/422 only when the payload text/code is explicitly payment-related
+ *     (BusinessRuleException PaymentRequired is HTTP 422)
  *
  * Generic 403/409 are NOT treated as payment-required (those remain
  * AdminLocked / SystemLocked / other forbidden handling).
@@ -26,6 +27,8 @@ const PAYMENT_REQUIRED_CODES = new Set([
 const PAYMENT_REQUIRED_HINTS = [
   "paymentrequired",
   "payment required",
+  "payment is required",
+  "subscription payment",
   "payment pending",
   "pending payment",
   "awaiting payment",
@@ -76,7 +79,11 @@ export function isPaymentRequiredApiError(error: unknown): boolean {
   // Existing in-repo Frontend contract (add-hall initiation), not an invented guess.
   if (error.status === 402) return true;
 
-  if (error.status !== 403 && error.status !== 402) return false;
+  // BusinessRuleException PaymentRequired is HTTP 422. Keep 403 text heuristics
+  // for older payloads. Generic 409 stays a booking conflict, not payment.
+  if (error.status !== 403 && error.status !== 402 && error.status !== 422) {
+    return false;
+  }
 
   const blob = blobFromApiError(error);
   return PAYMENT_REQUIRED_HINTS.some((hint) => blob.includes(hint));

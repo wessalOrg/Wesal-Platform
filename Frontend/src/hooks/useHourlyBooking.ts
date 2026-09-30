@@ -140,7 +140,12 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
 
   const selectSlot = useCallback(
     (slot: HourlySlot) => {
-      if (!canSubmit || slot.status !== "available" || submitting) return;
+      if (submitting) return;
+      if (slot.status !== "available") {
+        setErrorKey("errors.hourly.slotBooked");
+        return;
+      }
+      if (!canSubmit) return;
       setSlotStart(slot.start);
       setPromptOpen(true);
       setErrorKey(null);

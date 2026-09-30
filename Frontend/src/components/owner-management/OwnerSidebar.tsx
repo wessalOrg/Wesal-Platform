@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import WesalLogo from "@/components/brand/WesalLogo";
@@ -23,11 +23,25 @@ type OwnerSidebarProps = {
   onNavigate?: () => void;
 };
 
-export default function OwnerSidebar({
+export default function OwnerSidebar(props: OwnerSidebarProps) {
+  return (
+    <Suspense fallback={<OwnerSidebarView {...props} search="" />}>
+      <OwnerSidebarWithSearch {...props} />
+    </Suspense>
+  );
+}
+
+function OwnerSidebarWithSearch(props: OwnerSidebarProps) {
+  const searchParams = useSearchParams();
+  return <OwnerSidebarView {...props} search={searchParams.toString()} />;
+}
+
+function OwnerSidebarView({
   id,
   className = "",
   onNavigate,
-}: OwnerSidebarProps) {
+  search,
+}: OwnerSidebarProps & { search: string }) {
   const t = useT();
   const pathname = usePathname();
   const router = useRouter();
@@ -55,7 +69,7 @@ export default function OwnerSidebar({
         <nav className="seeker-dash-sidebar-nav">
           <ul className="seeker-dash-sidebar-list seeker-dash-sidebar-list--static">
             {HALL_OWNER_DASHBOARD_NAV.filter((item) => item.id !== "account").map((item) => {
-              const active = isOwnerNavActive(pathname, item.href, item.match);
+              const active = isOwnerNavActive(pathname, item.href, item.match, search);
               return (
                 <li key={item.id}>
                   <Link
@@ -91,7 +105,7 @@ export default function OwnerSidebar({
               <AddHallEntryAction />
             </li>
             {HALL_OWNER_DASHBOARD_NAV.filter((item) => item.id === "account").map((item) => {
-              const active = isOwnerNavActive(pathname, item.href, item.match);
+              const active = isOwnerNavActive(pathname, item.href, item.match, search);
               return (
                 <li key={item.id}>
                   <Link

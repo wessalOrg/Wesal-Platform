@@ -30,6 +30,8 @@ type HallMonthCalendarProps = {
   /** Owner browse: every day in the month can be selected, including booked and past days. */
   allowAnyDay?: boolean;
   onVisibleMonthChange?: (year: number, monthIndex: number) => void;
+  /** Owner day-close calendar: blocked days stay clickable so they can be reopened. */
+  allowClosedSelect?: boolean;
 };
 
 type Cursor = { year: number; month: number };
@@ -81,6 +83,7 @@ export default function HallMonthCalendar({
   legend = "full",
   allowAnyDay = false,
   onVisibleMonthChange,
+  allowClosedSelect = false,
 }: HallMonthCalendarProps) {
   const t = useT();
 
@@ -180,7 +183,8 @@ export default function HallMonthCalendar({
     if (disabled) return;
     if (!allowAnyDay && !isFutureBookingDate(iso)) return;
     const status = dayStatus(day, iso, dayStatuses, allowAnyDay);
-    if (!allowAnyDay && (status === "booked" || status === "blocked" || status === "past")) return;
+    if (!allowAnyDay && status === "past") return;
+    if (!allowAnyDay && !allowClosedSelect && (status === "booked" || status === "blocked")) return;
 
     onSelect(
       day ?? {
@@ -275,7 +279,10 @@ export default function HallMonthCalendar({
           const selected = cell.iso === selectedDateIso;
           const selectable =
             !disabled &&
-            (allowAnyDay || cell.status === "available" || cell.status === "partial");
+            (allowAnyDay ||
+              cell.status === "available" ||
+              cell.status === "partial" ||
+              (allowClosedSelect && cell.status === "blocked"));
           const isPartial = !selected && cell.status === "partial";
           const ownerBooked = legend === "owner" && cell.status === "booked";
           const isClosed = cell.status === "booked" || cell.status === "blocked";
@@ -294,9 +301,9 @@ export default function HallMonthCalendar({
                   : ownerBooked
                     ? "rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
                     : isClosed
-                    ? allowAnyDay
-                      ? "rounded-full bg-[#e8e1dc] text-[#6d625c] hover:bg-[#ddd4ce]"
-                      : "cursor-not-allowed rounded-full bg-[#fdecea] text-[#b42318]"
+                      ? allowAnyDay
+                        ? "rounded-full bg-[#e8e1dc] text-[#6d625c] hover:bg-[#ddd4ce]"
+                        : `${allowClosedSelect ? "" : "cursor-not-allowed "}rounded-full bg-[#fdecea] text-[#b42318]`
                     : isPartial
                       ? "hall-cal-day--partial rounded-xl"
                       : cell.status === "available"

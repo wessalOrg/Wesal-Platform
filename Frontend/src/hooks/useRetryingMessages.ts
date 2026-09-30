@@ -7,12 +7,27 @@ function messageKey(message: ThreadMessage): string {
   return message.clientRequestId || message.id;
 }
 
-/** Local retrying overlay on Lilian's pending delivery — no API changes. */
-export function useRetryingMessages(messages: ThreadMessage[]) {
-  const [ids, setIds] = useState<Set<string>>(() => new Set());
+function retrySignature(messages: ThreadMessage[]): string {
+  return messages
+    .map((item) => `${item.id}\0${item.clientRequestId ?? ""}\0${item.delivery ?? ""}`)
+    .join("\n");
+}
 
-  // Only pending messages still count as retrying; the rest stay in `ids`
-  // until remount (tiny set) so we never prune during render or in an effect.
+function pruneRetryingIds(current: Set<string>, messages: ThreadMessage[]): Set<string> {
+  if (current.size === 0) return current;
+  const next = new Set<string>();
+  for (const id of current) {
+    const match = messages.find((item) => item.id === id || item.clientRequestId === id);
+    if (match?.delivery === "pending") next.add(id);
+  }
+  if (next.size === current.size && [...next].every((id) => current.has(id))) return current;
+  return next;
+}
+
+/** Local retrying overlay on pending delivery — no API changes. */
+export function useRetryingMessages(messages: ThreadMessage[]) {
+  const signature = retrySignature(messages);
+  const [ids, setIds] = useState<Set<string>>(() => new Set());
   const pendingKeys = useMemo(() => {
     const keys = new Set<string>();
     for (const message of messages) {
@@ -20,6 +35,11 @@ export function useRetryingMessages(messages: ThreadMessage[]) {
     }
     return keys;
   }, [messages]);
+  const [prevSignature, setPrevSignature] = useState(signature);
+  if (prevSignature !== signature) {
+    setPrevSignature(signature);
+    setIds((current) => pruneRetryingIds(current, messages));
+  }
 
   const markRetrying = useCallback((id: string) => {
     setIds((current) => {

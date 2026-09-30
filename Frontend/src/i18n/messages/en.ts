@@ -1409,6 +1409,7 @@ const en: MessageCatalog = {
   "owner.hourly.settingsHint": "Available days and hours always stay visible. This toggle only hides booked days or hours from users.",
   "owner.hourly.showBooked": "Show booked days/hours to users",
   "owner.hourly.showBookedHint": "Available hours are always shown. Turn this off to hide booked hours from seekers.",
+  "owner.hourly.blockHint": "Tap a day on the calendar to close or reopen it.",
   "owner.calendar.title": "Bookings calendar",
   "owner.calendar.pageSubtitle": "Follow the booked days and hours for your halls.",
   "owner.calendar.hint": "Select a day to see whether it has booked hours.",
@@ -1434,6 +1435,10 @@ const en: MessageCatalog = {
   "owner.hourly.blockOccupied": "This day cannot be closed because it already has an active booking.",
   "owner.hourly.visibilitySaved": "Visibility setting saved.",
   "owner.hourly.saveFailed": "Could not save this setting.",
+  "owner.hourly.paymentRequired":
+    "Hourly settings cannot be saved until this hall's subscription is paid. Complete payment and try again.",
+  "owner.hourly.hallLocked": "This setting cannot be saved because the hall is locked by an administrator.",
+  "owner.hourly.systemLocked": "This setting cannot be saved because the subscription cycle has ended.",
   "owner.hourly.blockedList": "Closed days",
   "auth.stub.loginTitle": "Quick login (demo)",
   "auth.stub.registerTitle": "Quick signup (demo)",

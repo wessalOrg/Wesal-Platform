@@ -243,6 +243,7 @@ export default function HallOwnerHallManagementView({
           isSubmitting={isSubmitting}
           isSuccess={isSuccess}
           controlsDisabled={controlsDisabled}
+          paymentStatus={details.paymentStatus}
           onPatch={patchValues}
           onRemoveExistingPhoto={removeExistingPhoto}
           onSetCover={setCoverPhoto}

@@ -167,6 +167,16 @@ function testPaymentRequiredError() {
   );
   assert.equal(isPaymentRequiredApiError(new ApiError("Payment required", 402)), true);
   assert.equal(
+    isPaymentRequiredApiError(
+      new ApiError("Subscription payment is required before this hall can be managed.", 422),
+    ),
+    true,
+  );
+  assert.equal(
+    isPaymentRequiredApiError(new ApiError("denied", 422, {}, { code: "PaymentRequired" })),
+    true,
+  );
+  assert.equal(
     isPaymentRequiredApiError(new ApiError("Hall is admin locked", 403, {}, { code: "Forbidden" })),
     false,
   );

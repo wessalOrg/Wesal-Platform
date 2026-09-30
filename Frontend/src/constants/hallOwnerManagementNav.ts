@@ -86,11 +86,22 @@ export function isOwnerNavActive(
   pathname: string,
   href: string,
   match: "exact" | "prefix",
+  search?: string | null,
 ): boolean {
   if (match === "exact") {
     return pathname === href;
   }
   // Avoid marking "halls" active on unrelated owner routes; still cover
   // /owner/halls, /owner/halls/[id], and /owner/halls/add.
-  return pathname === href || pathname.startsWith(`${href}/`);
+  if (!(pathname === href || pathname.startsWith(`${href}/`))) {
+    return false;
+  }
+  // `/owner/messages?contact=admin` is Contact Admin, not Messages.
+  if (href === OWNER_MESSAGES_PATH) {
+    const query = (search ?? "").replace(/^\?/, "");
+    if (new URLSearchParams(query).get("contact") === "admin") {
+      return false;
+    }
+  }
+  return true;
 }
