@@ -5,6 +5,11 @@ using Wesal.Application.Common.Models;
 
 namespace Wesal.Infrastructure.Search;
 
+/// <summary>
+/// In-memory search-index placeholder: public search reads live database data,
+/// so this index is write-only until a durable index exists. RetryPendingAsync
+/// has no production scheduler; it exists for explicit/manual invocation.
+/// </summary>
 public class HallSearchIndexer : IHallSearchIndexer
 {
     private readonly ConcurrentDictionary<Guid, HallSearchIndexDto> _index = new();

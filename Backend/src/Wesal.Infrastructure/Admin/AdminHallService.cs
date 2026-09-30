@@ -116,7 +116,10 @@ public class AdminHallService : IAdminHallService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Search indexing failed for hall {HallId}, will retry", hall.Id);
+            // Truthful: public search reads live database data, so approval is
+            // unaffected. The in-memory index is a placeholder until a durable
+            // index exists; nothing schedules RetryPendingAsync in production.
+            _logger.LogWarning(ex, "Search indexing failed for hall {HallId}; approval is unaffected", hall.Id);
             // Do not throw - approval remains Approved, indexing is retryable
         }
     }
