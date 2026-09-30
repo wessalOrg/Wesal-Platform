@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "prebuild": "node scripts/verify-production-env.mjs",
+    "verify:api-base-url": "node scripts/verify-api-base-url.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

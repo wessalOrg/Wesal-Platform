@@ -1,45 +1,26 @@
 /**
  * Production environment gate for the Vercel build (runs as `prebuild`).
  *
- * - Vercel production deploys (VERCEL_ENV=production) MUST configure a valid
- *   absolute https NEXT_PUBLIC_API_BASE_URL, otherwise browsers would silently
- *   target localhost or an invalid origin.
+ * - NEXT_PUBLIC_API_BASE_URL is OPTIONAL on production deploys: when it is
+ *   missing, the canonical Wesal API (https://wesal-platform.onrender.com/api/v1)
+ *   is used, so deployments do not depend on dashboard-only configuration.
+ * - An explicitly provided value must be a valid absolute https URL (not
+ *   localhost) on a production deploy, otherwise the build fails.
  * - NEXT_PUBLIC_DEMO_MODE must NEVER be "true" on a production deploy,
  *   otherwise the site would serve fabricated demo data as if real.
- * - Any other environment (dev, preview, CI without Vercel context) only warns.
+ * - An explicit NEXT_PUBLIC_API_BASE_URL that is malformed fails in EVERY
+ *   environment; outside production deploys a missing value or demo mode only warns.
+ * - Preview deploys with no URL also use the canonical (production) API; set a
+ *   Preview-scoped NEXT_PUBLIC_API_BASE_URL to point previews elsewhere.
+ *
+ * The rules live in src/lib/api-base-url.mjs, shared with the app runtime.
  */
-const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").trim();
-const demoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "").trim();
-const vercelEnv = (process.env.VERCEL_ENV ?? "").trim();
-const failures = [];
+import { evaluateFrontendEnv } from "../src/lib/api-base-url.mjs";
 
-if (vercelEnv === "production") {
-  if (!apiBase) {
-    failures.push("NEXT_PUBLIC_API_BASE_URL is missing for the production deploy.");
-  } else {
-    let url = null;
-    try {
-      url = new URL(apiBase);
-    } catch {
-      url = null;
-    }
-    if (!url || (url.protocol !== "http:" && url.protocol !== "https:")) {
-      failures.push(`NEXT_PUBLIC_API_BASE_URL is not a valid absolute http(s) URL: "${apiBase}".`);
-    } else if (url.protocol !== "https:") {
-      failures.push("NEXT_PUBLIC_API_BASE_URL must use https in production.");
-    }
-  }
-  if (demoMode === "true") {
-    failures.push('NEXT_PUBLIC_DEMO_MODE must not be "true" on a production deploy.');
-  }
-} else {
-  if (!apiBase) {
-    console.warn("[verify-production-env] NEXT_PUBLIC_API_BASE_URL not set; development fallback (localhost) applies.");
-  }
-  if (demoMode === "true") {
-    console.warn("[verify-production-env] NEXT_PUBLIC_DEMO_MODE=true (demo fallbacks enabled; never use in production).");
-  }
-}
+const { failures, warnings, notes } = evaluateFrontendEnv(process.env);
+
+for (const note of notes) console.log(`[verify-production-env] ${note}`);
+for (const warning of warnings) console.warn(`[verify-production-env] ${warning}`);
 
 if (failures.length > 0) {
   for (const failure of failures) console.error(`[verify-production-env] ERROR: ${failure}`);

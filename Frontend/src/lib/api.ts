@@ -1,47 +1,28 @@
 import axios from "axios";
 import { ApiError, parseApiFieldErrors } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
-
-const DEV_API_BASE_URL = "http://localhost:5298/api/v1";
+import {
+  DEV_API_BASE_URL,
+  PROD_API_BASE_URL,
+  validateApiBaseUrl,
+} from "@/lib/api-base-url.mjs";
 
 /**
  * Resolves the backend base URL (production hardening).
- * Development keeps the localhost fallback; a production bundle with a missing
- * or invalid NEXT_PUBLIC_API_BASE_URL fails loudly instead of pointing users'
- * browsers at localhost.
+ * Order: explicit NEXT_PUBLIC_API_BASE_URL (validated) -> canonical Wesal API in
+ * production -> localhost in development. Production never falls back to
+ * localhost, and an invalid explicit value fails loudly.
+ *
+ * `process.env.*` reads stay literal so Next.js inlines them at build time; the
+ * fallback ternary then folds away the unused branch, keeping the localhost URL
+ * out of production client bundles. Runtime https/localhost checks only see
+ * VERCEL_ENV on the server — `scripts/verify-production-env.mjs` (prebuild) is
+ * the authoritative gate for the browser bundle.
  */
 export function resolveApiBaseUrl(): string {
-  const raw = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").trim();
-  if (!raw) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error(
-        "NEXT_PUBLIC_API_BASE_URL is not configured. Set it to the deployed API origin (e.g. https://wesal-platform.onrender.com/api/v1).",
-      );
-    }
-    return DEV_API_BASE_URL;
-  }
-
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    throw new Error(
-      `NEXT_PUBLIC_API_BASE_URL is not a valid absolute URL: "${raw}".`,
-    );
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error(
-      `NEXT_PUBLIC_API_BASE_URL must use http(s): "${raw}".`,
-    );
-  }
-  // HTTPS is required on Vercel production only: local production builds
-  // (NODE_ENV=production without VERCEL_ENV) may still target http localhost.
-  if (process.env.VERCEL_ENV === "production" && url.protocol !== "https:") {
-    throw new Error(
-      "NEXT_PUBLIC_API_BASE_URL must use https in production.",
-    );
-  }
-  return raw;
+  const explicit = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").trim();
+  if (explicit) return validateApiBaseUrl(explicit, process.env.VERCEL_ENV);
+  return process.env.NODE_ENV === "production" ? PROD_API_BASE_URL : DEV_API_BASE_URL;
 }
 
 /** Effective REST base URL (`.../api/v1`), validated for the current environment. */

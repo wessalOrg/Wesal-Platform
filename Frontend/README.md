@@ -29,8 +29,9 @@ src/
   lib/api.ts    # عميل Axios للـ API
 ```
 
-انسخ `.env.example` إلى `.env.local`. القيمة الافتراضية تتصل بـ API على Render:
-`https://wesal-platform.onrender.com/api/v1`. للتشغيل المحلي للباك استخدم `http://localhost:5298/api/v1`.
+انسخ `.env.example` إلى `.env.local`. `NEXT_PUBLIC_API_BASE_URL` اختياري: في بناء الإنتاج، إذا لم يُضبط، يُستخدم API الرسمي على Render
+`https://wesal-platform.onrender.com/api/v1` (لا يعود أبداً إلى localhost)، وفي التطوير المحلي تُستخدم القيمة `http://localhost:5298/api/v1`.
+أي قيمة صريحة في الإنتاج يجب أن تكون رابط https مطلقاً وإلا يفشل البناء.
 
 ## Documentation
 

@@ -67,6 +67,9 @@ jobs:
         continue-on-error: true
         run: npm run lint
 
+      - name: API base URL resolution and production env gate tests
+        run: npm run verify:api-base-url
+
       - name: Production env gate
         run: node scripts/verify-production-env.mjs
 

@@ -29,7 +29,7 @@ Optional / feature-gated:
 - `Email__Enable`, `Email__Host`, `Email__From`, `Email__Port`, `Email__Username`, `Email__Password` — REQUIRED only if password-reset e-mail must deliver; otherwise the API answers forgot-password generically and logs that SMTP is unconfigured
 - `PasswordReset__FrontendBaseUrl` — must be the deployed Vercel origin when SMTP is on
 - `HallMedia__Directory`, `DocumentStorage__Directory` — REQUIRED for durable uploads; when unset the app warns at startup that container-local temp storage will not survive redeploys
-- `NEXT_PUBLIC_API_BASE_URL` (Vercel side) — must be `https://<render-service>/api/v1`
+- `NEXT_PUBLIC_API_BASE_URL` (Vercel side) — OPTIONAL override; when unset, production builds use the canonical `https://wesal-platform.onrender.com/api/v1`. An explicit value must be an absolute https URL (not localhost) or the prebuild gate fails the deploy
 - `NEXT_PUBLIC_DEMO_MODE` (Vercel side) — must NEVER be `true` in production (the Vercel prebuild gate fails the deploy if it is)
 
 ## 3. Deploy verification (every production deploy)
