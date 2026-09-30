@@ -1,0 +1,74 @@
+# Wesal platform CI (backend + frontend). Build and tests gate; lint reports
+# without failing because pre-existing warnings/errors are tracked separately.
+# No secrets are used here and nothing is deployed from this workflow.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "Backend/**"
+      - "Frontend/**"
+      - ".github/workflows/ci.yml"
+
+jobs:
+  backend:
+    name: Backend restore, build, and test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore Wesal.slnx
+
+      - name: Build (Release)
+        run: dotnet build Wesal.slnx -c Release --no-restore
+
+      - name: Test (Release)
+        run: dotnet test Wesal.slnx -c Release --no-build
+
+  frontend:
+    name: Frontend install, lint, and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+    env:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:5298/api/v1
+      CI: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint (advisory until pre-existing findings are cleared)
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Production env gate
+        run: node scripts/verify-production-env.mjs
+
+      - name: Build
+        run: npm run build
