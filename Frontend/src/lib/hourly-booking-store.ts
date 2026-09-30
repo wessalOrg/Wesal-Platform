@@ -1,7 +1,6 @@
-import { addUtcDays, utcTodayIso } from "@/lib/booking-date";
 import type { HourlyBookingInput, HourlyBookingResult } from "@/types/hourly-booking";
 
-const STORAGE_KEY = "wesal-hourly-bookings";
+const STORAGE_KEY = "wesal-hourly-local";
 
 type StoreShape = {
   bookings: HourlyBookingResult[];
@@ -21,7 +20,7 @@ function readStore(): StoreShape {
   if (!canUseStorage()) return emptyStore();
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return seedStore();
+    if (!raw) return emptyStore();
     const parsed = JSON.parse(raw) as StoreShape;
     return {
       bookings: Array.isArray(parsed.bookings) ? parsed.bookings : [],
@@ -39,32 +38,6 @@ function readStore(): StoreShape {
 function writeStore(store: StoreShape) {
   if (!canUseStorage()) return;
   window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-}
-
-function seedStore(): StoreShape {
-  const sampleDate = addUtcDays(utcTodayIso(), 9);
-  const seeded: StoreShape = {
-    bookings: [
-      {
-        bookingId: "hourly-seed-1",
-        hallId: "1",
-        date: sampleDate,
-        slotTime: "10:00",
-        customerName: "ضيف تجريبي",
-      },
-      {
-        bookingId: "hourly-seed-2",
-        hallId: "1",
-        date: sampleDate,
-        slotTime: "14:00",
-        customerName: "ضيف تجريبي",
-      },
-    ],
-    blockedDays: {},
-    showBookedSlots: {},
-  };
-  writeStore(seeded);
-  return seeded;
 }
 
 export function listHourlyBookings(hallId: string, dateIso?: string): HourlyBookingResult[] {

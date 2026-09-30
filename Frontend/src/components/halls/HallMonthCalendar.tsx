@@ -26,6 +26,8 @@ type HallMonthCalendarProps = {
   disabled?: boolean;
   locale: string;
   legend?: "full" | "hourly";
+  /** Owner day-close calendar: blocked days stay clickable so they can be reopened. */
+  allowClosedSelect?: boolean;
 };
 
 type Cursor = { year: number; month: number };
@@ -73,6 +75,7 @@ export default function HallMonthCalendar({
   disabled = false,
   locale,
   legend = "full",
+  allowClosedSelect = false,
 }: HallMonthCalendarProps) {
   const t = useT();
 
@@ -164,7 +167,8 @@ export default function HallMonthCalendar({
   const selectIso = (iso: string, day?: HallAvailabilityDay) => {
     if (disabled || !isFutureBookingDate(iso)) return;
     const status = dayStatus(day, iso, dayStatuses);
-    if (status === "booked" || status === "blocked" || status === "past") return;
+    if (status === "past") return;
+    if (!allowClosedSelect && (status === "booked" || status === "blocked")) return;
 
     onSelect(
       day ?? {
@@ -242,7 +246,9 @@ export default function HallMonthCalendar({
           const selected = cell.iso === selectedDateIso;
           const selectable =
             !disabled &&
-            (cell.status === "available" || cell.status === "partial");
+            (cell.status === "available" ||
+              cell.status === "partial" ||
+              (allowClosedSelect && cell.status === "blocked"));
           const isPartial = !selected && cell.status === "partial";
           const isClosed = cell.status === "booked" || cell.status === "blocked";
 
@@ -257,7 +263,7 @@ export default function HallMonthCalendar({
                 selected
                   ? "hall-cal-day--selected rounded-full bg-[var(--wesal-maroon)] text-white shadow-[0_6px_14px_rgba(193,123,127,0.35)]"
                   : isClosed
-                    ? "cursor-not-allowed rounded-full bg-[#fdecea] text-[#b42318]"
+                    ? `${allowClosedSelect ? "" : "cursor-not-allowed "}rounded-full bg-[#fdecea] text-[#b42318]`
                     : isPartial
                       ? "hall-cal-day--partial rounded-xl"
                       : cell.status === "available"

@@ -27,7 +27,7 @@ function testGuidGate() {
   assert.equal(isGuidHallId("1"), false);
   assert.equal(isGuidHallId("demo-hall-approved"), false);
   assert.equal(isGuidHallId("8f14e45f-ea9c-4b1c-9d2a-6b7c8d9e0f11"), true);
-  console.log("ok  live API is GUID-only; demo halls stay local");
+  console.log("ok  live API is GUID-only; stub/demo hall ids stay local");
 }
 
 function testServiceContract() {

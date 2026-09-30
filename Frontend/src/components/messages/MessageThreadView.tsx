@@ -11,7 +11,9 @@ import { useT } from "@/i18n";
 import { isBookingRejectionContent } from "@/lib/booking-rejection-message";
 import { conversationHallLabel } from "@/lib/conversation-display";
 import { isSameUserId } from "@/lib/current-user";
-import type { MessageThread, ThreadStatus } from "@/types/messages";
+import type { MessageThread, ThreadMessage, ThreadStatus } from "@/types/messages";
+
+const EMPTY_MESSAGES: ThreadMessage[] = [];
 
 type MessageThreadViewProps = {
   status: ThreadStatus;
@@ -67,7 +69,7 @@ export default function MessageThreadView({
   const t = useT();
   const lang = useUiLang();
   const localizedHallName = thread ? conversationHallLabel(thread, lang) : "";
-  const messages = thread?.messages ?? [];
+  const messages = thread?.messages ?? EMPTY_MESSAGES;
   const lastMessage = messages[messages.length - 1];
   const { scrollerRef, unseenCount, unseenRejection, onScroll, scrollToLatest } = useThreadScroll(
     conversationId ?? thread?.conversationId ?? null,

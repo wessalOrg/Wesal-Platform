@@ -12,6 +12,7 @@ import HallMediaSection from "@/components/owner-management/add-hall/HallMediaSe
 import HallEditabilityNotice from "@/components/owner-management/halls/HallEditabilityNotice";
 import HallManagementPhotosSection from "@/components/owner-management/halls/HallManagementPhotosSection";
 import { useT } from "@/i18n";
+import type { HallPaymentStatus } from "@/constants/hallPaymentStatus";
 import type {
   HallEditFieldErrors,
   HallEditFormValues,
@@ -28,6 +29,7 @@ type HallManagementFormProps = {
   isSubmitting: boolean;
   isSuccess: boolean;
   controlsDisabled: boolean;
+  paymentStatus?: HallPaymentStatus;
   onPatch: (patch: Partial<HallEditFormValues>) => void;
   onRemoveExistingPhoto: (photoId: string) => void;
   onSetCover: (url: string) => void;
@@ -91,6 +93,7 @@ export default function HallManagementForm({
   isSubmitting,
   isSuccess,
   controlsDisabled,
+  paymentStatus,
   onPatch,
   onRemoveExistingPhoto,
   onSetCover,
@@ -191,7 +194,11 @@ export default function HallManagementForm({
           title={t("owner.hourly.title")}
           description={t("owner.hourly.settingsHint")}
         >
-          <OwnerHourlyControls hallId={hallId} disabled={controlsDisabled} />
+          <OwnerHourlyControls
+            hallId={hallId}
+            disabled={controlsDisabled}
+            paymentStatus={paymentStatus}
+          />
         </HallFormSection>
       </div>
 
