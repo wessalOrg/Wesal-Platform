@@ -14,6 +14,7 @@ import HallLockedBadge from "@/components/halls/HallLockedBadge";
 import HallRatingPanel from "@/components/halls/HallRatingPanel";
 import HallUnavailableDialog from "@/components/halls/HallUnavailableDialog";
 import { DEMO_HALL_REVIEWS, findHallDetailsFallback } from "@/constants/hallDetailsFallback";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useHallPermissions } from "@/hooks/useHallPermissions";
 import { useT } from "@/i18n";
@@ -35,7 +36,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   const lang = useUiLang();
   const router = useRouter();
   const { session, status: authStatus } = useAuth();
-  const local = findHallDetailsFallback(hallId);
+  const local = isDemoModeEnabled() ? findHallDetailsFallback(hallId) : undefined;
   const [loadedId, setLoadedId] = useState(hallId);
   const [status, setStatus] = useState<ViewStatus>(local ? "ready" : "loading");
   const [hall, setHall] = useState<HallDetails | null>(local ?? null);
@@ -57,17 +58,21 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
     if (authStatus !== "ready") return;
 
     let active = true;
-    const cached = findHallDetailsFallback(hallId);
+    const cached = isDemoModeEnabled() ? findHallDetailsFallback(hallId) : undefined;
 
     void fetchHallById(hallId).then(async (result) => {
       if (!active) return;
       if (result.status === "ok") {
         setHall({
           ...result.hall,
+          // Zero reviews stay zero: demo placeholder reviews only fill the gap
+          // when demo mode is explicitly enabled.
           reviews:
             result.hall.reviews.length > 0
               ? result.hall.reviews
-              : DEMO_HALL_REVIEWS,
+              : isDemoModeEnabled()
+                ? DEMO_HALL_REVIEWS
+                : [],
         });
         setWarning(result.warning ?? null);
         setStatus("ready");

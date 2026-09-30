@@ -1,5 +1,6 @@
 import { getStoredAuth } from "@/lib/auth-storage";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   const segment = token.split(".")[1];
@@ -28,7 +29,7 @@ export function getCurrentUserId(): string | null {
 
   const token = getAccessToken();
   if (!token) return null;
-  if (token.startsWith("stub-")) return "demo-user";
+  if (isDemoModeEnabled() && token.startsWith("stub-")) return "demo-user";
   return readJwtSubject(token);
 }
 

@@ -1,8 +1,10 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 
 function usesMock(): boolean {
+  if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return !token || token.startsWith("stub-");
 }

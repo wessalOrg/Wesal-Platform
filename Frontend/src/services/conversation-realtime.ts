@@ -2,11 +2,13 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } fro
 import { mapRealtimeMessageDto } from "@/lib/conversation-mapper";
 import { subscribeMockMessages } from "@/services/conversations-mock";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { IncomingRealtimeMessage } from "@/types/messages";
 
 type MessageHandler = (payload: IncomingRealtimeMessage) => void;
 
 function usesMockRealtime(): boolean {
+  if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return !token || token.startsWith("stub-");
 }

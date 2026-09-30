@@ -6,6 +6,7 @@ import {
   isAddHallSubscriptionBlockedError,
 } from "@/lib/add-hall-initiation-errors";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { AddHallInitiationResult } from "@/types/add-hall-initiation";
 
 /**
@@ -58,7 +59,7 @@ function blockedFromBody(data: InitiationDto): AddHallInitiationResult {
  */
 export async function initiateAddHall(): Promise<AddHallInitiationResult> {
   const token = getAccessToken();
-  if (!token || token.startsWith("stub-")) {
+  if (isDemoModeEnabled() && (!token || token.startsWith("stub-"))) {
     return { status: "allowed", initiationId: "demo-initiation" };
   }
 

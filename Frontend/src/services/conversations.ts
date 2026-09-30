@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { t } from "@/i18n";
 import {
   mockCreateHallConversation,
@@ -21,8 +22,9 @@ import type { ConversationSummary, MessageThread, ThreadMessage } from "@/types/
 
 export type { ConversationSummary, MessageThread, ThreadMessage };
 
-/** Live JWT talks to conversation APIs. Demo stub tokens stay on the mock store. */
+/** Live JWT talks to conversation APIs. Demo stub tokens stay on the mock store (demo mode only). */
 export function conversationsUseMock(): boolean {
+  if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return !token || token.startsWith("stub-");
 }

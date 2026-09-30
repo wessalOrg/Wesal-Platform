@@ -2,6 +2,7 @@ import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { ProfileError, toProfileError } from "@/lib/profile-errors";
 import { mapProfileDto } from "@/lib/profile-mapper";
 import { mockFetchProfile, mockUpdateProfile } from "@/services/profile-mock";
@@ -24,8 +25,9 @@ function raiseFromApi(err: unknown): never {
   throw toProfileError(err, "errors.profile.save");
 }
 
-/** Live JWT talks to GET/PUT /profile. Demo stub login stays on the mock store. */
+/** Live JWT talks to GET/PUT /profile. Demo stub login stays on the mock store (demo mode only). */
 export function profileUsesMock(): boolean {
+  if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return !token || token.startsWith("stub-");
 }

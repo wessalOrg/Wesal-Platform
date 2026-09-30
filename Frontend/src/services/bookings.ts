@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { toBookingError } from "@/lib/booking-errors";
 import { parseBookingPeriodType } from "@/lib/booking-period";
 import {
@@ -24,8 +25,9 @@ import type {
   UserBooking,
 } from "@/types/booking";
 
-/** Live JWT talks to POST /bookings. Demo stub login stays on the mock store. */
+/** Live JWT talks to POST /bookings. Demo stub login stays on the mock store (demo mode only). */
 export function bookingsUseMock(): boolean {
+  if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return !token || token.startsWith("stub-");
 }

@@ -30,6 +30,7 @@ import {
   mapCommentToReview,
 } from "@/services/comments";
 import { DEMO_HALL_REVIEWS } from "@/constants/hallDetailsFallback";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { HallReview } from "@/types/hall";
 
 type HallDetailsPageProps = {
@@ -84,7 +85,9 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
         setReviews(comments.map(mapCommentToReview));
         return;
       }
-      setReviews(localizeReviews(DEMO_HALL_REVIEWS, lang));
+      // No comments is authoritative: demo placeholder reviews only appear when
+      // demo mode is explicitly enabled, never as failed-request residue.
+      setReviews(isDemoModeEnabled() ? localizeReviews(DEMO_HALL_REVIEWS, lang) : []);
     });
     return () => {
       active = false;

@@ -9,6 +9,7 @@ import Reveal from "@/components/ui/Reveal";
 import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
 import { usePublicHallsRevalidation } from "@/hooks/usePublicHallsRevalidation";
 import { useT } from "@/i18n";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { fetchFeaturedHalls, filterFeaturedByRegion } from "@/services/halls";
 import type { FeaturedHall, HallRegion } from "@/types/hall";
 
@@ -71,9 +72,13 @@ export default function FeaturedHallsSection() {
         return;
       }
 
-      // Backend unavailable: keep the homepage usable by showing the local
-      // demo halls (region-filtered) alongside the offline notice.
-      setHalls(filterFeaturedByRegion(FEATURED_HALLS_FALLBACK, region));
+      // Backend unavailable: production keeps an honest empty list with the
+      // offline notice; static demo halls only render in demo mode.
+      setHalls(
+        isDemoModeEnabled()
+          ? filterFeaturedByRegion(FEATURED_HALLS_FALLBACK, region)
+          : [],
+      );
       setStatus("error");
       setErrorMessage(result.error ?? null);
       setIsRefreshing(false);
