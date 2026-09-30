@@ -55,6 +55,7 @@ export default function HallOwnerHallManagementView({
     isSubmitting,
     isSuccess,
     canEdit,
+    resubmitted,
     controlsDisabled,
     reload,
     patchValues,
@@ -251,6 +252,11 @@ export default function HallOwnerHallManagementView({
           onSubmit={() => {
             void submit();
           }}
+          successMessage={
+            resubmitted
+              ? t("owner.management.hallEdit.resubmitted")
+              : t("owner.management.hallEdit.success")
+          }
         />
       </div>
 

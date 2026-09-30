@@ -1,26 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { UserProfile } from "@/types/profile";
 import { useT } from "@/i18n";
-import {
-  readProfileAvatar,
-  resolveProfileAvatarUserIds,
-} from "@/lib/profile-avatar";
+import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { memberSinceYear } from "@/lib/profile-mapper";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
   const letters = parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
   return letters || "و";
-}
-
-function readFirstAvatar(profileId: string): string | null {
-  for (const id of resolveProfileAvatarUserIds(profileId)) {
-    const value = readProfileAvatar(id);
-    if (value) return value;
-  }
-  return null;
 }
 
 type ProfileHeroCardProps = {
@@ -46,25 +34,9 @@ export default function ProfileHeroCard({
   const phone = (phoneNumber ?? profile?.phoneNumber)?.trim() || "";
   const joined = memberSinceYear(createdAt ?? profile?.createdAt);
   const profileId = profile?.id ?? "";
-  const [storedAvatar, setStoredAvatar] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!profileId) {
-      setStoredAvatar(null);
-      return;
-    }
-    const ids = new Set(resolveProfileAvatarUserIds(profileId));
-    const refresh = () => setStoredAvatar(readFirstAvatar(profileId));
-    refresh();
-
-    const onAvatar = (event: Event) => {
-      const detail = (event as CustomEvent<{ userId?: string; dataUrl?: string | null }>).detail;
-      if (!detail?.userId || !ids.has(detail.userId)) return;
-      refresh();
-    };
-    window.addEventListener("wesal:profile-avatar", onAvatar);
-    return () => window.removeEventListener("wesal:profile-avatar", onAvatar);
-  }, [profileId]);
+  // Shared avatar store hook (profile id + session ids, live-updated on change).
+  const sessionAvatar = useProfileAvatarUrl(profileId ? [profileId] : []);
+  const storedAvatar = profileId ? sessionAvatar : null;
 
   const avatarUrl = avatarUrlProp || storedAvatar;
 

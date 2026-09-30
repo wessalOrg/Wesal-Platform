@@ -46,12 +46,11 @@ function writeStore(profile: UserProfile): void {
 }
 
 function seedProfile(displayName: string | null): UserProfile {
-  const fullName = displayName?.trim() || "ليان أحمد";
   return {
     id: "mock-regular-user",
-    fullName,
-    email: "layan@wesal.ps",
-    phoneNumber: "+970599111222",
+    fullName: displayName?.trim() || "",
+    email: "",
+    phoneNumber: "",
     concurrencyStamp: "1",
     isIdentityDocumentUploaded: false,
   };

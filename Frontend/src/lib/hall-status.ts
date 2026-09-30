@@ -28,15 +28,3 @@ export function parseHallStatus(raw: unknown): HallStatus | null {
   if (normalized === "rejected") return HALL_STATUS.Rejected;
   return null;
 }
-
-/** Normal Admin reject applies to PendingReview. Missing status is left to the server. */
-export function isHallEligibleForNormalReject(status: HallStatus | null): boolean {
-  return status === null || status === HALL_STATUS.PendingReview;
-}
-
-export function hallStatusMessageKey(status: HallStatus | null): string {
-  if (status === HALL_STATUS.PendingReview) return "admin.detail.status.pendingReview";
-  if (status === HALL_STATUS.Approved) return "admin.detail.status.approved";
-  if (status === HALL_STATUS.Rejected) return "admin.detail.status.rejected";
-  return "admin.detail.status.unknown";
-}

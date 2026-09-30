@@ -11,12 +11,13 @@ function isPositiveInt(raw: string): boolean {
   return Number.isFinite(value) && value > 0;
 }
 
-function isOptionalNonNegativeNumber(raw: string): boolean {
+/** Empty is allowed. A provided price must be greater than zero, matching the update validator. */
+function isOptionalPositivePrice(raw: string): boolean {
   const trimmed = raw.trim();
   if (trimmed === "") return true;
   if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return false;
   const value = Number(trimmed);
-  return Number.isFinite(value) && value >= 0;
+  return Number.isFinite(value) && value > 0;
 }
 
 const YOUTUBE_URL_PATTERN =
@@ -63,7 +64,7 @@ export function validateHallEditForm(
     errors.guestCapacity = "owner.management.addHall.errors.capacityInvalid";
   }
 
-  if (!isOptionalNonNegativeNumber(values.rentalPrice)) {
+  if (!isOptionalPositivePrice(values.rentalPrice)) {
     errors.rentalPrice = "owner.management.addHall.errors.priceInvalid";
   }
 
@@ -80,11 +81,9 @@ export function validateHallEditForm(
     errors.otherFeatures = "owner.management.addHall.errors.otherFeaturesTooLong";
   }
 
-  if (
-    values.existingPhotos.length < 1 &&
-    values.photos.length < 1 &&
-    !values.mainPhoto
-  ) {
+  const hasPersistedMedia =
+    values.existingPhotos.length > 0 || Boolean(values.coverApiUrl || values.coverPhotoUrl);
+  if (!hasPersistedMedia && values.photos.length < 1 && !values.mainPhoto) {
     errors.photos = "owner.management.addHall.errors.photosRequired";
   }
 

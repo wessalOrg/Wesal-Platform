@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useRef,
   type ReactNode,
@@ -11,7 +9,7 @@ import {
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import AiAssistantFab from "@/components/assistant/AiAssistantFab";
-import { useAiAssistant, type AiAssistantControls } from "@/hooks/useAiAssistant";
+import { useAiAssistant } from "@/hooks/useAiAssistant";
 import { useDraggableFab } from "@/hooks/useDraggableFab";
 import "@/components/assistant/ai-assistant.css";
 
@@ -20,21 +18,6 @@ const AiAssistantPanel = dynamic(() => import("@/components/assistant/AiAssistan
 });
 
 const PANEL_ID = "wesal-ai-assistant-panel";
-
-const IDLE_CONTROLS: AiAssistantControls = {
-  isOpen: false,
-  phase: "idle",
-  session: null,
-  errorKey: null,
-  unavailableReason: null,
-  isRetrying: false,
-  openAssistant: () => undefined,
-  closeAssistant: () => undefined,
-  toggleAssistant: () => undefined,
-  retry: () => undefined,
-};
-
-const AiAssistantContext = createContext<AiAssistantControls | null>(null);
 
 /** Guards against a second provider being nested somewhere below the root layout. */
 let mountedProviders = 0;
@@ -89,7 +72,7 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
   }, [closeAssistant]);
 
   return (
-    <AiAssistantContext.Provider value={controls}>
+    <>
       {children}
       {isOpen ? (
         <AiAssistantPanel
@@ -118,11 +101,6 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
         onPointerMove={drag.onPointerMove}
         onPointerUp={drag.onPointerUp}
       />
-    </AiAssistantContext.Provider>
+    </>
   );
-}
-
-/** Lets any component open the assistant; falls back to a no-op outside the provider. */
-export function useAiAssistantControls(): AiAssistantControls {
-  return useContext(AiAssistantContext) ?? IDLE_CONTROLS;
 }

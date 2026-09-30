@@ -30,9 +30,6 @@ export function conversationMessagesPath(
   return query ? `${base}?${query}` : base;
 }
 
-/** @deprecated Merged into account — kept as alias for old links. */
-export const SEEKER_SETTINGS_PATH = SEEKER_ACCOUNT_PATH;
-
 /**
  * Hall seeker dashboard sidebar (Epic 6 portal shell).
  * Profile + settings are one account page; favorites removed.
@@ -43,12 +40,6 @@ export const SEEKER_DASHBOARD_NAV = [
     href: SEEKER_DASHBOARD_PATH,
     labelKey: "seeker.nav.home",
     match: "exact" as const,
-  },
-  {
-    id: "account",
-    href: SEEKER_ACCOUNT_PATH,
-    labelKey: "seeker.nav.account",
-    match: "prefix" as const,
   },
   {
     id: "bookings",
@@ -66,6 +57,12 @@ export const SEEKER_DASHBOARD_NAV = [
     id: "notifications",
     href: SEEKER_NOTIFICATIONS_PATH,
     labelKey: "seeker.nav.notifications",
+    match: "prefix" as const,
+  },
+  {
+    id: "account",
+    href: SEEKER_ACCOUNT_PATH,
+    labelKey: "seeker.nav.settings",
     match: "prefix" as const,
   },
 ] as const;

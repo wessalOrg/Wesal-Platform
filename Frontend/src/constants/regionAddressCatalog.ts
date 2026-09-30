@@ -66,13 +66,20 @@ export const CATALOG_REGION_TO_OWNER: Record<Exclude<HallRegion, "all">, OwnerHa
   south: "South Gaza",
 };
 
+function addressesForOwnerRegion(
+  ownerRegion: OwnerHallRegion,
+  overlay?: Partial<Record<OwnerHallRegion, string[]>>,
+): string[] {
+  const live = overlay?.[ownerRegion];
+  if (live && live.length > 0) return live;
+  return DEFAULT_ADDRESSES_BY_OWNER_REGION[ownerRegion] ?? [];
+}
+
 export function addressesForCatalogRegion(
   region: HallRegion,
   overlay?: Partial<Record<OwnerHallRegion, string[]>>,
 ): string[] {
   if (region === "all") return [];
-  const ownerRegion = CATALOG_REGION_TO_OWNER[region];
-  const live = overlay?.[ownerRegion];
-  if (live && live.length > 0) return live;
-  return DEFAULT_ADDRESSES_BY_OWNER_REGION[ownerRegion] ?? [];
+
+  return addressesForOwnerRegion(CATALOG_REGION_TO_OWNER[region], overlay);
 }

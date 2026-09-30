@@ -56,8 +56,8 @@ export default function HallsCatalogView() {
   const [errorKind, setErrorKind] = useState<"catalog" | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const { region, address, detailedAddress } = filters;
   const filterKey = serializeHallFilters(filters);
-  const serverFilterKey = `${filters.region}|${filters.address}|${filters.detailedAddress}`;
   const [paging, setPaging] = useState({ key: filterKey, page: 0 });
   if (paging.key !== filterKey) {
     setPaging({ key: filterKey, page: 0 });
@@ -84,14 +84,14 @@ export default function HallsCatalogView() {
       setIsRefreshing(true);
     }
 
-    const useSearch = hasActiveHallFilters(filters);
+    const useSearch = hasActiveHallFilters({ region, address, detailedAddress });
 
     void (async () => {
       const result = useSearch
         ? await fetchSearchHalls({
-            region: filters.region,
-            address: filters.address,
-            detailedAddress: filters.detailedAddress,
+            region,
+            address,
+            detailedAddress,
             pageSize: SEARCH_PAGE_SIZE,
           })
         : await fetchCatalogHalls();
@@ -118,16 +118,11 @@ export default function HallsCatalogView() {
     return () => {
       active = false;
     };
-  }, [filters.address, filters.detailedAddress, filters.region, reloadKey, serverFilterKey, t]);
+  }, [address, detailedAddress, region, reloadKey, t]);
 
   const filtered = useMemo(
-    () =>
-      filterCatalogHalls(halls, {
-        region: filters.region,
-        address: filters.address,
-        detailedAddress: filters.detailedAddress,
-      }),
-    [halls, filters],
+    () => filterCatalogHalls(halls, { region, address, detailedAddress }),
+    [halls, region, address, detailedAddress],
   );
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));

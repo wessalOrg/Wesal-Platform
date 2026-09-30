@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent } from "react";
+import { type FormEvent, useEffect } from "react";
 import OwnerHourlyControls from "@/components/halls/hourly/OwnerHourlyControls";
 import HallFormSection from "@/components/owner-management/add-hall/HallFormSection";
 import HallBasicInfoSection from "@/components/owner-management/add-hall/HallBasicInfoSection";
@@ -18,7 +18,10 @@ import type {
   HallEditFormValues,
   HallEditability,
 } from "@/types/hall-owner-hall-management";
-import type { HallRegistrationFormValues } from "@/types/hall-registration";
+import type {
+  HallRegistrationFieldPath,
+  HallRegistrationFormValues,
+} from "@/types/hall-registration";
 
 type HallManagementFormProps = {
   hallId: string;
@@ -36,6 +39,7 @@ type HallManagementFormProps = {
   onAddNewPhotos: (files: FileList | File[]) => void;
   onRemoveNewPhoto: (index: number) => void;
   onSubmit: () => void;
+  successMessage?: string;
 };
 
 function resolveMessage(
@@ -47,6 +51,38 @@ function resolveMessage(
     ? t(value)
     : value;
 }
+
+const FIELD_FOCUS_ID: Record<HallRegistrationFieldPath, string> = {
+  hallName: "hall-name",
+  ownerPhone: "hall-phone",
+  region: "hall-region",
+  address: "hall-address",
+  detailedAddress: "hall-detailed-address",
+  description: "hall-description",
+  guestCapacity: "hall-capacity",
+  rentalPrice: "hall-price",
+  youtubeVideoUrl: "hall-youtube",
+  features: "hall-features",
+  otherFeatures: "hall-other-features",
+  mainPhoto: "hall-main-photo",
+  photos: "hall-mgmt-photos-add",
+};
+
+const FIELD_FOCUS_ORDER: HallRegistrationFieldPath[] = [
+  "hallName",
+  "ownerPhone",
+  "guestCapacity",
+  "rentalPrice",
+  "region",
+  "address",
+  "detailedAddress",
+  "description",
+  "features",
+  "otherFeatures",
+  "youtubeVideoUrl",
+  "mainPhoto",
+  "photos",
+];
 
 function toSectionValues(values: HallEditFormValues): HallRegistrationFormValues {
   return {
@@ -100,6 +136,7 @@ export default function HallManagementForm({
   onAddNewPhotos,
   onRemoveNewPhoto,
   onSubmit,
+  successMessage,
 }: HallManagementFormProps) {
   const t = useT();
   const resolveError = (value: string | undefined) => resolveMessage(t, value);
@@ -112,6 +149,14 @@ export default function HallManagementForm({
     formError,
     editability,
   );
+
+  useEffect(() => {
+    const field = FIELD_FOCUS_ORDER.find((key) => fieldErrors[key]);
+    if (!field) return;
+    const node = document.getElementById(FIELD_FOCUS_ID[field]);
+    node?.focus();
+    node?.scrollIntoView({ block: "center" });
+  }, [fieldErrors]);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -209,7 +254,7 @@ export default function HallManagementForm({
         resolveMessage={(value) => resolveMessage(t, value) ?? null}
         submitLabel={t("owner.management.hallEdit.actions.save")}
         savingLabel={t("owner.management.hallEdit.actions.saving")}
-        successMessage={t("owner.management.hallEdit.success")}
+        successMessage={successMessage ?? t("owner.management.hallEdit.success")}
         submitDisabled={!canSubmit}
         submitTestId="owner-hall-edit-submit"
         successTestId="owner-hall-edit-success"

@@ -341,7 +341,3 @@ export async function fetchOwnerHourlyControls(hallId: string): Promise<{
     showBookedSlots: getShowBookedSlots(hallId),
   };
 }
-
-export function readBlockedDays(hallId: string): string[] {
-  return listBlockedDays(hallId);
-}

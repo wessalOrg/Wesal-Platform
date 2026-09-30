@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ThreadMessage } from "@/types/messages";
 
 function messageKey(message: ThreadMessage): string {
@@ -28,6 +28,13 @@ function pruneRetryingIds(current: Set<string>, messages: ThreadMessage[]): Set<
 export function useRetryingMessages(messages: ThreadMessage[]) {
   const signature = retrySignature(messages);
   const [ids, setIds] = useState<Set<string>>(() => new Set());
+  const pendingKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const message of messages) {
+      if (message.delivery === "pending") keys.add(messageKey(message));
+    }
+    return keys;
+  }, [messages]);
   const [prevSignature, setPrevSignature] = useState(signature);
   if (prevSignature !== signature) {
     setPrevSignature(signature);
@@ -43,8 +50,9 @@ export function useRetryingMessages(messages: ThreadMessage[]) {
   }, []);
 
   const isRetrying = useCallback(
-    (message: ThreadMessage) => ids.has(messageKey(message)) && message.delivery === "pending",
-    [ids],
+    (message: ThreadMessage) =>
+      ids.has(messageKey(message)) && pendingKeys.has(messageKey(message)),
+    [ids, pendingKeys],
   );
 
   return { markRetrying, isRetrying };

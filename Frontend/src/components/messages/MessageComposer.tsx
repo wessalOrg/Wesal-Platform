@@ -21,6 +21,7 @@ type MessageComposerProps = {
   onChange: (value: string) => void;
   onSend: (value: string) => void;
   variant?: "page" | "widget";
+  appearance?: "default" | "owner";
   attachmentPreviewUrl?: string | null;
   attachmentName?: string | null;
   attachmentBusy?: boolean;
@@ -41,6 +42,7 @@ export default function MessageComposer({
   onChange,
   onSend,
   variant = "page",
+  appearance = "default",
   attachmentPreviewUrl = null,
   attachmentName = null,
   attachmentBusy = false,
@@ -101,12 +103,16 @@ export default function MessageComposer({
     onSend(trimmed);
   };
 
+  const owner = appearance === "owner";
+
   return (
     <form
       className={`sticky bottom-0 z-20 shrink-0 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
-        variant === "widget"
-          ? "border-[var(--wesal-maroon)]/15 bg-[var(--wesal-pink)]"
-          : "border-[var(--wesal-border)] bg-white"
+        owner
+          ? "owner-chat-composer"
+          : variant === "widget"
+            ? "border-[var(--wesal-maroon)]/15 bg-[var(--wesal-pink)]"
+            : "border-[var(--wesal-border)] bg-white"
       } ${dragging ? "ring-2 ring-inset ring-[var(--wesal-gold)]" : ""}`}
       onSubmit={submit}
       onDragOver={onDragOver}
@@ -153,7 +159,11 @@ export default function MessageComposer({
             />
             <button
               type="button"
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] disabled:opacity-60"
+              className={
+                owner
+                  ? "owner-chat-attach"
+                  : "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] disabled:opacity-60"
+              }
               disabled={disabled || attachmentBusy}
               aria-label={t("messages.attachReceipt")}
               data-testid="message-attach-receipt"
@@ -171,10 +181,12 @@ export default function MessageComposer({
           disabled={disabled || attachmentBusy}
           maxLength={MAX_LENGTH}
           placeholder={disabled ? t("messages.selectConversation") : t("messages.composerPlaceholder")}
-          className={`max-h-28 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-xl border px-3 py-2.5 text-sm leading-6 outline-none focus:border-[var(--wesal-maroon)] disabled:opacity-70 ${
-            variant === "widget"
-              ? "border-[var(--wesal-maroon)]/20 bg-white"
-              : "border-[var(--wesal-border)] bg-[#faf7f4]"
+          className={`max-h-28 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto px-3 py-2.5 text-sm leading-6 outline-none disabled:opacity-70 ${
+            owner
+              ? "owner-chat-field"
+              : variant === "widget"
+                ? "rounded-xl border border-[var(--wesal-maroon)]/20 bg-white focus:border-[var(--wesal-maroon)]"
+                : "rounded-xl border border-[var(--wesal-border)] bg-[#faf7f4] focus:border-[var(--wesal-maroon)]"
           }`}
           enterKeyHint="send"
           onChange={(event) => onChange(event.target.value)}
@@ -182,15 +194,19 @@ export default function MessageComposer({
         />
         <button
           type="submit"
-          className="btn-primary inline-flex h-11 w-11 shrink-0 items-center justify-center p-0 sm:h-auto sm:w-auto sm:min-w-[5.5rem] sm:px-4"
+          className={
+            owner
+              ? "owner-chat-send"
+              : "btn-primary inline-flex h-11 w-11 shrink-0 items-center justify-center p-0 sm:h-auto sm:w-auto sm:min-w-[5.5rem] sm:px-4"
+          }
           disabled={!canSend}
           aria-label={t("messages.send")}
         >
-          <span className="sm:hidden" aria-hidden="true">
-            <SendIcon />
-          </span>
-          <span className="hidden sm:inline">
+          <span className={owner ? "sr-only" : "hidden sm:inline"}>
             {attachmentBusy ? t("messages.attaching") : t("messages.send")}
+          </span>
+          <span className={owner ? "" : "sm:hidden"} aria-hidden={owner ? undefined : true}>
+            <SendIcon />
           </span>
         </button>
       </div>

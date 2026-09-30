@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/i18n";
 import {
   formatBookingDateLabel,
   isFutureBookingDate,
+  localTodayIso,
   parseDateIso,
   utcTodayIso,
 } from "@/lib/booking-date";
@@ -25,7 +26,10 @@ type HallMonthCalendarProps = {
   onSelect: (day: HallAvailabilityDay) => void;
   disabled?: boolean;
   locale: string;
-  legend?: "full" | "hourly";
+  legend?: "full" | "hourly" | "owner";
+  /** Owner browse: every day in the month can be selected, including booked and past days. */
+  allowAnyDay?: boolean;
+  onVisibleMonthChange?: (year: number, monthIndex: number) => void;
   /** Owner day-close calendar: blocked days stay clickable so they can be reopened. */
   allowClosedSelect?: boolean;
 };
@@ -45,10 +49,12 @@ function dayStatus(
   day: HallAvailabilityDay | undefined,
   iso: string,
   overrides?: Record<string, CalendarDayStatus>,
+  allowAnyDay = false,
 ): CalendarDayStatus {
-  if (!isFutureBookingDate(iso)) return "past";
   const override = overrides?.[iso];
+  if (!allowAnyDay && !isFutureBookingDate(iso)) return "past";
   if (override) return override;
+  if (allowAnyDay) return "available";
   if (!day?.periods?.length) return "available";
   const booked = day.periods.filter((period) => period.status === "booked").length;
   if (booked === day.periods.length) return "booked";
@@ -75,6 +81,8 @@ export default function HallMonthCalendar({
   disabled = false,
   locale,
   legend = "full",
+  allowAnyDay = false,
+  onVisibleMonthChange,
   allowClosedSelect = false,
 }: HallMonthCalendarProps) {
   const t = useT();
@@ -96,8 +104,11 @@ export default function HallMonthCalendar({
       const status = dayStatus(day, iso, dayStatuses);
       return status === "available" || status === "partial";
     });
-    return parseDateIso(firstAvailable?.dateIso) ?? utcTodayIso();
-  }, [days, selectedDateIso, dayStatuses]);
+    return (
+      parseDateIso(firstAvailable?.dateIso) ??
+      (allowAnyDay ? localTodayIso() : utcTodayIso())
+    );
+  }, [allowAnyDay, days, selectedDateIso, dayStatuses]);
 
   const [cursor, setCursor] = useState<Cursor>(() => toCursor(anchorIso));
   const [prevAnchorIso, setPrevAnchorIso] = useState(anchorIso);
@@ -140,7 +151,7 @@ export default function HallMonthCalendar({
         key: iso,
         dayNum,
         iso,
-        status: dayStatus(day, iso, dayStatuses),
+        status: dayStatus(day, iso, dayStatuses, allowAnyDay),
         day,
       });
     }
@@ -155,7 +166,11 @@ export default function HallMonthCalendar({
     }
 
     return list;
-  }, [byIso, cursor.month, cursor.year, dayStatuses]);
+  }, [allowAnyDay, byIso, cursor.month, cursor.year, dayStatuses]);
+
+  useEffect(() => {
+    onVisibleMonthChange?.(cursor.year, cursor.month);
+  }, [cursor.month, cursor.year, onVisibleMonthChange]);
 
   const shiftMonth = (delta: number) => {
     setCursor((current) => {
@@ -165,10 +180,11 @@ export default function HallMonthCalendar({
   };
 
   const selectIso = (iso: string, day?: HallAvailabilityDay) => {
-    if (disabled || !isFutureBookingDate(iso)) return;
-    const status = dayStatus(day, iso, dayStatuses);
-    if (status === "past") return;
-    if (!allowClosedSelect && (status === "booked" || status === "blocked")) return;
+    if (disabled) return;
+    if (!allowAnyDay && !isFutureBookingDate(iso)) return;
+    const status = dayStatus(day, iso, dayStatuses, allowAnyDay);
+    if (!allowAnyDay && status === "past") return;
+    if (!allowAnyDay && !allowClosedSelect && (status === "booked" || status === "blocked")) return;
 
     onSelect(
       day ?? {
@@ -185,7 +201,7 @@ export default function HallMonthCalendar({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] text-lg text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)]"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wesal-border)] text-lg text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
             onClick={() => shiftMonth(-1)}
             aria-label={t("halls.booking.prevMonth")}
           >
@@ -196,7 +212,7 @@ export default function HallMonthCalendar({
           </p>
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] text-lg text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)]"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wesal-border)] text-lg text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
             onClick={() => shiftMonth(1)}
             aria-label={t("halls.booking.nextMonth")}
           >
@@ -205,10 +221,27 @@ export default function HallMonthCalendar({
         </div>
 
         <ul className="flex flex-wrap items-center gap-3 text-[0.7rem] text-[var(--wesal-muted)]">
-          <li className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />
-            {t("halls.booking.legendAvailable")}
-          </li>
+          {legend === "owner" ? (
+            <>
+              <li className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-[var(--wesal-maroon)]" />
+                {t("owner.calendar.legendSelected")}
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#1f8a4c]" />
+                {t("owner.calendar.legendBooked")}
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full border border-[var(--wesal-border)] bg-white" />
+                {t("owner.calendar.legendNone")}
+              </li>
+            </>
+          ) : (
+            <li className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />
+              {t("halls.booking.legendAvailable")}
+            </li>
+          )}
           {legend === "full" ? (
             <>
               <li className="inline-flex items-center gap-1.5">
@@ -220,7 +253,7 @@ export default function HallMonthCalendar({
                 {t("halls.booking.legendBooked")}
               </li>
             </>
-          ) : (
+          ) : legend === "owner" ? null : (
             <li className="inline-flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-sm bg-[#dc4c4c]" />
               {t("halls.booking.legendBooked")}
@@ -246,11 +279,14 @@ export default function HallMonthCalendar({
           const selected = cell.iso === selectedDateIso;
           const selectable =
             !disabled &&
-            (cell.status === "available" ||
+            (allowAnyDay ||
+              cell.status === "available" ||
               cell.status === "partial" ||
               (allowClosedSelect && cell.status === "blocked"));
           const isPartial = !selected && cell.status === "partial";
+          const ownerBooked = legend === "owner" && cell.status === "booked";
           const isClosed = cell.status === "booked" || cell.status === "blocked";
+          const dateLabel = formatBookingDateLabel(cell.iso, locale);
 
           return (
             <button
@@ -259,11 +295,15 @@ export default function HallMonthCalendar({
               disabled={!selectable}
               onClick={() => selectIso(cell.iso!, cell.day)}
               className={[
-                "hall-cal-day relative inline-flex min-h-10 items-center justify-center overflow-hidden text-sm font-semibold transition sm:min-h-11",
+                "hall-cal-day relative inline-flex min-h-11 items-center justify-center overflow-hidden text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)] sm:min-h-11",
                 selected
                   ? "hall-cal-day--selected rounded-full bg-[var(--wesal-maroon)] text-white shadow-[0_6px_14px_rgba(193,123,127,0.35)]"
-                  : isClosed
-                    ? `${allowClosedSelect ? "" : "cursor-not-allowed "}rounded-full bg-[#fdecea] text-[#b42318]`
+                  : ownerBooked
+                    ? "rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
+                    : isClosed
+                      ? allowAnyDay
+                        ? "rounded-full bg-[#e8e1dc] text-[#6d625c] hover:bg-[#ddd4ce]"
+                        : `${allowClosedSelect ? "" : "cursor-not-allowed "}rounded-full bg-[#fdecea] text-[#b42318]`
                     : isPartial
                       ? "hall-cal-day--partial rounded-xl"
                       : cell.status === "available"
@@ -271,6 +311,9 @@ export default function HallMonthCalendar({
                         : "cursor-default rounded-full text-[#c5bbb4]",
               ].join(" ")}
               aria-pressed={selected}
+              aria-label={
+                ownerBooked ? `${dateLabel}, ${t("owner.calendar.legendBooked")}` : dateLabel
+              }
               data-day-status={cell.status}
               data-testid={`hall-cal-day-${cell.iso}`}
             >
@@ -279,6 +322,15 @@ export default function HallMonthCalendar({
                   <span className="hall-cal-day-split" aria-hidden="true" />
                   <span className="hall-cal-day-badge">{cell.dayNum}</span>
                 </>
+              ) : ownerBooked ? (
+                <span className="flex flex-col items-center justify-center leading-none">
+                  <span>{cell.dayNum}</span>
+                  <span
+                    className={`mt-0.5 h-1.5 w-1.5 rounded-full ${selected ? "bg-white" : "bg-[#1f8a4c]"}`}
+                    data-testid="owner-cal-booked-dot"
+                    aria-hidden="true"
+                  />
+                </span>
               ) : (
                 cell.dayNum
               )}

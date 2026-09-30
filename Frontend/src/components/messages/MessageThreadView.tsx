@@ -9,11 +9,11 @@ import { useRetryingMessages } from "@/hooks/useRetryingMessages";
 import { useThreadScroll } from "@/hooks/useThreadScroll";
 import { useT } from "@/i18n";
 import { isBookingRejectionContent } from "@/lib/booking-rejection-message";
-import { conversationHallLabel } from "@/lib/conversation-display";
+import { conversationAvatarInitials, conversationHallLabel } from "@/lib/conversation-display";
 import { isSameUserId } from "@/lib/current-user";
 import type { MessageThread, ThreadMessage, ThreadStatus } from "@/types/messages";
 
-const EMPTY_MESSAGES: ThreadMessage[] = [];
+const NO_MESSAGES: ThreadMessage[] = [];
 
 type MessageThreadViewProps = {
   status: ThreadStatus;
@@ -33,6 +33,8 @@ type MessageThreadViewProps = {
   composerId?: string;
   conversationId?: string | null;
   variant?: "page" | "widget";
+  appearance?: "default" | "owner";
+  context?: ReactNode;
   notice?: ReactNode;
   attachmentPreviewUrl?: string | null;
   attachmentName?: string | null;
@@ -59,6 +61,8 @@ export default function MessageThreadView({
   composerId = "inbox-message-draft",
   conversationId,
   variant = "page",
+  appearance = "default",
+  context,
   notice,
   attachmentPreviewUrl,
   attachmentName,
@@ -69,7 +73,8 @@ export default function MessageThreadView({
   const t = useT();
   const lang = useUiLang();
   const localizedHallName = thread ? conversationHallLabel(thread, lang) : "";
-  const messages = thread?.messages ?? EMPTY_MESSAGES;
+  // Stable fallback: a fresh `[]` per render would defeat reference checks in child hooks.
+  const messages = thread?.messages ?? NO_MESSAGES;
   const lastMessage = messages[messages.length - 1];
   const { scrollerRef, unseenCount, unseenRejection, onScroll, scrollToLatest } = useThreadScroll(
     conversationId ?? thread?.conversationId ?? null,
@@ -81,24 +86,33 @@ export default function MessageThreadView({
   const showEmpty = (status === "empty" || status === "ready") && messages.length === 0;
 
   const widget = variant === "widget";
+  const owner = appearance === "owner";
 
   return (
     <section
-      className={`flex min-h-0 min-w-0 flex-1 flex-col ${widget ? "bg-[var(--wesal-pink)]" : "bg-white"}`}
+      className={`flex min-h-0 min-w-0 flex-1 flex-col ${
+        owner ? "owner-chat-thread bg-white" : widget ? "bg-[var(--wesal-pink)]" : "bg-white"
+      }`}
       data-testid="message-thread"
     >
       <header
-        className={`flex shrink-0 items-start gap-2 px-3 py-2.5 sm:px-4 sm:py-3 ${
-          widget ? "border-b border-[var(--wesal-maroon)]/15" : "border-b border-[var(--wesal-border)]"
+        className={`flex shrink-0 items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3 ${
+          owner
+            ? "owner-chat-thread-head"
+            : widget
+              ? "border-b border-[var(--wesal-maroon)]/15"
+              : "border-b border-[var(--wesal-border)]"
         }`}
       >
         {onBack ? (
           <button
             type="button"
             className={
-              widget
-                ? "mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-maroon)]/45 bg-white text-[var(--wesal-maroon)] shadow-[0_4px_12px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
-                : "mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)]"
+              owner
+                ? "owner-chat-back"
+                : widget
+                  ? "mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-maroon)]/45 bg-white text-[var(--wesal-maroon)] shadow-[0_4px_12px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
+                  : "mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)]"
             }
             aria-label={t("messages.backToInbox")}
             onClick={onBack}
@@ -106,21 +120,36 @@ export default function MessageThreadView({
             <BackIcon />
           </button>
         ) : null}
+        {owner ? (
+          <span className="owner-chat-avatar" aria-hidden="true">
+            {conversationAvatarInitials(title)}
+          </span>
+        ) : null}
         <div className="min-w-0 flex-1">
-          <p className="text-[0.68rem] font-semibold text-[var(--wesal-gold)]">{t("messages.title")}</p>
-          <div className="mt-0.5 flex min-w-0 items-center gap-2">
-            <h2 className="truncate text-base font-bold text-[var(--wesal-maroon)]">{title}</h2>
+          {owner ? null : (
+            <p className="text-[0.68rem] font-semibold text-[var(--wesal-gold)]">{t("messages.title")}</p>
+          )}
+          <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
+            <h2 className="truncate text-base font-bold text-[var(--wesal-text)]">{title}</h2>
             {badge ? (
-              <span className="shrink-0 rounded-full border border-[var(--wesal-border)] px-2 py-0.5 text-[0.65rem] font-semibold text-[var(--wesal-muted)]">
+              <span
+                className={
+                  owner
+                    ? "owner-chat-role"
+                    : "shrink-0 rounded-full border border-[var(--wesal-border)] px-2 py-0.5 text-[0.65rem] font-semibold text-[var(--wesal-muted)]"
+                }
+              >
                 {badge}
               </span>
             ) : null}
           </div>
-          {subtitle ? (
+          {subtitle && !owner ? (
             <p className="truncate text-xs text-[var(--wesal-muted)]">{subtitle}</p>
           ) : null}
         </div>
       </header>
+
+      {context ? <div className="shrink-0 px-3 pb-2 sm:px-4">{context}</div> : null}
 
       {notice ? <div className="shrink-0 px-3 pt-2 sm:px-4">{notice}</div> : null}
 
@@ -128,7 +157,7 @@ export default function MessageThreadView({
         <div
           ref={scrollerRef}
           className={`absolute inset-0 space-y-3 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3 sm:px-4 sm:py-4 ${
-            widget ? "bg-[var(--wesal-pink-soft)]" : "bg-[#fbf8f5]"
+            owner ? "owner-chat-thread-body" : widget ? "bg-[var(--wesal-pink-soft)]" : "bg-[#fbf8f5]"
           }`}
           data-testid="message-thread-body"
           onScroll={onScroll}
@@ -171,6 +200,7 @@ export default function MessageThreadView({
                   key={message.id}
                   message={message}
                   own={isSameUserId(message.senderUserId, currentUserId)}
+                  tone={owner ? "owner" : "default"}
                   retrying={isRetrying(message)}
                   hallId={thread?.hallId}
                   hallName={localizedHallName}
@@ -204,6 +234,7 @@ export default function MessageThreadView({
         onChange={onDraftChange}
         onSend={onSend}
         variant={variant}
+        appearance={appearance}
         attachmentPreviewUrl={attachmentPreviewUrl}
         attachmentName={attachmentName}
         attachmentBusy={attachmentBusy}

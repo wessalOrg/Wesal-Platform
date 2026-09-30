@@ -22,7 +22,11 @@ export default function SeekerNotificationsPage() {
         <ul className="seeker-notifications-feed seeker-notifications-feed--animated">
           <SeekerAcceptedBookingNotices />
         </ul>
-        <NotificationsFeed audience="seeker" hideEmpty={hasAccepted} />
+        <NotificationsFeed
+          audience="seeker"
+          emptyKey="seeker.notifications.empty"
+          hideEmpty={hasAccepted}
+        />
       </section>
     </div>
   );

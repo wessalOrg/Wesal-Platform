@@ -1,8 +1,8 @@
-const DEFAULT_API_BASE = "http://localhost:5298/api/v1";
+import { apiOrigin } from "@/lib/api";
 
+/** Browser origin of the API host (no `/api/v1`). Same source as REST + SignalR. */
 export function apiMediaOrigin(): string {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE;
-  return apiBase.replace(/\/api\/v1\/?$/i, "");
+  return apiOrigin();
 }
 
 /**
@@ -41,6 +41,35 @@ export function extractPhotoUrls(
   return urls;
 }
 
+const UPLOADS_PREFIX = "/uploads/";
+
+function isUploadsPath(pathname: string): boolean {
+  return pathname.toLowerCase().startsWith(UPLOADS_PREFIX);
+}
+
+/**
+ * API-relative upload path (`/uploads/...` plus query) when `url` references a
+ * file served by the API `/uploads` static mount — whether it was stored relative
+ * or pinned to some absolute origin. Frontend counterpart of the backend
+ * `HallMediaUrl.NormalizePersistedUrl` rule (Edit 29): legacy rows persisted an
+ * absolute display URL, so the stored origin may belong to a retired deployment
+ * and must never decide where the browser fetches from.
+ *
+ * Returns `null` for anything else (external CDN URL, blob:, frontend-local asset).
+ */
+export function apiUploadPath(url: string | null | undefined): string | null {
+  const value = url?.trim();
+  if (!value) return null;
+  if (isUploadsPath(value)) return value;
+  if (!/^https?:\/\//i.test(value)) return null;
+  try {
+    const parsed = new URL(value);
+    return isUploadsPath(parsed.pathname) ? `${parsed.pathname}${parsed.search}` : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Resolves a persisted hall media URL into a browser-ready URL.
  *
@@ -49,17 +78,16 @@ export function extractPhotoUrls(
  * (`/uploads` static-file mount). They MUST be prefixed with the API origin,
  * otherwise the browser resolves them against the frontend origin and they 404.
  *
- * - Absolute http(s) and blob: URLs pass through unchanged.
- * - `/uploads/...` paths are prefixed with the API origin.
+ * - Any `/uploads/...` reference (relative, or absolute from any origin) is
+ *   re-anchored to the configured API origin — see {@link apiUploadPath}.
+ * - Other absolute http(s) and blob: URLs pass through unchanged.
  * - Any other relative path is treated as a frontend-local asset (e.g.
  *   `public/halls/featured-*.webp` fallbacks) and returned as-is.
  */
 export function resolveMediaUrl(url: string | null | undefined): string {
   const value = url?.trim();
   if (!value) return "";
-  if (/^https?:\/\//i.test(value) || value.startsWith("blob:")) return value;
-  if (value.startsWith("/uploads/")) {
-    return `${apiMediaOrigin()}${value}`;
-  }
+  const uploadPath = apiUploadPath(value);
+  if (uploadPath) return `${apiMediaOrigin()}${uploadPath}`;
   return value;
 }

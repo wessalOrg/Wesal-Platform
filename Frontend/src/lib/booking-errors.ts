@@ -48,11 +48,6 @@ export function bookingMessageKey(kind: BookingErrorKind): string {
   return "errors.booking.generic";
 }
 
-export function isBookingHallLockedError(error: unknown): boolean {
-  if (error instanceof BookingError) return error.kind === "hall_locked";
-  return isHallLockedApiError(error) || isSystemLockedApiError(error);
-}
-
 function firstErrorMessage(value: unknown): string | undefined {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (Array.isArray(value) && typeof value[0] === "string" && value[0].trim()) {

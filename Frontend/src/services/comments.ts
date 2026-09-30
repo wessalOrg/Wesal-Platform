@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { t } from "@/i18n";
+import { resolveMediaUrl } from "@/lib/hall-media-url";
 import { getStoredUiLang } from "@/lib/language";
 import type { HallReview } from "@/types/hall";
 
@@ -10,18 +11,29 @@ export const COMMENT_MAX_LENGTH = 1000;
 export type HallComment = {
   commentId: string;
   hallId: string;
+  userId: string;
   author: string;
+  avatarUrl: string | null;
   body: string;
   createdAt: string;
 };
 
-/** Mirrors the API `CommentResponse` contract exactly. */
+/** Mirrors the API `CommentResponse` (camelCase and PascalCase). */
 type CommentResponse = {
   commentId?: string;
+  CommentId?: string;
   hallId?: string;
+  HallId?: string;
   content?: string;
+  Content?: string;
+  userId?: string;
+  UserId?: string;
   userName?: string;
+  UserName?: string;
+  userProfilePictureUrl?: string | null;
+  UserProfilePictureUrl?: string | null;
   createdAt?: string;
+  CreatedAt?: string;
 };
 
 const HTML_ENTITIES: Record<string, string> = {
@@ -85,18 +97,26 @@ export function mapCommentToReview(comment: HallComment): HallReview {
     author: comment.author,
     comment: comment.body,
     timeAgo: formatCommentTimeAgo(comment.createdAt),
+    userId: comment.userId || null,
+    avatarUrl: comment.avatarUrl,
   };
 }
 
+function textField(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function mapResponse(data: CommentResponse, fallbackHallId: string): HallComment {
-  const author = (data.userName ?? "").trim();
+  const author = textField(data.userName ?? data.UserName);
+  const picture = textField(data.userProfilePictureUrl ?? data.UserProfilePictureUrl);
   return {
-    commentId: String(data.commentId ?? `comment-${Date.now()}`),
-    hallId: String(data.hallId ?? fallbackHallId),
-    // The hall comments list omits the writer name, so fall back to a neutral label.
+    commentId: textField(data.commentId ?? data.CommentId) || `comment-${Date.now()}`,
+    hallId: textField(data.hallId ?? data.HallId) || fallbackHallId,
+    userId: textField(data.userId ?? data.UserId),
     author: author ? decodeHtmlEntities(author) : t("common.user"),
-    body: decodeHtmlEntities(data.content ?? ""),
-    createdAt: data.createdAt ?? new Date().toISOString(),
+    avatarUrl: picture ? resolveMediaUrl(picture) || null : null,
+    body: decodeHtmlEntities(textField(data.content ?? data.Content)),
+    createdAt: textField(data.createdAt ?? data.CreatedAt) || new Date().toISOString(),
   };
 }
 
@@ -126,6 +146,24 @@ export async function submitHallComment(
   return mapResponse(data, hallId);
 }
 
+/** PUT /comments/{commentId} — author only. Returns the persisted comment. */
+export async function updateHallComment(
+  commentId: string,
+  body: string,
+): Promise<HallComment> {
+  const { data } = await api.put<CommentResponse>(
+    `/comments/${encodeURIComponent(commentId)}`,
+    { content: body.trim() },
+    { timeout: 8000 },
+  );
+  return mapResponse(data, "");
+}
+
+/** DELETE /comments/{commentId} — author only. 204 on success. */
+export async function deleteHallComment(commentId: string): Promise<void> {
+  await api.delete(`/comments/${encodeURIComponent(commentId)}`, { timeout: 8000 });
+}
+
 export function commentErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 400) {
@@ -143,4 +181,17 @@ export function commentErrorMessage(err: unknown): string {
     return err.message || t("errors.comment.generic");
   }
   return t("errors.comment.generic");
+}
+
+/** Edit/delete failures. 403 is an ownership denial, not a "cannot comment" denial. */
+export function commentActionErrorMessage(err: unknown, action: "edit" | "delete"): string {
+  const failed =
+    action === "edit" ? t("halls.comment.editFailed") : t("halls.comment.deleteFailed");
+  if (err instanceof ApiError) {
+    if (err.status === 401) return t("errors.comment.unauthorized");
+    if (err.status === 403) return t("halls.comment.forbidden");
+    if (err.status === 404) return t("halls.comment.notFound");
+    return failed;
+  }
+  return failed;
 }

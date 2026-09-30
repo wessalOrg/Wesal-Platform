@@ -394,7 +394,31 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
               }}
             />
 
-            <HallCommentList comments={viewHall.reviews} />
+            <HallCommentList
+              comments={viewHall.reviews}
+              onCommentUpdated={(review) => {
+                setHall((current) =>
+                  current
+                    ? {
+                        ...current,
+                        reviews: current.reviews.map((item) =>
+                          item.id === review.id ? { ...item, ...review } : item,
+                        ),
+                      }
+                    : current,
+                );
+              }}
+              onCommentDeleted={(commentId) => {
+                setHall((current) =>
+                  current
+                    ? {
+                        ...current,
+                        reviews: current.reviews.filter((item) => item.id !== commentId),
+                      }
+                    : current,
+                );
+              }}
+            />
 
             <HallGuestFeedbackPrompt
               hallId={viewHall.id}

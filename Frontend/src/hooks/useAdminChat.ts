@@ -131,10 +131,16 @@ export function useAdminChat({
     });
   }, []);
 
-  useEffect(() => {
-    clearAttachment();
+  // Attachment draft + error belong to one conversation: reset when the
+  // selection changes (reconciled during render; the [previewUrl] cleanup
+  // below revokes the previous object URL).
+  const [boundSelectedId, setBoundSelectedId] = useState(selectedId);
+  if (boundSelectedId !== selectedId) {
+    setBoundSelectedId(selectedId);
+    setFile(null);
+    setPreviewUrl(null);
     setErrorKey(null);
-  }, [clearAttachment, selectedId]);
+  }
 
   useEffect(() => {
     return () => {
