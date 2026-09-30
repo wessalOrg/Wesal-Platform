@@ -33,6 +33,11 @@ export default function HallHourlyBookingSection({
     >
       <h2 className="hall-section-title">{t("halls.hourly.title")}</h2>
       <p className="mt-1 text-sm text-[var(--wesal-muted)]">{t("halls.hourly.hint")}</p>
+      {errorText && !booking.promptOpen ? (
+        <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          {errorText}
+        </p>
+      ) : null}
 
       <div className="mt-5 space-y-5">
         <HallMonthCalendar
