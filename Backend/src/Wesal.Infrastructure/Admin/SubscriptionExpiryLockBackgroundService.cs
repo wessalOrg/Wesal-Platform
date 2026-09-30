@@ -18,6 +18,8 @@ public class SubscriptionExpiryLockOptions
 /// interval (default 24h). Failures never crash the host: the job logs and retries on
 /// the next tick, and the per-hall lock is atomic (see
 /// <see cref="SubscriptionExpiryLockService"/>).
+/// The first run happens at startup (not after one full interval) so restarts can
+/// never delay or skip a due lock; the underlying lock is idempotent per hall.
 /// </summary>
 public class SubscriptionExpiryLockBackgroundService : BackgroundService
 {
@@ -43,7 +45,6 @@ public class SubscriptionExpiryLockBackgroundService : BackgroundService
         {
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(_options.IntervalMinutes), stoppingToken);
                 using var scope = _scopeFactory.CreateScope();
                 var lockService = scope.ServiceProvider.GetRequiredService<ISubscriptionExpiryLockService>();
                 var locked = await lockService.LockExpiredCyclesAsync(stoppingToken);
@@ -59,6 +60,15 @@ public class SubscriptionExpiryLockBackgroundService : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during automatic subscription-lock job");
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromMinutes(_options.IntervalMinutes), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
             }
         }
     }
