@@ -141,7 +141,7 @@ function SelectedDayBookingStatus({
   }
 
   if (day.hasBookedHours) {
-    return <BookedDay heading={heading} day={day} locale={locale} />;
+    return <BookedDay className={className} heading={heading} day={day} locale={locale} />;
   }
 
   return (
@@ -163,10 +163,12 @@ function BookedDay({
   heading,
   day,
   locale,
+  className = "",
 }: {
   heading: string;
   day: OwnerBookingsCalendarDay;
   locale: string;
+  className?: string;
 }) {
   const t = useT();
   const ranges = bookedHourRanges(day.bookedHours).map((range) =>
