@@ -526,7 +526,12 @@ public class OwnerController : ControllerBase
         };
 
         var response = await _hallCreationService.CreateHallAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(GetSidebar), response);
+        // 201 points at the created owner hall resource (US-OWNER-07 details),
+        // not at the sidebar. Same DTO as before: only the Location changes.
+        return CreatedAtAction(
+            nameof(GetOwnedHallDetails),
+            new { version = "1", hallId = response.HallId },
+            response);
     }
 
     private static IReadOnlyList<string>? SplitFeatures(string? raw)

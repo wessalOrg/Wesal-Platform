@@ -143,8 +143,15 @@ try
 
     app.UseHttpsRedirection();
 
-    app.UseSwagger();
-    app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Wesal API v1"));
+    // The public document/UI stay available in Development, and in other
+    // environments only when explicitly enabled (Swagger:Enabled=true).
+    var swaggerEnabled = app.Environment.IsDevelopment()
+        || configuration.GetValue<bool>("Swagger:Enabled");
+    if (swaggerEnabled)
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Wesal API v1"));
+    }
 
     app.UseDefaultFiles();
     app.UseStaticFiles();

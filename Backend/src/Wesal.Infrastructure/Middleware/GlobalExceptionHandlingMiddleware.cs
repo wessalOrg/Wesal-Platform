@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -26,9 +27,10 @@ public class GlobalExceptionHandlingMiddleware
         {
             _logger.LogError(
                 exception,
-                "An unhandled exception occurred while processing the request {Method} {Path}",
+                "An unhandled exception occurred while processing the request {Method} {Path} (TraceId: {TraceId})",
                 context.Request.Method,
-                context.Request.Path);
+                context.Request.Path,
+                TraceIdFor(context));
 
             await WriteProblemDetailsAsync(context, exception);
         }
@@ -86,14 +88,14 @@ public class GlobalExceptionHandlingMiddleware
                 Status = statusCode,
                 Title = title,
                 Type = $"https://httpstatuses.com/{statusCode}",
-                Extensions = { ["code"] = code }
+                Extensions = { ["code"] = code, ["traceId"] = TraceIdFor(context) }
             }
             : new ValidationProblemDetails(errors.ToDictionary(error => error.Key, error => error.Value.ToArray()))
             {
                 Status = statusCode,
                 Title = title,
                 Type = $"https://httpstatuses.com/{statusCode}",
-                Extensions = { ["code"] = code }
+                Extensions = { ["code"] = code, ["traceId"] = TraceIdFor(context) }
             };
 
         // Surface the concrete conflict reason (email/phone already exists) to the client.
@@ -107,4 +109,11 @@ public class GlobalExceptionHandlingMiddleware
 
         await context.Response.WriteAsJsonAsync(problemDetails);
     }
+
+    /// <summary>
+    /// Safe correlation id shared between the 500 response body and the server
+    /// log line. Never carries stack traces or secrets: only the request id.
+    /// </summary>
+    private static string TraceIdFor(HttpContext context)
+        => Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
 }
