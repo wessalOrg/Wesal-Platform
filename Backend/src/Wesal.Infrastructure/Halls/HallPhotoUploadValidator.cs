@@ -53,6 +53,14 @@ public static class HallPhotoUploadValidator
             });
         }
 
+        if (!ExtensionMatchesMimeType(extension, mimeType))
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                [fieldName] = ["Photo extension does not match its MIME type."]
+            });
+        }
+
         if (!SignatureMatches(upload.Content, mimeType))
         {
             throw new ValidationException(new Dictionary<string, string[]>
@@ -62,17 +70,34 @@ public static class HallPhotoUploadValidator
         }
     }
 
+    private static bool ExtensionMatchesMimeType(string extension, string mimeType)
+        => (extension, mimeType) switch
+        {
+            (".jpg" or ".jpeg", "image/jpeg") => true,
+            (".png", "image/png") => true,
+            (".webp", "image/webp") => true,
+            _ => false
+        };
+
     private static bool SignatureMatches(byte[] content, string mimeType)
     {
-        if (content.Length < 4) return false;
-        // JPEG: FF D8 FF
-        if (mimeType == "image/jpeg" && content[0] == 0xFF && content[1] == 0xD8 && content[2] == 0xFF) return true;
-        // PNG: 89 50 4E 47
-        if (mimeType == "image/png" && content[0] == 0x89 && content[1] == 0x50 && content[2] == 0x4E && content[3] == 0x47) return true;
-        // WEBP: RIFF....WEBP
-        if (mimeType == "image/webp" && content.Length >= 12 && content[0] == 0x52 && content[1] == 0x49 && content[2] == 0x46 && content[3] == 0x46 && content[8] == 0x57 && content[9] == 0x45 && content[10] == 0x42 && content[11] == 0x50) return true;
-        // Allow jpg with jpeg mime
-        if (mimeType == "image/jpeg" || mimeType == "image/jpg") return true;
-        return false;
+        switch (mimeType)
+        {
+            // JPEG: FF D8 FF
+            case "image/jpeg":
+                return content.Length >= 3 && content[0] == 0xFF && content[1] == 0xD8 && content[2] == 0xFF;
+            // PNG: 89 50 4E 47 0D 0A 1A 0A
+            case "image/png":
+                return content.Length >= 8
+                    && content[0] == 0x89 && content[1] == 0x50 && content[2] == 0x4E && content[3] == 0x47
+                    && content[4] == 0x0D && content[5] == 0x0A && content[6] == 0x1A && content[7] == 0x0A;
+            // WEBP: RIFF....WEBP
+            case "image/webp":
+                return content.Length >= 12
+                    && content[0] == 0x52 && content[1] == 0x49 && content[2] == 0x46 && content[3] == 0x46
+                    && content[8] == 0x57 && content[9] == 0x45 && content[10] == 0x42 && content[11] == 0x50;
+            default:
+                return false;
+        }
     }
 }
