@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { markAuthNavigation, navigateAfterAuth } from "@/lib/auth-nav";
 import { useT } from "@/i18n";
@@ -50,7 +50,6 @@ export default function LoginFormCard({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -263,24 +262,13 @@ export default function LoginFormCard({
         />
         <LoginField
           label={t("auth.login.form.password")}
-          type={showPassword ? "text" : "password"}
+          type="password"
           value={password}
           onChange={(value) => updateField("password", value)}
           onBlur={() => blurField("password")}
           placeholder={t("auth.login.form.passwordPlaceholder")}
           error={fieldErrors.password}
           autoComplete="current-password"
-          trailing={
-            <PasswordToggle
-              visible={showPassword}
-              onToggle={() => setShowPassword((value) => !value)}
-              label={
-                showPassword
-                  ? t("auth.login.form.hidePassword")
-                  : t("auth.login.form.showPassword")
-              }
-            />
-          }
         />
 
         <div className="flex items-center justify-between gap-3">
@@ -337,7 +325,6 @@ function LoginField({
   error,
   type = "text",
   autoComplete,
-  trailing,
 }: {
   label: string;
   value: string;
@@ -347,7 +334,6 @@ function LoginField({
   error?: string;
   type?: string;
   autoComplete?: string;
-  trailing?: ReactNode;
 }) {
   return (
     <label className="block text-sm">
@@ -366,10 +352,9 @@ function LoginField({
           autoComplete={autoComplete}
           aria-invalid={error ? true : undefined}
           className={`wesal-register-field-input w-full rounded-xl border px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--wesal-maroon)] ${
-            trailing ? "pe-10" : ""
-          } ${error ? "wesal-register-field-input--error" : "border-[var(--wesal-border)]"}`}
+            error ? "wesal-register-field-input--error" : "border-[var(--wesal-border)]"
+          }`}
         />
-        {trailing ? <div className="absolute end-2 top-1/2 -translate-y-1/2">{trailing}</div> : null}
       </div>
       {error ? (
         <span className="mt-1 block text-xs font-medium text-[#b42318]" role="alert">
@@ -380,40 +365,3 @@ function LoginField({
   );
 }
 
-function PasswordToggle({
-  visible,
-  onToggle,
-  label,
-}: {
-  visible: boolean;
-  onToggle: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#8a7a70] transition hover:bg-white/70 hover:text-[var(--wesal-maroon)]"
-      aria-label={label}
-    >
-      {visible ? <EyeOffIcon /> : <EyeIcon />}
-    </button>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden="true">
-      <path d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12Z" />
-      <circle cx="12" cy="12" r="2.8" />
-    </svg>
-  );
-}
-
-function EyeOffIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden="true">
-      <path d="M3 3l18 18M10.58 10.58A2.5 2.5 0 0 0 12 15.5a2.5 2.5 0 0 0 1.42-.42M6.71 6.71C4.66 8.17 3.09 10.09 2.25 12c0 0 3.75 6.75 9.75 6.75 1.73 0 3.35-.45 4.77-1.24M17.94 17.94C19.34 16.54 20.91 14.62 21.75 12c0 0-1.57-1.92-3.62-3.29" strokeLinecap="round" />
-    </svg>
-  );
-}
