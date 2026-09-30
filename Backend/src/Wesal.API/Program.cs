@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
@@ -85,23 +86,7 @@ try
     var rateLimitingOptions = new RateLimitingOptions();
     configuration.GetSection(RateLimitingOptions.SectionName).Bind(rateLimitingOptions);
 
-    if (rateLimitingOptions.Enabled)
-    {
-        services.AddRateLimiter(limiterOptions =>
-        {
-            limiterOptions.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            limiterOptions.AddPolicy(RateLimitingOptions.GlobalPolicyName, context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = rateLimitingOptions.PermitLimit,
-                        Window = TimeSpan.FromSeconds(rateLimitingOptions.WindowSeconds),
-                        QueueLimit = 0,
-                        AutoReplenishment = true
-                    }));
-        });
-    }
+    services.AddWesalRateLimiting(configuration);
 
     services.AddHealthChecks()
         .AddDbContextCheck<ApplicationDbContext>(name: "database");
@@ -185,14 +170,15 @@ try
 
     app.MapControllers();
     app.MapMcp("/mcp");
-    app.MapHub<ConversationHub>("/hubs/conversation");
-    app.MapHub<OwnerDashboardHub>("/hubs/owner-dashboard");
-app.MapHub<NotificationsHub>("/hubs/notifications");
-    app.MapHealthChecks("/health");
+    // Monitoring and realtime stay reachable even when the global limiter runs.
+    app.MapHub<ConversationHub>("/hubs/conversation").DisableRateLimiting();
+    app.MapHub<OwnerDashboardHub>("/hubs/owner-dashboard").DisableRateLimiting();
+    app.MapHub<NotificationsHub>("/hubs/notifications").DisableRateLimiting();
+    app.MapHealthChecks("/health").DisableRateLimiting();
 
-    app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" }));
+    app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" })).DisableRateLimiting();
 
-    app.MapGet("/", () => Results.Ok(new { service = "Wesal API", status = "running", version = "v1" }));
+    app.MapGet("/", () => Results.Ok(new { service = "Wesal API", status = "running", version = "v1" })).DisableRateLimiting();
 
     app.Run();
 }
