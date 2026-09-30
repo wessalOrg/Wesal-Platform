@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import { ApiError, getApiFieldMessages } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { getRegisterPasswordIssue } from "@/lib/register-validation";
 import { profileUsesMock } from "@/services/profile";
 
@@ -170,7 +171,9 @@ async function apiChangePassword(input: ChangePasswordInput): Promise<void> {
 
 export async function changePassword(input: ChangePasswordInput): Promise<void> {
   const token = getAccessToken();
-  if (!token || profileUsesMock()) {
+  // Demo mock only when demo mode is on; otherwise the real endpoint runs and an
+  // unauthenticated call surfaces its honest 401 (never fake success).
+  if (isDemoModeEnabled() && (!token || profileUsesMock())) {
     await mockChangePassword(input);
     return;
   }

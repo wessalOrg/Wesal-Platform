@@ -181,7 +181,7 @@ public class HallCreationServiceShould : IDisposable
     [Fact]
     public async Task CreateHall_WithMultiplePhotos_Succeeds()
     {
-        var photos = new[] { CreateValidPhoto("a.jpg"), new HallPhotoUpload { FileName = "b.png", ContentType = "image/png", Content = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x00 } } };
+        var photos = new[] { CreateValidPhoto("a.jpg"), new HallPhotoUpload { FileName = "b.png", ContentType = "image/png", Content = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00 } } };
         var request = CreateValidRequest(photos: photos);
         var result = await _service.CreateHallAsync(request);
         Assert.Equal(2, result.Images.Count);

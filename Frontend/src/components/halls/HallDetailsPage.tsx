@@ -30,6 +30,7 @@ import {
   mapCommentToReview,
 } from "@/services/comments";
 import { DEMO_HALL_REVIEWS } from "@/constants/hallDetailsFallback";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { HallReview } from "@/types/hall";
 
 type HallDetailsPageProps = {
@@ -80,10 +81,11 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     let active = true;
     void fetchHallComments(hallId).then((comments) => {
       if (!active) return;
-      // null = comments API unreachable, so demo reviews stay.
+      // null = comments API unreachable. Demo placeholder reviews only appear
+      // when demo mode is explicitly enabled, never as failed-request residue.
       // An empty list is authoritative and must not be replaced by placeholders.
       if (comments == null) {
-        setReviews(localizeReviews(DEMO_HALL_REVIEWS, lang));
+        setReviews(isDemoModeEnabled() ? localizeReviews(DEMO_HALL_REVIEWS, lang) : []);
         return;
       }
       setReviews(comments.map(mapCommentToReview));

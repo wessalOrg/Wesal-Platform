@@ -15,6 +15,7 @@ import {
 } from "@/lib/admin-halls-mapper";
 import { toRejectAdminHallPayload, validateAdminRejectReason } from "@/lib/admin-reject-hall";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type {
   AdminHallApprovalResult,
   AdminHallDetail,
@@ -29,6 +30,7 @@ import type {
 } from "@/types/admin-halls";
 
 function usesDemoAdminStub(): boolean {
+  if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return Boolean(token?.startsWith("stub-admin"));
 }

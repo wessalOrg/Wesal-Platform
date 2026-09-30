@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { CREATE_HALL_PATH } from "@/lib/hall-form-mapper";
 import type { CreateHallResult } from "@/types/hall-registration";
 
@@ -21,7 +22,7 @@ function readHallId(data: CreateHallResponseDto | "" | null | undefined): string
  */
 export async function createHall(formData: FormData): Promise<CreateHallResult> {
   const token = getAccessToken();
-  if (!token || token.startsWith("stub-")) {
+  if (isDemoModeEnabled() && (!token || token.startsWith("stub-"))) {
     void formData;
     return { hallId: `demo-hall-${Date.now()}` };
   }

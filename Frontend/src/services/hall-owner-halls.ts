@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { mapHallOwnerHallsResponse } from "@/lib/hall-owner-halls-mapper";
 import type { HallOwnerHall } from "@/types/hall-owner-halls";
 
@@ -13,6 +14,7 @@ export const OWNER_HALLS_PATH = "/owner/halls";
 const DEMO_OWNER_HALLS: HallOwnerHall[] = [];
 
 function ownerHallsUsesMock(): boolean {
+  if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return !token || token.startsWith("stub-");
 }

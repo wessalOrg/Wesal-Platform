@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
@@ -85,23 +86,7 @@ try
     var rateLimitingOptions = new RateLimitingOptions();
     configuration.GetSection(RateLimitingOptions.SectionName).Bind(rateLimitingOptions);
 
-    if (rateLimitingOptions.Enabled)
-    {
-        services.AddRateLimiter(limiterOptions =>
-        {
-            limiterOptions.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            limiterOptions.AddPolicy(RateLimitingOptions.GlobalPolicyName, context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = rateLimitingOptions.PermitLimit,
-                        Window = TimeSpan.FromSeconds(rateLimitingOptions.WindowSeconds),
-                        QueueLimit = 0,
-                        AutoReplenishment = true
-                    }));
-        });
-    }
+    services.AddWesalRateLimiting(configuration);
 
     services.AddHealthChecks()
         .AddDbContextCheck<ApplicationDbContext>(name: "database");
@@ -158,8 +143,15 @@ try
 
     app.UseHttpsRedirection();
 
-    app.UseSwagger();
-    app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Wesal API v1"));
+    // The public document/UI stay available in Development, and in other
+    // environments only when explicitly enabled (Swagger:Enabled=true).
+    var swaggerEnabled = app.Environment.IsDevelopment()
+        || configuration.GetValue<bool>("Swagger:Enabled");
+    if (swaggerEnabled)
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Wesal API v1"));
+    }
 
     app.UseDefaultFiles();
     app.UseStaticFiles();
@@ -167,6 +159,8 @@ try
     // Serve hall media uploads from the writable media storage root (e.g. /tmp/wesal-media),
     // keeping the public URL scheme /uploads/halls/{hallId}/{fileName}.
     var mediaStorage = app.Services.GetRequiredService<IHallMediaStorage>();
+    var documentStorage = app.Services.GetRequiredService<Wesal.Application.Common.Interfaces.IDocumentStorage>();
+    WarnIfEphemeralUploadStorage(mediaStorage.Root, documentStorage.Root);
     app.UseStaticFiles(new StaticFileOptions
     {
         RequestPath = "/uploads",
@@ -185,14 +179,15 @@ try
 
     app.MapControllers();
     app.MapMcp("/mcp");
-    app.MapHub<ConversationHub>("/hubs/conversation");
-    app.MapHub<OwnerDashboardHub>("/hubs/owner-dashboard");
-app.MapHub<NotificationsHub>("/hubs/notifications");
-    app.MapHealthChecks("/health");
+    // Monitoring and realtime stay reachable even when the global limiter runs.
+    app.MapHub<ConversationHub>("/hubs/conversation").DisableRateLimiting();
+    app.MapHub<OwnerDashboardHub>("/hubs/owner-dashboard").DisableRateLimiting();
+    app.MapHub<NotificationsHub>("/hubs/notifications").DisableRateLimiting();
+    app.MapHealthChecks("/health").DisableRateLimiting();
 
-    app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" }));
+    app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" })).DisableRateLimiting();
 
-    app.MapGet("/", () => Results.Ok(new { service = "Wesal API", status = "running", version = "v1" }));
+    app.MapGet("/", () => Results.Ok(new { service = "Wesal API", status = "running", version = "v1" })).DisableRateLimiting();
 
     app.Run();
 }
@@ -240,5 +235,36 @@ static void ValidateNonDevelopmentConfiguration(IWebHostEnvironment environment,
         Log.Warning(
             "GoogleAI:GeminiModel is missing or invalid ('{Model}'); using the built-in default and deterministic fallbacks. Set GoogleAI__GeminiModel to a valid id such as gemini-2.5-flash.",
             geminiModel);
+    }
+}
+
+/// <summary>
+/// Production hardening: container-local temp storage is writable but NOT durable.
+/// Warn explicitly at startup when uploads would not survive a redeploy so the
+/// missing persistent-storage infrastructure cannot go unnoticed. Point
+/// HallMedia:Directory / DocumentStorage:Directory at durable storage to silence.
+/// </summary>
+static bool IsEphemeralUploadRoot(string root)
+{
+    var temp = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar);
+    var full = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
+    return full.Equals(temp, StringComparison.OrdinalIgnoreCase)
+        || full.StartsWith(temp + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+}
+
+static void WarnIfEphemeralUploadStorage(string mediaRoot, string documentRoot)
+{
+    if (IsEphemeralUploadRoot(mediaRoot))
+    {
+        Log.Warning(
+            "Hall media storage is ephemeral ({Root}); uploaded photos will NOT survive instance replacement/redeploy. Set HallMedia:Directory (HallMedia__Directory) to durable storage.",
+            mediaRoot);
+    }
+
+    if (IsEphemeralUploadRoot(documentRoot))
+    {
+        Log.Warning(
+            "Protected document storage is ephemeral ({Root}); identity documents and attachments will NOT survive instance replacement/redeploy. Set DocumentStorage:Directory (DocumentStorage__Directory) to durable storage.",
+            documentRoot);
     }
 }

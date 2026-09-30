@@ -25,6 +25,8 @@ public class SubscriptionExpiryWarningOptions
 /// 3 days (US-ADMIN-08, FR-SUB-02). Runs on a configurable interval (default 24h) and
 /// is idempotent per cycle. Failures never crash the host: the job logs and retries on
 /// the next tick, and the warning service drives retry-with-escalation for e-mail.
+/// The first run happens at startup (not after one full interval) so restarts can
+/// never delay or skip a due warning; delivery is idempotent per cycle end date.
 /// </summary>
 public class SubscriptionExpiryWarningBackgroundService : BackgroundService
 {
@@ -52,8 +54,6 @@ public class SubscriptionExpiryWarningBackgroundService : BackgroundService
         {
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(_options.IntervalMinutes), stoppingToken);
-
                 using var scope = _scopeFactory.CreateScope();
                 var warningService = scope.ServiceProvider.GetRequiredService<ISubscriptionExpiryWarningService>();
                 var delivered = await warningService.WarnCyclesEndingSoonAsync(stoppingToken);
@@ -70,6 +70,15 @@ public class SubscriptionExpiryWarningBackgroundService : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during subscription expiry-warning job");
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromMinutes(_options.IntervalMinutes), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
             }
         }
     }

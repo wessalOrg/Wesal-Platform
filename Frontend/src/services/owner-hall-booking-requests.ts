@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import {
   mapOwnerHallBookingRequestsResponse,
   OWNER_HALL_BOOKING_REQUESTS_PATH,
@@ -8,6 +9,7 @@ import {
 import type { OwnerHallBookingRequest } from "@/types/owner-hall-booking-requests";
 
 function ownerBookingRequestsUsesMock(): boolean {
+  if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return !token || token.startsWith("stub-");
 }

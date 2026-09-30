@@ -1,22 +1,38 @@
 import axios from "axios";
 import { ApiError, parseApiFieldErrors } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
+import {
+  DEV_API_BASE_URL,
+  PROD_API_BASE_URL,
+  validateApiBaseUrl,
+} from "@/lib/api-base-url.mjs";
 
-/** Local dev default only; deployments must set NEXT_PUBLIC_API_BASE_URL. */
-const DEV_API_BASE_URL = "http://localhost:5298/api/v1";
+/**
+ * Resolves the backend base URL (production hardening).
+ * Order: explicit NEXT_PUBLIC_API_BASE_URL (validated) -> canonical Wesal API in
+ * production -> localhost in development. Production never falls back to
+ * localhost, and an invalid explicit value fails loudly.
+ *
+ * `process.env.*` reads stay literal so Next.js inlines them at build time; the
+ * fallback ternary then folds away the unused branch, keeping the localhost URL
+ * out of production client bundles. Runtime https/localhost checks only see
+ * VERCEL_ENV on the server — `scripts/verify-production-env.mjs` (prebuild) is
+ * the authoritative gate for the browser bundle.
+ */
+export function resolveApiBaseUrl(): string {
+  const explicit = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").trim();
+  if (explicit) return validateApiBaseUrl(explicit, process.env.VERCEL_ENV);
+  return process.env.NODE_ENV === "production" ? PROD_API_BASE_URL : DEV_API_BASE_URL;
+}
 
-/** Effective REST base URL (`.../api/v1`), env-driven. */
+/** Effective REST base URL (`.../api/v1`), validated for the current environment. */
 export function apiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || DEV_API_BASE_URL;
+  return resolveApiBaseUrl();
 }
 
 /** Origin of the API host (no `/api/v1`), used for `/uploads` media and SignalR hubs. */
 export function apiOrigin(): string {
-  try {
-    return new URL(apiBaseUrl()).origin;
-  } catch {
-    return new URL(DEV_API_BASE_URL).origin;
-  }
+  return new URL(apiBaseUrl()).origin;
 }
 
 const api = axios.create({

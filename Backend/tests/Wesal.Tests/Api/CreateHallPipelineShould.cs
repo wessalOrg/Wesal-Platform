@@ -208,6 +208,8 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         var hall = await _context.Halls.Include(h => h.Images).SingleOrDefaultAsync();
         Assert.NotNull(hall);
         Assert.Single(hall!.Images);
+        // The 201 Location must address the created owner hall resource itself.
+        Assert.Contains($"/api/v1/owner/halls/{hall.Id}", response.Headers.Location!.ToString(), StringComparison.OrdinalIgnoreCase);
 
         var imageUrl = hall.Images.Single().Url;
         var fileName = Path.GetFileName(imageUrl);

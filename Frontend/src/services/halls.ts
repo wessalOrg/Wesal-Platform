@@ -10,6 +10,7 @@ import {
 import { getDefaultHallAmenities } from "@/lib/amenities";
 import { parseDateIso } from "@/lib/booking-date";
 import { parseBookingPeriodType } from "@/lib/booking-period";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { toDeleteHallError } from "@/lib/delete-hall-errors";
 import {
   hallAccessFromUnknown,
@@ -234,14 +235,18 @@ function summarizeBooked(days: HallAvailabilityDay[]): string | null {
 }
 
 function mapApiHall(hall: ApiFeaturedHall, index: number): FeaturedHall {
-  const fallback = FEATURED_HALLS_FALLBACK[index % FEATURED_HALLS_FALLBACK.length];
-  const id = hall.hallId ?? hall.id ?? fallback.id;
-  const name = hall.hallName ?? hall.name ?? fallback.name;
-  const location = hall.address ?? hall.location ?? fallback.location;
+  // Static records only fill gaps in demo mode; otherwise neutral defaults
+  // keep real halls honest instead of borrowing another hall's data.
+  const fallback = isDemoModeEnabled()
+    ? FEATURED_HALLS_FALLBACK[index % FEATURED_HALLS_FALLBACK.length]
+    : undefined;
+  const id = hall.hallId ?? hall.id ?? fallback?.id ?? "";
+  const name = hall.hallName ?? hall.name ?? fallback?.name ?? t("common.hall");
+  const location = hall.address ?? hall.location ?? fallback?.location ?? "";
   const availabilityDays =
     mapAvailabilityDays(hall.availability).length > 0
       ? mapAvailabilityDays(hall.availability)
-      : (fallback.availabilityDays ?? []);
+      : (fallback?.availabilityDays ?? []);
 
   return {
     id: String(id),
@@ -252,18 +257,18 @@ function mapApiHall(hall: ApiFeaturedHall, index: number): FeaturedHall {
     ),
     priceLabel:
       hall.priceLabel ??
-      (hall.price != null ? `${hall.price} / يوم` : fallback.priceLabel),
-    rating: hall.rating ?? fallback.rating,
-    reviewCount: hall.reviewCount ?? fallback.reviewCount,
+      (hall.price != null ? `${hall.price} / يوم` : (fallback?.priceLabel ?? null)),
+    rating: hall.rating ?? fallback?.rating ?? null,
+    reviewCount: hall.reviewCount ?? fallback?.reviewCount ?? null,
     location,
     address: hall.address ?? location,
     detailedAddress: hall.detailedAddress ?? null,
-    capacity: hall.capacity ?? fallback.capacity,
-    capacityMax: fallback.capacityMax ?? null,
-    tags: hall.tags ?? fallback.tags,
-    region: hall.region ? mapApiRegion(hall.region) : fallback.region,
+    capacity: hall.capacity ?? fallback?.capacity ?? 0,
+    capacityMax: fallback?.capacityMax ?? null,
+    tags: hall.tags ?? fallback?.tags ?? [],
+    region: hall.region ? mapApiRegion(hall.region) : (fallback?.region ?? "gaza"),
     bookedPeriodsSummary:
-      summarizeBooked(availabilityDays) ?? fallback.bookedPeriodsSummary ?? null,
+      summarizeBooked(availabilityDays) ?? fallback?.bookedPeriodsSummary ?? null,
     availabilityDays,
     isAvailable: isHallActive(hall) && !isHallPubliclyUnavailable(hallAccessFromUnknown(hall)),
   };
@@ -299,6 +304,18 @@ export async function fetchFeaturedHalls(
       source: "api",
     };
   } catch (err) {
+    // Production shows an honest empty list with the error; static demo halls
+    // only fill the homepage in demo mode.
+    if (!isDemoModeEnabled()) {
+      return {
+        halls: [],
+        source: "fallback",
+        error:
+          err instanceof Error
+            ? err.message
+            : t("errors.offlineDemo"),
+      };
+    }
     return {
       halls: FEATURED_HALLS_FALLBACK.slice(0, 6),
       source: "fallback",
@@ -315,8 +332,10 @@ function formatPriceAmount(value: number): string {
 }
 
 function mapSlotPrices(hall: ApiFeaturedHall): HallSlotPrice[] {
-  const fallback = getHallDetailsFallback(String(hall.hallId ?? hall.id ?? "")) ??
-    HALL_DETAILS_FALLBACK["1"];
+  const fallback = isDemoModeEnabled()
+    ? (getHallDetailsFallback(String(hall.hallId ?? hall.id ?? "")) ??
+      HALL_DETAILS_FALLBACK["1"])
+    : undefined;
 
   if (hall.morningPrice != null || hall.eveningPrice != null) {
     const slots: HallSlotPrice[] = [];
@@ -403,7 +422,9 @@ function isHallActive(hall: ApiFeaturedHall): boolean {
 
 function mapApiHallDetail(hall: ApiFeaturedHall, index: number): HallDetail {
   const id = String(hall.hallId ?? hall.id ?? "");
-  const fallback = getHallDetailsFallback(id) ?? HALL_DETAILS_FALLBACK["1"];
+  const fallback = isDemoModeEnabled()
+    ? (getHallDetailsFallback(id) ?? HALL_DETAILS_FALLBACK["1"])
+    : undefined;
   const photoUrls = extractPhotoUrls(hall.photos);
   const mainImageUrl = resolveHallImage(
     firstMediaReference(
@@ -417,32 +438,33 @@ function mapApiHallDetail(hall: ApiFeaturedHall, index: number): HallDetail {
   const availabilityDays =
     mapAvailabilityDays(hall.availability).length > 0
       ? mapAvailabilityDays(hall.availability)
-      : (fallback.availabilityDays ?? []);
+      : (fallback?.availabilityDays ?? []);
 
   return {
     id,
-    name: hall.hallName ?? hall.name ?? fallback.name,
+    name: hall.hallName ?? hall.name ?? fallback?.name ?? t("common.hall"),
     description:
       hall.description ??
       hall.shortDescription ??
-      fallback.description,
-    location: hall.address ?? hall.location ?? fallback.location,
-    detailedAddress: hall.detailedAddress ?? fallback.detailedAddress ?? null,
-    region: hall.region ? mapApiRegion(hall.region) : fallback.region,
-    capacity: hall.capacity ?? fallback.capacity,
-    capacityMax: hall.capacityMax ?? fallback.capacityMax ?? null,
-    amenities: hall.amenities ?? hall.tags ?? fallback.amenities,
+      fallback?.description ??
+      "",
+    location: hall.address ?? hall.location ?? fallback?.location ?? "",
+    detailedAddress: hall.detailedAddress ?? fallback?.detailedAddress ?? null,
+    region: hall.region ? mapApiRegion(hall.region) : (fallback?.region ?? "gaza"),
+    capacity: hall.capacity ?? fallback?.capacity ?? 0,
+    capacityMax: hall.capacityMax ?? fallback?.capacityMax ?? null,
+    amenities: hall.amenities ?? hall.tags ?? fallback?.amenities ?? [],
     features: hall.features?.filter(Boolean) ?? [],
-    otherFeatures: hall.otherFeatures ?? fallback.otherFeatures ?? null,
-    youtubeVideoUrl: hall.youtubeVideoUrl ?? fallback.youtubeVideoUrl ?? null,
+    otherFeatures: hall.otherFeatures ?? fallback?.otherFeatures ?? null,
+    youtubeVideoUrl: hall.youtubeVideoUrl ?? fallback?.youtubeVideoUrl ?? null,
     gallery: resolveGalleryImages(hall, mainImageUrl, index),
     mainImageUrl,
     slotPrices: mapSlotPrices(hall),
-    ownerPhone: hall.contactPhone ?? hall.ownerPhone ?? fallback.ownerPhone ?? null,
+    ownerPhone: hall.contactPhone ?? hall.ownerPhone ?? fallback?.ownerPhone ?? null,
     isActive: isHallActive(hall),
     isOwner: Boolean(hall.isOwner),
-    rating: hall.rating ?? fallback.rating ?? null,
-    reviewCount: hall.reviewCount ?? fallback.reviewCount ?? null,
+    rating: hall.rating ?? fallback?.rating ?? null,
+    reviewCount: hall.reviewCount ?? fallback?.reviewCount ?? null,
     availabilityDays,
   };
 }
@@ -459,7 +481,7 @@ function normalizeDetail(payload: HallDetailResponse): ApiFeaturedHall {
  * GET /v1/halls/{id}
  */
 export async function fetchHallDetails(id: string): Promise<HallDetailsLoadResult> {
-  const fallback = getHallDetailsFallback(id);
+  const fallback = isDemoModeEnabled() ? getHallDetailsFallback(id) : undefined;
 
   try {
     const { data } = await api.get<HallDetailResponse>(`/halls/${id}`, {
@@ -527,6 +549,16 @@ export async function fetchCatalogHalls(): Promise<FeaturedHallsLoadResult> {
     try {
       return await load("/halls/search");
     } catch (err) {
+      if (!isDemoModeEnabled()) {
+        return {
+          halls: [],
+          source: "fallback",
+          error:
+            err instanceof Error
+              ? err.message
+              : t("errors.offlineHalls"),
+        };
+      }
       return {
         halls: FEATURED_HALLS_FALLBACK,
         source: "fallback",
@@ -828,7 +860,9 @@ function mapReviews(
 }
 
 function mapApiHallDetails(raw: ApiHallDetails): HallDetails {
-  const fallback = findHallDetailsFallback(String(raw.hallId ?? raw.id ?? ""));
+  const fallback = isDemoModeEnabled()
+    ? findHallDetailsFallback(String(raw.hallId ?? raw.id ?? ""))
+    : undefined;
   const id = String(raw.hallId ?? raw.id ?? fallback?.id ?? "");
   const photosUrls = extractPhotoUrls(raw.photos);
   const galleryRaw = [...photosUrls, ...(raw.images ?? []), ...(raw.gallery ?? [])];
@@ -902,7 +936,7 @@ export async function fetchHallById(id: string): Promise<HallByIdLoadResult> {
     const status = err instanceof ApiError ? err.status : undefined;
     const message =
       err instanceof Error ? err.message : t("errors.hallLoad");
-    const local = findHallDetailsFallback(hallId);
+    const local = isDemoModeEnabled() ? findHallDetailsFallback(hallId) : undefined;
 
     if (isHallLockedApiError(err) || isSystemLockedApiError(err)) {
       return {

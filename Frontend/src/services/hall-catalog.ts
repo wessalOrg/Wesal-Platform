@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { fromHallRegionApi } from "@/lib/hall-owner-api-region";
 import type { HallRegion } from "@/constants/hallRegions";
 
@@ -89,6 +90,7 @@ export const DEFAULT_FEATURE_CATALOG: string[] = [
 ];
 
 function usesMock(): boolean {
+  if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return !token || token.startsWith("stub-");
 }
