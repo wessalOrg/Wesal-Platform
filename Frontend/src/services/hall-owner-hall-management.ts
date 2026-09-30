@@ -32,9 +32,13 @@ function toUpdateHallFormData(
 
 function dropJsonContentType() {
   return [
-    (body: unknown, headers: Record<string, unknown>) => {
-      if (typeof FormData !== "undefined" && body instanceof FormData) {
-        delete headers["Content-Type"];
+    (body: unknown, headers: { delete?: (name: string) => void } | Record<string, unknown>) => {
+      if (typeof FormData !== "undefined" && body instanceof FormData && headers) {
+        if (typeof headers.delete === "function") {
+          headers.delete("Content-Type");
+        } else {
+          delete (headers as Record<string, unknown>)["Content-Type"];
+        }
       }
       return body;
     },
@@ -49,27 +53,11 @@ function ownerHallManagementUsesMock(): boolean {
 const DEMO_HALL_META: Record<
   string,
   Pick<HallOwnerHallDetails, "name" | "status" | "editability">
-> = {
-  "demo-hall-approved": {
-    name: "قاعة النور",
-    status: "Approved",
-    editability: "editable",
-  },
-  "demo-hall-pending": {
-    name: "قاعة الأمل",
-    status: "Pending",
-    editability: "editable",
-  },
-  "demo-hall-rejected": {
-    name: "قاعة الياسمين",
-    status: "Rejected",
-    editability: "editable",
-  },
-};
+> = {};
 
 function buildDemoHallDetails(hallId: string): HallOwnerHallDetails {
   const meta = DEMO_HALL_META[hallId] ?? {
-    name: "قاعة تجريبية",
+    name: "",
     status: "Pending" as const,
     editability: "editable" as const,
   };
@@ -79,21 +67,24 @@ function buildDemoHallDetails(hallId: string): HallOwnerHallDetails {
     name: meta.name,
     status: meta.status,
     editability: meta.editability,
-    contactPhone: "0599111111",
+    contactPhone: "",
     region: "Gaza",
-    address: "غزة — شارع الجلاء",
-    detailedAddress: "حي الرمال",
-    description: "قاعة تجريبية لمعاينة واجهة إدارة صاحب القاعة.",
-    capacity: 200,
-    price: 1500,
+    address: "",
+    detailedAddress: "",
+    description: "",
+    capacity: 0,
+    price: 0,
     showPrice: true,
     youtubeVideoUrl: "",
-    features: ["تكييف", "كراسي جاهزة", "موقف سيارات"],
+    features: [],
     otherFeatures: "",
     paymentStatus: "Unpaid",
     paymentReceiptUploadedAt: null,
     hasPaymentReceipt: false,
     mainImageUrl: null,
+    mainImageApiUrl: null,
+    hourlySlotStart: null,
+    hourlySlotEnd: null,
     photos: [],
     adminLocked: false,
     systemLocked: false,

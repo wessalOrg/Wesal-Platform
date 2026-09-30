@@ -19,7 +19,7 @@ import {
 import { useT } from "@/i18n";
 
 const SIDEBAR_ID = "seeker-dash-sidebar";
-const EXTRA_PREFETCH = ["/halls"] as const;
+const EXTRA_PREFETCH = ["/"] as const;
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);

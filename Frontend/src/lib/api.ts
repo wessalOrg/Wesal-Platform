@@ -2,9 +2,25 @@ import axios from "axios";
 import { ApiError, parseApiFieldErrors } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
 
+/** Local dev default only; deployments must set NEXT_PUBLIC_API_BASE_URL. */
+const DEV_API_BASE_URL = "http://localhost:5298/api/v1";
+
+/** Effective REST base URL (`.../api/v1`), env-driven. */
+export function apiBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || DEV_API_BASE_URL;
+}
+
+/** Origin of the API host (no `/api/v1`), used for `/uploads` media and SignalR hubs. */
+export function apiOrigin(): string {
+  try {
+    return new URL(apiBaseUrl()).origin;
+  } catch {
+    return new URL(DEV_API_BASE_URL).origin;
+  }
+}
+
 const api = axios.create({
-  baseURL:
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5298/api/v1",
+  baseURL: apiBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },

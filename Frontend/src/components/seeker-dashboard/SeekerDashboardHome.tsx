@@ -3,12 +3,8 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
-import ProfileHeroCard from "@/components/profile/ProfileHeroCard";
 import { useSeekerProfile } from "@/hooks/useSeekerProfile";
-import {
-  SEEKER_ACCOUNT_PATH,
-  SEEKER_BOOKINGS_PATH,
-} from "@/constants/seekerDashboardNav";
+import { SEEKER_BOOKINGS_PATH } from "@/constants/seekerDashboardNav";
 import { useT } from "@/i18n";
 import { isPendingCancelGroup } from "@/lib/booking-cancel-ui";
 import { localizeHallName } from "@/lib/localize-hall-display";
@@ -67,7 +63,8 @@ export default function SeekerDashboardHome() {
 
   const name = display.fullName || t("seeker.guestName");
   const statsPending = bookingsState.status === "loading" && bookingsState.bookings.length === 0;
-  const profilePending = profileState.status === "loading" && !profileState.profile;
+  const phone = display.phoneNumber.trim();
+  const email = display.email.trim();
 
   return (
     <div className="seeker-home" data-testid="seeker-dashboard-home">
@@ -77,6 +74,26 @@ export default function SeekerDashboardHome() {
             {t("seeker.welcomeBack", { name })}
           </h1>
           <p className="seeker-welcome-body">{t("seeker.welcomeSubtitle")}</p>
+          {phone || email ? (
+            <div className="seeker-welcome-contacts">
+              {phone ? (
+                <p className="seeker-welcome-contact">
+                  <span className="seeker-welcome-contact-icon" aria-hidden="true">
+                    <PhoneIcon />
+                  </span>
+                  <span dir="ltr">{phone}</span>
+                </p>
+              ) : null}
+              {email ? (
+                <p className="seeker-welcome-contact">
+                  <span className="seeker-welcome-contact-icon" aria-hidden="true">
+                    <MailIcon />
+                  </span>
+                  <span dir="ltr">{email}</span>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <div className="seeker-welcome-actions">
             <Link href={SEEKER_BOOKINGS_PATH} className="seeker-btn-primary" prefetch>
               {t("seeker.cta.bookings")}
@@ -97,28 +114,8 @@ export default function SeekerDashboardHome() {
               <span>{display.initials}</span>
             )}
           </div>
-          <Link href={SEEKER_ACCOUNT_PATH} className="seeker-welcome-badge" prefetch>
-            {t("seeker.myAccount")}
-          </Link>
         </div>
       </section>
-
-      {profilePending ? (
-        <div
-          className="h-40 animate-pulse rounded-[1.35rem] bg-white/80"
-          aria-busy="true"
-          data-testid="seeker-profile-card-loading"
-        />
-      ) : (
-        <ProfileHeroCard
-          profile={profileState.profile}
-          fullName={display.fullName}
-          email={display.email}
-          phoneNumber={display.phoneNumber}
-          createdAt={display.createdAt}
-          avatarUrl={display.avatarUrl}
-        />
-      )}
 
       <section className="seeker-summary" aria-labelledby="seeker-summary-heading">
         <h2 id="seeker-summary-heading" className="seeker-home-section-title">
@@ -196,6 +193,28 @@ export default function SeekerDashboardHome() {
         )}
       </section>
     </div>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+      <path
+        d="M8.2 4.8h2.1l1.1 2.6-1.3 1.1a12.2 12.2 0 0 0 5.4 5.4l1.1-1.3 2.6 1.1v2.1c0 .7-.6 1.3-1.3 1.3A13.2 13.2 0 0 1 6.9 6.1c0-.7.6-1.3 1.3-1.3Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="m4.5 7 7.5 6L19.5 7" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    </svg>
   );
 }
 

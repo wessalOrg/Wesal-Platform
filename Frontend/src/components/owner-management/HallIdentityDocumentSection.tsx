@@ -101,37 +101,31 @@ export default function HallIdentityDocumentSection({
 
   return (
     <section
-      className="seeker-settings-card"
+      className="seeker-settings-card owner-identity-card"
       data-testid="owner-settings-identity"
     >
-      <h2 className="seeker-settings-section-title">
-        {t("owner.management.identity.title")}
-      </h2>
-      <p className="seeker-settings-section-lead">
-        {t("owner.management.identity.subtitle")}
-      </p>
+      <div>
+        <h2 className="seeker-settings-section-title">
+          {t("owner.management.identity.title")}
+        </h2>
+        <p className="seeker-settings-section-lead">
+          {t("owner.management.identity.subtitle")}
+        </p>
+      </div>
 
-      <div className="seeker-settings-identity-status">
+      <div className="owner-identity-row">
         <span
-          className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
-            uploaded
-              ? "bg-[#e8f4e4] text-[#2e7d32]"
-              : "bg-[#fdecea] text-[#c45b55]"
-          }`}
+          className={`owner-identity-status${uploaded ? " is-uploaded" : ""}`}
         >
-          <span
-            className={`h-2 w-2 rounded-full ${uploaded ? "bg-[#2e7d32]" : "bg-[#c45b55]"}`}
-            aria-hidden="true"
-          />
+          <span className="owner-identity-status-dot" aria-hidden="true" />
           {t(
             uploaded
               ? "owner.management.identity.uploaded"
               : "owner.management.identity.notUploaded",
           )}
         </span>
-      </div>
 
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <div className="owner-identity-actions flex min-w-0 flex-wrap items-center gap-2">
         <input
           ref={inputRef}
           type="file"
@@ -174,9 +168,10 @@ export default function HallIdentityDocumentSection({
                 : t("owner.management.identity.view")}
           </button>
         ) : null}
+        </div>
       </div>
 
-      <p className="mt-2 text-xs leading-5 text-[var(--wesal-muted)]">
+      <p className="owner-identity-hint">
         {t("owner.management.identity.hint")}
       </p>
 

@@ -85,13 +85,3 @@ export function readPaymentStatus(source: unknown): PaymentStatus {
 
   return PAYMENT_STATUS.Unpaid;
 }
-
-export function isUnpaidPaymentStatus(status: PaymentStatus): boolean {
-  return status === PAYMENT_STATUS.Unpaid;
-}
-
-export function paymentStatusMessageKey(status: PaymentStatus): string {
-  return status === PAYMENT_STATUS.Paid
-    ? "owner.payment.badge.paid"
-    : "owner.payment.badge.unpaid";
-}

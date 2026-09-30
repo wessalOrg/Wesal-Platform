@@ -21,6 +21,8 @@ type Options = {
   canSubmit: boolean;
 };
 
+type VisibleMonth = { year: number; monthIndex: number };
+
 function mergeDay(days: HourlyDay[], next: HourlyDay): HourlyDay[] {
   const index = days.findIndex((day) => day.dateIso === next.dateIso);
   if (index < 0) return [...days, next];
@@ -31,9 +33,11 @@ function mergeDay(days: HourlyDay[], next: HourlyDay): HourlyDay[] {
 
 export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Options) {
   const identity = useUserIdentity();
-  const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [monthIndex, setMonthIndex] = useState(now.getMonth());
+  const [visibleMonth, setVisibleMonth] = useState<VisibleMonth>(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), monthIndex: now.getMonth() };
+  });
+  const { year, monthIndex } = visibleMonth;
   const [days, setDays] = useState<HourlyDay[]>([]);
   const [showBookedSlots, setShowBookedSlots] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -202,12 +206,13 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
   }, [canSubmit, dateIso, selectedSlot, submitting, name, hallId, hallName, identity.displayName, reload]);
 
   const shiftMonth = useCallback((delta: number) => {
-    const next = new Date(year, monthIndex + delta, 1);
-    setYear(next.getFullYear());
-    setMonthIndex(next.getMonth());
+    setVisibleMonth((current) => {
+      const next = new Date(current.year, current.monthIndex + delta, 1);
+      return { year: next.getFullYear(), monthIndex: next.getMonth() };
+    });
     setDateIso(null);
     setSlotStart(null);
-  }, [year, monthIndex]);
+  }, []);
 
   return {
     year,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ThreadMessage } from "@/types/messages";
 
 function messageKey(message: ThreadMessage): string {
@@ -10,20 +10,16 @@ function messageKey(message: ThreadMessage): string {
 /** Local retrying overlay on Lilian's pending delivery — no API changes. */
 export function useRetryingMessages(messages: ThreadMessage[]) {
   const [ids, setIds] = useState<Set<string>>(() => new Set());
-  const [prevMessages, setPrevMessages] = useState(messages);
-  if (prevMessages !== messages) {
-    setPrevMessages(messages);
-    setIds((current) => {
-      if (current.size === 0) return current;
-      const next = new Set<string>();
-      for (const id of current) {
-        const match = messages.find((item) => item.id === id || item.clientRequestId === id);
-        if (match?.delivery === "pending") next.add(id);
-      }
-      if (next.size === current.size && [...next].every((id) => current.has(id))) return current;
-      return next;
-    });
-  }
+
+  // Only pending messages still count as retrying; the rest stay in `ids`
+  // until remount (tiny set) so we never prune during render or in an effect.
+  const pendingKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const message of messages) {
+      if (message.delivery === "pending") keys.add(messageKey(message));
+    }
+    return keys;
+  }, [messages]);
 
   const markRetrying = useCallback((id: string) => {
     setIds((current) => {
@@ -34,8 +30,9 @@ export function useRetryingMessages(messages: ThreadMessage[]) {
   }, []);
 
   const isRetrying = useCallback(
-    (message: ThreadMessage) => ids.has(messageKey(message)) && message.delivery === "pending",
-    [ids],
+    (message: ThreadMessage) =>
+      ids.has(messageKey(message)) && pendingKeys.has(messageKey(message)),
+    [ids, pendingKeys],
   );
 
   return { markRetrying, isRetrying };

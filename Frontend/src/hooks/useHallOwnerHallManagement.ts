@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { ApiError, isUnauthorizedApiError } from "@/lib/api-error";
+import { ApiError, isForbiddenApiError, isUnauthorizedApiError } from "@/lib/api-error";
 import {
   hallUpdateSubmitErrorMessage,
   isHallNotEditableApiError,
@@ -52,6 +52,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitStatus, setSubmitStatus] =
     useState<HallEditSubmitStatus>("idle");
+  const [resubmitted, setResubmitted] = useState(false);
 
   const submittingRef = useRef(false);
   const loadGenerationRef = useRef(0);
@@ -65,6 +66,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     setFieldErrors({});
     setFormError(null);
     setSubmitStatus("idle");
+    setResubmitted(false);
     setLoadErrorKey(null);
     setLoadStatus(enabled ? "loading" : "idle");
   }
@@ -85,7 +87,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     setLoadErrorKey(null);
 
     try {
-      // Hall-scoped fetch boundary: hallOwnerQueryKeys.hallDetails(hallId)
+      // Hall-scoped fetch boundary: one in-flight load per hallId (generation-guarded).
       const next = await fetchOwnerHallDetails(requestHallId);
       if (generation !== loadGenerationRef.current) return;
       if (next.id !== requestHallId) return;
@@ -146,10 +148,11 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
       loadGenerationRef.current += 1;
       return;
     }
-    // Existing hall-details fetch-on-mount; `load` is a memoized callback.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- gated fetch, not derived render state
-    void load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
     return () => {
+      window.clearTimeout(timer);
       loadGenerationRef.current += 1;
     };
   }, [enabled, load]);
@@ -169,6 +172,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     if (submitStatus === "success" || submitStatus === "error") {
       setSubmitStatus("idle");
     }
+    setResubmitted(false);
   }, [submitStatus]);
 
   const patchValues = useCallback(
@@ -211,11 +215,16 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
 
   const setCoverPhoto = useCallback(
     (url: string) => {
-      setValues((current) =>
-        current
-          ? { ...current, coverPhotoUrl: url, mainPhoto: null }
-          : current,
-      );
+      setValues((current) => {
+        if (!current) return current;
+        const selected = current.existingPhotos.find((photo) => photo.url === url);
+        return {
+          ...current,
+          coverPhotoUrl: url,
+          coverApiUrl: selected?.apiUrl ?? selected?.url ?? current.coverApiUrl,
+          mainPhoto: null,
+        };
+      });
       clearFeedback();
     },
     [clearFeedback],
@@ -277,6 +286,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     setFormError(null);
 
     const targetHallId = hallId;
+    const wasRejected = details.status === "Rejected";
     const submitGeneration = loadGenerationRef.current;
     const isSubmitStale = () =>
       submitGeneration !== loadGenerationRef.current || targetHallId !== hallId;
@@ -285,16 +295,12 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
       const updated = await updateOwnerHall(targetHallId, values);
       if (isSubmitStale()) return false;
 
-      if (updated) {
-        if (updated.id !== targetHallId) return false;
-        hydrateFromDetails(updated);
-      } else {
-        const refreshed = await fetchOwnerHallDetails(targetHallId);
-        if (isSubmitStale() || refreshed.id !== targetHallId) return false;
-        hydrateFromDetails(refreshed);
-      }
+      const saved = updated ?? (await fetchOwnerHallDetails(targetHallId));
+      if (isSubmitStale() || saved.id !== targetHallId) return false;
+      hydrateFromDetails(saved);
 
       if (isSubmitStale()) return false;
+      setResubmitted(wasRejected && saved.status === "Pending");
       setSubmitStatus("success");
       notifyHallOwnerHallsChanged();
       notifyPublicHallsChanged();
@@ -302,9 +308,18 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     } catch (err) {
       if (isSubmitStale()) return false;
 
-      if (isUnauthorizedApiError(err)) {
+      if (isUnauthorizedApiError(err) || (err instanceof ApiError && err.code === "Unauthorized")) {
         await logout({ redirect: false });
-        setSubmitStatus("idle");
+        setFieldErrors({});
+        setFormError("owner.management.hallEdit.errors.unauthorized");
+        setSubmitStatus("error");
+        return false;
+      }
+
+      if (isForbiddenApiError(err) || (err instanceof ApiError && err.code === "Forbidden")) {
+        setFieldErrors({});
+        setFormError("owner.management.hallEdit.errors.forbidden");
+        setSubmitStatus("error");
         return false;
       }
 
@@ -344,8 +359,13 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
       }
 
       if (err instanceof ApiError) {
-        setFieldErrors(mapHallApiErrorsToFormErrors(err));
-        setFormError(hallUpdateSubmitErrorMessage(err));
+        const mapped = mapHallApiErrorsToFormErrors(err);
+        setFieldErrors(mapped);
+        setFormError(
+          Object.keys(mapped).length > 0
+            ? "owner.management.addHall.errors.validation"
+            : hallUpdateSubmitErrorMessage(err),
+        );
       } else {
         setFormError(hallUpdateSubmitErrorMessage(err));
       }
@@ -374,6 +394,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     isAdminLocked: loadStatus === "admin_locked",
     isSubmitting: submitStatus === "submitting",
     isSuccess: submitStatus === "success" && detailsMatchSelection,
+    resubmitted: resubmitted && detailsMatchSelection,
     canEdit,
     controlsDisabled,
     reload: load,

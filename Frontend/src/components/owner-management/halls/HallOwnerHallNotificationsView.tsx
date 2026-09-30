@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import OwnerHallBookingsCalendar from "@/components/owner-management/halls/OwnerHallBookingsCalendar";
 import HallNotificationsView from "@/components/halls/notifications/HallNotificationsView";
 import HallBookingDataGate from "@/components/halls/HallBookingDataGate";
 import OwnerAvailabilitySchedule from "@/components/halls/OwnerAvailabilitySchedule";
@@ -82,6 +83,18 @@ export default function HallOwnerHallNotificationsView({
 
       <HallBookingDataGate access={access} flagsReady={isListReady}>
         <div className="space-y-5 sm:space-y-6">
+          <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
+            <div className="mb-4 min-w-0">
+              <h3 className="break-words text-base font-extrabold text-[var(--wesal-maroon)]">
+                {t("owner.calendar.title")}
+              </h3>
+              <p className="mt-1 break-words text-sm leading-7 text-[var(--wesal-muted)]">
+                {t("owner.calendar.hint")}
+              </p>
+            </div>
+            <OwnerHallBookingsCalendar key={hallId} hallId={hallId} enabled={bookingEnabled} />
+          </div>
+
           <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
             <div className="mb-4 min-w-0">
               <h3 className="break-words text-base font-extrabold text-[var(--wesal-maroon)]">

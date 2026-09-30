@@ -39,7 +39,13 @@ export type HallOwnerHallDetails = {
   paymentStatus: HallPaymentStatus;
   paymentReceiptUploadedAt: string | null;
   hasPaymentReceipt: boolean;
+  /** Resolved URL for display. */
   mainImageUrl: string | null;
+  /** Original API path/URL to send back on save. */
+  mainImageApiUrl: string | null;
+  /** Persisted bookable window (HH:mm). Null until the owner configures it. */
+  hourlySlotStart: string | null;
+  hourlySlotEnd: string | null;
   photos: ExistingHallPhoto[];
   adminLocked: boolean;
   systemLocked: boolean;
@@ -59,8 +65,13 @@ export type HallEditFormValues = {
   features: string[];
   otherFeatures: string;
   existingPhotos: ExistingHallPhoto[];
-  /** URL of the existing photo used as the cover (mainImageUrl on PUT). */
+  /** URL of the existing photo used as the cover (display). */
   coverPhotoUrl: string | null;
+  /** API path/URL for the current cover. Not a display URL. */
+  coverApiUrl: string | null;
+  /** Persisted bookable window echoed on save so a details edit does not clear it. */
+  hourlySlotStart: string | null;
+  hourlySlotEnd: string | null;
   /** Replacement cover file — tracked separately from existing media IDs. */
   mainPhoto: File | null;
   /** Newly picked gallery files — never mixed with existing photo IDs. */

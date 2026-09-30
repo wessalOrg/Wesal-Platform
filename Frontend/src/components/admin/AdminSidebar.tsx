@@ -9,9 +9,12 @@ import WesalLogo from "@/components/brand/WesalLogo";
 import {
   ADMIN_MANAGEMENT_PATH,
   ADMIN_MESSAGES_PATH,
+  ADMIN_REJECTED_HALLS_PATH,
   ADMIN_SUBSCRIPTIONS_PATH,
 } from "@/lib/account-profile-path";
 import { useT } from "@/i18n";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
+import UnreadBadge from "@/components/ui/UnreadBadge";
 
 type AdminSidebarProps = {
   id?: string;
@@ -29,8 +32,13 @@ export default function AdminSidebar({
   const router = useRouter();
   const { logout, isLoggingOut } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const { count: unreadCount, ready: unreadReady } = useUnreadCount();
+  const messagesUnread = unreadReady ? unreadCount : 0;
   const homeActive =
     pathname === ADMIN_MANAGEMENT_PATH || pathname.startsWith(`${ADMIN_MANAGEMENT_PATH}/halls`);
+  const rejectedActive =
+    pathname === ADMIN_REJECTED_HALLS_PATH ||
+    pathname.startsWith(`${ADMIN_REJECTED_HALLS_PATH}/`);
   const subscriptionsActive =
     pathname === ADMIN_SUBSCRIPTIONS_PATH || pathname.startsWith(`${ADMIN_SUBSCRIPTIONS_PATH}/`);
   const messagesActive =
@@ -74,6 +82,24 @@ export default function AdminSidebar({
             </li>
             <li>
               <Link
+                href={ADMIN_REJECTED_HALLS_PATH}
+                prefetch
+                className={`seeker-dash-sidebar-link${
+                  rejectedActive ? " seeker-dash-sidebar-link--active" : ""
+                }`}
+                aria-current={rejectedActive ? "page" : undefined}
+                data-testid="admin-nav-rejected-halls"
+                onClick={onNavigate}
+                onMouseEnter={() => router.prefetch(ADMIN_REJECTED_HALLS_PATH)}
+              >
+                <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+                  <RejectedHallsIcon />
+                </span>
+                <span>{t("admin.nav.rejectedHalls")}</span>
+              </Link>
+            </li>
+            <li>
+              <Link
                 href={ADMIN_SUBSCRIPTIONS_PATH}
                 prefetch
                 className={`seeker-dash-sidebar-link${
@@ -105,7 +131,14 @@ export default function AdminSidebar({
                 <span className="seeker-dash-sidebar-icon" aria-hidden="true">
                   <MessagesIcon />
                 </span>
-                <span>{t("admin.nav.messages")}</span>
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 truncate">{t("admin.nav.messages")}</span>
+                  <UnreadBadge
+                    count={messagesUnread}
+                    label={t("messages.unreadCount", { count: messagesUnread })}
+                    data-testid="admin-nav-messages-unread"
+                  />
+                </span>
               </Link>
             </li>
           </ul>
@@ -113,13 +146,13 @@ export default function AdminSidebar({
 
         <div className="seeker-dash-sidebar-footer">
           <Link
-            href="/halls"
+            href="/"
             prefetch
             className="seeker-dash-sidebar-browse"
             data-testid="admin-nav-browse-halls"
             onClick={onNavigate}
-            onMouseEnter={() => router.prefetch("/halls")}
-            onFocus={() => router.prefetch("/halls")}
+            onMouseEnter={() => router.prefetch("/")}
+            onFocus={() => router.prefetch("/")}
           >
             <span className="seeker-dash-sidebar-icon" aria-hidden="true">
               <HomeSiteIcon />
@@ -162,6 +195,16 @@ function SubmissionsIcon() {
     <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
       <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.7" />
       <path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function RejectedHallsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M9.5 13.5 14.5 18.5M14.5 13.5 9.5 18.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }

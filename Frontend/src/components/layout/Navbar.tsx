@@ -9,7 +9,7 @@ import AuthAccountMenu from "@/components/layout/AuthAccountMenu";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import NavbarNotificationsButton from "@/components/layout/NavbarNotificationsButton";
 import { useTranslateLang } from "@/i18n";
-import { getAccountMessagesPath, getAccountProfilePath } from "@/lib/account-profile-path";
+import { getAccountProfilePath } from "@/lib/account-profile-path";
 import { markAuthNavigation } from "@/lib/auth-nav";
 
 const NAV_HREFS = [

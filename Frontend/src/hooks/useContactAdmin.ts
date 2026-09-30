@@ -51,10 +51,7 @@ export function useContactAdmin() {
   );
 
   useEffect(() => {
-    if (!isHallOwner) {
-      setFetched(null);
-      return;
-    }
+    if (!isHallOwner) return;
     let cancelled = false;
     void loadOwnerInbox()
       .then((items) => {
@@ -68,7 +65,13 @@ export function useContactAdmin() {
     };
   }, [isHallOwner]);
 
-  const conversations = inbox?.conversations?.length ? inbox.conversations : fetched ?? [];
+  const inboxConversations = inbox?.conversations;
+  const conversations = useMemo<ConversationSummary[]>(() => {
+    if (inboxConversations?.length) return inboxConversations;
+    // Fetched inbox only applies to owners; ignore stale data after a role change.
+    return isHallOwner ? fetched ?? [] : [];
+  }, [fetched, inboxConversations, isHallOwner]);
+
   const adminConversation = useMemo(
     () => pickOwnerAdminConversation(conversations, preferredHallId),
     [conversations, preferredHallId],

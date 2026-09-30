@@ -55,8 +55,9 @@ export function useHallBookingRequests(hallId: string) {
 
   const [boundHallId, setBoundHallId] = useState(hallId);
   const [requests, setRequests] = useState<OwnerHallBookingRequest[]>([]);
-  const [status, setStatus] =
-    useState<OwnerHallBookingRequestsLoadStatus>("loading");
+  const [status, setStatus] = useState<OwnerHallBookingRequestsLoadStatus>(() =>
+    hallId.trim() ? "loading" : "ready",
+  );
   const [errorKind, setErrorKind] =
     useState<OwnerHallBookingRequestsErrorKind | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -71,7 +72,8 @@ export function useHallBookingRequests(hallId: string) {
     setErrorKind(null);
     setErrorKey(null);
     setIsRefreshing(false);
-    setStatus("loading");
+    // No Hall selected → nothing to load; otherwise the effect below fetches.
+    setStatus(hallId.trim() ? "loading" : "ready");
   }
 
   useEffect(() => {
@@ -142,12 +144,8 @@ export function useHallBookingRequests(hallId: string) {
 
   useEffect(() => {
     generationRef.current += 1;
-    if (!hallId.trim()) {
-      setRequests([]);
-      setStatus("ready");
-      setIsRefreshing(false);
-      return;
-    }
+    // Empty hallId state is already reconciled during render above.
+    if (!hallId.trim()) return;
     const timer = window.setTimeout(() => {
       void load("initial");
     }, 0);

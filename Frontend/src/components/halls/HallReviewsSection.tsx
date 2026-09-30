@@ -17,6 +17,8 @@ type HallReviewsSectionProps = {
   reviewCount?: number | null;
   comments: HallReview[];
   onCommentSubmitted: (review: HallReview) => void;
+  onCommentUpdated: (review: HallReview) => void;
+  onCommentDeleted: (commentId: string) => void;
 };
 
 function estimateDistribution(average: number, total: number): number[] {
@@ -41,6 +43,8 @@ export default function HallReviewsSection({
   reviewCount,
   comments,
   onCommentSubmitted,
+  onCommentUpdated,
+  onCommentDeleted,
 }: HallReviewsSectionProps) {
   const t = useT();
   const [summary, setSummary] = useState<{
@@ -121,7 +125,11 @@ export default function HallReviewsSection({
         </ul>
       </div>
 
-      <HallCommentList comments={comments} />
+      <HallCommentList
+        comments={comments}
+        onCommentUpdated={onCommentUpdated}
+        onCommentDeleted={onCommentDeleted}
+      />
 
       <div className="hall-add-review">
         <p className="hall-add-review-title">{t("halls.details.addReview")}</p>

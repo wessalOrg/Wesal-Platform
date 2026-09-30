@@ -99,7 +99,7 @@ export function buildAdminMessageItems(
   }
 
   const fromInbox = conversations.map((conversation) => {
-    const base = conversationToAdminMessageItem(conversation);
+    const base = conversationToAdminMessageItem(conversation, conversation.isUnread);
     const attention = attentionByHall.get(conversation.hallId.toLowerCase());
     if (!attention) return base;
 

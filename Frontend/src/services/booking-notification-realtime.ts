@@ -1,5 +1,7 @@
-import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
+import { HubConnection, HubConnectionBuilder, HubConnectionState } from "@microsoft/signalr";
+import { apiOrigin } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth-token";
+import { realtimeLogger } from "@/lib/realtime-logger";
 import {
   parseBookingRequestRealtimeEvent,
   type BookingRequestRealtimeEvent,
@@ -33,12 +35,7 @@ function usesMockRealtime(): boolean {
 function notificationsHubUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_BOOKING_NOTIFICATIONS_HUB_URL?.trim();
   if (explicit) return explicit;
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5298/api/v1";
-  try {
-    return `${new URL(apiBase).origin}/hubs/owner-dashboard`;
-  } catch {
-    return "http://localhost:5298/hubs/owner-dashboard";
-  }
+  return `${apiOrigin()}/hubs/owner-dashboard`;
 }
 
 function publish(raw: unknown) {
@@ -98,7 +95,7 @@ async function ensureHub(): Promise<HubConnection | null> {
         accessTokenFactory: () => getAccessToken() ?? "",
       })
       .withAutomaticReconnect()
-      .configureLogging(LogLevel.Error)
+      .configureLogging(realtimeLogger)
       .build();
     await connection.start();
     bindHubEvents(connection);

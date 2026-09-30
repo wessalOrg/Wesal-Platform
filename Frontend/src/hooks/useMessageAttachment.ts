@@ -22,22 +22,16 @@ export function useMessageAttachment(
 ) {
   const scopedConversation = conversationId?.trim() || null;
   const scopedMessage = messageId?.trim() || null;
-  const [url, setUrl] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    enabled && scopedConversation && scopedMessage ? "loading" : "idle",
-  );
+  const active = enabled && scopedConversation !== null && scopedMessage !== null;
+  // One key per request so a stale result can never be shown for a newer message.
+  const requestKey = active ? `${scopedConversation}|${scopedMessage}|${rawUrl ?? ""}` : null;
+  const [result, setResult] = useState<AttachmentResult | null>(null);
 
   useEffect(() => {
-    if (!enabled || !scopedConversation || !scopedMessage) {
-      setUrl(null);
-      setStatus("idle");
-      return;
-    }
+    if (!requestKey || !scopedConversation || !scopedMessage) return;
 
     let cancelled = false;
     let objectUrl: string | null = null;
-    setStatus("loading");
-    setUrl(null);
 
     void api
       .get<Blob>(attachmentRequestPath(scopedConversation, scopedMessage, rawUrl), {
@@ -47,24 +41,31 @@ export function useMessageAttachment(
       .then(({ data }) => {
         if (cancelled) return;
         if (!data || (typeof Blob !== "undefined" && data.size === 0)) {
-          setStatus("error");
+          setResult({ key: requestKey, url: null, status: "error" });
           return;
         }
         objectUrl = URL.createObjectURL(data);
-        setUrl(objectUrl);
-        setStatus("ready");
+        setResult({ key: requestKey, url: objectUrl, status: "ready" });
       })
       .catch(() => {
         if (cancelled) return;
-        setUrl(null);
-        setStatus("error");
+        setResult({ key: requestKey, url: null, status: "error" });
       });
 
     return () => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [enabled, rawUrl, scopedConversation, scopedMessage]);
+  }, [rawUrl, requestKey, scopedConversation, scopedMessage]);
 
-  return { url, status };
+  // Derive from the current key: results for a previous request are ignored.
+  if (!requestKey) return { url: null, status: "idle" as const };
+  if (result?.key === requestKey) return { url: result.url, status: result.status };
+  return { url: null, status: "loading" as const };
 }
+
+type AttachmentResult = {
+  key: string;
+  url: string | null;
+  status: "ready" | "error";
+};

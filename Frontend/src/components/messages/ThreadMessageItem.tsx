@@ -20,6 +20,7 @@ type ThreadMessageItemProps = {
   hallName: string;
   conversationId?: string | null;
   arriving?: boolean;
+  tone?: "default" | "owner";
   onRetrySend: (messageId: string) => void;
 };
 
@@ -30,6 +31,7 @@ export default function ThreadMessageItem({
   hallName,
   conversationId,
   arriving = false,
+  tone = "default",
   onRetrySend,
 }: ThreadMessageItemProps) {
   const classified = useBookingRejectionMessage(safeMessageText(message?.content), hallName ?? "");
@@ -62,6 +64,7 @@ export default function ThreadMessageItem({
       message={message}
       own={own}
       retrying={retrying}
+      tone={tone}
       conversationId={conversationId}
       onRetrySend={onRetrySend}
     />
@@ -72,12 +75,14 @@ function ThreadBubble({
   message,
   own,
   retrying,
+  tone = "default",
   conversationId,
   onRetrySend,
 }: {
   message: ThreadMessage;
   own: boolean;
   retrying: boolean;
+  tone?: "default" | "owner";
   conversationId?: string | null;
   onRetrySend: (messageId: string) => void;
 }) {
@@ -93,14 +98,18 @@ function ThreadBubble({
       data-delivery={retrying ? "retrying" : message.delivery}
     >
       <div className={`min-w-0 max-w-[85%] ${own ? "ms-8" : "me-6"}`}>
-        {own ? null : (
+        {own || tone === "owner" ? null : (
           <p className="mb-1 truncate text-[0.68rem] text-[var(--wesal-muted)]">{message.senderName}</p>
         )}
         <div
           className={
-            own
-              ? `overflow-hidden rounded-2xl rounded-ee-md bg-[var(--wesal-maroon)] px-3.5 py-2.5 text-[0.82rem] leading-6 break-words whitespace-pre-wrap [overflow-wrap:anywhere] text-white shadow-[0_6px_16px_rgba(193,123,127,0.28)] ${pending ? "opacity-70" : ""}`
-              : "overflow-hidden rounded-2xl rounded-es-md border border-[var(--wesal-border)] bg-white px-3.5 py-2.5 text-[0.82rem] leading-6 break-words whitespace-pre-wrap [overflow-wrap:anywhere] text-[var(--wesal-text)]"
+            tone === "owner"
+              ? own
+                ? `owner-chat-bubble is-own ${pending ? "opacity-70" : ""}`
+                : "owner-chat-bubble"
+              : own
+                ? `overflow-hidden rounded-2xl rounded-ee-md bg-[var(--wesal-maroon)] px-3.5 py-2.5 text-[0.82rem] leading-6 break-words whitespace-pre-wrap [overflow-wrap:anywhere] text-white shadow-[0_6px_16px_rgba(193,123,127,0.28)] ${pending ? "opacity-70" : ""}`
+                : "overflow-hidden rounded-2xl rounded-es-md border border-[var(--wesal-border)] bg-white px-3.5 py-2.5 text-[0.82rem] leading-6 break-words whitespace-pre-wrap [overflow-wrap:anywhere] text-[var(--wesal-text)]"
           }
         >
           <ThreadBubbleBody message={message} conversationId={conversationId} />
@@ -122,7 +131,7 @@ function ThreadBubble({
           </div>
         ) : (
           <p className={`mt-1 text-[0.65rem] text-[var(--wesal-muted)] ${own ? "text-end" : "text-start"}`}>
-            {formatRelativeTime(message.sentAt)}
+            {tone === "owner" ? formatClock(message.sentAt) : formatRelativeTime(message.sentAt)}
           </p>
         )}
       </div>
@@ -159,6 +168,12 @@ function ThreadBubbleBody({
   }
 
   return text;
+}
+
+function formatClock(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function ChatAttachmentBubble({

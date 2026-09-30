@@ -44,10 +44,3 @@ export function inferChatTextLang(text: string): ChatTextLang {
 export function chatTextDir(lang: ChatTextLang): ChatTextDir {
   return lang === "en" ? "ltr" : "rtl";
 }
-
-export function resolveChatTextLang(
-  text: string,
-  responseLanguage?: string | null,
-): ChatTextLang {
-  return parseChatResponseLanguage(responseLanguage) ?? inferChatTextLang(text);
-}

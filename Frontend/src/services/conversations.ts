@@ -4,12 +4,12 @@ import { getAccessToken } from "@/lib/auth-token";
 import { t } from "@/i18n";
 import {
   mockCreateHallConversation,
-  mockFetchConversation,
   mockFetchInbox,
   mockFetchThread,
   mockMarkConversationAsRead,
   mockSendAttachment,
   mockSendMessage,
+  mockUnreadConversationCount,
 } from "@/services/conversations-mock";
 import {
   mapInboxItemDto,
@@ -85,16 +85,6 @@ export async function createHallConversation(hallId: string): Promise<Conversati
   return thread;
 }
 
-export async function fetchConversation(conversationId: string): Promise<ConversationThread> {
-  if (conversationsUseMock()) {
-    return mockFetchConversation(conversationId);
-  }
-  const { data } = await api.get<ConversationResponse>(`/conversations/${conversationId}`, {
-    timeout: 8000,
-  });
-  return mapResponse(data, "");
-}
-
 function mapInboxItem(data: unknown): ConversationSummary | null {
   return mapInboxItemDto(data);
 }
@@ -105,10 +95,6 @@ export async function fetchInboxConversations(): Promise<ConversationSummary[]> 
   return unwrapConversationList(data)
     .map(mapInboxItem)
     .filter((item): item is ConversationSummary => Boolean(item));
-}
-
-export async function fetchMyConversations(): Promise<ConversationSummary[]> {
-  return fetchInboxConversations();
 }
 
 export async function fetchConversationThread(conversationId: string): Promise<MessageThread> {
@@ -193,7 +179,7 @@ export async function sendConversationAttachment(
 export type ConversationErrorScope = "start" | "inbox" | "thread" | "send";
 
 export async function fetchUnreadConversationCount(): Promise<number> {
-  if (conversationsUseMock()) return 0;
+  if (conversationsUseMock()) return mockUnreadConversationCount();
   const { data } = await api.get<unknown>("/conversations/unread-count", { timeout: 8000 });
   const root = data && typeof data === "object" ? (data as { unreadCount?: unknown; UnreadCount?: unknown }) : null;
   const count = root?.unreadCount ?? root?.UnreadCount;

@@ -1,6 +1,5 @@
 import type { UiLang } from "@/lib/language";
 import type {
-  FeaturedHall,
   HallAvailabilityDay,
   HallDetail,
   HallDetails,
@@ -302,19 +301,6 @@ export function localizeReviews(reviews: HallReview[], lang: UiLang): HallReview
       timeAgo: mapped.timeAgo,
     };
   });
-}
-
-export function localizeFeaturedHall(hall: FeaturedHall, lang: UiLang): FeaturedHall {
-  if (lang !== "en") return hall;
-  return {
-    ...hall,
-    name: localizeHallName(hall.id, hall.name, lang),
-    location: localizeLocation(hall.location, lang),
-    priceLabel: localizePriceLabel(hall.priceLabel, lang),
-    tags: hall.tags?.map((tag) => localizeTag(tag, lang)),
-    bookedPeriodsSummary: localizeBookedSummary(hall.bookedPeriodsSummary, lang),
-    availabilityDays: localizeAvailabilityDays(hall.availabilityDays, lang),
-  };
 }
 
 export function localizeHallDetails(hall: HallDetails, lang: UiLang): HallDetails {

@@ -1,33 +1,13 @@
 /**
- * Central Hall-ID scoped query identities (US-OWNER-08).
- * The app uses custom hooks (not TanStack Query); these keys document
- * and stabilize Hall-scoped cache/fetch boundaries for future RQ migration.
+ * Central Hall-ID scoped owner route builders (US-OWNER-08).
+ * Active Hall selection comes from the route: /owner/halls/[hallId]
  */
-export const hallOwnerQueryKeys = {
-  hallsList: () => ["hall-owner", "halls"] as const,
-  hallDetails: (hallId: string) =>
-    ["hall-owner", "hall-details", hallId] as const,
-  hallStatus: (hallId: string) =>
-    ["hall-owner", "hall-status", hallId] as const,
-  hallSubscription: (hallId: string) =>
-    ["hall-owner", "subscription", hallId] as const,
-  hallBookingRequests: (hallId: string) =>
-    ["hall-owner", "booking-requests", hallId] as const,
-  adminMessages: (hallId: string) =>
-    ["hall-owner", "admin-messages", hallId] as const,
-};
-
-/** Active Hall selection comes from the route: /owner/halls/[hallId] */
 export function ownerHallPath(hallId: string): string {
   return `/owner/halls/${encodeURIComponent(hallId)}`;
 }
 
 export function ownerHallSubscriptionPath(hallId: string): string {
   return `${ownerHallPath(hallId)}#hall-subscription-heading-${hallId}`;
-}
-
-export function ownerHallPaymentPath(hallId: string): string {
-  return `${ownerHallPath(hallId)}#owner-payment-receipt-section`;
 }
 
 export function ownerAdminMessagesPath(

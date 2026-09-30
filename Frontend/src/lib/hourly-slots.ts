@@ -71,11 +71,3 @@ export function resolveHourlyDayStatus(day: HourlyDay | undefined, dateIso: stri
   if (day?.blocked) return "blocked";
   return "available";
 }
-
-export function monthDateIsos(year: number, monthIndex: number): string[] {
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  return Array.from({ length: daysInMonth }, (_, index) => {
-    const day = index + 1;
-    return `${year}-${pad(monthIndex + 1)}-${pad(day)}`;
-  });
-}

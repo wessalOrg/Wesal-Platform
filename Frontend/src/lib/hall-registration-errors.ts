@@ -32,6 +32,7 @@ const FIELD_ALIASES: Record<string, HallRegistrationFieldPath> = {
   youtubevideourl: "youtubeVideoUrl",
   youtube: "youtubeVideoUrl",
   mainphoto: "mainPhoto",
+  mainimageurl: "mainPhoto",
   photos: "photos",
   photo: "photos",
   images: "photos",
@@ -39,6 +40,15 @@ const FIELD_ALIASES: Record<string, HallRegistrationFieldPath> = {
 
 function normalizeAliasKey(key: string): string {
   return key.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function fieldAlias(key: string): HallRegistrationFieldPath | undefined {
+  const normalized = normalizeAliasKey(key);
+  const direct = FIELD_ALIASES[normalized];
+  if (direct) return direct;
+  if (normalized.startsWith("photos") || normalized.includes("photourl")) return "photos";
+  if (normalized.includes("mainimage")) return "mainPhoto";
+  return undefined;
 }
 
 export function mapHallApiErrorsToFormErrors(
@@ -49,7 +59,7 @@ export function mapHallApiErrorsToFormErrors(
   for (const [key, messages] of Object.entries(error.fieldErrors)) {
     const message = messages[0]?.trim();
     if (!message) continue;
-    const field = FIELD_ALIASES[normalizeAliasKey(key)];
+    const field = fieldAlias(key);
     if (!field) continue;
     if (!mapped[field]) mapped[field] = message;
   }

@@ -1,9 +1,11 @@
 import { toHallPaymentStatus } from "@/constants/hallPaymentStatus";
+import { normalizeTimeOnly } from "@/lib/hourly-slots";
 import {
   fromHallRegionApi,
   resolveOwnerMediaUrl,
 } from "@/lib/hall-owner-api-region";
 import { hallAccessFromUnknown } from "@/lib/hall-access";
+import { apiUploadPath } from "@/lib/hall-media-url";
 import { mapBackendHallStatus } from "@/lib/hall-owner-halls-mapper";
 import type {
   ExistingHallPhoto,
@@ -48,6 +50,8 @@ export type OwnerHallDetailsDto = {
   paymentStatus?: string | number | boolean | null;
   paymentReceiptUploadedAt?: string | null;
   hasPaymentReceipt?: boolean | null;
+  hourlySlotStart?: string | null;
+  hourlySlotEnd?: string | null;
   isEditable?: boolean | null;
   isPaid?: boolean | null;
   paid?: boolean | null;
@@ -59,7 +63,8 @@ export type OwnerHallDetailsDto = {
 };
 
 function mapPhoto(dto: OwnerHallPhotoDto, index: number): ExistingHallPhoto | null {
-  const url = String(dto.url ?? "").trim();
+  const record = dto as OwnerHallPhotoDto & Record<string, unknown>;
+  const url = String(dto.url ?? record.Url ?? "").trim();
   if (!url) return null;
   const id = String(dto.id ?? "").trim() || `photo-${index}`;
   return {
@@ -71,23 +76,26 @@ function mapPhoto(dto: OwnerHallPhotoDto, index: number): ExistingHallPhoto | nu
 }
 
 /**
- * Prefer sending the API-relative path when we resolved an absolute URL for display.
+ * Media URL to echo back on PUT: always the API-relative `/uploads/...` path for
+ * API uploads (even when the stored value was a legacy absolute URL), otherwise
+ * the value unchanged. Keeps stored references origin-free (backend Edit 29).
+ */
+export function toOwnerMediaApiUrl(url: string): string {
+  const value = url.trim();
+  return apiUploadPath(value) ?? value;
+}
+
+/**
+ * Prefer the original API value over the resolved display URL.
  */
 export function toOwnerPhotoApiUrl(photo: ExistingHallPhoto): string {
-  const apiUrl = photo.apiUrl?.trim();
-  if (apiUrl) return apiUrl;
-  const url = photo.url.trim();
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5298/api/v1";
-  const origin = apiBase.replace(/\/api\/v1\/?$/i, "");
-  if (origin && url.startsWith(origin)) {
-    return url.slice(origin.length) || url;
-  }
-  return url;
+  return toOwnerMediaApiUrl(photo.apiUrl?.trim() || photo.url);
 }
 
 function mapPhotos(dto: OwnerHallDetailsDto): ExistingHallPhoto[] {
-  const list = Array.isArray(dto.photos) ? dto.photos : [];
+  const record = dto as OwnerHallDetailsDto & Record<string, unknown>;
+  const raw = dto.photos ?? record.Photos;
+  const list = Array.isArray(raw) ? (raw as OwnerHallPhotoDto[]) : [];
   const photos: ExistingHallPhoto[] = [];
   list.forEach((item, index) => {
     const mapped = mapPhoto(item, index);
@@ -119,6 +127,11 @@ function readStringList(value: unknown): string[] {
   return [];
 }
 
+function readHour(value: unknown): string | null {
+  const normalized = normalizeTimeOnly(value);
+  return normalized || null;
+}
+
 function readPaymentReceiptUploadedAt(raw: string | null | undefined): string | null {
   const value = String(raw ?? "").trim();
   return value || null;
@@ -133,12 +146,16 @@ export function mapOwnerHallDetailsDto(
   const id = String(dto.hallId ?? fallbackId ?? "").trim();
   if (!id) return null;
 
+  const record = dto as OwnerHallDetailsDto & Record<string, unknown>;
   const status =
-    mapBackendHallStatus(String(dto.status ?? "")) ?? "Pending";
+    mapBackendHallStatus(String(dto.status ?? record.Status ?? "")) ?? "Pending";
   const access = hallAccessFromUnknown(dto);
   const region =
     fromHallRegionApi(dto.regionDisplayName) ||
-    fromHallRegionApi(dto.region);
+    fromHallRegionApi(
+      dto.region ?? (record.Region as string | number | null | undefined),
+    );
+  const rawCover = String(dto.mainImageUrl ?? record.MainImageUrl ?? "").trim();
 
   return {
     id,
@@ -164,9 +181,10 @@ export function mapOwnerHallDetailsDto(
       dto.paymentReceiptUploadedAt,
     ),
     hasPaymentReceipt: Boolean(dto.hasPaymentReceipt),
-    mainImageUrl: dto.mainImageUrl
-      ? resolveOwnerMediaUrl(String(dto.mainImageUrl))
-      : null,
+    mainImageUrl: rawCover ? resolveOwnerMediaUrl(rawCover) : null,
+    mainImageApiUrl: rawCover || null,
+    hourlySlotStart: readHour(dto.hourlySlotStart ?? record.HourlySlotStart),
+    hourlySlotEnd: readHour(dto.hourlySlotEnd ?? record.HourlySlotEnd),
     photos: mapPhotos(dto),
     adminLocked: access.adminLocked,
     systemLocked: access.systemLocked,
@@ -193,6 +211,10 @@ export function mapHallDetailsToEditForm(
     otherFeatures: details.otherFeatures,
     existingPhotos: [...details.photos],
     coverPhotoUrl: details.mainImageUrl ?? (details.photos[0]?.url ?? null),
+    coverApiUrl:
+      details.mainImageApiUrl ?? details.photos[0]?.apiUrl ?? details.photos[0]?.url ?? null,
+    hourlySlotStart: details.hourlySlotStart,
+    hourlySlotEnd: details.hourlySlotEnd,
     mainPhoto: null,
     photos: [],
   };
