@@ -124,6 +124,9 @@ public class ConversationsController : ControllerBase
     [HttpPost("api/v{version:apiVersion}/conversations/{conversationId:guid}/messages/attachment")]
     [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
     [Consumes("multipart/form-data")]
+    // Single 5 MB image envelope.
+    [RequestSizeLimit(Wesal.API.Infrastructure.UploadLimits.SingleFileRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = Wesal.API.Infrastructure.UploadLimits.SingleFileRequestBytes)]
     [ProducesResponseType(typeof(SendMessageResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -141,6 +144,10 @@ public class ConversationsController : ControllerBase
             ModelState.AddModelError(nameof(file), "An image file is required.");
             return ValidationProblem(ModelState);
         }
+
+        // Declared length is known before buffering: reject >5 MB here so an
+        // oversized proof image never fills memory before service validation.
+        Wesal.API.Infrastructure.UploadedFileGuard.ThrowIfTooLarge(file, nameof(file), "The attached image must not exceed 5MB.");
 
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms, cancellationToken);

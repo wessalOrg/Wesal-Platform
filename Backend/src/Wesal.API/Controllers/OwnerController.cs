@@ -149,6 +149,9 @@ public class OwnerController : ControllerBase
     /// </summary>
     [HttpPut("halls/{hallId:guid}")]
     [Consumes("application/json", "multipart/form-data")]
+    // Same 1-cover-plus-gallery envelope as hall creation when the update carries files.
+    [RequestSizeLimit(Infrastructure.UploadLimits.HallFormRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = Infrastructure.UploadLimits.HallFormRequestBytes)]
     [ProducesResponseType(typeof(OwnerHallDetailsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -259,22 +262,26 @@ public class OwnerController : ControllerBase
             Photos = parsed.Photos,
             HourlySlotStart = parsed.HourlySlotStart,
             HourlySlotEnd = parsed.HourlySlotEnd,
-            MainPhoto = await ReadUploadAsync(Request.Form.Files.GetFile("mainPhoto"), cancellationToken),
-            NewPhotos = await ReadUploadsAsync(Request.Form.Files.GetFiles("photos"), cancellationToken)
+            MainPhoto = await ReadUploadAsync(Request.Form.Files.GetFile("mainPhoto"), "MainPhoto", cancellationToken),
+            NewPhotos = await ReadUploadsAsync(Request.Form.Files.GetFiles("photos"), "Photos", cancellationToken)
         };
     }
 
     private static async Task<HallPhotoUpload?> ReadUploadAsync(
         IFormFile? file,
+        string fieldName,
         CancellationToken cancellationToken)
     {
         // Zero-byte parts are preserved (not dropped) so an empty gallery upload is
         // properly rejected as "Invalid photo." downstream instead of silently
-        // vanishing and changing which gallery the merge validates.
+        // vanishing and changing which gallery the merge validates. Only oversized
+        // parts fail here, before buffering, using the create-path wording.
         if (file is null)
         {
             return null;
         }
+
+        Infrastructure.UploadedFileGuard.ThrowIfTooLarge(file, fieldName, "Photo size must not exceed 5MB.");
 
         using var stream = new MemoryStream();
         await file.CopyToAsync(stream, cancellationToken);
@@ -289,6 +296,7 @@ public class OwnerController : ControllerBase
 
     private static async Task<IReadOnlyList<HallPhotoUpload>?> ReadUploadsAsync(
         IReadOnlyList<IFormFile> files,
+        string fieldName,
         CancellationToken cancellationToken)
     {
         if (files.Count == 0)
@@ -299,7 +307,7 @@ public class OwnerController : ControllerBase
         var uploads = new List<HallPhotoUpload>(files.Count);
         foreach (var file in files)
         {
-            var upload = await ReadUploadAsync(file, cancellationToken);
+            var upload = await ReadUploadAsync(file, fieldName, cancellationToken);
             if (upload is not null)
             {
                 uploads.Add(upload);
@@ -450,6 +458,11 @@ public class OwnerController : ControllerBase
 
     [HttpPost("halls")]
     [Consumes("multipart/form-data")]
+    // Envelope derived from the real contract: 1 cover + 10 gallery photos at
+    // 5 MB each (see UploadLimits). Rejects oversized totals before buffering and
+    // lifts the 30 MB Kestrel default that would otherwise block full galleries.
+    [RequestSizeLimit(Infrastructure.UploadLimits.HallFormRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = Infrastructure.UploadLimits.HallFormRequestBytes)]
     [ProducesResponseType(typeof(CreateHallResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -474,14 +487,20 @@ public class OwnerController : ControllerBase
     {
         var photoUploads = Photos == null ? null : await Task.WhenAll(Photos.Select(async p =>
         {
+            // Declared length is known from the multipart framing: reject empty /
+            // oversized files here instead of buffering them first.
+            Infrastructure.UploadedFileGuard.EnsureGalleryPhoto(p);
             using var ms = new MemoryStream();
             await p.CopyToAsync(ms, cancellationToken);
             return new HallPhotoUpload { FileName = p.FileName, ContentType = p.ContentType, Content = ms.ToArray() };
         }));
 
         HallPhotoUpload? mainPhotoUpload = null;
-        if (MainPhoto is not null)
+        // An empty cover keeps meaning "no cover" downstream; only oversized
+        // covers fail here, before buffering.
+        if (MainPhoto is not null && MainPhoto.Length > 0)
         {
+            Infrastructure.UploadedFileGuard.ThrowIfTooLarge(MainPhoto, "MainPhoto", "Photo size must not exceed 5MB.");
             using var mainStream = new MemoryStream();
             await MainPhoto.CopyToAsync(mainStream, cancellationToken);
             mainPhotoUpload = new HallPhotoUpload { FileName = MainPhoto.FileName, ContentType = MainPhoto.ContentType, Content = mainStream.ToArray() };
@@ -543,13 +562,18 @@ public class OwnerController : ControllerBase
     /// </summary>
     [HttpPost("profile/identity-document")]
     [Consumes("multipart/form-data")]
+    // Single 5 MB document envelope: missing/empty/oversized parts fail with a
+    // clean 400 here instead of a NullReference 500 or late service rejection.
+    [RequestSizeLimit(Infrastructure.UploadLimits.SingleFileRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = Infrastructure.UploadLimits.SingleFileRequestBytes)]
     [ProducesResponseType(typeof(IdentityDocumentUploadResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<IdentityDocumentUploadResult>> UploadIdentityDocument(
-        IFormFile file,
+        IFormFile? file,
         CancellationToken cancellationToken)
     {
+        file = Infrastructure.UploadedFileGuard.EnsureIdentityDocument(file);
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms, cancellationToken);
 
