@@ -159,6 +159,8 @@ try
     // Serve hall media uploads from the writable media storage root (e.g. /tmp/wesal-media),
     // keeping the public URL scheme /uploads/halls/{hallId}/{fileName}.
     var mediaStorage = app.Services.GetRequiredService<IHallMediaStorage>();
+    var documentStorage = app.Services.GetRequiredService<Wesal.Application.Common.Interfaces.IDocumentStorage>();
+    WarnIfEphemeralUploadStorage(mediaStorage.Root, documentStorage.Root);
     app.UseStaticFiles(new StaticFileOptions
     {
         RequestPath = "/uploads",
@@ -233,5 +235,36 @@ static void ValidateNonDevelopmentConfiguration(IWebHostEnvironment environment,
         Log.Warning(
             "GoogleAI:GeminiModel is missing or invalid ('{Model}'); using the built-in default and deterministic fallbacks. Set GoogleAI__GeminiModel to a valid id such as gemini-2.5-flash.",
             geminiModel);
+    }
+}
+
+/// <summary>
+/// Production hardening: container-local temp storage is writable but NOT durable.
+/// Warn explicitly at startup when uploads would not survive a redeploy so the
+/// missing persistent-storage infrastructure cannot go unnoticed. Point
+/// HallMedia:Directory / DocumentStorage:Directory at durable storage to silence.
+/// </summary>
+static bool IsEphemeralUploadRoot(string root)
+{
+    var temp = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar);
+    var full = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
+    return full.Equals(temp, StringComparison.OrdinalIgnoreCase)
+        || full.StartsWith(temp + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+}
+
+static void WarnIfEphemeralUploadStorage(string mediaRoot, string documentRoot)
+{
+    if (IsEphemeralUploadRoot(mediaRoot))
+    {
+        Log.Warning(
+            "Hall media storage is ephemeral ({Root}); uploaded photos will NOT survive instance replacement/redeploy. Set HallMedia:Directory (HallMedia__Directory) to durable storage.",
+            mediaRoot);
+    }
+
+    if (IsEphemeralUploadRoot(documentRoot))
+    {
+        Log.Warning(
+            "Protected document storage is ephemeral ({Root}); identity documents and attachments will NOT survive instance replacement/redeploy. Set DocumentStorage:Directory (DocumentStorage__Directory) to durable storage.",
+            documentRoot);
     }
 }

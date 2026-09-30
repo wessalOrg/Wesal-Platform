@@ -53,6 +53,25 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Baseline hardening headers (production-safe; no CSP: Next.js inline boot
+  // scripts require unsafe-inline, so CSP stays deferred until a nonce strategy
+  // is adopted — see the hardening report).
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
