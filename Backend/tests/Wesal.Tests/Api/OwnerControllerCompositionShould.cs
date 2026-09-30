@@ -29,7 +29,14 @@ public sealed class OwnerControllerCompositionShould
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DefaultConnection"] =
-                    "Host=localhost;Port=5432;Database=wesal;Username=postgres;Password=postgres"
+                    "Host=localhost;Port=5432;Database=wesal;Username=postgres;Password=postgres",
+                // Production refuses to boot without Jwt settings
+                // (ValidateNonDevelopmentConfiguration + ValidateOnStart).
+                ["Jwt:Issuer"] = "WesalAPI",
+                ["Jwt:Audience"] = "WesalClients",
+                ["Jwt:SecretKey"] = "test-secret-key-that-is-long-enough-32",
+                ["Jwt:ExpirationMinutes"] = "60",
+                ["Jwt:ClockSkewMinutes"] = "5"
             })
             .Build();
 
