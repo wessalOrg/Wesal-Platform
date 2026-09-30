@@ -134,6 +134,11 @@ export default function AdminSubscriptionOverviewView() {
                           variant="soft"
                           onUnlocked={(result) => {
                             applyLockState(hall.hallId, result.adminLocked, result.systemLocked);
+                            setToastKey(
+                              result.systemLocked
+                                ? "admin.halls.unlock.toast.unpaidLocked"
+                                : "admin.unlock.success",
+                            );
                           }}
                         />
                         <AdminHallLockControls

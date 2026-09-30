@@ -64,7 +64,7 @@ export function useAdminHallDetail(hallId: string | null) {
         ...current,
         adminLocked,
         systemLocked,
-        lockBadgeVisible: true,
+        lockBadgeVisible: adminLocked || systemLocked,
       };
     });
   }, []);
@@ -88,7 +88,7 @@ export function useAdminHallDetail(hallId: string | null) {
           cycleStart: result.cycleStart,
           cycleEnd: result.cycleEnd,
           daysRemaining: result.daysRemaining,
-          lockBadgeVisible: true,
+          lockBadgeVisible: result.adminLocked || result.systemLocked,
         };
       });
     },
