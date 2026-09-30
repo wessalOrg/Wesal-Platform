@@ -11,7 +11,14 @@ public sealed class TokenRevocationRepository : ITokenRevocationRepository
 {
     private const string CacheKeyPrefix = "revoked-token:";
     private static readonly TimeSpan RevocationCacheLifetime = TimeSpan.FromHours(24);
-    private static readonly TimeSpan RetentionWindow = TimeSpan.FromHours(24);
+
+    /// <summary>
+    /// A revocation record must outlive every JWT it can still invalidate: the
+    /// maximum configured token lifetime (Jwt:ExpirationMinutes range caps at 1440)
+    /// plus the maximum clock skew (Jwt:ClockSkewMinutes range caps at 30), with
+    /// margin. Deleting earlier could resurrect a revoked-but-unexpired token.
+    /// </summary>
+    private static readonly TimeSpan RetentionWindow = TimeSpan.FromHours(25);
 
     private readonly ApplicationDbContext _context;
     private readonly IMemoryCache _cache;

@@ -75,6 +75,45 @@ public class TokenRevocationRepositoryShould
     }
 
     [Fact]
+    public async Task Purge_KeepsRevocationWithinMaxTokenLifetime()
+    {
+        // A token revoked near the maximum JWT lifetime (24h) plus clock skew
+        // must stay revoked: purging it early would resurrect a live token.
+        await using var context = CreateContext();
+        context.RevokedTokens.Add(new RevokedToken
+        {
+            Jti = "old-but-live-jti",
+            UserId = "user-1",
+            RevokedAt = DateTimeOffset.UtcNow - TimeSpan.FromHours(24.5)
+        });
+        await context.SaveChangesAsync();
+
+        var repository = new TokenRevocationRepository(context);
+        await repository.RevokeAsync("fresh-jti", "user-1");
+
+        Assert.True(await context.RevokedTokens.AnyAsync(token => token.Jti == "old-but-live-jti"));
+        Assert.True(await repository.IsRevokedAsync("old-but-live-jti"));
+    }
+
+    [Fact]
+    public async Task Purge_RemovesLongExpiredRevocations()
+    {
+        await using var context = CreateContext();
+        context.RevokedTokens.Add(new RevokedToken
+        {
+            Jti = "ancient-jti",
+            UserId = "user-1",
+            RevokedAt = DateTimeOffset.UtcNow - TimeSpan.FromHours(26)
+        });
+        await context.SaveChangesAsync();
+
+        var repository = new TokenRevocationRepository(context);
+        await repository.RevokeAsync("fresh-jti", "user-1");
+
+        Assert.False(await context.RevokedTokens.AnyAsync(token => token.Jti == "ancient-jti"));
+    }
+
+    [Fact]
     public void Model_ConfiguresUniqueIndexOnJti()
     {
         using var context = CreateContext();
