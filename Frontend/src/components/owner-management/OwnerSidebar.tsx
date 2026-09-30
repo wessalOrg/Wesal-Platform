@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import WesalLogo from "@/components/brand/WesalLogo";
 import AddHallEntryAction from "@/components/owner-management/AddHallEntryAction";
-import ContactAdminButton from "@/components/owner-management/ContactAdminButton";
 import HallOwnerHallsSection from "@/components/owner-management/halls/HallOwnerHallsSection";
 import {
   HALL_OWNER_DASHBOARD_NAV,
@@ -24,11 +23,25 @@ type OwnerSidebarProps = {
   onNavigate?: () => void;
 };
 
-export default function OwnerSidebar({
+export default function OwnerSidebar(props: OwnerSidebarProps) {
+  return (
+    <Suspense fallback={<OwnerSidebarView {...props} search="" />}>
+      <OwnerSidebarWithSearch {...props} />
+    </Suspense>
+  );
+}
+
+function OwnerSidebarWithSearch(props: OwnerSidebarProps) {
+  const searchParams = useSearchParams();
+  return <OwnerSidebarView {...props} search={searchParams.toString()} />;
+}
+
+function OwnerSidebarView({
   id,
   className = "",
   onNavigate,
-}: OwnerSidebarProps) {
+  search,
+}: OwnerSidebarProps & { search: string }) {
   const t = useT();
   const pathname = usePathname();
   const router = useRouter();
@@ -55,8 +68,8 @@ export default function OwnerSidebar({
 
         <nav className="seeker-dash-sidebar-nav">
           <ul className="seeker-dash-sidebar-list seeker-dash-sidebar-list--static">
-            {HALL_OWNER_DASHBOARD_NAV.map((item) => {
-              const active = isOwnerNavActive(pathname, item.href, item.match);
+            {HALL_OWNER_DASHBOARD_NAV.filter((item) => item.id !== "account").map((item) => {
+              const active = isOwnerNavActive(pathname, item.href, item.match, search);
               return (
                 <li key={item.id}>
                   <Link
@@ -89,11 +102,32 @@ export default function OwnerSidebar({
               );
             })}
             <li>
-              <ContactAdminButton variant="sidebar" onOpened={onNavigate} />
-            </li>
-            <li>
               <AddHallEntryAction />
             </li>
+            {HALL_OWNER_DASHBOARD_NAV.filter((item) => item.id === "account").map((item) => {
+              const active = isOwnerNavActive(pathname, item.href, item.match, search);
+              return (
+                <li key={item.id}>
+                  <Link
+                    href={item.href}
+                    prefetch
+                    className={`seeker-dash-sidebar-link${
+                      active ? " seeker-dash-sidebar-link--active" : ""
+                    }`}
+                    aria-current={active ? "page" : undefined}
+                    data-testid={`owner-management-nav-${item.id}`}
+                    onClick={onNavigate}
+                    onMouseEnter={() => router.prefetch(item.href)}
+                    onFocus={() => router.prefetch(item.href)}
+                  >
+                    <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+                      <NavIcon id={item.id} />
+                    </span>
+                    <span className="min-w-0 truncate">{t(item.labelKey)}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
           <div className="seeker-dash-sidebar-scroll">
@@ -103,13 +137,13 @@ export default function OwnerSidebar({
 
         <div className="seeker-dash-sidebar-footer">
           <Link
-            href="/halls"
+            href="/"
             prefetch
             className="seeker-dash-sidebar-browse"
             data-testid="owner-nav-browse-halls"
             onClick={onNavigate}
-            onMouseEnter={() => router.prefetch("/halls")}
-            onFocus={() => router.prefetch("/halls")}
+            onMouseEnter={() => router.prefetch("/")}
+            onFocus={() => router.prefetch("/")}
           >
             <span className="seeker-dash-sidebar-icon" aria-hidden="true">
               <HomeSiteIcon />
@@ -182,6 +216,13 @@ function NavIcon({ id }: { id: HallOwnerDashboardNavId }) {
             strokeLinejoin="round"
           />
           <path d="M9 20v-6h6v6" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        </svg>
+      );
+    case "calendar":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+          <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.7" />
+          <path d="M8 3.5v3M16 3.5v3M4 9.5h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
         </svg>
       );
     case "messages":

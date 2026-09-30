@@ -81,13 +81,14 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     let active = true;
     void fetchHallComments(hallId).then((comments) => {
       if (!active) return;
-      if (comments != null && comments.length > 0) {
-        setReviews(comments.map(mapCommentToReview));
+      // null = comments API unreachable. Demo placeholder reviews only appear
+      // when demo mode is explicitly enabled, never as failed-request residue.
+      // An empty list is authoritative and must not be replaced by placeholders.
+      if (comments == null) {
+        setReviews(isDemoModeEnabled() ? localizeReviews(DEMO_HALL_REVIEWS, lang) : []);
         return;
       }
-      // No comments is authoritative: demo placeholder reviews only appear when
-      // demo mode is explicitly enabled, never as failed-request residue.
-      setReviews(isDemoModeEnabled() ? localizeReviews(DEMO_HALL_REVIEWS, lang) : []);
+      setReviews(comments.map(mapCommentToReview));
     });
     return () => {
       active = false;
@@ -374,6 +375,14 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           comments={reviews}
           onCommentSubmitted={(review) => {
             setReviews((current) => [review, ...current]);
+          }}
+          onCommentUpdated={(review) => {
+            setReviews((current) =>
+              current.map((item) => (item.id === review.id ? { ...item, ...review } : item)),
+            );
+          }}
+          onCommentDeleted={(commentId) => {
+            setReviews((current) => current.filter((item) => item.id !== commentId));
           }}
         />
       </div>

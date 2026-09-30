@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getStoredAuth } from "@/lib/auth-storage";
+import { getAccessToken } from "@/lib/auth-token";
 import { addUtcDays, parseDateIso, utcTodayIso } from "@/lib/booking-date";
 import {
   isPendingLimitReachedApiError,
@@ -20,7 +21,6 @@ import {
   formatHourlyRange,
   normalizeTimeOnly,
 } from "@/lib/hourly-slots";
-import { bookingsUseMock } from "@/services/bookings";
 import type {
   BlockDayInput,
   HourlyBookingInput,
@@ -37,9 +37,11 @@ export function isGuidHallId(hallId: string): boolean {
   return GUID_RE.test(hallId.trim());
 }
 
-/** Live JWT + GUID hall → WESAL-TASK-1 hourly APIs. Stub / demo ids stay local. */
+/** Real halls (GUID) use live hourly APIs. Demo/stub ids stay local. */
 export function hourlyUsesLiveApi(hallId: string): boolean {
-  return !bookingsUseMock() && isGuidHallId(hallId);
+  const token = getAccessToken();
+  if (token?.startsWith("stub-")) return false;
+  return isGuidHallId(hallId);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -283,7 +285,6 @@ export async function blockHallDay(input: BlockDayInput): Promise<void> {
       { date: input.date, isOpen: !input.blocked },
       { timeout: 8000 },
     );
-    setDayBlocked(input.hallId, input.date, input.blocked);
     return;
   }
   setDayBlocked(input.hallId, input.date, input.blocked);
@@ -321,16 +322,16 @@ export async function fetchOwnerHourlyControls(hallId: string): Promise<{
       params: { fromDate: from, toDate: to },
       timeout: 8000,
     });
-    const blockedDays = new Set(listBlockedDays(hallId));
+    const blockedDays: string[] = [];
     for (const row of asList(data, ["days"])) {
       if (!row || typeof row !== "object") continue;
       const rec = row as Record<string, unknown>;
       const iso = parseDateIso(String(rec.date ?? rec.dateIso ?? ""));
       if (!iso || !isExplicitlyFalse(rec.isOpen)) continue;
-      blockedDays.add(iso);
+      blockedDays.push(iso);
     }
     return {
-      blockedDays: [...blockedDays].sort(),
+      blockedDays: [...new Set(blockedDays)].sort(),
       showBookedSlots: getShowBookedSlots(hallId),
     };
   }
@@ -339,8 +340,4 @@ export async function fetchOwnerHourlyControls(hallId: string): Promise<{
     blockedDays: listBlockedDays(hallId),
     showBookedSlots: getShowBookedSlots(hallId),
   };
-}
-
-export function readBlockedDays(hallId: string): string[] {
-  return listBlockedDays(hallId);
 }

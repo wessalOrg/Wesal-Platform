@@ -1,8 +1,5 @@
-import {
-  periodSlotKey,
-} from "@/lib/owner-acceptance-ui";
+import { periodSlotKey } from "@/lib/owner-acceptance-ui";
 import { parseDateIso } from "@/lib/booking-date";
-import type { BookingPeriodType } from "@/types/booking";
 import type { HallBookingNotification } from "@/types/hall-notifications";
 
 type Listener = () => void;
@@ -24,10 +21,6 @@ export function subscribeOwnerPublishedSlots(listener: Listener): () => void {
 
 export function getOwnerPublishedSlots(hallId: string): Set<string> {
   return slotsByHall.get(hallId) ?? EMPTY_KEYS;
-}
-
-export function getEmptyOwnerPublishedSlots(): Set<string> {
-  return EMPTY_KEYS;
 }
 
 export function publishOwnerPublishedSlots(hallId: string, keys: Set<string>) {
@@ -56,21 +49,4 @@ export function publishOwnerPublishedSlotsFromItems(
   items: HallBookingNotification[],
 ) {
   publishOwnerPublishedSlots(hallId, publishedSlotKeysFromItems(items));
-}
-
-export function mergeOwnerPublishedSlots(
-  hallId: string,
-  date: string,
-  periods: BookingPeriodType[],
-) {
-  const scoped = hallId.trim();
-  if (!scoped) return;
-  const dateIso = parseDateIso(date);
-  if (!dateIso || periods.length === 0) return;
-  const next = new Set(getOwnerPublishedSlots(scoped));
-  for (const period of periods) {
-    const key = periodSlotKey(dateIso, period);
-    if (key) next.add(key);
-  }
-  publishOwnerPublishedSlots(scoped, next);
 }

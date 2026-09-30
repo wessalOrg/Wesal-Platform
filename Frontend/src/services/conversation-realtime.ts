@@ -1,5 +1,7 @@
-import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
+import { HubConnection, HubConnectionBuilder, HubConnectionState } from "@microsoft/signalr";
+import { apiOrigin } from "@/lib/api";
 import { mapRealtimeMessageDto } from "@/lib/conversation-mapper";
+import { realtimeLogger } from "@/lib/realtime-logger";
 import { subscribeMockMessages } from "@/services/conversations-mock";
 import { getAccessToken } from "@/lib/auth-token";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
@@ -14,12 +16,7 @@ function usesMockRealtime(): boolean {
 }
 
 function conversationHubUrl(): string {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5298/api/v1";
-  try {
-    return `${new URL(apiBase).origin}/hubs/conversation`;
-  } catch {
-    return "http://localhost:5298/hubs/conversation";
-  }
+  return `${apiOrigin()}/hubs/conversation`;
 }
 
 function mapRealtime(data: unknown): IncomingRealtimeMessage | null {
@@ -71,7 +68,7 @@ async function ensureHub(): Promise<HubConnection | null> {
         accessTokenFactory: () => getAccessToken() ?? "",
       })
       .withAutomaticReconnect()
-      .configureLogging(LogLevel.Warning)
+      .configureLogging(realtimeLogger)
       .build();
     await connection.start();
     bindHubEvents(connection);

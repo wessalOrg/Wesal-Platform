@@ -7,6 +7,7 @@ import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
 import OwnerConfirmPaymentBar from "@/components/messages/OwnerConfirmPaymentBar";
+import OwnerInboxList, { OwnerChatHallCard } from "@/components/messages/OwnerInboxList";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { SEEKER_MESSAGES_PATH } from "@/constants/seekerDashboardNav";
@@ -82,25 +83,34 @@ export default function SeekerMessagesPage() {
     : thread && conversationHallLabel(thread, lang) !== threadTitle
       ? conversationHallLabel(thread, lang)
       : null;
-  const threadBadge = conversationPeerRoleLabel({
-    viewerIsHallOwner: isHallOwner,
-    viewerIsAdmin: isAdmin,
-    peerIsAdmin: selected
-      ? isOwnerAdminConversation(selected, conversations)
-      : ownerContactAdmin,
-  });
+  const peerIsAdmin = selected
+    ? isOwnerAdminConversation(selected, conversations)
+    : ownerContactAdmin;
+  const threadBadge = isHallOwner
+    ? peerIsAdmin
+      ? t("owner.messages.admin")
+      : t("owner.messages.seekerRole")
+    : conversationPeerRoleLabel({
+        viewerIsHallOwner: isHallOwner,
+        viewerIsAdmin: isAdmin,
+        peerIsAdmin,
+      });
+  const hallName = selected
+    ? conversationHallLabel(selected, lang)
+    : thread
+      ? conversationHallLabel(thread, lang)
+      : "";
+  const hallId = selected?.hallId ?? thread?.hallId ?? "";
 
   return (
     <MessagesErrorBoundary>
     <div className="seeker-messages" data-testid="seeker-messages-page">
-      <header className="seeker-settings-header">
-        <h1 className="seeker-settings-title">
-          {ownerContactAdmin ? t("owner.nav.contactAdmin") : t("seeker.nav.messages")}
-        </h1>
-        {ownerContactAdmin ? null : (
+      {isHallOwner ? null : (
+        <header className="seeker-settings-header">
+          <h1 className="seeker-settings-title">{t("seeker.nav.messages")}</h1>
           <p className="seeker-settings-lead">{t("seeker.messages.subtitle")}</p>
-        )}
-      </header>
+        </header>
+      )}
 
       {!canUseMessaging ? (
         <section className="seeker-settings-card" data-testid="seeker-messages-unauthorized">
@@ -111,21 +121,33 @@ export default function SeekerMessagesPage() {
         </section>
       ) : (
         <section
-          className="seeker-messages-workspace"
+          className={`seeker-messages-workspace${isHallOwner ? " owner-chat-workspace" : ""}`}
           data-testid="seeker-messages-workspace"
         >
           <div
             className={`seeker-messages-list${showThread ? " seeker-messages-list--hidden-mobile" : ""}`}
           >
-            <ConversationList
-              status={inboxStatus}
-              conversations={conversations}
-              selectedId={selectedId}
-              error={inboxError}
-              onSelect={selectConversation}
-              onRetry={retryInbox}
-              variant="page"
-            />
+            {isHallOwner ? (
+              <OwnerInboxList
+                status={inboxStatus}
+                conversations={conversations}
+                selectedId={selectedId}
+                error={inboxError}
+                focusAdmin={ownerContactAdmin}
+                onSelect={selectConversation}
+                onRetry={retryInbox}
+              />
+            ) : (
+              <ConversationList
+                status={inboxStatus}
+                conversations={conversations}
+                selectedId={selectedId}
+                error={inboxError}
+                onSelect={selectConversation}
+                onRetry={retryInbox}
+                variant="page"
+              />
+            )}
           </div>
 
           <div
@@ -140,6 +162,12 @@ export default function SeekerMessagesPage() {
                 title={threadTitle}
                 subtitle={threadSubtitle}
                 badge={showThread ? threadBadge : null}
+                appearance={isHallOwner ? "owner" : "default"}
+                context={
+                  isHallOwner && hallName ? (
+                    <OwnerChatHallCard hallId={hallId} hallName={hallName} />
+                  ) : null
+                }
                 currentUserId={currentUserId}
                 onRetryLoad={retryThread}
                 onRetrySend={retrySend}

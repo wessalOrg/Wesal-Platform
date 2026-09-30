@@ -60,6 +60,10 @@ export type HallReview = {
   rating?: number | null;
   comment: string;
   timeAgo: string;
+  /** Comment author id from the comments API. Absent on rating-only/demo rows. */
+  userId?: string | null;
+  /** Resolved author profile picture, or null when the API has none. */
+  avatarUrl?: string | null;
 };
 
 export type HallDetails = {

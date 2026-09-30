@@ -37,12 +37,15 @@ export default function AcceptConfirmModal({
   const titleId = useId();
   const [depositDraft, setDepositDraft] = useState("");
   const [depositError, setDepositError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setDepositDraft("");
-    setDepositError(null);
-  }, [open]);
+  // Fresh draft each time the modal opens (reconciled during render).
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) {
+      setDepositDraft("");
+      setDepositError(null);
+    }
+  }
 
   useEffect(() => {
     if (!open) return;

@@ -4,7 +4,6 @@ import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
 import HallIdentityDocumentSection from "@/components/owner-management/HallIdentityDocumentSection";
 import ManagementSectionError from "@/components/owner-management/ManagementSectionError";
 import ProfileField from "@/components/profile/ProfileField";
-import ProfileHeroCard from "@/components/profile/ProfileHeroCard";
 import SuccessToast from "@/components/ui/SuccessToast";
 import { useHallOwnerManagementProfile } from "@/hooks/useHallOwnerManagementProfile";
 import { useT } from "@/i18n";
@@ -221,14 +220,12 @@ export default function HallOwnerProfileSection() {
       />
 
       <header className="seeker-settings-header">
-        <h1 className="seeker-settings-title">{t("owner.nav.account")}</h1>
+        <h1 className="seeker-settings-title">{t("owner.nav.settings")}</h1>
         <p className="seeker-settings-lead">{t("profile.subtitle")}</p>
       </header>
 
-      <ProfileHeroCard profile={profile} />
-
-      <div className="seeker-settings-split">
-        <section className="seeker-settings-card" data-testid="owner-settings-profile">
+      <div className="seeker-settings-split owner-settings-layout">
+        <section className="seeker-settings-card owner-settings-profile" data-testid="owner-settings-profile">
           <h2 className="seeker-settings-section-title">{t("seeker.settings.profile.title")}</h2>
           <p className="seeker-settings-section-lead">{t("seeker.settings.profile.subtitle")}</p>
 
@@ -355,6 +352,7 @@ export default function HallOwnerProfileSection() {
           </form>
         </section>
 
+        <div className="owner-settings-stack">
         <HallIdentityDocumentSection
           profile={profile}
           reload={profileState.reload}
@@ -457,6 +455,7 @@ export default function HallOwnerProfileSection() {
             </div>
           </form>
         </section>
+        </div>
       </div>
     </div>
   );

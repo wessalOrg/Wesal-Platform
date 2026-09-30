@@ -202,39 +202,12 @@ export function canAccessDashboard(access: HallAccessState): boolean {
 }
 
 /** Public seeker actions (book / contact) are blocked by Admin or System lock only. */
-export function canBookHall(access: HallAccessState): boolean {
-  return !access.adminLocked && !access.systemLocked;
-}
-
-export function canMessageHall(access: HallAccessState): boolean {
-  return canBookHall(access);
-}
-
 export function isHallPubliclyUnavailable(access: HallAccessState): boolean {
   return access.adminLocked || access.systemLocked;
-}
-
-export function bookingDataLockReason(access: HallAccessState): BookingDataLockReason | null {
-  const result = getManagementAccess(access);
-  if (result.allowed) return null;
-  if (result.reason === "PAYMENT_REQUIRED") return null;
-  if (result.reason === "ADMIN_AND_SYSTEM_LOCKED") return "both";
-  if (result.reason === "ADMIN_LOCKED") return "admin";
-  return "system";
 }
 
 export function hallLockedMessageKey(reason: BookingDataLockReason): string {
   if (reason === "admin") return "owner.hallAccess.locked.admin";
   if (reason === "system") return "owner.hallAccess.locked.system";
   return "owner.hallAccess.locked.both";
-}
-
-export function managementLockReason(
-  result: ManagementAccessResult,
-): BookingDataLockReason | null {
-  if (result.allowed) return null;
-  if (result.reason === "PAYMENT_REQUIRED") return null;
-  if (result.reason === "ADMIN_AND_SYSTEM_LOCKED") return "both";
-  if (result.reason === "ADMIN_LOCKED") return "admin";
-  return "system";
 }

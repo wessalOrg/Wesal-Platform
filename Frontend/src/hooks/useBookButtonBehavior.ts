@@ -15,10 +15,6 @@ type UseBookButtonBehaviorOptions = {
   onOpenBooking: () => void;
 };
 
-export function buildHallReturnPath(hallId: string, openBooking = false): string {
-  return buildHallDetailsPath(hallId, openBooking);
-}
-
 export function useBookButtonBehavior({
   hallId,
   hydrated,

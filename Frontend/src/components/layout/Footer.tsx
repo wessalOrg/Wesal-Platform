@@ -19,7 +19,7 @@ const ACCOUNT_LINKS = [
 ] as const;
 
 const SUPPORT_LINKS = [
-  { href: "/faq", labelKey: "footer.helpCenter" },
+  { href: "/help", labelKey: "footer.helpCenter" },
   { href: "/about", labelKey: "footer.aboutWesal" },
   { href: "/halls", labelKey: "footer.browseHalls" },
 ] as const;

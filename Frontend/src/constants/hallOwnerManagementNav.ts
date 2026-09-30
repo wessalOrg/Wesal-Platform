@@ -1,5 +1,6 @@
 import {
   HALL_OWNER_ADD_HALL_PATH,
+  HALL_OWNER_CALENDAR_PATH,
   HALL_OWNER_HALLS_PATH,
   HALL_OWNER_MANAGEMENT_PATH,
   HALL_OWNER_MESSAGES_PATH,
@@ -9,6 +10,7 @@ import {
 export const OWNER_DASHBOARD_PATH = HALL_OWNER_MANAGEMENT_PATH;
 export const OWNER_ACCOUNT_PATH = HALL_OWNER_PROFILE_PATH;
 export const OWNER_HALLS_PATH = HALL_OWNER_HALLS_PATH;
+export const OWNER_CALENDAR_PATH = HALL_OWNER_CALENDAR_PATH;
 export const OWNER_MESSAGES_PATH = HALL_OWNER_MESSAGES_PATH;
 
 /**
@@ -23,21 +25,27 @@ export const HALL_OWNER_DASHBOARD_NAV = [
     match: "exact" as const,
   },
   {
-    id: "account",
-    href: OWNER_ACCOUNT_PATH,
-    labelKey: "owner.nav.account",
-    match: "prefix" as const,
-  },
-  {
     id: "halls",
     href: OWNER_HALLS_PATH,
     labelKey: "owner.nav.halls",
     match: "prefix" as const,
   },
   {
+    id: "calendar",
+    href: OWNER_CALENDAR_PATH,
+    labelKey: "owner.nav.calendar",
+    match: "prefix" as const,
+  },
+  {
     id: "messages",
     href: OWNER_MESSAGES_PATH,
     labelKey: "owner.nav.messages",
+    match: "prefix" as const,
+  },
+  {
+    id: "account",
+    href: OWNER_ACCOUNT_PATH,
+    labelKey: "owner.nav.settings",
     match: "prefix" as const,
   },
 ] as const;
@@ -74,18 +82,26 @@ export type HallOwnerManagementSectionId =
 export type HallOwnerManagementActionId =
   (typeof HALL_OWNER_MANAGEMENT_ACTIONS)[number]["id"];
 
-export const DEFAULT_HALL_OWNER_MANAGEMENT_SECTION =
-  HALL_OWNER_MANAGEMENT_NAV[0];
-
 export function isOwnerNavActive(
   pathname: string,
   href: string,
   match: "exact" | "prefix",
+  search?: string | null,
 ): boolean {
   if (match === "exact") {
     return pathname === href;
   }
   // Avoid marking "halls" active on unrelated owner routes; still cover
   // /owner/halls, /owner/halls/[id], and /owner/halls/add.
-  return pathname === href || pathname.startsWith(`${href}/`);
+  if (!(pathname === href || pathname.startsWith(`${href}/`))) {
+    return false;
+  }
+  // `/owner/messages?contact=admin` is Contact Admin, not Messages.
+  if (href === OWNER_MESSAGES_PATH) {
+    const query = (search ?? "").replace(/^\?/, "");
+    if (new URLSearchParams(query).get("contact") === "admin") {
+      return false;
+    }
+  }
+  return true;
 }

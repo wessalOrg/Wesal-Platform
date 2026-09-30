@@ -7,10 +7,7 @@ import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApp
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
 import SubscriptionPaymentNotice from "@/components/halls/subscription/SubscriptionPaymentNotice";
 import { useUiLang } from "@/components/layout/LanguageProvider";
-import {
-  OWNER_ACCOUNT_PATH,
-  OWNER_HALLS_PATH,
-} from "@/constants/hallOwnerManagementNav";
+import { OWNER_HALLS_PATH } from "@/constants/hallOwnerManagementNav";
 import { useAddHallInitiation } from "@/hooks/useAddHallInitiation";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useHallOwnerManagementProfile } from "@/hooks/useHallOwnerManagementProfile";
@@ -97,6 +94,8 @@ export default function OwnerDashboardHome() {
   }
 
   const name = profileState.profile?.fullName || t("owner.guestName");
+  const phone = profileState.profile?.phoneNumber?.trim() ?? "";
+  const email = profileState.profile?.email?.trim() ?? "";
 
   return (
     <div className="seeker-home" data-testid="owner-dashboard-home">
@@ -106,6 +105,26 @@ export default function OwnerDashboardHome() {
             {t("owner.welcomeBack", { name })}
           </h1>
           <p className="seeker-welcome-body">{t("owner.welcomeSubtitle")}</p>
+          {phone || email ? (
+            <div className="seeker-welcome-contacts">
+              {phone ? (
+                <p className="seeker-welcome-contact">
+                  <span className="seeker-welcome-contact-icon" aria-hidden="true">
+                    <PhoneIcon />
+                  </span>
+                  <span dir="ltr">{phone}</span>
+                </p>
+              ) : null}
+              {email ? (
+                <p className="seeker-welcome-contact">
+                  <span className="seeker-welcome-contact-icon" aria-hidden="true">
+                    <MailIcon />
+                  </span>
+                  <span dir="ltr">{email}</span>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <div className="seeker-welcome-actions">
             <Link href={OWNER_HALLS_PATH} className="seeker-btn-primary" prefetch>
               {t("owner.cta.halls")}
@@ -135,9 +154,6 @@ export default function OwnerDashboardHome() {
               <span>{initials(name)}</span>
             )}
           </div>
-          <Link href={OWNER_ACCOUNT_PATH} className="seeker-welcome-badge" prefetch>
-            {t("owner.myAccount")}
-          </Link>
         </div>
       </section>
 
@@ -320,6 +336,28 @@ export default function OwnerDashboardHome() {
         )}
       </section>
     </div>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+      <path
+        d="M8.2 4.8h2.1l1.1 2.6-1.3 1.1a12.2 12.2 0 0 0 5.4 5.4l1.1-1.3 2.6 1.1v2.1c0 .7-.6 1.3-1.3 1.3A13.2 13.2 0 0 1 6.9 6.1c0-.7.6-1.3 1.3-1.3Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="m4.5 7 7.5 6L19.5 7" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    </svg>
   );
 }
 

@@ -1,14 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import {
   listPlatformNotifications,
   markPlatformNotificationRead,
   markPlatformNotificationsRead,
+  readPlatformNotificationsSnapshot,
   subscribePlatformNotifications,
-  unreadPlatformNotificationCount,
 } from "@/lib/platform-notifications-store";
 import { resolveNotificationActionUrl } from "@/lib/platform-notification-routes";
 import type {
@@ -29,20 +29,22 @@ export function useNotifications(audienceOverride?: NotificationAudience) {
   const identity = useUserIdentity();
   const router = useRouter();
   const audience = audienceOverride ?? audienceFromIdentity(identity);
-  const [items, setItems] = useState<PlatformNotification[]>([]);
+  // Subscribe to the localStorage-backed store; the serialized snapshot changes
+  // whenever notifications are pushed / marked read (same tab or another tab).
+  const snapshot = useSyncExternalStore(
+    subscribePlatformNotifications,
+    readPlatformNotificationsSnapshot,
+    () => "",
+  );
 
-  const refresh = useCallback(() => {
-    setItems(listPlatformNotifications(audience));
-  }, [audience]);
-
-  useEffect(() => {
-    refresh();
-    return subscribePlatformNotifications(refresh);
-  }, [refresh]);
+  const items = useMemo(
+    () => (snapshot ? listPlatformNotifications(audience) : []),
+    [audience, snapshot],
+  );
 
   const unreadCount = useMemo(
-    () => unreadPlatformNotificationCount(audience),
-    [audience, items],
+    () => items.filter((item) => !item.is_read).length,
+    [items],
   );
 
   const markRead = useCallback((id: string) => {

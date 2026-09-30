@@ -3,10 +3,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { normalizeUnreadCount } from "@/lib/unread-badge";
-import {
-  conversationsUseMock,
-  fetchUnreadConversationCount,
-} from "@/services/conversations";
+import { fetchUnreadConversationCount } from "@/services/conversations";
 
 type UseUnreadCountOptions = {
   /** Polling interval in ms. Defaults to 30000 (30 s). */
@@ -68,11 +65,6 @@ function getServerSnapshot(): UnreadSnapshot {
 async function pullUnreadCount(sessionKey: string | null): Promise<void> {
   if (!sessionKey) {
     setSnapshot({ count: 0, ready: true, sessionKey: null });
-    return;
-  }
-
-  if (conversationsUseMock()) {
-    setSnapshot({ count: 0, ready: true, sessionKey });
     return;
   }
 

@@ -1,7 +1,7 @@
 import { roleFromAccountSignals } from "@/lib/account-role";
 import { getAccessToken } from "@/lib/auth-token";
 import { getStoredAuth } from "@/lib/auth-storage";
-import { GUEST_SESSION, type SessionState, type WesalRole } from "@/types/session";
+import type { SessionState, WesalRole } from "@/types/session";
 
 type JwtClaims = {
   sub?: unknown;
@@ -61,8 +61,4 @@ export function readLocalSession(): SessionState | null {
     role,
     userName,
   };
-}
-
-export function sessionOrGuest(session: SessionState | null): SessionState {
-  return session ?? GUEST_SESSION;
 }

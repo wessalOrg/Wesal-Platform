@@ -1,6 +1,3 @@
-import type { HallAvailabilityDay, HallDayPeriod } from "@/types/hall";
-import { inferBookingPeriodType } from "@/lib/booking-period";
-
 function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
@@ -8,6 +5,12 @@ function pad(value: number): string {
 export function utcTodayIso(): string {
   const now = new Date();
   return `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}`;
+}
+
+/** Calendar-grid today. Local date parts, so the visible month does not shift across UTC midnight. */
+export function localTodayIso(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 export function utcDaysRemaining(cycleEndIso: string, todayIso = utcTodayIso()): number | null {
@@ -53,50 +56,14 @@ export function formatBookingDateLabel(iso: string, locale: string): string {
   });
 }
 
-export function formatBookingDateChip(iso: string, locale: string): string {
+/** Selected-day heading. Date parts stay local so the label matches the clicked cell. */
+export function formatBookingDateLong(iso: string, locale: string): string {
   const parsed = parseDateIso(iso);
   if (!parsed) return iso;
   const [year, month, day] = parsed.split("-").map(Number);
   return new Date(year, month - 1, day).toLocaleDateString(locale, {
-    weekday: "short",
+    weekday: "long",
     day: "numeric",
-    month: "short",
+    month: "long",
   });
-}
-
-export function withPeriodTypes(periods: HallDayPeriod[]): HallDayPeriod[] {
-  return periods.map((period) => ({
-    ...period,
-    periodType: period.periodType ?? inferBookingPeriodType(period) ?? undefined,
-  }));
-}
-
-/**
- * Demo fallback days often omit `dateIso`. Assign consecutive future dates
- * so the booking form can still submit yyyy-MM-dd values.
- */
-export function ensureAvailabilityDateIso(
-  days: HallAvailabilityDay[],
-): HallAvailabilityDay[] {
-  let nextIso = addUtcDays(utcTodayIso(), 1);
-
-  return days.map((day) => {
-    const iso = parseDateIso(day.dateIso) ?? nextIso;
-    if (!parseDateIso(day.dateIso)) {
-      nextIso = addUtcDays(iso, 1);
-    }
-    return {
-      ...day,
-      dateIso: iso,
-      periods: withPeriodTypes(day.periods),
-    };
-  });
-}
-
-export function futureAvailabilityDays(
-  days: HallAvailabilityDay[],
-): HallAvailabilityDay[] {
-  return ensureAvailabilityDateIso(days).filter(
-    (day) => day.dateIso && isFutureBookingDate(day.dateIso),
-  );
 }

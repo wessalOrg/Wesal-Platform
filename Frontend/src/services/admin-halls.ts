@@ -4,12 +4,14 @@ import {
   mapAdminHallApproval,
   mapAdminHallDetail,
   mapAdminHallLock,
+  mapAdminHallPage,
   mapAdminHallReject,
   mapAdminHallUnlock,
   mapAdminMarkPaid,
   mapAdminOwnerMessage,
   mapAdminPendingHalls,
   mapAdminSubscriptionOverview,
+  type AdminHallPage,
 } from "@/lib/admin-halls-mapper";
 import { toRejectAdminHallPayload, validateAdminRejectReason } from "@/lib/admin-reject-hall";
 import { getAccessToken } from "@/lib/auth-token";
@@ -33,50 +35,31 @@ function usesDemoAdminStub(): boolean {
   return Boolean(token?.startsWith("stub-admin"));
 }
 
-const DEMO_PENDING_HALLS: AdminPendingHall[] = [
-  {
-    hallId: "demo-hall-pending",
-    name: "قاعة الأمل (تجريبي)",
-    thumbnailUrl: null,
-    submittedAt: new Date().toISOString(),
-    adminLocked: false,
-    systemLocked: false,
-    lockBadgeVisible: false,
-  },
-  {
-    hallId: "demo-hall-approved",
-    name: "قاعة النور (تجريبي)",
-    thumbnailUrl: null,
-    submittedAt: new Date().toISOString(),
-    adminLocked: true,
-    systemLocked: false,
-    lockBadgeVisible: true,
-  },
-];
+const DEMO_PENDING_HALLS: AdminPendingHall[] = [];
 
 function buildDemoAdminHallDetail(hallId: string): AdminHallDetail {
   const pending = DEMO_PENDING_HALLS.find((hall) => hall.hallId === hallId);
   const isPending = hallId === "demo-hall-pending" || !pending;
   return {
     hallId,
-    name: pending?.name ?? "قاعة تجريبية",
-    regionDisplayName: "رام الله",
-    address: "شارع الإرسال",
-    detailedAddress: "وسط البلد",
-    description: "تفاصيل قاعة تجريبية لمعاينة لوحة الأدمن محلياً.",
-    capacity: 200,
-    price: 1500,
+    name: pending?.name ?? "",
+    regionDisplayName: "",
+    address: "",
+    detailedAddress: "",
+    description: "",
+    capacity: 0,
+    price: 0,
     submittedAt: pending?.submittedAt ?? new Date().toISOString(),
     status: isPending ? "PendingReview" : "Approved",
     approvalBadge: isPending ? "Pending" : "Approved",
-    ownerId: "demo-owner",
-    ownerFullName: "صاحب قاعة تجريبي",
-    ownerPhoneNumber: "0599111111",
-    ownerEmail: "owner.demo@wesal.local",
+    ownerId: "",
+    ownerFullName: "",
+    ownerPhoneNumber: "",
+    ownerEmail: "",
     mainImageUrl: null,
     photoUrls: [],
     youtubeVideoUrl: null,
-    features: ["تكييف", "موقف سيارات"],
+    features: [],
     otherFeatures: null,
     adminLocked: pending?.adminLocked ?? false,
     systemLocked: pending?.systemLocked ?? false,
@@ -102,6 +85,20 @@ export async function fetchAdminPendingHalls(): Promise<AdminPendingHall[]> {
   return mapAdminPendingHalls(data);
 }
 
+const REJECTED_HALLS_PAGE_SIZE = 10;
+
+/** GET /api/v1/admin/halls/rejected — Rejected halls only, same row shape as the pending queue. */
+export async function fetchAdminRejectedHalls(page = 1): Promise<AdminHallPage> {
+  if (usesDemoAdminStub()) {
+    return { items: [], page: 1, pageSize: REJECTED_HALLS_PAGE_SIZE, totalCount: 0, totalPages: 0 };
+  }
+  const { data } = await api.get<unknown>("/admin/halls/rejected", {
+    params: { page, pageSize: REJECTED_HALLS_PAGE_SIZE },
+    timeout: 10000,
+  });
+  return mapAdminHallPage(data);
+}
+
 export async function fetchAdminHallDetail(hallId: string): Promise<AdminHallDetail> {
   if (usesDemoAdminStub()) {
     return buildDemoAdminHallDetail(hallId);
@@ -117,8 +114,8 @@ export async function fetchAdminHallDetail(hallId: string): Promise<AdminHallDet
 }
 
 /**
- * PUT /api/v1/admin/halls/{hallId}/approve (US-ADMIN-02 / FR-ADM-03).
- * Only HallStatus PendingReview → Approved. Payment/subscription are untouched.
+ * PUT /api/v1/admin/halls/{hallId}/approve.
+ * PendingReview or Rejected → Approved. Payment, subscription, and lock flags are untouched.
  */
 export async function approveAdminHall(hallId: string): Promise<AdminHallApprovalResult> {
   if (usesDemoAdminStub()) {
@@ -306,29 +303,7 @@ export async function markAdminHallSubscriptionPaid(
  * GET /api/v1/admin/subscriptions (US-ADMIN-11 / FR-SUB-06).
  */
 export async function fetchAdminSubscriptionOverview(): Promise<AdminSubscriptionOwnerGroup[]> {
-  if (usesDemoAdminStub()) {
-    return [
-      {
-        ownerId: "demo-owner",
-        ownerFullName: "صاحب قاعة تجريبي",
-        ownerPhoneNumber: "0599111111",
-        ownerEmail: "owner.demo@wesal.local",
-        halls: [
-          {
-            hallId: "demo-hall-approved",
-            name: "قاعة النور (تجريبي)",
-            approvalStatus: "Approved",
-            paymentStatus: "Unpaid",
-            systemLocked: false,
-            adminLocked: true,
-            nextBillingDate: null,
-            daysRemaining: null,
-            lastPaymentDate: null,
-          },
-        ],
-      },
-    ];
-  }
+  if (usesDemoAdminStub()) return [];
   const { data } = await api.get<unknown>("/admin/subscriptions", {
     timeout: 10000,
   });

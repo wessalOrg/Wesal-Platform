@@ -202,7 +202,9 @@ export default function OwnerHallsPage() {
                         className="seeker-home-soft-btn"
                         prefetch
                       >
-                        {t("owner.hallsPage.manage")}
+                        {hall.status === "Rejected"
+                          ? t("owner.hallsPage.edit")
+                          : t("owner.hallsPage.manage")}
                       </Link>
                       <Link
                         href={ownerHallNotificationsPath(hall.id)}

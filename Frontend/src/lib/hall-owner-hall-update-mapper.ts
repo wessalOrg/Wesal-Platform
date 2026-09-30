@@ -1,5 +1,9 @@
-import { toHallRegionApi } from "@/lib/hall-owner-api-region";
-import { toOwnerPhotoApiUrl } from "@/lib/hall-owner-hall-management-mapper";
+import { toHallRegionApi, toTimeOnlyApi } from "@/lib/hall-owner-api-region";
+import {
+  toOwnerMediaApiUrl,
+  toOwnerPhotoApiUrl,
+} from "@/lib/hall-owner-hall-management-mapper";
+import { normalizeTimeOnly } from "@/lib/hourly-slots";
 import { normalizeRegisterPhone } from "@/lib/register-validation";
 import type { HallEditFormValues } from "@/types/hall-owner-hall-management";
 
@@ -27,6 +31,8 @@ export type UpdateOwnerHallRequest = {
   features: string[];
   otherFeatures: string | null;
   photos: UpdateOwnerHallPhotoDto[];
+  hourlySlotStart: string | null;
+  hourlySlotEnd: string | null;
 };
 
 /**
@@ -47,12 +53,17 @@ export function mapHallFormToUpdateHallRequest(
     }),
   );
 
+  const coverUrl = resolveCoverApiUrl(values);
+  if (photos.length === 0 && coverUrl && !values.mainPhoto && values.photos.length === 0) {
+    photos.push({ url: coverUrl, displayOrder: 0 });
+  }
+
   const priceRaw = values.rentalPrice.trim();
   const price = priceRaw === "" ? null : Number.parseFloat(priceRaw);
 
   return {
     name: values.hallName.trim(),
-    mainImageUrl: values.coverPhotoUrl ?? photos[0]?.url ?? null,
+    mainImageUrl: coverUrl ?? photos[0]?.url ?? null,
     contactPhone: normalizeRegisterPhone(values.ownerPhone) || null,
     region,
     address: values.address.trim(),
@@ -65,5 +76,20 @@ export function mapHallFormToUpdateHallRequest(
     features: values.features,
     otherFeatures: values.otherFeatures.trim() || null,
     photos,
+    hourlySlotStart: toWholeHourApi(values.hourlySlotStart),
+    hourlySlotEnd: toWholeHourApi(values.hourlySlotEnd),
   };
+}
+
+function resolveCoverApiUrl(values: HallEditFormValues): string | null {
+  const selected = values.existingPhotos.find((photo) => photo.url === values.coverPhotoUrl);
+  if (selected) return toOwnerPhotoApiUrl(selected);
+  const stored = values.coverApiUrl?.trim();
+  return stored ? toOwnerMediaApiUrl(stored) : null;
+}
+
+function toWholeHourApi(value: string | null): string | null {
+  const normalized = normalizeTimeOnly(value ?? "");
+  if (!normalized) return null;
+  return toTimeOnlyApi(normalized);
 }

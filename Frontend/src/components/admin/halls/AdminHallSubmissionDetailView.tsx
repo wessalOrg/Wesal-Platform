@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AdminHallDeleteControls from "@/components/admin/halls/AdminHallDeleteControls";
 import AdminHallLockBadge from "@/components/admin/halls/AdminHallLockBadge";
 import AdminHallLockControls from "@/components/admin/halls/AdminHallLockControls";
@@ -18,7 +19,7 @@ import SuccessToast from "@/components/ui/SuccessToast";
 import { useAdminHallDetail } from "@/hooks/useAdminHallDetail";
 import { useApproveHallSubmission } from "@/hooks/useApproveHallSubmission";
 import { useUiLang } from "@/components/layout/LanguageProvider";
-import { ADMIN_MANAGEMENT_PATH } from "@/lib/account-profile-path";
+import { ADMIN_MANAGEMENT_PATH, ADMIN_REJECTED_HALLS_PATH } from "@/lib/account-profile-path";
 import { canApproveHallStatus } from "@/lib/admin-halls-mapper";
 import { formatBookingDateLabel } from "@/lib/booking-date";
 import { fetchAdminOwnerIdentityUrl } from "@/services/admin-documents";
@@ -33,12 +34,22 @@ export default function AdminHallSubmissionDetailView({
   hallId,
 }: AdminHallSubmissionDetailViewProps) {
   const t = useT();
+  const fromRejected = useSearchParams().get("from") === "rejected";
+  const backHref = fromRejected ? ADMIN_REJECTED_HALLS_PATH : ADMIN_MANAGEMENT_PATH;
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const detail = useAdminHallDetail(hallId);
   const [toastKey, setToastKey] = useState<string | null>(null);
 
   const closeToast = useCallback(() => setToastKey(null), []);
+  const identityOwnerId = detail.hall?.ownerId ?? null;
+  const loadIdentityDocument = useCallback(
+    () =>
+      identityOwnerId
+        ? fetchAdminOwnerIdentityUrl(identityOwnerId)
+        : Promise.resolve(null),
+    [identityOwnerId],
+  );
 
   const approval = useApproveHallSubmission({
     onApproved: () => {
@@ -73,7 +84,7 @@ export default function AdminHallSubmissionDetailView({
           <button type="button" className="btn-outline" onClick={() => void detail.reload()}>
             {t("common.retry")}
           </button>
-          <Link href={ADMIN_MANAGEMENT_PATH} className="btn-outline">
+          <Link href={backHref} className="btn-outline">
             {t("admin.halls.detail.back")}
           </Link>
         </div>
@@ -133,7 +144,7 @@ export default function AdminHallSubmissionDetailView({
               <div className="admin-ops-badges mt-2">
                 <HallApprovalStatusBadge status={hall.approvalBadge} />
                 <AdminPaymentStatusBadge status={hall.paymentStatus} />
-                {hall.adminLocked || hall.systemLocked || hall.lockBadgeVisible ? (
+                {hall.adminLocked || hall.systemLocked ? (
                   <AdminHallLockBadge
                     adminLocked={hall.adminLocked}
                     systemLocked={hall.systemLocked}
@@ -142,7 +153,7 @@ export default function AdminHallSubmissionDetailView({
               </div>
               <p className="seeker-welcome-body mt-2">{t("admin.halls.detail.subtitle")}</p>
             </div>
-            <Link href={ADMIN_MANAGEMENT_PATH} className="btn-outline min-h-10 shrink-0">
+            <Link href={backHref} className="btn-outline min-h-10 shrink-0">
               {t("admin.halls.detail.back")}
             </Link>
           </div>
@@ -210,16 +221,15 @@ export default function AdminHallSubmissionDetailView({
             {t("admin.halls.detail.identitySection")}
           </h2>
           <AdminSecureDocumentViewer
+            key={`${hall.hallId}:${identityOwnerId ?? ""}`}
             available={hall.ownerHasIdentityDocument}
+            sourceKey={identityOwnerId}
             labelKey="admin.halls.details.identity.view"
+            altKey="admin.halls.detail.identitySection"
             hintKey="admin.halls.details.identity.hint"
             missingHintKey="admin.halls.details.identity.missing"
             errorKey="admin.halls.details.identity.errors.loadFailed"
-            loadDocument={() =>
-              hall.ownerId
-                ? fetchAdminOwnerIdentityUrl(hall.ownerId)
-                : Promise.resolve(null)
-            }
+            loadDocument={loadIdentityDocument}
             testId="admin-owner-identity-document"
           />
         </section>
@@ -320,11 +330,15 @@ export default function AdminHallSubmissionDetailView({
             hallId={hall.hallId}
             adminLocked={hall.adminLocked}
             systemLocked={hall.systemLocked}
-            lockBadgeVisible={hall.lockBadgeVisible}
             showBadge={false}
             variant="primary"
             onUnlocked={(result) => {
               detail.applyLockState(result.adminLocked, result.systemLocked);
+              setToastKey(
+                result.systemLocked
+                  ? "admin.halls.unlock.toast.unpaidLocked"
+                  : "admin.unlock.success",
+              );
             }}
           />
           <AdminHallLockControls

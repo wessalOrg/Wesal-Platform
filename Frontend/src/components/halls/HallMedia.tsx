@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useT } from "@/i18n";
 
 export function isRemoteImage(src: string) {
   return /^https?:\/\//i.test(src);
@@ -14,7 +15,8 @@ function canOptimizeRemote(src: string) {
       host === "images.unsplash.com" ||
       host === "localhost" ||
       host === "127.0.0.1" ||
-      host === "wesal-platform.onrender.com"
+      host === "wesal-platform.onrender.com" ||
+      host.endsWith(".apps.taqat.academy")
     );
   } catch {
     return false;
@@ -34,16 +36,18 @@ export default function HallMedia({
   sizes?: string;
   priority?: boolean;
 }) {
+  const t = useT();
   const [failed, setFailed] = useState(false);
 
   if (failed || !src) {
+    const failedLabel = t("halls.gallery.failed");
     return (
       <span
         className={`flex items-center justify-center bg-[#f3ece8] text-xs text-[var(--wesal-muted)] ${className ?? ""}`}
         role="img"
-        aria-label={alt || "تعذر تحميل الصورة"}
+        aria-label={alt || failedLabel}
       >
-        تعذر تحميل الصورة
+        {failedLabel}
       </span>
     );
   }

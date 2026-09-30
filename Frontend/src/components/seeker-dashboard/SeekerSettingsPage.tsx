@@ -1,7 +1,6 @@
 "use client";
 
 import ProfileField from "@/components/profile/ProfileField";
-import ProfileHeroCard from "@/components/profile/ProfileHeroCard";
 import SuccessToast from "@/components/ui/SuccessToast";
 import { useSeekerProfile } from "@/hooks/useSeekerProfile";
 import { useT } from "@/i18n";
@@ -134,7 +133,7 @@ export default function SeekerSettingsPage() {
   if (profileState.status === "unauthorized") {
     return (
       <section className="seeker-settings-card" data-testid="seeker-settings-unauthorized">
-        <h1 className="seeker-settings-title">{t("seeker.nav.account")}</h1>
+        <h1 className="seeker-settings-title">{t("seeker.nav.settings")}</h1>
         <p className="seeker-settings-lead">{t("profile.loginRequired")}</p>
         <Link href="/login?redirect=/profile/account" className="btn-primary mt-5">
           {t("profile.goLogin")}
@@ -146,7 +145,7 @@ export default function SeekerSettingsPage() {
   if (profileState.status === "forbidden") {
     return (
       <section className="seeker-settings-card" data-testid="seeker-settings-forbidden">
-        <h1 className="seeker-settings-title">{t("seeker.nav.account")}</h1>
+        <h1 className="seeker-settings-title">{t("seeker.nav.settings")}</h1>
         <p className="seeker-settings-lead">{t("profile.loginRequired")}</p>
       </section>
     );
@@ -155,7 +154,7 @@ export default function SeekerSettingsPage() {
   if (profileState.status === "error" && !profileState.profile && !display.fullName && !display.email) {
     return (
       <section className="seeker-settings-card" data-testid="seeker-settings-error">
-        <h1 className="seeker-settings-title">{t("seeker.nav.account")}</h1>
+        <h1 className="seeker-settings-title">{t("seeker.nav.settings")}</h1>
         <p className="seeker-settings-lead">{t("errors.profile.load")}</p>
         <button type="button" className="btn-outline mt-5" onClick={profileState.reload}>
           {t("common.retry")}
@@ -264,18 +263,9 @@ export default function SeekerSettingsPage() {
       />
 
       <header className="seeker-settings-header">
-        <h1 className="seeker-settings-title">{t("seeker.nav.account")}</h1>
+        <h1 className="seeker-settings-title">{t("seeker.nav.settings")}</h1>
         <p className="seeker-settings-lead">{t("profile.subtitle")}</p>
       </header>
-
-      <ProfileHeroCard
-        profile={profile}
-        fullName={display.fullName || profile?.fullName}
-        email={display.email || profile?.email}
-        phoneNumber={display.phoneNumber || profile?.phoneNumber}
-        createdAt={display.createdAt || profile?.createdAt}
-        avatarUrl={display.avatarUrl}
-      />
 
       {profileState.status === "error" && !profile ? (
         <section className="seeker-settings-card" data-testid="seeker-settings-error-banner">

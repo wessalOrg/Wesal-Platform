@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { addressesForCatalogRegion } from "@/constants/regionAddressCatalog";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useHallCatalogs } from "@/hooks/useHallCatalogs";
 import { REGION_OPTIONS, type HallRegion } from "@/types/hall";
 
@@ -50,6 +49,8 @@ export function hasActiveHallFilters(filters: HallLocationFilters): boolean {
   );
 }
 
+const DETAILED_ADDRESS_DEBOUNCE_MS = 400;
+
 export function useHallFilters() {
   const router = useRouter();
   const pathname = usePathname();
@@ -61,25 +62,29 @@ export function useHallFilters() {
     parseHallFilters(searchParams),
   );
   const [detailedDraft, setDetailedDraft] = useState(filters.detailedAddress);
-  const debouncedDetailed = useDebouncedValue(detailedDraft, 400);
+  const [syncedQuery, setSyncedQuery] = useState(queryString);
+  const detailedTimerRef = useRef<number | null>(null);
 
-  useEffect(() => {
+  const clearDetailedTimer = useCallback(() => {
+    if (detailedTimerRef.current === null) return;
+    window.clearTimeout(detailedTimerRef.current);
+    detailedTimerRef.current = null;
+  }, []);
+
+  // URL is the source of truth (back/forward, shared links). Reconcile during
+  // render instead of in an effect so there is no extra cascading commit.
+  if (syncedQuery !== queryString) {
+    setSyncedQuery(queryString);
     const fromUrl = parseHallFilters(new URLSearchParams(queryString));
-    setFilters((current) =>
-      serializeHallFilters(current) === serializeHallFilters(fromUrl) ? current : fromUrl,
-    );
-    setDetailedDraft((current) =>
-      current === fromUrl.detailedAddress ? current : fromUrl.detailedAddress,
-    );
-  }, [queryString]);
+    if (serializeHallFilters(filters) !== serializeHallFilters(fromUrl)) {
+      setFilters(fromUrl);
+    }
+    if (detailedDraft !== fromUrl.detailedAddress) {
+      setDetailedDraft(fromUrl.detailedAddress);
+    }
+  }
 
-  useEffect(() => {
-    setFilters((current) =>
-      current.detailedAddress === debouncedDetailed
-        ? current
-        : { ...current, detailedAddress: debouncedDetailed },
-    );
-  }, [debouncedDetailed]);
+  useEffect(() => clearDetailedTimer, [clearDetailedTimer]);
 
   useEffect(() => {
     const nextQuery = serializeHallFilters(filters);
@@ -104,14 +109,27 @@ export function useHallFilters() {
     setFilters((current) => ({ ...current, address }));
   }, []);
 
-  const setDetailedAddress = useCallback((detailedAddress: string) => {
-    setDetailedDraft(detailedAddress);
-  }, []);
+  const setDetailedAddress = useCallback(
+    (detailedAddress: string) => {
+      setDetailedDraft(detailedAddress);
+      clearDetailedTimer();
+      detailedTimerRef.current = window.setTimeout(() => {
+        detailedTimerRef.current = null;
+        setFilters((current) =>
+          current.detailedAddress === detailedAddress
+            ? current
+            : { ...current, detailedAddress },
+        );
+      }, DETAILED_ADDRESS_DEBOUNCE_MS);
+    },
+    [clearDetailedTimer],
+  );
 
   const resetFilters = useCallback(() => {
+    clearDetailedTimer();
     setDetailedDraft("");
     setFilters(EMPTY_FILTERS);
-  }, []);
+  }, [clearDetailedTimer]);
 
   return {
     filters,

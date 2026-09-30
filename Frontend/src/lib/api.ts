@@ -44,8 +44,18 @@ export function resolveApiBaseUrl(): string {
   return raw;
 }
 
+/** Effective REST base URL (`.../api/v1`), validated for the current environment. */
+export function apiBaseUrl(): string {
+  return resolveApiBaseUrl();
+}
+
+/** Origin of the API host (no `/api/v1`), used for `/uploads` media and SignalR hubs. */
+export function apiOrigin(): string {
+  return new URL(apiBaseUrl()).origin;
+}
+
 const api = axios.create({
-  baseURL: resolveApiBaseUrl(),
+  baseURL: apiBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },

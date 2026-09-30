@@ -52,6 +52,19 @@ function defaultTone(type: PlatformNotificationType): PlatformNotificationTone {
   return "info";
 }
 
+/**
+ * Serialized store contents (or "" when empty / on the server). Stable by string
+ * equality, so it is safe as a `useSyncExternalStore` snapshot.
+ */
+export function readPlatformNotificationsSnapshot(): string {
+  if (!canUseStorage()) return "";
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 function readRaw(): PlatformNotification[] {
   if (!canUseStorage()) return [];
   try {
@@ -132,10 +145,6 @@ export function listPlatformNotifications(
   const items = readRaw().map(hydratePlatformNotification);
   if (!audience) return items;
   return items.filter((item) => item.audience === audience);
-}
-
-export function unreadPlatformNotificationCount(audience?: NotificationAudience): number {
-  return listPlatformNotifications(audience).filter((item) => !item.is_read).length;
 }
 
 function isRecentDuplicate(

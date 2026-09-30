@@ -88,13 +88,13 @@ export default function SeekerSidebar({
 
         <div className="seeker-dash-sidebar-footer">
           <Link
-            href="/halls"
+            href="/"
             prefetch
             className="seeker-dash-sidebar-browse"
             data-testid="seeker-nav-browse-halls"
             onClick={onNavigate}
-            onMouseEnter={() => router.prefetch("/halls")}
-            onFocus={() => router.prefetch("/halls")}
+            onMouseEnter={() => router.prefetch("/")}
+            onFocus={() => router.prefetch("/")}
           >
             <span className="seeker-dash-sidebar-icon" aria-hidden="true">
               <HomeSiteIcon />

@@ -58,144 +58,9 @@ function scheduleMockDeferredRejection(conversationId: string) {
   }, 2200);
 }
 
-const INBOX: ConversationSummary[] = [
-  {
-    conversationId: "mock-convo-payment-hope",
-    hallId: "mock-hall-hope",
-    hallName: "قاعة الأمل",
-    otherParticipantId: "owner-hope",
-    otherParticipantName: "أحمد أبو سالم",
-    lastMessagePreview:
-      'Your subscription for "قاعة الأمل" ends on 2026-09-30 (4 days remaining). Please renew your subscription to keep management access to this hall active.',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
-    messageCount: 2,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
-    isUnread: true,
-  },
-  {
-    conversationId: "mock-convo-gold",
-    hallId: "mock-hall-gold",
-    hallName: "قاعة النخيل الذهبية",
-    otherParticipantId: "owner-1",
-    otherParticipantName: "سارة أحمد",
-    lastMessagePreview: formatBookingRejectionContent(
-      "قاعة النخيل الذهبية",
-      "2026-09-18",
-      "FirstPeriod",
-      "القاعة محجوزة في هذا الموعد لأن فيه حفلين متتاليين، وما نقدر نفك الفترة. نعتذر منك، وجرب تاريخ ثاني أو الفترة الثانية إذا كانت ظاهرة متاحة، وفريق القاعة يردك من هنا إذا احتجت مساعدة.",
-    ),
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    messageCount: 4,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(),
-    isUnread: true,
-  },
-  {
-    conversationId: "mock-convo-royal",
-    hallId: "mock-hall-royal",
-    hallName: "قاعة رويال",
-    otherParticipantId: "owner-2",
-    otherParticipantName: "صاحب قاعة رويال",
-    lastMessagePreview: "أهلاً، كيف فينا نساعدك؟",
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    messageCount: 2,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    isUnread: false,
-  },
-];
+const INBOX: ConversationSummary[] = [];
 
-const THREADS: Record<string, MessageThread> = {
-  "mock-convo-payment-hope": {
-    conversationId: "mock-convo-payment-hope",
-    hallId: "mock-hall-hope",
-    hallName: "قاعة الأمل",
-    messages: [
-      {
-        id: "hope-pay-1",
-        senderUserId: "system",
-        senderName: "Wesal",
-        content:
-          'Your subscription for "قاعة الأمل" ends on 2026-09-30 (4 days remaining). Please renew your subscription to keep management access to this hall active.',
-        sentAt: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
-        delivery: "sent",
-      },
-      {
-        id: "hope-pay-2",
-        senderUserId: "owner-hope",
-        senderName: "أحمد أبو سالم",
-        content: "مرحباً. هل يمكن معرفة تفاصيل أكثر عن طريقة الدفع؟ شكراً.",
-        sentAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
-        delivery: "sent",
-      },
-    ],
-  },
-  "mock-convo-gold": {
-    conversationId: "mock-convo-gold",
-    hallId: "mock-hall-gold",
-    hallName: "قاعة النخيل الذهبية",
-    messages: [
-      {
-        id: "m1",
-        senderUserId: DEMO_USER_ID,
-        senderName: "مستخدم وصال",
-        content: "مرحبا، في توفر يوم الجمعة؟",
-        sentAt: new Date(Date.now() - 1000 * 60 * 80).toISOString(),
-        delivery: "sent",
-      },
-      {
-        id: "m2",
-        senderUserId: "owner-1",
-        senderName: "صاحب قاعة النخيل",
-        content: "أهلاً، نعم المساء متاح.",
-        sentAt: new Date(Date.now() - 1000 * 60 * 55).toISOString(),
-        delivery: "sent",
-      },
-      {
-        id: "m3",
-        senderUserId: "owner-1",
-        senderName: "صاحب قاعة النخيل",
-        content: "تقدر تحجز مساء الجمعة إذا بدك.",
-        sentAt: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
-        delivery: "sent",
-      },
-      {
-        id: "m4-reject",
-        senderUserId: "owner-1",
-        senderName: "صاحب قاعة النخيل",
-        content: formatBookingRejectionContent(
-          "قاعة النخيل الذهبية",
-          "2026-09-18",
-          "FirstPeriod",
-          "القاعة محجوزة في هذا الموعد لأن فيه حفلين متتاليين، وما نقدر نفك الفترة. نعتذر منك، وجرب تاريخ ثاني أو الفترة الثانية إذا كانت ظاهرة متاحة، وفريق القاعة يردك من هنا إذا احتجت مساعدة.",
-        ),
-        sentAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-        delivery: "sent",
-      },
-    ],
-  },
-  "mock-convo-royal": {
-    conversationId: "mock-convo-royal",
-    hallId: "mock-hall-royal",
-    hallName: "قاعة رويال",
-    messages: [
-      {
-        id: "r1",
-        senderUserId: "owner-2",
-        senderName: "صاحب قاعة رويال",
-        content: "أهلاً، كيف فينا نساعدك؟",
-        sentAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-        delivery: "sent",
-      },
-      {
-        id: "r2",
-        senderUserId: DEMO_USER_ID,
-        senderName: "مستخدم وصال",
-        content: "بدي أعرف السعة القصوى.",
-        sentAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-        delivery: "sent",
-      },
-    ],
-  },
-};
+const THREADS: Record<string, MessageThread> = {};
 
 const sentByClientId = new Map<string, ThreadMessage>();
 
@@ -214,6 +79,10 @@ function touchInbox(
   item.isUnread = true;
 }
 
+export function mockUnreadConversationCount(): number {
+  return INBOX.filter((item) => item.isUnread).length;
+}
+
 export async function mockFetchInbox(): Promise<ConversationSummary[]> {
   await wait(LATENCY_MS);
   return INBOX.map((item) => ({ ...item }));
@@ -229,32 +98,6 @@ export async function mockFetchThread(conversationId: string): Promise<MessageTh
   return {
     ...thread,
     messages: thread.messages.map((message) => ({ ...message })),
-  };
-}
-
-export async function mockFetchConversation(conversationId: string): Promise<{
-  conversationId: string;
-  hallId: string;
-  hallName: string;
-  initiatorUserId: string;
-  ownerUserId: string;
-  createdAt: string;
-  isExisting: boolean;
-}> {
-  await wait(LATENCY_MS);
-  const item = INBOX.find((row) => row.conversationId === conversationId);
-  const thread = THREADS[conversationId];
-  if (!item || !thread) {
-    throw new ApiError(t("errors.conversation.missing"), 404);
-  }
-  return {
-    conversationId: item.conversationId,
-    hallId: item.hallId,
-    hallName: item.hallName,
-    initiatorUserId: DEMO_USER_ID,
-    ownerUserId: item.otherParticipantId,
-    createdAt: item.createdAt,
-    isExisting: true,
   };
 }
 

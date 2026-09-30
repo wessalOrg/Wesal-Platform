@@ -8,6 +8,12 @@ export { mapHallApiErrorsToFormErrors };
 
 export function hallUpdateSubmitErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.status === 401 || error.code === "Unauthorized") {
+      return "owner.management.hallEdit.errors.unauthorized";
+    }
+    if (error.status === 403 || error.code === "Forbidden") {
+      return "owner.management.hallEdit.errors.forbidden";
+    }
     if (isHallNotEditableApiError(error)) {
       return "owner.management.hallEdit.errors.notEditable";
     }
@@ -20,7 +26,12 @@ export function hallUpdateSubmitErrorMessage(error: unknown): string {
     return "owner.management.hallEdit.errors.submitFailed";
   }
   if (message === "owner.management.addHall.errors.validation") {
-    return "owner.management.addHall.errors.validation";
+    const detail =
+      error instanceof ApiError ? (error.detail ?? error.message).trim() : "";
+    if (detail && !detail.startsWith("owner.") && !detail.startsWith("errors.")) {
+      return detail;
+    }
+    return "owner.management.hallEdit.errors.submitFailed";
   }
   return message;
 }

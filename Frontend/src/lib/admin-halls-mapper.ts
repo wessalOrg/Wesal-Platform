@@ -204,6 +204,39 @@ export function mapAdminPendingHalls(payload: unknown): AdminPendingHall[] {
   return halls;
 }
 
+export type AdminHallPage = {
+  items: AdminPendingHall[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+};
+
+/** PagedResult from GET /admin/halls/pending and GET /admin/halls/rejected. */
+export function mapAdminHallPage(payload: unknown): AdminHallPage {
+  const items = mapAdminPendingHalls(payload);
+  const root =
+    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+  const page = readPositiveInt(root?.pageNumber ?? root?.PageNumber) ?? 1;
+  const pageSize = readPositiveInt(root?.pageSize ?? root?.PageSize) ?? 10;
+  const totalCount = readNonNegativeInt(root?.totalCount ?? root?.TotalCount) ?? items.length;
+  const reportedPages = readNonNegativeInt(root?.totalPages ?? root?.TotalPages);
+  const totalPages =
+    reportedPages ?? (pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0);
+  return { items, page, pageSize, totalCount, totalPages };
+}
+
+function readPositiveInt(value: unknown): number | null {
+  const parsed = readNonNegativeInt(value);
+  return parsed !== null && parsed > 0 ? parsed : null;
+}
+
+function readNonNegativeInt(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0) return value;
+  if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
+  return null;
+}
+
 export function mapAdminHallApproval(payload: unknown): AdminHallApprovalResult | null {
   if (!payload || typeof payload !== "object") return null;
   const dto = payload as Record<string, unknown>;
@@ -219,8 +252,9 @@ export function mapAdminHallApproval(payload: unknown): AdminHallApprovalResult 
   };
 }
 
+/** Backend ApproveHall accepts PendingReview and Rejected. Payment and locks stay untouched. */
 export function canApproveHallStatus(status: AdminHallStatus): boolean {
-  return status === "PendingReview";
+  return status === "PendingReview" || status === "Rejected";
 }
 
 /** PendingReview or live Approved (needs confirmLiveApproved). */

@@ -1,5 +1,6 @@
 "use client";
 
+import CatalogFilterSelect from "@/components/halls/CatalogFilterSelect";
 import { useT } from "@/i18n";
 import { REGION_OPTIONS, type HallRegion } from "@/types/hall";
 
@@ -31,6 +32,18 @@ export default function HallsFilterBar({
 }: HallsFilterBarProps) {
   const t = useT();
   const addressDisabled = region === "all";
+  const addressOptions = [
+    {
+      value: "",
+      label: addressDisabled
+        ? t("halls.catalog.addressDisabled")
+        : t("halls.catalog.addressPick"),
+    },
+    ...(address && !addresses.includes(address)
+      ? [{ value: address, label: address }]
+      : []),
+    ...addresses.map((item) => ({ value: item, label: item })),
+  ];
 
   return (
     <form
@@ -41,50 +54,32 @@ export default function HallsFilterBar({
       data-testid="halls-filter-bar"
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <label className="min-w-0">
-          <span className="mb-1.5 block text-sm font-semibold text-[var(--wesal-text)]">
-            {t("halls.catalog.region")}
-          </span>
-          <select
-            id="halls-filter-region"
-            value={region}
-            className={FIELD_CLASS}
-            data-testid="halls-filter-region"
-            onChange={(event) => onRegionChange(event.target.value as HallRegion)}
-          >
-            {REGION_OPTIONS.map((option) => (
-              <option key={option.id} value={option.id}>
-                {t(option.labelKey)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <CatalogFilterSelect
+          id="halls-filter-region"
+          label={t("halls.catalog.region")}
+          value={region}
+          options={REGION_OPTIONS.map((option) => ({
+            value: option.id,
+            label: t(option.labelKey),
+          }))}
+          testId="halls-filter-region"
+          onChange={(next) => onRegionChange(next as HallRegion)}
+        />
 
-        <label className="min-w-0">
-          <span className="mb-1.5 block text-sm font-semibold text-[var(--wesal-text)]">
-            {t("halls.catalog.address")}
-          </span>
-          <select
-            id="halls-filter-address"
-            value={address}
-            disabled={addressDisabled}
-            className={FIELD_CLASS}
-            data-testid="halls-filter-address"
-            onChange={(event) => onAddressChange(event.target.value)}
-          >
-            <option value="">
-              {addressDisabled ? t("halls.catalog.addressDisabled") : t("halls.catalog.addressPick")}
-            </option>
-            {address && !addresses.includes(address) ? (
-              <option value={address}>{address}</option>
-            ) : null}
-            {addresses.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
+        <CatalogFilterSelect
+          id="halls-filter-address"
+          label={t("halls.catalog.address")}
+          value={address}
+          placeholder={
+            addressDisabled
+              ? t("halls.catalog.addressDisabled")
+              : t("halls.catalog.addressPick")
+          }
+          options={addressOptions}
+          disabled={addressDisabled}
+          testId="halls-filter-address"
+          onChange={onAddressChange}
+        />
 
         <label className="min-w-0 sm:col-span-2 lg:col-span-1">
           <span className="mb-1.5 block text-sm font-semibold text-[var(--wesal-text)]">
