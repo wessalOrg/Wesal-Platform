@@ -195,10 +195,18 @@ export default function HallMonthCalendar({
     );
   };
 
+  const ownerLegend = legend === "owner";
+
   return (
     <div data-testid="hall-month-calendar" className="hall-month-calendar">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div
+        className={
+          ownerLegend
+            ? "flex flex-col items-center gap-3"
+            : "flex flex-wrap items-center justify-between gap-3"
+        }
+      >
+        <div className={`flex items-center gap-2 ${ownerLegend ? "justify-center" : ""}`}>
           <button
             type="button"
             className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wesal-border)] text-lg text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
@@ -220,7 +228,11 @@ export default function HallMonthCalendar({
           </button>
         </div>
 
-        <ul className="flex flex-wrap items-center gap-3 text-[0.7rem] text-[var(--wesal-muted)]">
+        <ul
+          className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.75rem] text-[var(--wesal-muted)] ${
+            ownerLegend ? "justify-center" : ""
+          }`}
+        >
           {legend === "owner" ? (
             <>
               <li className="inline-flex items-center gap-1.5">
@@ -307,7 +319,9 @@ export default function HallMonthCalendar({
                     : isPartial
                       ? "hall-cal-day--partial rounded-xl"
                       : cell.status === "available"
-                        ? "rounded-full bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                        ? ownerLegend
+                          ? "rounded-full border border-[#d7ebe0] bg-white text-[var(--wesal-text)] hover:bg-[#f4fbf7]"
+                          : "rounded-full bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
                         : "cursor-default rounded-full text-[#c5bbb4]",
               ].join(" ")}
               aria-pressed={selected}

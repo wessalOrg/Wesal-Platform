@@ -209,7 +209,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   background: #c4a05c;
 }
 
-/* Exact Wesal logo — original PNG, tinted to site maroon */
+/* Wesal logo — adopted calligraphy PNG */
 .wesal-logo-img {
   display: block;
   width: auto;
@@ -218,11 +218,6 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   object-position: center;
   user-select: none;
   pointer-events: none;
-}
-
-.wesal-logo-img--brand {
-  /* Match site maroon (#c17b7f) without over-darkening */
-  filter: brightness(0.95) saturate(1.2) contrast(1.05);
 }
 
 .wesal-logo-img--white {
@@ -3793,10 +3788,6 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   background: transparent;
 }
 
-.wesal-auth-minimal-header .wesal-logo-img--brand {
-  filter: brightness(0.95) saturate(1.2) contrast(1.05);
-}
-
 .wesal-auth-brand-name {
   color: var(--wesal-maroon);
 }
@@ -6186,6 +6177,115 @@ html[dir="rtl"] .seeker-notify-panel {
   margin: 0.25rem 0 0;
   font-size: 0.85rem;
   color: var(--seeker-muted);
+}
+
+.admin-sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.admin-sub-card {
+  border-radius: 1.35rem;
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+  background: var(--seeker-white);
+  padding: 1.15rem 1.2rem 1.2rem;
+  box-shadow: 0 10px 24px rgba(90, 55, 45, 0.045);
+}
+
+.admin-sub-card-head {
+  padding-bottom: 0.85rem;
+  margin-bottom: 0.95rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 85%, white);
+}
+
+.admin-sub-owner-name {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--seeker-maroon-dark);
+}
+
+.admin-sub-owner-meta {
+  margin: 0.3rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--seeker-muted);
+  overflow-wrap: anywhere;
+}
+
+.admin-sub-halls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-sub-hall {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 75%, white);
+  background: var(--seeker-pink-soft);
+  padding: 1rem 1.05rem;
+}
+
+.admin-sub-hall-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem 0.8rem;
+}
+
+.admin-sub-hall-name {
+  margin: 0;
+  min-width: 0;
+  font-size: 1rem;
+  font-weight: 750;
+  line-height: 1.45;
+  color: var(--wesal-text);
+}
+
+.admin-sub-hall-meta {
+  margin: 0.4rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.7;
+  color: var(--wesal-muted);
+}
+
+.admin-sub-hall-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+}
+
+.admin-sub-hall-actions > * {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 639px) {
+  .admin-sub-hall-actions {
+    justify-content: stretch;
+  }
+
+  .admin-sub-hall-actions > * {
+    flex: 1 1 100%;
+  }
+
+  .admin-sub-hall-actions button,
+  .admin-sub-hall-actions a {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .seeker-welcome-actions {

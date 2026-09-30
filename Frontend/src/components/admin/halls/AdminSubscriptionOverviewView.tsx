@@ -62,107 +62,103 @@ export default function AdminSubscriptionOverviewView() {
       ) : null}
 
       {!loading && !errorKey && hallCount > 0 ? (
-        <section className="seeker-pending-panel">
+        <section className="admin-sub-list" data-testid="admin-subscription-list">
           {groups.map((group) => (
-            <div
+            <article
               key={group.ownerId || group.ownerEmail || group.ownerFullName || "owner"}
-              className="admin-ops-owner-group"
+              className="admin-sub-card"
               data-testid="admin-subscription-owner-group"
             >
-              <header className="admin-ops-owner-head">
-                <h2 className="admin-ops-owner-name">
+              <header className="admin-sub-card-head">
+                <h2 className="admin-sub-owner-name">
                   {group.ownerFullName || t("admin.halls.message.ownerFallback")}
                 </h2>
                 {group.ownerEmail || group.ownerPhoneNumber ? (
-                  <p className="admin-ops-owner-meta">
+                  <p className="admin-sub-owner-meta">
                     {[group.ownerEmail, group.ownerPhoneNumber].filter(Boolean).join(" · ")}
                   </p>
                 ) : null}
               </header>
 
-              <ul className="seeker-home-booking-list">
+              <ul className="admin-sub-halls">
                 {group.halls.map((hall) => (
                   <li
                     key={hall.hallId}
-                    className="seeker-home-booking-row"
+                    className="admin-sub-hall"
                     data-testid="admin-subscription-hall-row"
                     data-hall-id={hall.hallId}
                     data-payment={hall.paymentStatus}
                   >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-[var(--wesal-text)]">{hall.name}</p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <AdminPaymentStatusBadge status={hall.paymentStatus} />
-                        </div>
-                        {hall.nextBillingDate ? (
-                          <p className="mt-2 text-sm text-[var(--wesal-muted)]">
-                            {t("admin.halls.paid.nextBilling")}:{" "}
-                            {formatBookingDateLabel(hall.nextBillingDate, locale)}
-                            {hall.daysRemaining != null
-                              ? ` · ${t("admin.halls.paid.daysRemaining", { count: hall.daysRemaining })}`
-                              : ""}
-                          </p>
-                        ) : (
-                          <p className="mt-2 text-sm text-[var(--wesal-muted)]">
-                            {t("admin.halls.paid.noCycle")}
-                          </p>
-                        )}
+                    <div className="admin-sub-hall-main">
+                      <div className="admin-sub-hall-title-row">
+                        <p className="admin-sub-hall-name">{hall.name}</p>
+                        <AdminPaymentStatusBadge status={hall.paymentStatus} />
                       </div>
-                      <div className="admin-ops-row-actions">
-                        <AdminHallPaidControls
-                          hallId={hall.hallId}
-                          status={hall.approvalStatus}
-                          paymentStatus={hall.paymentStatus}
-                          systemLocked={hall.systemLocked}
-                          cycleEnd={hall.nextBillingDate}
-                          variant="soft"
-                          showBadge={false}
-                          onPaid={(result) => {
-                            applyPaidState(result);
-                            setToastKey(
-                              result.alreadyPaidWithActiveCycle
-                                ? "admin.halls.paid.alreadyActive"
-                                : "admin.halls.paid.success",
-                            );
-                          }}
-                        />
-                        <AdminHallUnlockControls
-                          hallId={hall.hallId}
-                          adminLocked={hall.adminLocked}
-                          systemLocked={hall.systemLocked}
-                          variant="soft"
-                          onUnlocked={(result) => {
-                            applyLockState(hall.hallId, result.adminLocked, result.systemLocked);
-                            setToastKey(
-                              result.systemLocked
-                                ? "admin.halls.unlock.toast.unpaidLocked"
-                                : "admin.unlock.success",
-                            );
-                          }}
-                        />
-                        <AdminHallLockControls
-                          hallId={hall.hallId}
-                          adminLocked={hall.adminLocked}
-                          variant="soft"
-                          onLocked={(result) => {
-                            applyLockState(hall.hallId, result.adminLocked, hall.systemLocked);
-                            setToastKey("admin.lock.success");
-                          }}
-                        />
-                        <Link
-                          href={adminHallSubmissionPath(hall.hallId)}
-                          className="btn-primary min-h-11 px-4 sm:min-h-10"
-                          prefetch
-                        >
-                          {t("admin.halls.queue.open")}
-                        </Link>
-                      </div>
+                      {hall.nextBillingDate ? (
+                        <p className="admin-sub-hall-meta">
+                          {t("admin.halls.paid.nextBilling")}:{" "}
+                          {formatBookingDateLabel(hall.nextBillingDate, locale)}
+                          {hall.daysRemaining != null
+                            ? ` · ${t("admin.halls.paid.daysRemaining", { count: hall.daysRemaining })}`
+                            : ""}
+                        </p>
+                      ) : (
+                        <p className="admin-sub-hall-meta">{t("admin.halls.paid.noCycle")}</p>
+                      )}
+                    </div>
+                    <div className="admin-sub-hall-actions">
+                      <AdminHallPaidControls
+                        hallId={hall.hallId}
+                        status={hall.approvalStatus}
+                        paymentStatus={hall.paymentStatus}
+                        systemLocked={hall.systemLocked}
+                        cycleEnd={hall.nextBillingDate}
+                        variant="soft"
+                        showBadge={false}
+                        onPaid={(result) => {
+                          applyPaidState(result);
+                          setToastKey(
+                            result.alreadyPaidWithActiveCycle
+                              ? "admin.halls.paid.alreadyActive"
+                              : "admin.halls.paid.success",
+                          );
+                        }}
+                      />
+                      <AdminHallUnlockControls
+                        hallId={hall.hallId}
+                        adminLocked={hall.adminLocked}
+                        systemLocked={hall.systemLocked}
+                        variant="soft"
+                        onUnlocked={(result) => {
+                          applyLockState(hall.hallId, result.adminLocked, result.systemLocked);
+                          setToastKey(
+                            result.systemLocked
+                              ? "admin.halls.unlock.toast.unpaidLocked"
+                              : "admin.unlock.success",
+                          );
+                        }}
+                      />
+                      <AdminHallLockControls
+                        hallId={hall.hallId}
+                        adminLocked={hall.adminLocked}
+                        variant="soft"
+                        onLocked={(result) => {
+                          applyLockState(hall.hallId, result.adminLocked, hall.systemLocked);
+                          setToastKey("admin.lock.success");
+                        }}
+                      />
+                      <Link
+                        href={adminHallSubmissionPath(hall.hallId)}
+                        className="btn-primary min-h-11 px-4 sm:min-h-10"
+                        prefetch
+                      >
+                        {t("admin.halls.queue.open")}
+                      </Link>
                     </div>
                   </li>
                 ))}
               </ul>
-            </div>
+            </article>
           ))}
         </section>
       ) : null}

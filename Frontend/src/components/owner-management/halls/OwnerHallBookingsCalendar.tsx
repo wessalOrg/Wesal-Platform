@@ -47,7 +47,7 @@ export default function OwnerHallBookingsCalendar({
 
   return (
     <div
-      className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(16rem,0.85fr)] lg:items-start lg:gap-6"
+      className="grid min-w-0 grid-cols-1 items-stretch gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(17rem,0.75fr)] lg:gap-8"
       data-testid="owner-bookings-calendar"
       data-hall-id={hallId}
     >
@@ -65,13 +65,14 @@ export default function OwnerHallBookingsCalendar({
         onVisibleMonthChange={onVisibleMonthChange}
       />
 
-      <div className="min-w-0">
+      <div className="flex min-w-0 flex-col">
         {detailsTitle ? (
           <h2 className="mb-3 text-base font-extrabold text-[var(--wesal-maroon)]">
             {t("owner.calendar.dayDetails")}
           </h2>
         ) : null}
         <SelectedDayBookingStatus
+          className="min-h-40 flex-1"
           selectedDate={selectedInView ? selectedDate : null}
           load={load}
           locale={locale}
@@ -87,17 +88,20 @@ function SelectedDayBookingStatus({
   load,
   locale,
   onRetry,
+  className = "",
 }: {
   selectedDate: string | null;
   load: OwnerBookingsCalendarStatus;
   locale: string;
   onRetry: () => void;
+  className?: string;
 }) {
   const t = useT();
 
   if (load.status === "error") {
     return (
       <CalendarDayError
+        className={className}
         heading={selectedDate ? formatBookingDateLong(selectedDate, locale) : null}
         onRetry={onRetry}
       />
@@ -107,7 +111,7 @@ function SelectedDayBookingStatus({
   if (!selectedDate) {
     return (
       <p
-        className="rounded-2xl border border-dashed border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-6 text-sm leading-7 text-[var(--wesal-muted)]"
+        className={`flex flex-col justify-center rounded-2xl border border-dashed border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-6 text-sm leading-7 text-[var(--wesal-muted)] ${className}`}
         data-testid="owner-calendar-idle"
       >
         {t("owner.calendar.pickDay")}
@@ -120,7 +124,7 @@ function SelectedDayBookingStatus({
   if (load.status === "loading" || load.status === "idle") {
     return (
       <section
-        className="rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-5"
+        className={`flex flex-col justify-center rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-5 ${className}`}
         aria-busy="true"
         aria-live="polite"
         data-testid="owner-calendar-loading"
@@ -133,7 +137,7 @@ function SelectedDayBookingStatus({
 
   const day = load.calendar.days.find((item) => item.date === selectedDate);
   if (!day) {
-    return <CalendarDayError heading={heading} onRetry={onRetry} />;
+    return <CalendarDayError className={className} heading={heading} onRetry={onRetry} />;
   }
 
   if (day.hasBookedHours) {
@@ -142,7 +146,7 @@ function SelectedDayBookingStatus({
 
   return (
     <section
-      className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-5"
+      className={`flex flex-col justify-center rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-5 ${className}`}
       role="status"
       aria-live="polite"
       data-testid="owner-calendar-empty"
@@ -171,7 +175,7 @@ function BookedDay({
 
   return (
     <section
-      className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-5"
+      className={`flex flex-col justify-center rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-5 ${className}`}
       role="status"
       aria-live="polite"
       data-testid="owner-calendar-booked"
@@ -200,15 +204,17 @@ function BookedDay({
 function CalendarDayError({
   heading,
   onRetry,
+  className = "",
 }: {
   heading: string | null;
   onRetry: () => void;
+  className?: string;
 }) {
   const t = useT();
 
   return (
     <section
-      className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-5"
+      className={`flex flex-col justify-center rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-5 ${className}`}
       role="alert"
       data-testid="owner-calendar-error"
     >

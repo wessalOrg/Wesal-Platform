@@ -245,35 +245,38 @@ function CommentItem({
           </div>
         </form>
       ) : (
-        <p className="mt-2 whitespace-pre-line break-words text-start text-[15px] leading-7 text-[#4a403c]">
-          {review.comment}
-        </p>
-      )}
-
-      {isOwner && !editing ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="btn-outline min-h-11 px-4 text-sm"
-            data-testid={`hall-comment-edit-${review.id}`}
-            onClick={() => {
-              setDraft(review.comment);
-              setError(null);
-              setEditing(true);
-            }}
-          >
-            {t("halls.comment.edit")}
-          </button>
-          <button
-            type="button"
-            className="btn-outline min-h-11 px-4 text-sm"
-            data-testid={`hall-comment-delete-${review.id}`}
-            onClick={onDelete}
-          >
-            {t("halls.comment.delete")}
-          </button>
+        <div className="mt-2 flex items-center gap-3">
+          <p className="min-w-0 flex-1 whitespace-pre-line break-words text-start text-[15px] leading-7 text-[#4a403c]">
+            {review.comment}
+          </p>
+          {isOwner ? (
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+                aria-label={t("halls.comment.editLabel")}
+                data-testid={`hall-comment-edit-${review.id}`}
+                onClick={() => {
+                  setDraft(review.comment);
+                  setError(null);
+                  setEditing(true);
+                }}
+              >
+                <PencilIcon />
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#b42318] transition hover:bg-[#fdecea] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b42318]"
+                aria-label={t("halls.comment.delete")}
+                data-testid={`hall-comment-delete-${review.id}`}
+                onClick={onDelete}
+              >
+                <TrashIcon />
+              </button>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      )}
 
       {error ? (
         <div className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
@@ -369,5 +372,39 @@ function DeleteCommentDialog({
         </div>
       </div>
     </div>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+      <path
+        d="M4 20h4l10.2-10.2a1.6 1.6 0 0 0 0-2.3l-1.7-1.7a1.6 1.6 0 0 0-2.3 0L4 16v4Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="m12.8 6.2 3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+      <path d="M5 7h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7.5 7 8.2 19a1.5 1.5 0 0 0 1.5 1.4h4.6a1.5 1.5 0 0 0 1.5-1.4L16.5 7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

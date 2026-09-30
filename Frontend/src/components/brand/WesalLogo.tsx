@@ -22,7 +22,7 @@ export default function WesalLogo({
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset */}
       <img
-        src="/logo-wesal.png?v=11"
+        src="/logo-wesal.png?v=13"
         alt=""
         draggable={false}
         decoding="async"
