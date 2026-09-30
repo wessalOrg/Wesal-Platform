@@ -33,7 +33,7 @@ export function useAdminPendingHalls() {
     setHalls((current) =>
       current.map((hall) =>
         hall.hallId === hallId
-          ? { ...hall, adminLocked, systemLocked, lockBadgeVisible: true }
+          ? { ...hall, adminLocked, systemLocked, lockBadgeVisible: adminLocked || systemLocked }
           : hall,
       ),
     );

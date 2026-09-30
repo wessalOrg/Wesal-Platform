@@ -144,7 +144,7 @@ export default function AdminHallSubmissionDetailView({
               <div className="admin-ops-badges mt-2">
                 <HallApprovalStatusBadge status={hall.approvalBadge} />
                 <AdminPaymentStatusBadge status={hall.paymentStatus} />
-                {hall.adminLocked || hall.systemLocked || hall.lockBadgeVisible ? (
+                {hall.adminLocked || hall.systemLocked ? (
                   <AdminHallLockBadge
                     adminLocked={hall.adminLocked}
                     systemLocked={hall.systemLocked}
@@ -330,11 +330,15 @@ export default function AdminHallSubmissionDetailView({
             hallId={hall.hallId}
             adminLocked={hall.adminLocked}
             systemLocked={hall.systemLocked}
-            lockBadgeVisible={hall.lockBadgeVisible}
             showBadge={false}
             variant="primary"
             onUnlocked={(result) => {
               detail.applyLockState(result.adminLocked, result.systemLocked);
+              setToastKey(
+                result.systemLocked
+                  ? "admin.halls.unlock.toast.unpaidLocked"
+                  : "admin.unlock.success",
+              );
             }}
           />
           <AdminHallLockControls
