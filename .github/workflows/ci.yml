@@ -88,6 +88,9 @@ jobs:
       - name: API base URL resolution and production env gate tests
         run: npm run verify:api-base-url
 
+      - name: Mabrouk assistant contract (routes, navigation safety, context, recovery)
+        run: npm run verify:assistant
+
       - name: Production env gate
         run: node scripts/verify-production-env.mjs
 
