@@ -15,5 +15,6 @@ public interface IAiAssistantService
         string message,
         string? language,
         CancellationToken cancellationToken = default,
-        AiConversationContext? context = null);
+        AiConversationContext? context = null,
+        AiRequestContext? requestContext = null);
 }

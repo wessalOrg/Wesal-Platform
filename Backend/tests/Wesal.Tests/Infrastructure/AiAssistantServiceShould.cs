@@ -25,7 +25,9 @@ public class AiAssistantServiceShould
     private readonly FakeGeminiToolOrchestrator _orchestrator = new();
 
     private AiAssistantService CreateService()
-        => new(
+    {
+        var clock = new AiClock(_dateTime);
+        return new(
             _extractor,
             _howTo,
             _recommendation,
@@ -34,9 +36,19 @@ public class AiAssistantServiceShould
             new HallSearchService(_repository),
             _availability,
             new AiLanguageDetector(),
-            _dateTime,
             _orchestrator,
+            new AiContextResolver(_details, clock, NullLogger<AiContextResolver>.Instance),
+            new AiAssistantPolicyGate(
+                new SubscriptionPaymentService(Microsoft.Extensions.Options.Options.Create(new SubscriptionPaymentOptions())),
+                new EmptyKnowledgeService()),
             NullLogger<AiAssistantService>.Instance);
+    }
+
+    private sealed class EmptyKnowledgeService : IWesalKnowledgeService
+    {
+        public Task<IReadOnlyList<WesalKnowledgeArticle>> SearchAsync(string question, string? language, int maxResults = 3, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<WesalKnowledgeArticle>>([]);
+    }
 
     [Fact]
     public async Task HowToIntent_ReturnsAnswerKind()
@@ -120,7 +132,7 @@ public class AiAssistantServiceShould
             "en",
             DateTime.UtcNow);
 
-        var result = await CreateService().ProcessMessageAsync("find halls", "en", CancellationToken.None);
+        var result = await CreateService().ProcessMessageAsync("find halls in Gaza", "en", CancellationToken.None);
 
         Assert.Equal(AiAssistantResponseKind.Error, result.Kind);
     }
@@ -555,7 +567,7 @@ public class AiAssistantServiceShould
         public int Invocations { get; private set; }
         public Action<string?, string?, CancellationToken, AiConversationContext?>? OnExecute { get; set; }
 
-        public Task<WesalToolOrchestrationResult> ExecuteAsync(string message, string? language, CancellationToken cancellationToken = default, AiConversationContext? context = null)
+        public Task<WesalToolOrchestrationResult> ExecuteAsync(string message, string? language, CancellationToken cancellationToken = default, AiConversationContext? context = null, AiTurnContext? turnContext = null)
         {
             Invocations++;
             OnExecute?.Invoke(message, language, cancellationToken, context);
@@ -573,7 +585,7 @@ public class AiAssistantServiceShould
     {
         public string Answer { get; set; } = string.Empty;
 
-        public Task<HowToResponse> AskHowToAsync(string question, string? language, CancellationToken cancellationToken = default)
+        public Task<HowToResponse> AskHowToAsync(string question, string? language, CancellationToken cancellationToken = default, bool allowModel = true)
             => Task.FromResult(new HowToResponse(Answer, "general", language ?? "ar", DateTime.UtcNow));
     }
 

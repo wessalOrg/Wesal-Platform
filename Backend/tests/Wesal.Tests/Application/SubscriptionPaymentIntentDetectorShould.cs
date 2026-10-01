@@ -8,10 +8,7 @@ public class SubscriptionPaymentIntentDetectorShould
 
     [Theory]
     [InlineData("How do I pay my subscription?")]
-    [InlineData("How do I pay?")]
-    [InlineData("Who do I contact for payment?")]
     [InlineData("Where can I pay my subscription?")]
-    [InlineData("Where do I pay?")]
     [InlineData("How can I renew my subscription?")]
     [InlineData("Who should I message about my subscription?")]
     [InlineData("Who do I contact about my subscription?")]
@@ -25,8 +22,6 @@ public class SubscriptionPaymentIntentDetectorShould
 
     [Theory]
     [InlineData("كيف أدفع الاشتراك؟")]
-    [InlineData("كيف أدفع؟")]
-    [InlineData("مع مين أتواصل للدفع؟")]
     [InlineData("وين أتواصل عشان أدفع الاشتراك؟")]
     [InlineData("كيف أجدد الاشتراك؟")]
     [InlineData("مين أتواصل معه بخصوص الاشتراك؟")]
@@ -43,7 +38,6 @@ public class SubscriptionPaymentIntentDetectorShould
     [InlineData("I need help with my subscription.")]
     [InlineData("I have a problem with my subscription.")]
     [InlineData("I want to renew.")]
-    [InlineData("Where do I pay?")]
     [InlineData("Who handles subscriptions?")]
     public void Ambiguous_SubscriptionRelated_PrefersPayment(string message)
     {

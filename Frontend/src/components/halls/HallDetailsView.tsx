@@ -5,6 +5,7 @@ import { GoldStar, GoldStars } from "@/components/ui/GoldStar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import AskMabroukAboutHallButton from "@/components/assistant/AskMabroukAboutHallButton";
 import HallContactButton from "@/components/halls/HallContactButton";
 import HallGallery from "@/components/halls/HallGallery";
 import HallCommentList from "@/components/halls/HallCommentList";
@@ -280,17 +281,25 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                   {viewHall.name}
                 </h1>
               </button>
-              <button
-                type="button"
-                className="btn-outline mt-2 !min-h-10 !px-3 !text-sm"
-                data-testid="hall-popup-details-cta"
-                onClick={() => {
-                  onClose?.();
-                  router.push(buildHallDetailsPath(viewHall.id));
-                }}
-              >
-                {t("halls.popup.clickForDetails")}
-              </button>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="btn-outline !min-h-10 !px-3 !text-sm"
+                  data-testid="hall-popup-details-cta"
+                  onClick={() => {
+                    onClose?.();
+                    router.push(buildHallDetailsPath(viewHall.id));
+                  }}
+                >
+                  {t("halls.popup.clickForDetails")}
+                </button>
+                <AskMabroukAboutHallButton
+                  hallId={viewHall.id}
+                  hallName={viewHall.name}
+                  variant="inline"
+                  className="!min-h-10"
+                />
+              </div>
               {viewHall.priceLabel ? (
                 <PriceLine
                   label={

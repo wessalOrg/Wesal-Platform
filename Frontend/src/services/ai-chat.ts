@@ -7,10 +7,13 @@ import type {
   AiChatVariant,
   AiExtractedCriteria,
   AiHallAvailability,
+  AiNavigateAction,
   AiRecommendedHall,
   RecommendationStatus,
 } from "@/types/ai-chat";
+import type { AiPinnedHall } from "@/types/ai-assistant";
 import { parseChatResponseLanguage } from "@/lib/ai-chat-text-direction";
+import { isValidHallId, sanitizeAssistantHref, type AssistantPageContext } from "@/lib/wesal-routes";
 
 const CHAT_TIMEOUT_MS = 25_000;
 const QUESTION_MAX_LENGTH = 500;
@@ -25,7 +28,16 @@ const ASSISTANT_KINDS: readonly string[] = [
   "Error",
 ];
 
-type AssistantRequest = { message?: string | null };
+/**
+ * What the client tells the backend about the turn. Everything here is UNTRUSTED
+ * input the server re-validates: a validated pathname (no content/tokens) and the
+ * pinned hall's id (the server re-fetches the hall; name/price/etc. are never sent).
+ */
+type AssistantRequest = {
+  message?: string | null;
+  page?: AssistantPageContext | null;
+  entity?: { type: "hall"; id: string; name?: string | null } | null;
+};
 type HallRecommendationDto = {
   hallId?: string;
   hallName?: string | null;
@@ -59,11 +71,26 @@ type AssistantAvailabilityPeriodDto = {
   endTime?: string | null;
   status?: string | null;
 };
+type AssistantSlotDto = {
+  startTime?: string | null;
+  endTime?: string | null;
+  status?: string | null;
+};
 type AssistantAvailabilityDayDto = {
   hallId?: string;
   hallName?: string | null;
   date?: string | null;
+  /** Current backend contract: hourly slots. */
+  slots?: AssistantSlotDto[] | null;
+  /** Legacy per-period payload (kept for older responses). */
   periods?: AssistantAvailabilityPeriodDto[] | null;
+};
+type AssistantActionDto = {
+  type?: string | null;
+  pageKey?: string | null;
+  href?: string | null;
+  label?: string | null;
+  mode?: string | null;
 };
 type AssistantIntentDto = {
   intent?: string | null;
@@ -83,6 +110,7 @@ type AssistantResponseDto = {
   hallDetails?: AssistantHallDetailsDto | null;
   availability?: AssistantAvailabilityDayDto | null;
   intent?: AssistantIntentDto | null;
+  actions?: AssistantActionDto[] | null;
 };
 
 type ProblemDetails = {
@@ -103,7 +131,10 @@ export type AiChatTurn = {
   timestamp: string;
   sessionExpired: boolean;
   availability: AiHallAvailability | null;
+  actions: AiNavigateAction[];
 };
+
+type BaseTurn = Omit<AiChatTurn, "actions">;
 
 function newId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -216,16 +247,58 @@ function mapAvailability(data: AssistantAvailabilityDayDto | null | undefined): 
     hallId,
     hallName: readTrimmed(data.hallName) ?? "",
     date: readTrimmed(data.date) ?? "",
-    periods: Array.isArray(data.periods)
-      ? data.periods.map((period) => ({
-          periodType: readTrimmed(period.periodType) ?? "",
-          periodName: readTrimmed(period.periodName) ?? "",
-          startTime: readTrimmed(period.startTime) ?? "",
-          endTime: readTrimmed(period.endTime) ?? "",
-          status: readTrimmed(period.status) ?? "Available",
+    periods: Array.isArray(data.slots)
+      ? data.slots.map((slot) => ({
+          periodType: "hourly",
+          periodName: "",
+          startTime: readTrimmed(slot.startTime) ?? "",
+          endTime: readTrimmed(slot.endTime) ?? "",
+          status: readTrimmed(slot.status) ?? "Available",
         }))
-      : [],
+      : Array.isArray(data.periods)
+        ? data.periods.map((period) => ({
+            periodType: readTrimmed(period.periodType) ?? "",
+            periodName: readTrimmed(period.periodName) ?? "",
+            startTime: readTrimmed(period.startTime) ?? "",
+            endTime: readTrimmed(period.endTime) ?? "",
+            status: readTrimmed(period.status) ?? "Available",
+          }))
+        : [],
   };
+}
+
+const MAX_ACTIONS = 3;
+
+/**
+ * Keeps only well-formed Navigate actions whose href is a real internal Wesal route.
+ * Anything else (external URLs, protocol-relative, javascript:, unknown routes, query
+ * strings) is dropped, so a malformed or hostile payload can never navigate anywhere.
+ */
+export function mapAssistantActions(
+  list: AssistantActionDto[] | null | undefined,
+): AiNavigateAction[] {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set<string>();
+  const actions: AiNavigateAction[] = [];
+
+  for (const raw of list) {
+    if (actions.length >= MAX_ACTIONS) break;
+    if (!raw || raw.type !== "Navigate") continue;
+    const href = sanitizeAssistantHref(raw.href);
+    const label = readTrimmed(raw.label);
+    const pageKey = readTrimmed(raw.pageKey);
+    if (!href || !label || !pageKey || seen.has(href)) continue;
+    seen.add(href);
+    actions.push({
+      type: "Navigate",
+      pageKey,
+      href,
+      label: label.slice(0, 80),
+      mode: raw.mode === "auto" ? "auto" : "suggest",
+    });
+  }
+
+  return actions;
 }
 
 function parseAssistantCriteria(intent: AssistantIntentDto | null | undefined): AiExtractedCriteria | null {
@@ -277,6 +350,7 @@ function emptyTurn(
     timestamp: new Date().toISOString(),
     sessionExpired: extras?.sessionExpired ?? false,
     availability: null,
+    actions: [],
   };
 }
 
@@ -286,7 +360,7 @@ function isAssistantPayload(data: unknown): data is AssistantResponseDto {
   return normalizeAssistantKind(row.kind) !== null || typeof row.message === "string";
 }
 
-function mapAssistant(data: AssistantResponseDto): AiChatTurn {
+function mapAssistantBase(data: AssistantResponseDto): BaseTurn {
   const kind = normalizeAssistantKind(data.kind);
   const text = readTrimmed(data.message) ?? "";
   const lang = parseChatResponseLanguage(data.responseLanguage);
@@ -385,6 +459,11 @@ function mapAssistant(data: AssistantResponseDto): AiChatTurn {
   }
 }
 
+/** Maps one assistant payload onto the chat turn the UI renders. Exported for verification. */
+export function mapAssistantResponse(data: AssistantResponseDto): AiChatTurn {
+  return { ...mapAssistantBase(data), actions: mapAssistantActions(data.actions) };
+}
+
 async function postChat<T>(
   url: string,
   body: AssistantRequest,
@@ -399,11 +478,20 @@ async function postChat<T>(
   });
 }
 
+export type AiChatSendOptions = {
+  signal?: AbortSignal;
+  /** Where the user is (validated pathname only). */
+  page?: AssistantPageContext | null;
+  /** The explicitly pinned hall, if any. Only its id is meaningful to the server. */
+  pinned?: AiPinnedHall | null;
+};
+
 export async function sendAiChatTurn(
   sessionId: string,
   raw: string,
-  signal?: AbortSignal,
+  options: AiChatSendOptions = {},
 ): Promise<AiChatTurn> {
+  const { signal, page = null, pinned = null } = options;
   const invalid = validateChatQuestion(raw);
   if (invalid) {
     throw new ApiError(invalid, 400);
@@ -418,7 +506,14 @@ export async function sendAiChatTurn(
   try {
     const { status, data } = await postChat<AssistantResponseDto | ProblemDetails>(
       `/ai/sessions/${sessionId}/assistant`,
-      { message: text },
+      {
+        message: text,
+        page,
+        entity:
+          pinned && isValidHallId(pinned.id)
+            ? { type: "hall", id: pinned.id.trim(), name: pinned.name }
+            : null,
+      },
       signal,
     );
 
@@ -441,12 +536,37 @@ export async function sendAiChatTurn(
       throw new ApiError("errors.assistant.chat.send", 502);
     }
 
-    return mapAssistant(data);
+    return mapAssistantResponse(data);
   } catch (err) {
     if (err instanceof ApiError) throw err;
     if (isBrowserOffline()) throw new ApiError("errors.assistant.network", 0);
     throw new ApiError("errors.assistant.chat.send", 503);
   }
+}
+
+/**
+ * Sends a turn and, if the backend session has expired or was lost (404), creates ONE
+ * fresh session via `renew` and replays the same turn once. Never loops: a second
+ * expiry is returned as-is so the UI can show a normal retryable error.
+ */
+export async function sendTurnWithRecovery(
+  sessionId: string,
+  raw: string,
+  options: AiChatSendOptions,
+  renew?: () => Promise<string | null>,
+): Promise<{ turn: AiChatTurn; sessionId: string }> {
+  let activeId = sessionId;
+  let turn = await sendAiChatTurn(activeId, raw, options);
+
+  if (turn.sessionExpired && renew && !options.signal?.aborted) {
+    const fresh = await renew();
+    if (fresh && !options.signal?.aborted) {
+      activeId = fresh;
+      turn = await sendAiChatTurn(fresh, raw, options);
+    }
+  }
+
+  return { turn, sessionId: activeId };
 }
 
 export function describeChatError(err: unknown): {

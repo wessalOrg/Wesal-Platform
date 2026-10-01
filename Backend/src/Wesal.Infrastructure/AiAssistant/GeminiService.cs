@@ -35,8 +35,15 @@ public sealed class GeminiService : IGeminiService, IGeminiToolCallService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    private const int CircuitBreakerCooldownSeconds = 60;
-    private static long _circuitOpenUntilUtcTicks;
+    /// <summary>Hard ceiling on messages sent in one tool-calling request (defensive only;
+    /// the orchestrator already bounds history and tool rounds well below this).</summary>
+    internal const int MaxToolRequestContents = 30;
+
+    // Per-instance (the service is a singleton) so unrelated service instances never
+    // share breaker state, and it only trips after several CONSECUTIVE failures so one
+    // slow or failed request cannot take the assistant down for everybody.
+    private long _circuitOpenUntilTicks;
+    private int _consecutiveFailures;
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly GoogleAiSettings _settings;
@@ -58,29 +65,39 @@ public sealed class GeminiService : IGeminiService, IGeminiToolCallService
         {
             if (!_settings.Enabled || string.IsNullOrWhiteSpace(_settings.ApiKey))
                 return false;
-            var until = Volatile.Read(ref _circuitOpenUntilUtcTicks);
+            var until = Volatile.Read(ref _circuitOpenUntilTicks);
             if (until > 0 && Environment.TickCount64 < until)
                 return false;
             if (until > 0)
-                Volatile.Write(ref _circuitOpenUntilUtcTicks, 0);
+            {
+                Volatile.Write(ref _circuitOpenUntilTicks, 0);
+                Volatile.Write(ref _consecutiveFailures, 0);
+            }
             return true;
         }
     }
 
-    private static void RecordFailure()
+    private void RecordFailure()
     {
-        var until = Environment.TickCount64 + CircuitBreakerCooldownSeconds * 1000L;
-        Volatile.Write(ref _circuitOpenUntilUtcTicks, until);
+        var threshold = Math.Max(1, _settings.CircuitFailureThreshold);
+        var failures = Interlocked.Increment(ref _consecutiveFailures);
+        if (failures < threshold)
+        {
+            return;
+        }
+
+        var cooldown = Math.Max(1, _settings.CircuitCooldownSeconds);
+        Volatile.Write(ref _circuitOpenUntilTicks, Environment.TickCount64 + cooldown * 1000L);
+        _logger.LogWarning(
+            "Gemini circuit opened for {Cooldown}s after {Failures} consecutive failures; deterministic paths serve requests meanwhile.",
+            cooldown,
+            failures);
     }
 
-    private static void RecordSuccess()
+    private void RecordSuccess()
     {
-        Volatile.Write(ref _circuitOpenUntilUtcTicks, 0);
-    }
-
-    internal static void ResetCircuitBreaker()
-    {
-        Volatile.Write(ref _circuitOpenUntilUtcTicks, 0);
+        Volatile.Write(ref _consecutiveFailures, 0);
+        Volatile.Write(ref _circuitOpenUntilTicks, 0);
     }
 
     public async Task<string?> GenerateTextAsync(
@@ -190,9 +207,7 @@ public sealed class GeminiService : IGeminiService, IGeminiToolCallService
         IReadOnlyList<GeminiFunctionDeclaration> functions,
         CancellationToken cancellationToken)
     {
-        var safeContents = contents is null || contents.Count == 0
-            ? []
-            : contents.Take(7).Select(ToWireMessage).ToList();
+        var safeContents = SanitizeToolContents(contents).Select(ToWireMessage).ToList();
 
         var safeFunctions = functions is null
             ? []
@@ -276,6 +291,60 @@ public sealed class GeminiService : IGeminiService, IGeminiToolCallService
             _logger.LogWarning("Gemini tool-calling request/response serialization failed; stopping tool orchestration.");
             return null;
         }
+    }
+
+    /// <summary>
+    /// Returns a valid Gemini history. Tool calls are atomic: a model message holding a
+    /// <c>functionCall</c> is only ever sent together with the <c>function</c> message
+    /// that answers it. If the history is over the ceiling, whole leading logical turns
+    /// (a user message, or a call/response pair) are dropped — a call is never separated
+    /// from its response — and any orphan call/response is removed defensively.
+    /// </summary>
+    internal static IReadOnlyList<GeminiConversationMessage> SanitizeToolContents(
+        IReadOnlyList<GeminiConversationMessage>? contents)
+    {
+        if (contents is null || contents.Count == 0)
+        {
+            return [];
+        }
+
+        // Group into atomic units: [model(functionCall) + function(functionResponse)] stay together.
+        var units = new List<List<GeminiConversationMessage>>();
+        for (var i = 0; i < contents.Count; i++)
+        {
+            var message = contents[i];
+            var hasCall = message.Parts.Any(part => part.FunctionCall is not null);
+            if (hasCall)
+            {
+                var next = i + 1 < contents.Count ? contents[i + 1] : null;
+                var answered = next is not null && next.Parts.Any(part => part.FunctionResponse is not null);
+                if (!answered)
+                {
+                    continue; // orphan functionCall: drop it
+                }
+
+                units.Add([message, next!]);
+                i++;
+                continue;
+            }
+
+            if (message.Parts.Any(part => part.FunctionResponse is not null))
+            {
+                continue; // orphan functionResponse: drop it
+            }
+
+            units.Add([message]);
+        }
+
+        var total = units.Sum(unit => unit.Count);
+        var start = 0;
+        while (total > MaxToolRequestContents && start < units.Count - 1)
+        {
+            total -= units[start].Count;
+            start++;
+        }
+
+        return units.Skip(start).SelectMany(unit => unit).ToList();
     }
 
     private static GeminiWireMessage ToWireMessage(GeminiConversationMessage message)

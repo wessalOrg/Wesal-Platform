@@ -23,5 +23,8 @@
 # Frontend — not needed for backend image
 Frontend/
 
-# Documentation — not needed for runtime
-documentation/
+# Documentation — not needed for runtime, EXCEPT the AI Knowledge Base: it is compiled
+# into Wesal.Infrastructure as embedded resources (see Wesal.Infrastructure.csproj), so it
+# must be part of the build context or production silently ships with zero articles.
+documentation/*
+!documentation/ai-knowledge

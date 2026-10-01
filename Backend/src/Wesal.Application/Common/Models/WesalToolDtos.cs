@@ -44,6 +44,16 @@ public sealed record WesalToolResult(
     JsonObject? Data,
     string? ErrorMessage)
 {
+    /// <summary>
+    /// Typed public payload mirroring <see cref="Data"/>. Only the application (never
+    /// the model) reads these, to build the structured assistant response.
+    /// </summary>
+    public IReadOnlyList<HallListItemDto>? Halls { get; init; }
+
+    public HallDetailsDto? HallDetails { get; init; }
+
+    public AiAssistantAvailabilityDayDto? Availability { get; init; }
+
     public static WesalToolResult Ok(JsonObject data) => new(true, data, null);
 
     public static WesalToolResult Fail(string message) => new(false, null, message);
@@ -116,4 +126,36 @@ public sealed record WesalToolOrchestrationResult(
     string Answer,
     string ResponseLanguage,
     IReadOnlyList<WesalToolInvocation> ToolCalls,
-    DateTime Timestamp);
+    DateTime Timestamp)
+{
+    /// <summary>
+    /// Whether the orchestrator actually handled the request. <see cref="AiOrchestrationDisposition.NotHandled"/>
+    /// (Gemini unavailable/failed) tells the caller to run the deterministic path instead
+    /// of treating a generic string as a successful answer.
+    /// </summary>
+    public AiOrchestrationDisposition Disposition { get; init; } = AiOrchestrationDisposition.Handled;
+
+    public IReadOnlyList<HallRecommendationDto> Halls { get; init; } = [];
+
+    public HallDetailsDto? HallDetails { get; init; }
+
+    public AiAssistantAvailabilityDayDto? Availability { get; init; }
+
+    public static WesalToolOrchestrationResult NotHandled(string language)
+        => new(false, string.Empty, language, [], DateTime.UtcNow)
+        {
+            Disposition = AiOrchestrationDisposition.NotHandled
+        };
+}
+
+public enum AiOrchestrationDisposition
+{
+    /// <summary>The model produced the answer (possibly using live tools).</summary>
+    Handled,
+
+    /// <summary>The model could not serve the request; the caller must degrade deterministically.</summary>
+    NotHandled,
+
+    /// <summary>A budget/guard stopped the turn; <c>Answer</c> is a safe canned message.</summary>
+    SafeTermination
+}

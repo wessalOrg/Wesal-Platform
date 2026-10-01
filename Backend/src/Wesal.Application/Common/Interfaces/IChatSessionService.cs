@@ -30,4 +30,19 @@ public interface IChatSessionService
     /// so later turns can carry criteria forward across the conversation.
     /// </summary>
     Task SaveTurnAsync(Guid sessionId, string userMessage, AiAssistantIntentDto? intent, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records one complete exchange — the user's message, the assistant's reply, the
+    /// structured intent, the halls that were shown and the hall the turn focused on —
+    /// so follow-ups ("الثانية شو سعرها؟") can be resolved. Bounded and in-memory.
+    /// No-op for missing/expired sessions.
+    /// </summary>
+    Task SaveExchangeAsync(
+        Guid sessionId,
+        string userMessage,
+        string? assistantMessage,
+        AiAssistantIntentDto? intent,
+        IReadOnlyList<AiHallRef>? shownHalls,
+        AiHallRef? focusedHall,
+        CancellationToken cancellationToken = default);
 }

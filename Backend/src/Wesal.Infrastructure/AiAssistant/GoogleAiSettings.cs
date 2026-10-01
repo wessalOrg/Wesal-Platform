@@ -34,10 +34,23 @@ public sealed class GoogleAiSettings
     /// <summary>Maximum characters of user content to send to Gemini.</summary>
     public int MaxContextCharacters { get; set; } = 2000;
 
-    /// <summary>Request timeout for a single Gemini HTTP call, in seconds. Must stay
-    /// well below the frontend's 25 s request budget because a single /assistant
-    /// turn can issue multiple Gemini calls (structured intent + HowTo text).
-    /// At 5 s the worst case is ~10 s with two sequential calls; the circuit
-    /// breaker short-circuits after the first failure.</summary>
-    public int TimeoutSeconds { get; set; } = 5;
+    /// <summary>Timeout for a single Gemini HTTP call, in seconds. The default leaves
+    /// headroom for current Flash models, which routinely need several seconds.</summary>
+    public int TimeoutSeconds { get; set; } = 10;
+
+    /// <summary>Wall-clock budget for one whole assistant turn's Gemini work (all tool
+    /// rounds together). When it is exhausted the turn degrades to the deterministic
+    /// path instead of making the user wait. Must stay below the frontend's 25 s budget.</summary>
+    public int TotalBudgetSeconds { get; set; } = 15;
+
+    /// <summary>Consecutive Gemini failures before the (per-process) breaker opens.
+    /// A single slow or failed request must not disable Gemini for everyone.</summary>
+    public int CircuitFailureThreshold { get; set; } = 3;
+
+    /// <summary>How long the breaker stays open once tripped, in seconds.</summary>
+    public int CircuitCooldownSeconds { get; set; } = 30;
+
+    /// <summary>IANA time zone used to resolve "today" / "tomorrow" / weekdays for
+    /// availability questions.</summary>
+    public string TimeZoneId { get; set; } = "Asia/Gaza";
 }

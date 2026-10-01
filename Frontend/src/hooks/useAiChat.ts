@@ -5,14 +5,31 @@ import {
   createChatMessageId,
   describeChatError,
   isHallSearchQuestion,
-  sendAiChatTurn,
+  sendTurnWithRecovery,
   validateChatQuestion,
 } from "@/services/ai-chat";
+import type { AssistantPageContext } from "@/lib/wesal-routes";
+import type { AiPinnedHall } from "@/types/ai-assistant";
 import type { AiChatMessage, AiChatSendState, AiChatSurface } from "@/types/ai-chat";
+
+/** What is attached to each turn. Read when the user SENDS, so it is never stale. */
+export type AiTurnContextSnapshot = {
+  page: AssistantPageContext | null;
+  pinned: AiPinnedHall | null;
+};
 
 type UseAiChatInput = {
   sessionId: string | null;
   greeting: string;
+  /** Latest validated page + pinned hall, evaluated at send time. */
+  getContext?: () => AiTurnContextSnapshot;
+  /**
+   * Creates a fresh backend session after an expired/lost one (404). The visible
+   * thread is untouched; the failed turn is retried exactly once with the new id.
+   */
+  renewSession?: () => Promise<string | null>;
+  /** Called after a successful turn (slides the client-side session expiry). */
+  onTurnSuccess?: () => void;
 };
 
 export type AiChatControls = {
@@ -26,6 +43,8 @@ export type AiChatControls = {
   /** Replays the last retryable turn in place — no page reload, no extra user bubble. */
   retry: () => Promise<boolean>;
   validate: (text: string) => string | null;
+  /** Replaces the thread with a stored one (UI continuity); ignored once the user has chatted. */
+  hydrate: (messages: AiChatMessage[]) => void;
 };
 
 const EMPTY_RECOMMENDATION = {
@@ -35,6 +54,7 @@ const EMPTY_RECOMMENDATION = {
   lang: null,
   category: null,
   availability: null as AiChatMessage["availability"],
+  actions: [] as AiChatMessage["actions"],
 };
 
 function greetingMessage(text: string): AiChatMessage {
@@ -84,10 +104,19 @@ function upsertUserTurn(messages: AiChatMessage[], text: string): AiChatMessage[
 }
 
 /**
- * Owns the in-panel thread: send, loading, retry, and error bubbles. Session
- * lifecycle stays in `useAiAssistant`; this hook only talks once a session id exists.
+ * Owns the in-panel thread: send, loading, retry, and error bubbles. Mounted at the
+ * provider level (not inside the panel), so closing the panel or navigating between
+ * pages never erases the conversation. Session lifecycle stays in `useAiAssistant`;
+ * this hook only talks once a session id exists, and recovers once from an expired
+ * session.
  */
-export function useAiChat({ sessionId, greeting }: UseAiChatInput): AiChatControls {
+export function useAiChat({
+  sessionId,
+  greeting,
+  getContext,
+  renewSession,
+  onTurnSuccess,
+}: UseAiChatInput): AiChatControls {
   const [messages, setMessages] = useState<AiChatMessage[]>(() =>
     greeting ? [greetingMessage(greeting)] : [],
   );
@@ -99,14 +128,26 @@ export function useAiChat({ sessionId, greeting }: UseAiChatInput): AiChatContro
   const sessionRef = useRef(sessionId);
   const greetingRef = useRef(greeting);
   const lastPromptRef = useRef<string | null>(null);
+  const getContextRef = useRef(getContext);
+  const renewRef = useRef(renewSession);
+  const successRef = useRef(onTurnSuccess);
 
   useEffect(() => {
-    const sessionChanged = sessionRef.current !== sessionId;
-    const greetingChanged = greetingRef.current !== greeting;
-    sessionRef.current = sessionId;
-    greetingRef.current = greeting;
+    getContextRef.current = getContext;
+    renewRef.current = renewSession;
+    successRef.current = onTurnSuccess;
+  });
 
-    if (!sessionChanged && !greetingChanged) return;
+  useEffect(() => {
+    sessionRef.current = sessionId ?? sessionRef.current;
+  }, [sessionId]);
+
+  // Only a language change (new greeting) starts a fresh thread. A new session id on
+  // its own — including one created by expired-session recovery — keeps the thread.
+  useEffect(() => {
+    const greetingChanged = greetingRef.current !== greeting;
+    greetingRef.current = greeting;
+    if (!greetingChanged) return;
 
     abortRef.current?.abort();
     abortRef.current = null;
@@ -116,7 +157,7 @@ export function useAiChat({ sessionId, greeting }: UseAiChatInput): AiChatContro
     setIsRecommending(false);
     setSendState("idle");
     setMessages(greeting ? [greetingMessage(greeting)] : []);
-  }, [sessionId, greeting]);
+  }, [greeting]);
 
   useEffect(() => {
     return () => {
@@ -125,10 +166,20 @@ export function useAiChat({ sessionId, greeting }: UseAiChatInput): AiChatContro
     };
   }, []);
 
+  const hydrate = useCallback((restored: AiChatMessage[]) => {
+    if (restored.length === 0) return;
+    setMessages((current) => {
+      // Never overwrite a conversation the user already started in this page load.
+      if (current.some((message) => message.role === "user")) return current;
+      const greetingOnly = current.filter((message) => message.id === "greeting");
+      return [...greetingOnly, ...restored];
+    });
+  }, []);
+
   const dispatch = useCallback(
     async (raw: string, appendUser: boolean): Promise<boolean> => {
       if (inFlightRef.current) return false;
-      if (!sessionId) return false;
+      if (!sessionRef.current) return false;
 
       const invalid = validateChatQuestion(raw);
       if (invalid) {
@@ -166,11 +217,22 @@ export function useAiChat({ sessionId, greeting }: UseAiChatInput): AiChatContro
       abortRef.current = controller;
 
       try {
-        const turn = await sendAiChatTurn(sessionId, text, controller.signal);
+        const context = getContextRef.current?.() ?? { page: null, pinned: null };
+        const options = { signal: controller.signal, page: context.page, pinned: context.pinned };
+
+        // Expired / lost session (404): ONE new session, same visible conversation, this
+        // turn replayed once. A second failure surfaces as a normal retryable error.
+        const { turn, sessionId: usedSession } = await sendTurnWithRecovery(
+          sessionRef.current as string,
+          text,
+          options,
+          renewRef.current,
+        );
         if (controller.signal.aborted) return false;
+        sessionRef.current = usedSession;
 
         if (turn.variant === "error") {
-          setCanRetry(!turn.sessionExpired);
+          setCanRetry(true);
           setMessages((current) => [
             ...current,
             {
@@ -187,6 +249,7 @@ export function useAiChat({ sessionId, greeting }: UseAiChatInput): AiChatContro
         }
 
         lastPromptRef.current = null;
+        successRef.current?.();
         setMessages((current) => [
           ...current,
           {
@@ -201,6 +264,7 @@ export function useAiChat({ sessionId, greeting }: UseAiChatInput): AiChatContro
             lang: turn.lang,
             category: turn.category,
             availability: turn.availability,
+            actions: turn.actions,
           },
         ]);
         setSendState("success");
@@ -229,7 +293,7 @@ export function useAiChat({ sessionId, greeting }: UseAiChatInput): AiChatContro
         setSendState((current) => (current === "sending" ? "idle" : current));
       }
     },
-    [sessionId],
+    [],
   );
 
   const send = useCallback((raw: string) => dispatch(raw, true), [dispatch]);
@@ -259,5 +323,6 @@ export function useAiChat({ sessionId, greeting }: UseAiChatInput): AiChatContro
     send,
     retry,
     validate: validateChatQuestion,
+    hydrate,
   };
 }
