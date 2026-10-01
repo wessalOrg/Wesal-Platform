@@ -64,15 +64,15 @@ public static class AiNavigationIntentDetector
 
     private static readonly (AiUnavailableTopic Topic, Regex Pattern)[] UnavailableTopics =
     [
-        (new AiUnavailableTopic("photography", "التصوير", "photography"),
+        (new AiUnavailableTopic("photography", "تصوير", "photography"),
             AiText.AnyWord(["تصوير", "مصور", "مصورين", "فوتوغراف", "photography", "photographer", "photographers", "photo", "photos", "videography"])),
-        (new AiUnavailableTopic("catering", "الضيافة والبوفيه", "catering"),
+        (new AiUnavailableTopic("catering", "ضيافة وبوفيه", "catering"),
             AiText.AnyWord(["بوفيه", "ضيافه", "كاترينج", "طعام", "catering", "buffet"])),
-        (new AiUnavailableTopic("invitations", "تصميم الدعوات", "invitation design"),
+        (new AiUnavailableTopic("invitations", "تصميم دعوات", "invitation design"),
             AiText.AnyWord(["دعوات", "بطاقات", "invitation", "invitations", "cards"])),
-        (new AiUnavailableTopic("suit_rental", "تأجير البدل", "suit rental"),
+        (new AiUnavailableTopic("suit_rental", "تأجير بدل", "suit rental"),
             AiText.AnyWord(["بدل", "بدله", "فستان", "فساتين", "suit", "suits", "dress", "dresses"])),
-        (new AiUnavailableTopic("planners", "منسقي الأفراح", "wedding planners"),
+        (new AiUnavailableTopic("planners", "منسقي أفراح", "wedding planners"),
             AiText.AnyWord(["منسق", "منسقه", "منسقين", "planner", "planners", "decorator", "decorators"]))
     ];
 

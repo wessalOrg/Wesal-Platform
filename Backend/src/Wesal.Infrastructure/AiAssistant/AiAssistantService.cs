@@ -777,14 +777,14 @@ public sealed class AiAssistantService : IAiAssistantService
         {
             return language == "en"
                 ? $"{hallName} is closed on {formattedDate}."
-                : $"قاعة {hallName} مغلقة في {formattedDate}.";
+                : $"{HallLabel(language, hallName)} مغلقة في {formattedDate}.";
         }
 
         if (slots.Count == 0)
         {
             return language == "en"
                 ? $"No available hourly slots were found for {hallName} on {formattedDate}."
-                : $"لم يتم العثور على فترات ساعة متاحة لقاعة {hallName} في {formattedDate}.";
+                : $"لم يتم العثور على فترات ساعة متاحة لـ{HallLabel(language, hallName)} في {formattedDate}.";
         }
 
         var available = slots
@@ -795,7 +795,7 @@ public sealed class AiAssistantService : IAiAssistantService
         {
             return language == "en"
                 ? $"{hallName} is fully booked on {formattedDate}."
-                : $"قاعة {hallName} محجوزة بالكامل في {formattedDate}.";
+                : $"{HallLabel(language, hallName)} محجوزة بالكامل في {formattedDate}.";
         }
 
         var availableRanges = string.Join(
@@ -804,7 +804,7 @@ public sealed class AiAssistantService : IAiAssistantService
 
         return language == "en"
             ? $"{hallName} on {formattedDate} — available hourly slot(s): {availableRanges}."
-            : $"قاعة {hallName} في {formattedDate} — الفترات المتاحة بالساعة: {availableRanges}.";
+            : $"{HallLabel(language, hallName)} في {formattedDate} — الفترات المتاحة بالساعة: {availableRanges}.";
     }
 
     private static AiAssistantResponse BuildClarification(string language, AiAssistantIntentDto intention, string? message = null)
