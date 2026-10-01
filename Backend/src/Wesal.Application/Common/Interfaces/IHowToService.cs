@@ -15,5 +15,9 @@ public interface IHowToService
     ///    declare which language was actually used for the response.
     /// 3. If language cannot be determined, default to "ar".
     /// </summary>
-    Task<HowToResponse> AskHowToAsync(string question, string? language, CancellationToken cancellationToken = default);
+    Task<HowToResponse> AskHowToAsync(
+        string question,
+        string? language,
+        CancellationToken cancellationToken = default,
+        bool allowModel = true);
 }

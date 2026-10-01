@@ -180,7 +180,9 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         };
     }
 
-    [GeneratedRegex(@"(?:in|at|في)\s+([A-Za-z\u0600-\u06FF]+)", RegexOptions.IgnoreCase)]
+    // The preposition must start a word: without the lookbehind "wh-at is" / "th-in" matched
+    // "at"/"in" inside ordinary words ("What is Wesal?" produced area = "is").
+    [GeneratedRegex(@"(?<![A-Za-z\u0600-\u06FF])(?:و|ف)?(?:in|at|في)\s+([A-Za-z\u0600-\u06FF]+)", RegexOptions.IgnoreCase)]
     private static partial Regex AreaRegex();
 
     [GeneratedRegex(@"\d{4}-\d{2}-\d{2}")]

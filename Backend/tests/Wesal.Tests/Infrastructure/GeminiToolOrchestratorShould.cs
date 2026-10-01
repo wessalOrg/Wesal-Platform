@@ -12,11 +12,10 @@ public sealed class GeminiToolOrchestratorShould
     private readonly FakeToolCallService _gemini = new();
     private readonly FakeToolGateway _gateway = new();
     private readonly FakeKnowledgeService _knowledge = new();
-    private readonly FakeHowToService _howTo = new();
     private readonly FakeLanguageDetector _languageDetector = new();
 
     private GeminiToolOrchestrator CreateOrchestrator()
-        => new(_gemini, _gateway, _knowledge, _howTo, _languageDetector, NullLogger<GeminiToolOrchestrator>.Instance);
+        => new(_gemini, _gateway, _knowledge, _languageDetector, null, NullLogger<GeminiToolOrchestrator>.Instance);
 
     [Fact]
     public async Task ReturnModelTextDirectly_WhenNoToolCall()
@@ -52,44 +51,40 @@ public sealed class GeminiToolOrchestratorShould
     }
 
     [Fact]
-    public async Task GeminiUnavailable_FallsBackToHowTo()
+    public async Task GeminiUnavailable_ReportsNotHandled_SoTheDeterministicPathRuns()
     {
         _gemini.Available = false;
-        _howTo.Answer = "HowTo deterministic answer";
-        _howTo.Language = "en";
 
         var result = await CreateOrchestrator().ExecuteAsync("how do I book?", "en");
 
-        Assert.True(result.Success);
-        Assert.Equal("HowTo deterministic answer", result.Answer);
-        Assert.Equal("en", result.ResponseLanguage);
+        Assert.False(result.Success);
+        Assert.Equal(AiOrchestrationDisposition.NotHandled, result.Disposition);
+        Assert.Equal(string.Empty, result.Answer);
         Assert.Empty(result.ToolCalls);
         Assert.False(_gemini.WasCalled);
     }
 
     [Fact]
-    public async Task GeminiReturnsNullTurn_FallsBackToHowTo()
+    public async Task GeminiReturnsNullTurn_ReportsNotHandled()
     {
         _gemini.Script = [null!];
-        _howTo.Answer = "HowTo fallback";
 
         var result = await CreateOrchestrator().ExecuteAsync("how do I book?", "ar");
 
-        Assert.True(result.Success);
-        Assert.Equal("HowTo fallback", result.Answer);
+        Assert.False(result.Success);
+        Assert.Equal(AiOrchestrationDisposition.NotHandled, result.Disposition);
         Assert.Empty(result.ToolCalls);
     }
 
     [Fact]
-    public async Task GeminiReturnsEmptyTurn_FallsBackToHowTo()
+    public async Task GeminiReturnsEmptyTurn_ReportsNotHandled()
     {
         _gemini.Script = [new GeminiToolTurn(null, null)];
-        _howTo.Answer = "HowTo fallback";
 
         var result = await CreateOrchestrator().ExecuteAsync("how do I book?", "ar");
 
-        Assert.True(result.Success);
-        Assert.Equal("HowTo fallback", result.Answer);
+        Assert.False(result.Success);
+        Assert.Equal(AiOrchestrationDisposition.NotHandled, result.Disposition);
     }
 
     [Fact]
@@ -262,17 +257,15 @@ public sealed class GeminiToolOrchestratorShould
     }
 
     [Fact]
-    public async Task FallbackToHowTo_UseDetectedLanguage()
+    public async Task NotHandled_UsesDetectedLanguage()
     {
         _gemini.Available = false;
         _languageDetector.ReturnedLanguage = "ar";
-        _howTo.Answer = "AR answer";
-        _howTo.Language = "ar";
 
         var result = await CreateOrchestrator().ExecuteAsync("سؤال", "en");
 
         Assert.Equal("ar", result.ResponseLanguage);
-        Assert.Equal("AR answer", result.Answer);
+        Assert.Equal(AiOrchestrationDisposition.NotHandled, result.Disposition);
     }
 
     private static GeminiFunctionResponse? FindFunctionResponse(
@@ -355,15 +348,6 @@ public sealed class GeminiToolOrchestratorShould
         public Task<IReadOnlyList<WesalKnowledgeArticle>> SearchAsync(string question, string? language,
             int maxResults = 3, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<WesalKnowledgeArticle>>(Articles);
-    }
-
-    private sealed class FakeHowToService : IHowToService
-    {
-        public string Answer { get; set; } = string.Empty;
-        public string Language { get; set; } = "ar";
-
-        public Task<HowToResponse> AskHowToAsync(string question, string? language, CancellationToken cancellationToken = default)
-            => Task.FromResult(new HowToResponse(Answer, "general", Language, DateTime.UtcNow));
     }
 
     private sealed class FakeLanguageDetector : IAiLanguageDetector

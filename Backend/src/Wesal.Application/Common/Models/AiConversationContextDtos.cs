@@ -1,8 +1,8 @@
 namespace Wesal.Application.Common.Models;
 
 /// <summary>
-/// A single recorded exchange in a session's conversation memory.
-/// <see cref="Role"/> is the participant that produced the text ("user").
+/// A single recorded entry in a session's conversation memory.
+/// <see cref="Role"/> is the participant that produced the text ("user" or "assistant").
 /// </summary>
 public sealed record AiConversationTurn(string Role, string Text);
 
@@ -15,4 +15,27 @@ public sealed record AiConversationTurn(string Role, string Text);
 /// </summary>
 public sealed record AiConversationContext(
     IReadOnlyList<AiConversationTurn> Turns,
-    AiAssistantIntentDto? LastIntent);
+    AiAssistantIntentDto? LastIntent,
+    IReadOnlyList<AiHallRef>? LastHalls = null,
+    AiHallRef? LastHall = null);
+
+/// <summary>A hall the conversation has shown or focused (id + display name only).</summary>
+public sealed record AiHallRef(Guid HallId, string HallName);
+
+/// <summary>
+/// Validated, server-resolved context for one turn. <see cref="Hall"/> is a live
+/// public projection fetched by the backend from the hall id — never client data.
+/// <see cref="HallSource"/> says why that hall is in context
+/// ("pinned", "page", "ordinal" or "conversation").
+/// </summary>
+public sealed record AiTurnContext(
+    string? PageKey,
+    string? PagePath,
+    HallDetailsDto? Hall,
+    string? HallSource,
+    DateOnly Today,
+    string TimeZoneLabel)
+{
+    public static AiTurnContext Empty(DateOnly today, string timeZoneLabel = "Asia/Gaza")
+        => new(null, null, null, null, today, timeZoneLabel);
+}

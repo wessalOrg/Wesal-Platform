@@ -33,7 +33,6 @@ public sealed class GeminiToolCallingShould
         Func<HttpRequestMessage, HttpResponseMessage> responder,
         GoogleAiSettings? settings = null)
     {
-        GeminiService.ResetCircuitBreaker();
         var handler = new FakeHttpHandler(responder);
         var factory = new FakeHttpClientFactory(handler);
         return new GeminiService(factory, Options.Create(settings ?? Settings()), NullLogger<GeminiService>.Instance);
@@ -209,7 +208,7 @@ public sealed class GeminiToolCallingShould
     }
 
     [Fact]
-    public async Task CapsContentHistoryAtSevenMessages()
+    public async Task ShortHistoryIsSentWhole()
     {
         JsonNode? body = null;
         var service = CreateService(request =>
@@ -224,8 +223,69 @@ public sealed class GeminiToolCallingShould
 
         await service.GenerateToolTurnAsync(messages, "system", SampleFunctions(), CancellationToken.None);
 
-        var contents = body!["contents"]!.AsArray();
-        Assert.True(contents.Count <= 7);
+        Assert.Equal(10, body!["contents"]!.AsArray().Count);
+    }
+
+    private static GeminiConversationMessage Call(string name)
+        => new("model", [new GeminiConversationPart(FunctionCall: new GeminiFunctionCall(name, new JsonObject()))]);
+
+    private static GeminiConversationMessage Response(string name)
+        => new("function", [new GeminiConversationPart(FunctionResponse: new GeminiFunctionResponse(name, new JsonObject()))]);
+
+    private static GeminiConversationMessage User(string text)
+        => new("user", [new GeminiConversationPart(Text: text)]);
+
+    [Fact]
+    public void SanitizeToolContents_NeverSplitsACallFromItsResponse_WhenOverTheCeiling()
+    {
+        var history = new List<GeminiConversationMessage>();
+        for (var i = 0; i < 20; i++)
+        {
+            history.Add(User($"q{i}"));
+            history.Add(Call("search_halls"));
+            history.Add(Response("search_halls"));
+        }
+
+        var sent = GeminiService.SanitizeToolContents(history);
+
+        Assert.True(sent.Count <= GeminiService.MaxToolRequestContents);
+        for (var i = 0; i < sent.Count; i++)
+        {
+            if (sent[i].Parts.Any(p => p.FunctionCall is not null))
+            {
+                Assert.True(i + 1 < sent.Count && sent[i + 1].Parts.Any(p => p.FunctionResponse is not null),
+                    "functionCall must be immediately followed by its functionResponse");
+            }
+
+            if (sent[i].Parts.Any(p => p.FunctionResponse is not null))
+            {
+                Assert.True(i > 0 && sent[i - 1].Parts.Any(p => p.FunctionCall is not null),
+                    "functionResponse must be immediately preceded by its functionCall");
+            }
+        }
+    }
+
+    [Fact]
+    public void SanitizeToolContents_DropsOrphanCallsAndResponses()
+    {
+        var sent = GeminiService.SanitizeToolContents(
+        [
+            User("a"),
+            Call("search_halls"),          // orphan call (no response)
+            User("b"),
+            Response("search_halls"),      // orphan response (no call)
+            User("c")
+        ]);
+
+        Assert.All(sent, m => Assert.DoesNotContain(m.Parts, p => p.FunctionCall is not null || p.FunctionResponse is not null));
+        Assert.Equal(3, sent.Count);
+    }
+
+    [Fact]
+    public void SanitizeToolContents_KeepsPairsIntact_ForNormalTurn()
+    {
+        var sent = GeminiService.SanitizeToolContents([User("q"), Call("get_hall_details"), Response("get_hall_details")]);
+        Assert.Equal(3, sent.Count);
     }
 
     [Fact]

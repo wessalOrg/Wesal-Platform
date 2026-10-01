@@ -13,14 +13,16 @@ public interface IGeminiToolOrchestrator
 {
     /// <summary>
     /// Processes one user message. Requires a non-empty message bounded to a
-    /// maximum safe length. When Gemini is unavailable or fails, or the model
-    /// never produces usable text within the budget, the orchestrator falls back
-    /// to the deterministic <see cref="IHowToService"/> answer so the assistant
-    /// still responds deterministically.
+    /// maximum safe length. When Gemini is unavailable, fails, times out or produces
+    /// no usable turn, the result carries
+    /// <see cref="AiOrchestrationDisposition.NotHandled"/> so the caller degrades to the
+    /// deterministic path (search, details, availability, knowledge, navigation) rather
+    /// than mistaking a generic string for a handled answer.
     /// </summary>
     Task<WesalToolOrchestrationResult> ExecuteAsync(
         string message,
         string? language,
         CancellationToken cancellationToken = default,
-        AiConversationContext? context = null);
+        AiConversationContext? context = null,
+        AiTurnContext? turnContext = null);
 }

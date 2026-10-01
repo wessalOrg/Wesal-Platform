@@ -47,19 +47,43 @@ public sealed partial class HowToService : IHowToService
     public async Task<HowToResponse> AskHowToAsync(
         string question,
         string? language,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool allowModel = true)
     {
         var detected = _languageDetector.Detect(question);
         var effectiveLanguage = detected ?? (string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language);
 
-        // Subscription-payment intent takes priority and uses trusted backend contact (anti-hallucination)
-        if (_paymentIntentDetector.IsSubscriptionPaymentIntent(question))
+        // Payment questions are disambiguated BEFORE anything else: a hall-owner
+        // subscription is answered from trusted configuration, a booking payment from
+        // the booking knowledge, and a bare "how do I pay" asks which one is meant.
+        var payment = AiPaymentIntentClassifier.Classify(question);
+        if (payment == AiPaymentIntent.OwnerSubscription || _paymentIntentDetector.IsSubscriptionPaymentIntent(question))
         {
             var details = _subscriptionPaymentService.GetPaymentDetails();
             var paymentAnswer = effectiveLanguage == "en"
                 ? $"To pay your subscription as a Hall Owner: contact the Admin via WhatsApp at {details.AdminWhatsAppContact} to arrange payment. The subscription is {details.SubscriptionPriceIls:F0} ILS per {details.SubscriptionCycleDays}-day cycle per hall. Once the Admin confirms your payment, your hall's management features unlock."
                 : $"لدفع اشتراكك كصاحب قاعة: تواصل مع المدير عبر واتساب على الرقم {details.AdminWhatsAppContact} لترتيب الدفع. الاشتراك {details.SubscriptionPriceIls:F0} شيكل لكل {details.SubscriptionCycleDays} يوم لكل قاعة. بمجرد تأكيد المدير للدفع، يتم فتح ميزات إدارة قاعدتك.";
             return new HowToResponse(paymentAnswer, "payment", effectiveLanguage, DateTime.UtcNow);
+        }
+
+        if (payment == AiPaymentIntent.BookingPayment)
+        {
+            var booking = _knowledgeService is null
+                ? null
+                : (await _knowledgeService.SearchAsync("booking deposit payment", effectiveLanguage, 5, cancellationToken))
+                    .FirstOrDefault(a => string.Equals(a.Category, "user-guide", StringComparison.OrdinalIgnoreCase)
+                        && a.Title.Contains("booking a hall", StringComparison.OrdinalIgnoreCase));
+
+            var bookingAnswer = booking is not null
+                ? ComposeAnswer(booking, effectiveLanguage)
+                : AiPaymentTexts.BookingFallback(effectiveLanguage);
+            return new HowToResponse(bookingAnswer, "booking-payment", effectiveLanguage, DateTime.UtcNow);
+        }
+
+        if (payment == AiPaymentIntent.Ambiguous)
+        {
+            var ask = AiPaymentTexts.Ambiguous(effectiveLanguage, _subscriptionPaymentService.GetPaymentDetails());
+            return new HowToResponse(ask, "payment", effectiveLanguage, DateTime.UtcNow);
         }
 
         // Official knowledge first (platform/faq/policies): the Knowledge Base is
@@ -88,6 +112,16 @@ public sealed partial class HowToService : IHowToService
             }
         }
 
+        // Wesal's own support/contact question that the Knowledge Base could not answer:
+        // point to the Help Center instead of falling through to hall-owner messaging.
+        if (AiSupportIntentDetector.IsSupport(question))
+        {
+            var supportAnswer = effectiveLanguage == "en"
+                ? "You can reach the Wesal team through the Help Center page."
+                : "تقدر توصل لفريق وصال من صفحة مركز المساعدة.";
+            return new HowToResponse(supportAnswer, "support", effectiveLanguage, DateTime.UtcNow);
+        }
+
         // Creator-intent returns the exact, verified attribution in the user's
         // language. Handled before Gemini so the exact answer always wins,
         // independent of Gemini availability or model output.
@@ -106,7 +140,7 @@ public sealed partial class HowToService : IHowToService
         // Try Gemini first when enabled and a key is configured. Any failure
         // (unavailable, error, timeout, empty/invalid response) falls through to
         // the existing deterministic keyword matching below.
-        if (_geminiService?.IsAvailable == true)
+        if (allowModel && _geminiService?.IsAvailable == true)
         {
             var geminiAnswer = await _geminiService.GenerateTextAsync(question, effectiveLanguage, cancellationToken);
             if (!string.IsNullOrWhiteSpace(geminiAnswer))
@@ -230,7 +264,7 @@ public sealed partial class HowToService : IHowToService
         if (ContainsAny(question, "تعليق", "اكتب تعليق", "about comment", "about review", "about feedback"))
             return ("لإضافة تعليق على قاعة: افتح صفحة تفاصيل القاعة وأنت مسجل الدخول. اختر قسم التعليقات واكتب تعليقك. أرسله وسيظهر للجميع مع اسمك وتاريخه. أصحاب القاعات لا يمكنهم كتابة تعليقات.", "comments");
 
-        if (ContainsAny(question, "تواصل", "مراسلة", "اتصال", "صاحب القاعة", "about contact", "about message", "about owner", "about chat"))
+        if (ContainsAny(question, "تواصل", "مراسلة", "اتصال", "صاحب القاعة", "صاحب الصالة", "مالك القاعة", "about contact", "about message", "about owner", "about chat"))
             return ("للتواصل مع صاحب القاعة: افتح صفحة تفاصيل القاعة وأنت مسجل الدخول. اضغط على زر التواصل مع صاحب القاعة بجانب زر الحجز. سيفتح لك محادثة مع الصاحب حيث يمكنك السؤال عن الأسعار أو التفاصيل أو أي معلومات أخرى.", "messaging");
 
         if (ContainsAny(question, "تسجيل", "حساب", "إنشاء حساب", "about register", "about sign", "about create account", "about account"))

@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
@@ -8,14 +10,20 @@ namespace Wesal.Infrastructure.AiAssistant;
 
 /// <summary>
 /// Bounded Gemini tool-calling orchestration for the Wesal assistant. Grounds the
-/// model in official Knowledge Base facts, exposes only the approved read-only
-/// tools through <see cref="IWesalToolGateway"/>, and enforces strict budgets so a
-/// misbehaving model can never loop: at most <see cref="MaxToolRounds"/> Gemini
-/// turns per user message and at most <see cref="MaxRepeatedToolCalls"/> identical
-/// tool invocations. Gemini is never trusted with authentication material, never
-/// chooses which code runs, and may only request the three approved tools. Any
-/// failure, empty result, or exhausted budget falls back to the deterministic
-/// <see cref="IHowToService"/> so the assistant always answers safely.
+/// model in official Knowledge Base facts and trusted per-turn context (today's date,
+/// the semantic page, the hall in context), exposes only the approved read-only tools
+/// through <see cref="IWesalToolGateway"/>, and enforces strict budgets so a
+/// misbehaving model can never loop: at most <see cref="MaxToolRounds"/> Gemini turns
+/// per user message, at most <see cref="MaxRepeatedToolCalls"/> identical tool
+/// invocations, and a wall-clock budget for the whole turn. Gemini is never trusted
+/// with authentication material, never chooses which code runs, and may only request
+/// the approved tools.
+///
+/// When Gemini cannot serve the request (unavailable, failed, timed out, empty) the
+/// result is <see cref="AiOrchestrationDisposition.NotHandled"/> — NOT a generic
+/// answer — so the caller runs the deterministic search/details/availability/
+/// knowledge/navigation path. Live tool results are kept as typed payloads so the
+/// response can carry hall cards, details and availability, not just prose.
 /// </summary>
 public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
 {
@@ -23,19 +31,11 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
     public const int MaxRepeatedToolCalls = 2;
     public const int MaxMessageLength = 2000;
     public const int MaxHistoryTurns = 5;
-    public const int MaxKnowledgeResults = 3;
+    public const int MaxKnowledgeResults = 4;
     public const int MaxKnowledgeInjections = 2;
+    public const int MaxStructuredHalls = 8;
 
     private const string DefaultLanguage = "ar";
-
-    /// <summary>
-    /// Official-fact categories injected as authoritative context (mirrors
-    /// <see cref="HowToService"/>). Feature how-tos stay with the deterministic
-    /// feature matcher and are never injected as model-grounding.
-    /// </summary>
-    private static readonly HashSet<string> OfficialKnowledgeCategories = new(
-        ["platform", "faq", "policies"],
-        StringComparer.OrdinalIgnoreCase);
 
     private static readonly string[] SupportContactMarkers =
     [
@@ -46,23 +46,23 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
     private readonly IGeminiToolCallService _gemini;
     private readonly IWesalToolGateway _gateway;
     private readonly IWesalKnowledgeService _knowledgeService;
-    private readonly IHowToService _howToService;
     private readonly IAiLanguageDetector _languageDetector;
+    private readonly GoogleAiSettings _settings;
     private readonly ILogger<GeminiToolOrchestrator> _logger;
 
     public GeminiToolOrchestrator(
         IGeminiToolCallService gemini,
         IWesalToolGateway gateway,
         IWesalKnowledgeService knowledgeService,
-        IHowToService howToService,
         IAiLanguageDetector? languageDetector = null,
+        IOptions<GoogleAiSettings>? settings = null,
         ILogger<GeminiToolOrchestrator>? logger = null)
     {
         _gemini = gemini;
         _gateway = gateway;
         _knowledgeService = knowledgeService;
-        _howToService = howToService;
         _languageDetector = languageDetector ?? new AiLanguageDetector();
+        _settings = settings?.Value ?? new GoogleAiSettings();
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<GeminiToolOrchestrator>.Instance;
     }
 
@@ -70,7 +70,8 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
         string message,
         string? language,
         CancellationToken cancellationToken = default,
-        AiConversationContext? context = null)
+        AiConversationContext? context = null,
+        AiTurnContext? turnContext = null)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
@@ -83,10 +84,37 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
 
         if (!_gemini.IsAvailable)
         {
-            _logger.LogInformation("Gemini unavailable; orchestrator falling back to deterministic HowTo.");
-            return await FallbackToHowToAsync(boundedMessage, effectiveLanguage, cancellationToken);
+            _logger.LogInformation("Gemini unavailable; orchestrator reports NotHandled so the deterministic path runs.");
+            return WesalToolOrchestrationResult.NotHandled(effectiveLanguage);
         }
 
+        var total = Stopwatch.StartNew();
+        var budgetSeconds = _settings.TotalBudgetSeconds > 0 ? _settings.TotalBudgetSeconds : 15;
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budget.CancelAfter(TimeSpan.FromSeconds(budgetSeconds));
+
+        try
+        {
+            return await RunAsync(boundedMessage, effectiveLanguage, context, turnContext, budget.Token, total);
+        }
+        catch (OperationCanceledException) when (budget.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(
+                "Gemini orchestration exceeded its {Budget}s budget after {ElapsedMs} ms; degrading to the deterministic path.",
+                budgetSeconds,
+                total.ElapsedMilliseconds);
+            return WesalToolOrchestrationResult.NotHandled(effectiveLanguage);
+        }
+    }
+
+    private async Task<WesalToolOrchestrationResult> RunAsync(
+        string boundedMessage,
+        string effectiveLanguage,
+        AiConversationContext? context,
+        AiTurnContext? turnContext,
+        CancellationToken cancellationToken,
+        Stopwatch total)
+    {
         var functions = _gateway.ToolDefinitions
             .Select(definition => new GeminiFunctionDeclaration(
                 definition.Name,
@@ -94,20 +122,45 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
                 definition.Parameters))
             .ToList();
 
+        var knowledgeTimer = Stopwatch.StartNew();
         var knowledgeContext = await BuildOfficialKnowledgeContextAsync(boundedMessage, effectiveLanguage, cancellationToken);
-        var systemInstruction = GeminiPromptBuilder.BuildToolSystemInstruction(effectiveLanguage, knowledgeContext);
+        knowledgeTimer.Stop();
+
+        var systemInstruction = GeminiPromptBuilder.BuildToolSystemInstruction(
+            effectiveLanguage,
+            knowledgeContext,
+            GeminiPromptBuilder.MaxToolSystemContextCharacters,
+            turnContext,
+            context);
 
         var contents = BuildInitialContents(boundedMessage, context);
         var toolCalls = new List<WesalToolInvocation>();
         var invocationCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var hallNames = new Dictionary<Guid, string>();
+        if (turnContext?.Hall is { } pinned)
+        {
+            hallNames[pinned.HallId] = pinned.HallName;
+        }
+
+        foreach (var shown in context?.LastHalls ?? [])
+        {
+            hallNames[shown.HallId] = shown.HallName;
+        }
+
+        WesalToolResult? lastStructured = null;
+        long modelMs = 0;
+        long toolMs = 0;
 
         for (var round = 0; round < MaxToolRounds; round++)
         {
+            var modelTimer = Stopwatch.StartNew();
             var turn = await _gemini.GenerateToolTurnAsync(contents, systemInstruction, functions, cancellationToken);
+            modelMs += modelTimer.ElapsedMilliseconds;
+
             if (turn is null)
             {
-                _logger.LogWarning("Gemini tool-calling produced no usable turn; falling back to deterministic HowTo.");
-                return await FallbackToHowToAsync(boundedMessage, effectiveLanguage, cancellationToken);
+                _logger.LogWarning("Gemini tool-calling produced no usable turn; NotHandled (round {Round}).", round + 1);
+                return WesalToolOrchestrationResult.NotHandled(effectiveLanguage);
             }
 
             if (turn.FunctionCall is not null)
@@ -139,9 +192,22 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
                 modelMessageParts.Add(new GeminiConversationPart(FunctionCall: turn.FunctionCall));
                 contents.Add(new GeminiConversationMessage("model", modelMessageParts));
 
+                var toolTimer = Stopwatch.StartNew();
                 var invocationResult = _gateway.IsKnownTool(invocation.Name)
                     ? await _gateway.ExecuteAsync(invocation, cancellationToken)
                     : WesalToolResult.Fail($"The tool '{invocation.Name}' is not a supported Wesal tool.");
+                toolMs += toolTimer.ElapsedMilliseconds;
+
+                if (invocationResult.Success)
+                {
+                    RememberNames(hallNames, invocationResult);
+                    if (invocationResult.Halls is not null
+                        || invocationResult.HallDetails is not null
+                        || invocationResult.Availability is not null)
+                    {
+                        lastStructured = invocationResult;
+                    }
+                }
 
                 var responsePayload = new JsonObject
                 {
@@ -160,34 +226,24 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
 
             if (turn.HasText)
             {
-                return new WesalToolOrchestrationResult(
-                    true,
-                    turn.Text!,
-                    effectiveLanguage,
-                    toolCalls,
-                    DateTime.UtcNow);
+                _logger.LogInformation(
+                    "Assistant orchestration handled by Gemini: tools={ToolCount} rounds={Rounds} knowledgeMs={KnowledgeMs} modelMs={ModelMs} toolMs={ToolMs} totalMs={TotalMs}",
+                    toolCalls.Count,
+                    round + 1,
+                    knowledgeTimer.ElapsedMilliseconds,
+                    modelMs,
+                    toolMs,
+                    total.ElapsedMilliseconds);
+
+                return BuildHandled(turn.Text!, effectiveLanguage, toolCalls, lastStructured, hallNames);
             }
 
-            _logger.LogWarning("Gemini returned an empty tool-calling turn; falling back to deterministic HowTo.");
-            return await FallbackToHowToAsync(boundedMessage, effectiveLanguage, cancellationToken);
+            _logger.LogWarning("Gemini returned an empty tool-calling turn; NotHandled.");
+            return WesalToolOrchestrationResult.NotHandled(effectiveLanguage);
         }
 
         _logger.LogWarning("Gemini tool-calling exceeded the maximum of {Max} rounds; safely stopping.", MaxToolRounds);
         return BuildSafeTermination(effectiveLanguage, toolCalls);
-    }
-
-    private async Task<WesalToolOrchestrationResult> FallbackToHowToAsync(
-        string message,
-        string language,
-        CancellationToken cancellationToken)
-    {
-        var howTo = await _howToService.AskHowToAsync(message, language, cancellationToken);
-        return new WesalToolOrchestrationResult(
-            true,
-            howTo.Answer,
-            howTo.ResponseLanguage,
-            [],
-            DateTime.UtcNow);
     }
 
     private async Task<string> BuildOfficialKnowledgeContextAsync(
@@ -206,29 +262,110 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
             return string.Empty;
         }
 
-        var official = articles
-            .Where(a => OfficialKnowledgeCategories.Contains(a.Category))
+        // All categories are grounding for the model (user-guide and hall-owner included);
+        // contact info is skipped when the user is clearly asking about a hall owner.
+        var selected = articles
             .Where(a => !IsContactInterference(a, question))
             .Take(MaxKnowledgeInjections)
             .ToList();
 
-        return GeminiPromptBuilder.BuildOfficialKnowledgeContext(official);
+        return GeminiPromptBuilder.BuildOfficialKnowledgeContext(selected);
     }
 
-    private static List<GeminiConversationMessage> BuildInitialContents(string message, AiConversationContext? context)
+    /// <summary>
+    /// Builds the Gemini history: the last <see cref="MaxHistoryTurns"/> complete
+    /// exchanges (user text as role <c>user</c>, assistant text as role <c>model</c>),
+    /// then the current message. History is made of whole exchanges only; tool
+    /// call/response pairs exist only inside the current turn, so no pair can ever be
+    /// split by truncation.
+    /// </summary>
+    internal static List<GeminiConversationMessage> BuildInitialContents(string message, AiConversationContext? context)
     {
         var contents = new List<GeminiConversationMessage>();
 
-        if (context?.Turns is not null && context.Turns.Count > 0)
+        if (context?.Turns is { Count: > 0 } turns)
         {
-            foreach (var turn in context.Turns.Where(t => !string.IsNullOrWhiteSpace(t.Text)).TakeLast(MaxHistoryTurns))
+            var usable = turns.Where(t => !string.IsNullOrWhiteSpace(t.Text)).ToList();
+
+            // Keep the last N user turns together with the assistant replies that follow them.
+            var userIndexes = usable
+                .Select((turn, index) => (turn, index))
+                .Where(x => x.turn.Role == "user")
+                .Select(x => x.index)
+                .ToList();
+            var startAt = userIndexes.Count > MaxHistoryTurns ? userIndexes[^MaxHistoryTurns] : 0;
+            var firstUser = userIndexes.Count == 0 ? usable.Count : userIndexes[0];
+            startAt = Math.Max(startAt, firstUser);
+
+            foreach (var turn in usable.Skip(startAt))
             {
-                contents.Add(new GeminiConversationMessage("user", [new GeminiConversationPart(Text: turn.Text.Trim())]));
+                var role = turn.Role == "assistant" ? "model" : "user";
+                contents.Add(new GeminiConversationMessage(role, [new GeminiConversationPart(Text: turn.Text.Trim())]));
             }
         }
 
         contents.Add(new GeminiConversationMessage("user", [new GeminiConversationPart(Text: message)]));
         return contents;
+    }
+
+    private static void RememberNames(Dictionary<Guid, string> names, WesalToolResult result)
+    {
+        foreach (var hall in result.Halls ?? [])
+        {
+            names[hall.HallId] = hall.HallName;
+        }
+
+        if (result.HallDetails is { } details)
+        {
+            names[details.HallId] = details.HallName;
+        }
+    }
+
+    private static WesalToolOrchestrationResult BuildHandled(
+        string answer,
+        string language,
+        IReadOnlyList<WesalToolInvocation> toolCalls,
+        WesalToolResult? lastStructured,
+        IReadOnlyDictionary<Guid, string> hallNames)
+    {
+        var result = new WesalToolOrchestrationResult(true, answer, language, toolCalls, DateTime.UtcNow);
+        if (lastStructured is null)
+        {
+            return result;
+        }
+
+        if (lastStructured.Availability is { } availability)
+        {
+            var name = hallNames.TryGetValue(availability.HallId, out var known) ? known : availability.HallName;
+            return result with { Availability = availability with { HallName = name } };
+        }
+
+        if (lastStructured.HallDetails is { } details)
+        {
+            return result with { HallDetails = details };
+        }
+
+        if (lastStructured.Halls is { Count: > 0 } halls)
+        {
+            return result with
+            {
+                Halls = halls
+                    .Take(MaxStructuredHalls)
+                    .Select(hall => new HallRecommendationDto(
+                        hall.HallId,
+                        hall.HallName,
+                        hall.Region,
+                        hall.Address,
+                        hall.Capacity,
+                        hall.Price,
+                        hall.MainImage,
+                        IsAvailable: true,
+                        UnavailableReason: null))
+                    .ToList()
+            };
+        }
+
+        return result;
     }
 
     private static WesalToolOrchestrationResult BuildSafeTermination(
@@ -239,7 +376,10 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
             ? "I couldn't complete that request safely. Please try a different wording."
             : "تعذر إكمال طلبك بأمان. يرجى إعادة الصياغة والمحاولة مرة أخرى.";
 
-        return new WesalToolOrchestrationResult(true, answer, language, toolCalls, DateTime.UtcNow);
+        return new WesalToolOrchestrationResult(true, answer, language, toolCalls, DateTime.UtcNow)
+        {
+            Disposition = AiOrchestrationDisposition.SafeTermination
+        };
     }
 
     private static string BoundMessage(string message)
@@ -262,10 +402,8 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
     }
 
     /// <summary>
-    /// When the top official hit is the support-contact article and the user is
-    /// actually asking about messaging a Hall Owner, skip that article so tailored
-    /// how-to guidance wins (mirrors the contact-interference guard in
-    /// <see cref="HowToService"/>).
+    /// When the top hit is the support-contact article and the user is actually asking
+    /// about messaging a Hall Owner, skip that article so tailored how-to guidance wins.
     /// </summary>
     private static bool IsContactInterference(WesalKnowledgeArticle article, string question)
     {

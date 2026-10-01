@@ -4,7 +4,47 @@ namespace Wesal.Application.Common.Models;
 /// Request for the unified AI assistant endpoint. The message is the raw user
 /// input; classification into a structured intent happens server-side.
 /// </summary>
-public sealed record AiAssistantRequest(string? Message);
+public sealed record AiAssistantRequest(
+    string? Message,
+    AiPageContextDto? Page = null,
+    AiEntityContextDto? Entity = null);
+
+/// <summary>
+/// Untrusted description of where the user is, sent by the frontend with each turn.
+/// Only <see cref="Pathname"/> is read, and only after validation against
+/// <c>WesalNavigationRegistry</c>; <see cref="PageKey"/> is advisory and never trusted.
+/// No page content, tokens or form values are ever part of this contract.
+/// </summary>
+public sealed record AiPageContextDto(string? Pathname, string? PageKey = null);
+
+/// <summary>
+/// Untrusted reference to the entity the user pinned ("اسأل مبروك عن هذه الصالة").
+/// Only <see cref="Type"/> and <see cref="Id"/> matter: the backend re-resolves the
+/// entity from the live application services. <see cref="Name"/> is display-only and
+/// ignored by the server. Prices, capacity, availability etc. are never accepted.
+/// </summary>
+public sealed record AiEntityContextDto(string? Type, string? Id, string? Name = null);
+
+/// <summary>Untrusted per-turn client context (page + pinned entity) passed to the assistant.</summary>
+public sealed record AiRequestContext(AiPageContextDto? Page, AiEntityContextDto? Entity);
+
+/// <summary>
+/// A trusted, bounded client action produced by the backend. <see cref="Href"/> is
+/// always resolved from <c>WesalNavigationRegistry</c>; the model never supplies it.
+/// </summary>
+public sealed record AiAssistantActionDto(
+    string Type,
+    string PageKey,
+    string Href,
+    string Label,
+    string Mode);
+
+public static class AiAssistantActionTypes
+{
+    public const string Navigate = "Navigate";
+    public const string ModeAuto = "auto";
+    public const string ModeSuggest = "suggest";
+}
 
 /// <summary>
 /// Structured intent produced for a user message. <see cref="AiIntentType"/> carries
@@ -69,4 +109,5 @@ public sealed record AiAssistantResponse(
     IReadOnlyList<HallRecommendationDto> Halls,
     HallDetailsDto? HallDetails,
     AiAssistantAvailabilityDayDto? Availability,
-    AiAssistantIntentDto? Intent);
+    AiAssistantIntentDto? Intent,
+    IReadOnlyList<AiAssistantActionDto>? Actions = null);

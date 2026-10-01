@@ -124,6 +124,7 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddScoped<ILanguageService, LanguageService>();
         services.AddSingleton<IChatSessionService, ChatSessionService>();
         services.AddSingleton<IWesalKnowledgeService, WesalKnowledgeService>();
+        services.AddHostedService<AiKnowledgeStartupCheck>();
         services.AddSingleton<IHowToService, HowToService>();
         services.AddScoped<IRecommendationService, RecommendationService>();
         services.AddSingleton<ISubscriptionPaymentService, SubscriptionPaymentService>();
@@ -134,6 +135,9 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddSingleton<IAiIntentExtractor, GeminiAiIntentExtractor>();
         services.AddScoped<IWesalToolGateway, WesalToolGateway>();
         services.AddScoped<IGeminiToolOrchestrator, GeminiToolOrchestrator>();
+        services.AddSingleton<AiClock>();
+        services.AddScoped<AiContextResolver>();
+        services.AddScoped<AiAssistantPolicyGate>();
         services.AddScoped<IAiAssistantService, AiAssistantService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
