@@ -5,7 +5,7 @@ language: ar,en
 source: official-project-team
 lastUpdated: 2026-09-16
 status: verified
-keywords: faq|price|cost|سعر|تكلفة|كم سعر|دعم
+keywords: faq|price|cost|fees|pricing|سعر|تكلفة|كم سعر|رسوم|أسعار|دعم
 ---
 
 ## العربية

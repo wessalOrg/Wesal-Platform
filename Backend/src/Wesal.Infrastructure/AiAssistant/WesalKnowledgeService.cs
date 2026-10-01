@@ -21,7 +21,7 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// every returned article; callers must never present NeedsVerification or Draft
 /// content as confirmed platform policy.
 /// </summary>
-public sealed partial class WesalKnowledgeService : IWesalKnowledgeService
+public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWesalKnowledgeStats
 {
     private static readonly string[] BilingualMarkers = ["WesalKnowledge.", "documentation.ai-knowledge", "documentation/ai-knowledge", "ai-knowledge"];
 
@@ -40,6 +40,25 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService
     {
         _logger = logger ?? NullLogger<WesalKnowledgeService>.Instance;
         _documents = LoadDocuments(typeof(WesalKnowledgeService).Assembly);
+        LogLoaded();
+    }
+
+    /// <summary>Number of knowledge articles loaded from the embedded Knowledge Base.</summary>
+    public int ArticleCount => _documents.Count;
+
+    private void LogLoaded()
+    {
+        if (_documents.Count == 0)
+        {
+            _logger.LogWarning(
+                "Wesal AI knowledge loaded: 0 articles. The embedded Knowledge Base is missing from this build, so support, FAQ and platform answers will not be grounded. Check that documentation/ai-knowledge is included in the build context (see Backend/.dockerignore).");
+            return;
+        }
+
+        _logger.LogInformation(
+            "Wesal AI knowledge loaded: {Count} articles ({Verified} verified).",
+            _documents.Count,
+            _documents.Count(d => d.Status == WesalKnowledgeStatus.Verified));
     }
 
     internal WesalKnowledgeService(IReadOnlyList<KnowledgeDocument> documents)
@@ -90,6 +109,15 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService
         return Task.FromResult(results);
     }
 
+    // Minimum number of meaningful shared words for a hit that matched no title/keyword.
+    private const int MinContentOnlyOverlap = 1;
+
+    private static readonly HashSet<string> StopWords = new(StringComparer.Ordinal)
+    {
+        "كيف", "ما", "ماذا", "من", "مين", "شو", "ايش", "هل", "هو", "هي", "هذا", "هذه", "في", "على", "عن", "الى", "مع", "او", "ان", "انا", "بدي", "لو", "كم",
+        "قاعه", "قاعات", "صاله", "صالات", "hall", "halls", "how", "what", "who", "the", "is", "are", "a", "an", "to", "of", "do", "does", "i", "my", "can", "you", "for", "and", "in", "on", "it", "be", "or", "me", "we", "your"
+    };
+
     private static int Score(
         KnowledgeDocument document,
         string normalizedQuery,
@@ -137,16 +165,19 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService
             }
         }
 
-        var contentTokens = Tokenize(GetLocalizedContent(document.Content, language));
-        foreach (var token in queryTokens)
+        // Content overlap only supports a hit that already matched on title/keywords,
+        // or a genuinely broad overlap of MEANINGFUL words. Question words such as
+        // "كيف" or "how" appear in almost every article and must never produce a hit
+        // on their own (they made "كيف أحجزها؟" return the pricing FAQ).
+        var contentTokens = Tokenize(Normalize(GetLocalizedContent(document.Content, language)));
+        var overlap = queryTokens.Count(token => token.Length > 2 && !StopWords.Contains(token) && contentTokens.Contains(token));
+
+        if (score > 0)
         {
-            if (contentTokens.Contains(token))
-            {
-                score += 1;
-            }
+            return score + overlap;
         }
 
-        return score;
+        return overlap >= MinContentOnlyOverlap ? overlap : 0;
     }
 
     /// <summary>
@@ -221,6 +252,9 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService
         {
             return null;
         }
+
+        // Articles may be checked out with CRLF; paragraph and section parsing assume LF.
+        raw = raw.Replace("\r\n", "\n").Replace('\r', '\n');
 
         var meta = ParseFrontMatter(raw, out var body);
 
@@ -360,8 +394,10 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService
             || trimmed.StartsWith("\u0645\u0644\u0627\u062d\u0638\u0629 \u062a\u062d\u0642\u0642", StringComparison.Ordinal);
     }
 
+    // Folds Arabic hamza/alef/ta-marbuta/diacritic variants so "الصالة"/"الصاله" and
+    // "أحجز"/"احجز" match the same keywords; Latin text is just lower-cased.
     private static string Normalize(string input)
-        => WhitespaceRegex().Replace(input.Trim().ToLowerInvariant(), " ");
+        => Wesal.Application.Ai.AiText.Normalize(input);
 
     private static IReadOnlySet<string> Tokenize(string text)
         => WordRegex().Matches(text)

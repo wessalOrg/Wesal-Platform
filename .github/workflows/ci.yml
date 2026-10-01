@@ -40,6 +40,24 @@ jobs:
       - name: Test (Release)
         run: dotnet test Wesal.slnx -c Release --no-build
 
+      # Guards the historical production failure: Backend/.dockerignore excluded
+      # documentation/, so the Docker image shipped with ZERO embedded AI knowledge
+      # articles. Build the REAL production image and inspect the published assembly.
+      - name: Production image ships the AI knowledge base
+        working-directory: .
+        run: |
+          docker build -t wesal-api-ci Backend
+          cid=$(docker create wesal-api-ci)
+          docker cp "$cid:/app/Wesal.Infrastructure.dll" /tmp/Wesal.Infrastructure.dll
+          docker rm "$cid"
+          count=$(grep -a -o 'WesalKnowledge\.[A-Za-z0-9_.-]*\.md' /tmp/Wesal.Infrastructure.dll | sort -u | wc -l)
+          expected=$(find Backend/documentation/ai-knowledge -name '*.md' | wc -l)
+          echo "Embedded knowledge articles in the production image: $count (source files: $expected)"
+          if [ "$count" -lt 1 ] || [ "$count" -ne "$expected" ]; then
+            echo "::error::The production Docker image does not contain the full AI knowledge base ($count of $expected)."
+            exit 1
+          fi
+
   frontend:
     name: Frontend install, lint, and build
     runs-on: ubuntu-latest
