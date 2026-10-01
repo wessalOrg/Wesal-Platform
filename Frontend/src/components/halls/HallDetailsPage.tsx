@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import AskMabroukAboutHallButton from "@/components/assistant/AskMabroukAboutHallButton";
 import HallActionCard from "@/components/halls/HallActionCard";
 import HallContactButton from "@/components/halls/HallContactButton";
 import HallAmenitiesGrid from "@/components/halls/HallAmenitiesGrid";
@@ -351,6 +352,11 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
               loginHref={loginHref}
               registerHref={registerHref}
               onGuestAuthNavigate={preserveGuestBookingContext}
+            />
+            <AskMabroukAboutHallButton
+              hallId={viewHall.id}
+              hallName={viewHall.name}
+              className="mt-3"
             />
           </div>
         </div>
