@@ -16,7 +16,8 @@ import AiChatComposer from "@/components/assistant/AiChatComposer";
 import AiChatErrorBoundary from "@/components/assistant/AiChatErrorBoundary";
 import AiChatShell from "@/components/assistant/AiChatShell";
 import AiChatThread from "@/components/assistant/AiChatThread";
-import { useAiChat } from "@/hooks/useAiChat";
+import { useAiAssistantInternals } from "@/components/assistant/AiAssistantContext";
+import type { AiChatControls } from "@/hooks/useAiChat";
 import { useT } from "@/i18n";
 import { BUBBLE_GAP_PX, placeBubble, type Rect } from "@/lib/bubble-placement";
 import type {
@@ -61,6 +62,19 @@ const DRAG_THRESHOLD_PX = 5;
 
 type PanelMotion = "closed" | "in" | "open" | "out";
 type PanelSize = { width: number; height: number };
+
+const EMPTY_CHAT: AiChatControls = {
+  messages: [],
+  sendState: "idle",
+  surface: "empty",
+  isSending: false,
+  isRecommending: false,
+  canRetry: false,
+  send: async () => false,
+  retry: async () => false,
+  validate: () => null,
+  hydrate: () => undefined,
+};
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -228,10 +242,13 @@ export default function AiAssistantPanel({
   // Keep the failure on screen while retrying instead of flashing back to a spinner.
   const showFailure = failed || (isRetrying && errorKey !== null);
   const sessionReady = phase === "active" && Boolean(session?.sessionId);
-  const chat = useAiChat({
-    sessionId: sessionReady && session ? session.sessionId : null,
-    greeting: t("assistant.greeting"),
-  });
+  // The thread lives in the provider, so closing this panel (or changing page) never
+  // erases the conversation. Outside the provider (tests) fall back to an empty chat.
+  const internals = useAiAssistantInternals();
+  const chat: AiChatControls = internals?.chat ?? EMPTY_CHAT;
+  const pinned = internals?.launcher.pinned ?? null;
+  const clearPinned = internals?.launcher.clearPinnedContext;
+  const focusToken = internals?.focusToken ?? 0;
 
   /**
    * `open` is still Lillian's source of truth. This only chooses how the panel
@@ -604,7 +621,10 @@ export default function AiAssistantPanel({
   useEffect(() => {
     if (!open) return;
 
-    panelRef.current?.focus();
+    // Child effects have already run: when the composer took focus (for example after
+    // "ask Mabrouk about this hall"), keep it there instead of stealing it for the dialog.
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) panel.focus();
 
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -740,6 +760,46 @@ export default function AiAssistantPanel({
         </div>
       </div>
 
+      {pinned && !showFailure ? (
+        <div
+          className="flex shrink-0 items-center gap-2 border-b border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-2"
+          data-testid="ai-context-chip"
+        >
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--wesal-maroon)]"
+          />
+          <p
+            className="min-w-0 flex-1 truncate text-[0.72rem] font-semibold text-[var(--wesal-maroon-dark)]"
+            title={pinned.name ?? undefined}
+          >
+            {pinned.name
+              ? t("assistant.context.asking", { name: pinned.name })
+              : t("assistant.context.askingGeneric")}
+          </p>
+          <button
+            type="button"
+            onClick={() => clearPinned?.()}
+            aria-label={t("assistant.context.clear")}
+            title={t("assistant.context.clear")}
+            data-testid="ai-context-clear"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--wesal-maroon-dark)] transition hover:bg-white"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              aria-hidden="true"
+              className="h-3 w-3"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+      ) : null}
+
       <AiChatErrorBoundary>
         {showFailure ? (
           <div className="wesal-ai-panel-body min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
@@ -789,6 +849,7 @@ export default function AiAssistantPanel({
           sending={chat.isSending}
           sendState={chat.sendState}
           onSend={chat.send}
+          focusToken={focusToken}
         />
       )}
     </div>

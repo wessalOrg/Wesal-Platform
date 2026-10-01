@@ -16,6 +16,8 @@ type AiChatComposerProps = {
   sending: boolean;
   sendState?: AiChatSendState;
   onSend: (text: string) => Promise<boolean> | boolean;
+  /** Bumped by the launcher (e.g. "ask about this hall") to move focus into the field. */
+  focusToken?: number;
 };
 
 const COMPOSER_MAX_HEIGHT_PX = 112;
@@ -32,6 +34,7 @@ export default function AiChatComposer({
   sending,
   sendState,
   onSend,
+  focusToken = 0,
 }: AiChatComposerProps) {
   const t = useT();
   const [value, setValue] = useState("");
@@ -47,7 +50,7 @@ export default function AiChatComposer({
   useEffect(() => {
     if (disabled) return;
     fieldRef.current?.focus();
-  }, [disabled]);
+  }, [disabled, focusToken]);
 
   useLayoutEffect(() => {
     resizeComposerField(fieldRef.current);

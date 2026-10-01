@@ -31,3 +31,14 @@ export type AiSessionFailure = {
   messageKey: string;
   reason: AiUnavailableReason;
 };
+
+/**
+ * The entity the user explicitly pinned ("اسأل مبروك عن هذه الصالة"). Only the id is
+ * authoritative: the backend re-fetches the hall from live services, and `name` is
+ * used purely to label the context chip.
+ */
+export type AiPinnedHall = {
+  type: "hall";
+  id: string;
+  name: string | null;
+};

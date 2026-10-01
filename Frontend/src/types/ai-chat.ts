@@ -59,6 +59,19 @@ export type AiHallAvailability = {
   periods: AiAvailabilityPeriod[];
 };
 
+/**
+ * A trusted client action produced by the backend (href resolved from its navigation
+ * registry). The frontend still re-validates the href before following it.
+ */
+export type AiNavigateAction = {
+  type: "Navigate";
+  pageKey: string;
+  href: string;
+  label: string;
+  /** `auto`: the user explicitly asked to be taken there. `suggest`: show a button. */
+  mode: "auto" | "suggest";
+};
+
 export type AiChatMessage = {
   id: string;
   role: AiChatRole;
@@ -74,6 +87,8 @@ export type AiChatMessage = {
   category: string | null;
   /** Structured per-period availability from the unified `/assistant` endpoint. */
   availability: AiHallAvailability | null;
+  /** Validated navigation actions (CTA buttons / auto-navigation). */
+  actions: AiNavigateAction[];
 };
 
 export type AiChatSendState = "idle" | "sending" | "success" | "error";
