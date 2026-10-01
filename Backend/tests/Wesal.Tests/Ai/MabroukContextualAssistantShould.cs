@@ -590,7 +590,7 @@ public class MabroukContextualAssistantShould
             {
                 if (contents[i].Parts.Any(p => p.FunctionCall is not null))
                 {
-                    Assert.True(contents[i + 1].Parts.Any(p => p.FunctionResponse is not null));
+                    Assert.Contains(contents[i + 1].Parts, p => p.FunctionResponse is not null);
                 }
             }
 

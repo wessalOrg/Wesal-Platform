@@ -146,7 +146,8 @@ public sealed class AiAssistantPolicyGate
                 : "تقدر توصل لفريق وصال من صفحة مركز المساعدة.";
 
         var response = Build(language, AiAssistantResponseKind.Answer, text, null);
-        return response with { Actions = [NavigateAction(language, WesalNavigationRegistry.Help, AiNavigationMode.Suggest)] };
+        var help = NavigateAction(language, WesalNavigationRegistry.Help, AiNavigationMode.Suggest);
+        return help is null ? response : response with { Actions = [help] };
     }
 
     private async Task<WesalKnowledgeArticle?> FindAsync(
