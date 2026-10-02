@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Catalogs;
 using Wesal.Domain.Constants;
@@ -36,14 +38,14 @@ public class HallCreationServiceShould : IDisposable
             o.User.RequireUniqueEmail = true;
         }).AddRoles<ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>();
         services.AddLogging();
-        services.AddSingleton<IHallMediaStorage>(new FakeHallMediaStorage());
+        services.AddSingleton<IHallMediaStorage>(new LocalHallMediaStorage(Options.Create(new HallMediaOptions())));
         _provider = services.BuildServiceProvider();
         _context = _provider.GetRequiredService<ApplicationDbContext>();
         _context.Database.EnsureCreated();
         _userManager = _provider.GetRequiredService<UserManager<ApplicationUser>>();
         SeedOwnerAsync("owner-1", withIdentityDocument: true).GetAwaiter().GetResult();
         _currentUser = new FakeCurrentUser("owner-1", true, ApplicationRoles.HallOwner);
-        _service = new HallCreationService(_currentUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager, new RecordingNotificationDispatcher());
+        _service = new HallCreationService(_currentUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager, new RecordingNotificationDispatcher(), NullLogger<HallCreationService>.Instance);
     }
 
     /// <summary>
@@ -80,13 +82,6 @@ public class HallCreationServiceShould : IDisposable
         public string? Email => "test@example.com";
         public bool IsAuthenticated { get; }
         public IReadOnlyList<string> Roles { get; }
-    }
-
-    private class FakeHallMediaStorage : IHallMediaStorage
-    {
-        private readonly string _root = Path.Combine(Path.GetTempPath(), "wesal-media-test-" + Guid.NewGuid());
-        public string Root => _root;
-        public string HallsUploadDirectory(Guid hallId) => Path.Combine(_root, "halls", hallId.ToString());
     }
 
     private class TestHallRepository : Wesal.Application.Common.Interfaces.Persistence.IHallRepository
@@ -246,7 +241,7 @@ public class HallCreationServiceShould : IDisposable
     [Fact]
     public async Task Unauthenticated_Rejected()
     {
-        var unauthService = new HallCreationService(new FakeCurrentUser(null, false, ""), new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager, new RecordingNotificationDispatcher());
+        var unauthService = new HallCreationService(new FakeCurrentUser(null, false, ""), new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager, new RecordingNotificationDispatcher(), NullLogger<HallCreationService>.Instance);
         var request = CreateValidRequest();
         await Assert.ThrowsAsync<UnauthorizedException>(() => unauthService.CreateHallAsync(request));
     }
@@ -255,7 +250,7 @@ public class HallCreationServiceShould : IDisposable
     public async Task RegularUser_Rejected()
     {
         var regUser = new FakeCurrentUser("user-2", true, ApplicationRoles.RegisteredUser);
-        var service = new HallCreationService(regUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager, new RecordingNotificationDispatcher());
+        var service = new HallCreationService(regUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager, new RecordingNotificationDispatcher(), NullLogger<HallCreationService>.Instance);
         var request = CreateValidRequest();
         await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateHallAsync(request));
     }
@@ -275,7 +270,7 @@ public class HallCreationServiceShould : IDisposable
     {
         await SeedOwnerAsync("owner-no-doc", withIdentityDocument: false);
         var noDocUser = new FakeCurrentUser("owner-no-doc", true, ApplicationRoles.HallOwner);
-        var service = new HallCreationService(noDocUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager, new RecordingNotificationDispatcher());
+        var service = new HallCreationService(noDocUser, new TestHallRepository(_context), new TestUnitOfWork(_context), _provider.GetRequiredService<IHallMediaStorage>(), _userManager, new RecordingNotificationDispatcher(), NullLogger<HallCreationService>.Instance);
 
         await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateHallAsync(CreateValidRequest()));
         Assert.Equal(0, await _context.Halls.CountAsync());

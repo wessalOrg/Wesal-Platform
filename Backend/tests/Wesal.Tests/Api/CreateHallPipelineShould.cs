@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Wesal.API.Controllers;
 using Wesal.API.Filters;
 using Wesal.Application.Common.Interfaces;
@@ -33,7 +34,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
     private readonly WebApplication _app;
     private readonly HttpClient _client;
     private readonly ApplicationDbContext _context;
-    private readonly IHallMediaStorage _mediaStorage;
+    private readonly LocalHallMediaStorage _mediaStorage;
 
     public CreateHallPipelineShould()
     {
@@ -90,7 +91,12 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         builder.Services.AddScoped<ICurrentUserService>(_ => new FakeCurrentUser());
         builder.Services.AddScoped<IHallRepository, TestInMemoryHallRepository>();
         builder.Services.AddScoped<IUnitOfWork, TestInMemoryUnitOfWork>();
-        builder.Services.AddSingleton<IHallMediaStorage>(new FakeHallMediaStorage());
+        var mediaStorage = new LocalHallMediaStorage(
+            Options.Create(new HallMediaOptions
+            {
+                Directory = Path.Combine(Path.GetTempPath(), "wesal-media-pipeline-" + Guid.NewGuid())
+            }));
+        builder.Services.AddSingleton<IHallMediaStorage>(mediaStorage);
         // WESAL-TASK-13 (Edit 13): the production dispatcher is built into the real DI graph
         // by Wesal.Infrastructure. This pipeline test uses a trimmed container, so the
         // notification port is supplied here to keep the service constructible; the wording
@@ -121,7 +127,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         _client = _app.GetTestClient();
         _client.DefaultRequestHeaders.Add(TestAuthHandler.HeaderName, "test-token");
         _context = _app.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        _mediaStorage = _app.Services.GetRequiredService<IHallMediaStorage>();
+        _mediaStorage = mediaStorage;
         SeedOwnerWithIdentityDocument();
     }
 
@@ -354,15 +360,6 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         public string? Email => "owner@example.com";
         public bool IsAuthenticated => true;
         public IReadOnlyList<string> Roles => new[] { ApplicationRoles.HallOwner };
-    }
-
-    private sealed class FakeHallMediaStorage : IHallMediaStorage
-    {
-        private readonly string _root = Path.Combine(Path.GetTempPath(), "wesal-media-pipeline-" + Guid.NewGuid());
-
-        public string Root => _root;
-
-        public string HallsUploadDirectory(Guid hallId) => Path.Combine(_root, "halls", hallId.ToString());
     }
 
     private sealed class TestInMemoryHallRepository : IHallRepository

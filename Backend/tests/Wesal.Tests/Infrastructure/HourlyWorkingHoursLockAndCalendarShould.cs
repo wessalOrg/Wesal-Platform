@@ -18,6 +18,7 @@ using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Wesal.Tests.TestDoubles;
 
@@ -125,8 +126,8 @@ public class HourlyWorkingHoursLockAndCalendarShould : IDisposable
     private OwnerHallService CreateOwnerHallService(string ownerId)
         => new(_userManager, new FakeCurrentUser(ownerId, true, ApplicationRoles.HallOwner),
             new OwnerDashboardRepository(_context), new BookingRepository(_context),
-            new HallMediaStorage(Options.Create(new HallMediaOptions())),
-            new UnitOfWork(_context));
+            new LocalHallMediaStorage(Options.Create(new HallMediaOptions())),
+            new UnitOfWork(_context), NullLogger<OwnerHallService>.Instance);
 
     private ConversationService CreateConversationService(string userId, string role)
         => new(new ConversationRepository(_context), new MessageRepository(_context),

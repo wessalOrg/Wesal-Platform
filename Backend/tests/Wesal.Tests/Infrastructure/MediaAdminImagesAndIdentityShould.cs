@@ -148,8 +148,8 @@ public class MediaAdminImagesAndIdentityShould : IDisposable
     private OwnerHallService CreateOwnerHallService(string ownerId)
         => new(_userManager, new FakeCurrentUser(ownerId, true, ApplicationRoles.HallOwner),
             new OwnerDashboardRepository(_context), new BookingRepository(_context),
-            new HallMediaStorage(Options.Create(new HallMediaOptions())),
-            new UnitOfWork(_context));
+            new LocalHallMediaStorage(Options.Create(new HallMediaOptions())),
+            new UnitOfWork(_context), NullLogger<OwnerHallService>.Instance);
 
     private static OwnerDocumentUpload JpegUpload(string fileName = "id.jpg") => new()
     {

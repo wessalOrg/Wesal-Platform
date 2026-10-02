@@ -15,6 +15,7 @@ using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -102,8 +103,8 @@ public class OwnerHallServiceShould : IDisposable
             currentUser,
             new OwnerDashboardRepository(_context),
             new BookingRepository(_context),
-            new HallMediaStorage(Options.Create(new HallMediaOptions())),
-            new UnitOfWork(_context));
+            new LocalHallMediaStorage(Options.Create(new HallMediaOptions())),
+            new UnitOfWork(_context), NullLogger<OwnerHallService>.Instance);
 
     private static UpdateOwnerHallRequest CreateUpdateRequest() => new()
     {

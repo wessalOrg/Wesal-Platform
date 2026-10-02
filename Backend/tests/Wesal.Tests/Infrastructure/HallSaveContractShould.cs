@@ -21,6 +21,7 @@ using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Infrastructure.Sessions;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -103,8 +104,8 @@ public class HallSaveContractShould : IDisposable
     private OwnerHallService CreateOwnerService(string ownerId)
         => new(_userManager, new FakeCurrentUser(ownerId, true, ApplicationRoles.HallOwner),
             new OwnerDashboardRepository(_context), new BookingRepository(_context),
-            new HallMediaStorage(Options.Create(new HallMediaOptions { Directory = _mediaRoot })),
-            new UnitOfWork(_context));
+            new LocalHallMediaStorage(Options.Create(new HallMediaOptions { Directory = _mediaRoot })),
+            new UnitOfWork(_context), NullLogger<OwnerHallService>.Instance);
 
     private static UpdateOwnerHallRequest ValidRequest(Hall hall) => new()
     {
@@ -297,8 +298,8 @@ public class HallSaveContractShould : IDisposable
         var service = new OwnerHallService(
             _userManager, new FakeCurrentUser(null, false),
             new OwnerDashboardRepository(_context), new BookingRepository(_context),
-            new HallMediaStorage(Options.Create(new HallMediaOptions { Directory = _mediaRoot })),
-            new UnitOfWork(_context));
+            new LocalHallMediaStorage(Options.Create(new HallMediaOptions { Directory = _mediaRoot })),
+            new UnitOfWork(_context), NullLogger<OwnerHallService>.Instance);
 
         await Assert.ThrowsAsync<UnauthorizedException>(() =>
             service.UpdateOwnedHallAsync(hall.Id, ValidRequest(hall)));
