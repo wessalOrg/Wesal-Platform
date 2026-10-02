@@ -27,7 +27,7 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
             period: sweepInterval ?? DefaultSweepInterval);
     }
 
-    public Task<AiSessionResponse> InitializeSessionAsync(string? language, CancellationToken cancellationToken = default)
+    public Task<AiSessionResponse> InitializeSessionAsync(string? language, CancellationToken cancellationToken = default, string? userId = null)
     {
         var effectiveLanguage = string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language;
         var now = DateTime.UtcNow;
@@ -36,6 +36,7 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
         var session = new AiSession
         {
             SessionId = sessionId,
+            UserId = userId,
             Language = effectiveLanguage,
             CreatedAt = now,
             LastActivityAt = now,
@@ -51,9 +52,9 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
             session.ExpiresAt));
     }
 
-    public Task<AiSessionResponse?> GetSessionAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    public Task<AiSessionResponse?> GetSessionAsync(Guid sessionId, CancellationToken cancellationToken = default, string? userId = null)
     {
-        if (!_sessions.TryGetValue(sessionId, out var session))
+        if (!_sessions.TryGetValue(sessionId, out var session) || !OwnsSession(session, userId))
         {
             return Task.FromResult<AiSessionResponse?>(null);
         }
@@ -74,9 +75,9 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
             session.ExpiresAt));
     }
 
-    public Task<AiSessionResponse?> PeekSessionAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    public Task<AiSessionResponse?> PeekSessionAsync(Guid sessionId, CancellationToken cancellationToken = default, string? userId = null)
     {
-        if (!_sessions.TryGetValue(sessionId, out var session))
+        if (!_sessions.TryGetValue(sessionId, out var session) || !OwnsSession(session, userId))
         {
             return Task.FromResult<AiSessionResponse?>(null);
         }
@@ -107,9 +108,10 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
         }
     }
 
-    public Task<AiConversationContext> GetConversationContextAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    public Task<AiConversationContext> GetConversationContextAsync(Guid sessionId, CancellationToken cancellationToken = default, string? userId = null)
     {
         if (!_sessions.TryGetValue(sessionId, out var session)
+            || !OwnsSession(session, userId)
             || DateTime.UtcNow > session.ExpiresAt)
         {
             return Task.FromResult(new AiConversationContext([], null));
@@ -124,6 +126,22 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
                 session.LastHall));
         }
     }
+
+    public Task EndSessionsForUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return Task.CompletedTask;
+        foreach (var entry in _sessions)
+        {
+            if (string.Equals(entry.Value.UserId, userId, StringComparison.Ordinal))
+            {
+                _sessions.TryRemove(entry.Key, out _);
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    private static bool OwnsSession(AiSession session, string? userId)
+        => string.Equals(session.UserId, userId, StringComparison.Ordinal);
 
     public Task SaveTurnAsync(Guid sessionId, string userMessage, AiAssistantIntentDto? intent, CancellationToken cancellationToken = default)
         => SaveExchangeAsync(sessionId, userMessage, null, intent, null, null, cancellationToken);
@@ -202,6 +220,7 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
     internal sealed class AiSession
     {
         public Guid SessionId { get; set; }
+        public string? UserId { get; set; }
         public string Language { get; set; } = DefaultLanguage;
         public DateTime CreatedAt { get; set; }
         public DateTime LastActivityAt { get; set; }

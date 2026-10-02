@@ -18,17 +18,20 @@ public class AuthController : ControllerBase
     private readonly ILogoutService _logoutService;
     private readonly ICurrentUserService _currentUser;
     private readonly IAuthService _authService;
+    private readonly IChatSessionService _chatSessionService;
 
     public AuthController(
         ILoginService loginService,
         ILogoutService logoutService,
         ICurrentUserService currentUser,
-        IAuthService authService)
+        IAuthService authService,
+        IChatSessionService chatSessionService)
     {
         _loginService = loginService;
         _logoutService = logoutService;
         _currentUser = currentUser;
         _authService = authService;
+        _chatSessionService = chatSessionService;
     }
 
     [HttpPost("register")]
@@ -67,6 +70,7 @@ public class AuthController : ControllerBase
         var jti = User.FindFirstValue(JwtRegisteredClaimNames.Jti) ?? string.Empty;
         var userId = _currentUser.UserId ?? string.Empty;
 
+        await _chatSessionService.EndSessionsForUserAsync(userId, cancellationToken);
         var response = await _logoutService.LogoutAsync(jti, userId, cancellationToken);
 
         return Ok(response);

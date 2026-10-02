@@ -19,15 +19,17 @@ import {
   type AiHallContextInput,
 } from "@/components/assistant/AiAssistantContext";
 import { useLanguage } from "@/components/layout/LanguageProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { useAiAssistant } from "@/hooks/useAiAssistant";
 import { useAiChat } from "@/hooks/useAiChat";
 import { useDraggableFab } from "@/hooks/useDraggableFab";
 import { useT } from "@/i18n";
 import {
   clearChatSnapshot,
-  readChatSnapshot,
+  readChatSnapshotForOwner,
   writeChatSnapshot,
 } from "@/lib/ai-chat-storage";
+import { getStoredAuth } from "@/lib/auth-storage";
 import {
   buildAssistantPageContext,
   isValidHallId,
@@ -56,6 +58,42 @@ let mountedProviders = 0;
  * stable element, so assistant state changes never re-render the page tree.
  */
 export function AiAssistantProvider({ children }: { children: ReactNode }) {
+  const { session, status } = useAuth();
+  const storedUserId = session.isAuthenticated ? getStoredAuth()?.user.id ?? null : null;
+  const ownerKey = status !== "ready"
+    ? "auth-loading"
+    : session.isAuthenticated
+      ? `user:${storedUserId ?? "unknown"}`
+      : "guest";
+  const previousOwnerRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const nextOwner = status !== "ready" || !session.isAuthenticated ? null : storedUserId;
+    const previousOwner = previousOwnerRef.current;
+    if (previousOwner && previousOwner !== nextOwner) clearChatSnapshot(previousOwner);
+    previousOwnerRef.current = nextOwner;
+  }, [status, session.isAuthenticated, storedUserId]);
+
+  return (
+    <AssistantRuntime
+      key={ownerKey}
+      ownerId={status === "ready" && session.isAuthenticated ? storedUserId : null}
+      storageReady={status === "ready" && (!session.isAuthenticated || Boolean(storedUserId))}
+    >
+      {children}
+    </AssistantRuntime>
+  );
+}
+
+function AssistantRuntime({
+  children,
+  ownerId,
+  storageReady,
+}: {
+  children: ReactNode;
+  ownerId: string | null;
+  storageReady: boolean;
+}) {
   const controls = useAiAssistant();
   const { lang, status: langStatus } = useLanguage();
   const t = useT();
@@ -77,7 +115,7 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
   // Lazily restored from this tab's stored snapshot (it only feeds the panel chip, never
   // server-rendered markup, so there is no hydration mismatch).
   const [pinned, setPinned] = useState<AiPinnedHall | null>(
-    () => readChatSnapshot()?.pinned ?? null,
+    () => storageReady ? readChatSnapshotForOwner(undefined, ownerId)?.pinned ?? null : null,
   );
   const [focusToken, setFocusToken] = useState(0);
 
@@ -134,25 +172,26 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
     // would otherwise reset the thread we are about to restore.
     if (hydratedRef.current || langStatus !== "ready") return;
     hydratedRef.current = true;
-    const snapshot = readChatSnapshot(lang);
+    if (!storageReady) return;
+    const snapshot = readChatSnapshotForOwner(lang, ownerId);
     if (!snapshot) return;
     hydrate(snapshot.messages);
     if (snapshot.sessionId) restoreSession(snapshot.sessionId, snapshot.savedAt);
-  }, [lang, langStatus, hydrate, restoreSession]);
+  }, [lang, langStatus, hydrate, restoreSession, ownerId, storageReady]);
 
   // ── persist (debounced, bounded, no secrets) ──
   const messages = chat.messages;
   const sessionId = session?.sessionId ?? null;
   useEffect(() => {
-    if (!hydratedRef.current) return;
+    if (!hydratedRef.current || !storageReady) return;
     const hasConversation = messages.some((message) => message.id !== "greeting");
     if (!hasConversation && !pinned) return;
 
     const timer = window.setTimeout(() => {
-      writeChatSnapshot({ lang, sessionId, messages, pinned });
+      writeChatSnapshot({ lang, sessionId, messages, pinned }, ownerId);
     }, PERSIST_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [messages, pinned, sessionId, lang]);
+  }, [messages, pinned, sessionId, lang, ownerId, storageReady]);
 
   // ── navigation actions (Mabrouk never owns routing; it asks, the router follows) ──
   const followAction = useCallback(
@@ -203,8 +242,8 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
 
   const clearPinnedContext = useCallback(() => {
     setPinned(null);
-    clearChatSnapshot();
-  }, []);
+    clearChatSnapshot(ownerId);
+  }, [ownerId]);
 
   const launcher = useMemo<AiAssistantLauncher>(
     () => ({

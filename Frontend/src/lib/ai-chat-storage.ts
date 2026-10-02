@@ -11,7 +11,10 @@ import { isValidHallId } from "@/lib/wesal-routes";
  * Never stored: JWTs, credentials, private documents, page content. Only the chat
  * text the user already sees, public hall ids/names and an opaque session id.
  */
+/** Legacy unscoped key is intentionally discarded; ownership cannot be proven. */
 export const AI_CHAT_STORAGE_KEY = "wesal_ai_chat_v1";
+export const AI_CHAT_GUEST_STORAGE_KEY = "wesal_ai_chat_guest";
+const AI_CHAT_USER_STORAGE_PREFIX = "wesal_ai_chat_v1_";
 export const AI_CHAT_SCHEMA_VERSION = 1;
 /** Matches the backend sliding session TTL (30 min) with a safety margin. */
 export const AI_CHAT_MAX_AGE_MS = 25 * 60 * 1000;
@@ -177,10 +180,23 @@ export function serializeChatSnapshot(
 }
 
 export function readChatSnapshot(lang?: string): AiChatSnapshot | null {
+  return readChatSnapshotForOwner(lang, null);
+}
+
+function snapshotKey(userId: string | null): string {
+  return userId ? `${AI_CHAT_USER_STORAGE_PREFIX}${encodeURIComponent(userId)}` : AI_CHAT_GUEST_STORAGE_KEY;
+}
+
+function clearLegacySnapshot(storage: StorageLike): void {
+  try { storage.removeItem(AI_CHAT_STORAGE_KEY); } catch { /* ignore */ }
+}
+
+export function readChatSnapshotForOwner(lang: string | undefined, userId: string | null): AiChatSnapshot | null {
   const storage = getStorage();
   if (!storage) return null;
+  clearLegacySnapshot(storage);
   try {
-    return parseChatSnapshot(storage.getItem(AI_CHAT_STORAGE_KEY), Date.now(), lang);
+    return parseChatSnapshot(storage.getItem(snapshotKey(userId)), Date.now(), lang);
   } catch {
     return null;
   }
@@ -188,21 +204,24 @@ export function readChatSnapshot(lang?: string): AiChatSnapshot | null {
 
 export function writeChatSnapshot(
   input: Pick<AiChatSnapshot, "lang" | "sessionId" | "messages" | "pinned">,
+  userId: string | null = null,
 ): void {
   const storage = getStorage();
   if (!storage) return;
   try {
-    storage.setItem(AI_CHAT_STORAGE_KEY, serializeChatSnapshot(input));
+    clearLegacySnapshot(storage);
+    storage.setItem(snapshotKey(userId), serializeChatSnapshot(input));
   } catch {
     /* quota exceeded / private mode: continuity is best-effort */
   }
 }
 
-export function clearChatSnapshot(): void {
+export function clearChatSnapshot(userId: string | null = null): void {
   const storage = getStorage();
   if (!storage) return;
   try {
-    storage.removeItem(AI_CHAT_STORAGE_KEY);
+    storage.removeItem(snapshotKey(userId));
+    clearLegacySnapshot(storage);
   } catch {
     /* ignore */
   }
