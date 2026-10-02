@@ -27,9 +27,11 @@ public static class HallMediaRegistration
             services.AddSingleton<IAmazonS3>(sp =>
             {
                 var r2 = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<HallMediaR2Options>>().Value;
+                // AuthenticationRegion "auto" is required: SigV4 signing needs a region
+                // even against R2's custom endpoint (the SDK throws without one).
                 return new AmazonS3Client(
                     new BasicAWSCredentials(r2.AccessKeyId, r2.SecretAccessKey),
-                    new AmazonS3Config { ServiceURL = r2.ServiceUrl });
+                    new AmazonS3Config { ServiceURL = r2.ServiceUrl, AuthenticationRegion = "auto" });
             });
             services.AddSingleton<IHallMediaStorage, R2HallMediaStorage>();
             return services;
