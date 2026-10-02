@@ -99,7 +99,8 @@ public static class DependencyInjection
         services.AddScoped<IOwnerSidebarService, OwnerSidebarService>();
         services.AddScoped<IHallCreationService, HallCreationService>();
         services.AddOptions<HallMediaOptions>().Bind(configuration.GetSection(HallMediaOptions.SectionName));
-        services.AddSingleton<IHallMediaStorage, HallMediaStorage>();
+        services.AddOptions<HallMediaR2Options>().Bind(configuration.GetSection($"{HallMediaOptions.SectionName}:R2"));
+        services.AddHallMediaStorage(configuration);
 services.AddOptions<DocumentStorageOptions>().Bind(configuration.GetSection(DocumentStorageOptions.SectionName));
 services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddScoped<IHallInitiationService, HallInitiationService>();

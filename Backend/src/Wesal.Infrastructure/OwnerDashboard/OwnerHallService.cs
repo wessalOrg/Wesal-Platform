@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -32,6 +33,7 @@ public sealed class OwnerHallService : IOwnerHallService
     private readonly IBookingRepository _bookingRepository;
     private readonly IHallMediaStorage _mediaStorage;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<OwnerHallService> _logger;
 
     public OwnerHallService(
         UserManager<ApplicationUser> userManager,
@@ -39,7 +41,8 @@ public sealed class OwnerHallService : IOwnerHallService
         IOwnerDashboardRepository ownerDashboardRepository,
         IBookingRepository bookingRepository,
         IHallMediaStorage mediaStorage,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<OwnerHallService> logger)
     {
         _userManager = userManager;
         _currentUser = currentUser;
@@ -47,6 +50,7 @@ public sealed class OwnerHallService : IOwnerHallService
         _bookingRepository = bookingRepository;
         _mediaStorage = mediaStorage;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<OwnerHallDetailsDto> GetOwnedHallDetailsAsync(
@@ -128,18 +132,18 @@ public sealed class OwnerHallService : IOwnerHallService
         }
         catch
         {
-            // A refused write must not orphan freshly saved uploads on disk.
-            foreach (var path in savedPaths)
+            // A refused write must not orphan freshly saved uploads: compensate
+            // exactly the objects this request created (never history), logging
+            // cleanup failures without masking the original exception.
+            foreach (var stored in savedPaths)
             {
                 try
                 {
-                    if (File.Exists(path))
-                    {
-                        File.Delete(path);
-                    }
+                    await _mediaStorage.DeleteAsync(stored, CancellationToken.None);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _logger.LogWarning(ex, "Failed to clean up hall media {StorageKey} after a failed update", stored.StorageKey);
                 }
             }
 
@@ -201,12 +205,12 @@ public sealed class OwnerHallService : IOwnerHallService
     /// with continuing display order. Returns the request unchanged when no uploads
     /// accompany it (pure JSON path).
     /// </summary>
-    private async Task<(UpdateOwnerHallRequest Effective, List<string> SavedPaths)> MergeUploadedPhotosAsync(
+    private async Task<(UpdateOwnerHallRequest Effective, List<StoredHallMedia> SavedPaths)> MergeUploadedPhotosAsync(
         Guid hallId,
         UpdateOwnerHallRequest request,
         CancellationToken cancellationToken)
     {
-        var savedPaths = new List<string>();
+        var savedPaths = new List<StoredHallMedia>();
 
         var hasCoverUpload = request.MainPhoto is not null && request.MainPhoto.Content.Length > 0;
         var galleryUploads = request.NewPhotos
@@ -262,18 +266,13 @@ public sealed class OwnerHallService : IOwnerHallService
     private async Task<string> SaveUploadedPhotoAsync(
         Guid hallId,
         HallPhotoUpload upload,
-        List<string> savedPaths,
+        List<StoredHallMedia> savedPaths,
         CancellationToken cancellationToken)
     {
-        var directory = _mediaStorage.HallsUploadDirectory(hallId);
-        Directory.CreateDirectory(directory);
+        var stored = await _mediaStorage.SaveAsync(hallId, upload, cancellationToken);
+        savedPaths.Add(stored);
 
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(upload.FileName).ToLowerInvariant()}";
-        var fullPath = Path.Combine(directory, fileName);
-        await File.WriteAllBytesAsync(fullPath, upload.Content, cancellationToken);
-        savedPaths.Add(fullPath);
-
-        return $"/uploads/halls/{hallId}/{fileName}";
+        return stored.PublicUrl;
     }
 
     /// <summary>
