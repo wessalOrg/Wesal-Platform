@@ -298,6 +298,110 @@ public class OwnerHallServiceShould : IDisposable
             => Task.FromResult(0);
     }
 
+    /// <summary>
+    /// Tracker invariant (hall-update concurrency regression): through the real
+    /// update path, pre-existing features must end Deleted and replacements must
+    /// be explicitly Added — never discovered as Modified (which produced UPDATEs
+    /// against never-inserted rows and DbUpdateConcurrencyException in production).
+    /// A spy unit of work snapshots tracker states immediately before the real
+    /// SaveChanges runs.
+    /// </summary>
+    [Fact]
+    public async Task UpdateOwnedHall_FeatureTrackerStates_AreDeletedAndAddedWithoutModified()
+    {
+        var owner = await CreateOwnerAsync("owner10@example.com", "+970599100011");
+        var hall = AddHall(owner.Id, "Grand Hall", withDetails: true);
+        _context.HallFeatures.Add(new HallFeature { HallId = hall.Id, Name = "تكييف" });
+        _context.HallFeatures.Add(new HallFeature { HallId = hall.Id, Name = "موقف سيارات" });
+        _context.SaveChanges();
+        var originalIds = _context.HallFeatures
+            .Where(feature => feature.HallId == hall.Id)
+            .Select(feature => feature.Id)
+            .ToList();
+        Assert.Equal(2, originalIds.Count);
+
+        var spy = new TrackerSpyUnitOfWork(_context);
+        var service = new OwnerHallService(
+            _userManager,
+            new FakeCurrentUser(owner.Id, true),
+            new OwnerDashboardRepository(_context),
+            new BookingRepository(_context),
+            new LocalHallMediaStorage(Options.Create(new HallMediaOptions())),
+            spy,
+            NullLogger<OwnerHallService>.Instance);
+
+        var baseRequest = CreateUpdateRequest();
+        var request = new UpdateOwnerHallRequest
+        {
+            Name = baseRequest.Name,
+            MainImageUrl = baseRequest.MainImageUrl,
+            ContactPhone = baseRequest.ContactPhone,
+            Region = baseRequest.Region,
+            Address = baseRequest.Address,
+            DetailedAddress = baseRequest.DetailedAddress,
+            Description = baseRequest.Description,
+            Capacity = baseRequest.Capacity,
+            Price = baseRequest.Price,
+            ShowPrice = baseRequest.ShowPrice,
+            YouTubeVideoUrl = baseRequest.YouTubeVideoUrl,
+            Features = ["تكييف", "موقف سيارات"],
+            OtherFeatures = baseRequest.OtherFeatures,
+            Photos = baseRequest.Photos,
+            HourlySlotStart = baseRequest.HourlySlotStart,
+            HourlySlotEnd = baseRequest.HourlySlotEnd
+        };
+
+        var details = await service.UpdateOwnedHallAsync(hall.Id, request);
+
+        var deleted = spy.PreSaveStates.Where(s => s.State == EntityState.Deleted).ToList();
+        var added = spy.PreSaveStates.Where(s => s.State == EntityState.Added).ToList();
+        Assert.DoesNotContain(spy.PreSaveStates, s => s.State == EntityState.Modified);
+        Assert.Equal(originalIds.OrderBy(id => id), deleted.Select(s => s.Id).OrderBy(id => id));
+        Assert.Equal(2, added.Count);
+        Assert.DoesNotContain(added, s => originalIds.Contains(s.Id));
+
+        var persistedFeatures = await _context.HallFeatures
+            .AsNoTracking()
+            .Where(feature => feature.HallId == hall.Id)
+            .ToListAsync();
+        Assert.Equal(2, persistedFeatures.Count);
+        Assert.DoesNotContain(persistedFeatures, feature => originalIds.Contains(feature.Id));
+        Assert.Equal(
+            ["تكييف", "موقف سيارات"],
+            persistedFeatures.Select(feature => feature.Name).OrderBy(name => name, StringComparer.Ordinal));
+        Assert.Contains("تكييف", details.Features);
+    }
+
+    private sealed class TrackerSpyUnitOfWork : IUnitOfWork
+    {
+        private readonly UnitOfWork _inner;
+        private readonly ApplicationDbContext _context;
+
+        public TrackerSpyUnitOfWork(ApplicationDbContext context)
+        {
+            _context = context;
+            _inner = new UnitOfWork(context);
+        }
+
+        public List<(Guid Id, EntityState State)> PreSaveStates { get; } = [];
+
+        public Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default)
+            => _inner.ExecuteInTransactionAsync(operation, cancellationToken);
+
+        public Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> operation, CancellationToken cancellationToken = default)
+            => _inner.ExecuteInTransactionAsync(operation, cancellationToken);
+
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            foreach (var entry in _context.ChangeTracker.Entries<HallFeature>())
+            {
+                PreSaveStates.Add((entry.Entity.Id, entry.State));
+            }
+
+            return await _inner.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     [Fact]
     public async Task UpdateOwnedHall_UpdatesHourlyWindow()
     {
