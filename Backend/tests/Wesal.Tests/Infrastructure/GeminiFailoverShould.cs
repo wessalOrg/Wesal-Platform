@@ -31,7 +31,6 @@ public class GeminiSingleApiShould
         Func<HttpRequestMessage, HttpResponseMessage> responder,
         GoogleAiSettings? settings = null)
     {
-        GeminiService.ResetCircuitBreaker();
         var handler = new FakeHttpHandler(responder);
         var factory = new FakeHttpClientFactory(handler);
         return new GeminiService(factory, Options.Create(settings ?? Settings()), NullLogger<GeminiService>.Instance);
@@ -418,13 +417,58 @@ public class GeminiSingleApiShould
     }
 
     [Fact]
-    public async Task CircuitBreaker_OpensAfterFailure()
+    public async Task CircuitBreaker_StaysClosedAfterASingleFailure()
     {
         var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
 
         await service.GenerateTextAsync("question", "en", CancellationToken.None);
 
-        Assert.False(service.IsAvailable, "Circuit breaker should be open after failure");
+        Assert.True(service.IsAvailable, "One slow/failed request must not disable Gemini for everyone");
+    }
+
+    [Fact]
+    public async Task CircuitBreaker_OpensAfterConsecutiveFailures()
+    {
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+
+        for (var i = 0; i < 3; i++)
+        {
+            await service.GenerateTextAsync("question", "en", CancellationToken.None);
+        }
+
+        Assert.False(service.IsAvailable, "Breaker should open after the consecutive-failure threshold");
+    }
+
+    [Fact]
+    public async Task CircuitBreaker_SuccessResetsTheFailureCount()
+    {
+        var calls = 0;
+        var service = CreateService(_ => ++calls == 3
+            ? Json(HttpStatusCode.OK, SuccessResponse("ok"))
+            : new HttpResponseMessage(HttpStatusCode.InternalServerError));
+
+        for (var i = 0; i < 5; i++)
+        {
+            await service.GenerateTextAsync("question", "en", CancellationToken.None);
+        }
+
+        // failures: F F S F F -> never 3 consecutive
+        Assert.True(service.IsAvailable);
+    }
+
+    [Fact]
+    public async Task CircuitBreaker_StateIsNotSharedBetweenInstances()
+    {
+        var failing = CreateService(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        for (var i = 0; i < 3; i++)
+        {
+            await failing.GenerateTextAsync("question", "en", CancellationToken.None);
+        }
+
+        var healthy = CreateService(_ => Json(HttpStatusCode.OK, SuccessResponse("ok")));
+
+        Assert.False(failing.IsAvailable);
+        Assert.True(healthy.IsAvailable);
     }
 
     [Fact]

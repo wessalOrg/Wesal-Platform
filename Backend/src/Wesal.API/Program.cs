@@ -156,16 +156,21 @@ try
     app.UseDefaultFiles();
     app.UseStaticFiles();
 
-    // Serve hall media uploads from the writable media storage root (e.g. /tmp/wesal-media),
-    // keeping the public URL scheme /uploads/halls/{hallId}/{fileName}.
+    // Legacy local hall media (development): serve /uploads/... from the local
+    // root. With the R2 provider, images are absolute public URLs loaded straight
+    // from R2, so no local mount is created (wwwroot static files above are unaffected).
     var mediaStorage = app.Services.GetRequiredService<IHallMediaStorage>();
     var documentStorage = app.Services.GetRequiredService<Wesal.Application.Common.Interfaces.IDocumentStorage>();
-    WarnIfEphemeralUploadStorage(mediaStorage.Root, documentStorage.Root);
-    app.UseStaticFiles(new StaticFileOptions
+    if (mediaStorage.Info is { IsLocal: true, LocalRoot: string localRoot })
     {
-        RequestPath = "/uploads",
-        FileProvider = new PhysicalFileProvider(mediaStorage.Root)
-    });
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            RequestPath = "/uploads",
+            FileProvider = new PhysicalFileProvider(localRoot)
+        });
+    }
+    ValidateHallMediaConfiguration(app.Environment, configuration);
+    WarnIfEphemeralUploadStorage(mediaStorage.Info, documentStorage.Root);
 
     app.UseCors(CorsPolicyName);
 
@@ -252,12 +257,15 @@ static bool IsEphemeralUploadRoot(string root)
         || full.StartsWith(temp + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
 }
 
-static void WarnIfEphemeralUploadStorage(string mediaRoot, string documentRoot)
+static void WarnIfEphemeralUploadStorage(
+    Wesal.Infrastructure.Halls.HallMediaStorageInfo mediaInfo,
+    string documentRoot)
 {
-    if (IsEphemeralUploadRoot(mediaRoot))
+    // R2-backed hall media is durable by construction: nothing to warn about.
+    if (mediaInfo is { IsLocal: true, LocalRoot: string mediaRoot } && IsEphemeralUploadRoot(mediaRoot))
     {
         Log.Warning(
-            "Hall media storage is ephemeral ({Root}); uploaded photos will NOT survive instance replacement/redeploy. Set HallMedia:Directory (HallMedia__Directory) to durable storage.",
+            "Hall media storage is ephemeral ({Root}); uploaded photos will NOT survive instance replacement/redeploy. Set HallMedia:Provider=R2 (HallMedia__Provider) with durable R2 settings for production.",
             mediaRoot);
     }
 
@@ -267,4 +275,29 @@ static void WarnIfEphemeralUploadStorage(string mediaRoot, string documentRoot)
             "Protected document storage is ephemeral ({Root}); identity documents and attachments will NOT survive instance replacement/redeploy. Set DocumentStorage:Directory (DocumentStorage__Directory) to durable storage.",
             documentRoot);
     }
+}
+
+/// <summary>
+/// Startup safety for durable hall media: when the R2 provider is selected, all
+/// required settings are validated here so a misconfigured deployment fails
+/// clearly at boot (naming settings, never secret values) instead of 500ing the
+/// first upload. Local development needs no R2 configuration.
+/// </summary>
+static void ValidateHallMediaConfiguration(Microsoft.AspNetCore.Hosting.IWebHostEnvironment environment, IConfiguration configuration)
+{
+    var provider = configuration.GetSection("HallMedia")?.Get<Wesal.Infrastructure.Halls.HallMediaOptions>()?.Provider;
+    if (!string.Equals(provider, Wesal.Infrastructure.Halls.HallMediaOptions.ProviderR2, StringComparison.OrdinalIgnoreCase))
+    {
+        if (!environment.IsDevelopment())
+        {
+            Log.Warning(
+                "HallMedia:Provider is '{Provider}'; production hall uploads use ephemeral container-local storage and will NOT survive restarts. Set HallMedia__Provider=R2 for durable storage.",
+                provider ?? "(unset)");
+        }
+
+        return;
+    }
+
+    var r2 = configuration.GetSection("HallMedia:R2").Get<Wesal.Infrastructure.Halls.HallMediaR2Options>();
+    Wesal.Infrastructure.Halls.HallMediaR2Configuration.Validate(r2, environment.IsDevelopment());
 }

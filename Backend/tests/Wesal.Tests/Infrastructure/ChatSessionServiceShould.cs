@@ -7,6 +7,33 @@ namespace Wesal.Tests.Infrastructure;
 public class ChatSessionServiceShould
 {
     [Fact]
+    public async Task Session_IsolatedByAuthenticatedOwner_AndEndedOnLogout()
+    {
+        using var service = new ChatSessionService();
+        var session = await service.InitializeSessionAsync("en", userId: "user-a");
+        await service.SaveTurnAsync(session.SessionId, "private to A", null);
+
+        Assert.NotNull(await service.GetSessionAsync(session.SessionId, userId: "user-a"));
+        Assert.Null(await service.GetSessionAsync(session.SessionId, userId: "user-b"));
+        Assert.Null(await service.GetSessionAsync(session.SessionId));
+        Assert.Empty((await service.GetConversationContextAsync(session.SessionId, userId: "user-b")).Turns);
+
+        await service.EndSessionsForUserAsync("user-a");
+
+        Assert.Null(await service.GetSessionAsync(session.SessionId, userId: "user-a"));
+    }
+
+    [Fact]
+    public async Task GuestSession_IsUnavailableToAuthenticatedUsers()
+    {
+        using var service = new ChatSessionService();
+        var session = await service.InitializeSessionAsync("en");
+
+        Assert.NotNull(await service.GetSessionAsync(session.SessionId));
+        Assert.Null(await service.GetSessionAsync(session.SessionId, userId: "user-a"));
+    }
+
+    [Fact]
     public async Task InitializeSession_ReturnsNewSessionWithId()
     {
         using var service = new ChatSessionService();

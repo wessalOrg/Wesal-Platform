@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Wesal.API.Controllers;
 using Wesal.API.Filters;
 using Wesal.Application.Common.Interfaces;
@@ -33,7 +34,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
     private readonly WebApplication _app;
     private readonly HttpClient _client;
     private readonly ApplicationDbContext _context;
-    private readonly IHallMediaStorage _mediaStorage;
+    private readonly LocalHallMediaStorage _mediaStorage;
 
     public CreateHallPipelineShould()
     {
@@ -90,7 +91,12 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         builder.Services.AddScoped<ICurrentUserService>(_ => new FakeCurrentUser());
         builder.Services.AddScoped<IHallRepository, TestInMemoryHallRepository>();
         builder.Services.AddScoped<IUnitOfWork, TestInMemoryUnitOfWork>();
-        builder.Services.AddSingleton<IHallMediaStorage>(new FakeHallMediaStorage());
+        var mediaStorage = new LocalHallMediaStorage(
+            Options.Create(new HallMediaOptions
+            {
+                Directory = Path.Combine(Path.GetTempPath(), "wesal-media-pipeline-" + Guid.NewGuid())
+            }));
+        builder.Services.AddSingleton<IHallMediaStorage>(mediaStorage);
         // WESAL-TASK-13 (Edit 13): the production dispatcher is built into the real DI graph
         // by Wesal.Infrastructure. This pipeline test uses a trimmed container, so the
         // notification port is supplied here to keep the service constructible; the wording
@@ -121,7 +127,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         _client = _app.GetTestClient();
         _client.DefaultRequestHeaders.Add(TestAuthHandler.HeaderName, "test-token");
         _context = _app.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        _mediaStorage = _app.Services.GetRequiredService<IHallMediaStorage>();
+        _mediaStorage = mediaStorage;
         SeedOwnerWithIdentityDocument();
     }
 
@@ -278,6 +284,85 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         Assert.Equal(0, await _context.Halls.CountAsync());
     }
 
+    /// <summary>
+    /// Regression for the hall-edit "Validation failed" outage: the frontend sends
+    /// the region as an enum name ("Gaza"). The controller's manual JSON readers must
+    /// parse it exactly like [FromBody] binding did (JsonStringEnumConverter),
+    /// on both the JSON and multipart paths.
+    /// </summary>
+    [Fact]
+    public async Task UpdateHall_JsonStringRegion_ReachesService()
+    {
+        var response = await _client.PutAsync(
+            $"/api/v1/owner/halls/{Guid.NewGuid()}",
+            UpdateJsonContent("Gaza", "حي الشجاعية"));
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Expected 200 but got {response.StatusCode}: {body}");
+    }
+
+    [Fact]
+    public async Task UpdateHall_MultipartStringRegion_ReachesService()
+    {
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(UpdateJson("Gaza", "حي الشجاعية"), Encoding.UTF8), "payload");
+
+        var response = await _client.PutAsync($"/api/v1/owner/halls/{Guid.NewGuid()}", content);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Expected 200 but got {response.StatusCode}: {body}");
+    }
+
+    [Theory]
+    [InlineData("NorthGaza", "جباليا")]
+    [InlineData("Gaza", "حي الشجاعية")]
+    [InlineData("MiddleArea", "النصيرات")]
+    [InlineData("SouthGaza", "بني سهيلا")]
+    public async Task UpdateHall_AllStringRegions_ReachesService(string region, string address)
+    {
+        var response = await _client.PutAsync(
+            $"/api/v1/owner/halls/{Guid.NewGuid()}",
+            UpdateJsonContent(region, address));
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Expected 200 but got {response.StatusCode}: {body}");
+    }
+
+    [Fact]
+    public async Task UpdateHall_InvalidRegion_IsRejected()
+    {
+        var response = await _client.PutAsync(
+            $"/api/v1/owner/halls/{Guid.NewGuid()}",
+            UpdateJsonContent("NotARealRegion", "حي الشجاعية"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateHall_NumericRegion_BindsLikeApplicationJson()
+    {
+        // The application-wide JsonStringEnumConverter accepts numbers; the manual
+        // readers must behave identically (no broader, no narrower).
+        var json = UpdateJson("Gaza", "حي الشجاعية").Replace("\"Gaza\"", "1");
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _client.PutAsync($"/api/v1/owner/halls/{Guid.NewGuid()}", content);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Expected 200 but got {response.StatusCode}: {body}");
+    }
+
+    private static string UpdateJson(string region, string address) =>
+        "{\"name\":\"Test Hall\",\"mainImageUrl\":null,\"contactPhone\":\"+972599123456\"," +
+        $"\"region\":\"{region}\",\"address\":\"{address}\",\"detailedAddress\":null," +
+        "\"description\":\"Nice hall\",\"capacity\":300,\"price\":1000,\"showPrice\":true," +
+        "\"youtubeVideoUrl\":null,\"features\":[],\"otherFeatures\":null," +
+        "\"photos\":[{\"url\":\"/uploads/halls/x/a.jpg\",\"displayOrder\":0}]," +
+        "\"hourlySlotStart\":\"08:00:00\",\"hourlySlotEnd\":\"22:00:00\"}";
+
+    private static StringContent UpdateJsonContent(string region, string address) =>
+        new(UpdateJson(region, address), Encoding.UTF8, "application/json");
+
     [Fact]
     public async Task DirectServiceCall_PersistsHall()
     {
@@ -354,15 +439,6 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         public string? Email => "owner@example.com";
         public bool IsAuthenticated => true;
         public IReadOnlyList<string> Roles => new[] { ApplicationRoles.HallOwner };
-    }
-
-    private sealed class FakeHallMediaStorage : IHallMediaStorage
-    {
-        private readonly string _root = Path.Combine(Path.GetTempPath(), "wesal-media-pipeline-" + Guid.NewGuid());
-
-        public string Root => _root;
-
-        public string HallsUploadDirectory(Guid hallId) => Path.Combine(_root, "halls", hallId.ToString());
     }
 
     private sealed class TestInMemoryHallRepository : IHallRepository

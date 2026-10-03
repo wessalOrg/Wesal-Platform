@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Serialization;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
@@ -200,7 +201,20 @@ public class OwnerController : ControllerBase
     }
 
     private static readonly System.Text.Json.JsonSerializerOptions UpdateRequestJsonOptions =
-        new(System.Text.Json.JsonSerializerDefaults.Web);
+        CreateUpdateRequestJsonOptions();
+
+    /// <summary>
+    /// Manual-read options kept in parity with the application's MVC JSON
+    /// configuration (see Program.cs): Web defaults plus string-enum support,
+    /// so the frontend's "region": "Gaza" binds exactly as [FromBody] did
+    /// before the multipart-capable manual readers were introduced.
+    /// </summary>
+    private static System.Text.Json.JsonSerializerOptions CreateUpdateRequestJsonOptions()
+    {
+        var options = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
 
     private async Task<UpdateOwnerHallRequest> ReadJsonUpdateRequestAsync(CancellationToken cancellationToken)
     {

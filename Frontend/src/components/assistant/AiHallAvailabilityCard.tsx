@@ -44,6 +44,7 @@ export default function AiHallAvailabilityCard({
             const periodKey = periodMessageKey(period.periodType);
             const periodLabel = periodKey ? t(periodKey) : period.periodName || "";
             const booked = period.status === "Booked";
+            const held = period.status === "Reserved";
             return (
               <li
                 key={`${period.periodType}-${period.startTime}-${period.endTime}`}
@@ -57,14 +58,16 @@ export default function AiHallAvailabilityCard({
                 </span>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[0.62rem] font-semibold ${
-                    booked
+                    booked || held
                       ? "bg-[#f8e8e6] text-[var(--wesal-maroon)]"
                       : "bg-[#e7f6ee] text-[#2f7d56]"
                   }`}
                 >
                   {booked
                     ? t("assistant.chat.availability.booked")
-                    : t("assistant.chat.available")}
+                    : held
+                      ? t("assistant.chat.availability.reserved")
+                      : t("assistant.chat.available")}
                 </span>
               </li>
             );

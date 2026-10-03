@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 
@@ -15,17 +16,20 @@ public class AiAssistantController : ControllerBase
     private readonly IHowToService _howToService;
     private readonly IRecommendationService _recommendationService;
     private readonly IAiAssistantService _aiAssistantService;
+    private readonly ICurrentUserService _currentUser;
 
     public AiAssistantController(
         IChatSessionService chatSessionService,
         IHowToService howToService,
         IRecommendationService recommendationService,
-        IAiAssistantService aiAssistantService)
+        IAiAssistantService aiAssistantService,
+        ICurrentUserService currentUser)
     {
         _chatSessionService = chatSessionService;
         _howToService = howToService;
         _recommendationService = recommendationService;
         _aiAssistantService = aiAssistantService;
+        _currentUser = currentUser;
     }
 
     [HttpPost]
@@ -37,7 +41,8 @@ public class AiAssistantController : ControllerBase
     {
         var response = await _chatSessionService.InitializeSessionAsync(
             request?.Language,
-            cancellationToken);
+            cancellationToken,
+            CurrentUserId);
 
         return CreatedAtAction(nameof(GetSession), new { sessionId = response.SessionId }, response);
     }
@@ -50,7 +55,7 @@ public class AiAssistantController : ControllerBase
         Guid sessionId,
         CancellationToken cancellationToken)
     {
-        var response = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken);
+        var response = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken, CurrentUserId);
 
         if (response is null)
         {
@@ -70,7 +75,7 @@ public class AiAssistantController : ControllerBase
         [FromBody] HowToRequest request,
         CancellationToken cancellationToken)
     {
-        var session = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken);
+        var session = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken, CurrentUserId);
 
         if (session is null)
         {
@@ -96,7 +101,7 @@ public class AiAssistantController : ControllerBase
         [FromBody] RecommendationRequest request,
         CancellationToken cancellationToken)
     {
-        var session = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken);
+        var session = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken, CurrentUserId);
 
         if (session is null)
         {
@@ -128,11 +133,13 @@ public class AiAssistantController : ControllerBase
     }
 
     /// <summary>
-    /// Unified assistant turn: the backend classifies the message into a structured
-    /// intent (optionally via Gemini) and resolves it against verified platform data.
-    /// The returned <see cref="AiAssistantResponse"/> carries a stable discriminator
-    /// so the frontend can render halls/details/availability/clarification distinctly.
-    /// Existing /how-to and /recommend endpoints remain untouched.
+    /// Unified assistant turn. The body may carry an untrusted page context (pathname)
+    /// and a pinned entity (a hall id); the backend validates both, re-resolves the hall
+    /// from live services, and answers from exactly one trusted source (live tools,
+    /// Knowledge Base, deterministic policy, navigation registry or a clarification).
+    /// The returned <see cref="AiAssistantResponse"/> carries a stable kind discriminator
+    /// plus optional trusted navigation actions. The legacy /how-to and /recommend
+    /// endpoints remain untouched.
     /// </summary>
     [HttpPost("{sessionId:guid}/assistant")]
     [AllowAnonymous]
@@ -144,7 +151,7 @@ public class AiAssistantController : ControllerBase
         [FromBody] AiAssistantRequest request,
         CancellationToken cancellationToken)
     {
-        var session = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken);
+        var session = await _chatSessionService.GetSessionAsync(sessionId, cancellationToken, CurrentUserId);
 
         if (session is null)
         {
@@ -157,20 +164,34 @@ public class AiAssistantController : ControllerBase
             return BadRequest(new { Message = "Message is required." });
         }
 
-        var context = await _chatSessionService.GetConversationContextAsync(sessionId, cancellationToken);
+        var context = await _chatSessionService.GetConversationContextAsync(sessionId, cancellationToken, CurrentUserId);
 
         AiAssistantResponse response;
         try
         {
-            response = await _aiAssistantService.ProcessMessageAsync(message, session.Language, cancellationToken, context);
+            response = await _aiAssistantService.ProcessMessageAsync(
+                message,
+                session.Language,
+                cancellationToken,
+                context,
+                new AiRequestContext(request?.Page, request?.Entity));
         }
         catch (ArgumentException)
         {
             return BadRequest(new { Message = "Message is invalid." });
         }
 
-        await _chatSessionService.SaveTurnAsync(sessionId, message, response.Intent, cancellationToken);
+        await _chatSessionService.SaveExchangeAsync(
+            sessionId,
+            message,
+            response.Message,
+            response.Intent,
+            AiResponseMemory.ShownHalls(response),
+            AiResponseMemory.FocusedHall(response),
+            cancellationToken);
 
         return Ok(response);
     }
+
+    private string? CurrentUserId => _currentUser.IsAuthenticated ? _currentUser.UserId : null;
 }

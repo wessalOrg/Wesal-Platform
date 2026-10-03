@@ -131,8 +131,8 @@ public class RejectedLifecycleShould : IDisposable
     private OwnerHallService CreateOwnerHallService(string ownerId)
         => new(_userManager, new FakeCurrentUser(ownerId, true, ApplicationRoles.HallOwner),
             new OwnerDashboardRepository(_context), new BookingRepository(_context),
-            new HallMediaStorage(Options.Create(new HallMediaOptions { Directory = _mediaRoot })),
-            new UnitOfWork(_context));
+            new LocalHallMediaStorage(Options.Create(new HallMediaOptions { Directory = _mediaRoot })),
+            new UnitOfWork(_context), NullLogger<OwnerHallService>.Instance);
 
     private AdminHallService CreateAdminHallService(string adminId)
         => new(new HallRepository(_context), new UnitOfWork(_context),
@@ -160,8 +160,8 @@ public class RejectedLifecycleShould : IDisposable
     private HallCreationService CreateCreationService(string ownerId)
         => new(new FakeCurrentUser(ownerId, true, ApplicationRoles.HallOwner),
             new HallRepository(_context), new UnitOfWork(_context),
-            new HallMediaStorage(Options.Create(new HallMediaOptions { Directory = _mediaRoot })),
-            _userManager, new RecordingNotificationDispatcher());
+            new LocalHallMediaStorage(Options.Create(new HallMediaOptions { Directory = _mediaRoot })),
+            _userManager, new RecordingNotificationDispatcher(), NullLogger<HallCreationService>.Instance);
 
     private static UpdateOwnerHallRequest CorrectionRequest(Hall hall) => new()
     {

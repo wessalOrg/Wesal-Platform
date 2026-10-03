@@ -14,3 +14,9 @@ public interface IWesalKnowledgeService
         int maxResults = 3,
         CancellationToken cancellationToken = default);
 }
+
+/// <summary>Diagnostics for the knowledge base (how many articles were actually loaded).</summary>
+public interface IWesalKnowledgeStats
+{
+    int ArticleCount { get; }
+}

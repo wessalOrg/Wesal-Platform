@@ -35,6 +35,8 @@ public sealed class WesalToolGateway : IWesalToolGateway
     public const int MaxPageSize = 20;
     public const int MaxNameLength = 120;
     public const int MaxAreaLength = 80;
+    public const int MaxCapacity = 9999;
+    private const int CapacityFetchSize = 50;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -47,7 +49,7 @@ public sealed class WesalToolGateway : IWesalToolGateway
         {
             [WesalToolNames.SearchHalls] = new(
                 WesalToolNames.SearchHalls,
-                "Searches the public, approved Wesal wedding halls by optional name, region, area, or date. Returns a bounded page of halls with id, name, region, address, description, capacity, price and main image. This is a read-only public search.",
+                "Searches the public, approved Wesal wedding halls by optional name, region, area, date, or minimum guest capacity. Returns a bounded page of halls with id, name, region, address, description, capacity, price and main image. This is a read-only public search.",
                 BuildSearchSchema()),
             [WesalToolNames.GetHallDetails] = new(
                 WesalToolNames.GetHallDetails,
@@ -131,7 +133,7 @@ public sealed class WesalToolGateway : IWesalToolGateway
 
     private async Task<WesalToolResult> ExecuteSearchAsync(JsonObject args, CancellationToken cancellationToken)
     {
-        var allowed = new[] { "name", "region", "area", "date", "pageSize" };
+        var allowed = new[] { "name", "region", "area", "date", "minCapacity", "pageSize" };
         if (!EnsureOnlyKnownArguments(args, allowed, WesalToolNames.SearchHalls, out var knownError))
             return knownError;
 
@@ -143,12 +145,14 @@ public sealed class WesalToolGateway : IWesalToolGateway
             return WesalToolResult.Fail("The 'region' parameter must be one of: NorthGaza, Gaza, MiddleArea, SouthGaza.");
         if (!TryGetOptionalDate(args, "date", out var date))
             return WesalToolResult.Fail("The 'date' parameter must be an ISO date in yyyy-MM-dd format.");
+        if (!TryGetMinCapacity(args, out var minCapacity))
+            return WesalToolResult.Fail($"The 'minCapacity' parameter must be an integer between 1 and {MaxCapacity}.");
         if (!TryGetPageSize(args, out var pageSize))
             return WesalToolResult.Fail($"The 'pageSize' parameter must be an integer between 1 and {MaxPageSize}.");
 
-        if (name is null && area is null && region is null && date is null)
+        if (name is null && area is null && region is null && date is null && minCapacity is null)
         {
-            return WesalToolResult.Fail("Provide at least one search criterion: name, region, area, or date.");
+            return WesalToolResult.Fail("Provide at least one search criterion: name, region, area, date, or minCapacity.");
         }
 
         var request = new HallSearchRequest
@@ -158,15 +162,26 @@ public sealed class WesalToolGateway : IWesalToolGateway
             Area = area,
             Date = date,
             PageNumber = 1,
-            PageSize = pageSize
+            // Capacity is not a repository filter: fetch a wider page and filter here so the
+            // model never has to guess capacity from a short, newest-first list.
+            PageSize = minCapacity is null ? pageSize : CapacityFetchSize
         };
 
         var page = await _searchService.SearchHallsAsync(request, cancellationToken);
 
-        var payload = JsonSerializer.SerializeToNode(new { halls = page.Items, totalCount = page.TotalCount }, JsonOptions)
+        IReadOnlyList<HallListItemDto> items = page.Items;
+        var totalCount = page.TotalCount;
+        if (minCapacity is { } required)
+        {
+            var matching = page.Items.Where(hall => hall.Capacity >= required).ToList();
+            totalCount = matching.Count;
+            items = matching.Take(pageSize).ToList();
+        }
+
+        var payload = JsonSerializer.SerializeToNode(new { halls = items, totalCount }, JsonOptions)
             as JsonObject ?? new JsonObject();
 
-        return WesalToolResult.Ok(payload);
+        return WesalToolResult.Ok(payload) with { Halls = items };
     }
 
     private async Task<WesalToolResult> ExecuteDetailsAsync(JsonObject args, CancellationToken cancellationToken)
@@ -204,7 +219,7 @@ public sealed class WesalToolGateway : IWesalToolGateway
             }
         }, JsonOptions) as JsonObject ?? new JsonObject();
 
-        return WesalToolResult.Ok(payload);
+        return WesalToolResult.Ok(payload) with { HallDetails = details };
     }
 
     private async Task<WesalToolResult> ExecuteAvailabilityAsync(JsonObject args, CancellationToken cancellationToken)
@@ -228,7 +243,12 @@ public sealed class WesalToolGateway : IWesalToolGateway
             availability.Slots
         }, JsonOptions) as JsonObject ?? new JsonObject();
 
-        return WesalToolResult.Ok(payload);
+        return WesalToolResult.Ok(payload) with
+        {
+            // The gateway only knows the id; the orchestrator fills the display name from
+            // earlier tool results / trusted context.
+            Availability = new AiAssistantAvailabilityDayDto(hallId, string.Empty, availability.Date, availability.Slots)
+        };
     }
 
     private static bool TryStealSensitiveArgument(JsonObject args, out string? key)
@@ -349,6 +369,22 @@ public sealed class WesalToolGateway : IWesalToolGateway
         return false;
     }
 
+    private static bool TryGetMinCapacity(JsonObject args, out int? value)
+    {
+        value = null;
+        if (!args.TryGetPropertyValue("minCapacity", out var node) || node is null)
+            return true;
+
+        if (node is JsonValue jsonValue && jsonValue.TryGetValue<int>(out var parsed)
+            && parsed >= 1 && parsed <= MaxCapacity)
+        {
+            value = parsed;
+            return true;
+        }
+
+        return false;
+    }
+
     private static bool TryGetPageSize(JsonObject args, out int value)
     {
         value = DefaultPageSize;
@@ -379,6 +415,13 @@ public sealed class WesalToolGateway : IWesalToolGateway
             },
             ["area"] = new JsonObject { ["type"] = "string", ["description"] = "Hall area/locality (partial match)." },
             ["date"] = new JsonObject { ["type"] = "string", ["format"] = "date", ["description"] = "Event date, ISO yyyy-MM-dd. Use it only when the user gave a real date." },
+            ["minCapacity"] = new JsonObject
+            {
+                ["type"] = "integer",
+                ["minimum"] = 1,
+                ["maximum"] = MaxCapacity,
+                ["description"] = "Minimum number of guests the hall must hold. Use it when the user states a guest count."
+            },
             ["pageSize"] = new JsonObject
             {
                 ["type"] = "integer",

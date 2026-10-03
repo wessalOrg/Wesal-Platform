@@ -39,6 +39,16 @@ export type AiAssistantControls = {
   closeAssistant: () => void;
   toggleAssistant: () => void;
   retry: () => void;
+  /**
+   * Creates ONE fresh backend session without touching the visible conversation and
+   * resolves with its id (null when it could not be created). Used to recover from an
+   * expired/lost session (404) so the user's turn can be retried once.
+   */
+  renewSession: () => Promise<string | null>;
+  /** Re-adopts a previously stored session id (UI continuity after a reload). */
+  restoreSession: (sessionId: string, savedAt: number) => void;
+  /** Slides the client-side expiry after a successful turn (the backend slides its TTL). */
+  touchSession: () => void;
 };
 
 /**
@@ -170,6 +180,76 @@ export function useAiAssistant(): AiAssistantControls {
     [lang, markUnreachable],
   );
 
+  const touchSession = useCallback(() => {
+    const current = sessionRef.current;
+    if (!current) return;
+    const next: AiSession = {
+      ...current,
+      expiresAt: new Date(Date.now() + 25 * 60 * 1000).toISOString(),
+    };
+    sessionRef.current = next;
+    setSession(next);
+  }, []);
+
+  const renewSession = useCallback(async (): Promise<string | null> => {
+    // A request is already running: join it instead of firing a second one.
+    if (inFlightRef.current) {
+      await inFlightRef.current;
+      return sessionRef.current?.sessionId ?? null;
+    }
+
+    if (isBrowserOffline()) return null;
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const requestedLang = lang;
+
+    const request = (async () => {
+      try {
+        const next = await initializeAiSession(requestedLang, controller.signal);
+        if (controller.signal.aborted || !mountedRef.current) return;
+        sessionRef.current = next;
+        requestedLangRef.current = requestedLang;
+        setSession(next);
+        setErrorKey(null);
+        setUnavailableReason(null);
+        setPhase("active");
+      } catch {
+        /* the caller falls back to the normal retryable error */
+      } finally {
+        if (abortRef.current === controller) abortRef.current = null;
+      }
+    })();
+
+    inFlightRef.current = request;
+    try {
+      await request;
+    } finally {
+      inFlightRef.current = null;
+    }
+
+    return sessionRef.current?.sessionId ?? null;
+  }, [lang]);
+
+  const restoreSession = useCallback(
+    (sessionId: string, savedAt: number) => {
+      if (sessionRef.current) return;
+      const restored: AiSession = {
+        sessionId,
+        language: lang,
+        createdAt: new Date(savedAt).toISOString(),
+        // Mirrors the stored-snapshot max age; the backend slides its own TTL, and a
+        // 404 simply triggers renewSession.
+        expiresAt: new Date(savedAt + 25 * 60 * 1000).toISOString(),
+      };
+      sessionRef.current = restored;
+      requestedLangRef.current = lang;
+      setSession(restored);
+      setPhase("active");
+    },
+    [lang],
+  );
+
   const openAssistant = useCallback(() => {
     setIsOpen(true);
 
@@ -239,6 +319,9 @@ export function useAiAssistant(): AiAssistantControls {
       closeAssistant,
       toggleAssistant,
       retry,
+      renewSession,
+      restoreSession,
+      touchSession,
     }),
     [
       isOpen,
@@ -251,6 +334,9 @@ export function useAiAssistant(): AiAssistantControls {
       closeAssistant,
       toggleAssistant,
       retry,
+      renewSession,
+      restoreSession,
+      touchSession,
     ],
   );
 }

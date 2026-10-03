@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -20,6 +21,7 @@ public class HallCreationService : IHallCreationService
     private readonly IHallMediaStorage _mediaStorage;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly INotificationDispatcher _notificationDispatcher;
+    private readonly ILogger<HallCreationService> _logger;
 
     public HallCreationService(
         ICurrentUserService currentUser,
@@ -27,7 +29,8 @@ public class HallCreationService : IHallCreationService
         IUnitOfWork unitOfWork,
         IHallMediaStorage mediaStorage,
         UserManager<ApplicationUser> userManager,
-        INotificationDispatcher notificationDispatcher)
+        INotificationDispatcher notificationDispatcher,
+        ILogger<HallCreationService> logger)
     {
         _currentUser = currentUser;
         _hallRepository = hallRepository;
@@ -35,6 +38,7 @@ public class HallCreationService : IHallCreationService
         _mediaStorage = mediaStorage;
         _userManager = userManager;
         _notificationDispatcher = notificationDispatcher;
+        _logger = logger;
     }
 
     public async Task<CreateHallResponse> CreateHallAsync(CreateHallRequest request, CancellationToken cancellationToken = default)
@@ -124,7 +128,10 @@ public class HallCreationService : IHallCreationService
             IsDeleted = false
         };
 
-        var uploadsRoot = _mediaStorage.HallsUploadDirectory(hall.Id);
+        // Newly persisted objects tracked for rollback compensation: object
+        // storage and PostgreSQL share no transaction, so a later DB failure must
+        // delete ONLY these handles — never history or other halls' objects.
+        var savedMedia = new List<StoredHallMedia>();
 
         try
         {
@@ -135,16 +142,18 @@ public class HallCreationService : IHallCreationService
                     .ToList();
 
                 var images = new List<HallImage>();
-                Directory.CreateDirectory(uploadsRoot);
 
                 int order = 0;
                 foreach (var photo in validatedPhotos)
                 {
-                    var fileName = $"{Guid.NewGuid()}{photo.Extension}";
-                    var filePath = Path.Combine(uploadsRoot, fileName);
-                    await File.WriteAllBytesAsync(filePath, photo.Content, cancellationToken);
-                    var url = $"/uploads/halls/{hall.Id}/{fileName}";
-                    var image = new HallImage { HallId = hall.Id, Url = url, DisplayOrder = order++, IsDeleted = false };
+                    var stored = await _mediaStorage.SaveAsync(hall.Id, new HallPhotoUpload
+                    {
+                        FileName = photo.OriginalName,
+                        ContentType = photo.MimeType,
+                        Content = photo.Content
+                    }, cancellationToken);
+                    savedMedia.Add(stored);
+                    var image = new HallImage { HallId = hall.Id, Url = stored.PublicUrl, DisplayOrder = order++, IsDeleted = false };
                     images.Add(image);
                 }
                 hall.Images = images;
@@ -153,9 +162,9 @@ public class HallCreationService : IHallCreationService
                 // duplicated into the gallery list.
                 if (request.MainPhoto != null && request.MainPhoto.Content.Length > 0)
                 {
-                    var mainFileName = $"{Guid.NewGuid()}{Path.GetExtension(request.MainPhoto.FileName).ToLowerInvariant()}";
-                    await File.WriteAllBytesAsync(Path.Combine(uploadsRoot, mainFileName), request.MainPhoto.Content, cancellationToken);
-                    hall.MainImageUrl = $"/uploads/halls/{hall.Id}/{mainFileName}";
+                    var stored = await _mediaStorage.SaveAsync(hall.Id, request.MainPhoto, cancellationToken);
+                    savedMedia.Add(stored);
+                    hall.MainImageUrl = stored.PublicUrl;
                 }
                 else if (images.Count > 0)
                 {
@@ -202,13 +211,22 @@ public class HallCreationService : IHallCreationService
         }
         catch
         {
-            // Rollback already happened inside the unit of work; clean up any files written.
-            try
+            // Rollback already happened inside the unit of work; compensate the
+            // storage side for exactly the objects this request created. Cleanup
+            // failures are logged (storage key only, never credentials) and never
+            // mask the original exception.
+            foreach (var stored in savedMedia)
             {
-                if (Directory.Exists(uploadsRoot))
-                    Directory.Delete(uploadsRoot, true);
+                try
+                {
+                    await _mediaStorage.DeleteAsync(stored, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to clean up hall media {StorageKey} after a failed creation", stored.StorageKey);
+                }
             }
-            catch { }
+
             throw;
         }
     }

@@ -4,6 +4,7 @@ import AiAssistantSparkIcon from "@/components/assistant/AiAssistantSparkIcon";
 import AiHallAvailabilityCard from "@/components/assistant/AiHallAvailabilityCard";
 import AiHallRecommendationList from "@/components/assistant/AiHallRecommendationList";
 import WhatsAppActionLink from "@/components/assistant/WhatsAppActionLink";
+import { useAiAssistantInternals } from "@/components/assistant/AiAssistantContext";
 import { useT } from "@/i18n";
 import {
   chatTextDir,
@@ -55,6 +56,42 @@ function bubbleLang(message: AiChatMessage, displayed: string): ChatTextLang {
 type AiChatMessageProps = {
   message: AiChatMessage;
 };
+
+/** Native call-to-action for a validated navigation action. Presentation + a router callback. */
+function AiNavigateActions({ message }: { message: AiChatMessage }) {
+  const internals = useAiAssistantInternals();
+  if (message.actions.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-2" data-testid="ai-chat-actions">
+      {message.actions.map((action) => (
+        <button
+          key={action.href}
+          type="button"
+          onClick={() => internals?.followAction(action)}
+          data-testid="ai-chat-action"
+          data-href={action.href}
+          data-mode={action.mode}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-[var(--wesal-maroon-soft)] bg-white px-3.5 py-1.5 text-[0.76rem] font-bold text-[var(--wesal-maroon-dark)] transition hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+        >
+          {action.label}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="h-3.5 w-3.5 rtl:-scale-x-100"
+          >
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /** One bubble in the thread. Presentation only. */
 export default function AiChatMessageBubble({ message }: AiChatMessageProps) {
@@ -112,6 +149,7 @@ export default function AiChatMessageBubble({ message }: AiChatMessageProps) {
             {message.availability ? (
               <AiHallAvailabilityCard availability={message.availability} />
             ) : null}
+            <AiNavigateActions message={message} />
           </>
         )}
       </div>
