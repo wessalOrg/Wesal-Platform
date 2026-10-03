@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
@@ -130,8 +131,22 @@ public sealed class OwnerHallService : IOwnerHallService
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }, cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
+            // Diagnostic only: identify which entity lost its row when EF reports
+            // "expected to affect 1 row(s), but actually affected 0". Logs entity
+            // type, primary key and state — never property values or payloads.
+            // Compensation and rethrow below are unchanged.
+            if (ex is DbUpdateConcurrencyException concurrencyEx)
+            {
+                _logger.LogError(
+                    concurrencyEx,
+                    "Hall update concurrency conflict for hall {HallId}: {Entries}",
+                    hallId,
+                    string.Join(", ", concurrencyEx.Entries.Select(e =>
+                        $"{e.Entity.GetType().Name} pk={e.Properties.Single(p => p.Metadata.IsPrimaryKey()).CurrentValue} state={e.State}")));
+            }
+
             // A refused write must not orphan freshly saved uploads: compensate
             // exactly the objects this request created (never history), logging
             // cleanup failures without masking the original exception.
@@ -141,9 +156,9 @@ public sealed class OwnerHallService : IOwnerHallService
                 {
                     await _mediaStorage.DeleteAsync(stored, CancellationToken.None);
                 }
-                catch (Exception ex)
+                catch (Exception cleanupEx)
                 {
-                    _logger.LogWarning(ex, "Failed to clean up hall media {StorageKey} after a failed update", stored.StorageKey);
+                    _logger.LogWarning(cleanupEx, "Failed to clean up hall media {StorageKey} after a failed update", stored.StorageKey);
                 }
             }
 

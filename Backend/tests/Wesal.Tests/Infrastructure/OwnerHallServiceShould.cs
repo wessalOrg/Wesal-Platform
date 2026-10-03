@@ -250,6 +250,54 @@ public class OwnerHallServiceShould : IDisposable
         Assert.True(persistedOld.IsDeleted);
     }
 
+    /// <summary>
+    /// Diagnostic-only guard: when the unit of work surfaces a
+    /// DbUpdateConcurrencyException (e.g. a replayed DELETE matching 0 rows),
+    /// UpdateOwnedHallAsync must log it and rethrow the identical instance —
+    /// never swallow, wrap, or convert it. (The Entries-logging branch runs
+    /// here with an empty entry list; production Entries carry the failed rows.)
+    /// </summary>
+    [Fact]
+    public async Task UpdateOwnedHall_ConcurrencyConflict_PropagatesUnchanged()
+    {
+        var owner = await CreateOwnerAsync("owner9@example.com", "+970599100010");
+        var hall = AddHall(owner.Id, "Grand Hall", withDetails: true);
+
+        var concurrencyEx = new DbUpdateConcurrencyException("Simulated 0-row conflict");
+        var service = new OwnerHallService(
+            _userManager,
+            new FakeCurrentUser(owner.Id, true),
+            new OwnerDashboardRepository(_context),
+            new BookingRepository(_context),
+            new LocalHallMediaStorage(Options.Create(new HallMediaOptions())),
+            new ThrowingUnitOfWork(concurrencyEx),
+            NullLogger<OwnerHallService>.Instance);
+
+        var thrown = await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() =>
+            service.UpdateOwnedHallAsync(hall.Id, CreateUpdateRequest()));
+
+        Assert.Same(concurrencyEx, thrown);
+    }
+
+    private sealed class ThrowingUnitOfWork : IUnitOfWork
+    {
+        private readonly Exception _failure;
+
+        public ThrowingUnitOfWork(Exception failure) => _failure = failure;
+
+        public Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default)
+            => ExecuteInTransactionAsync<byte>(async () => { await operation(); return 0; }, cancellationToken);
+
+        public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> operation, CancellationToken cancellationToken = default)
+        {
+            await operation();
+            throw _failure;
+        }
+
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
+    }
+
     [Fact]
     public async Task UpdateOwnedHall_UpdatesHourlyWindow()
     {
