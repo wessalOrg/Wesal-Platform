@@ -13,13 +13,10 @@ const CITIES = ["gazaStrip", "north", "gaza", "middle", "south"] as const;
 
 type TopicId = (typeof TOPICS)[number];
 
-function FieldLabel({ label, hint, id }: { label: string; hint: string; id?: string }) {
+function FieldLabel({ label, id }: { label: string; id?: string }) {
   return (
-    <span className="mb-2 flex items-center justify-between gap-3 text-sm text-[var(--wesal-text)]">
-      <span id={id} className="font-semibold">
-        {label}
-      </span>
-      <span className="text-xs text-[var(--wesal-muted)]">{hint}</span>
+    <span id={id} className="mb-2 block text-sm font-semibold text-[var(--wesal-text)]">
+      {label}
     </span>
   );
 }
@@ -79,7 +76,7 @@ export default function ConsultSection() {
             <form className="consult-form" onSubmit={onSubmit} noValidate>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <FieldLabel label={t("home.consult.name")} hint={t("home.consult.required")} />
+                  <FieldLabel label={t("home.consult.name")} />
                   <input
                     value={name}
                     onChange={(event) => setName(event.target.value)}
@@ -90,7 +87,7 @@ export default function ConsultSection() {
                   />
                 </label>
                 <label className="block">
-                  <FieldLabel label={t("home.consult.email")} hint={t("home.consult.required")} />
+                  <FieldLabel label={t("home.consult.email")} />
                   <input
                     type="email"
                     value={email}
@@ -125,15 +122,11 @@ export default function ConsultSection() {
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <FieldLabel label={t("home.consult.date")} hint={t("home.consult.optional")} />
+                  <FieldLabel label={t("home.consult.date")} />
                   <ConsultDateField value={date} onChange={setDate} />
                 </label>
                 <div className="block">
-                  <FieldLabel
-                    id="consult-city-label"
-                    label={t("home.consult.city")}
-                    hint={t("home.consult.optional")}
-                  />
+                  <FieldLabel id="consult-city-label" label={t("home.consult.city")} />
                   <ConsultCityField
                     labelId="consult-city-label"
                     value={city}
@@ -147,7 +140,7 @@ export default function ConsultSection() {
               </div>
 
               <label className="mt-6 block">
-                <FieldLabel label={t("home.consult.message")} hint={t("home.consult.required")} />
+                <FieldLabel label={t("home.consult.message")} />
                 <textarea
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
