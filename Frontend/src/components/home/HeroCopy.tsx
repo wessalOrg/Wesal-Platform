@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import LangDir from "@/components/layout/LangDir";
+import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
+import { requestOpenAssistant } from "@/lib/assistant-events";
 import type { HomepageIntro } from "@/types/homepage";
 
 type HeroCopyProps = {
@@ -9,50 +12,78 @@ type HeroCopyProps = {
   intro: HomepageIntro;
 };
 
-/** Hero intro copy — uses i18n when the API fallback path is active. */
+function CompassIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="m15.6 8.4-2 5.2-5.2 2 2-5.2 5.2-2Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Hero copy: brand, heading, short description and the two calls to action. */
 export default function HeroCopy({ titleId, intro }: HeroCopyProps) {
   const t = useT();
-
-  const platformName = intro.isFallback ? t("brand.name") : intro.platformName;
-  const tagline = intro.isFallback ? t("home.hero.tagline") : intro.tagline;
-  const titleLine1 = intro.isFallback ? t("home.hero.title1") : intro.titleLine1;
-  const titleLine2 = intro.isFallback ? t("home.hero.title2") : intro.titleLine2;
-  const description = intro.isFallback
-    ? t("home.hero.description")
-    : intro.description;
+  const lang = useUiLang();
+  const arrow = lang === "ar" ? "←" : "→";
 
   return (
-    <LangDir className="hero-copy-enter mx-auto w-full max-w-[18rem] text-center sm:max-w-[20rem]">
-      <p className="sr-only">{platformName}</p>
-
-      <div className="hero-copy-tagline flex items-center gap-3">
-        <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-gold)]/70" />
-        <p className="hero-copy-eyebrow shrink-0 text-[0.75rem] font-medium leading-6 tracking-wide text-[var(--wesal-gold)] sm:text-[0.85rem]">
-          {tagline}
-        </p>
-        <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-gold)]/70" />
-      </div>
+    <LangDir className="hero-copy-enter mx-auto w-full max-w-[22rem] text-center">
+      <p className="sr-only">{intro.platformName}</p>
 
       <h1
         id={titleId}
-        className="hero-copy-title mt-6 text-[1.75rem] font-extrabold leading-[1.4] sm:text-[2.2rem] lg:text-[2.45rem]"
+        className="hero-copy-title text-[1.2rem] font-extrabold leading-[1.7] text-[var(--wesal-gold)] sm:text-[1.4rem] md:-mx-8 md:text-[0.95rem] lg:text-[1.1rem] xl:text-[1.35rem]"
       >
-        <span className="hero-copy-line block text-[var(--wesal-maroon)]">
-          {titleLine1}
-        </span>
-        <span className="hero-copy-line hero-copy-line--late mt-1 block text-[var(--wesal-maroon)]">
-          {titleLine2}
-        </span>
+        <span className="hero-copy-line block md:whitespace-nowrap">{t("home.hero.heading")}</span>
       </h1>
 
       <div
-        className="hero-copy-divider mx-auto mt-5 h-px max-w-[10rem] bg-gradient-to-l from-transparent via-[var(--wesal-gold)] to-transparent"
+        className="hero-copy-divider mx-auto mt-3 h-px max-w-[10rem] bg-gradient-to-l from-transparent via-[var(--wesal-gold)] to-transparent"
         aria-hidden="true"
       />
 
-      <p className="hero-copy-desc mt-5 text-sm leading-8 text-[var(--wesal-muted)] sm:text-[0.95rem]">
-        {description}
+      <div className="hero-copy-tagline mt-5 flex items-center gap-3">
+        <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-maroon)]/70" />
+        <p
+          className="hero-copy-eyebrow shrink-0 text-[2rem] font-extrabold leading-none text-[var(--wesal-maroon)] sm:text-[2.4rem]"
+          aria-hidden="true"
+        >
+          {t("brand.name")}
+        </p>
+        <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-maroon)]/70" />
+      </div>
+
+      <p className="hero-copy-desc mt-5 text-sm leading-8 text-black sm:text-[0.95rem]">
+        {t("home.hero.description")}
       </p>
+
+      <div className="hero-copy-desc mt-6 flex flex-wrap items-center justify-center gap-3">
+        <button
+          type="button"
+          className="btn-primary min-h-11 whitespace-nowrap px-5 text-sm"
+          onClick={requestOpenAssistant}
+          data-testid="hero-cta-start"
+        >
+          {t("home.hero.ctaStart")}
+          <span aria-hidden="true" className="ms-2">
+            {arrow}
+          </span>
+        </button>
+        <Link
+          href="/halls"
+          className="btn-outline min-h-11 gap-2 whitespace-nowrap px-5 text-sm"
+          data-testid="hero-cta-explore"
+        >
+          <CompassIcon />
+          {t("home.hero.ctaExplore")}
+        </Link>
+      </div>
     </LangDir>
   );
 }

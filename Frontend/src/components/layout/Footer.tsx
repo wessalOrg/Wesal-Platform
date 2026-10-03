@@ -127,7 +127,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div>
+          <div id="contact" className="scroll-mt-20">
             <h3 className="text-xs font-extrabold text-[var(--wesal-maroon)] sm:text-sm">
               {t("footer.contact")}
             </h3>

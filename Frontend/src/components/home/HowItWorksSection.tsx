@@ -25,7 +25,10 @@ export default function HowItWorksSection() {
   const t = useT();
 
   return (
-    <section className="how-section relative isolate overflow-hidden py-16 sm:py-20">
+    <section
+      id="how-it-works"
+      className="how-section relative isolate scroll-mt-20 overflow-hidden py-16 sm:py-20"
+    >
       <div className="how-section-bg" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

@@ -11,7 +11,7 @@ import {
   resolveApiBaseUrlFrom,
 } from "../src/lib/api-base-url.mjs";
 
-const CANONICAL = "https://wesal-platform.onrender.com/api/v1";
+const CANONICAL = "https://wesal-platform-p0iv.onrender.com/api/v1";
 const PROD = { nodeEnv: "production", vercelEnv: "production" };
 
 assert.equal(PROD_API_BASE_URL, CANONICAL);
@@ -116,10 +116,10 @@ check("E3: local production build (no VERCEL_ENV) may still target http localhos
 });
 
 check("API origin for uploads / SignalR / media is the Render host", () => {
-  assert.equal(new URL(resolveApiBaseUrlFrom({ ...PROD }).value).origin, "https://wesal-platform.onrender.com");
+  assert.equal(new URL(resolveApiBaseUrlFrom({ ...PROD }).value).origin, "https://wesal-platform-p0iv.onrender.com");
   assert.equal(
     `${new URL(resolveApiBaseUrlFrom({ ...PROD }).value).origin}/hubs/conversation`,
-    "https://wesal-platform.onrender.com/hubs/conversation",
+    "https://wesal-platform-p0iv.onrender.com/hubs/conversation",
   );
 });
 
@@ -136,7 +136,7 @@ function runGate(env) {
 check("gate: production + env missing -> passes and announces canonical API", () => {
   const r = runGate({ VERCEL_ENV: "production" });
   assert.equal(r.code, 0, r.out);
-  assert.match(r.out, /Using canonical production API: https:\/\/wesal-platform\.onrender\.com\/api\/v1/);
+  assert.match(r.out, /Using canonical production API: https:\/\/wesal-platform-p0iv\.onrender\.com\/api\/v1/);
 });
 
 check("gate: production + valid https env -> passes", () => {

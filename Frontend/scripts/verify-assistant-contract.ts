@@ -87,7 +87,10 @@ async function main() {
   });
 
   await check("there is no photography route and none is allowed", () => {
-    assert.ok(!pageRoutes().some((route) => /photo|media|vendor/i.test(route)));
+    // /photographers and /event-planners are "coming soon" placeholder pages (no real
+    // service behind them); the assistant must still never route to them.
+    const comingSoon = new Set(["/photographers", "/event-planners"]);
+    assert.ok(!pageRoutes().some((route) => !comingSoon.has(route) && /photo|media|vendor/i.test(route)));
     assert.ok(!ASSISTANT_STATIC_ROUTES.some((route) => /photo/i.test(route)));
     assert.equal(sanitizeAssistantHref("/photography"), null);
   });
