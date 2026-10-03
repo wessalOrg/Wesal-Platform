@@ -72,7 +72,7 @@ const CATEGORIES: Category[] = [
   {
     id: "planners",
     href: "/event-planners",
-    image: "/home/planners.jpg",
+    image: "/home/planners-day.jpg",
     icon: <CoordinatorIcon />,
     titleKey: "home.categories.planners.title",
     subtitleKey: "home.categories.planners.subtitle",
@@ -81,7 +81,7 @@ const CATEGORIES: Category[] = [
   {
     id: "photographers",
     href: "/photographers",
-    image: "/home/photographers.jpg",
+    image: "/home/photographers-venue.jpg",
     icon: <CameraIcon />,
     titleKey: "home.categories.photographers.title",
     subtitleKey: "home.categories.photographers.subtitle",
@@ -92,13 +92,13 @@ const CATEGORIES: Category[] = [
 /* Card geometry (px): white panel height, where its flat top edge sits
    (PLATEAU_Y), the rounded corner that lands on the card's bottom line, and
    the icon bubble. */
-const PANEL_H = 184;
-const PLATEAU_Y = 38;
+const PANEL_H = 98;
+const PLATEAU_Y = 16;
 /** Width (of 300) of the rounded corner that ends on the card's bottom line. */
-const CORNER_W = 125;
-const BUBBLE = 112;
-const BUBBLE_INSET = 52;
-const FILLET = 16;
+const CORNER_W = 108;
+const BUBBLE = 58;
+const BUBBLE_INSET = 26;
+const FILLET = 10;
 const KAPPA = 0.5523;
 
 /** Landing page category cards: halls, event planners and photographers. */
@@ -117,7 +117,7 @@ export default function HomeCategoriesSection() {
     >
       <Reveal>
         <div className="container-wesal">
-          <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7">
+          <ul className="mx-auto grid max-w-5xl gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
             {CATEGORIES.map((category) => (
               <li key={category.id}>
                 <Link
@@ -125,20 +125,22 @@ export default function HomeCategoriesSection() {
                   className="group block rounded-[1.75rem] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--wesal-maroon)]"
                   data-testid={`home-category-${category.id}`}
                 >
-                  <div className="relative h-[22rem] overflow-hidden rounded-[1.5rem] shadow-[0_14px_34px_rgba(90,55,45,0.14)] transition-transform duration-300 group-hover:-translate-y-1 sm:h-[24rem]">
+                  <div className="relative aspect-square overflow-hidden rounded-[1.35rem] shadow-[0_12px_28px_rgba(90,55,45,0.12)] transition-transform duration-300 group-hover:-translate-y-1">
                     <Image
                       src={category.image}
                       alt=""
                       fill
-                      sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 100vw"
-                      className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                      sizes="(min-width: 1024px) 40vw, 100vw"
+                      quality={80}
+                      unoptimized={category.id === "planners"}
+                      className="object-cover object-center"
                     />
 
                     <div
                       className="absolute inset-x-0 bottom-0"
                       style={{ height: PANEL_H }}
                     >
-                      {/* White body: flat on the icon side, rounded corner ending at the bottom line. */}
+                      {/* White panel: flat on the icon side, rounded corner on the bottom line. */}
                       <svg
                         className={`absolute inset-0 h-full w-full ${rtl ? "" : "-scale-x-100"}`}
                         viewBox={`0 0 300 ${PANEL_H}`}
@@ -151,13 +153,13 @@ export default function HomeCategoriesSection() {
                         />
                       </svg>
 
-                      {/* Icon bubble rising above the white body */}
+                      {/* Icon bubble rising above the panel */}
                       <span
-                        className="absolute flex items-center justify-center rounded-full bg-white text-[var(--wesal-maroon)] [&_svg]:h-[4.25rem] [&_svg]:w-[4.25rem] [&_svg]:stroke-[1.15]"
+                        className="absolute flex items-center justify-center rounded-full bg-white text-[var(--wesal-maroon)] [&_svg]:h-7 [&_svg]:w-7 [&_svg]:stroke-[1.4]"
                         style={{
                           width: BUBBLE,
                           height: BUBBLE,
-                          top: PLATEAU_Y - BUBBLE / 2,
+                          top: PLATEAU_Y - BUBBLE / 2 - 28,
                           [side]: BUBBLE_INSET,
                         }}
                         aria-hidden="true"
@@ -188,19 +190,19 @@ export default function HomeCategoriesSection() {
                         aria-hidden="true"
                       />
 
-                      <div className="absolute inset-x-0 bottom-0 px-8 pb-4 text-center">
-                        <h3 className="text-lg font-extrabold text-[var(--wesal-maroon)] sm:text-xl">
+                      <div className="absolute inset-x-0 bottom-0 px-5 pb-3 text-center">
+                        <h3 className="text-base font-extrabold leading-snug text-[var(--wesal-maroon-dark)]">
                           {t(category.titleKey)}
                         </h3>
-                        <p className="mt-1 text-sm font-semibold text-[var(--wesal-text)]/85">
+                        <p className="mt-0.5 text-[0.8rem] font-bold leading-snug text-[var(--wesal-text)]">
                           {t(category.subtitleKey)}
                         </p>
-                        <p className="mt-0.5 text-[0.8rem] font-medium text-[var(--wesal-text)]/70">
+                        <p className="mt-0.5 text-[0.75rem] font-semibold leading-snug text-[var(--wesal-text)]">
                           {t(category.hintKey)}
                         </p>
                       </div>
                       <span
-                        className="absolute bottom-10 end-4 text-lg font-bold text-[var(--wesal-maroon)] transition-transform rtl:group-hover:-translate-x-1 ltr:group-hover:translate-x-1"
+                        className="absolute bottom-8 end-3 text-base font-bold text-[var(--wesal-maroon)] transition-transform rtl:group-hover:-translate-x-1 ltr:group-hover:translate-x-1"
                         aria-hidden="true"
                       >
                         {arrow}

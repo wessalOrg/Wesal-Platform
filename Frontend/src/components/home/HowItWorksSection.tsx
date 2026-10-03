@@ -7,17 +7,26 @@ const STEPS = [
   {
     titleKey: "home.how.step1.title",
     descKey: "home.how.step1.desc",
+    noteKey: "home.how.step1.note",
     icon: "spark",
   },
   {
     titleKey: "home.how.step2.title",
     descKey: "home.how.step2.desc",
+    noteKey: "home.how.step2.note",
     icon: "search",
   },
   {
     titleKey: "home.how.step3.title",
     descKey: "home.how.step3.desc",
-    icon: "book",
+    noteKey: "home.how.step3.note",
+    icon: "card",
+  },
+  {
+    titleKey: "home.how.step4.title",
+    descKey: "home.how.step4.desc",
+    noteKey: "home.how.step4.note",
+    icon: "celebrate",
   },
 ] as const;
 
@@ -59,25 +68,29 @@ export default function HowItWorksSection() {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-5 md:grid-cols-3 md:gap-6">
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
           {STEPS.map((step, index) => (
             <article
               key={step.titleKey}
-              className="how-card group relative overflow-hidden rounded-2xl border border-white/70 bg-white/85 p-7 text-center shadow-[0_14px_36px_rgba(90,55,45,0.08)] backdrop-blur-md"
-              style={{ animationDelay: `${180 + index * 160}ms` }}
+              className="how-card group relative flex flex-col overflow-hidden rounded-[1.6rem] border border-white/80 bg-white px-5 py-7 text-center shadow-[0_16px_36px_rgba(120,70,70,0.08)]"
+              style={{ animationDelay: `${140 + index * 120}ms` }}
             >
-              <span className="how-card-shine" aria-hidden="true" />
-              <div
-                className="how-card-icon mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]"
-                style={{ animationDelay: `${400 + index * 180}ms` }}
-              >
-                <StepIcon type={step.icon} />
+              <div className="flex w-full">
+                <div
+                  className="how-card-icon ms-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#f6f0e8] text-[#c4a05c]"
+                  style={{ animationDelay: `${280 + index * 120}ms` }}
+                >
+                  <StepIcon type={step.icon} />
+                </div>
               </div>
-              <h3 className="mt-5 text-lg font-extrabold text-[var(--wesal-maroon)]">
+              <h3 className="mt-5 text-lg font-extrabold text-[var(--wesal-text)]">
                 {t(step.titleKey)}
               </h3>
-              <p className="mt-2.5 text-sm leading-8 text-[var(--wesal-text)]/75">
+              <p className="mt-3 flex-1 text-sm leading-7 text-[var(--wesal-muted)]">
                 {t(step.descKey)}
+              </p>
+              <p className="mt-5 text-xs font-semibold text-[var(--wesal-gold)]">
+                {t(step.noteKey)}
               </p>
             </article>
           ))}
@@ -89,28 +102,64 @@ export default function HowItWorksSection() {
 }
 
 function StepIcon({ type }: { type: (typeof STEPS)[number]["icon"] }) {
+  const common = {
+    width: 20,
+    height: 20,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    "aria-hidden": true as const,
+  };
+
   if (type === "spark") {
     return (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 2.5l1.2 6.3L19.5 10 13.2 11.2 12 17.5l-1.2-6.3L4.5 10l6.3-1.2L12 2.5Z" />
-        <path d="M18.5 14.2l.55 2.8 2.75.55-2.75.55-.55 2.8-.55-2.8-2.75-.55 2.75-.55.55-2.8Z" opacity="0.75" />
+      <svg {...common}>
+        <path
+          d="M9.2 3.4 10.2 7l3.6 1-3.6 1-1 3.6-1-3.6-3.6-1 3.6-1 1-3.6Z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M16.6 12.2 17.3 14.6l2.4.7-2.4.7-.7 2.4-.7-2.4-2.4-.7 2.4-.7.7-2.4Z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
       </svg>
     );
   }
 
   if (type === "search") {
     return (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M20 20l-3.6-3.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <svg {...common}>
+        <circle cx="10.5" cy="10.5" r="5.4" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M14.6 14.6 19 19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (type === "card") {
+    return (
+      <svg {...common}>
+        <rect x="4" y="6.2" width="16" height="11.6" rx="2.2" stroke="currentColor" strokeWidth="1.6" />
+        <rect x="7" y="9.1" width="5.2" height="3.6" rx="0.7" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     );
   }
 
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="4.5" y="5.5" width="15" height="13" rx="2.2" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M8 10h8M8 13.5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <svg {...common}>
+      <path
+        d="M4.6 19.5 10.4 11.4c.35-.52 1.08-.58 1.5-.08l2.35 2.55c.42.46.36 1.16-.12 1.55L7.15 20.4c-.62.5-1.55.12-1.78-.62l-.77-1.28Z"
+        stroke="currentColor"
+        strokeWidth="1.55"
+        strokeLinejoin="round"
+      />
+      <path d="M13.4 8.4 15.1 6.2" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" />
+      <path d="M16.2 9.7 18.5 8.7" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" />
+      <path d="M15.6 4.8 16.5 2.9" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" />
+      <circle cx="18.8" cy="5.2" r="0.75" fill="currentColor" />
+      <circle cx="18.1" cy="11.6" r="0.6" fill="currentColor" />
     </svg>
   );
 }

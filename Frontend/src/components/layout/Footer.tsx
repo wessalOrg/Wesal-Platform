@@ -9,6 +9,9 @@ import { useT } from "@/i18n";
 const QUICK_LINKS = [
   { href: "/", labelKey: "nav.home" },
   { href: "/halls", labelKey: "nav.halls" },
+  { href: "/event-planners", labelKey: "nav.eventPlanners" },
+  { href: "/photographers", labelKey: "nav.photographers" },
+  { href: "/#how-it-works", labelKey: "nav.howItWorks" },
   { href: "/about", labelKey: "nav.about" },
   { href: "/faq", labelKey: "nav.faq" },
 ] as const;
@@ -43,7 +46,7 @@ export default function Footer() {
 
       <div className="container-wesal relative z-10 py-7 sm:py-8">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
-          <div className="sm:col-span-2 lg:col-span-1 -ms-5 sm:-ms-7 lg:-ms-10">
+          <div className="sm:col-span-2 lg:col-span-1 -ms-5 sm:-ms-7 lg:-ms-20">
             <WesalBrandLockup logoClassName="h-8 w-auto" nameClassName="text-base" />
             <p className="mt-2.5 max-w-xs text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm sm:leading-7">
               {t("brand.tagline")}

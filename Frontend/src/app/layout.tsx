@@ -16,6 +16,14 @@ import { LANGUAGE_BOOT_SCRIPT } from "@/lib/language";
 import "./globals.css";
 
 /**
+ * The in-IDE browser stamps `data-cursor-ref` onto SSR markup before hydration.
+ * React then reports a false mismatch. Strip those attributes in development
+ * only, and stop once the page has loaded so later inspection refs can stick.
+ */
+const DEV_CURSOR_REF_GUARD =
+  "(function(){function s(n){if(!n||n.nodeType!==1)return;if(n.hasAttribute('data-cursor-ref'))n.removeAttribute('data-cursor-ref');}function t(n){if(!n||n.nodeType!==1)return;s(n);var a=n.querySelectorAll('[data-cursor-ref]');for(var i=0;i<a.length;i++)a[i].removeAttribute('data-cursor-ref');}t(document.documentElement);var o=new MutationObserver(function(rs){for(var i=0;i<rs.length;i++){var r=rs[i];if(r.type==='attributes')s(r.target);var ns=r.addedNodes;for(var j=0;j<ns.length;j++)t(ns[j]);}});o.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['data-cursor-ref']});function stop(){t(document.documentElement);o.disconnect();}if(document.readyState==='complete')setTimeout(stop,1500);else window.addEventListener('load',function(){setTimeout(stop,1500);});})();";
+
+/**
  * Cairo is bundled at build time via next/font (self-hosted), so runtime
  * never waits on Google Fonts. Fallbacks stay in --font-wesal-sans.
  */
@@ -49,6 +57,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {process.env.NODE_ENV === "development" ? (
+          <script dangerouslySetInnerHTML={{ __html: DEV_CURSOR_REF_GUARD }} />
+        ) : null}
         <script dangerouslySetInnerHTML={{ __html: LANGUAGE_BOOT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: FAB_POSITION_BOOT_SCRIPT }} />
       </head>

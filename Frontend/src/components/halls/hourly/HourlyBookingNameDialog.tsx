@@ -48,7 +48,14 @@ export default function HourlyBookingNameDialog({
         </h3>
         <p className="mt-1 text-sm text-[var(--wesal-muted)]">
           {dateLabel}
-          {slotLabel ? ` · ${slotLabel}` : ""}
+          {slotLabel ? (
+            <>
+              {" · "}
+              <span dir="ltr" className="inline-block whitespace-nowrap tabular-nums">
+                {slotLabel}
+              </span>
+            </>
+          ) : null}
         </p>
         <label className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]" htmlFor="hourly-full-name">
           {t("halls.hourly.fullName")}
