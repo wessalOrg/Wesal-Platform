@@ -284,6 +284,85 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         Assert.Equal(0, await _context.Halls.CountAsync());
     }
 
+    /// <summary>
+    /// Regression for the hall-edit "Validation failed" outage: the frontend sends
+    /// the region as an enum name ("Gaza"). The controller's manual JSON readers must
+    /// parse it exactly like [FromBody] binding did (JsonStringEnumConverter),
+    /// on both the JSON and multipart paths.
+    /// </summary>
+    [Fact]
+    public async Task UpdateHall_JsonStringRegion_ReachesService()
+    {
+        var response = await _client.PutAsync(
+            $"/api/v1/owner/halls/{Guid.NewGuid()}",
+            UpdateJsonContent("Gaza", "حي الشجاعية"));
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Expected 200 but got {response.StatusCode}: {body}");
+    }
+
+    [Fact]
+    public async Task UpdateHall_MultipartStringRegion_ReachesService()
+    {
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(UpdateJson("Gaza", "حي الشجاعية"), Encoding.UTF8), "payload");
+
+        var response = await _client.PutAsync($"/api/v1/owner/halls/{Guid.NewGuid()}", content);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Expected 200 but got {response.StatusCode}: {body}");
+    }
+
+    [Theory]
+    [InlineData("NorthGaza", "جباليا")]
+    [InlineData("Gaza", "حي الشجاعية")]
+    [InlineData("MiddleArea", "النصيرات")]
+    [InlineData("SouthGaza", "بني سهيلا")]
+    public async Task UpdateHall_AllStringRegions_ReachesService(string region, string address)
+    {
+        var response = await _client.PutAsync(
+            $"/api/v1/owner/halls/{Guid.NewGuid()}",
+            UpdateJsonContent(region, address));
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Expected 200 but got {response.StatusCode}: {body}");
+    }
+
+    [Fact]
+    public async Task UpdateHall_InvalidRegion_IsRejected()
+    {
+        var response = await _client.PutAsync(
+            $"/api/v1/owner/halls/{Guid.NewGuid()}",
+            UpdateJsonContent("NotARealRegion", "حي الشجاعية"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateHall_NumericRegion_BindsLikeApplicationJson()
+    {
+        // The application-wide JsonStringEnumConverter accepts numbers; the manual
+        // readers must behave identically (no broader, no narrower).
+        var json = UpdateJson("Gaza", "حي الشجاعية").Replace("\"Gaza\"", "1");
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _client.PutAsync($"/api/v1/owner/halls/{Guid.NewGuid()}", content);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Expected 200 but got {response.StatusCode}: {body}");
+    }
+
+    private static string UpdateJson(string region, string address) =>
+        "{\"name\":\"Test Hall\",\"mainImageUrl\":null,\"contactPhone\":\"+972599123456\"," +
+        $"\"region\":\"{region}\",\"address\":\"{address}\",\"detailedAddress\":null," +
+        "\"description\":\"Nice hall\",\"capacity\":300,\"price\":1000,\"showPrice\":true," +
+        "\"youtubeVideoUrl\":null,\"features\":[],\"otherFeatures\":null," +
+        "\"photos\":[{\"url\":\"/uploads/halls/x/a.jpg\",\"displayOrder\":0}]," +
+        "\"hourlySlotStart\":\"08:00:00\",\"hourlySlotEnd\":\"22:00:00\"}";
+
+    private static StringContent UpdateJsonContent(string region, string address) =>
+        new(UpdateJson(region, address), Encoding.UTF8, "application/json");
+
     [Fact]
     public async Task DirectServiceCall_PersistsHall()
     {
