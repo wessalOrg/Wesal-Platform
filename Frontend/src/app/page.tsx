@@ -1,7 +1,7 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/home/HeroSection";
-import FeaturedHallsSection from "@/components/home/FeaturedHallsSection";
+import HomeCategoriesSection from "@/components/home/HomeCategoriesSection";
 import dynamic from "next/dynamic";
 
 const HowItWorksSection = dynamic(
@@ -20,7 +20,7 @@ export default function Home() {
       <Navbar />
       <main>
         <HeroSection />
-        <FeaturedHallsSection />
+        <HomeCategoriesSection />
         <HowItWorksSection />
         <OwnerCtaSection />
         <BenefitsSection />

@@ -4,7 +4,6 @@ import { type FormEvent, useEffect } from "react";
 import OwnerHourlyControls from "@/components/halls/hourly/OwnerHourlyControls";
 import HallFormSection from "@/components/owner-management/add-hall/HallFormSection";
 import HallBasicInfoSection from "@/components/owner-management/add-hall/HallBasicInfoSection";
-import HallDescriptionSection from "@/components/owner-management/add-hall/HallDescriptionSection";
 import HallFeaturesSection from "@/components/owner-management/add-hall/HallFeaturesSection";
 import HallFormActions from "@/components/owner-management/add-hall/HallFormActions";
 import HallLocationSection from "@/components/owner-management/add-hall/HallLocationSection";
@@ -189,14 +188,6 @@ export default function HallManagementForm({
         />
 
         <HallLocationSection
-          values={sectionValues}
-          fieldErrors={fieldErrors}
-          disabled={controlsDisabled}
-          onChange={(patch) => onPatch(patch)}
-          resolveError={resolveError}
-        />
-
-        <HallDescriptionSection
           values={sectionValues}
           fieldErrors={fieldErrors}
           disabled={controlsDisabled}

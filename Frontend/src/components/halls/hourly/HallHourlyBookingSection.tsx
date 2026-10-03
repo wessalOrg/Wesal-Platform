@@ -1,7 +1,7 @@
 "use client";
 
 import HallMonthCalendar from "@/components/halls/HallMonthCalendar";
-import HallHourlySlotTable from "@/components/halls/hourly/HallHourlySlotTable";
+import HallHourlyRangePicker from "@/components/halls/hourly/HallHourlyRangePicker";
 import HourlyBookingNameDialog from "@/components/halls/hourly/HourlyBookingNameDialog";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useHourlyBooking } from "@/hooks/useHourlyBooking";
@@ -59,11 +59,15 @@ export default function HallHourlyBookingSection({
             {booking.slotsLoading ? (
               <p className="text-sm text-[var(--wesal-muted)]">{t("common.loading")}</p>
             ) : (
-              <HallHourlySlotTable
-                slots={booking.slots}
-                selectedStart={booking.selectedSlot?.start ?? null}
-                onSelect={booking.selectSlot}
-                disabled={!canSubmit || booking.submitting}
+              <HallHourlyRangePicker
+                from={booking.rangeFrom}
+                to={booking.rangeTo}
+                fromHours={booking.hourChoices.fromHours}
+                toHours={booking.hourChoices.toHours}
+                onFromChange={booking.setRangeFrom}
+                onToChange={booking.setRangeTo}
+                onApply={booking.confirmRange}
+                disabled={booking.submitting}
               />
             )}
           </div>
@@ -80,7 +84,7 @@ export default function HallHourlyBookingSection({
         }}
         submitting={booking.submitting}
         errorText={errorText}
-        slotLabel={booking.selectedSlot?.label ?? ""}
+        slotLabel={booking.selectedRangeLabel}
         dateLabel={booking.dateLabel || formatBookingDateLabel(booking.dateIso ?? "", locale)}
       />
     </section>

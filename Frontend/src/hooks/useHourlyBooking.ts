@@ -5,7 +5,12 @@ import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { ApiError } from "@/lib/api-error";
 import { formatBookingDateLabel, isFutureBookingDate } from "@/lib/booking-date";
 import { emitBookingSubmitted } from "@/lib/booking-events";
-import { resolveHourlyDayStatus, visibleHourlySlots } from "@/lib/hourly-slots";
+import {
+  formatHourlyRange,
+  hourChoicesFromSlots,
+  resolveHourlyDayStatus,
+  slotStartsBetween,
+} from "@/lib/hourly-slots";
 import { rememberUserBookings } from "@/lib/user-bookings-store";
 import {
   fetchHourlyDay,
@@ -43,7 +48,9 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
   const [loading, setLoading] = useState(true);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [dateIso, setDateIso] = useState<string | null>(null);
-  const [slotStart, setSlotStart] = useState<string | null>(null);
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  const [confirmedStarts, setConfirmedStarts] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [promptOpen, setPromptOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -109,12 +116,27 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
     [days, dateIso],
   );
 
-  const slots = useMemo(() => {
-    if (!selectedDay || selectedDay.blocked) return [];
-    return visibleHourlySlots(selectedDay.slots, showBookedSlots);
-  }, [selectedDay, showBookedSlots]);
+  const hourChoices = useMemo(
+    () => hourChoicesFromSlots(selectedDay?.slots ?? []),
+    [selectedDay],
+  );
 
-  const selectedSlot = slots.find((slot) => slot.start === slotStart) ?? null;
+  const selectedSlots = useMemo(() => {
+    if (!selectedDay || confirmedStarts.length === 0) return [];
+    const byStart = new Map(selectedDay.slots.map((slot) => [slot.start, slot]));
+    return confirmedStarts
+      .map((start) => byStart.get(start))
+      .filter((slot): slot is HourlySlot => Boolean(slot));
+  }, [selectedDay, confirmedStarts]);
+
+  const selectedRangeLabel = useMemo(() => {
+    if (confirmedStarts.length === 0) return "";
+    const first = selectedSlots[0];
+    const last = selectedSlots[selectedSlots.length - 1];
+    if (first && last) return formatHourlyRange(first.start, last.end, locale);
+    return formatHourlyRange(confirmedStarts[0], rangeTo, locale);
+  }, [confirmedStarts, selectedSlots, locale, rangeTo]);
+
   const dateLabel = dateIso ? formatBookingDateLabel(dateIso, locale) : "";
 
   const dayStatuses = useMemo(() => {
@@ -131,27 +153,41 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
       const day = days.find((item) => item.dateIso === iso);
       if (day?.blocked) return;
       setDateIso(iso);
-      setSlotStart(null);
+      setRangeFrom("");
+      setRangeTo("");
+      setConfirmedStarts([]);
       setErrorKey(null);
       void loadCatalog(iso);
     },
     [days, loadCatalog],
   );
 
-  const selectSlot = useCallback(
-    (slot: HourlySlot) => {
-      if (submitting) return;
-      if (slot.status !== "available") {
-        setErrorKey("errors.hourly.slotBooked");
-        return;
-      }
-      if (!canSubmit) return;
-      setSlotStart(slot.start);
-      setPromptOpen(true);
-      setErrorKey(null);
-    },
-    [canSubmit, submitting],
-  );
+  const confirmRange = useCallback(() => {
+    if (submitting) return;
+    const starts = slotStartsBetween(rangeFrom, rangeTo);
+    if (starts.length === 0) {
+      setErrorKey("halls.hourly.rangeInvalid");
+      setConfirmedStarts([]);
+      return;
+    }
+
+    const catalog = selectedDay?.slots ?? [];
+    const byStart = new Map(catalog.map((slot) => [slot.start, slot]));
+    const unavailable = starts.some((start) => {
+      const slot = byStart.get(start);
+      return !slot || slot.status === "booked";
+    });
+    if (unavailable) {
+      setConfirmedStarts([]);
+      setErrorKey("errors.hourly.slotBooked");
+      return;
+    }
+
+    setConfirmedStarts(starts);
+    setErrorKey(null);
+    if (!canSubmit) return;
+    setPromptOpen(true);
+  }, [submitting, rangeFrom, rangeTo, selectedDay, canSubmit]);
 
   const closePrompt = useCallback(() => {
     if (submitting) return;
@@ -159,7 +195,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
   }, [submitting]);
 
   const submit = useCallback(async () => {
-    if (!canSubmit || !dateIso || !selectedSlot || submitting) return;
+    if (!canSubmit || !dateIso || confirmedStarts.length === 0 || submitting) return;
     const customerName = name.trim();
     if (!customerName) {
       setErrorKey("errors.hourly.nameRequired");
@@ -172,7 +208,8 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
       const result = await submitHourlyBooking({
         hallId,
         date: dateIso,
-        slotTime: selectedSlot.start,
+        slotTime: confirmedStarts[0],
+        slotTimes: confirmedStarts,
         customerName,
         requesterName: identity.displayName?.trim() || customerName,
       });
@@ -183,8 +220,8 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
             hallId,
             hallName: hallName?.trim() || "",
             date: dateIso,
-            slotStart: selectedSlot.start,
-            timeRange: selectedSlot.label,
+            slotStart: confirmedStarts[0],
+            timeRange: selectedRangeLabel,
             status: "Pending",
           },
         ]);
@@ -193,11 +230,12 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
           hallName: hallName?.trim() || "",
           date: dateIso,
           bookingId: result.bookingId,
-          timeRange: selectedSlot.label,
+          timeRange: selectedRangeLabel,
         });
       }
       setPromptOpen(false);
       setName("");
+      setConfirmedStarts([]);
       await reload();
     } catch (err) {
       const key =
@@ -208,7 +246,18 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
     } finally {
       setSubmitting(false);
     }
-  }, [canSubmit, dateIso, selectedSlot, submitting, name, hallId, hallName, identity.displayName, reload]);
+  }, [
+    canSubmit,
+    dateIso,
+    confirmedStarts,
+    submitting,
+    name,
+    hallId,
+    hallName,
+    identity.displayName,
+    selectedRangeLabel,
+    reload,
+  ]);
 
   const shiftMonth = useCallback((delta: number) => {
     setVisibleMonth((current) => {
@@ -216,7 +265,9 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
       return { year: next.getFullYear(), monthIndex: next.getMonth() };
     });
     setDateIso(null);
-    setSlotStart(null);
+    setRangeFrom("");
+    setRangeTo("");
+    setConfirmedStarts([]);
   }, []);
 
   return {
@@ -230,9 +281,13 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
     dateIso,
     dateLabel,
     selectDate,
-    slots,
-    selectedSlot,
-    selectSlot,
+    hourChoices,
+    rangeFrom,
+    rangeTo,
+    setRangeFrom,
+    setRangeTo,
+    confirmRange,
+    selectedRangeLabel,
     promptOpen,
     closePrompt,
     name,

@@ -25,6 +25,7 @@ export type HourlyBookingInput = {
   hallId: string;
   date: string;
   slotTime: string;
+  slotTimes?: string[];
   customerName: string;
   requesterName?: string;
 };

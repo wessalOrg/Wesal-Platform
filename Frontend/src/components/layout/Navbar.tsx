@@ -15,8 +15,31 @@ import { markAuthNavigation } from "@/lib/auth-nav";
 const NAV_HREFS = [
   { href: "/", key: "nav.home" },
   { href: "/halls", key: "nav.halls" },
+  { href: "/event-planners", key: "nav.eventPlanners" },
+  { href: "/photographers", key: "nav.photographers" },
+  { href: "/#how-it-works", key: "nav.howItWorks" },
   { href: "/about", key: "nav.about" },
+  { href: "/#contact", key: "nav.contact" },
 ] as const;
+
+function navPath(href: string) {
+  return href.split("#")[0] || "/";
+}
+
+function navHash(href: string) {
+  const index = href.indexOf("#");
+  return index >= 0 ? href.slice(index) : "";
+}
+
+function isNavActive(pathname: string, hash: string, href: string) {
+  const path = navPath(href);
+  const targetHash = navHash(href);
+  if (targetHash) {
+    return pathname === path && hash === targetHash;
+  }
+  if (path === "/") return pathname === "/";
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
 
 export default function Navbar({
   variant = "default",
@@ -25,6 +48,7 @@ export default function Navbar({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [hash, setHash] = useState("");
   const [menuPath, setMenuPath] = useState(pathname);
   const router = useRouter();
   const { t } = useTranslateLang();
@@ -36,6 +60,19 @@ export default function Navbar({
     setMenuPath(pathname);
     if (open) setOpen(false);
   }
+
+  useEffect(() => {
+    const syncHash = () => setHash(window.location.hash);
+    syncHash();
+    const id = window.location.hash.replace(/^#/, "");
+    if (id) {
+      requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
+  }, [pathname]);
 
   useEffect(() => {
     if (authenticated) return;
@@ -83,20 +120,21 @@ export default function Navbar({
           <WesalBrandLockup />
 
           <nav
-            className="hidden min-w-0 items-center gap-0.5 text-sm font-medium text-[var(--wesal-text)] md:flex"
+            className="hidden min-w-0 flex-1 items-center justify-center gap-0 text-[12.5px] font-medium text-[var(--wesal-text)] lg:flex xl:gap-0.5 xl:text-sm"
             aria-label={t("nav.main")}
           >
             {NAV_HREFS.map((link) => {
-              const active = pathname === link.href;
+              const active = isNavActive(pathname, hash, link.href);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`whitespace-nowrap rounded-full px-2.5 py-1.5 transition lg:px-3 ${
+                  className={`whitespace-nowrap rounded-full px-1.5 py-1.5 transition xl:px-2.5 ${
                     active
                       ? "text-[var(--wesal-maroon)] underline decoration-[var(--wesal-maroon)] decoration-2 underline-offset-8"
                       : "hover:text-[var(--wesal-maroon)]"
                   }`}
+                  onClick={() => setHash(navHash(link.href))}
                 >
                   {t(link.key)}
                 </Link>
@@ -152,7 +190,10 @@ export default function Navbar({
                 key={link.href}
                 href={link.href}
                 className="flex min-h-11 items-center py-2 text-sm font-medium text-[var(--wesal-text)]"
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  setHash(navHash(link.href));
+                  setOpen(false);
+                }}
               >
                 {t(link.key)}
               </Link>

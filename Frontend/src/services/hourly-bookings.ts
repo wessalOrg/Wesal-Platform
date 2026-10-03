@@ -240,12 +240,13 @@ export async function submitHourlyBooking(input: HourlyBookingInput): Promise<Ho
 
   if (hourlyUsesLiveApi(input.hallId)) {
     try {
+      const starts = (input.slotTimes?.length ? input.slotTimes : [input.slotTime]).filter(Boolean);
       const { data } = await api.post<unknown>(
         `/halls/${input.hallId}/hourly-bookings`,
         {
           hallId: input.hallId,
           date: input.date,
-          slotStarts: [toSlotStartPayload(input.slotTime)],
+          slotStarts: starts.map(toSlotStartPayload),
           nameOnBooking: name,
           requesterName,
         },
@@ -265,17 +266,18 @@ export async function submitHourlyBooking(input: HourlyBookingInput): Promise<Ho
     }
   }
 
+  const starts = (input.slotTimes?.length ? input.slotTimes : [input.slotTime]).filter(Boolean);
   if (isDayBlocked(input.hallId, input.date)) {
     throw new ApiError("errors.hourly.dayBlocked", 409);
   }
-  const taken = listHourlyBookings(input.hallId, input.date).some(
-    (item) => item.slotTime === input.slotTime,
+  const taken = listHourlyBookings(input.hallId, input.date).some((item) =>
+    starts.includes(item.slotTime),
   );
   if (taken) {
     throw new ApiError("errors.hourly.slotBooked", 409);
   }
 
-  return addHourlyBooking({ ...input, customerName: name, requesterName });
+  return addHourlyBooking({ ...input, slotTime: starts[0] ?? input.slotTime, customerName: name, requesterName });
 }
 
 export async function blockHallDay(input: BlockDayInput): Promise<void> {

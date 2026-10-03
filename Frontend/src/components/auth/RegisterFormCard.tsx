@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import RegisterSuccessModal from "@/components/auth/RegisterSuccessModal";
 import { markAuthNavigation } from "@/lib/auth-nav";
 import { useT } from "@/i18n";
@@ -61,7 +61,17 @@ export default function RegisterFormCard({
   const [formError, setFormError] = useState<string | null>(null);
   const [showConflictLogin, setShowConflictLogin] = useState(false);
   const [pending, setPending] = useState(false);
+  const [slowServer, setSlowServer] = useState(false);
   const [success, setSuccess] = useState(previewSuccess);
+
+  useEffect(() => {
+    if (!pending) {
+      setSlowServer(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setSlowServer(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [pending]);
 
   const canSubmit =
     Boolean(accountType) &&
@@ -422,6 +432,11 @@ export default function RegisterFormCard({
         >
           {pending ? t("auth.register.form.submitting") : t("auth.register.form.submit")}
         </button>
+        {pending && slowServer ? (
+          <p className="text-center text-xs text-[var(--wesal-muted)] sm:text-sm" role="status">
+            {t("auth.form.serverWaking")}
+          </p>
+        ) : null}
       </form>
 
       <p className="mt-3.5 text-center text-xs text-[var(--wesal-muted)] sm:text-sm">

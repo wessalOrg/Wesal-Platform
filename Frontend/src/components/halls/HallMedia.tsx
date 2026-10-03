@@ -16,6 +16,7 @@ function canOptimizeRemote(src: string) {
       host === "localhost" ||
       host === "127.0.0.1" ||
       host === "wesal-platform.onrender.com" ||
+      host === "wesal-platform-p0iv.onrender.com" ||
       host.endsWith(".apps.taqat.academy")
     );
   } catch {

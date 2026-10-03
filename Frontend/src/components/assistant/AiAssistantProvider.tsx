@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import AiAssistantFab from "@/components/assistant/AiAssistantFab";
 import { useAiAssistant } from "@/hooks/useAiAssistant";
 import { useDraggableFab } from "@/hooks/useDraggableFab";
+import { OPEN_ASSISTANT_EVENT } from "@/lib/assistant-events";
 import "@/components/assistant/ai-assistant.css";
 
 const AiAssistantPanel = dynamic(() => import("@/components/assistant/AiAssistantPanel"), {
@@ -36,6 +37,7 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
     errorKey,
     unavailableReason,
     isRetrying,
+    openAssistant,
     closeAssistant,
     toggleAssistant,
     retry,
@@ -65,6 +67,14 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
     if (!isOpenRef.current) return;
     closeAssistant();
   }, [pathname, closeAssistant]);
+
+  useEffect(() => {
+    const onOpen = () => {
+      if (!isOpenRef.current) openAssistant();
+    };
+    window.addEventListener(OPEN_ASSISTANT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_ASSISTANT_EVENT, onOpen);
+  }, [openAssistant]);
 
   const handleClose = useCallback(() => {
     closeAssistant();
