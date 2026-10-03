@@ -50,6 +50,17 @@ public interface IOwnerDashboardRepository
     void AddHallImages(IEnumerable<HallImage> images);
 
     /// <summary>
+    /// Registers replacement features on a tracked hall aggregate (US-OWNER-07).
+    /// New rows must be added explicitly through this method — never left for
+    /// navigation-traversal discovery — so EF tracks them as Added: untracked
+    /// entities carrying explicit non-default store-generated keys would otherwise
+    /// be discovered as Modified, producing UPDATEs against rows that were never
+    /// inserted. Nothing is persisted here; the caller saves atomically through
+    /// the unit of work.
+    /// </summary>
+    void AddHallFeatures(IEnumerable<HallFeature> features);
+
+    /// <summary>
     /// Returns a single non-deleted hall owned by a user together with its
     /// subscription state (US-OWNER-17, FR-HALL-05). Read-only (no tracking); the
     /// caller must not mutate the returned aggregate. Returns <see langword="null"/>

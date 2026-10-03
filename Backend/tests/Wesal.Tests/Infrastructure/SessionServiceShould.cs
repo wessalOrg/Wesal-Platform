@@ -239,6 +239,10 @@ public class SessionServiceShould
         {
         }
 
+        public void AddHallFeatures(IEnumerable<HallFeature> features)
+        {
+        }
+
         public Task<Hall?> GetOwnedHallAsync(Guid hallId, string ownerId, CancellationToken cancellationToken = default)
             => Task.FromResult<Hall?>(null);
 

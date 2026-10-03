@@ -420,7 +420,7 @@ public sealed class OwnerHallService : IOwnerHallService
         hall.Address = incoming;
     }
 
-    private static void ApplyFeatures(Hall hall, IReadOnlyList<string> features)
+    private void ApplyFeatures(Hall hall, IReadOnlyList<string> features)
     {
         var normalized = HallFeatureCatalog.Normalize(features);
 
@@ -440,9 +440,18 @@ public sealed class OwnerHallService : IOwnerHallService
             hall.Features.Remove(item);
         }
 
-        foreach (var name in normalized)
+        // Explicit AddRange (not navigation-traversal discovery): replacement rows
+        // carry explicit client Guids on a store-generated key, which DetectChanges
+        // would otherwise classify as Modified, producing UPDATEs against rows that
+        // were never inserted. The collection add below only keeps the in-memory
+        // aggregate (used by the response mapping) consistent.
+        var replacements = normalized
+            .Select(name => new HallFeature { HallId = hall.Id, Name = name })
+            .ToList();
+        _ownerDashboardRepository.AddHallFeatures(replacements);
+        foreach (var feature in replacements)
         {
-            hall.Features.Add(new HallFeature { HallId = hall.Id, Name = name });
+            hall.Features.Add(feature);
         }
     }
 

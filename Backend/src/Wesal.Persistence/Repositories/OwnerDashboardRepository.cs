@@ -54,6 +54,9 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
     public void AddHallImages(IEnumerable<HallImage> images)
         => _context.HallImages.AddRange(images);
 
+    public void AddHallFeatures(IEnumerable<HallFeature> features)
+        => _context.HallFeatures.AddRange(features);
+
     public Task<Hall?> GetOwnedHallAsync(
         Guid hallId,
         string ownerId,
