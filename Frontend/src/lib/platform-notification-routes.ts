@@ -5,6 +5,7 @@ import {
 } from "@/lib/account-profile-path";
 import {
   SEEKER_BOOKINGS_PATH,
+  conversationMessagePath,
   seekerBookingContactPath,
 } from "@/constants/seekerDashboardNav";
 import {
@@ -28,6 +29,7 @@ export function resolveNotificationActionUrl(
   const explicit = actionUrl?.trim();
   const hallId = metadata.hall_id?.trim() || "";
   const bookingId = metadata.booking_id?.trim() || "";
+  const conversationId = metadata.conversation_id?.trim() || "";
   const staleOwnerBookingHref =
     type === "booking_submitted" &&
     audience === "owner" &&
@@ -47,6 +49,11 @@ export function resolveNotificationActionUrl(
       }
       return SEEKER_BOOKINGS_PATH;
     case "booking_accepted":
+      // An acceptance asks the seeker to send a deposit receipt, which is done in the
+      // conversation with the owner, so the thread is the destination whenever we know it.
+      // The bookings page stays the fallback for a notice with no conversation reference.
+      if (conversationId) return conversationMessagePath(conversationId);
+      return bookingId ? seekerBookingContactPath(bookingId) : SEEKER_BOOKINGS_PATH;
     case "booking_rejected":
       return bookingId ? seekerBookingContactPath(bookingId) : SEEKER_BOOKINGS_PATH;
     case "booking_cancelled":

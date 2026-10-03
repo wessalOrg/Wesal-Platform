@@ -122,7 +122,11 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
         Boolean(payload.message.hasAttachment),
       );
       applyBookingRejectionFromMessage(payload.message.content);
-      applyBookingAcceptanceFromMessage(payload.message.content);
+      applyBookingAcceptanceFromMessage(
+        payload.message.content,
+        "",
+        payload.conversationId,
+      );
       void markConversationAsRead(payload.conversationId).catch(() => undefined);
     },
   );
@@ -142,7 +146,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
         Boolean(message.hasAttachment),
       );
       applyBookingRejectionFromMessage(message.content);
-      applyBookingAcceptanceFromMessage(message.content);
+      applyBookingAcceptanceFromMessage(message.content, "", conversationId);
       void markConversationAsRead(conversationId).catch(() => undefined);
     },
   );
@@ -167,10 +171,11 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   }, [ownerKey, selectedId, threadFetchEnabled, threadState.status]);
 
   useEffect(() => {
-    const hallName = threadState.thread?.hallName ?? "";
-    for (const message of threadState.thread?.messages ?? []) {
+    const thread = threadState.thread;
+    const hallName = thread?.hallName ?? "";
+    for (const message of thread?.messages ?? []) {
       applyBookingRejectionFromMessage(message.content, hallName);
-      applyBookingAcceptanceFromMessage(message.content, hallName);
+      applyBookingAcceptanceFromMessage(message.content, hallName, thread?.conversationId);
     }
   }, [threadState.thread]);
 

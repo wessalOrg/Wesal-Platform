@@ -24,6 +24,14 @@ export type BookingAcceptedDetail = {
   periods?: BookingPeriodType[];
   hallName?: string;
   depositAmount?: number | null;
+  /**
+   * The seeker <-> hall owner thread the approval landed in. The backend resolves exactly
+   * this conversation when it accepts a booking, so carrying it here lets the "deposit
+   * required" notification open the right thread instead of falling back to the bookings
+   * list. Optional because an acceptance surfaced outside a thread (e.g. the owner-side
+   * accept action) has no seeker-facing conversation to open.
+   */
+  conversationId?: string;
 };
 
 export type BookingRejectedDetail = {

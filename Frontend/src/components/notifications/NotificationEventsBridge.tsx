@@ -109,6 +109,9 @@ export default function NotificationEventsBridge() {
         metadata: {
           hall_id: detail.hallId,
           booking_id: detail.bookingId,
+          // The exact seeker <-> owner thread the owner wrote the approval into. Carrying it
+          // here is what lets the click open that conversation rather than the bookings list.
+          conversation_id: detail.conversationId,
           hall_name: hallName,
           date: detail.date,
           period,

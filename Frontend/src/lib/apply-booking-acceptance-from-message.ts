@@ -15,10 +15,17 @@ export function parseBookingApprovalDeposit(content: string): number | null {
   return parseDepositAmount(match[1]);
 }
 
-/** Maps the owner approval chat notice onto the seeker's remembered bookings. */
+/**
+ * Maps the owner approval chat notice onto the seeker's remembered bookings.
+ *
+ * `conversationId` is the thread the notice was read from. The backend resolves exactly the
+ * seeker <-> hall owner conversation when it accepts a booking, so passing it through lets the
+ * resulting notification open that thread instead of the generic bookings page.
+ */
 export function applyBookingAcceptanceFromMessage(
   content: string,
   fallbackHallName = "",
+  conversationId?: string | null,
 ): void {
   const depositAmount = parseBookingApprovalDeposit(content);
   if (depositAmount == null) return;
@@ -41,5 +48,6 @@ export function applyBookingAcceptanceFromMessage(
     periods: patched.period ? [patched.period] : [],
     hallName: patched.hallName || hallName,
     depositAmount,
+    conversationId: conversationId?.trim() || undefined,
   });
 }

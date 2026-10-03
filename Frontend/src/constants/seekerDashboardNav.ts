@@ -12,6 +12,15 @@ export function seekerBookingContactPath(bookingId: string): string {
     ? `${SEEKER_BOOKINGS_PATH}?booking_id=${encodeURIComponent(id)}&intent=contact`
     : SEEKER_BOOKINGS_PATH;
 }
+
+/**
+ * Deep link that opens one specific conversation. This mirrors the route
+ * `useStartHallConversation` already pushes, so a notification and a hall card land on the
+ * same thread page rather than inventing a second way in.
+ */
+export function conversationMessagePath(conversationId: string): string {
+  return `/messages/${encodeURIComponent(conversationId.trim())}`;
+}
 export const SEEKER_NOTIFICATIONS_PATH = `${REGULAR_PROFILE_PATH}/notifications`;
 export const SEEKER_MESSAGES_PATH = `${REGULAR_PROFILE_PATH}/messages`;
 
