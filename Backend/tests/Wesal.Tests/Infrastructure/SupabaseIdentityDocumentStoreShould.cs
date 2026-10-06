@@ -13,16 +13,17 @@ public class SupabaseIdentityDocumentStoreShould
     private const string SecretKey = "unit-svc-key";
     private const string FileBytes = "\uD83D\uDE80 identity";
 
-    private static SupabaseStorageOptions StoreOptions(string? secret = null) => new()
+    private static SupabaseStorageOptions StoreOptions(string? secret = null, string? bucket = null) => new()
     {
         Url = ProjectUrl,
         SecretKey = secret ?? SecretKey,
-        IdentityDocumentsBucket = "identity-documents",
+        IdentityDocumentsBucket = bucket ?? "identity-documents",
         TimeoutSeconds = 10
     };
 
     private static SupabaseIdentityDocumentStore CreateStore(
-        Func<HttpRequestMessage, Task<HttpResponseMessage>> responder)
+        Func<HttpRequestMessage, Task<HttpResponseMessage>> responder,
+        string? bucket = null)
     {
         var client = new HttpClient(new FakeHttpHandler(responder), disposeHandler: false)
         {
@@ -30,7 +31,7 @@ public class SupabaseIdentityDocumentStoreShould
         };
         return new SupabaseIdentityDocumentStore(
             new FakeHttpClientFactory(client),
-            Options.Create(StoreOptions()),
+            Options.Create(StoreOptions(bucket: bucket)),
             NullLogger<SupabaseIdentityDocumentStore>.Instance);
     }
 
@@ -52,7 +53,11 @@ public class SupabaseIdentityDocumentStoreShould
 
         Assert.NotNull(captured);
         Assert.Equal(HttpMethod.Post, captured!.Method);
-        Assert.Equal("https://unit.supabase.co/storage/v1/object/owners/o-1/file.pdf", captured.RequestUri!.AbsoluteUri);
+        // Every storage REST call is scoped to the configured PRIVATE bucket; the request
+        // path is object/{bucket}/{owners/{ownerId}/{fileName}} — never object/{key}.
+        Assert.Equal(
+            "https://unit.supabase.co/storage/v1/object/identity-documents/owners/o-1/file.pdf",
+            captured.RequestUri!.AbsoluteUri);
         // Private bucket access is enforced with the server-side key on every request...
         Assert.Equal(SecretKey, captured.Headers.GetValues("apikey").Single());
         Assert.Equal(new AuthenticationHeaderValue("Bearer", SecretKey), captured.Headers.Authorization);
@@ -118,7 +123,9 @@ public class SupabaseIdentityDocumentStoreShould
         // Remote storage has no filesystem path: the caller must stream the bytes, not a URL.
         Assert.Null(result.LocalPath);
         Assert.Equal(HttpMethod.Get, captured!.Method);
-        Assert.Equal("https://unit.supabase.co/storage/v1/object/owners/o-1/file.pdf", captured.RequestUri!.AbsoluteUri);
+        Assert.Equal(
+            "https://unit.supabase.co/storage/v1/object/identity-documents/owners/o-1/file.pdf",
+            captured.RequestUri!.AbsoluteUri);
         Assert.Equal(SecretKey, captured.Headers.GetValues("apikey").Single());
     }
 
@@ -171,6 +178,54 @@ public class SupabaseIdentityDocumentStoreShould
         await store.DeleteAsync("/documents/owners/o-1/file.pdf");
 
         Assert.True(requested);
+    }
+
+    [Fact]
+    public async Task SaveAsync_UsesConfiguredBucket_NotHardcoded()
+    {
+        HttpRequestMessage? captured = null;
+        var store = CreateStore(async request =>
+        {
+            captured = request;
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        }, bucket: "private-identity-documents");
+
+        await store.SaveAsync("/documents/owners/o-1/file.pdf", [1, 2, 3]);
+
+        Assert.Equal(
+            "https://unit.supabase.co/storage/v1/object/private-identity-documents/owners/o-1/file.pdf",
+            captured!.RequestUri!.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task ReadAsync_UsesSameConfiguredBucket()
+    {
+        var store = CreateStore(async _ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([1, 2])
+        }, bucket: "private-identity-documents");
+
+        var result = await store.ReadAsync("/documents/owners/o-1/file.pdf");
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_TargetsSameConfiguredBucket()
+    {
+        HttpRequestMessage? captured = null;
+        var store = CreateStore(async request =>
+        {
+            captured = request;
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        }, bucket: "private-identity-documents");
+
+        await store.DeleteAsync("/documents/owners/o-1/file.pdf");
+
+        Assert.Equal(HttpMethod.Delete, captured!.Method);
+        Assert.Equal(
+            "https://unit.supabase.co/storage/v1/object/private-identity-documents/owners/o-1/file.pdf",
+            captured.RequestUri!.AbsoluteUri);
     }
 
     [Fact]

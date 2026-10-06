@@ -42,7 +42,7 @@ public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
     {
         var key = RequireKey(relativeUrl);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"object/{Escape(key)}")
+        using var request = new HttpRequestMessage(HttpMethod.Post, ObjectResource(key))
         {
             Content = new ByteArrayContent(content)
         };
@@ -79,7 +79,7 @@ public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
             return null;
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"object/{Escape(key)}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, ObjectResource(key));
         using var response = await SendAsync(request, cancellationToken);
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -108,7 +108,7 @@ public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
             return;
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Delete, $"object/{Escape(key)}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, ObjectResource(key));
 
         try
         {
@@ -150,6 +150,15 @@ public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
     private string RequireKey(string relativeUrl)
         => DocumentPath.OwnerIdentityObjectKey(relativeUrl)
            ?? throw new ValidationException("The identity document path is not valid.");
+
+    /// <summary>
+    /// Storage REST resource for an object, always scoped to the configured private
+    /// bucket: <c>object/{bucket}/{owners/{ownerId}/{fileName}}</c>. The bucket is a
+    /// transport-level part of the request path only — the persisted relative URL and the
+    /// validated object key stay bucket-relative.
+    /// </summary>
+    private string ObjectResource(string key)
+        => $"object/{Escape(_options.IdentityDocumentsBucket)}/{Escape(key)}";
 
     /// <summary>Escapes each key segment while preserving the folder separators.</summary>
     private static string Escape(string key)
