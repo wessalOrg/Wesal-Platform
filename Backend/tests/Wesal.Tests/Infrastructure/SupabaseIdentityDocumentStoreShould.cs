@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Documents;
@@ -29,7 +30,8 @@ public class SupabaseIdentityDocumentStoreShould
         };
         return new SupabaseIdentityDocumentStore(
             new FakeHttpClientFactory(client),
-            Options.Create(StoreOptions()));
+            Options.Create(StoreOptions()),
+            NullLogger<SupabaseIdentityDocumentStore>.Instance);
     }
 
     [Fact]
@@ -63,11 +65,18 @@ public class SupabaseIdentityDocumentStoreShould
     [Fact]
     public async Task SaveAsync_RejectedUpload_ThrowsSoNoReferenceIsEverRecorded()
     {
-        var store = CreateStore(async _ => new HttpResponseMessage(HttpStatusCode.BadRequest));
+        var store = CreateStore(async _ => new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("Bucket not found or unavailable for writes")
+        });
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             store.SaveAsync("/documents/owners/o-1/file.pdf", [1, 2, 3]));
 
+        // The storage's own rejection reason is preserved so failures are diagnosable
+        // without a live probe.
+        Assert.Contains("(400)", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("Bucket not found or unavailable for writes", ex.Message, StringComparison.Ordinal);
         Assert.Contains("bucket", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 

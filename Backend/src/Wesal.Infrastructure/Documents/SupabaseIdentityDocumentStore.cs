@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
@@ -25,13 +26,16 @@ public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly SupabaseStorageOptions _options;
+    private readonly ILogger<SupabaseIdentityDocumentStore> _logger;
 
     public SupabaseIdentityDocumentStore(
         IHttpClientFactory httpClientFactory,
-        IOptions<SupabaseStorageOptions> options)
+        IOptions<SupabaseStorageOptions> options,
+        ILogger<SupabaseIdentityDocumentStore> logger)
     {
         _httpClientFactory = httpClientFactory;
         _options = options.Value;
+        _logger = logger;
     }
 
     public async Task SaveAsync(string relativeUrl, byte[] content, CancellationToken cancellationToken = default)
@@ -51,11 +55,19 @@ public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
 
         if (!response.IsSuccessStatusCode)
         {
+            var reason = await ReadBodySafelyAsync(response, cancellationToken);
+            // Names the object key (never a secret) and the storage's own reason so a
+            // rejected write is diagnosable from the logs without a live probe.
+            _logger.LogWarning(
+                "Supabase Storage rejected the identity document upload: status {Status}, key {Key}, reason {Reason}",
+                (int)response.StatusCode,
+                key,
+                reason);
             // Fail loudly: recording a reference to bytes the store rejected is exactly
             // the data loss this store exists to prevent.
             throw new InvalidOperationException(
                 $"Supabase Storage rejected the identity document upload ({(int)response.StatusCode}). " +
-                $"Ensure the '{_options.IdentityDocumentsBucket}' bucket exists and is reachable.");
+                $"Reason: {reason} Ensure the '{_options.IdentityDocumentsBucket}' bucket exists and is reachable.");
         }
     }
 
@@ -119,6 +131,20 @@ public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.SecretKey);
 
         return await client.SendAsync(request, cancellationToken);
+    }
+
+    /// <summary>Reads the error body so its exact text can be logged/surfaced; never throws.</summary>
+    private static async Task<string> ReadBodySafelyAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            return string.IsNullOrWhiteSpace(body) ? "(no response body)" : body.Trim();
+        }
+        catch (Exception)
+        {
+            return "(response body could not be read)";
+        }
     }
 
     private string RequireKey(string relativeUrl)
