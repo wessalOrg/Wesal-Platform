@@ -11,7 +11,7 @@ namespace Wesal.Tests.Infrastructure;
 /// </summary>
 public sealed class HallMediaRegistrationShould
 {
-    private static IConfiguration Config(string? provider, bool includeR2 = false)
+    private static IConfiguration Config(string? provider, bool includeR2 = false, bool includeSupabase = false)
     {
         var values = new Dictionary<string, string?>();
         if (provider is not null)
@@ -26,6 +26,12 @@ public sealed class HallMediaRegistrationShould
             values["HallMedia:R2:SecretAccessKey"] = "SECRET";
             values["HallMedia:R2:BucketName"] = "wesal-hall-media";
             values["HallMedia:R2:PublicBaseUrl"] = "https://media.example.com";
+        }
+
+        if (includeSupabase)
+        {
+            values["SupabaseStorage:Url"] = "https://unit.supabase.co";
+            values["SupabaseStorage:SecretKey"] = "unit-svc-key";
         }
 
         return new ConfigurationBuilder().AddInMemoryCollection(values).Build();
@@ -53,6 +59,25 @@ public sealed class HallMediaRegistrationShould
     {
         // AmazonS3Client construction performs no network I/O.
         Assert.IsType<R2HallMediaStorage>(Resolve(Config("R2", includeR2: true)));
+    }
+
+    [Fact]
+    public void SupabaseProvider_ResolvesSupabaseStorage()
+    {
+        var storage = Resolve(Config("Supabase", includeSupabase: true));
+        var supabase = Assert.IsType<SupabaseHallMediaStorage>(storage);
+        // The existing PUBLIC hall-images bucket is the default; no bucket is created.
+        Assert.Equal("hall-images", supabase.Bucket);
+        Assert.False(supabase.Info.IsLocal);
+    }
+
+    [Fact]
+    public void SupabaseProvider_WithoutCredentials_Throws()
+    {
+        var services = new ServiceCollection();
+        var ex = Assert.Throws<InvalidOperationException>(() => services.AddHallMediaStorage(Config("Supabase")));
+        Assert.Contains("SupabaseStorage:Url", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("SupabaseStorage:SecretKey", ex.Message, StringComparison.Ordinal);
     }
 
     [Fact]

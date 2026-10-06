@@ -4,9 +4,10 @@ namespace Wesal.Infrastructure.Halls;
 /// Configuration for hall media uploads (<c>HallMedia</c> section).
 /// <para>
 /// <see cref="Provider"/> selects the implementation: <c>Local</c> (default,
-/// container-local filesystem for development) or <c>R2</c> (durable Cloudflare
-/// R2 object storage for production). The choice is explicit: an unknown value
-/// fails startup rather than silently falling back.
+/// container-local filesystem for development), <c>R2</c> (durable Cloudflare
+/// R2 object storage) or <c>Supabase</c> (durable public Supabase Storage
+/// bucket). The choice is explicit: an unknown value fails startup rather than
+/// silently falling back.
 /// </para>
 /// </summary>
 public sealed class HallMediaOptions
@@ -16,6 +17,8 @@ public sealed class HallMediaOptions
     public const string ProviderLocal = "Local";
 
     public const string ProviderR2 = "R2";
+
+    public const string ProviderSupabase = "Supabase";
 
     /// <summary>Local filesystem directory. Defaults to the OS temp directory.</summary>
     public string? Directory { get; set; }

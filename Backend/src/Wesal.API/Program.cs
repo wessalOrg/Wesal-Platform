@@ -163,6 +163,7 @@ try
     var documentStorage = app.Services.GetRequiredService<Wesal.Application.Common.Interfaces.IDocumentStorage>();
     var identityDocumentStorage = Wesal.Infrastructure.Documents.IdentityDocumentStoreRegistration.DescribeIdentityDocumentStorage(configuration);
     var messageAttachmentStorage = Wesal.Infrastructure.Documents.MessageAttachmentStoreRegistration.DescribeMessageAttachmentStorage(configuration);
+    var hallMediaStorage = Wesal.Infrastructure.Halls.HallMediaRegistration.DescribeHallMediaStorage(configuration);
     if (mediaStorage.Info is { IsLocal: true, LocalRoot: string localRoot })
     {
         app.UseStaticFiles(new StaticFileOptions
@@ -183,6 +184,10 @@ try
         "Conversation attachment storage: {Provider} (bucket {Bucket}); attachments survive redeploys only when durable.",
         messageAttachmentStorage.Provider,
         messageAttachmentStorage.Bucket ?? "n/a");
+    Log.Information(
+        "Hall media storage: {Provider} (bucket {Bucket}); hall images survive redeploys only when durable.",
+        hallMediaStorage.Provider,
+        hallMediaStorage.Bucket ?? "n/a");
 
     app.UseCors(CorsPolicyName);
 
@@ -305,20 +310,36 @@ static void WarnIfEphemeralUploadStorage(
 }
 
 /// <summary>
-/// Startup safety for durable hall media: when the R2 provider is selected, all
-/// required settings are validated here so a misconfigured deployment fails
-/// clearly at boot (naming settings, never secret values) instead of 500ing the
-/// first upload. Local development needs no R2 configuration.
+/// Startup safety for durable hall media: when a durable provider (R2 or Supabase) is
+/// selected, all required settings are validated here so a misconfigured deployment
+/// fails clearly at boot (naming settings, never secret values) instead of 500ing the
+/// first upload. Local development needs no external configuration.
 /// </summary>
 static void ValidateHallMediaConfiguration(Microsoft.AspNetCore.Hosting.IWebHostEnvironment environment, IConfiguration configuration)
 {
     var provider = configuration.GetSection("HallMedia")?.Get<Wesal.Infrastructure.Halls.HallMediaOptions>()?.Provider;
+
+    if (string.Equals(provider, Wesal.Infrastructure.Halls.HallMediaOptions.ProviderSupabase, StringComparison.OrdinalIgnoreCase))
+    {
+        var supabase = configuration.GetSection("SupabaseStorage")
+            .Get<Wesal.Infrastructure.Documents.SupabaseStorageOptions>();
+        if (supabase is null || !supabase.IsConfigured)
+        {
+            throw new InvalidOperationException(
+                "HallMedia:Provider is 'Supabase' but SupabaseStorage:Url / " +
+                "SupabaseStorage:SecretKey are missing or empty. Set the SupabaseStorage__Url / " +
+                "SupabaseStorage__SecretKey environment variables.");
+        }
+
+        return;
+    }
+
     if (!string.Equals(provider, Wesal.Infrastructure.Halls.HallMediaOptions.ProviderR2, StringComparison.OrdinalIgnoreCase))
     {
         if (!environment.IsDevelopment())
         {
             Log.Warning(
-                "HallMedia:Provider is '{Provider}'; production hall uploads use ephemeral container-local storage and will NOT survive restarts. Set HallMedia__Provider=R2 for durable storage.",
+                "HallMedia:Provider is '{Provider}'; production hall uploads use ephemeral container-local storage and will NOT survive restarts. Set HallMedia__Provider=R2 (with R2 settings) or HallMedia__Provider=Supabase (with SupabaseStorage settings) for durable storage.",
                 provider ?? "(unset)");
         }
 

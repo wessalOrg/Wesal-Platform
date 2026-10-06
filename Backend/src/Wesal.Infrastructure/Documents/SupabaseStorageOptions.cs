@@ -28,6 +28,15 @@ public sealed class SupabaseStorageOptions
     /// </summary>
     public string ConversationAttachmentsBucket { get; set; } = "conversation-attachments";
 
+    /// <summary>
+    /// PUBLIC bucket holding hall photos. Unlike the two private buckets above, hall
+    /// images are served straight to browsers through the Supabase public object URL
+    /// (<c>/storage/v1/object/public/{bucket}/...</c>), so this bucket must stay
+    /// public-read enabled. Writes still require the server-side secret key and never
+    /// carry credentials: the bucket flag only governs anonymous reads.
+    /// </summary>
+    public string HallImagesBucket { get; set; } = "hall-images";
+
     public int TimeoutSeconds { get; set; } = 30;
 
     public bool IsConfigured =>
