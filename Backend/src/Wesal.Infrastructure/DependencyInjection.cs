@@ -103,6 +103,7 @@ public static class DependencyInjection
         services.AddHallMediaStorage(configuration);
 services.AddOptions<DocumentStorageOptions>().Bind(configuration.GetSection(DocumentStorageOptions.SectionName));
 services.AddSingleton<IDocumentStorage, DocumentStorage>();
+        services.AddIdentityDocumentStore(configuration);
         services.AddScoped<IHallInitiationService, HallInitiationService>();
         services.AddScoped<IHallStatusTrackingService, HallStatusTrackingService>();
         services.AddScoped<IOwnerHallService, OwnerHallService>();

@@ -1,0 +1,99 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Wesal.Infrastructure.Documents;
+
+/// <summary>
+/// Which implementation serves owner identity documents.
+/// </summary>
+public sealed record IdentityDocumentStorageInfo(bool IsRemote, string Provider, string? Bucket);
+
+/// <summary>
+/// Provider selection for the private identity-document store. Reads
+/// <c>DocumentStorage:Provider</c> (<c>Local</c> default in Development,
+/// <c>Supabase</c> for a Supabase Storage private bucket) and registers exactly one
+/// <see cref="Application.Common.Interfaces.IIdentityDocumentStore"/>.
+///
+/// When no provider is named, Supabase is chosen automatically if
+/// <c>SupabaseStorage</c> credentials are present, so a configured deployment is
+/// durable without extra knobs. Naming <c>Supabase</c> without usable credentials, or
+/// naming an unknown provider, fails startup loudly rather than silently writing to an
+/// ephemeral disk — the exact failure this store was introduced to remove.
+/// </summary>
+public static class IdentityDocumentStoreRegistration
+{
+    public const string ProviderLocal = "Local";
+    public const string ProviderSupabase = "Supabase";
+
+    public static IServiceCollection AddIdentityDocumentStore(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddOptions<SupabaseStorageOptions>()
+            .Bind(configuration.GetSection(SupabaseStorageOptions.SectionName));
+
+        var configuredProvider = configuration.GetSection(DocumentStorageOptions.SectionName)
+            .Get<DocumentStorageOptions>()?.Provider;
+
+        var supabase = configuration.GetSection(SupabaseStorageOptions.SectionName)
+            .Get<SupabaseStorageOptions>() ?? new SupabaseStorageOptions();
+
+        var provider = ResolveProvider(configuredProvider, supabase.IsConfigured);
+
+        if (string.Equals(provider, ProviderSupabase, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!supabase.IsConfigured)
+            {
+                throw new InvalidOperationException(
+                    $"DocumentStorage:Provider is '{ProviderSupabase}' but SupabaseStorage:Url / SupabaseStorage:SecretKey are missing or empty.");
+            }
+
+            services.AddHttpClient(SupabaseIdentityDocumentStore.HttpClientName, (sp, client) =>
+            {
+                var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SupabaseStorageOptions>>().Value;
+                client.BaseAddress = new Uri(options.Url!.TrimEnd('/') + "/storage/v1/");
+                client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds > 0 ? options.TimeoutSeconds : 30);
+            });
+            services.AddSingleton<Application.Common.Interfaces.IIdentityDocumentStore, SupabaseIdentityDocumentStore>();
+            return services;
+        }
+
+        services.AddSingleton<Application.Common.Interfaces.IIdentityDocumentStore, LocalIdentityDocumentStore>();
+        return services;
+    }
+
+    /// <summary>Active provider for startup diagnostics (names settings, never secrets).</summary>
+    public static IdentityDocumentStorageInfo DescribeIdentityDocumentStorage(IConfiguration configuration)
+    {
+        var configuredProvider = configuration.GetSection(DocumentStorageOptions.SectionName)
+            .Get<DocumentStorageOptions>()?.Provider;
+
+        var supabase = configuration.GetSection(SupabaseStorageOptions.SectionName)
+            .Get<SupabaseStorageOptions>() ?? new SupabaseStorageOptions();
+
+        var provider = ResolveProvider(configuredProvider, supabase.IsConfigured);
+        var remote = string.Equals(provider, ProviderSupabase, StringComparison.OrdinalIgnoreCase);
+
+        return new IdentityDocumentStorageInfo(
+            remote,
+            provider!,
+            remote ? supabase.IdentityDocumentsBucket : null);
+    }
+
+    private static string ResolveProvider(string? configuredProvider, bool supabaseConfigured)
+    {
+        if (string.IsNullOrWhiteSpace(configuredProvider))
+        {
+            return supabaseConfigured ? ProviderSupabase : ProviderLocal;
+        }
+
+        if (string.Equals(configuredProvider, ProviderLocal, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(configuredProvider, ProviderSupabase, StringComparison.OrdinalIgnoreCase))
+        {
+            return configuredProvider;
+        }
+
+        throw new InvalidOperationException(
+            $"Unknown DocumentStorage:Provider '{configuredProvider}'. Expected '{ProviderLocal}' or '{ProviderSupabase}'.");
+    }
+}

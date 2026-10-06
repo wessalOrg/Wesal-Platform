@@ -45,7 +45,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
     private readonly IDateTime _dateTime;
     private readonly IConversationNotifier _notifier;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IDocumentStorage _documentStorage;
+    private readonly IIdentityDocumentStore _identityDocumentStore;
     private readonly INotificationService _notificationService;
     private readonly INotificationDispatcher _notificationDispatcher;
     private readonly ILogger<AdminHallReviewService> _logger;
@@ -60,7 +60,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         IDateTime dateTime,
         IConversationNotifier notifier,
         UserManager<ApplicationUser> userManager,
-        IDocumentStorage documentStorage,
+        IIdentityDocumentStore identityDocumentStore,
         INotificationService notificationService,
         INotificationDispatcher notificationDispatcher,
         ILogger<AdminHallReviewService> logger)
@@ -74,7 +74,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         _dateTime = dateTime;
         _notifier = notifier;
         _userManager = userManager;
-        _documentStorage = documentStorage;
+        _identityDocumentStore = identityDocumentStore;
         _notificationService = notificationService;
         _notificationDispatcher = notificationDispatcher;
         _logger = logger;
@@ -172,9 +172,9 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
             throw new NotFoundException("The owner has not uploaded an identity document yet.");
         }
 
-        var fullPath = DocumentPath.ResolveFullPath(_documentStorage.Root, owner.IdentityDocumentUrl);
+        var stored = await _identityDocumentStore.ReadAsync(owner.IdentityDocumentUrl, cancellationToken);
 
-        if (fullPath is null || !File.Exists(fullPath))
+        if (stored is null)
         {
             throw new NotFoundException("The owner identity document was not found.");
         }
@@ -182,20 +182,10 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
         return new StoredDocument
         {
             RelativeUrl = owner.IdentityDocumentUrl,
-            FullPath = fullPath,
-            ContentType = InferContentType(fullPath),
-            FileName = DocumentPath.FileNameFromUrl(owner.IdentityDocumentUrl) ?? Path.GetFileName(fullPath)
-        };
-    }
-
-    private static string InferContentType(string fullPath)
-    {
-        return Path.GetExtension(fullPath).ToLowerInvariant() switch
-        {
-            ".pdf" => "application/pdf",
-            ".png" => "image/png",
-            ".webp" => "image/webp",
-            _ => "image/jpeg"
+            FullPath = stored.LocalPath ?? string.Empty,
+            Content = stored.Bytes,
+            ContentType = DocumentPath.ContentTypeFromUrl(owner.IdentityDocumentUrl),
+            FileName = DocumentPath.FileNameFromUrl(owner.IdentityDocumentUrl) ?? owner.IdentityDocumentUrl
         };
     }
 

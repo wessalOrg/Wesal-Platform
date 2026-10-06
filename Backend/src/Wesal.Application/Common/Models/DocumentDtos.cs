@@ -23,16 +23,32 @@ public class OwnerDocumentUpload
 /// resolved exclusively from the persisted URL (never from the request) so a caller can
 /// never ask for an arbitrary file path.
 /// </summary>
-public class StoredDocument
-{
-    public string RelativeUrl { get; init; } = string.Empty;
-
-    public string FullPath { get; init; } = string.Empty;
-
-    public string ContentType { get; init; } = string.Empty;
-
-    public string FileName { get; init; } = string.Empty;
-}
+  public class StoredDocument
+  {
+      public string RelativeUrl { get; init; } = string.Empty;
+  
+      /// <summary>Filesystem path, populated only when the backing store is local.</summary>
+      public string FullPath { get; init; } = string.Empty;
+  
+      /// <summary>
+      /// Buffered bytes. Always populated for documents served from a durable object
+      /// store (which has no filesystem path to hand to the response layer).
+      /// </summary>
+      public byte[]? Content { get; init; }
+  
+      public string ContentType { get; init; } = string.Empty;
+  
+      public string FileName { get; init; } = string.Empty;
+  }
+  
+  /// <summary>Bytes returned by an identity-document store, plus their local path when one exists.</summary>
+  public class StoredDocumentContent
+  {
+      public byte[] Bytes { get; init; } = [];
+  
+      /// <summary>Set by the local filesystem store; null for remote object storage.</summary>
+      public string? LocalPath { get; init; }
+  }
 
 /// <summary>Result of the Hall Owner's identity-document upload (US-OWNER-30).</summary>
 public class IdentityDocumentUploadResult

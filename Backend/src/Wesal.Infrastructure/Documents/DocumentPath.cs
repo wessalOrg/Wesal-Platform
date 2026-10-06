@@ -57,4 +57,53 @@ public static class DocumentPath
         var name = relativeUrl.Split('/').LastOrDefault();
         return string.IsNullOrWhiteSpace(name) ? null : name;
     }
+
+    /// <summary>
+    /// Maps a persisted relative URL to the content type the document was uploaded as.
+    /// Upload validation restricts identity documents to these five extensions, so an
+    /// unknown extension still falls back to the common case rather than letting an
+    /// unchecked value reach the response's Content-Type header.
+    /// </summary>
+    public static string ContentTypeFromUrl(string relativeUrl)
+    {
+        var extension = Path.GetExtension(FileNameFromUrl(relativeUrl) ?? string.Empty).ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => "image/jpeg"
+        };
+    }
+
+    /// <summary>
+    /// Object key for a persisted identity-document URL inside the private documents
+    /// bucket (<c>owners/{ownerId}/{fileName}</c>). Returns <c>null</c> unless the URL is
+    /// exactly an owner-identity document path, so a stored value can never address a
+    /// different bucket prefix and <c>..</c> can never escape into another key.
+    /// </summary>
+    public static string? OwnerIdentityObjectKey(string relativeUrl)
+    {
+        if (string.IsNullOrWhiteSpace(relativeUrl) || !relativeUrl.StartsWith("/documents/owners/", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        // documents / owners / {ownerId} / {fileName}
+        var segments = relativeUrl.Trim('/').Split('/');
+        if (segments.Length != 4)
+        {
+            return null;
+        }
+
+        foreach (var segment in segments)
+        {
+            if (segment.Length == 0 || segment is "." or "..")
+            {
+                return null;
+            }
+        }
+
+        return string.Join('/', segments[1..]);
+    }
 }

@@ -132,12 +132,14 @@ public class MediaAdminImagesAndIdentityShould : IDisposable
             new UnitOfWork(_context), new ConversationRepository(_context),
             new MessageRepository(_context),
             new FakeCurrentUser(adminId, true, ApplicationRoles.Admin), TestClock(),
-            new RecordingConversationNotifier(), _userManager, storage ?? CreateDocumentStorage(),
+            new RecordingConversationNotifier(), _userManager,
+            new LocalIdentityDocumentStore(storage ?? CreateDocumentStorage()),
             new FakeNotificationService(), new RecordingNotificationDispatcher(),
             NullLogger<AdminHallReviewService>.Instance);
 
     private OwnerIdentityService CreateIdentityService(string userId, string role, IDocumentStorage? storage = null)
-        => new(_userManager, new FakeCurrentUser(userId, true, role), storage ?? CreateDocumentStorage());
+        => new(_userManager, new FakeCurrentUser(userId, true, role),
+            new LocalIdentityDocumentStore(storage ?? CreateDocumentStorage()));
 
     private ConversationService CreateConversationService(string userId, string role, IDocumentStorage? storage = null)
         => new(new ConversationRepository(_context), new MessageRepository(_context),
@@ -348,9 +350,11 @@ public class MediaAdminImagesAndIdentityShould : IDisposable
 
         Assert.True(File.Exists(document.FullPath));
         Assert.Equal("image/jpeg", document.ContentType);
+        Assert.Equal(JpegBytes, document.Content);
 
-        var response = await StoredDocumentResult.ServeAsync(
-            document.FullPath, document.ContentType, CancellationToken.None);
+        // The StoredDocument overload serves the already-read bytes (the path used by
+        // object-store documents, where no filesystem path exists).
+        var response = await StoredDocumentResult.ServeAsync(document, CancellationToken.None);
         var file = Assert.IsType<FileContentResult>(response);
         Assert.Equal(JpegBytes, file.FileContents);
         Assert.Equal("image/jpeg", file.ContentType);

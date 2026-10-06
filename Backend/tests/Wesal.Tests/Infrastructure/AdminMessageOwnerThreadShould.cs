@@ -11,6 +11,7 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Admin;
 using Wesal.Infrastructure.Conversations;
+using Wesal.Infrastructure.Documents;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
@@ -406,7 +407,7 @@ public class AdminMessageOwnerThreadShould : IDisposable
             new FakeDateTime(new DateTimeOffset(2026, 8, 15, 10, 0, 0, TimeSpan.Zero)),
             new FakeNotifier(),
             _userManager,
-            new FakeDocumentStorage(),
+            new LocalIdentityDocumentStore(new FakeDocumentStorage()),
             new FakeNotificationService(),
             new RecordingNotificationDispatcher(),
             NullLogger<AdminHallReviewService>.Instance);

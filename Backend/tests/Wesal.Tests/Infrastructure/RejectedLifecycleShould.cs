@@ -148,7 +148,7 @@ public class RejectedLifecycleShould : IDisposable
             new MessageRepository(_context),
             new FakeCurrentUser(adminId, true, ApplicationRoles.Admin), TestClock(),
             new RecordingConversationNotifier(), _userManager,
-            new DocumentStorage(Options.Create(new DocumentStorageOptions { Directory = _documentsRoot })),
+            new LocalIdentityDocumentStore(new DocumentStorage(Options.Create(new DocumentStorageOptions { Directory = _documentsRoot }))),
             new FakeNotificationService(), new RecordingNotificationDispatcher(),
             NullLogger<AdminHallReviewService>.Instance);
 

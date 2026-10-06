@@ -161,6 +161,7 @@ try
     // from R2, so no local mount is created (wwwroot static files above are unaffected).
     var mediaStorage = app.Services.GetRequiredService<IHallMediaStorage>();
     var documentStorage = app.Services.GetRequiredService<Wesal.Application.Common.Interfaces.IDocumentStorage>();
+    var identityDocumentStorage = Wesal.Infrastructure.Documents.IdentityDocumentStoreRegistration.DescribeIdentityDocumentStorage(configuration);
     if (mediaStorage.Info is { IsLocal: true, LocalRoot: string localRoot })
     {
         app.UseStaticFiles(new StaticFileOptions
@@ -170,7 +171,13 @@ try
         });
     }
     ValidateHallMediaConfiguration(app.Environment, configuration);
-    WarnIfEphemeralUploadStorage(mediaStorage.Info, documentStorage.Root);
+    WarnIfEphemeralUploadStorage(mediaStorage.Info, documentStorage.Root, identityDocumentStorage);
+    // Names the active provider and its bucket (never credentials) so a deploy that is
+    // still on ephemeral storage is visible in the logs.
+    Log.Information(
+        "Identity document storage: {Provider} (bucket {Bucket}); served only through authenticated endpoints.",
+        identityDocumentStorage.Provider,
+        identityDocumentStorage.Bucket ?? "n/a");
 
     app.UseCors(CorsPolicyName);
 
@@ -259,7 +266,8 @@ static bool IsEphemeralUploadRoot(string root)
 
 static void WarnIfEphemeralUploadStorage(
     Wesal.Infrastructure.Halls.HallMediaStorageInfo mediaInfo,
-    string documentRoot)
+    string documentRoot,
+    Wesal.Infrastructure.Documents.IdentityDocumentStorageInfo identityDocumentStorage)
 {
     // R2-backed hall media is durable by construction: nothing to warn about.
     if (mediaInfo is { IsLocal: true, LocalRoot: string mediaRoot } && IsEphemeralUploadRoot(mediaRoot))
@@ -271,9 +279,19 @@ static void WarnIfEphemeralUploadStorage(
 
     if (IsEphemeralUploadRoot(documentRoot))
     {
-        Log.Warning(
-            "Protected document storage is ephemeral ({Root}); identity documents and attachments will NOT survive instance replacement/redeploy. Set DocumentStorage:Directory (DocumentStorage__Directory) to durable storage.",
-            documentRoot);
+        if (identityDocumentStorage.IsRemote)
+        {
+            Log.Warning(
+                "Conversation attachment storage is ephemeral ({Root}); attachments will NOT survive instance replacement/redeploy. Identity documents are unaffected ({IdentityProvider}).",
+                documentRoot,
+                identityDocumentStorage.Provider);
+        }
+        else
+        {
+            Log.Warning(
+                "Protected document storage is ephemeral ({Root}); identity documents and attachments will NOT survive instance replacement/redeploy. Set DocumentStorage:Provider=Supabase (DocumentStorage__Provider) with SupabaseStorage:Url / SupabaseStorage:SecretKey for durable identity documents.",
+                documentRoot);
+        }
     }
 }
 
