@@ -36,13 +36,35 @@ public class WesalNavigationRegistryShould
     }
 
     [Fact]
-    public void NoPhotographyPage_IsRegistered_BecauseNoSuchRouteExists()
+    public void PhotographyPage_IsNeverAssistantNavigable()
     {
-        Assert.DoesNotContain(WesalNavigationRegistry.Pages, p =>
+        // A /photographers route exists as a coming-soon placeholder (added for
+        // the landing category cards), so "no such route exists" is no longer
+        // true. The security property that matters is navigability: the
+        // assistant must never offer or resolve navigation to any
+        // photography/media URL. Registry entries for such pages, if any, must
+        // stay page-context only (AssistantNavigable = false), mirroring how
+        // admin/owner-manage pages are recognised without being offered.
+        static bool IsPhotoPage(WesalPage p) =>
             p.Key.Contains("photo", StringComparison.OrdinalIgnoreCase)
             || p.Path.Contains("photo", StringComparison.OrdinalIgnoreCase)
-            || p.Path.Contains("media", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(FrontendRoutes(), r => r.Contains("photo", StringComparison.OrdinalIgnoreCase));
+            || p.Path.Contains("media", StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(WesalNavigationRegistry.NavigablePages, (WesalPage p) => IsPhotoPage(p));
+        foreach (var page in WesalNavigationRegistry.Pages.Where(IsPhotoPage))
+        {
+            Assert.False(page.AssistantNavigable,
+                $"Registry page '{page.Key}' ({page.Path}) must stay context-only; the assistant must never navigate to photography pages.");
+        }
+
+        foreach (var route in FrontendRoutes().Where(r => r.Contains("photo", StringComparison.OrdinalIgnoreCase)))
+        {
+            var registered = WesalNavigationRegistry.Pages.FirstOrDefault(p =>
+                string.Equals(p.Path, route, StringComparison.Ordinal));
+            Assert.True(registered is null || !registered.AssistantNavigable,
+                $"Frontend route '{route}' must never be assistant-navigable.");
+        }
+
         Assert.Null(WesalNavigationRegistry.ResolveHref("photography"));
     }
 

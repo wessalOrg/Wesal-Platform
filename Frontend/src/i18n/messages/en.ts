@@ -2000,6 +2000,13 @@ const en: MessageCatalog = {
   "admin.help.selectPrompt": "Select a question to view details and reply.",
   "admin.help.errors.emptyReply": "Please write a reply before sending.",
   "admin.help.errors.replyFailed": "Could not save the reply. Please try again.",
+  "pwa.installApp": "Install app",
+  "pwa.bannerTitle": "Install the Wesal app",
+  "pwa.bannerBody": "Open it as a standalone app from your home screen.",
+  "pwa.iosTitle": "Install Wesal on iPhone",
+  "pwa.iosStep1": "Tap the Share button in Safari.",
+  "pwa.iosStep2": "Choose “Add to Home Screen”.",
+  "pwa.iosStep3": "Tap “Add” and Wesal appears on your home screen.",
 
 };
 
