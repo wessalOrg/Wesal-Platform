@@ -1797,6 +1797,13 @@ const ar: MessageCatalog = {
   "admin.help.selectPrompt": "اختر سؤالاً لعرض التفاصيل والرد عليه.",
   "admin.help.errors.emptyReply": "يرجى كتابة الرد قبل الإرسال.",
   "admin.help.errors.replyFailed": "تعذر حفظ الرد. حاول مرة أخرى.",
+  "pwa.installApp": "تثبيت التطبيق",
+  "pwa.bannerTitle": "ثبّت تطبيق وصال",
+  "pwa.bannerBody": "افتحه كتطبيق مستقل من شاشتك الرئيسية.",
+  "pwa.iosTitle": "تثبيت وصال على iPhone",
+  "pwa.iosStep1": "اضغط زر المشاركة في متصفح سفاري.",
+  "pwa.iosStep2": "اختر «إضافة إلى الشاشة الرئيسية».",
+  "pwa.iosStep3": "اضغط «إضافة» وستجد وصال على شاشتك الرئيسية.",
 
 };
 

@@ -8,6 +8,7 @@ import WesalBrandLockup from "@/components/brand/WesalBrandLockup";
 import AuthAccountMenu from "@/components/layout/AuthAccountMenu";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import NavbarNotificationsButton from "@/components/layout/NavbarNotificationsButton";
+import PwaInstallButton from "@/components/pwa/PwaInstallButton";
 import { useTranslateLang } from "@/i18n";
 import { getAccountProfilePath } from "@/lib/account-profile-path";
 import { markAuthNavigation } from "@/lib/auth-nav";
@@ -106,6 +107,7 @@ export default function Navbar({
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:gap-3">
             <div className="hidden shrink-0 items-center gap-1.5 sm:gap-2 lg:flex">
+              <PwaInstallButton />
               <LanguageSwitcher />
               {authenticated ? <NavbarNotificationsButton /> : null}
             </div>
@@ -161,6 +163,7 @@ export default function Navbar({
               <LanguageSwitcher compact />
               {authenticated ? <NavbarNotificationsButton /> : null}
             </div>
+            <PwaInstallButton variant="full" />
             {status === "loading" ? (
               <div
                 className="h-11 w-full animate-pulse rounded-xl bg-[var(--wesal-pink)]"
