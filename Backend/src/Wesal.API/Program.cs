@@ -162,6 +162,7 @@ try
     var mediaStorage = app.Services.GetRequiredService<IHallMediaStorage>();
     var documentStorage = app.Services.GetRequiredService<Wesal.Application.Common.Interfaces.IDocumentStorage>();
     var identityDocumentStorage = Wesal.Infrastructure.Documents.IdentityDocumentStoreRegistration.DescribeIdentityDocumentStorage(configuration);
+    var messageAttachmentStorage = Wesal.Infrastructure.Documents.MessageAttachmentStoreRegistration.DescribeMessageAttachmentStorage(configuration);
     if (mediaStorage.Info is { IsLocal: true, LocalRoot: string localRoot })
     {
         app.UseStaticFiles(new StaticFileOptions
@@ -171,13 +172,17 @@ try
         });
     }
     ValidateHallMediaConfiguration(app.Environment, configuration);
-    WarnIfEphemeralUploadStorage(mediaStorage.Info, documentStorage.Root, identityDocumentStorage);
-    // Names the active provider and its bucket (never credentials) so a deploy that is
+    WarnIfEphemeralUploadStorage(mediaStorage.Info, documentStorage.Root, identityDocumentStorage, messageAttachmentStorage);
+    // Names the active providers and their buckets (never credentials) so a deploy that is
     // still on ephemeral storage is visible in the logs.
     Log.Information(
         "Identity document storage: {Provider} (bucket {Bucket}); served only through authenticated endpoints.",
         identityDocumentStorage.Provider,
         identityDocumentStorage.Bucket ?? "n/a");
+    Log.Information(
+        "Conversation attachment storage: {Provider} (bucket {Bucket}); attachments survive redeploys only when durable.",
+        messageAttachmentStorage.Provider,
+        messageAttachmentStorage.Bucket ?? "n/a");
 
     app.UseCors(CorsPolicyName);
 
@@ -267,7 +272,8 @@ static bool IsEphemeralUploadRoot(string root)
 static void WarnIfEphemeralUploadStorage(
     Wesal.Infrastructure.Halls.HallMediaStorageInfo mediaInfo,
     string documentRoot,
-    Wesal.Infrastructure.Documents.IdentityDocumentStorageInfo identityDocumentStorage)
+    Wesal.Infrastructure.Documents.IdentityDocumentStorageInfo identityDocumentStorage,
+    Wesal.Infrastructure.Documents.MessageAttachmentStorageInfo messageAttachments)
 {
     // R2-backed hall media is durable by construction: nothing to warn about.
     if (mediaInfo is { IsLocal: true, LocalRoot: string mediaRoot } && IsEphemeralUploadRoot(mediaRoot))
@@ -277,21 +283,24 @@ static void WarnIfEphemeralUploadStorage(
             mediaRoot);
     }
 
-    if (IsEphemeralUploadRoot(documentRoot))
+    if (!IsEphemeralUploadRoot(documentRoot))
     {
-        if (identityDocumentStorage.IsRemote)
-        {
-            Log.Warning(
-                "Conversation attachment storage is ephemeral ({Root}); attachments will NOT survive instance replacement/redeploy. Identity documents are unaffected ({IdentityProvider}).",
-                documentRoot,
-                identityDocumentStorage.Provider);
-        }
-        else
-        {
-            Log.Warning(
-                "Protected document storage is ephemeral ({Root}); identity documents and attachments will NOT survive instance replacement/redeploy. Set DocumentStorage:Provider=Supabase (DocumentStorage__Provider) with SupabaseStorage:Url / SupabaseStorage:SecretKey for durable identity documents.",
-                documentRoot);
-        }
+        return;
+    }
+
+    if (!messageAttachments.IsDurable)
+    {
+        Log.Warning(
+            "Conversation attachment storage is ephemeral ({Root}); attachments will NOT survive instance replacement/redeploy. Set DocumentStorage:Provider=Supabase (DocumentStorage__Provider) with SupabaseStorage:Url / SupabaseStorage:SecretKey and a '{Bucket}' private bucket for durable attachments.",
+            documentRoot,
+            "conversation-attachments");
+    }
+
+    if (!identityDocumentStorage.IsRemote)
+    {
+        Log.Warning(
+            "Identity document storage is ephemeral ({Root}); identity documents will NOT survive instance replacement/redeploy. Set DocumentStorage:Provider=Supabase (DocumentStorage__Provider) with SupabaseStorage:Url / SupabaseStorage:SecretKey for durable identity documents.",
+            documentRoot);
     }
 }
 

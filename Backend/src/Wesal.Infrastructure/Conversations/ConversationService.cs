@@ -20,6 +20,7 @@ public sealed class ConversationService : IConversationService
     private readonly ICurrentUserService _currentUser;
     private readonly IConversationNotifier _notifier;
     private readonly IDocumentStorage _documentStorage;
+    private readonly IMessageAttachmentStore _messageAttachmentStore;
 
     public ConversationService(
         IConversationRepository conversationRepository,
@@ -29,7 +30,8 @@ public sealed class ConversationService : IConversationService
         IHallRepository hallRepository,
         ICurrentUserService currentUser,
         IConversationNotifier notifier,
-        IDocumentStorage documentStorage)
+        IDocumentStorage documentStorage,
+        IMessageAttachmentStore? messageAttachmentStore = null)
     {
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
@@ -39,6 +41,9 @@ public sealed class ConversationService : IConversationService
         _currentUser = currentUser;
         _notifier = notifier;
         _documentStorage = documentStorage;
+        // Null only in legacy test/test-double constructions; production DI always
+        // supplies the registered store (Local no-op or durable Supabase).
+        _messageAttachmentStore = messageAttachmentStore ?? Documents.LocalMessageAttachmentStore.Instance;
     }
 
     public async Task<ConversationResponse> CreateConversationAsync(
@@ -588,6 +593,25 @@ public sealed class ConversationService : IConversationService
         var fullPath = Path.Combine(directory, fileName);
         await File.WriteAllBytesAsync(fullPath, attachment.Content, cancellationToken);
 
+        // The local copy is the hot read path; when a durable store is configured the
+        // same bytes are mirrored there so a redeploy/restart cannot orphan the row.
+        // A rejected durable write fails the whole send: recording a row whose bytes
+        // cannot survive is exactly the data loss this store exists to prevent.
+        if (_messageAttachmentStore.IsDurable)
+        {
+            try
+            {
+                await _messageAttachmentStore.StoreAsync(relativeUrl, attachment.Content, cancellationToken);
+            }
+            catch
+            {
+                // Whatever failed, try to remove both copies before surfacing the error so
+                // a rejected send never orphans bytes on either side.
+                await TryDeleteStoredAttachmentAsync(fullPath, relativeUrl, CancellationToken.None);
+                throw;
+            }
+        }
+
         var message = new Message
         {
             ConversationId = conversationId,
@@ -608,9 +632,9 @@ public sealed class ConversationService : IConversationService
         catch (Exception ex) when (IsUniqueViolation(ex) && normalizedRequestId is not null)
         {
             // Lost the race against a concurrent send with the same ClientRequestId: the
-            // other request persisted the file and the row, so drop our orphaned copy and
+            // other request persisted the file and the row, so drop our orphaned copies and
             // return the row that actually won instead of surfacing a unique-constraint error.
-            TryDeleteAttachmentFile(fullPath);
+            await TryDeleteStoredAttachmentAsync(fullPath, relativeUrl, CancellationToken.None);
 
             var duplicate = await _messageRepository.GetByClientRequestIdAsync(
                 senderUserId, normalizedRequestId, cancellationToken);
@@ -626,7 +650,7 @@ public sealed class ConversationService : IConversationService
         catch
         {
             // Any other failure: best-effort cleanup so a rejected insert never orphans a file.
-            TryDeleteAttachmentFile(fullPath);
+            await TryDeleteStoredAttachmentAsync(fullPath, relativeUrl, CancellationToken.None);
             throw;
         }
 
@@ -678,18 +702,42 @@ public sealed class ConversationService : IConversationService
 
         var fullPath = DocumentPath.ResolveFullPath(_documentStorage.Root, message.AttachmentUrl!);
 
-        if (fullPath is null || !File.Exists(fullPath))
+        var fileName = message.AttachmentFileName
+            ?? DocumentPath.FileNameFromUrl(message.AttachmentUrl!)
+            ?? "attachment";
+
+        // The local copy serves as the hot path (messages written before the durable
+        // store existed, and the current container's own uploads). When it is gone — a
+        // redeploy/restart wiped the ephemeral filesystem — fall back to the durable
+        // store so the row keeps resolving to real bytes. Both branches produce the same
+        // StoredDocument; the controller serves buffered bytes or a path identically.
+        if (fullPath is not null && File.Exists(fullPath))
         {
-            throw new NotFoundException("MessageAttachment", messageId);
+            return new StoredDocument
+            {
+                RelativeUrl = message.AttachmentUrl!,
+                FullPath = fullPath,
+                ContentType = message.AttachmentContentType ?? "application/octet-stream",
+                FileName = fileName
+            };
         }
 
-        return new StoredDocument
+        if (_messageAttachmentStore.IsDurable)
         {
-            RelativeUrl = message.AttachmentUrl!,
-            FullPath = fullPath,
-            ContentType = message.AttachmentContentType ?? "application/octet-stream",
-            FileName = message.AttachmentFileName ?? Path.GetFileName(fullPath)
-        };
+            var stored = await _messageAttachmentStore.TryReadAsync(message.AttachmentUrl!, cancellationToken);
+            if (stored?.Bytes is { Length: > 0 })
+            {
+                return new StoredDocument
+                {
+                    RelativeUrl = message.AttachmentUrl!,
+                    Content = stored.Bytes,
+                    ContentType = message.AttachmentContentType ?? "application/octet-stream",
+                    FileName = fileName
+                };
+            }
+        }
+
+        throw new NotFoundException("MessageAttachment", messageId);
     }
 
     /// <summary>
@@ -728,6 +776,24 @@ public sealed class ConversationService : IConversationService
         catch (Exception)
         {
             // Best-effort: an orphaned file is preferable to failing an already-persisted message.
+        }
+    }
+
+    /// <summary>
+    /// Best-effort removal of both attachment copies (local file and, when configured,
+    /// the durable object) so a failed send never orphans bytes on either side.
+    /// </summary>
+    private async Task TryDeleteStoredAttachmentAsync(string? fullPath, string relativeUrl, CancellationToken cancellationToken)
+    {
+        if (fullPath is not null)
+        {
+            TryDeleteAttachmentFile(fullPath);
+        }
+
+        if (_messageAttachmentStore.IsDurable)
+        {
+            // The store's DeleteAsync is itself best-effort (missing object is not an error).
+            await _messageAttachmentStore.DeleteAsync(relativeUrl, cancellationToken);
         }
     }
 

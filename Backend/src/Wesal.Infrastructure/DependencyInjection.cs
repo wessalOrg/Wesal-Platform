@@ -104,6 +104,8 @@ public static class DependencyInjection
 services.AddOptions<DocumentStorageOptions>().Bind(configuration.GetSection(DocumentStorageOptions.SectionName));
 services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddIdentityDocumentStore(configuration);
+        services.AddMessageAttachmentStore(configuration);
+        services.AddHostedService<ConversationAttachmentBackfillService>();
         services.AddScoped<IHallInitiationService, HallInitiationService>();
         services.AddScoped<IHallStatusTrackingService, HallStatusTrackingService>();
         services.AddScoped<IOwnerHallService, OwnerHallService>();

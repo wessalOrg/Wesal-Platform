@@ -38,7 +38,7 @@ public static class IdentityDocumentStoreRegistration
         var supabase = configuration.GetSection(SupabaseStorageOptions.SectionName)
             .Get<SupabaseStorageOptions>() ?? new SupabaseStorageOptions();
 
-        var provider = ResolveProvider(configuredProvider, supabase.IsConfigured);
+        var provider = ProtectedDocumentStoreProvider.Resolve(configuredProvider, supabase.IsConfigured);
 
         if (string.Equals(provider, ProviderSupabase, StringComparison.OrdinalIgnoreCase))
         {
@@ -71,29 +71,12 @@ public static class IdentityDocumentStoreRegistration
         var supabase = configuration.GetSection(SupabaseStorageOptions.SectionName)
             .Get<SupabaseStorageOptions>() ?? new SupabaseStorageOptions();
 
-        var provider = ResolveProvider(configuredProvider, supabase.IsConfigured);
+        var provider = ProtectedDocumentStoreProvider.Resolve(configuredProvider, supabase.IsConfigured);
         var remote = string.Equals(provider, ProviderSupabase, StringComparison.OrdinalIgnoreCase);
 
         return new IdentityDocumentStorageInfo(
             remote,
             provider!,
             remote ? supabase.IdentityDocumentsBucket : null);
-    }
-
-    private static string ResolveProvider(string? configuredProvider, bool supabaseConfigured)
-    {
-        if (string.IsNullOrWhiteSpace(configuredProvider))
-        {
-            return supabaseConfigured ? ProviderSupabase : ProviderLocal;
-        }
-
-        if (string.Equals(configuredProvider, ProviderLocal, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(configuredProvider, ProviderSupabase, StringComparison.OrdinalIgnoreCase))
-        {
-            return configuredProvider;
-        }
-
-        throw new InvalidOperationException(
-            $"Unknown DocumentStorage:Provider '{configuredProvider}'. Expected '{ProviderLocal}' or '{ProviderSupabase}'.");
     }
 }

@@ -106,4 +106,36 @@ public static class DocumentPath
 
         return string.Join('/', segments[1..]);
     }
+
+    /// <summary>
+    /// Object key for a persisted message-attachment URL inside the private
+    /// conversation-attachments bucket (<c>conversations/{conversationId}/attachments/{fileName}</c>).
+    /// Returns <c>null</c> unless the URL is exactly a conversation attachment path, so a
+    /// stored value can never address a different bucket prefix and <c>..</c> can never
+    /// escape into another key.
+    /// </summary>
+    public static string? ConversationAttachmentObjectKey(string relativeUrl)
+    {
+        if (string.IsNullOrWhiteSpace(relativeUrl) || !relativeUrl.StartsWith("/documents/conversations/", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        // documents / conversations / {conversationId} / attachments / {fileName}
+        var segments = relativeUrl.Trim('/').Split('/');
+        if (segments.Length != 5 || !string.Equals(segments[3], "attachments", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        foreach (var segment in segments)
+        {
+            if (segment.Length == 0 || segment is "." or "..")
+            {
+                return null;
+            }
+        }
+
+        return string.Join('/', segments[1..]);
+    }
 }

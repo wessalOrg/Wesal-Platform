@@ -187,10 +187,11 @@ public class ConversationsController : ControllerBase
         var document = await _conversationService.GetMessageAttachmentAsync(
             conversationId, messageId, cancellationToken);
 
-        // Final audit: same race-safe streaming as identity documents, so a file that
-        // vanished after the service check is a proper 404, never an unrelated 500.
+        // Final audit: race-safe streaming via whatever the store produced — a buffered object-store
+        // read (durable fallback) or a local path. A file that vanished after the service check
+        // is a proper 404, never an unrelated 500.
         return await Infrastructure.StoredDocumentResult.ServeAsync(
-            document.FullPath, document.ContentType, cancellationToken, document.FileName);
+            document, cancellationToken, document.FileName);
     }
 
     [HttpPost("api/v{version:apiVersion}/conversations/{conversationId:guid}/read")]

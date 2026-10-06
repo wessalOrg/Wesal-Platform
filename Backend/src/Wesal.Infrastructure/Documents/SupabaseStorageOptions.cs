@@ -21,6 +21,13 @@ public sealed class SupabaseStorageOptions
     /// </summary>
     public string IdentityDocumentsBucket { get; set; } = "identity-documents";
 
+    /// <summary>
+    /// Private bucket holding conversation message attachments. Same constraints as
+    /// <see cref="IdentityDocumentsBucket"/>: private, never exposed through static
+    /// files, reads only server-side after authorization.
+    /// </summary>
+    public string ConversationAttachmentsBucket { get; set; } = "conversation-attachments";
+
     public int TimeoutSeconds { get; set; } = 30;
 
     public bool IsConfigured =>
