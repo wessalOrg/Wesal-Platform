@@ -170,4 +170,76 @@ public sealed class GazanDialectShould
     {
         Assert.Equal(AiHallQuestion.Price, AiHallQuestionClassifier.Classify("قديش سعر القاعة؟"));
     }
+
+    [Theory]
+    [InlineData("طب كيف احجز صالة او مصور")]
+    [InlineData("بدي احجز قاعة ومصور")]
+    public async Task PhotographerMention_DoesNotReturnPhotosAnswer(string phrase)
+    {
+        var response = await CreateHowTo().AskHowToAsync(phrase, "ar");
+        Assert.NotEqual("photos", response.Category);
+    }
+
+    public static TheoryData<string> CapabilitiesPhrasings => new()
+    {
+        "بتقدموا انتو",
+        "شو خدماتكم؟",
+        "شو بتقدمو؟",
+    };
+
+    [Theory]
+    [MemberData(nameof(CapabilitiesPhrasings))]
+    public async Task CapabilitiesDialect_ReturnsCapabilitiesAnswer(string phrase)
+    {
+        var response = await CreateHowTo().AskHowToAsync(phrase, "ar");
+        Assert.Equal("capabilities", response.Category);
+    }
+
+    public static TheoryData<string> OrthographyVariants => new()
+    {
+        "أبحث عن قاعة",
+        "ابحث عن قاعة",
+        "فرجيني صورة القاعة",
+        "بدي ألغي الحجز",
+    };
+
+    [Theory]
+    [MemberData(nameof(OrthographyVariants))]
+    public async Task OrthographyVariants_DoNotFallToGeneric(string phrase)
+    {
+        var response = await CreateHowTo().AskHowToAsync(phrase, "ar");
+        Assert.NotEqual("general", response.Category);
+    }
+
+    public static TheoryData<string> MonthHintPhrasings => new()
+    {
+        "بشهر 10 بدي",
+        "أكتوبر",
+        "بشهر عشرة",
+    };
+
+    [Theory]
+    [MemberData(nameof(MonthHintPhrasings))]
+    public async Task MonthWithoutDay_AsksForExactDay(string phrase)
+    {
+        var response = await CreateHowTo().AskHowToAsync(phrase, "ar");
+        Assert.Equal("month-hint", response.Category);
+    }
+
+    [Theory]
+    [InlineData("استعرض الصالات")]
+    [InlineData("اعرضلي القاعات")]
+    public async Task ShowHallsDialect_ReturnsSearchAnswer(string phrase)
+    {
+        var response = await CreateHowTo().AskHowToAsync(phrase, "ar");
+        Assert.Equal("search", response.Category);
+    }
+
+    [Fact]
+    public async Task FamousWord_IsNotMonthHint()
+    {
+        // "اشهر" (most famous) contains "شهر" but must not trigger month-hint.
+        var response = await CreateHowTo().AskHowToAsync("شو اشهر صالة بغزة؟", "ar");
+        Assert.NotEqual("month-hint", response.Category);
+    }
 }
