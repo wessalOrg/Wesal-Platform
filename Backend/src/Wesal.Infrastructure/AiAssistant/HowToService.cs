@@ -252,8 +252,31 @@ public sealed partial class HowToService : IHowToService
 
     private (string Answer, string Category) MatchArabic(string question)
     {
-        if (ContainsAny(question, "بحث", "ابحث", "أبحث", "تصفية", "about search", "about filter", "search", "find", "browse", "filter"))
+        // Photo gallery questions come before search so that "فرجيني صور
+        // القاعة" (show me the photos) does not get a search answer.
+        if (ContainsAny(question, "صور", "صورها", "صوره", "الصور", "معرض الصور", "about photos", "about gallery", "about pictures"))
+            return ("صور كل قاعة موجودة في معرض الصور بصفحة تفاصيلها: افتح القاعة واضغط على أي صورة عشان تشوفها بالحجم الكامل وتتنقل بينهم. إذا الصور ما ظهرت عندك جرّب تحدّث الصفحة أو تواصل معنا من مركز المساعدة.", "photos");
+
+        if (ContainsAny(question, "بحث", "ابحث", "أبحث", "دور", "دورلي", "بدور", "فرجيني", "ورجيني", "وريني", "جيبلي", "هات", "هاتلي", "بلاقي", "الاقي", "وين بلاقي", "شو عندكم", "تصفية", "about search", "about filter", "search", "find", "browse", "filter"))
             return ("للبحث عن قاعات: انتقل إلى صفحة الاستكشاف والبحث من شريط التنقل. يمكنك تصفية القاعات حسب المنطقة (شمال غزة، غزة، الوسطى، جنوب المنطقة)، المنطقة الفئة، التاريخ، أو اسم القاعة. يمكنك الجمع بين عدة مرشحات. فقط القاعات المعتمدة تظهر في النتائج.", "search");
+
+        // Cancellation / backing out comes BEFORE booking: "بدي الغي الحجز"
+        // contains حجز and must not receive booking instructions.
+        if ((ContainsAny(question, "إلغاء", "الغاء", "الغي", "الغيه", "يلغي", "بطلت", "بلاش") && ContainsAny(question, "حجز", "حجزي", "الحجز"))
+            || (ContainsAny(question, "مش", "ما") && ContainsAny(question, "بدي") && ContainsAny(question, "حجز", "احجز")))
+            return ("تمام، لا مشكلة! إذا عندك طلب حجز معلق وبدك تلغيه: روح على حجوزاتك واختار الطلب المعلق والغيه. بس انتبه: بعد ما صاحب القاعة يقبل الطلب أو يرفضه ما بتقدر تلغيه، وساعتها تواصل معه عبر المحادثة. وإذا غيّرت رأيك وحابب تحجز قاعة ثانية، أنا جاهز أساعدك.", "booking-cancel");
+
+        // "ليش الحجز مرفوض؟" needs the reason, not booking instructions.
+        if (ContainsAny(question, "ليش", "ليه", "لماذا") && ContainsAny(question, "مرفوض", "رفض", "انرفض", "الحجز", "حجزي"))
+            return ("سبب الرفض بيوصلك في الإشعارات مع تفاصيل طلب الحجز. افتح صفحة حجوزاتك أو الإشعارات وشوف ملاحظة صاحب القاعة، وإذا بدك توضيح أكثر تواصل معه مباشرة عبر المحادثة من صفحة القاعة.", "booking-rejected");
+
+        // Gazan price phrasings: قديش/بقديش/شو سعر. Before booking so that
+        // "بقديش الحجز؟" answers the price instead of booking steps.
+        if (ContainsAny(question, "قديش", "بقديش", "كم سعر", "كم ثمن", "شو سعر", "شو اسعار", "about price", "about cost", "about fee"))
+            return ("أسعار القاعات بتختلف من قاعة لثانية حسب السعة والخدمات والفترة. افتح صفحة تفاصيل أي قاعة وشوف قسم الأسعار والفترات، وبتقدر تقارن بين كذا قاعة من صفحة البحث. إذا بدك مساعدة باختيار قاعة بسعر معين احكيلي عن ميزانيتك والمنطقة.", "pricing");
+
+        if (ContainsAny(question, "توفر", "تقويم", "متاح", "فاضي", "فاضيه", "فاضية", "شاغر", "شاغره", "فترات", "ساعة", "ساعه", "about availability", "about calendar", "about available", "about slot", "about hour"))
+            return ("للتحقق من التوفر: افتح صفحة تفاصيل القاعة واختر التاريخ. تعرض الصفحة الفترات المتاحة بالساعة في ذلك اليوم. الفترات المتاحة باللون الأخضر والمحجوزة باللون الأحمر، أو تُخفى إذا اختار صاحب القاعة ذلك.", "availability");
 
         if (ContainsAny(question, "حجز", "احجز", "حجزت", "about booking", "about reserve", "book", "reserve", "booking"))
             return ("لحجز قاعة: افتح صفحة تفاصيل القاعة واضغط على زر حجز. اختر التاريخ المفضل، ثم اختر فترة ساعة أو أكثر متتالية. أرسل طلب الحجز وسيراجعه صاحب القاعة. تحتاج إلى حساب مسجل للحجز.", "booking");
@@ -267,17 +290,22 @@ public sealed partial class HowToService : IHowToService
         if (ContainsAny(question, "تواصل", "مراسلة", "اتصال", "صاحب القاعة", "صاحب الصالة", "مالك القاعة", "about contact", "about message", "about owner", "about chat"))
             return ("للتواصل مع صاحب القاعة: افتح صفحة تفاصيل القاعة وأنت مسجل الدخول. اضغط على زر التواصل مع صاحب القاعة بجانب زر الحجز. سيفتح لك محادثة مع الصاحب حيث يمكنك السؤال عن الأسعار أو التفاصيل أو أي معلومات أخرى.", "messaging");
 
-        if (ContainsAny(question, "تسجيل", "حساب", "إنشاء حساب", "about register", "about sign", "about create account", "about account"))
+        if (ContainsAny(question, "تسجيل", "حساب", "إنشاء حساب", "اعمل حساب", "سوي حساب", "about register", "about sign", "about create account", "about account"))
             return ("لإنشاء حساب: اضغط على إنشاء حساب في شريط التنقل. اختر بين المستخدم العادي (لحجز، تقييم، تعليق، مراسلة) أو صاحب القاعة (لإضافة وإدارة قاعاتك). أكمل بياناتك: الاسم الكامل، البريد الإلكتروني، رقم الهاتف، كلمة المرور.", "registration");
 
-        if (ContainsAny(question, "دخول", "تسجيل دخول", "about login", "about sign in", "about log in"))
+        if (ContainsAny(question, "دخول", "تسجيل دخول", "سجل دخول", "فوت", "فوتي", "about login", "about sign in", "about log in"))
             return ("لتسجيل الدخول: اضغط على تسجيل الدخول في شريط التنقل. أدخل البريد الإلكتروني أو رقم الهاتف المسجل مع كلمة مرورك. سيتم توجيهك إلى الصفحة الرئيسية مع الوصول الكامل إلى ميزات حسابك.", "login");
 
         if (ContainsAny(question, "تفاصيل القاعة", "معلومات القاعة", "صورة", "معرض", "مرافق", "سعة", "about hall detail", "about hall info", "about photo", "about gallery", "about ameniti", "about capacity"))
             return ("لعرض تفاصيل القاعة: اضغط على أي بطاقة قاعة من نتائج البحث أو الصفحة الرئيسية. صفحة التفاصيل تضم معرض الصور، الوصف، السعة، الموقع، معلومات الاتصال، المرافق المتوفرة، الأسعار، وتقويم التوفر التفاعلي.", "hall-details");
 
-        if (ContainsAny(question, "توفر", "تقويم", "متاح", "فترات", "ساعة", "about availability", "about calendar", "about available", "about slot", "about hour"))
-            return ("للتحقق من التوفر: افتح صفحة تفاصيل القاعة واختر التاريخ. تعرض الصفحة الفترات المتاحة بالساعة في ذلك اليوم. الفترات المتاحة باللون الأخضر والمحجوزة باللون الأحمر، أو تُخفى إذا اختار صاحب القاعة ذلك.", "availability");
+        // Capacity questions: the live number lives on the hall details page.
+        if (ContainsAny(question, "سعه", "سعتها", "سعته", "بتسع", "بتتسع", "تتسع", "كم شخص", "كم نفر", "كم ضيف", "كم واحد", "عدد الاشخاص", "عدد الضيوف", "about capacity", "about seats"))
+            return ("سعة كل قاعة (كم شخص بتسع) مكتوبة في صفحة تفاصيلها مع باقي المعلومات. افتح القاعة اللي عجبتك وشوف السعة، وإذا بدك قاعة كبيرة لمناسبة معينة احكيلي العدد التقريبي والمنطقة وبساعدك تدور.", "capacity");
+
+        // Opening / support hours: point to the Help Center, never invent hours.
+        if (ContainsAny(question, "دوام", "دوامكم", "ساعات العمل", "ساعات الدوام", "بتفتحو", "بتسكرو", "وينتا بتفتحو", "about hours", "about working hours"))
+            return ("بتقدر تتواصل مع فريق وصال في أي وقت من صفحة مركز المساعدة، وطلبات الحجز والرسائل بتنبعت لأصحاب القاعات مباشرة وبيردوا عليك من حساباتهم. لمواعيد قاعة معينة (وينتا بتفتح أبوابها للمناسبات) شوف صفحة تفاصيلها أو اسأل صاحبها عبر المحادثة.", "hours");
 
         if (ContainsAny(question, "الصفحة الرئيسية", "مقدمة", "about featured", "about homepage", "about landing", "about home"))
             return ("الصفحة الرئيسية تُعرّف وصال وتعرض 6 قاعات معتمدة مميزة وقسم كيفية العمل. يمكنك تصفية القاعات المميزة حسب المنطقة. اضغط على بطاقة أي قاعة لعرض تفاصيلها الكاملة. زر تصفح المزيد ينقلك إلى قائمة القاعات الكاملة.", "homepage");
@@ -297,8 +325,10 @@ public sealed partial class HowToService : IHowToService
         if (ContainsAny(question, "كيف أستخدم", "كيف يمكنني", "مساعدة", "دليل", "تعليم", "ما هو وصال", "عن وصال", "عن هذا الموقع", "about how to use", "about how do i", "about help", "about guide", "about tutorial", "about what can", "about what is wesal", "about about wesal", "about about this site"))
             return ("وصال هو منصة حجز قاعات أفراح في غزة. يمكنك تصفح القاعات المعتمدة، البحث حسب المنطقة والتاريخ، عرض تفاصيل القاعات والتوفر، حجز القاعات، تقييم وتعليق على القاعات، والتواصل مع أصحاب القاعات مباشرة. سجل مجاناً للوصول إلى ميزات الحجز والتعليق والتقييم والمراسلة.", "general");
 
-        if (ContainsAny(question, "إلغاء", "الغاء", "about cancel", "about cancellation"))
-            return ("لإلغاء طلب حجز ما دام معلقاً: اذهب إلى حجوزاتك واختر الطلب المعلق الذي تريد إلغائه. بمجرد قبول صاحب القاعة طلبك أو رفضه، لا يمكن إلغاؤه بعد ذلك. تواصل مع صاحب القاعة عبر المحادثة لمناقشة أي تغييرات.", "booking");
+        // Greetings and thanks come last (before the fallback) so a greeting
+        // combined with a real request ("مرحبا بدي احجز") still routes by intent.
+        if (ContainsAny(question, "مرحبا", "أهلا", "اهلا", "اهلين", "سلام", "صباح الخير", "مسا الخير", "مساء الخير", "يسلمو", "يسلموا", "شكرا", "مشكور", "مشكوره", "يعطيك العافيه", "هلا", "about hello", "about hi", "about thanks", "about thank"))
+            return ("أهلاً وسهلاً فيك! أنا مبروك، مساعد وصال. بقدر أساعدك تلاقي قاعة أفراح مناسبة: احكيلي عن المنطقة أو التاريخ أو السعر اللي ببالك، أو اسألني عن الحجز والتسجيل والتواصل مع أصحاب القاعات. شو بتحب تعرف؟", "greeting");
 
         return ("يمكنني مساعدتك في كيفية استخدام وصال. يمكنك السؤال عن: البحث عن قاعات، حجز قاعة، عرض تفاصيل القاعة، تقييم وتعليق على القاعات، التواصل مع أصحاب القاعات، التسجيل، تسجيل الدخول، تبديل اللغة، والمزيد. ماذا تريد أن تعرف؟", "general");
     }
@@ -319,11 +349,13 @@ public sealed partial class HowToService : IHowToService
                 "mohammed shamaa", "mohammad shamaa", "shamaa"))
             return true;
 
-        // Arabic intent (منشئ، من أنشأ، من صنع، من طور، من بنى، صانع، مطور، قائد الفريق، محمد شمعة، فريق وصال)
+        // Arabic intent (MSA + Gazan: مين عملك، احكيلي عن حالك، عرفني عليك)
         if (ContainsAny(question,
                 "منشئ", "من أنشأ", "المنشئ", "منشئو", "صانع", "الصانع", "من صنع", "من طور",
                 "المطور", "مطور", "مطورو", "من بنى", "من أعد", "فريق وصال", "القائمين",
-                "محمد شمعة", "محمد شما", "شمعة", "قائد الفريق"))
+                "محمد شمعة", "محمد شما", "شمعة", "قائد الفريق",
+                "مين عملك", "مين سواك", "مين صنعك", "مين صانعك", "مين مطورك", "مين انت", "شو انت",
+                "احكيلي عن حالك", "احكي عن حالك", "عرفني عليك", "عرفني على حالك", "مين مبروك", "شو مبروك"))
             return true;
 
         return false;

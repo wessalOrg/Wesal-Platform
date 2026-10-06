@@ -86,7 +86,10 @@ public static class AiSupportIntentDetector
     [
         new(@"(?:الدعم|دعم)\s*(?:ال)?(?:فني|تقني|وصال)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
         new(@"(?:بدي|ابغى|اريد|ابي|احتاج|محتاج)\s+(?:ال)?(?:دعم|دعما)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
-        new(@"(?:رقم|واتس(?:اب)?|ايميل|بريد|هاتف|تلفون|جوال)\s+(?:ال)?(?:وصال|دعم|فريق)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
+        new(@"(?:رقم|واتس(?:اب)?|ايميل|بريد|هاتف|تلفون|تلفونكم|جوال|جوالكم)\s+(?:ال)?(?:وصال|دعم|فريق)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
+        // Gazan "your number" without naming Wesal ("اعطيني رقمكم", "وين رقم تلفونكم").
+        // The OwnerContact guard above still excludes hall-owner numbers.
+        new(@"(?:رقمكم|رقمك|تلفونكم|تلفونك|جوالكم|جوالك|واتسابكم)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
         new(@"(?:تواصل|اتواصل|اكلم|احكي|اتصل)\s+(?:مع|ب|عبر)?\s*(?:ال)?(?:وصال|دعم|فريق\s+وصال|فريق\s+الدعم|الاداره)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
         new(@"(?:مشكله|مشاكل|عطل|خلل|خطا)\s+(?:في|ب|عندي\s+في)?\s*(?:ال)?(?:موقع|تطبيق|منصه|وصال|حسابي)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
         new(@"عندي\s+مشكله", RegexOptions.Compiled | RegexOptions.CultureInvariant),
@@ -138,7 +141,7 @@ public enum AiHallQuestion
 public static class AiHallQuestionClassifier
 {
     private static readonly Regex Availability = AiText.AnyWord([
-        "متاح", "متاحه", "متوفر", "متوفره", "فاضيه", "فاضي", "شاغره", "محجوزه", "محجوز", "available", "availability", "free", "booked"
+        "متاح", "متاحه", "متوفر", "متوفره", "فاضيه", "فاضي", "شاغره", "شاغر", "فارغه", "فارغ", "محجوزه", "محجوز", "available", "availability", "free", "booked"
     ]);
 
     private static readonly Regex HowToBook = new(
@@ -150,7 +153,7 @@ public static class AiHallQuestionClassifier
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Price = AiText.AnyWord([
-        "سعر", "سعرها", "سعره", "اسعار", "ثمن", "تكلفه", "تكلفتها", "بكم", "price", "cost", "costs", "pricing", "fee", "fees"
+        "سعر", "سعرها", "سعره", "اسعار", "ثمن", "تكلفه", "تكلفتها", "بكم", "قديش", "بقديش", "price", "cost", "costs", "pricing", "fee", "fees"
     ]);
 
     private static readonly Regex HowMuch = new(@"كم\s+(?:سعر|ثمن|تكلف|بتكلف|بدفع)|how\s+much", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -160,7 +163,7 @@ public static class AiHallQuestionClassifier
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Location = new(
-        @"(?:وين|فين|مكان|موقع|عنوان|منطقه|بتقع|تقع|location|address|where|located|area)",
+        AiText.Bounded(@"وين|فين|مكان|موقع|عنوان|منطقه|بتقع|تقع|location|address|where|located|area"),
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Services = new(
@@ -168,7 +171,7 @@ public static class AiHallQuestionClassifier
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Photos = new(
-        @"(?:صور|صورها|صوره|معرض|photos?|pictures?|images?|gallery)",
+        AiText.Bounded(@"صور|صورها|صوره|معرض|photos?|pictures?|images?|gallery"),
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Description = new(
@@ -176,7 +179,7 @@ public static class AiHallQuestionClassifier
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Details = new(
-        @"(?:تفاصيل|احكيلي|حكيلي|عرفني|اخبرني|معلومات|عنها|details|tell\s+me|about\s+(?:it|this|the)|info)",
+        @"(?:تفاصيل|احكيلي|حكيلي|عرفني|اخبرني|خبرني|فهمني|اشرحلي|اشرح|معلومات|عنها|details|tell\s+me|about\s+(?:it|this|the)|info)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex PlatformWords = AiText.AnyWord([
@@ -266,7 +269,7 @@ public static class AiReferenceResolver
         // demonstratives / pronoun-ish
         "هذه", "هاي", "هاذي", "هذي", "هادي", "هاده", "هاد", "هاذه", "الحاليه", "الحالي", "this", "that", "the", "it", "a", "an", "my",
         // question / filler words that follow "hall" in questions
-        "كم", "شو", "ايش", "وين", "متاحه", "متاح", "فيها", "فيه", "في", "ب", "بكم", "سعرها", "سعر", "سعتها", "هل", "مين", "كيف",
+        "كم", "شو", "ايش", "وين", "وينتا", "ليش", "قديش", "مين", "متاحه", "متاح", "فيها", "فيه", "في", "ب", "بكم", "سعرها", "سعر", "سعتها", "هل", "كيف", "دورلي", "فرجيني", "هات", "بدي", "بلاقي",
         "available", "price", "capacity", "has", "have", "is", "are", "for", "in", "at", "near", "how", "what", "where", "which", "does",
         // generic "hall" qualifiers
         "افراح", "الافراح", "اعراس", "مناسبات", "wedding", "weddings", "event", "events"
