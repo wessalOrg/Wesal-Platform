@@ -162,8 +162,12 @@ public sealed partial class HowToService : IHowToService
             DateTime.UtcNow);
     }
 
-    private static string Normalize(string input) =>
-        WhitespaceRegex().Replace(input.Trim().ToLowerInvariant(), " ");
+    /// <summary>
+    /// Shared normalization (AiText): folds hamza/alef forms, ta marbuta,
+    /// alef maqsura and diacritics, so keyword lists are written in the folded
+    /// form and match "أبحث/ابحث"، "صورة/صوره"، "قيّم/قيم" alike.
+    /// </summary>
+    private static string Normalize(string input) => AiText.Normalize(input);
 
     /// <summary>
     /// When the top knowledge hit is the official support-contact article and the
@@ -250,19 +254,32 @@ public sealed partial class HowToService : IHowToService
         return ("I can help you with how to use Wesal. You can ask about: searching for halls, booking a hall, viewing hall details, rating and commenting on halls, contacting hall owners, registration, login, language switching, and more. What would you like to know?", "general");
     }
 
+    /// <summary>
+    /// A month was named without a day ("بشهر 10", "أكتوبر"): availability needs
+    /// an exact date, so ask for the day instead of guessing or falling back to
+    /// the generic answer. Month names are word-bounded ("اب" must not match
+    /// inside "باب"/"جواب"، and bare "شهر" must not match "اشهر").
+    /// </summary>
+    private static readonly Regex MonthHint = new(
+        AiText.Bounded(@"بشهر|بالشهر|الشهر|هالشهر|بهالشهر|يناير|كانون الثاني|فبراير|شباط|مارس|اذار|ابريل|نيسان|مايو|ماي|ايار|يونيو|حزيران|يوليو|تموز|اغسطس|اب|سبتمبر|ايلول|اكتوبر|تشرين|نوفمبر|تشرين الثاني|ديسمبر|كانون|كانون اول|كانون الاول|شهر\s+\d|january|february|march|april|may|june|july|august|september|october|november|december"),
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private (string Answer, string Category) MatchArabic(string question)
     {
         // Photo gallery questions come before search so that "فرجيني صور
         // القاعة" (show me the photos) does not get a search answer.
-        if (ContainsAny(question, "صور", "صورها", "صوره", "الصور", "معرض الصور", "about photos", "about gallery", "about pictures"))
+        // Guard: "مصور/تصوير/فوتوغراف" contain "صور" as a substring but mean
+        // photographer, which Wesal does not offer (unavailable topic).
+        if (ContainsAny(question, "صور", "صورها", "صوره", "الصور", "معرض الصور", "about photos", "about gallery", "about pictures")
+            && !ContainsAny(question, "مصور", "مصورين", "مصوره", "تصوير", "فوتوغراف", "فيديو"))
             return ("صور كل قاعة موجودة في معرض الصور بصفحة تفاصيلها: افتح القاعة واضغط على أي صورة عشان تشوفها بالحجم الكامل وتتنقل بينهم. إذا الصور ما ظهرت عندك جرّب تحدّث الصفحة أو تواصل معنا من مركز المساعدة.", "photos");
 
-        if (ContainsAny(question, "بحث", "ابحث", "أبحث", "دور", "دورلي", "بدور", "فرجيني", "ورجيني", "وريني", "جيبلي", "هات", "هاتلي", "بلاقي", "الاقي", "وين بلاقي", "شو عندكم", "تصفية", "about search", "about filter", "search", "find", "browse", "filter"))
+        if (ContainsAny(question, "بحث", "ابحث", "دور", "دورلي", "بدور", "فرجيني", "ورجيني", "وريني", "جيبلي", "هات", "هاتلي", "بلاقي", "الاقي", "وين بلاقي", "شو عندكم", "استعرض", "استعراض", "اعرض", "اعرضلي", "عرض", "شوف", "شوفلي", "تصفيه", "about search", "about filter", "search", "find", "browse", "filter"))
             return ("للبحث عن قاعات: انتقل إلى صفحة الاستكشاف والبحث من شريط التنقل. يمكنك تصفية القاعات حسب المنطقة (شمال غزة، غزة، الوسطى، جنوب المنطقة)، المنطقة الفئة، التاريخ، أو اسم القاعة. يمكنك الجمع بين عدة مرشحات. فقط القاعات المعتمدة تظهر في النتائج.", "search");
 
         // Cancellation / backing out comes BEFORE booking: "بدي الغي الحجز"
         // contains حجز and must not receive booking instructions.
-        if ((ContainsAny(question, "إلغاء", "الغاء", "الغي", "الغيه", "يلغي", "بطلت", "بلاش") && ContainsAny(question, "حجز", "حجزي", "الحجز"))
+        if ((ContainsAny(question, "الغاء", "الغي", "الغيه", "يلغي", "بطلت", "بلاش") && ContainsAny(question, "حجز", "حجزي", "الحجز"))
             || (ContainsAny(question, "مش", "ما") && ContainsAny(question, "بدي") && ContainsAny(question, "حجز", "احجز")))
             return ("تمام، لا مشكلة! إذا عندك طلب حجز معلق وبدك تلغيه: روح على حجوزاتك واختار الطلب المعلق والغيه. بس انتبه: بعد ما صاحب القاعة يقبل الطلب أو يرفضه ما بتقدر تلغيه، وساعتها تواصل معه عبر المحادثة. وإذا غيّرت رأيك وحابب تحجز قاعة ثانية، أنا جاهز أساعدك.", "booking-cancel");
 
@@ -272,7 +289,7 @@ public sealed partial class HowToService : IHowToService
 
         // Gazan price phrasings: قديش/بقديش/شو سعر. Before booking so that
         // "بقديش الحجز؟" answers the price instead of booking steps.
-        if (ContainsAny(question, "قديش", "بقديش", "كم سعر", "كم ثمن", "شو سعر", "شو اسعار", "about price", "about cost", "about fee"))
+        if (ContainsAny(question, "قديش", "بقديش", "كم سعر", "كم ثمن", "شو سعر", "شو اسعار", "سعرها", "سعره", "الاسعار", "اسعار", "about price", "about cost", "about fee"))
             return ("أسعار القاعات بتختلف من قاعة لثانية حسب السعة والخدمات والفترة. افتح صفحة تفاصيل أي قاعة وشوف قسم الأسعار والفترات، وبتقدر تقارن بين كذا قاعة من صفحة البحث. إذا بدك مساعدة باختيار قاعة بسعر معين احكيلي عن ميزانيتك والمنطقة.", "pricing");
 
         if (ContainsAny(question, "توفر", "تقويم", "متاح", "فاضي", "فاضيه", "فاضية", "شاغر", "شاغره", "فترات", "ساعة", "ساعه", "about availability", "about calendar", "about available", "about slot", "about hour"))
@@ -281,39 +298,44 @@ public sealed partial class HowToService : IHowToService
         if (ContainsAny(question, "حجز", "احجز", "حجزت", "about booking", "about reserve", "book", "reserve", "booking"))
             return ("لحجز قاعة: افتح صفحة تفاصيل القاعة واضغط على زر حجز. اختر التاريخ المفضل، ثم اختر فترة ساعة أو أكثر متتالية. أرسل طلب الحجز وسيراجعه صاحب القاعة. تحتاج إلى حساب مسجل للحجز.", "booking");
 
-        if (ContainsAny(question, "تقييم", "قيّم", "نجمة", "about rating", "about rate", "about star"))
+        if (ContainsAny(question, "تقييم", "قيم", "نجمه", "about rating", "about rate", "about star"))
             return ("لتقييم قاعة: افتح صفحة تفاصيل القاعة وأنت مسجل الدخول كمستخدم عادي. سترى عناصر النجوم الخمسة. اضغط على عدد النجوم (1-5) لإرسال تقييمك. يمكنك تحديث تقييمك لاحقاً. أصحاب القاعات لا يمكنهم تقييم القاعات.", "ratings");
 
         if (ContainsAny(question, "تعليق", "اكتب تعليق", "about comment", "about review", "about feedback"))
             return ("لإضافة تعليق على قاعة: افتح صفحة تفاصيل القاعة وأنت مسجل الدخول. اختر قسم التعليقات واكتب تعليقك. أرسله وسيظهر للجميع مع اسمك وتاريخه. أصحاب القاعات لا يمكنهم كتابة تعليقات.", "comments");
 
-        if (ContainsAny(question, "تواصل", "مراسلة", "اتصال", "صاحب القاعة", "صاحب الصالة", "مالك القاعة", "about contact", "about message", "about owner", "about chat"))
+        if (ContainsAny(question, "تواصل", "مراسله", "اتصال", "صاحب القاعه", "صاحب الصاله", "مالك القاعه", "about contact", "about message", "about owner", "about chat"))
             return ("للتواصل مع صاحب القاعة: افتح صفحة تفاصيل القاعة وأنت مسجل الدخول. اضغط على زر التواصل مع صاحب القاعة بجانب زر الحجز. سيفتح لك محادثة مع الصاحب حيث يمكنك السؤال عن الأسعار أو التفاصيل أو أي معلومات أخرى.", "messaging");
 
-        if (ContainsAny(question, "تسجيل", "حساب", "إنشاء حساب", "اعمل حساب", "سوي حساب", "about register", "about sign", "about create account", "about account"))
+        if (ContainsAny(question, "تسجيل", "حساب", "انشاء حساب", "اعمل حساب", "سوي حساب", "about register", "about sign", "about create account", "about account"))
             return ("لإنشاء حساب: اضغط على إنشاء حساب في شريط التنقل. اختر بين المستخدم العادي (لحجز، تقييم، تعليق، مراسلة) أو صاحب القاعة (لإضافة وإدارة قاعاتك). أكمل بياناتك: الاسم الكامل، البريد الإلكتروني، رقم الهاتف، كلمة المرور.", "registration");
 
         if (ContainsAny(question, "دخول", "تسجيل دخول", "سجل دخول", "فوت", "فوتي", "about login", "about sign in", "about log in"))
             return ("لتسجيل الدخول: اضغط على تسجيل الدخول في شريط التنقل. أدخل البريد الإلكتروني أو رقم الهاتف المسجل مع كلمة مرورك. سيتم توجيهك إلى الصفحة الرئيسية مع الوصول الكامل إلى ميزات حسابك.", "login");
 
-        if (ContainsAny(question, "تفاصيل القاعة", "معلومات القاعة", "صورة", "معرض", "مرافق", "سعة", "about hall detail", "about hall info", "about photo", "about gallery", "about ameniti", "about capacity"))
+        if (ContainsAny(question, "تفاصيل القاعه", "معلومات القاعه", "صوره", "معرض", "مرافق", "سعه", "about hall detail", "about hall info", "about photo", "about gallery", "about ameniti", "about capacity"))
             return ("لعرض تفاصيل القاعة: اضغط على أي بطاقة قاعة من نتائج البحث أو الصفحة الرئيسية. صفحة التفاصيل تضم معرض الصور، الوصف، السعة، الموقع، معلومات الاتصال، المرافق المتوفرة، الأسعار، وتقويم التوفر التفاعلي.", "hall-details");
 
         // Capacity questions: the live number lives on the hall details page.
         if (ContainsAny(question, "سعه", "سعتها", "سعته", "بتسع", "بتتسع", "تتسع", "كم شخص", "كم نفر", "كم ضيف", "كم واحد", "عدد الاشخاص", "عدد الضيوف", "about capacity", "about seats"))
             return ("سعة كل قاعة (كم شخص بتسع) مكتوبة في صفحة تفاصيلها مع باقي المعلومات. افتح القاعة اللي عجبتك وشوف السعة، وإذا بدك قاعة كبيرة لمناسبة معينة احكيلي العدد التقريبي والمنطقة وبساعدك تدور.", "capacity");
 
+        // A month without a day ("بشهر 10"، "أكتوبر"): availability needs an
+        // exact date, so ask for the day instead of guessing.
+        if (MonthHint.IsMatch(question))
+            return ("تمام، بشهر مناسب! بس عشان أفحصلك التوفر لازم يوم محدد — بأي يوم بالضبط؟ (مثال: 15/10) وإذا حكيتلي المنطقة وعدد الضيوف بدوّرلك على أنسب القاعات المتاحة بهاليوم.", "month-hint");
+
         // Opening / support hours: point to the Help Center, never invent hours.
         if (ContainsAny(question, "دوام", "دوامكم", "ساعات العمل", "ساعات الدوام", "بتفتحو", "بتسكرو", "وينتا بتفتحو", "about hours", "about working hours"))
             return ("بتقدر تتواصل مع فريق وصال في أي وقت من صفحة مركز المساعدة، وطلبات الحجز والرسائل بتنبعت لأصحاب القاعات مباشرة وبيردوا عليك من حساباتهم. لمواعيد قاعة معينة (وينتا بتفتح أبوابها للمناسبات) شوف صفحة تفاصيلها أو اسأل صاحبها عبر المحادثة.", "hours");
 
-        if (ContainsAny(question, "الصفحة الرئيسية", "مقدمة", "about featured", "about homepage", "about landing", "about home"))
+        if (ContainsAny(question, "الصفحه الرييسيه", "مقدمه", "about featured", "about homepage", "about landing", "about home"))
             return ("الصفحة الرئيسية تُعرّف وصال وتعرض 6 قاعات معتمدة مميزة وقسم كيفية العمل. يمكنك تصفية القاعات المميزة حسب المنطقة. اضغط على بطاقة أي قاعة لعرض تفاصيلها الكاملة. زر تصفح المزيد ينقلك إلى قائمة القاعات الكاملة.", "homepage");
 
-        if (ContainsAny(question, "صاحب القاعة", "إضافة قاعة", "إدارة قاعة", "لوحة التحكم", "about hall owner", "about add hall", "about manage hall", "about dashboard"))
+        if (ContainsAny(question, "صاحب القاعه", "اضافه قاعه", "اداره قاعه", "لوحه التحكم", "about hall owner", "about add hall", "about manage hall", "about dashboard"))
             return ("أصحاب القاعات يمكنهم إضافة قاعات، إدارة إعدادات الساعات وحظر الأيام، التعامل مع طلبات الحجز، والرد على رسائل العملاء من لوحة التحكم. اضغط على أيقونة الملف الشخصي للوصول إلى واجهة الإدارة مع الشريط الجانبي لإدارة جميع قاعاتك.", "hall-owner");
 
-        if (ContainsAny(question, "لغة", "عربية", "إنجليزية", "تبديل", "about language", "about arabic", "about english", "about toggle"))
+        if (ContainsAny(question, "لغه", "عربيه", "انجليزيه", "تبديل", "about language", "about arabic", "about english", "about toggle"))
             return ("لتبديل لغة الموقع: اضغط على زر تبديل اللغة في شريط التنقل العلوي. الموقع يدعم العربية (الافتراضي، من اليمين لليسار) والإنجليزية (من اليسار لليمين). جميع المحتوى والتخطيط يتكيفون تلقائياً عند التبديل.", "language");
 
         if (ContainsAny(question, "دفع", "اشتراك", "ريال", "about payment", "about subscription", "about pay", "about ils"))
@@ -322,12 +344,17 @@ public sealed partial class HowToService : IHowToService
             return ($"لدفع اشتراكك كصاحب قاعة: تواصل مع المدير عبر واتساب على الرقم {details.AdminWhatsAppContact} لترتيب الدفع. الاشتراك {details.SubscriptionPriceIls:F0} شيكل لكل {details.SubscriptionCycleDays} يوم لكل قاعة. بمجرد تأكيد المدير للدفع، يتم فتح ميزات إدارة قاعدتك.", "payment");
         }
 
-        if (ContainsAny(question, "كيف أستخدم", "كيف يمكنني", "مساعدة", "دليل", "تعليم", "ما هو وصال", "عن وصال", "عن هذا الموقع", "about how to use", "about how do i", "about help", "about guide", "about tutorial", "about what can", "about what is wesal", "about about wesal", "about about this site"))
+        if (ContainsAny(question, "كيف استخدم", "كيف يمكنني", "مساعده", "دليل", "تعليم", "ما هو وصال", "عن وصال", "عن هذا الموقع", "about how to use", "about how do i", "about help", "about guide", "about tutorial", "about what can", "about what is wesal", "about about wesal", "about about this site"))
             return ("وصال هو منصة حجز قاعات أفراح في غزة. يمكنك تصفح القاعات المعتمدة، البحث حسب المنطقة والتاريخ، عرض تفاصيل القاعات والتوفر، حجز القاعات، تقييم وتعليق على القاعات، والتواصل مع أصحاب القاعات مباشرة. سجل مجاناً للوصول إلى ميزات الحجز والتعليق والتقييم والمراسلة.", "general");
+
+        // What Wesal offers ("بتقدموا انتو؟", "شو خدماتكم؟"). Late on purpose:
+        // a combined question ("شو بتقدمو غير الحجز؟") keeps its specific answer.
+        if (ContainsAny(question, "بتقدمو", "بتقدموا", "بتوفر", "بتوفرو", "بتسوو", "بتعملو", "شو بتقدم", "شو بتقدمو", "شو خدماتكم", "ايش خدماتكم", "شو فيكم تساعدوني", "شو بتسوو", "about services", "about features", "about offer"))
+            return ("وصال منصة حجز قاعات أفراح في غزة، وهاي خدماتنا: تصفح القاعات المعتمدة والبحث حسب المنطقة والتاريخ، عرض تفاصيل كل قاعة (الصور والسعة والأسعار والتوفر)، حجز القاعات ومتابعة الطلب، تقييم القاعات والتعليق عليها، والتواصل المباشر مع أصحاب القاعات. سجّل حساب مجاني عشان تستخدم الحجز والمراسلة والتقييم. شو حابب تعمل أول شي؟", "capabilities");
 
         // Greetings and thanks come last (before the fallback) so a greeting
         // combined with a real request ("مرحبا بدي احجز") still routes by intent.
-        if (ContainsAny(question, "مرحبا", "أهلا", "اهلا", "اهلين", "سلام", "صباح الخير", "مسا الخير", "مساء الخير", "يسلمو", "يسلموا", "شكرا", "مشكور", "مشكوره", "يعطيك العافيه", "هلا", "about hello", "about hi", "about thanks", "about thank"))
+        if (ContainsAny(question, "مرحبا", "اهلا", "اهلين", "سلام", "صباح الخير", "مسا الخير", "مساء الخير", "يسلمو", "يسلموا", "شكرا", "مشكور", "مشكوره", "يعطيك العافيه", "هلا", "about hello", "about hi", "about thanks", "about thank"))
             return ("أهلاً وسهلاً فيك! أنا مبروك، مساعد وصال. بقدر أساعدك تلاقي قاعة أفراح مناسبة: احكيلي عن المنطقة أو التاريخ أو السعر اللي ببالك، أو اسألني عن الحجز والتسجيل والتواصل مع أصحاب القاعات. شو بتحب تعرف؟", "greeting");
 
         return ("يمكنني مساعدتك في كيفية استخدام وصال. يمكنك السؤال عن: البحث عن قاعات، حجز قاعة، عرض تفاصيل القاعة، تقييم وتعليق على القاعات، التواصل مع أصحاب القاعات، التسجيل، تسجيل الدخول، تبديل اللغة، والمزيد. ماذا تريد أن تعرف؟", "general");
@@ -340,8 +367,11 @@ public sealed partial class HowToService : IHowToService
 
     private static bool IsCreatorQuestion(string question)
     {
+        // Match on normalized text so hamza/ta-marbuta spelling variants
+        // ("أنشأ/انشا"، "شمعه/شمعه") are all recognized.
+        var normalized = AiText.Normalize(question);
         // English intent
-        if (ContainsAny(question,
+        if (ContainsAny(normalized,
                 "creator", "who created", "who made", "who built", "who developed", "who developed wesal",
                 "who is the creator", "who is the developer", "who is behind", "developer of wesal",
                 "made wesal", "built wesal", "developed wesal", "created wesal", "team leader",
@@ -350,17 +380,14 @@ public sealed partial class HowToService : IHowToService
             return true;
 
         // Arabic intent (MSA + Gazan: مين عملك، احكيلي عن حالك، عرفني عليك)
-        if (ContainsAny(question,
-                "منشئ", "من أنشأ", "المنشئ", "منشئو", "صانع", "الصانع", "من صنع", "من طور",
-                "المطور", "مطور", "مطورو", "من بنى", "من أعد", "فريق وصال", "القائمين",
-                "محمد شمعة", "محمد شما", "شمعة", "قائد الفريق",
+        if (ContainsAny(normalized,
+                "منشي", "من انشا", "المنشي", "منشيو", "صانع", "الصانع", "من صنع", "من طور",
+                "المطور", "مطور", "مطورو", "من بني", "من اعد", "فريق وصال", "القايمين",
+                "محمد شمعه", "محمد شما", "شمعه", "قايد الفريق",
                 "مين عملك", "مين سواك", "مين صنعك", "مين صانعك", "مين مطورك", "مين انت", "شو انت",
-                "احكيلي عن حالك", "احكي عن حالك", "عرفني عليك", "عرفني على حالك", "مين مبروك", "شو مبروك"))
+                "احكيلي عن حالك", "احكي عن حالك", "عرفني عليك", "عرفني علي حالك", "مين مبروك", "شو مبروك"))
             return true;
 
         return false;
     }
-
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex WhitespaceRegex();
 }
