@@ -52,6 +52,15 @@ public static partial class AiText
     public static string WordWithArabicPrefixes(string normalizedWord)
         => $@"(?<![\p{{L}}\p{{N}}])(?:وال|بال|عال|فال|كال|لل|ال|ع|ب|ل|و|ف)?{Regex.Escape(normalizedWord)}(?![\p{{L}}\p{{N}}])";
 
+    /// <summary>
+    /// Wraps an alternation so it only matches whole words: without the guards
+    /// a short word matches inside a longer one ("وين" inside "وينتا",
+    /// "صور" inside "مصور"), producing wrong intents for Gazan phrasings.
+    /// The inner pattern must already be normalized.
+    /// </summary>
+    public static string Bounded(string inner)
+        => $@"(?<![\p{{L}}\p{{N}}])(?:{inner})(?![\p{{L}}\p{{N}}])";
+
     public static Regex AnyWord(IEnumerable<string> normalizedWords)
     {
         var alternatives = string.Join("|", normalizedWords

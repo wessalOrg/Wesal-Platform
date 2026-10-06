@@ -76,7 +76,7 @@ namespace Wesal.Infrastructure.AiAssistant;
         var effectiveLanguage = string.IsNullOrWhiteSpace(language) ? "ar" : language;
         var isArabic = IsArabic(effectiveLanguage);
         var languageDirective = isArabic
-            ? "Respond in Arabic (العربية)."
+            ? "Respond in Arabic, using the friendly Gazan dialect (العامية الغزاوية) like a helpful local: say بدي، وين، قديش، شو، كيف، هات instead of stiff formal equivalents, but keep hall names, prices and facts exact."
             : "Respond in English.";
 
         var knowledgeBlock = LimitContext(officialKnowledgeContext, maxContextCharacters);
@@ -194,7 +194,7 @@ namespace Wesal.Infrastructure.AiAssistant;
     {
         var isArabic = IsArabic(language);
         var languageDirective = isArabic
-            ? "Respond in Arabic (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)."
+            ? "Respond in Arabic, using the friendly Gazan dialect (العامية الغزاوية) like a helpful local: say بدي، وين، قديش، شو، كيف، هات instead of stiff formal equivalents, but keep hall names, prices and facts exact."
             : "Respond in English.";
 
         var knowledge = LimitContext(WesalPlatformKnowledge.BuildContextPrompt(language), maxContextCharacters);
