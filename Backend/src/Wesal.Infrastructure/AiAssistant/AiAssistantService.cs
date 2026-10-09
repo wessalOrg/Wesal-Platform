@@ -103,14 +103,40 @@ public sealed class AiAssistantService : IAiAssistantService
         var turn = await _contextResolver.ResolveAsync(requestContext, context, text, cancellationToken);
         var contextMs = stage.ElapsedMilliseconds;
 
+        var resumed = AiConversationStateResolver.TryResume(context?.State, text, turn.Today);
+        if (resumed is not null)
+        {
+            HallDetailsDto? hall = turn.Hall;
+            if (context?.State?.ActiveHallId is { } hallId)
+            {
+                try { hall = await _hallDetailsService.GetHallDetailsAsync(hallId, cancellationToken); }
+                catch (NotFoundException) { hall = null; }
+            }
+            if (hall is not null)
+            {
+                var availabilityTurn = turn with { Hall = hall, HallSource = "conversation" };
+                var resumedAnswer = await HandleHallAvailabilityAsync(text, effectiveLanguage, availabilityTurn, hall, cancellationToken);
+                _logger.LogInformation("Assistant turn: route={Route} kind={Kind} resolvedGoal={ResolvedGoal} resolvedIntent={ResolvedIntent} activeHallSource={HallSource} hasPendingClarification={HasPendingClarification} pendingField={PendingField} selectedResultIndex={SelectedResultIndex} toolName={ToolName} fallbackReason={FallbackReason} totalMs={TotalMs}",
+                    "slot_resume", resumedAnswer.Kind, "find_hall", "check_availability", "conversation", false, "-", context?.State?.SelectedResultIndex, "availability", "-", total.ElapsedMilliseconds);
+                return resumedAnswer;
+            }
+        }
+
         var routed = await RouteAsync(text, effectiveLanguage, turn, context, cancellationToken);
         var response = routed.Response;
         response = WithContextualActions(text, response, turn);
 
         _logger.LogInformation(
-            "Assistant turn: route={Route} kind={Kind} page={PageKey} hallContext={HallSource} actions={Actions} contextMs={ContextMs} policyMs={PolicyMs} hallContextMs={HallContextMs} orchestrationMs={OrchestrationMs} fallbackReason={FallbackReason} totalMs={TotalMs}",
+            "Assistant turn: route={Route} kind={Kind} resolvedGoal={ResolvedGoal} resolvedIntent={ResolvedIntent} activeHallSource={HallSource} hasPendingClarification={HasPendingClarification} pendingField={PendingField} selectedResultIndex={SelectedResultIndex} toolName={ToolName} page={PageKey} hallContext={HallSource} actions={Actions} contextMs={ContextMs} policyMs={PolicyMs} hallContextMs={HallContextMs} orchestrationMs={OrchestrationMs} fallbackReason={FallbackReason} totalMs={TotalMs}",
             routed.Route,
             response.Kind,
+            response.Intent?.Intent.ToString() ?? "unknown",
+            response.Intent?.Intent.ToString() ?? "unknown",
+            turn.HallSource ?? "-",
+            context?.State?.PendingClarification is not null,
+            context?.State?.MissingField ?? "-",
+            context?.State?.SelectedResultIndex,
+            response.Availability is not null ? "availability" : response.Halls.Count > 0 ? "search_halls" : "-",
             turn.PageKey ?? "-",
             turn.HallSource ?? "-",
             response.Actions?.Count ?? 0,
@@ -131,10 +157,74 @@ public sealed class AiAssistantService : IAiAssistantService
         AiConversationContext? context,
         CancellationToken cancellationToken)
     {
+        var policyMs = 0L;
+        if (AiConversationStateResolver.IsCollectionQuestion(text))
+        {
+            var collectionIntent = await _intentExtractor.ExtractWithoutModelAsync(text, language, cancellationToken, context);
+            var collectionQuestion = AiHallQuestionClassifier.Classify(text);
+            var collection = await _hallSearchService.SearchHallsAsync(new HallSearchRequest { PageNumber = 1, PageSize = 12 }, cancellationToken);
+            var all = collection.Items.Select(h => new HallRecommendationDto(h.HallId, h.HallName, h.Region, h.Address, h.Capacity, h.Price, h.MainImage, IsAvailable: true, UnavailableReason: null)).ToList();
+            if (collectionQuestion == AiHallQuestion.Price)
+                all = all.Where(h => h.Price.HasValue).ToList();
+            var message = all.Count == 0
+                ? (language == "en" ? "No public halls were found." : "ما لقيت قاعات متاحة للعرض حالياً.")
+                : (language == "en" ? $"Here are {all.Count} public halls." : $"هاي {all.Count} من القاعات الموجودة، والأسعار ظاهرة للقاعات اللي ناشرتها.");
+            return new AssistantRouteResult(Build(language, AiAssistantResponseKind.Halls, message,
+                collectionIntent with { Intent = AiIntentType.SearchHalls }, halls: all), "hall_collection", policyMs, 0, 0, null);
+        }
+
+        // "غيرها" walks the last shown results. The durable state keeps the result
+        // ids across turns that show no new list (a details turn wipes the
+        // short-lived LastHalls memory), so fall back to it when it is empty.
+        if (AiConversationStateResolver.IsNextResult(text))
+        {
+            IReadOnlyList<Guid> resultIds = context?.LastHalls is { Count: > 0 } shownHalls
+                ? shownHalls.Select(hall => hall.HallId).ToList()
+                : context?.State?.ShownHallIds ?? (IReadOnlyList<Guid>)Array.Empty<Guid>();
+            if (resultIds.Count > 0)
+            {
+                var nextIndex = (context?.State?.SelectedResultIndex ?? -1) + 1;
+                if (nextIndex >= resultIds.Count)
+                {
+                    var end = language == "en" ? "That's the last result in this search. I can look with different criteria." : "هاي آخر نتيجة عندي من البحث الحالي. إذا بدك بدورلك بمعايير ثانية.";
+                    return new AssistantRouteResult(Build(language, AiAssistantResponseKind.Answer, end, null), "result_navigation_end", policyMs, 0, 0, null);
+                }
+                var selected = await _hallDetailsService.GetHallDetailsAsync(resultIds[nextIndex], cancellationToken);
+                var selectedMessage = language == "en" ? $"Another result: {selected.HallName}." : $"هاي نتيجة ثانية: {selected.HallName}.";
+                return new AssistantRouteResult(Build(language, AiAssistantResponseKind.HallDetails, selectedMessage,
+                    new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, selected.HallName), hallDetails: selected), "result_navigation", policyMs, 0, 0, null);
+            }
+        }
+
+        // A bare ordinal ("الثانية") selects that result. Guarded to selection-only
+        // turns so an ordinal inside a real question ("الأولى شو سعرها؟") still
+        // reaches hall-context and gets the asked fact answered about that hall.
+        if (AiReferenceResolver.TryGetOrdinal(text) is { } ordinal
+            && AiHallQuestionClassifier.Classify(text) == AiHallQuestion.None
+            && AiReferenceResolver.TryGetExplicitHallName(text) is null)
+        {
+            IReadOnlyList<Guid> ordinalIds = context?.LastHalls is { Count: > 0 } ordinalHalls
+                ? ordinalHalls.Select(hall => hall.HallId).ToList()
+                : context?.State?.ShownHallIds ?? (IReadOnlyList<Guid>)Array.Empty<Guid>();
+            if (ordinalIds.Count > 0)
+            {
+                var resolvedIndex = ordinal < 0 ? ordinalIds.Count - 1 : ordinal;
+                if (resolvedIndex < 0 || resolvedIndex >= ordinalIds.Count)
+                {
+                    var end = language == "en" ? "That's the last result in this search. I can look with different criteria." : "هاي آخر نتيجة عندي من البحث الحالي. إذا بدك بدورلك بمعايير ثانية.";
+                    return new AssistantRouteResult(Build(language, AiAssistantResponseKind.Answer, end, null), "result_ordinal_end", policyMs, 0, 0, null);
+                }
+                var ordinalSelected = await _hallDetailsService.GetHallDetailsAsync(ordinalIds[resolvedIndex], cancellationToken);
+                var ordinalMessage = language == "en" ? $"Result {resolvedIndex + 1}: {ordinalSelected.HallName}." : $"النتيجة {resolvedIndex + 1}: {ordinalSelected.HallName}.";
+                return new AssistantRouteResult(Build(language, AiAssistantResponseKind.HallDetails, ordinalMessage,
+                    new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, ordinalSelected.HallName), hallDetails: ordinalSelected), "result_ordinal", policyMs, 0, 0, null);
+            }
+        }
+
         // 1) Deterministic policies: navigation, unavailable services, support, payments.
         var stage = Stopwatch.StartNew();
         var gate = await _policyGate.TryHandleAsync(text, language, cancellationToken);
-        var policyMs = stage.ElapsedMilliseconds;
+        policyMs = stage.ElapsedMilliseconds;
         if (gate is not null)
         {
             return new AssistantRouteResult(gate, "policy", policyMs, 0, 0, null);

@@ -264,6 +264,10 @@ public static class AiReferenceResolver
         (-1, AiText.AnyWord(["الاخيره", "الاخير", "اخر", "اخيره", "last"]))
     ];
 
+    private static readonly Regex NextResult = new(
+        @"(?:غيرها|غيرو|هات\s+غيرها|فرجيني\s+غيرها|واحده\s+ثانيه|صاله\s+ثانيه|التالي|اللي\s+بعدها|next(?:\s+one)?|another\s+one)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static readonly HashSet<string> NotAName = new(StringComparer.Ordinal)
     {
         // demonstratives / pronoun-ish
@@ -289,6 +293,9 @@ public static class AiReferenceResolver
 
         return null;
     }
+
+    public static bool IsNextResult(string? message)
+        => NextResult.IsMatch(AiText.Normalize(message));
 
     private static readonly Regex WordRegex = new(@"[\p{L}\p{N}]+", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
+using Wesal.Infrastructure.AiAssistant;
 
 namespace Wesal.API.Controllers;
 
@@ -183,6 +184,13 @@ public class AiAssistantController : ControllerBase
             return BadRequest(new { Message = "Message is invalid." });
         }
 
+        // The hall the conversation had focused (or the single shown hall) so a
+        // date clarification, which carries no hall payload, keeps the reference
+        // the later date reply must resume against. Only used when Advance would
+        // otherwise leave a pending date without an active hall.
+        var conversationHall = context.LastHall
+            ?? (context.LastHalls is { Count: 1 } single ? single[0] : null);
+
         await _chatSessionService.SaveExchangeAsync(
             sessionId,
             message,
@@ -190,10 +198,34 @@ public class AiAssistantController : ControllerBase
             response.Intent,
             AiResponseMemory.ShownHalls(response),
             AiResponseMemory.FocusedHall(response),
-            cancellationToken);
+            cancellationToken,
+            response.Intent?.Intent == AiIntentType.SearchHalls && response.Halls.Count > 0
+                ? AiConversationStateResolver.WithCollectionResults(context.State, AiResponseMemory.ShownHalls(response))
+                : AiReferenceResolver.TryGetOrdinal(message) is { } ordinal
+                    && OrdinalHallIds(context) is { Count: > 0 } ordinalIds
+                    && ordinalIds.Count > (ordinal < 0 ? ordinalIds.Count - 1 : ordinal)
+                    && AiResponseMemory.FocusedHall(response) is { } ordinalHall
+                ? AiConversationStateResolver.AdvanceSelection(context.State, ordinalHall,
+                    ordinal < 0 ? ordinalIds.Count - 1 : ordinal)
+                : AiConversationStateResolver.IsNextResult(message) && AiResponseMemory.FocusedHall(response) is { } nextHall
+                ? AiConversationStateResolver.AdvanceSelection(context.State, nextHall,
+                    (context.State?.SelectedResultIndex ?? -1) + 1)
+                : AiConversationStateResolver.Advance(context.State, message, response, conversationHall));
 
         return Ok(response);
     }
 
     private string? CurrentUserId => _currentUser.IsAuthenticated ? _currentUser.UserId : null;
+
+    /// <summary>
+    /// Result ids an ordinal ("الثانية") can index into: the short-lived last
+    /// halls when present, otherwise the durable state's shown ids (a details or
+    /// clarification turn shows no new list but the cursor must keep working).
+    /// </summary>
+    private static IReadOnlyList<Guid> OrdinalHallIds(AiConversationContext context)
+    {
+        if (context.LastHalls is { Count: > 0 } halls)
+            return halls.Select(hall => hall.HallId).ToList();
+        return context.State?.ShownHallIds ?? (IReadOnlyList<Guid>)Array.Empty<Guid>();
+    }
 }

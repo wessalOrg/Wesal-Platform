@@ -46,5 +46,6 @@ public interface IChatSessionService
         AiAssistantIntentDto? intent,
         IReadOnlyList<AiHallRef>? shownHalls,
         AiHallRef? focusedHall,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        AiConversationState? conversationState = null);
 }

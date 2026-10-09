@@ -123,7 +123,8 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
             Deserialize<List<AiConversationTurn>>(session.TurnsJson) ?? [],
             Deserialize<AiAssistantIntentDto>(session.LastIntentJson),
             Deserialize<List<AiHallRef>>(session.LastHallsJson) ?? [],
-            Deserialize<AiHallRef>(session.LastHallJson));
+            Deserialize<AiHallRef>(session.LastHallJson),
+            Deserialize<AiConversationState>(session.ConversationStateJson));
     }
 
     public Task EndSessionsForUserAsync(string userId, CancellationToken cancellationToken = default)
@@ -145,7 +146,8 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
         AiAssistantIntentDto? intent,
         IReadOnlyList<AiHallRef>? shownHalls,
         AiHallRef? focusedHall,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        AiConversationState? conversationState = null)
     {
         var message = SanitizeUserMessage(userMessage);
         if (string.IsNullOrWhiteSpace(message)) return;
@@ -169,8 +171,20 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
             TrimTurns(turns);
             session.TurnsJson = Serialize(turns);
             if (intent is not null) session.LastIntentJson = Serialize(intent);
-            if (shownHalls is { Count: > 0 }) session.LastHallsJson = Serialize(shownHalls.Take(MaxRememberedHalls).ToArray());
+            if (shownHalls is not null) session.LastHallsJson = Serialize(shownHalls.Take(MaxRememberedHalls).ToArray());
             if (focusedHall is not null) session.LastHallJson = Serialize(focusedHall);
+            if (conversationState is not null)
+            {
+                var bounded = conversationState with
+                {
+                    ActiveHallName = Limit(conversationState.ActiveHallName, 160),
+                    Region = Limit(conversationState.Region, 80),
+                    ShownHallIds = conversationState.ShownHallIds?.Take(MaxRememberedHalls).ToArray(),
+                    RequestedFacts = conversationState.RequestedFacts?.Take(8).Select(value => Limit(value, 40) ?? string.Empty).ToArray()
+                };
+                var stateJson = Serialize(bounded);
+                session.ConversationStateJson = stateJson.Length <= MaxConversationStateCharacters ? stateJson : "{}";
+            }
             session.LastActivityAt = DateTimeOffset.UtcNow;
             session.ExpiresAt = session.LastActivityAt.Add(SessionDuration);
 
@@ -208,6 +222,9 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
 
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, JsonOptions);
 
+    private static string? Limit(string? value, int length)
+        => string.IsNullOrWhiteSpace(value) ? null : value[..Math.Min(value.Length, length)];
+
     private static T? Deserialize<T>(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return default;
@@ -219,6 +236,7 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
     private const int MaxStoredUserTurnCharacters = 600;
     private const int MaxAssistantTurnCharacters = 600;
     private const int MaxRememberedHalls = 10;
+    private const int MaxConversationStateCharacters = 8_000;
 }
 
 /// <summary>Per-instance store used only by unit tests that construct ChatSessionService directly.</summary>
@@ -285,6 +303,7 @@ internal sealed class InMemoryAiConversationSessionStore : IAiConversationSessio
         TurnsJson = value.TurnsJson,
         LastIntentJson = value.LastIntentJson,
         LastHallsJson = value.LastHallsJson,
-        LastHallJson = value.LastHallJson
+        LastHallJson = value.LastHallJson,
+        ConversationStateJson = value.ConversationStateJson
     };
 }

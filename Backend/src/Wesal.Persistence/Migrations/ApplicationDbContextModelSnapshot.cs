@@ -199,6 +199,10 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<string>("ConversationStateJson")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
                     b.Property<string>("LastHallsJson")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
