@@ -354,7 +354,7 @@ public class MabroukContextualAssistantShould
 
         Assert.True(response.Actions is null || response.Actions.Count == 0);
         Assert.DoesNotContain("/photography", response.Message);
-        Assert.Contains(response.ResponseLanguage == "en" ? "dedicated" : "ما في صفحة", response.Message);
+        Assert.Contains(response.ResponseLanguage == "en" ? "coming soon" : "قيد التجهيز", response.Message);
     }
 
     [Fact]
@@ -600,7 +600,7 @@ public class MabroukContextualAssistantShould
 
         var secondCall = h.Gemini.Calls[1].Contents;
         Assert.Equal("model", secondCall[^2].Role);
-        Assert.Equal("function", secondCall[^1].Role);
+        Assert.Equal("user", secondCall[^1].Role);
     }
 
     [Fact]

@@ -86,12 +86,13 @@ async function main() {
     assert.deepEqual([...ASSISTANT_STATIC_ROUTES].sort(), backend);
   });
 
-  await check("there is no photography route and none is allowed", () => {
-    // /photographers and /event-planners are "coming soon" placeholder pages (no real
-    // service behind them); the assistant must still never route to them.
+  await check("coming-soon marketplace pages are real allowlisted routes", () => {
+    // These pages can be opened when explicitly requested, while service-search
+    // requests remain truthful Coming Soon responses in the backend policy.
     const comingSoon = new Set(["/photographers", "/event-planners"]);
     assert.ok(!pageRoutes().some((route) => !comingSoon.has(route) && /photo|media|vendor/i.test(route)));
-    assert.ok(!ASSISTANT_STATIC_ROUTES.some((route) => /photo/i.test(route)));
+    assert.ok(ASSISTANT_STATIC_ROUTES.includes("/photographers"));
+    assert.ok(ASSISTANT_STATIC_ROUTES.includes("/event-planners"));
     assert.equal(sanitizeAssistantHref("/photography"), null);
   });
 

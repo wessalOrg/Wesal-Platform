@@ -100,8 +100,12 @@ public sealed partial class HowToService : IHowToService
                 maxResults: 3,
                 cancellationToken);
 
-            var official = articles.FirstOrDefault(a => OfficialFactCategories.Contains(a.Category));
+            // Respect retrieval rank. Searching the whole short list for any
+            // "official" article let a broad platform page (for example the
+            // homepage overview) override a higher-ranked feature guide.
+            var official = articles.FirstOrDefault();
             if (official is not null
+                && OfficialFactCategories.Contains(official.Category)
                 && !IsContactInterference(official, question))
             {
                 return new HowToResponse(
@@ -230,9 +234,6 @@ public sealed partial class HowToService : IHowToService
         if (ContainsAny(question, "availability", "calendar", "available", "slot", "hour", "free date"))
             return ("To check availability: open a hall's details page and select a date. The page shows the hall's hourly slots for that day. Available slots are shown in green and booked slots in red, or hidden when the owner chooses not to show them.", "availability");
 
-        if (ContainsAny(question, "featured", "homepage", "landing", "home"))
-            return ("The homepage shows an introduction to Wesal, 6 featured approved halls, and a How It Works section. You can filter featured halls by region. Tap any hall card to see full details. The Browse More Halls button takes you to the complete halls listing.", "homepage");
-
         if (ContainsAny(question, "hall owner", "add hall", "manage hall", "dashboard"))
             return ("Hall Owners can add halls, manage hourly settings and day blocks, handle booking requests, and respond to customer messages from their dashboard. Tap the Profile icon to access the management interface with a sidebar for managing all your halls.", "hall-owner");
 
@@ -328,9 +329,6 @@ public sealed partial class HowToService : IHowToService
         // Opening / support hours: point to the Help Center, never invent hours.
         if (ContainsAny(question, "دوام", "دوامكم", "ساعات العمل", "ساعات الدوام", "بتفتحو", "بتسكرو", "وينتا بتفتحو", "about hours", "about working hours"))
             return ("بتقدر تتواصل مع فريق وصال في أي وقت من صفحة مركز المساعدة، وطلبات الحجز والرسائل بتنبعت لأصحاب القاعات مباشرة وبيردوا عليك من حساباتهم. لمواعيد قاعة معينة (وينتا بتفتح أبوابها للمناسبات) شوف صفحة تفاصيلها أو اسأل صاحبها عبر المحادثة.", "hours");
-
-        if (ContainsAny(question, "الصفحه الرييسيه", "مقدمه", "about featured", "about homepage", "about landing", "about home"))
-            return ("الصفحة الرئيسية تُعرّف وصال وتعرض 6 قاعات معتمدة مميزة وقسم كيفية العمل. يمكنك تصفية القاعات المميزة حسب المنطقة. اضغط على بطاقة أي قاعة لعرض تفاصيلها الكاملة. زر تصفح المزيد ينقلك إلى قائمة القاعات الكاملة.", "homepage");
 
         if (ContainsAny(question, "صاحب القاعه", "اضافه قاعه", "اداره قاعه", "لوحه التحكم", "about hall owner", "about add hall", "about manage hall", "about dashboard"))
             return ("أصحاب القاعات يمكنهم إضافة قاعات، إدارة إعدادات الساعات وحظر الأيام، التعامل مع طلبات الحجز، والرد على رسائل العملاء من لوحة التحكم. اضغط على أيقونة الملف الشخصي للوصول إلى واجهة الإدارة مع الشريط الجانبي لإدارة جميع قاعاتك.", "hall-owner");

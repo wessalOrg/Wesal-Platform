@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Wesal.Application.Ai;
 using Wesal.Application.Ai.Navigation;
 
 namespace Wesal.Tests.Ai;
@@ -36,36 +37,36 @@ public class WesalNavigationRegistryShould
     }
 
     [Fact]
-    public void PhotographyPage_IsNeverAssistantNavigable()
+    public void ComingSoonProviderPages_AreNavigableOnlyAsRealPagesWithTruthfulStatus()
     {
-        // A /photographers route exists as a coming-soon placeholder (added for
-        // the landing category cards), so "no such route exists" is no longer
-        // true. The security property that matters is navigability: the
-        // assistant must never offer or resolve navigation to any
-        // photography/media URL. Registry entries for such pages, if any, must
-        // stay page-context only (AssistantNavigable = false), mirroring how
-        // admin/owner-manage pages are recognised without being offered.
-        static bool IsPhotoPage(WesalPage p) =>
-            p.Key.Contains("photo", StringComparison.OrdinalIgnoreCase)
-            || p.Path.Contains("photo", StringComparison.OrdinalIgnoreCase)
-            || p.Path.Contains("media", StringComparison.OrdinalIgnoreCase);
+        var photographers = WesalNavigationRegistry.Find(WesalNavigationRegistry.Photographers);
+        var planners = WesalNavigationRegistry.Find(WesalNavigationRegistry.EventPlanners);
+        Assert.NotNull(photographers);
+        Assert.NotNull(planners);
+        Assert.True(photographers!.AssistantNavigable);
+        Assert.True(planners!.AssistantNavigable);
+        Assert.Contains(WesalNavigationRegistry.NavigablePages, page => page.Key == WesalNavigationRegistry.Photographers);
+        Assert.Contains(WesalNavigationRegistry.NavigablePages, page => page.Key == WesalNavigationRegistry.EventPlanners);
+        Assert.Equal(WesalCapabilityStatus.ComingSoon, WesalCapabilityRegistry.Find("photographers.marketplace")!.Status);
+        Assert.Equal(WesalCapabilityStatus.ComingSoon, WesalCapabilityRegistry.Find("event_planners.marketplace")!.Status);
+        Assert.Equal("photographers.marketplace", AiNavigationIntentDetector.DetectUnavailableTopic("find photographers")!.Key);
+        Assert.Equal("event_planners.marketplace", AiNavigationIntentDetector.DetectUnavailableTopic("بدي منسق مناسبات")!.Key);
+        Assert.Null(AiNavigationIntentDetector.DetectUnavailableTopic("open the photographers page"));
+        Assert.Equal(WesalNavigationRegistry.Photographers, AiNavigationIntentDetector.Detect("open the photographers page")!.Page.Key);
+    }
 
-        Assert.DoesNotContain(WesalNavigationRegistry.NavigablePages, (WesalPage p) => IsPhotoPage(p));
-        foreach (var page in WesalNavigationRegistry.Pages.Where(IsPhotoPage))
-        {
-            Assert.False(page.AssistantNavigable,
-                $"Registry page '{page.Key}' ({page.Path}) must stay context-only; the assistant must never navigate to photography pages.");
-        }
+    [Fact]
+    public void CapabilityPromptContext_ExposesStatusRoutesActionsAndKnowledgeSources()
+    {
+        var context = WesalCapabilityRegistry.BuildAssistantContext();
 
-        foreach (var route in FrontendRoutes().Where(r => r.Contains("photo", StringComparison.OrdinalIgnoreCase)))
-        {
-            var registered = WesalNavigationRegistry.Pages.FirstOrDefault(p =>
-                string.Equals(p.Path, route, StringComparison.Ordinal));
-            Assert.True(registered is null || !registered.AssistantNavigable,
-                $"Frontend route '{route}' must never be assistant-navigable.");
-        }
-
-        Assert.Null(WesalNavigationRegistry.ResolveHref("photography"));
+        Assert.Contains("photographers.marketplace", context);
+        Assert.Contains("status=ComingSoon", context);
+        Assert.Contains("route=/photographers", context);
+        Assert.Contains("search, compare or book photographers", context);
+        Assert.Contains("user-guide/booking", context);
+        Assert.Contains("status=Private", context);
+        Assert.Contains("read private booking records through public assistant tools", context);
     }
 
     [Theory]

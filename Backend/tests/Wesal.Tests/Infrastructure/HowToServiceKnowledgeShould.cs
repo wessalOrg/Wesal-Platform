@@ -38,6 +38,27 @@ public class HowToServiceKnowledgeShould
     }
 
     [Fact]
+    public async Task EnglishHomepageQuestion_UsesCurrentHomepageKnowledge()
+    {
+        var result = await CreateService().AskHowToAsync("what is on the Wesal homepage?", "en", CancellationToken.None);
+
+        Assert.Equal("platform", result.Category);
+        Assert.Contains("three category cards", result.Answer, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Coming Soon", result.Answer, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("featured-halls API", result.Answer, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ArabicHomepageQuestion_UsesCurrentHomepageKnowledge()
+    {
+        var result = await CreateService().AskHowToAsync("شو موجود بالصفحة الرئيسية لوصال؟", "ar", CancellationToken.None);
+
+        Assert.Equal("platform", result.Category);
+        Assert.Contains("ثلاث بطاقات", result.Answer);
+        Assert.Contains("قريباً", result.Answer);
+    }
+
+    [Fact]
     public async Task DevQuestion_ReturnsOfficialPrimaryDevelopers()
     {
         var result = await CreateService().AskHowToAsync("who are the primary developers?", "en", CancellationToken.None);

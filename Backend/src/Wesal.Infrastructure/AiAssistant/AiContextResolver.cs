@@ -124,7 +124,9 @@ public sealed class AiContextResolver
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Assistant context hall lookup failed; context dropped.");
+            _logger.LogWarning(
+                "Assistant context hall lookup failed; context dropped. exceptionType={ExceptionType}",
+                ex.GetType().Name);
             return null;
         }
     }

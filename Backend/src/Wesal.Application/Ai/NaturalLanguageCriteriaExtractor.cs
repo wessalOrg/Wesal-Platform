@@ -13,11 +13,12 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
             return new ExtractedCriteriaDto(null, null, null, null);
 
         var normalized = message.Trim();
+        var numericNormalized = NormalizeNumerals(normalized);
 
         var region = ExtractRegion(normalized);
         var area = ExtractArea(normalized, region);
-        var date = ExtractDate(normalized);
-        var capacity = ExtractCapacity(normalized);
+        var date = ExtractDate(numericNormalized);
+        var capacity = ExtractCapacity(numericNormalized);
 
         return new ExtractedCriteriaDto(region, area, date, capacity);
     }
@@ -157,6 +158,21 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         }
         return null;
     }
+
+    private static string NormalizeNumerals(string message)
+        => string.Create(message.Length, message, static (buffer, value) =>
+        {
+            for (var i = 0; i < value.Length; i++)
+            {
+                var character = value[i];
+                buffer[i] = character switch
+                {
+                    >= '\u0660' and <= '\u0669' => (char)('0' + character - '\u0660'),
+                    >= '\u06F0' and <= '\u06F9' => (char)('0' + character - '\u06F0'),
+                    _ => character
+                };
+            }
+        });
 
     private static bool TryParseMonth(string name, out int month)
     {

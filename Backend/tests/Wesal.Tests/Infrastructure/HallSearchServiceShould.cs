@@ -61,6 +61,25 @@ public class HallSearchServiceShould
     }
 
     [Fact]
+    public async Task SearchHallsAsync_MinimumCapacityIsFilteredBeforePagination()
+    {
+        var repository = new FakeHallRepository();
+        repository.Halls.Add(CreateHall(name: "Recent small hall", createdAt: FixedNow, capacity: 120));
+        repository.Halls.Add(CreateHall(name: "Older large hall", createdAt: FixedNow.AddDays(-1), capacity: 450));
+        repository.Halls.Add(CreateHall(name: "Oldest large hall", createdAt: FixedNow.AddDays(-2), capacity: 600));
+
+        var result = await CreateService(repository).SearchHallsAsync(new HallSearchRequest
+        {
+            MinimumCapacity = 300,
+            PageSize = 1
+        });
+
+        Assert.Equal(2, result.TotalCount);
+        Assert.Equal("Older large hall", Assert.Single(result.Items).HallName);
+        Assert.Equal(300, repository.LastSearchRequest!.MinimumCapacity);
+    }
+
+    [Fact]
     public async Task SearchHallsAsync_DateFilter_IsPassedToRepository()
     {
         var repository = new FakeHallRepository();
@@ -312,6 +331,30 @@ public class HallSearchServiceShould
 
             return Task.FromResult(count);
         }
+
+        public Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
+            HallSearchRequest request, int skip, int take, CancellationToken cancellationToken = default)
+        {
+            LastSearchRequest = request;
+            var query = Halls
+                .Where(h => h.Status == HallStatus.Approved && !h.IsDeleted)
+                .Where(h => request.Name == null || h.Name.Contains(request.Name))
+                .Where(h => !request.Region.HasValue || h.Region == request.Region.Value)
+                .Where(h => request.Area == null || h.Address.Contains(request.Area))
+                .Where(h => request.MinimumCapacity == null || h.Capacity >= request.MinimumCapacity.Value)
+                .OrderByDescending(h => h.CreatedAt).ThenBy(h => h.Name);
+            return Task.FromResult<IReadOnlyList<Hall>>(query.Skip(skip).Take(take).ToList());
+        }
+
+        public Task<int> SearchApprovedHallsCountAsync(
+            HallSearchRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(Halls
+                .Where(h => h.Status == HallStatus.Approved && !h.IsDeleted)
+                .Where(h => request.Name == null || h.Name.Contains(request.Name))
+                .Where(h => !request.Region.HasValue || h.Region == request.Region.Value)
+                .Where(h => request.Area == null || h.Address.Contains(request.Area))
+                .Where(h => request.MinimumCapacity == null || h.Capacity >= request.MinimumCapacity.Value)
+                .Count());
 
         public Task<IReadOnlyList<Hall>> GetApprovedHallsByRegionAsync(
             HallRegion region, int count, CancellationToken cancellationToken = default)

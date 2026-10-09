@@ -155,6 +155,11 @@ internal sealed class MabroukHarness
                 query = query.Where(h => string.Equals(h.Region, region.ToString(), StringComparison.OrdinalIgnoreCase));
             }
 
+            if (request.MinimumCapacity is { } minimumCapacity)
+            {
+                query = query.Where(h => h.Capacity >= minimumCapacity);
+            }
+
             var list = query.ToList();
             return Task.FromResult(new PagedResult<HallListItemDto>(list, 1, request.PageSize, list.Count));
         }

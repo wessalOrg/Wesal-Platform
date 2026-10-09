@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using Wesal.Application.Ai;
+using Wesal.Application.Common.Models;
 
 namespace Wesal.Application.Ai.Navigation;
 
@@ -14,7 +16,7 @@ public enum AiNavigationMode
 public sealed record AiNavigationMatch(WesalPage Page, AiNavigationMode Mode);
 
 /// <summary>A service the user asked for that has no real Wesal page (yet).</summary>
-public sealed record AiUnavailableTopic(string Key, string LabelAr, string LabelEn);
+public sealed record AiUnavailableTopic(string Key, string LabelAr, string LabelEn, string? PageKey = null);
 
 /// <summary>
 /// Deterministic navigation understanding. It separates information questions
@@ -28,6 +30,9 @@ public static class AiNavigationIntentDetector
 {
     private const int MaxExplicitTokens = 9;
     private const int MaxDiscoveryTokens = 7;
+    private static readonly AiIntentFallbackClassifier FallbackIntentClassifier = new(new NaturalLanguageCriteriaExtractor());
+    private static readonly Regex AdministrativeSurface = AiText.AnyWord(["admin", "administrator", "ادمن", "الاداره"]);
+    private static readonly Regex ExplicitPageReference = AiText.AnyWord(["page", "صفحه", "صفحة"]);
 
     private static readonly Regex ExplicitVerbs = AiText.AnyWord([
         "وديني", "وصلني", "خديني", "خدني", "روحني", "افتح", "افتحلي", "افتحلى", "افتحلنا",
@@ -64,15 +69,15 @@ public static class AiNavigationIntentDetector
 
     private static readonly (AiUnavailableTopic Topic, Regex Pattern)[] UnavailableTopics =
     [
-        (new AiUnavailableTopic("photography", "تصوير", "photography"),
-            AiText.AnyWord(["تصوير", "مصور", "مصورين", "فوتوغراف", "photography", "photographer", "photographers", "photo", "photos", "videography"])),
+        (new AiUnavailableTopic("photographers.marketplace", "تصوير", "photography", WesalNavigationRegistry.Photographers),
+            AiText.AnyWord(["تصوير", "مصور", "مصورين", "فوتوغراف", "photography", "photographer", "photographers", "videography"])),
         (new AiUnavailableTopic("catering", "ضيافة وبوفيه", "catering"),
             AiText.AnyWord(["بوفيه", "ضيافه", "كاترينج", "طعام", "catering", "buffet"])),
         (new AiUnavailableTopic("invitations", "تصميم دعوات", "invitation design"),
             AiText.AnyWord(["دعوات", "بطاقات", "invitation", "invitations", "cards"])),
         (new AiUnavailableTopic("suit_rental", "تأجير بدل", "suit rental"),
             AiText.AnyWord(["بدل", "بدله", "فستان", "فساتين", "suit", "suits", "dress", "dresses"])),
-        (new AiUnavailableTopic("planners", "منسقي أفراح", "wedding planners"),
+        (new AiUnavailableTopic("event_planners.marketplace", "منسقي أفراح", "event planners", WesalNavigationRegistry.EventPlanners),
             AiText.AnyWord(["منسق", "منسقه", "منسقين", "planner", "planners", "decorator", "decorators"]))
     ];
 
@@ -88,9 +93,29 @@ public static class AiNavigationIntentDetector
             return null;
         }
 
+        // Search requests stay in the assistant flow, where missing criteria can
+        // be clarified, rather than becoming a route suggestion.
+        if (FallbackIntentClassifier.Classify(text).Intent == AiIntentType.SearchHalls
+            || AdministrativeSurface.IsMatch(text))
+        {
+            return null;
+        }
+
         var tokens = AiText.Tokens(text);
         var page = FindPage(text);
         if (page is null)
+        {
+            return null;
+        }
+
+        // A service that is marked Coming Soon may have a truthful status page,
+        // but a request for that service is not a request to browse that page.
+        // Require an explicit page reference before treating it as navigation.
+        var comingSoonServicePage = UnavailableTopics.Any(x =>
+            x.Topic.PageKey == page.Key
+            && WesalCapabilityRegistry.Find(x.Topic.Key) is
+                { Status: WesalCapabilityStatus.ComingSoon or WesalCapabilityStatus.Unavailable });
+        if (comingSoonServicePage && !ExplicitVerbs.IsMatch(text) && !ExplicitPageReference.IsMatch(text))
         {
             return null;
         }
@@ -114,6 +139,13 @@ public static class AiNavigationIntentDetector
 
         if (InfoMarkers.IsMatch(text) && tokens.Count <= MaxDiscoveryTokens)
         {
+            // The homepage knowledge article answers content questions without
+            // sending the user away from the page they asked about.
+            if (page.Key == WesalNavigationRegistry.Home)
+            {
+                return null;
+            }
+
             return new AiNavigationMatch(page, AiNavigationMode.Suggest);
         }
 
@@ -137,6 +169,12 @@ public static class AiNavigationIntentDetector
     {
         var text = AiText.Normalize(message);
         if (text.Length == 0)
+        {
+            return null;
+        }
+
+        if (FallbackIntentClassifier.Classify(text).Intent == AiIntentType.SearchHalls
+            || AdministrativeSurface.IsMatch(text))
         {
             return null;
         }
@@ -177,7 +215,14 @@ public static class AiNavigationIntentDetector
 
         foreach (var (topic, pattern) in UnavailableTopics)
         {
-            if (pattern.IsMatch(text) && FindPage(text) is null)
+            if (!pattern.IsMatch(text))
+                continue;
+
+            var page = FindPage(text);
+            if (page is not null && page.Key == topic.PageKey && ExplicitVerbs.IsMatch(text))
+                return null; // explicit request to open the real Coming Soon page
+
+            if (WesalCapabilityRegistry.Find(topic.Key) is { Status: WesalCapabilityStatus.ComingSoon or WesalCapabilityStatus.Unavailable })
             {
                 return topic;
             }
