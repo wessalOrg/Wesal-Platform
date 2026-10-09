@@ -35,4 +35,7 @@ public sealed class AiConversationSession
 
     [MaxLength(1_000)]
     public string? LastHallJson { get; set; }
+
+    [MaxLength(8_000)]
+    public string? ConversationStateJson { get; set; }
 }

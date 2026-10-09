@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
+using Wesal.Infrastructure.AiAssistant;
 
 namespace Wesal.API.Controllers;
 
@@ -190,7 +191,17 @@ public class AiAssistantController : ControllerBase
             response.Intent,
             AiResponseMemory.ShownHalls(response),
             AiResponseMemory.FocusedHall(response),
-            cancellationToken);
+            cancellationToken,
+            response.Intent?.Intent == AiIntentType.SearchHalls && response.Halls.Count > 0
+                ? AiConversationStateResolver.WithCollectionResults(context.State, AiResponseMemory.ShownHalls(response))
+                : AiReferenceResolver.TryGetOrdinal(message) is { } ordinal && context.LastHalls is { Count: > 0 } ordinalHalls
+                    && ordinalHalls.Count > (ordinal < 0 ? ordinalHalls.Count - 1 : ordinal)
+                ? AiConversationStateResolver.AdvanceOrdinal(context.State,
+                    ordinalHalls[ordinal < 0 ? ordinalHalls.Count - 1 : ordinal], ordinal < 0 ? ordinalHalls.Count - 1 : ordinal)
+                : AiConversationStateResolver.IsNextResult(message) && AiResponseMemory.FocusedHall(response) is { } nextHall
+                ? AiConversationStateResolver.AdvanceSelection(context.State, nextHall,
+                    (context.State?.SelectedResultIndex ?? -1) + 1)
+                : AiConversationStateResolver.Advance(context.State, message, response));
 
         return Ok(response);
     }

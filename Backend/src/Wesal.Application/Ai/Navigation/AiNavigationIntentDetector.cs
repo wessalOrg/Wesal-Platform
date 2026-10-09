@@ -39,6 +39,14 @@ public static class AiNavigationIntentDetector
         "روح", "اذهب", "انتقل", "ودني", "سجلني", "take", "open", "navigate", "bring", "redirect", "go"
     ]);
 
+    private static readonly Regex AttachedHallNavigation = new(
+        @"(?:وديني|وصلني|روحني|روح|افتحلي|افتح)\s+(?:ع|عال|لل|ل)?\s*(?:ال)?(?:قاعات|صالات)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex AttachedHallNavigationSingleToken = new(
+        @"(?:وديني|وصلني|روحني|روح|افتحلي|افتح)\s+ع\s*لقاعات",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static readonly Regex ShowAllRegex = new(
         @"(?:ورجيني|وريني|اعرض|show\s+me)\s+(?:لي\s+|لنا\s+)?(?:كل|جميع|all)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -102,13 +110,20 @@ public static class AiNavigationIntentDetector
         if (FallbackIntentClassifier.Classify(text).Intent == AiIntentType.SearchHalls
             || AdministrativeSurface.IsMatch(text))
         {
-            return null;
+            if (!(AttachedHallNavigation.IsMatch(text) || AttachedHallNavigationSingleToken.IsMatch(text)) || DataQuestionBlockers.IsMatch(text)
+                || WesalNavigationRegistry.Find(WesalNavigationRegistry.Halls) is not { } hallsPage)
+                return null;
+            return new AiNavigationMatch(hallsPage, AiNavigationMode.Auto);
         }
 
         var tokens = AiText.Tokens(text);
         var page = FindPage(text);
         if (page is null)
         {
+            if ((AttachedHallNavigation.IsMatch(text) || AttachedHallNavigationSingleToken.IsMatch(text))
+                && !DataQuestionBlockers.IsMatch(text)
+                && WesalNavigationRegistry.Find(WesalNavigationRegistry.Halls) is { } hallPage)
+                return new AiNavigationMatch(hallPage, AiNavigationMode.Auto);
             return null;
         }
 
@@ -150,7 +165,7 @@ public static class AiNavigationIntentDetector
                 return null;
             }
 
-            return new AiNavigationMatch(page, AiNavigationMode.Suggest);
+        return new AiNavigationMatch(page, AiNavigationMode.Suggest);
         }
 
         // A lone page name ("الصالات", "FAQ", "صفحة المساعدة") is a navigation wish; a

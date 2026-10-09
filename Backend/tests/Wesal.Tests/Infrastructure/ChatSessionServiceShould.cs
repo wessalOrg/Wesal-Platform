@@ -88,6 +88,28 @@ public class ChatSessionServiceShould
     }
 
     [Fact]
+    public async Task PersistConversationStateAcrossServiceRestartAndKeepItOwnerScoped()
+    {
+        var store = new InMemoryAiConversationSessionStore();
+        using var first = new ChatSessionService(store);
+        var session = await first.InitializeSessionAsync("ar", userId: "user-a");
+        var hall = new AiHallRef(Guid.NewGuid(), "قاعة النخيل");
+        var state = new AiConversationState("find_hall", "check_availability", "check_availability", "date", "date",
+            hall.HallId, hall.HallName, [hall.HallId], 0, "Gaza", 300, ["price", "availability"]);
+        await first.SaveExchangeAsync(session.SessionId, "متى متوفرة؟", "لأي يوم؟",
+            new AiAssistantIntentDto(AiIntentType.CheckHallAvailability, null, null, null, null, hall.HallName), [hall], hall,
+            conversationState: state);
+
+        using var restarted = new ChatSessionService(store);
+        var resumed = await restarted.GetConversationContextAsync(session.SessionId, userId: "user-a");
+        Assert.Equal("date", resumed.State?.PendingClarification);
+        Assert.Equal(hall.HallId, resumed.State?.ActiveHallId);
+        Assert.Equal(300, resumed.State?.Capacity);
+        var unauthorized = await restarted.GetConversationContextAsync(session.SessionId, userId: "user-b");
+        Assert.Null(unauthorized.State);
+    }
+
+    [Fact]
     public async Task ConversationHistoryKeepsOnlySixWholeExchanges()
     {
         using var service = new ChatSessionService();

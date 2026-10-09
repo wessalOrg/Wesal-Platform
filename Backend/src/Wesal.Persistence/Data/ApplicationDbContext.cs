@@ -283,6 +283,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(session => session.LastIntentJson).HasMaxLength(8_000);
             entity.Property(session => session.LastHallsJson).HasMaxLength(4_000);
             entity.Property(session => session.LastHallJson).HasMaxLength(1_000);
+            entity.Property(session => session.ConversationStateJson).HasMaxLength(8_000);
             entity.Property(session => session.Revision).IsConcurrencyToken();
             entity.HasIndex(session => session.ExpiresAt);
             entity.HasIndex(session => session.UserId);

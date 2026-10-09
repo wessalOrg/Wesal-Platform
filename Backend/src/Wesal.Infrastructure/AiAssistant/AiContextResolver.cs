@@ -67,7 +67,7 @@ public sealed class AiContextResolver
         string? source = null;
 
         var ordinal = AiReferenceResolver.TryGetOrdinal(message);
-        if (ordinal is { } index && conversation?.LastHalls is { Count: > 0 } shown)
+        if (ordinal is { } index && !AiConversationStateResolver.IsCollectionRequest(message) && conversation?.LastHalls is { Count: > 0 } shown)
         {
             var slot = index < 0 ? shown.Count - 1 : index;
             if (slot >= 0 && slot < shown.Count)
@@ -77,19 +77,20 @@ public sealed class AiContextResolver
             }
         }
 
-        if (candidate is null && pinned is { } pin)
+        if (candidate is null && !AiConversationStateResolver.IsCollectionQuestion(message) && pinned is { } pin)
         {
             candidate = pin;
             source = "pinned";
         }
 
-        if (candidate is null && pageEntity is { } pageHall)
+        if (candidate is null && !AiConversationStateResolver.IsCollectionQuestion(message) && pageEntity is { } pageHall)
         {
             candidate = pageHall;
             source = "page";
         }
 
         if (candidate is null
+            && !AiConversationStateResolver.IsCollectionQuestion(message)
             && conversation?.LastHall is { } last
             && AiHallQuestionClassifier.Classify(message) is not AiHallQuestion.None
             && !AiHallQuestionClassifier.MentionsPlatform(message))
