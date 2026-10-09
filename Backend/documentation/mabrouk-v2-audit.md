@@ -1,8 +1,8 @@
 # Mabrouk V2 audit and delivery notes
 
-Audit date: 2026-10-09  
-Repository: `wessalOrg/Wesal-Platform`  
-Branch: `feat/mabrouk-intelligence-v2`  
+Audit date: 2026-10-09
+Repository: `wessalOrg/Wesal-Platform`
+Branch: `feat/mabrouk-intelligence-v2`
 Starting local and `origin/main` SHA: `1e39ed8f2d97170024839fc7a321e83a5810a9ea`
 
 This document records source-code findings and checks from this branch. It does not claim live Gemini quality, production health, or a production database migration: no billable provider request or production mutation was run.
