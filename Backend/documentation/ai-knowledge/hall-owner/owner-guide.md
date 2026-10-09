@@ -3,8 +3,8 @@ title: Hall Owner guide
 category: hall-owner
 language: ar,en
 source: official-project-team-and-repository
-lastUpdated: 2026-09-16
-status: needs-verification
+lastUpdated: 2026-10-09
+status: product-confirmation-required
 keywords: hall owner|owner dashboard|صاحب قاعة|مالك القاعة|لوحة التحكم
 ---
 

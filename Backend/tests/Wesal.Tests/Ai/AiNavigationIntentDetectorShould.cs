@@ -41,10 +41,35 @@ public class AiNavigationIntentDetectorShould
         => Assert.Null(AiNavigationIntentDetector.Detect(message));
 
     [Theory]
-    [InlineData("بدي تصوير", "photography")]
-    [InlineData("وديني عالتصوير", "photography")]
-    [InlineData("I want a photographer", "photography")]
-    [InlineData("بدي مصور للعرس", "photography")]
+    [InlineData("بدي قاعة لعرس")]
+    [InlineData("I want a wedding hall")]
+    public void Detect_DoesNotTurnHallSearchIntentIntoNavigation(string message)
+    {
+        Assert.Null(AiNavigationIntentDetector.Detect(message));
+        Assert.Null(AiNavigationIntentDetector.DetectSuggestion(message));
+    }
+
+    [Fact]
+    public void Detect_DoesNotNavigateForHomepageContentQuestions()
+    {
+        const string message = "شو موجود بالصفحة الرئيسية لوصال؟";
+
+        Assert.Null(AiNavigationIntentDetector.Detect(message));
+        Assert.Null(AiNavigationIntentDetector.DetectSuggestion(message));
+    }
+
+    [Fact]
+    public void Detect_DoesNotRouteAnAdminDashboardRequestToTheOwnerDashboard()
+    {
+        Assert.Null(AiNavigationIntentDetector.Detect("open the admin dashboard"));
+        Assert.Null(AiNavigationIntentDetector.DetectSuggestion("open the admin dashboard"));
+    }
+
+    [Theory]
+    [InlineData("بدي تصوير", "photographers.marketplace")]
+    [InlineData("وديني عالتصوير", "photographers.marketplace")]
+    [InlineData("I want a photographer", "photographers.marketplace")]
+    [InlineData("بدي مصور للعرس", "photographers.marketplace")]
     [InlineData("وين بلاقي بوفيه", "catering")]
     public void DetectUnavailableTopic_FindsServicesWithoutAPage(string message, string topic)
     {

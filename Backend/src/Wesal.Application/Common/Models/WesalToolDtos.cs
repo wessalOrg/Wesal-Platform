@@ -76,7 +76,8 @@ public sealed record GeminiFunctionDeclaration(
 /// </summary>
 public sealed record GeminiFunctionCall(
     string Name,
-    JsonObject Arguments);
+    JsonObject Arguments,
+    string? Id = null);
 
 /// <summary>
 /// The application's response to one <c>functionCall</c>, returned to Gemini as a
@@ -84,7 +85,8 @@ public sealed record GeminiFunctionCall(
 /// </summary>
 public sealed record GeminiFunctionResponse(
     string Name,
-    JsonObject Response);
+    JsonObject Response,
+    string? Id = null);
 
 /// <summary>
 /// One part of a Gemini conversation message: either free text, a function call
@@ -101,7 +103,16 @@ public sealed record GeminiConversationPart(
 /// </summary>
 public sealed record GeminiConversationMessage(
     string Role,
-    IReadOnlyList<GeminiConversationPart> Parts);
+    IReadOnlyList<GeminiConversationPart> Parts)
+{
+    /// <summary>
+    /// Opaque model continuation payload. Infrastructure owns its format and must
+    /// round-trip it unchanged; application code must not inspect or persist it.
+    /// This preserves provider-required metadata without coupling Application to a
+    /// provider SDK.
+    /// </summary>
+    public string? ProviderContinuation { get; init; }
+}
 
 /// <summary>
 /// The outcome of one Gemini tool-calling turn: either a final natural-language
@@ -112,7 +123,13 @@ public sealed record GeminiToolTurn(
     string? Text,
     GeminiFunctionCall? FunctionCall)
 {
-    public bool HasFunctionCall => FunctionCall is not null;
+    public IReadOnlyList<GeminiFunctionCall> FunctionCalls { get; init; }
+        = FunctionCall is null ? [] : [FunctionCall];
+
+    /// <summary>Opaque continuation state for the complete model message.</summary>
+    public string? ProviderContinuation { get; init; }
+
+    public bool HasFunctionCall => FunctionCalls.Count > 0;
     public bool HasText => !string.IsNullOrWhiteSpace(Text);
 }
 

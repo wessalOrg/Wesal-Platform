@@ -474,7 +474,7 @@ async function postChat<T>(
     signal,
     // 503 is tolerated so a proxy error is still surfaced as an assistant turn.
     validateStatus: (status) =>
-      status === 200 || status === 400 || status === 404 || status === 503,
+      status === 200 || status === 400 || status === 404 || status === 429 || status === 503,
   });
 }
 
@@ -531,6 +531,9 @@ export async function sendAiChatTurn(
         problemMessage(data) || "errors.assistant.chat.send",
         503,
       );
+    }
+    if (status === 429) {
+      throw new ApiError("errors.assistant.chat.rateLimited", 429);
     }
     if (!isAssistantPayload(data)) {
       throw new ApiError("errors.assistant.chat.send", 502);

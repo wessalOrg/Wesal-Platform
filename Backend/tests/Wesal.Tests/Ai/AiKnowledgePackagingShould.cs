@@ -155,7 +155,7 @@ public class AiKnowledgePackagingShould
     [InlineData("ما هي ساعات الدعم؟", "ar", "9:00")]
     [InlineData("كيف أتواصل مع الدعم؟", "ar", "wesal.platform.gaza@gmail.com")]
     [InlineData("What are the support hours?", "en", "9:00")]
-    [InlineData("What is Wesal?", "en", "modern platform")]
+    [InlineData("What is Wesal?", "en", "approved wedding halls")]
     public async Task HowTo_WithGeminiDisabled_StillAnswersFromTheKnowledgeBase(string question, string language, string expected)
     {
         var how = new HowToService(

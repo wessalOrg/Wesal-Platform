@@ -131,9 +131,11 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
             knowledgeContext,
             GeminiPromptBuilder.MaxToolSystemContextCharacters,
             turnContext,
-            context);
+            context,
+            functions);
 
         var contents = BuildInitialContents(boundedMessage, context);
+        var thinkingLevel = ChooseThinkingLevel(boundedMessage, context, turnContext);
         var toolCalls = new List<WesalToolInvocation>();
         var invocationCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         var hallNames = new Dictionary<Guid, string>();
@@ -154,7 +156,12 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
         for (var round = 0; round < MaxToolRounds; round++)
         {
             var modelTimer = Stopwatch.StartNew();
-            var turn = await _gemini.GenerateToolTurnAsync(contents, systemInstruction, functions, cancellationToken);
+            var turn = await _gemini.GenerateToolTurnWithThinkingAsync(
+                contents,
+                systemInstruction,
+                functions,
+                thinkingLevel,
+                cancellationToken);
             modelMs += modelTimer.ElapsedMilliseconds;
 
             if (turn is null)
@@ -163,25 +170,38 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
                 return WesalToolOrchestrationResult.NotHandled(effectiveLanguage);
             }
 
-            if (turn.FunctionCall is not null)
+            if (turn.HasFunctionCall)
             {
-                var invocation = new WesalToolInvocation(
-                    turn.FunctionCall.Name.Trim(),
-                    turn.FunctionCall.Arguments ?? new JsonObject());
+                var calls = turn.FunctionCalls.Count > 0
+                    ? turn.FunctionCalls
+                    : turn.FunctionCall is null ? [] : [turn.FunctionCall];
+                var invocations = calls
+                    .Where(call => !string.IsNullOrWhiteSpace(call.Name))
+                    .Select(call => (Call: call, Invocation: new WesalToolInvocation(
+                        call.Name.Trim(), call.Arguments ?? new JsonObject())))
+                    .ToList();
 
-                var fingerprint = BuildFingerprint(invocation);
-                var prior = invocationCounts.TryGetValue(fingerprint, out var count) ? count : 0;
-                if (prior + 1 > MaxRepeatedToolCalls)
+                // Check the whole model turn before executing any part of it, so a
+                // mixed valid/repeated parallel batch cannot partially run.
+                var nextCounts = new Dictionary<string, int>(invocationCounts, StringComparer.Ordinal);
+                foreach (var item in invocations)
                 {
-                    _logger.LogWarning(
-                        "Gemini requested identical tool call {ToolName} more than {Max} times; aborting this turn.",
-                        invocation.Name,
-                        MaxRepeatedToolCalls);
-                    return BuildSafeTermination(effectiveLanguage, toolCalls);
+                    var fingerprint = BuildFingerprint(item.Invocation);
+                    var prior = nextCounts.TryGetValue(fingerprint, out var count) ? count : 0;
+                    if (prior + 1 > MaxRepeatedToolCalls)
+                    {
+                        _logger.LogWarning(
+                            "Gemini requested identical tool call {ToolName} more than {Max} times; aborting this turn.",
+                            item.Invocation.Name,
+                            MaxRepeatedToolCalls);
+                        return BuildSafeTermination(effectiveLanguage, toolCalls);
+                    }
+
+                    nextCounts[fingerprint] = prior + 1;
                 }
 
-                invocationCounts[fingerprint] = prior + 1;
-                toolCalls.Add(invocation);
+                invocationCounts = nextCounts;
+                toolCalls.AddRange(invocations.Select(item => item.Invocation));
 
                 var modelMessageParts = new List<GeminiConversationPart>();
                 if (turn.HasText)
@@ -189,37 +209,50 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
                     modelMessageParts.Add(new GeminiConversationPart(Text: turn.Text));
                 }
 
-                modelMessageParts.Add(new GeminiConversationPart(FunctionCall: turn.FunctionCall));
-                contents.Add(new GeminiConversationMessage("model", modelMessageParts));
-
-                var toolTimer = Stopwatch.StartNew();
-                var invocationResult = _gateway.IsKnownTool(invocation.Name)
-                    ? await _gateway.ExecuteAsync(invocation, cancellationToken)
-                    : WesalToolResult.Fail($"The tool '{invocation.Name}' is not a supported Wesal tool.");
-                toolMs += toolTimer.ElapsedMilliseconds;
-
-                if (invocationResult.Success)
+                modelMessageParts.AddRange(calls.Select(call => new GeminiConversationPart(FunctionCall: call)));
+                contents.Add(new GeminiConversationMessage("model", modelMessageParts)
                 {
-                    RememberNames(hallNames, invocationResult);
-                    if (invocationResult.Halls is not null
-                        || invocationResult.HallDetails is not null
-                        || invocationResult.Availability is not null)
+                    ProviderContinuation = turn.ProviderContinuation
+                });
+
+                var responseParts = new List<GeminiConversationPart>(invocations.Count);
+                foreach (var item in invocations)
+                {
+                    var toolTimer = Stopwatch.StartNew();
+                    var invocationResult = _gateway.IsKnownTool(item.Invocation.Name)
+                        ? await _gateway.ExecuteAsync(item.Invocation, cancellationToken)
+                        : WesalToolResult.Fail($"The tool '{item.Invocation.Name}' is not a supported Wesal tool.");
+                    toolMs += toolTimer.ElapsedMilliseconds;
+
+                    if (invocationResult.Success)
                     {
-                        lastStructured = invocationResult;
+                        RememberNames(hallNames, invocationResult);
+                        if (invocationResult.Halls is not null
+                            || invocationResult.HallDetails is not null
+                            || invocationResult.Availability is not null)
+                        {
+                            lastStructured = invocationResult;
+                        }
                     }
+
+                    var responsePayload = new JsonObject
+                    {
+                        ["result"] = invocationResult.Success ? (invocationResult.Data?.DeepClone() ?? new JsonObject()) : "tool_error",
+                        ["error"] = invocationResult.ErrorMessage
+                    };
+
+                    responseParts.Add(new GeminiConversationPart(FunctionResponse: new GeminiFunctionResponse(
+                        item.Invocation.Name,
+                        responsePayload,
+                        item.Call.Id)));
                 }
 
-                var responsePayload = new JsonObject
+                if (responseParts.Count > 0)
                 {
-                    ["result"] = invocationResult.Success ? (invocationResult.Data?.DeepClone() ?? new JsonObject()) : "tool_error",
-                    ["error"] = invocationResult.ErrorMessage
-                };
-
-                contents.Add(new GeminiConversationMessage(
-                    "function",
-                    [
-                        new GeminiConversationPart(FunctionResponse: new GeminiFunctionResponse(invocation.Name, responsePayload))
-                    ]));
+                    // Gemini accepts function responses in a user message. The SDK
+                    // keeps the call/response ids and opaque thought signatures.
+                    contents.Add(new GeminiConversationMessage("user", responseParts));
+                }
 
                 continue;
             }
@@ -227,7 +260,9 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
             if (turn.HasText)
             {
                 _logger.LogInformation(
-                    "Assistant orchestration handled by Gemini: tools={ToolCount} rounds={Rounds} knowledgeMs={KnowledgeMs} modelMs={ModelMs} toolMs={ToolMs} totalMs={TotalMs}",
+                    "Assistant orchestration handled by Gemini: model={Model} thinking={ThinkingLevel} tools={ToolCount} rounds={Rounds} knowledgeMs={KnowledgeMs} modelMs={ModelMs} toolMs={ToolMs} totalMs={TotalMs}",
+                    _settings.GeminiModel,
+                    thinkingLevel,
                     toolCalls.Count,
                     round + 1,
                     knowledgeTimer.ElapsedMilliseconds,
@@ -244,6 +279,31 @@ public sealed class GeminiToolOrchestrator : IGeminiToolOrchestrator
 
         _logger.LogWarning("Gemini tool-calling exceeded the maximum of {Max} rounds; safely stopping.", MaxToolRounds);
         return BuildSafeTermination(effectiveLanguage, toolCalls);
+    }
+
+    /// <summary>
+    /// Uses existing structured criteria extraction to select model effort. High
+    /// effort is reserved for requests with three or more explicit constraints;
+    /// ordinary turns stay low/medium and deterministic fast paths never reach here.
+    /// </summary>
+    internal string ChooseThinkingLevel(
+        string message,
+        AiConversationContext? conversation,
+        AiTurnContext? turn)
+    {
+        var criteria = new NaturalLanguageCriteriaExtractor().Extract(message);
+        var hasDate = criteria.Date is not null
+                      || (turn is not null && AiRelativeDateResolver.Resolve(message, turn.Today) is not null);
+        var explicitConstraints = new object?[] { criteria.Region, criteria.Area, hasDate ? true : null, criteria.Capacity }
+            .Count(value => value is not null);
+
+        if (explicitConstraints >= 3)
+            return _settings.DeepThinkingLevel;
+
+        if (explicitConstraints >= 2 || (conversation?.LastHalls?.Count ?? 0) >= 2)
+            return _settings.NormalThinkingLevel;
+
+        return _settings.FastThinkingLevel;
     }
 
     private async Task<string> BuildOfficialKnowledgeContextAsync(

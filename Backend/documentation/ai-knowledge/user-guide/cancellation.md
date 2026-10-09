@@ -3,19 +3,19 @@ title: Booking cancellation
 category: user-guide
 language: ar,en
 source: official-project-team-and-repository
-lastUpdated: 2026-09-16
-status: needs-verification
+lastUpdated: 2026-10-09
+status: product-confirmation-required
 keywords: cancel|cancellation|withdraw|refund|إلغاء|الغاء|سحب الطلب|عربون
 ---
 
 ## العربية
 
-يمكن لصاحب الطلب إلغاء طلب الحجز. وفق المعلومات الرسمية، قد يؤدي الإلغاء بعد دفع العربون إلى خسارة العربون، بينما يمكن سحب الطلب دون خسارة عربون مدفوع إذا لم يتم دفع عربون.
+يستطيع صاحب الطلب إلغاء طلب بحالة «معلق» أو «مقبول» ما دام دفع العربون لم يتأكد. بعد تأكيد دفع العربون يمنع مسار الإلغاء الحالي إلغاء الطلب.
 
-ملاحظة تحقق: التنفيذ الحالي يسمح فقط لصاحب الطلب المصادق بإلغاء الطلبات ذات حالة Pending. لا تؤكد هذه المعرفة نسبة استرداد أو مهلة إلغاء أو رسوماً إضافية أو معالجة دفع عربون.
+ملاحظة تحقق: كانت معلومات سابقة تقول إن الإلغاء بعد دفع العربون قد يؤدي إلى خسارة العربون، لكن التنفيذ الحالي يمنع الإلغاء بعد تأكيد الدفع. لا تؤكد هذه المعرفة استرداد المبلغ أو مهلة الإلغاء أو رسوماً إضافية؛ يلزم اعتماد سياسة الإلغاء والاسترداد من فريق المنتج.
 
 ## English
 
-The requester can cancel a booking request. Official information says cancellation after a paid deposit can result in losing that deposit, while a request can be withdrawn without losing a paid deposit when no deposit was paid.
+The requester can cancel a Pending or Accepted booking while deposit payment has not been confirmed. The current cancellation endpoint refuses cancellation after deposit confirmation.
 
-Verification note: the current implementation allows only the authenticated requester to cancel Pending requests. This knowledge base does not confirm refund percentages, cancellation deadlines, extra fees, or deposit-payment handling.
+Verification note: earlier official information said cancellation after a paid deposit may result in losing the deposit, while the current implementation blocks cancellation after confirmation. Refund handling, cancellation deadlines, and extra fees require a product policy decision.

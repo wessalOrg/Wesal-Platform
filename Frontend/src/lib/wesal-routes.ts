@@ -19,6 +19,8 @@ export const ASSISTANT_STATIC_ROUTES: readonly string[] = [
   "/",
   "/about",
   "/halls",
+  "/event-planners",
+  "/photographers",
   "/faq",
   "/help",
   "/login",

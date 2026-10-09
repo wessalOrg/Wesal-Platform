@@ -31,9 +31,10 @@ public class GeminiSingleApiShould
         Func<HttpRequestMessage, HttpResponseMessage> responder,
         GoogleAiSettings? settings = null)
     {
-        var handler = new FakeHttpHandler(responder);
-        var factory = new FakeHttpClientFactory(handler);
-        return new GeminiService(factory, Options.Create(settings ?? Settings()), NullLogger<GeminiService>.Instance);
+        var server = new GeminiSdkTestServer(responder);
+        var configured = settings ?? Settings();
+        configured.BaseUrl = server.BaseUrl;
+        return new GeminiService(Options.Create(configured), NullLogger<GeminiService>.Instance);
     }
 
     private static HttpResponseMessage Json(HttpStatusCode code, object body)
@@ -159,7 +160,7 @@ public class GeminiSingleApiShould
 
         await service.GenerateTextAsync("question", "en", CancellationToken.None);
 
-        Assert.StartsWith("https://custom.example/v1beta/models/gemini-2.5-flash:generateContent", requestUrl);
+        Assert.Contains("/v1beta/models/gemini-2.5-flash:generateContent", requestUrl);
     }
 
     // ── Test 3: Gemini failure → null (deterministic fallback path) ──
@@ -287,13 +288,11 @@ public class GeminiSingleApiShould
             throw new OperationCanceledException(cts.Token);
         });
 
-        await Assert.ThrowsAsync<OperationCanceledException>(
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => service.GenerateTextAsync("question", "en", cts.Token));
 
-        // The single Gemini call may be invoked, but the OperationCanceledException must propagate
-        // without any retry or fallback attempt. callCount is 1 because the handler fires once
-        // before the exception propagates.
-        Assert.Equal(1, callCount);
+        // Cancellation is passed through the SDK and stops before any network request.
+        Assert.Equal(0, callCount);
     }
 
     // ── Test 4: Backend validation (malformed structured output rejected) ──

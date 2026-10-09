@@ -26,8 +26,8 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// <item>success payloads that contain only public, safe data — never
 /// <c>Status</c>/<c>IsOwner</c> or any owner-scoped field.</item>
 /// </list>
-/// The gateway mirrors the public MCP tool surface so internal AI tooling and the
-/// external MCP server advertise the same capabilities.
+/// The gateway shares application services with the public MCP server. Its
+/// function schema is transport-specific and can include assistant-only criteria.
 /// </summary>
 public sealed class WesalToolGateway : IWesalToolGateway
 {
@@ -36,7 +36,6 @@ public sealed class WesalToolGateway : IWesalToolGateway
     public const int MaxNameLength = 120;
     public const int MaxAreaLength = 80;
     public const int MaxCapacity = 9999;
-    private const int CapacityFetchSize = 50;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -126,7 +125,10 @@ public sealed class WesalToolGateway : IWesalToolGateway
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Tool '{ToolName}' failed unexpectedly.", name);
+            _logger.LogError(
+                "Tool '{ToolName}' failed unexpectedly. exceptionType={ExceptionType}",
+                name,
+                ex.GetType().Name);
             return WesalToolResult.Fail("The tool could not complete your request. Please try again later.");
         }
     }
@@ -161,27 +163,17 @@ public sealed class WesalToolGateway : IWesalToolGateway
             Region = region,
             Area = area,
             Date = date,
+            MinimumCapacity = minCapacity,
             PageNumber = 1,
-            // Capacity is not a repository filter: fetch a wider page and filter here so the
-            // model never has to guess capacity from a short, newest-first list.
-            PageSize = minCapacity is null ? pageSize : CapacityFetchSize
+            PageSize = pageSize
         };
 
         var page = await _searchService.SearchHallsAsync(request, cancellationToken);
 
-        IReadOnlyList<HallListItemDto> items = page.Items;
-        var totalCount = page.TotalCount;
-        if (minCapacity is { } required)
-        {
-            var matching = page.Items.Where(hall => hall.Capacity >= required).ToList();
-            totalCount = matching.Count;
-            items = matching.Take(pageSize).ToList();
-        }
-
-        var payload = JsonSerializer.SerializeToNode(new { halls = items, totalCount }, JsonOptions)
+        var payload = JsonSerializer.SerializeToNode(new { halls = page.Items, totalCount = page.TotalCount }, JsonOptions)
             as JsonObject ?? new JsonObject();
 
-        return WesalToolResult.Ok(payload) with { Halls = items };
+        return WesalToolResult.Ok(payload) with { Halls = page.Items };
     }
 
     private async Task<WesalToolResult> ExecuteDetailsAsync(JsonObject args, CancellationToken cancellationToken)

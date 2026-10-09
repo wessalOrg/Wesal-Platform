@@ -191,12 +191,13 @@ try
 
     app.UseCors(CorsPolicyName);
 
-    if (rateLimitingOptions.Enabled)
+    app.UseAuthentication();
+    // Endpoint policies (including Mabrouk's dedicated quota) require routing
+    // and authentication metadata to be available before the limiter runs.
+    if (rateLimitingOptions.Enabled || configuration.GetValue("RateLimiting:Assistant:Enabled", true))
     {
         app.UseRateLimiter();
     }
-
-    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapControllers();

@@ -805,6 +805,7 @@ const ar: MessageCatalog = {
   "errors.assistant.chat.tooLong": "السؤال أطول من الحد المسموح.",
   "errors.assistant.chat.validation": "تعذر فهم السؤال. يمكن تجربة صيغة أقصر أو أوضح.",
   "errors.assistant.chat.send": "تعذر إرسال الرسالة. يرجى المحاولة مرة أخرى.",
+  "errors.assistant.chat.rateLimited": "وصلت لعدد الرسائل المسموح فيه حالياً. استنى شوي وبعدين جرّب مرة ثانية.",
   "errors.assistant.chat.expired": "انتهت جلسة مبروك. يرجى إغلاقه ثم فتحه من جديد.",
   "errors.assistant.chat.unavailable":
     "خدمة التوصيات غير متاحة حالياً. يمكن تصفح القاعات يدوياً.",

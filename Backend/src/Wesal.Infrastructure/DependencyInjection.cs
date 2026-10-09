@@ -58,13 +58,6 @@ public static class DependencyInjection
 
         services.AddScoped<AdminProvisioningService>();
 
-        services.AddHttpClient(GeminiService.HttpClientName, (sp, client) =>
-        {
-            var settings = sp.GetRequiredService<IOptions<GoogleAiSettings>>().Value;
-            var timeoutSeconds = settings.TimeoutSeconds > 0 ? settings.TimeoutSeconds : 30;
-            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-        });
-
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -126,7 +119,7 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddSingleton<IHallSearchIndexer, HallSearchIndexer>();
         services.AddScoped<IOwnerBookingRequestsService, OwnerBookingRequestsService>();
         services.AddScoped<ILanguageService, LanguageService>();
-        services.AddSingleton<IChatSessionService, ChatSessionService>();
+        services.AddScoped<IChatSessionService, ChatSessionService>();
         services.AddSingleton<IWesalKnowledgeService, WesalKnowledgeService>();
         services.AddHostedService<AiKnowledgeStartupCheck>();
         services.AddSingleton<IHowToService, HowToService>();
@@ -134,7 +127,9 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddSingleton<ISubscriptionPaymentService, SubscriptionPaymentService>();
         services.AddScoped<IHallRecommendationMatcher, HallRecommendationMatcher>();
         services.AddSingleton<IDateTime, DateTimeService>();
-        services.AddSingleton<IGeminiService, GeminiService>();
+        services.AddSingleton<IGeminiService>(sp => new GeminiService(
+            sp.GetRequiredService<IOptions<GoogleAiSettings>>(),
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<GeminiService>>()));
         services.AddSingleton<IGeminiToolCallService>(sp => (IGeminiToolCallService)sp.GetRequiredService<IGeminiService>());
         services.AddSingleton<IAiIntentExtractor, GeminiAiIntentExtractor>();
         services.AddScoped<IWesalToolGateway, WesalToolGateway>();

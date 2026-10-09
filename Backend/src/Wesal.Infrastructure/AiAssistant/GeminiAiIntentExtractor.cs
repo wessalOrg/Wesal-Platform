@@ -74,6 +74,16 @@ public sealed class GeminiAiIntentExtractor : IAiIntentExtractor
         return _fallbackClassifier.Classify(message);
     }
 
+    public Task<AiAssistantIntentDto> ExtractWithoutModelAsync(
+        string message,
+        string? language,
+        CancellationToken cancellationToken = default,
+        AiConversationContext? context = null)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_fallbackClassifier.Classify(message));
+    }
+
     private static AiAssistantIntentDto MapPayload(GeminiIntentPayload payload)
     {
         return new AiAssistantIntentDto(

@@ -3,9 +3,9 @@ title: Wesal team
 category: platform
 language: ar,en
 source: official-project-team
-lastUpdated: 2026-09-16
+lastUpdated: 2026-10-09
 status: verified
-keywords: developer|developers|team|technical team|مطور|المطورين|فريق|الفريق التقني|طور|تطوير
+keywords: developer|developers|developed|developer team|who built wesal|who built the platform|builder|team|technical team|مطور|المطورين|فريق|الفريق التقني|مين طور وصال|مين طور منصة وصال|طور وصال|طور منصة وصال|طور|تطوير
 ---
 
 ## العربية

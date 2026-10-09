@@ -62,13 +62,26 @@ public sealed class AiAssistantPolicyGate
             var unavailable = AiNavigationIntentDetector.DetectUnavailableTopic(message);
             if (unavailable is not null)
             {
-                return Build(
+                var capability = WesalCapabilityRegistry.Find(unavailable.Key);
+                var comingSoon = capability?.Status == WesalCapabilityStatus.ComingSoon;
+                var answer = comingSoon
+                    ? language == "en"
+                        ? $"{capability!.LabelEn} are coming soon on Wesal. You can't search for or book them yet."
+                        : $"خدمة {capability!.LabelAr} لسه قيد التجهيز في وصال، وما بتقدر تبحث عنها أو تحجزها حالياً."
+                    : language == "en"
+                        ? $"Wesal doesn't currently offer {unavailable.LabelEn}. What I can help with today is finding wedding halls, checking their details and availability, and explaining how booking works."
+                        : $"خدمة {unavailable.LabelAr} مش متاحة حالياً في وصال. بقدر أساعدك بالبحث عن قاعات الأفراح وتفاصيلها وتوفرها، أو أشرحلك طريقة الحجز.";
+
+                var response = Build(
                     language,
                     AiAssistantResponseKind.Answer,
-                    language == "en"
-                        ? $"Wesal doesn't have a dedicated {unavailable.LabelEn} page right now. What I can help with today is finding wedding halls, checking their details and availability, and explaining how booking works."
-                        : $"ما في صفحة {unavailable.LabelAr} مستقلة متاحة حالياً في وصال. المتاح الآن: البحث عن قاعات الأفراح، وعرض تفاصيلها وتوفرها، وشرح طريقة الحجز.",
+                    answer,
                     null);
+
+                // Describing a service as Coming Soon must not route users into its
+                // placeholder page. An explicit request to open that real page is
+                // handled by the navigation detector below.
+                return response;
             }
 
             var navigation = AiNavigationIntentDetector.Detect(message);
@@ -163,16 +176,7 @@ public sealed class AiAssistantPolicyGate
     }
 
     private static string Compose(WesalKnowledgeArticle article, string language)
-    {
-        if (article.Status == WesalKnowledgeStatus.Verified)
-        {
-            return article.Content;
-        }
-
-        return article.Content + (language == "en"
-            ? "\n\nNote: some details in this answer are pending verification; please contact the Wesal team to confirm before relying on them."
-            : "\n\nملاحظة: بعض التفاصيل في هذه الإجابة قيد التحقق؛ يُنصح بالتواصل مع فريق وصال للتأكيد قبل الاعتماد عليها.");
-    }
+        => WesalKnowledgeAnswerComposer.Compose(article, language);
 
     internal static AiAssistantResponse BuildNavigation(string language, AiNavigationMatch match)
     {

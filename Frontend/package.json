@@ -7,14 +7,15 @@
     "prebuild": "node scripts/verify-production-env.mjs",
     "verify:api-base-url": "node scripts/verify-api-base-url.mjs",
     "verify:assistant": "tsx scripts/verify-assistant-contract.ts",
+    "verify:assistant-storage": "tsx scripts/verify-ai-chat-storage.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@microsoft/signalr": "^10.0.11",
-    "axios": "^1.19.0",
-    "next": "16.3.0",
+    "axios": "^1.20.0",
+    "next": "16.4.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -24,7 +25,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.0",
+    "eslint-config-next": "16.4.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

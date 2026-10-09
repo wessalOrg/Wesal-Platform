@@ -22,6 +22,9 @@ public class HallSearchRequest
 
     public TimeOnly? StartTime { get; init; }
 
+    /// <summary>Optional lower bound for venue guest capacity.</summary>
+    public int? MinimumCapacity { get; init; }
+
     public int PageNumber { get; init; } = 1;
 
     public int PageSize { get; init; } = 12;

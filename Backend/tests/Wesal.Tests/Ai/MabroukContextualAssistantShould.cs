@@ -354,7 +354,7 @@ public class MabroukContextualAssistantShould
 
         Assert.True(response.Actions is null || response.Actions.Count == 0);
         Assert.DoesNotContain("/photography", response.Message);
-        Assert.Contains(response.ResponseLanguage == "en" ? "dedicated" : "ما في صفحة", response.Message);
+        Assert.Contains(response.ResponseLanguage == "en" ? "coming soon" : "قيد التجهيز", response.Message);
     }
 
     [Fact]
@@ -391,7 +391,7 @@ public class MabroukContextualAssistantShould
 
         Assert.DoesNotContain("+972597744476", response.Message);
         Assert.DoesNotContain("120", response.Message);
-        Assert.Contains("عربون", response.Message);
+        Assert.Equal("سياسة هذه الحالة غير مؤكدة عندي حاليًا، تواصل مع دعم وصال.", response.Message);
     }
 
     [Fact]
@@ -448,7 +448,7 @@ public class MabroukContextualAssistantShould
     [InlineData("شو هو وصال؟", "ar", "منصة")]
     [InlineData("ما هي ساعات الدعم؟", "ar", "9:00")]
     [InlineData("كيف أتواصل مع الدعم الفني؟", "ar", "wesal.platform.gaza@gmail.com")]
-    [InlineData("What is Wesal?", "en", "modern platform")]
+    [InlineData("What is Wesal?", "en", "approved wedding halls")]
     [InlineData("What are the support hours?", "en", "9:00")]
     public async Task KnowledgeQuestions_AreAnsweredFromTheKnowledgeBase_WithGeminiOff(string message, string language, string expected)
     {
@@ -600,7 +600,7 @@ public class MabroukContextualAssistantShould
 
         var secondCall = h.Gemini.Calls[1].Contents;
         Assert.Equal("model", secondCall[^2].Role);
-        Assert.Equal("function", secondCall[^1].Role);
+        Assert.Equal("user", secondCall[^1].Role);
     }
 
     [Fact]

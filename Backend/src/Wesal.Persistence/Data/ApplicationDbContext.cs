@@ -37,6 +37,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<AISession> AISessions => Set<AISession>();
 
+    public DbSet<AiConversationSession> AiConversationSessions => Set<AiConversationSession>();
+
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
 
     public DbSet<Booking> Bookings => Set<Booking>();
@@ -265,6 +267,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(session => session.CreatedAt).HasColumnType("timestamp with time zone");
 
             entity.Property(session => session.LastAccessedAt).HasColumnType("timestamp with time zone");
+        });
+
+        builder.Entity<AiConversationSession>(entity =>
+        {
+            entity.ToTable("AiConversationSessions");
+            entity.HasKey(session => session.SessionId);
+            entity.Property(session => session.SessionId).ValueGeneratedNever();
+            entity.Property(session => session.UserId).HasMaxLength(450);
+            entity.Property(session => session.Language).IsRequired().HasMaxLength(8);
+            entity.Property(session => session.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(session => session.LastActivityAt).HasColumnType("timestamp with time zone");
+            entity.Property(session => session.ExpiresAt).HasColumnType("timestamp with time zone");
+            entity.Property(session => session.TurnsJson).IsRequired().HasMaxLength(20_000);
+            entity.Property(session => session.LastIntentJson).HasMaxLength(8_000);
+            entity.Property(session => session.LastHallsJson).HasMaxLength(4_000);
+            entity.Property(session => session.LastHallJson).HasMaxLength(1_000);
+            entity.Property(session => session.Revision).IsConcurrencyToken();
+            entity.HasIndex(session => session.ExpiresAt);
+            entity.HasIndex(session => session.UserId);
         });
 
         builder.Entity<RevokedToken>(entity =>

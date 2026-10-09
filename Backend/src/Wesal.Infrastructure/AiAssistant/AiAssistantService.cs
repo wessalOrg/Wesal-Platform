@@ -103,23 +103,28 @@ public sealed class AiAssistantService : IAiAssistantService
         var turn = await _contextResolver.ResolveAsync(requestContext, context, text, cancellationToken);
         var contextMs = stage.ElapsedMilliseconds;
 
-        var (response, route) = await RouteAsync(text, effectiveLanguage, turn, context, cancellationToken);
+        var routed = await RouteAsync(text, effectiveLanguage, turn, context, cancellationToken);
+        var response = routed.Response;
         response = WithContextualActions(text, response, turn);
 
         _logger.LogInformation(
-            "Assistant turn: route={Route} kind={Kind} page={PageKey} hallContext={HallSource} actions={Actions} contextMs={ContextMs} totalMs={TotalMs}",
-            route,
+            "Assistant turn: route={Route} kind={Kind} page={PageKey} hallContext={HallSource} actions={Actions} contextMs={ContextMs} policyMs={PolicyMs} hallContextMs={HallContextMs} orchestrationMs={OrchestrationMs} fallbackReason={FallbackReason} totalMs={TotalMs}",
+            routed.Route,
             response.Kind,
             turn.PageKey ?? "-",
             turn.HallSource ?? "-",
             response.Actions?.Count ?? 0,
             contextMs,
+            routed.PolicyMs,
+            routed.HallContextMs,
+            routed.OrchestrationMs,
+            routed.FallbackReason ?? "-",
             total.ElapsedMilliseconds);
 
         return response;
     }
 
-    private async Task<(AiAssistantResponse Response, string Route)> RouteAsync(
+    private async Task<AssistantRouteResult> RouteAsync(
         string text,
         string language,
         AiTurnContext turn,
@@ -127,33 +132,39 @@ public sealed class AiAssistantService : IAiAssistantService
         CancellationToken cancellationToken)
     {
         // 1) Deterministic policies: navigation, unavailable services, support, payments.
+        var stage = Stopwatch.StartNew();
         var gate = await _policyGate.TryHandleAsync(text, language, cancellationToken);
+        var policyMs = stage.ElapsedMilliseconds;
         if (gate is not null)
         {
-            return (gate, "policy");
+            return new AssistantRouteResult(gate, "policy", policyMs, 0, 0, null);
         }
 
         // 2) The hall in context answers its own data questions from live data.
+        stage.Restart();
         var hallAnswer = await TryHandleHallContextAsync(text, language, turn, cancellationToken);
+        var hallContextMs = stage.ElapsedMilliseconds;
         if (hallAnswer is not null)
         {
-            return (hallAnswer, "hall-context");
+            return new AssistantRouteResult(hallAnswer, "hall-context", policyMs, hallContextMs, 0, null);
         }
 
         // 3) Gemini orchestration (structured, tool-grounded).
-        var orchestration = await TryOrchestrateAsync(text, language, context, turn, cancellationToken);
+        stage.Restart();
+        var (orchestration, fallbackReason) = await TryOrchestrateAsync(text, language, context, turn, cancellationToken);
+        var orchestrationMs = stage.ElapsedMilliseconds;
         if (orchestration is not null)
         {
-            return (orchestration, "gemini");
+            return new AssistantRouteResult(orchestration, "gemini", policyMs, hallContextMs, orchestrationMs, null);
         }
 
         // 4) Deterministic degradation: fully functional without any model.
         cancellationToken.ThrowIfCancellationRequested();
         var degraded = await HandleDeterministicAsync(text, language, turn, context, cancellationToken);
-        return (degraded, "deterministic");
+        return new AssistantRouteResult(degraded, "deterministic", policyMs, hallContextMs, orchestrationMs, fallbackReason);
     }
 
-    private async Task<AiAssistantResponse?> TryOrchestrateAsync(
+    private async Task<(AiAssistantResponse? Response, string? FallbackReason)> TryOrchestrateAsync(
         string text,
         string language,
         AiConversationContext? context,
@@ -175,23 +186,38 @@ public sealed class AiAssistantService : IAiAssistantService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Gemini orchestrator failed unexpectedly; using the deterministic path.");
-            return null;
+            // Exception messages and stack traces may contain user text or provider payloads.
+            _logger.LogWarning(
+                "Gemini orchestrator failed; using deterministic path. exceptionType={ExceptionType}",
+                ex.GetType().Name);
+            return (null, "exception");
         }
 
-        if (result is null
-            || result.Disposition == AiOrchestrationDisposition.NotHandled
-            || !result.Success
-            || string.IsNullOrWhiteSpace(result.Answer))
+        if (result is null)
         {
-            return null;
+            return (null, "no_result");
+        }
+
+        if (result.Disposition == AiOrchestrationDisposition.NotHandled)
+        {
+            return (null, "not_handled");
+        }
+
+        if (!result.Success)
+        {
+            return (null, "unsuccessful");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.Answer))
+        {
+            return (null, "empty_answer");
         }
 
         var responseLanguage = string.IsNullOrWhiteSpace(result.ResponseLanguage) ? language : result.ResponseLanguage;
 
         if (result.Availability is { } availability)
         {
-            return new AiAssistantResponse(
+            return (new AiAssistantResponse(
                 AiAssistantResponseKind.Availability,
                 result.Answer,
                 responseLanguage,
@@ -199,12 +225,12 @@ public sealed class AiAssistantService : IAiAssistantService
                 Array.Empty<HallRecommendationDto>(),
                 null,
                 availability,
-                new AiAssistantIntentDto(AiIntentType.CheckHallAvailability, null, null, availability.Date, null, availability.HallName));
+                new AiAssistantIntentDto(AiIntentType.CheckHallAvailability, null, null, availability.Date, null, availability.HallName)), null);
         }
 
         if (result.HallDetails is { } details)
         {
-            return new AiAssistantResponse(
+            return (new AiAssistantResponse(
                 AiAssistantResponseKind.HallDetails,
                 result.Answer,
                 responseLanguage,
@@ -212,12 +238,12 @@ public sealed class AiAssistantService : IAiAssistantService
                 Array.Empty<HallRecommendationDto>(),
                 details,
                 null,
-                new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, details.HallName));
+                new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, details.HallName)), null);
         }
 
         if (result.Halls.Count > 0)
         {
-            return new AiAssistantResponse(
+            return (new AiAssistantResponse(
                 AiAssistantResponseKind.Halls,
                 result.Answer,
                 responseLanguage,
@@ -225,11 +251,19 @@ public sealed class AiAssistantService : IAiAssistantService
                 result.Halls,
                 null,
                 null,
-                new AiAssistantIntentDto(AiIntentType.SearchHalls, null, null, null, null, null));
+                new AiAssistantIntentDto(AiIntentType.SearchHalls, null, null, null, null, null)), null);
         }
 
-        return Build(responseLanguage, AiAssistantResponseKind.Answer, result.Answer, null);
+        return (Build(responseLanguage, AiAssistantResponseKind.Answer, result.Answer, null), null);
     }
+
+    private sealed record AssistantRouteResult(
+        AiAssistantResponse Response,
+        string Route,
+        long PolicyMs,
+        long HallContextMs,
+        long OrchestrationMs,
+        string? FallbackReason);
 
     // ───────────────────────── hall context (pinned / page / ordinal) ─────────────────────────
 
@@ -454,7 +488,7 @@ public sealed class AiAssistantService : IAiAssistantService
         AiConversationContext? context,
         CancellationToken cancellationToken)
     {
-        var intent = await _intentExtractor.ExtractAsync(text, language, cancellationToken, context);
+        var intent = await _intentExtractor.ExtractWithoutModelAsync(text, language, cancellationToken, context);
         intent = MergeWithContext(intent, context);
         intent = RefineIntent(text, intent, turn);
 

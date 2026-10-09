@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
@@ -142,6 +143,7 @@ public class AiAssistantController : ControllerBase
     /// endpoints remain untouched.
     /// </summary>
     [HttpPost("{sessionId:guid}/assistant")]
+    [EnableRateLimiting(AssistantRateLimitingOptions.PolicyName)]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AiAssistantResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

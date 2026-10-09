@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Common;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
@@ -72,7 +73,7 @@ public class HallRepository : IHallRepository
         int skip,
         int take,
         CancellationToken cancellationToken = default)
-        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, detailedAddress, date, startTime)
+        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, detailedAddress, date, startTime, null)
             .OrderByDescending(hall => hall.CreatedAt)
             .ThenBy(hall => hall.Name)
             .Skip(skip)
@@ -87,7 +88,27 @@ public class HallRepository : IHallRepository
         DateOnly? date,
         TimeOnly? startTime,
         CancellationToken cancellationToken = default)
-        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, detailedAddress, date, startTime)
+        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, detailedAddress, date, startTime, null)
+            .CountAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
+        HallSearchRequest request,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+        => await ApplySearchFilters(ApprovedHallsQuery(), request.Name, request.Region, request.Area,
+                request.DetailedAddress, request.Date, request.StartTime, request.MinimumCapacity)
+            .OrderByDescending(hall => hall.CreatedAt)
+            .ThenBy(hall => hall.Name)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+    public async Task<int> SearchApprovedHallsCountAsync(
+        HallSearchRequest request,
+        CancellationToken cancellationToken = default)
+        => await ApplySearchFilters(ApprovedHallsQuery(), request.Name, request.Region, request.Area,
+                request.DetailedAddress, request.Date, request.StartTime, request.MinimumCapacity)
             .CountAsync(cancellationToken);
 
     public async Task<IReadOnlyList<HallImage>> GetHallImagesAsync(
@@ -143,7 +164,8 @@ public class HallRepository : IHallRepository
         string? area,
         string? detailedAddress,
         DateOnly? date,
-        TimeOnly? startTime)
+        TimeOnly? startTime,
+        int? minimumCapacity)
     {
         if (!string.IsNullOrWhiteSpace(name))
         {
@@ -153,6 +175,11 @@ public class HallRepository : IHallRepository
         if (region.HasValue)
         {
             query = query.Where(hall => hall.Region == region.Value);
+        }
+
+        if (minimumCapacity.HasValue)
+        {
+            query = query.Where(hall => hall.Capacity >= minimumCapacity.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(area))

@@ -1,5 +1,6 @@
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
+using Wesal.Application.Common.Models;
 
 namespace Wesal.Application.Common.Interfaces.Persistence;
 
@@ -40,6 +41,29 @@ public interface IHallRepository
         DateOnly? date,
         TimeOnly? startTime,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Search overload for criteria, including repository-owned capacity filtering.</summary>
+    Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
+        HallSearchRequest request,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.MinimumCapacity.HasValue)
+            throw new NotSupportedException("This hall repository does not support capacity filtering.");
+        return SearchApprovedHallsAsync(request.Name, request.Region, request.Area, request.DetailedAddress,
+            request.Date, request.StartTime, skip, take, cancellationToken);
+    }
+
+    Task<int> SearchApprovedHallsCountAsync(
+        HallSearchRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.MinimumCapacity.HasValue)
+            throw new NotSupportedException("This hall repository does not support capacity filtering.");
+        return SearchApprovedHallsCountAsync(request.Name, request.Region, request.Area, request.DetailedAddress,
+            request.Date, request.StartTime, cancellationToken);
+    }
 
     Task<IReadOnlyList<HallImage>> GetHallImagesAsync(Guid hallId, CancellationToken cancellationToken = default);
 
