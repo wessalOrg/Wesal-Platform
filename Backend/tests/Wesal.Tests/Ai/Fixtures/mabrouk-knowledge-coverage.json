@@ -1,0 +1,934 @@
+[
+  {
+    "question": "مين مطورين وصال",
+    "language": "ar"
+  },
+  {
+    "question": "مين مطورين وصال لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "مين مطورين وصال ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "مين مطورين وصال بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "مين مطورين وصال احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "مين مطورين وصال بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "مين مطورين وصال؟",
+    "language": "ar"
+  },
+  {
+    "question": "مين مطورين وصال يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "مين مطورين وصال ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "مين عمل مبروك",
+    "language": "ar"
+  },
+  {
+    "question": "مين عمل مبروك لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "مين عمل مبروك ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "مين عمل مبروك بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "مين عمل مبروك احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "مين عمل مبروك بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "مين عمل مبروك؟",
+    "language": "ar"
+  },
+  {
+    "question": "مين عمل مبروك يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "مين عمل مبروك ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "شو هي وصال",
+    "language": "ar"
+  },
+  {
+    "question": "شو هي وصال لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "شو هي وصال ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "شو هي وصال بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "شو هي وصال احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "شو هي وصال بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "شو هي وصال؟",
+    "language": "ar"
+  },
+  {
+    "question": "شو هي وصال يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "شو هي وصال ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "شو الخدمات المتاحة حالياً",
+    "language": "ar"
+  },
+  {
+    "question": "شو الخدمات المتاحة حالياً لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "شو الخدمات المتاحة حالياً ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "شو الخدمات المتاحة حالياً بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "شو الخدمات المتاحة حالياً احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "شو الخدمات المتاحة حالياً بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "شو الخدمات المتاحة حالياً؟",
+    "language": "ar"
+  },
+  {
+    "question": "شو الخدمات المتاحة حالياً يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "شو الخدمات المتاحة حالياً ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "عندكم مصورين",
+    "language": "ar"
+  },
+  {
+    "question": "عندكم مصورين لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "عندكم مصورين ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "عندكم مصورين بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "عندكم مصورين احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "عندكم مصورين بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "عندكم مصورين؟",
+    "language": "ar"
+  },
+  {
+    "question": "عندكم مصورين يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "عندكم مصورين ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع وصال",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع وصال لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع وصال ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع وصال بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع وصال احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع وصال بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع وصال؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع وصال يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع وصال ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "ما هي ساعات الدعم",
+    "language": "ar"
+  },
+  {
+    "question": "ما هي ساعات الدعم لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "ما هي ساعات الدعم ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "ما هي ساعات الدعم بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "ما هي ساعات الدعم احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "ما هي ساعات الدعم بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "ما هي ساعات الدعم؟",
+    "language": "ar"
+  },
+  {
+    "question": "ما هي ساعات الدعم يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "ما هي ساعات الدعم ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أعمل حساب",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أعمل حساب لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أعمل حساب ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أعمل حساب بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أعمل حساب احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أعمل حساب بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أعمل حساب؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أعمل حساب يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أعمل حساب ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أسجل الدخول",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أسجل الدخول لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أسجل الدخول ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أسجل الدخول بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أسجل الدخول احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أسجل الدخول بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أسجل الدخول؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أسجل الدخول يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أسجل الدخول ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أبحث عن قاعات",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أبحث عن قاعات لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أبحث عن قاعات ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أبحث عن قاعات بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أبحث عن قاعات احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أبحث عن قاعات بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أبحث عن قاعات؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أبحث عن قاعات يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أبحث عن قاعات ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أشوف تفاصيل القاعة",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أشوف تفاصيل القاعة لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أشوف تفاصيل القاعة ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أشوف تفاصيل القاعة بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أشوف تفاصيل القاعة احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أشوف تفاصيل القاعة بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أشوف تفاصيل القاعة؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أشوف تفاصيل القاعة يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أشوف تفاصيل القاعة ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أحجز قاعة",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أحجز قاعة لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أحجز قاعة ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أحجز قاعة بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أحجز قاعة احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أحجز قاعة بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أحجز قاعة؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أحجز قاعة يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أحجز قاعة ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "وين بشوف حجوزاتي",
+    "language": "ar"
+  },
+  {
+    "question": "وين بشوف حجوزاتي لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "وين بشوف حجوزاتي ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "وين بشوف حجوزاتي بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "وين بشوف حجوزاتي احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "وين بشوف حجوزاتي بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "وين بشوف حجوزاتي؟",
+    "language": "ar"
+  },
+  {
+    "question": "وين بشوف حجوزاتي يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "وين بشوف حجوزاتي ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف ألغي حجزي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف ألغي حجزي لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف ألغي حجزي ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف ألغي حجزي بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف ألغي حجزي احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف ألغي حجزي بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف ألغي حجزي؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف ألغي حجزي يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف ألغي حجزي ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف قاعتي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف قاعتي لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف قاعتي ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف قاعتي بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف قاعتي احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف قاعتي بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف قاعتي؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف قاعتي يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف قاعتي ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدير قاعتي من لوحة التحكم",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدير قاعتي من لوحة التحكم لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدير قاعتي من لوحة التحكم ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدير قاعتي من لوحة التحكم بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدير قاعتي من لوحة التحكم احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدير قاعتي من لوحة التحكم بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدير قاعتي من لوحة التحكم؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدير قاعتي من لوحة التحكم يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدير قاعتي من لوحة التحكم ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "بعد ما أضيف القاعة شو بصير",
+    "language": "ar"
+  },
+  {
+    "question": "بعد ما أضيف القاعة شو بصير لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "بعد ما أضيف القاعة شو بصير ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "بعد ما أضيف القاعة شو بصير بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "بعد ما أضيف القاعة شو بصير احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "بعد ما أضيف القاعة شو بصير بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "بعد ما أضيف القاعة شو بصير؟",
+    "language": "ar"
+  },
+  {
+    "question": "بعد ما أضيف القاعة شو بصير يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "بعد ما أضيف القاعة شو بصير ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "ليش قاعتي مش ظاهرة",
+    "language": "ar"
+  },
+  {
+    "question": "ليش قاعتي مش ظاهرة لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "ليش قاعتي مش ظاهرة ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "ليش قاعتي مش ظاهرة بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "ليش قاعتي مش ظاهرة احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "ليش قاعتي مش ظاهرة بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "ليش قاعتي مش ظاهرة؟",
+    "language": "ar"
+  },
+  {
+    "question": "ليش قاعتي مش ظاهرة يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "ليش قاعتي مش ظاهرة ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدفع اشتراك القاعة",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدفع اشتراك القاعة لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدفع اشتراك القاعة ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدفع اشتراك القاعة بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدفع اشتراك القاعة احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدفع اشتراك القاعة بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدفع اشتراك القاعة؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدفع اشتراك القاعة يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أدفع اشتراك القاعة ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أغير اللغة",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أغير اللغة لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أغير اللغة ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أغير اللغة بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أغير اللغة احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أغير اللغة بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أغير اللغة؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أغير اللغة يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أغير اللغة ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أنزل وصال كتطبيق",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أنزل وصال كتطبيق لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أنزل وصال كتطبيق ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أنزل وصال كتطبيق بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أنزل وصال كتطبيق احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أنزل وصال كتطبيق بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أنزل وصال كتطبيق؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أنزل وصال كتطبيق يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أنزل وصال كتطبيق ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع صاحب القاعة",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع صاحب القاعة لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع صاحب القاعة ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع صاحب القاعة بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع صاحب القاعة احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع صاحب القاعة بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع صاحب القاعة؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع صاحب القاعة يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أتواصل مع صاحب القاعة ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف تعليق",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف تعليق لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف تعليق ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف تعليق بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف تعليق احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف تعليق بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف تعليق؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف تعليق يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أضيف تعليق ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أقيم قاعة",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أقيم قاعة لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أقيم قاعة ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أقيم قاعة بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أقيم قاعة احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أقيم قاعة بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أقيم قاعة؟",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أقيم قاعة يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "كيف أقيم قاعة ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "هل صاحب القاعة يقدر يحجز قاعة ثانية",
+    "language": "ar"
+  },
+  {
+    "question": "هل صاحب القاعة يقدر يحجز قاعة ثانية لو سمحت",
+    "language": "ar"
+  },
+  {
+    "question": "هل صاحب القاعة يقدر يحجز قاعة ثانية ممكن توضحلي",
+    "language": "ar"
+  },
+  {
+    "question": "هل صاحب القاعة يقدر يحجز قاعة ثانية بدي أعرف",
+    "language": "ar"
+  },
+  {
+    "question": "هل صاحب القاعة يقدر يحجز قاعة ثانية احكيلي عنها",
+    "language": "ar"
+  },
+  {
+    "question": "هل صاحب القاعة يقدر يحجز قاعة ثانية بالله عليك",
+    "language": "ar"
+  },
+  {
+    "question": "هل صاحب القاعة يقدر يحجز قاعة ثانية؟",
+    "language": "ar"
+  },
+  {
+    "question": "هل صاحب القاعة يقدر يحجز قاعة ثانية يا ريت",
+    "language": "ar"
+  },
+  {
+    "question": "هل صاحب القاعة يقدر يحجز قاعة ثانية ممكن تساعدني",
+    "language": "ar"
+  },
+  {
+    "question": "مين طور وصال",
+    "language": "ar"
+  },
+  {
+    "question": "who developed Wesal",
+    "language": "en"
+  },
+  {
+    "question": "مين مطوريين وصال",
+    "language": "ar"
+  },
+  {
+    "question": "كيف اضيف قاعتي",
+    "language": "ar"
+  },
+  {
+    "question": "how أضيف a hall",
+    "language": "ar"
+  },
+  {
+    "question": "who developed منصة Wesal",
+    "language": "en"
+  },
+  {
+    "question": "كيف بدي أضيف الصالة تبعتي؟",
+    "language": "ar"
+  },
+  {
+    "question": "ممكن طريقة install وصال؟",
+    "language": "ar"
+  }
+]

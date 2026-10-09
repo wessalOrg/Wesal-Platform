@@ -149,6 +149,17 @@ public sealed class AiAssistantService : IAiAssistantService
             return new AssistantRouteResult(hallAnswer, "hall-context", policyMs, hallContextMs, 0, null);
         }
 
+        // Verified static facts and deterministic how-tos are authoritative and do
+        // not require Gemini. Unknown questions return null and continue to orchestration.
+        stage.Restart();
+        var knownAnswer = await _howToService.TryAnswerKnownQuestionAsync(text, language, cancellationToken, context);
+        var knowledgeMs = stage.ElapsedMilliseconds;
+        if (knownAnswer is not null)
+        {
+            var response = Build(language, AiAssistantResponseKind.Answer, knownAnswer.Answer, null);
+            return new AssistantRouteResult(response, "knowledge", policyMs, hallContextMs, knowledgeMs, null);
+        }
+
         // 3) Gemini orchestration (structured, tool-grounded).
         stage.Restart();
         var (orchestration, fallbackReason) = await TryOrchestrateAsync(text, language, context, turn, cancellationToken);

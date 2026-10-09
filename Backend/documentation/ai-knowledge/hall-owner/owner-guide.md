@@ -2,20 +2,20 @@
 title: Hall Owner guide
 category: hall-owner
 language: ar,en
-source: official-project-team-and-repository
+source: current-repository-owner-and-hall-creation-services
 lastUpdated: 2026-10-09
-status: product-confirmation-required
-keywords: hall owner|owner dashboard|صاحب قاعة|مالك القاعة|لوحة التحكم
+status: verified
+keywords: hall owner|owner dashboard|add a hall|register my hall|identity document|hall owner account|صاحب قاعة|مالك القاعة|صاحب صالة|لوحة التحكم|إضافة قاعة|اضيف قاعتي|سجل قاعتي|وثيقة الهوية
 ---
 
 ## العربية
 
-يستطيع صاحب القاعة إضافة قاعة وإدارة قاعاته من لوحة التحكم الخاصة به. تتطلب إجراءات إدارة القاعة حساب صاحب قاعة مصادقاً.
+تحتاج إضافة قاعة إلى حساب صاحب قاعة مع تسجيل الدخول، ورفع وثيقة إثبات الهوية في ملف صاحب القاعة. من لوحة صاحب القاعة اختر «إضافة قاعة». أدخل اسم القاعة ورقم التواصل والمنطقة والعنوان من قائمة العناوين التابعة لها والسعة. الوصف والسعر والمزايا والفترة الزمنية للحجز بالساعة ورابط YouTube والصور حقول اختيارية بحسب النموذج. بعد الإرسال تصبح القاعة «قيد المراجعة» حتى يراجعها المدير ويوافق عليها أو يرفضها. يستطيع صاحب القاعة من لوحته عرض قاعاته وتفاصيلها وتعديلها أو حذفها حيثما يسمح النظام، ومتابعة التقويم وطلبات الحجز والرسائل.
 
-ملاحظة تحقق: المعلومات الرسمية تذكر أن صاحب القاعة يستطيع طلب حجز لقاعة أخرى، لكن التنفيذ الحالي يمنع دور Hall Owner من إنشاء طلبات حجز. تحتاج هذه النقطة إلى قرار وتوحيد.
+لا تظهر القاعة للعامة إلا إذا كانت معتمدة، واشتراكها مدفوعاً ومؤكداً من المدير، وغير مقفلة أو محذوفة.
 
 ## English
 
-A Hall Owner can add a hall and manage owned halls through the owner dashboard. Hall-management actions require an authenticated Hall Owner account.
+Adding a hall requires an authenticated Hall Owner account and an identity document uploaded to the owner's profile. From the owner dashboard, choose Add Hall. Enter the hall name, contact phone, region, an address from that region's address list, and capacity. Description, price, features, hourly booking window, YouTube link, and photos are optional fields as supported by the form. On submission, the hall becomes Pending Review for Admin approval or rejection. The dashboard also supports viewing owned halls and their details, editing or deleting where permitted, and managing calendar, booking requests, and messages.
 
-Verification note: official information says a Hall Owner can request a booking for another hall, but the current implementation blocks the Hall Owner role from creating booking requests. This needs a product decision and alignment.
+A hall is public only when approved, its subscription payment is confirmed by an Admin, and it is not locked or deleted.
