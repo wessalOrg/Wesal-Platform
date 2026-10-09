@@ -19,6 +19,7 @@ public sealed class AiConversationSessionStore : IAiConversationSessionStore
     {
         _context.AiConversationSessions.Add(session);
         await _context.SaveChangesAsync(cancellationToken);
+        _context.Entry(session).State = EntityState.Detached;
     }
 
     public async Task<bool> TryUpdateAsync(
@@ -35,6 +36,7 @@ public sealed class AiConversationSessionStore : IAiConversationSessionStore
         try
         {
             await _context.SaveChangesAsync(cancellationToken);
+            _context.Entry(session).State = EntityState.Detached;
             return true;
         }
         catch (DbUpdateConcurrencyException)

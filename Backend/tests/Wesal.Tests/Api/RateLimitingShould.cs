@@ -115,6 +115,67 @@ public sealed class RateLimitingShould
     }
 
     [Fact]
+    public async Task AssistantConcurrency_RejectsWhenBothSlotsAreOccupied_AndLeavesOrdinaryTrafficAvailable()
+    {
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var bothRequestsEntered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var activeRequests = 0;
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["RateLimiting:Enabled"] = "false",
+            ["RateLimiting:Assistant:Enabled"] = "true",
+            ["RateLimiting:Assistant:TokenLimit"] = "10",
+            ["RateLimiting:Assistant:TokensPerPeriod"] = "10",
+            ["RateLimiting:Assistant:ReplenishmentPeriodSeconds"] = "60",
+            ["RateLimiting:Assistant:ConcurrencyLimit"] = "2"
+        });
+        builder.Services.AddWesalRateLimiting(builder.Configuration);
+        var app = builder.Build();
+        app.UseRateLimiter();
+        app.MapGet("/assistant", async () =>
+        {
+            if (Interlocked.Increment(ref activeRequests) == 2)
+            {
+                bothRequestsEntered.TrySetResult(true);
+            }
+
+            await release.Task;
+            Interlocked.Decrement(ref activeRequests);
+            return Results.Ok();
+        }).RequireRateLimiting(AssistantRateLimitingOptions.PolicyName);
+        app.MapGet("/ordinary", () => Results.Ok());
+        await app.StartAsync();
+        await using var _ = app;
+        var client = app.GetTestClient();
+        Task<HttpResponseMessage>? first = null;
+        Task<HttpResponseMessage>? second = null;
+
+        try
+        {
+            first = client.GetAsync("/assistant");
+            second = client.GetAsync("/assistant");
+            await bothRequestsEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.Equal(2, Volatile.Read(ref activeRequests));
+            Assert.Equal(429, (int)(await client.GetAsync("/assistant")).StatusCode);
+            Assert.Equal(200, (int)(await client.GetAsync("/ordinary")).StatusCode);
+        }
+        finally
+        {
+            release.TrySetResult(true);
+            if (first is not null && second is not null)
+            {
+                await Task.WhenAll(first, second);
+            }
+        }
+
+        Assert.Equal(200, (int)(await first!).StatusCode);
+        Assert.Equal(200, (int)(await second!).StatusCode);
+    }
+
+    [Fact]
     public void EnabledWithNonPositivePermitLimit_ThrowsAtStartup()
     {
         var services = new ServiceCollection();
