@@ -158,9 +158,13 @@ public class WesalKnowledgeServiceShould
         var articles = await _service.SearchAsync("book hall wesal", "en", 5);
 
         Assert.NotEmpty(articles);
-        var booking = Assert.Single(articles, a => a.Category == "user-guide" && a.Title.Contains("Booking", StringComparison.OrdinalIgnoreCase));
+        var booking = Assert.Single(articles, a => a.Category == "user-guide" && a.Title.Equals("Booking a hall", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("book", booking.Content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("deposit", booking.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("deposit", booking.Content, StringComparison.OrdinalIgnoreCase);
+
+        var payment = await _service.SearchAsync("booking deposit payment", "en", 5);
+        var pendingTerms = Assert.Single(payment, a => a.Category == "user-guide" && a.Title == "Booking payment terms");
+        Assert.Equal(WesalKnowledgeStatus.NeedsVerification, pendingTerms.Status);
     }
 
     [Fact]
@@ -200,8 +204,9 @@ public class WesalKnowledgeServiceShould
         var articles = await _service.SearchAsync("cancel booking", "en", 5);
 
         Assert.NotEmpty(articles);
-        var cancellation = Assert.Single(articles, a => a.Category == "user-guide" && a.Title.Contains("cancellation", StringComparison.OrdinalIgnoreCase));
+        var cancellation = Assert.Single(articles, a => a.Category == "user-guide" && a.Title == "Cancel a booking request");
         Assert.Contains("deposit", cancellation.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Accepted", cancellation.Content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -210,7 +215,7 @@ public class WesalKnowledgeServiceShould
         var articles = await _service.SearchAsync("إلغاء حجز", "ar", 5);
 
         Assert.NotEmpty(articles);
-        var cancellation = Assert.Single(articles, a => a.Title.Contains("cancellation", StringComparison.OrdinalIgnoreCase));
+        var cancellation = Assert.Single(articles, a => a.Title == "Cancel a booking request");
         Assert.Contains("العربون", cancellation.Content);
     }
 

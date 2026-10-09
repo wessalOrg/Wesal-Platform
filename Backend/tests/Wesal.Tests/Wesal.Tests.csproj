@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <Content Update="Ai\Fixtures\mabrouk-golden-eval.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="Ai\Fixtures\mabrouk-knowledge-coverage.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

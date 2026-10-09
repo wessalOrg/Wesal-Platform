@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
@@ -31,6 +32,7 @@ internal sealed class MabroukHarness
     public FakeClock Clock { get; } = new() { Now = Now };
     public AiAssistantService Service { get; }
     public AiContextResolver ContextResolver { get; }
+    public List<string> RouteLogs { get; } = [];
 
     public MabroukHarness(bool geminiAvailable = false)
     {
@@ -72,7 +74,18 @@ internal sealed class MabroukHarness
             orchestrator,
             ContextResolver,
             new AiAssistantPolicyGate(payment, knowledge),
-            NullLogger<AiAssistantService>.Instance);
+            new RecordingLogger<AiAssistantService>(RouteLogs));
+    }
+
+    private sealed class RecordingLogger<T>(List<string> messages) : ILogger<T>
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel >= LogLevel.Information)
+                messages.Add(formatter(state, exception));
+        }
     }
 
     public Task<AiAssistantResponse> AskAsync(
