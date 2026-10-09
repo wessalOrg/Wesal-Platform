@@ -48,6 +48,10 @@ public static class AiNavigationIntentDetector
         "اعرض", "where", "find", "show", "want", "need", "looking", "see", "browse", "wanna"
     ]);
 
+    private static readonly Regex ServiceAvailabilityQuestion = AiText.AnyWord([
+        "عندكم", "متوفر", "متوفرة", "بتوفروا", "هل يوجد", "هل عندكم", "do you offer", "do you have", "available", "availability"
+    ]);
+
     private static readonly Regex InfoMarkers = new(
         @"(?:شو|ما|ايش|what).{0,12}(?:صفحه|page)|(?:صفحه|page).{0,12}(?:شو|ايش|what)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -208,7 +212,7 @@ public static class AiNavigationIntentDetector
             return null;
         }
 
-        if (!DiscoveryMarkers.IsMatch(text) && !ExplicitVerbs.IsMatch(text))
+        if (!DiscoveryMarkers.IsMatch(text) && !ExplicitVerbs.IsMatch(text) && !ServiceAvailabilityQuestion.IsMatch(text))
         {
             return null;
         }

@@ -5,7 +5,7 @@ language: ar,en
 source: official-project-team
 lastUpdated: 2026-10-09
 status: verified
-keywords: developer|developers|developed|developer team|who built wesal|who built the platform|builder|team|technical team|مطور|المطورين|فريق|الفريق التقني|مين طور وصال|مين طور منصة وصال|طور وصال|طور منصة وصال|طور|تطوير
+keywords: developer|developers|developed|developer team|who built wesal|who built the platform|who developed wesal|who created wesal|builder|team|technical team|team leader|مطور|المطورين|منشئ وصال|فريق|الفريق التقني|مين طور وصال|مين طور منصة وصال|من طور وصال|من أنشأ منصة وصال|مين عمل وصال|مين عمل منصة وصال|من صنع وصال|من هو المطور|محمد شمعة|طور وصال|طور منصة وصال|طور|تطوير
 ---
 
 ## العربية

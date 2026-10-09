@@ -2,20 +2,16 @@
 title: Booking a hall
 category: user-guide
 language: ar,en
-source: official-project-team-and-repository
+source: current-repository-booking-services
 lastUpdated: 2026-10-09
-status: product-confirmation-required
-keywords: booking|book|reserve|deposit|حجز|احجز|طلب حجز|عربون
+status: verified
+keywords: booking|book|reserve|hourly slots|registered user|my bookings|حجز|احجز|طلب حجز|حجوزاتي|فترة ساعة|حساب مسجل
 ---
 
 ## العربية
 
-لإرسال طلب حجز، يلزم تسجيل الدخول كمستخدم مسجل ثم اختيار القاعة والتاريخ وفترة حجز واحدة أو أكثر، وكل فترة مدتها ساعة. ينشأ الطلب بحالة «معلق» وتحجز الفترات المطلوبة مؤقتاً حتى يراجعه صاحب القاعة. وفق المعلومات الرسمية، تتم إجراءات العربون بالاتفاق بين طالب الحجز وصاحب القاعة، ويؤكد صاحب القاعة عملية الحجز.
-
-ملاحظة تحقق: التنفيذ الحالي المتحقق ينشئ طلب حجز بحالة Pending ويعالج قبوله أو رفضه، لكنه لا يثبت نسبة عربون أو وسيلة دفع أو مهلة دفع أو بوابة دفع في هذه المعرفة.
+لإرسال طلب حجز، سجّل الدخول بحساب مستخدم مسجل، وافتح تفاصيل القاعة واختر التاريخ وفترة أو أكثر، مدة كل فترة ساعة. أرسل الطلب؛ يبدأ بحالة «معلق» ويظهر في صفحة حجوزاتي إلى أن يراجعه صاحب القاعة. يلزم تسجيل الدخول لإرسال الطلب.
 
 ## English
 
-To submit a booking request, sign in as a Registered User, choose a hall, date, and one or more booking slots, each one hour long. The request starts as Pending and the requested slots are held while the Hall Owner reviews it. Official information says the deposit process is agreed between the requester and Hall Owner, and the Hall Owner confirms the booking process.
-
-Verification note: the verified implementation creates a Pending booking request and supports acceptance/rejection, but this knowledge base does not confirm a deposit percentage, payment method, payment deadline, or payment gateway.
+To submit a booking request, sign in as a Registered User, open a hall's details, and select a date and one or more one-hour slots. Submit the request; it starts as Pending and appears in My Bookings while the Hall Owner reviews it. Sign-in is required.

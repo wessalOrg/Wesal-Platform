@@ -5,7 +5,7 @@ language: ar,en
 source: current-capability-registry-and-routes
 lastUpdated: 2026-10-09
 status: verified
-keywords: وصال|wesal|what is wesal|ما هي وصال|شو هي وصال|مبروك|mabrook
+keywords: وصال|wesal|what is wesal|ما هي وصال|شو هي وصال|مبروك|mabrook|خدمات وصال|الخدمات المتاحة|شو الخدمات المتاحة|شو بتقدموا|شو بتقدم وصال|شو خدماتكم|ماذا تقدم وصال|what services wesal provides|what services does wesal provide|what is available now
 ---
 
 ## العربية

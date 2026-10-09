@@ -112,7 +112,7 @@ public sealed class AiAssistantPolicyGate
                 var articles = await _knowledgeService.SearchAsync("booking deposit payment", language, 5, cancellationToken);
                 var booking = articles.FirstOrDefault(a =>
                     string.Equals(a.Category, "user-guide", StringComparison.OrdinalIgnoreCase)
-                    && a.Title.Contains("booking a hall", StringComparison.OrdinalIgnoreCase));
+                    && a.Title.Contains("payment terms", StringComparison.OrdinalIgnoreCase));
 
                 var text = booking is not null
                     ? Compose(booking, language)

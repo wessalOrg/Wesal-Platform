@@ -53,6 +53,15 @@ public sealed partial class HowToService : IHowToService
         var detected = _languageDetector.Detect(question);
         var effectiveLanguage = detected ?? (string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language);
 
+        if (IsOtherHallBookingPolicyQuestion(question))
+        {
+            return new HowToResponse(
+                effectiveLanguage == "en"
+                    ? "Whether a Hall Owner can book another hall is not confirmed yet. Please contact Wesal support."
+                    : "سياسة حجز صاحب القاعة لقاعة أخرى غير مؤكدة عندي حاليًا، تواصل مع دعم وصال للتأكد.",
+                "policies", effectiveLanguage, DateTime.UtcNow);
+        }
+
         // Payment questions are disambiguated BEFORE anything else: a hall-owner
         // subscription is answered from trusted configuration, a booking payment from
         // the booking knowledge, and a bare "how do I pay" asks which one is meant.
@@ -68,22 +77,25 @@ public sealed partial class HowToService : IHowToService
 
         if (payment == AiPaymentIntent.BookingPayment)
         {
-            var booking = _knowledgeService is null
-                ? null
-                : (await _knowledgeService.SearchAsync("booking deposit payment", effectiveLanguage, 5, cancellationToken))
-                    .FirstOrDefault(a => string.Equals(a.Category, "user-guide", StringComparison.OrdinalIgnoreCase)
-                        && a.Title.Contains("booking a hall", StringComparison.OrdinalIgnoreCase));
-
-            var bookingAnswer = booking is not null
-                ? ComposeAnswer(booking, effectiveLanguage)
-                : AiPaymentTexts.BookingFallback(effectiveLanguage);
-            return new HowToResponse(bookingAnswer, "booking-payment", effectiveLanguage, DateTime.UtcNow);
+            return new HowToResponse(AiPaymentTexts.BookingFallback(effectiveLanguage), "booking-payment", effectiveLanguage, DateTime.UtcNow);
         }
 
         if (payment == AiPaymentIntent.Ambiguous)
         {
             var ask = AiPaymentTexts.Ambiguous(effectiveLanguage, _subscriptionPaymentService.GetPaymentDetails());
             return new HowToResponse(ask, "payment", effectiveLanguage, DateTime.UtcNow);
+        }
+
+        if (IsCreatorQuestion(question))
+        {
+            var creatorAnswer = effectiveLanguage == "en"
+                ? "I’m Wesal’s smart assistant 😄🇵🇸\n" +
+                  "I was specially created to help you find the perfect wedding hall and answer your questions about halls, bookings, and the Wesal platform.\n\n" +
+                  "In short… the Wesal team built me to make your search easier and save you the headache of looking around 😂."
+                : "أنا مساعد وصال الذكي 😄🇵🇸\n" +
+                  "انعملت خصيصًا عشان أساعدك تلاقي صالة أفراح مناسبة، وأجاوبك عن الصالات والحجز والمنصة.\n" +
+                  "يعني باختصار… فريق وصال صنعني، وأنا هون أخفف عنك وجعة راس البحث 😂.";
+            return new HowToResponse(creatorAnswer, "creator", effectiveLanguage, DateTime.UtcNow);
         }
 
         // Official knowledge first (platform/faq/policies): the Knowledge Base is
@@ -126,21 +138,6 @@ public sealed partial class HowToService : IHowToService
             return new HowToResponse(supportAnswer, "support", effectiveLanguage, DateTime.UtcNow);
         }
 
-        // Creator-intent returns the exact, verified attribution in the user's
-        // language. Handled before Gemini so the exact answer always wins,
-        // independent of Gemini availability or model output.
-        if (IsCreatorQuestion(question))
-        {
-            var creatorAnswer = effectiveLanguage == "en"
-                ? "I’m Wesal’s smart assistant 😄🇵🇸\n" +
-                  "I was specially created to help you find the perfect wedding hall and answer your questions about halls, bookings, and the Wesal platform.\n\n" +
-                  "In short… the Wesal team built me to make your search easier and save you the headache of looking around 😂."
-                : "أنا مساعد وصال الذكي 😄🇵🇸\n" +
-                  "انعملت خصيصًا عشان أساعدك تلاقي صالة أفراح مناسبة، وأجاوبك عن الصالات والحجز والمنصة.\n" +
-                  "يعني باختصار… فريق وصال صنعني، وأنا هون أخفف عنك وجعة راس البحث 😂.";
-            return new HowToResponse(creatorAnswer, "general", effectiveLanguage, DateTime.UtcNow);
-        }
-
         // Try Gemini first when enabled and a key is configured. Any failure
         // (unavailable, error, timeout, empty/invalid response) falls through to
         // the existing deterministic keyword matching below.
@@ -165,6 +162,77 @@ public sealed partial class HowToService : IHowToService
             effectiveLanguage,
             DateTime.UtcNow);
     }
+
+    public async Task<HowToResponse?> TryAnswerKnownQuestionAsync(
+        string question,
+        string? language,
+        CancellationToken cancellationToken = default,
+        AiConversationContext? context = null)
+    {
+        var normalized = Normalize(question);
+        var hallQuestion = AiHallQuestionClassifier.Classify(question);
+        var platformOverview = AiHallQuestionClassifier.MentionsPlatform(question)
+            && !ContainsAny(normalized, "قاعه", "قاعات", "hall", "halls");
+        if (!IsTeamQuestion(normalized) && !IsCreatorQuestion(question) && !platformOverview
+            && hallQuestion is not AiHallQuestion.None and not AiHallQuestion.BookingHowTo and not AiHallQuestion.ContactOwner)
+            return null;
+        // Recommendation requests and bare search commands must retain structured
+        // hall results and the read-only tool path. Only explicit search-how-to asks
+        // are handled here.
+        var explicitSearchHowTo = ContainsAny(normalized, "كيف ابحث", "كيف ادور", "how do i search", "how to search", "how can i find");
+        if (!explicitSearchHowTo && (ContainsAny(normalized, "دور", "ابحث", "بحث", "search", "find", "browse", "استكشف", "هات قاعات", "جيب قاعات")
+            || LooksLikeLiveHallSearch(normalized)))
+            return null;
+        var priorText = context is null ? string.Empty : string.Join(" ", context.Turns.Select(t => t.Text));
+        var inAddHallFlow = ContainsAny(Normalize(priorText), "اضافه قاعه", "اضيف قاعه", "add a hall", "add hall", "hall owner")
+            || ContainsAny(Normalize(priorText), "dashboard") && ContainsAny(Normalize(priorText), "hall");
+
+        if (inAddHallFlow && ContainsAny(normalized, "شو بطلب مني", "شو لازم", "شو بطلب", "what do i need", "what is required"))
+            return new HowToResponse(AddHallRequirements(language), "hall-owner", language ?? DefaultLanguage, DateTime.UtcNow);
+        if (inAddHallFlow && ContainsAny(normalized, "بعد ما", "بعد ما ارسل", "وبعدها", "what happens after", "after i submit"))
+            return new HowToResponse(AddHallReview(language), "hall-approval", language ?? DefaultLanguage, DateTime.UtcNow);
+        if (inAddHallFlow && ContainsAny(normalized, "ليش", "ليه", "مش ظاهره", "مش ظاهرة", "not visible", "not showing"))
+            return new HowToResponse(AddHallVisibility(language), "hall-approval", language ?? DefaultLanguage, DateTime.UtcNow);
+
+        var answer = await AskHowToAsync(question, language, cancellationToken, allowModel: false);
+        var knownCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "platform", "faq", "policies", "support", "creator", "booking", "booking-cancel",
+            "booking-rejected", "registration", "login", "hall-owner", "hall-approval", "language",
+            "install", "ratings", "comments", "messaging", "subscription", "availability", "booking-status",
+            "hall-management", "hall-details", "search", "capabilities"
+        };
+        return knownCategories.Contains(answer.Category) ? answer : null;
+    }
+
+    private static bool IsTeamQuestion(string normalized)
+        => ContainsAny(normalized, "مين مطور", "من مطور", "مين طور وصال", "من طور وصال", "مين عمل وصال", "مين عمل منصة وصال",
+            "who developed wesal", "who built wesal", "who are the developers", "wesal technical team");
+
+    private static bool LooksLikeLiveHallSearch(string normalized)
+        => ContainsAny(normalized, "قاعة", "قاعات", "hall", "halls")
+            && (ContainsAny(normalized, "غزه", "شمال", "وسطى", "جنوب", "region", "capacity", "شخص", "نفر", "ضيف")
+                || Regex.IsMatch(normalized, @"\d", RegexOptions.CultureInvariant));
+
+    private static bool IsOtherHallBookingPolicyQuestion(string question)
+    {
+        var normalized = Normalize(question);
+        return (ContainsAny(normalized, "صاحب القاعه", "مالك القاعه", "hall owner")
+                && ContainsAny(normalized, "يحجز", "احجز", "حجز", "book", "booking"))
+            && ContainsAny(normalized, "اخرى", "ثانيه", "غيرها", "another", "other hall");
+    }
+
+    private static string AddHallRequirements(string? language) => language == "en"
+        ? "You need an authenticated Hall Owner account and an identity document uploaded to your profile. In the owner dashboard, choose Add Hall and enter the name, contact phone, region and matching address, capacity, and any optional price, description, features, hourly window, and photos."
+        : "لازم يكون عندك حساب صاحب قاعة ومسجل دخول، وترفع وثيقة إثبات الهوية في ملفك قبل الإضافة. من لوحة صاحب القاعة اختار «إضافة قاعة»، وأدخل الاسم ورقم التواصل والمنطقة والعنوان المناسب لها والسعة. السعر والوصف والمزايا ومواعيد الساعات والصور حقول اختيارية حسب النموذج.";
+
+    private static string AddHallReview(string? language) => language == "en"
+        ? "After you submit the hall, it enters Pending Review. An Admin reviews it and approves or rejects it; you can follow its status from your owner dashboard."
+        : "بعد الإرسال بتدخل القاعة حالة «قيد المراجعة». المدير بيراجعها وبيوافق عليها أو برفضها، وبتقدر تتابع حالتها من لوحة صاحب القاعة.";
+
+    private static string AddHallVisibility(string? language) => language == "en"
+        ? "For the hall to appear publicly, it must be approved, its subscription payment must be confirmed by an Admin, it must not be locked, and it must not be deleted."
+        : "عشان تظهر القاعة للناس لازم تكون معتمدة، واشتراكها مدفوع ومؤكد من المدير، وما تكون مقفلة أو محذوفة.";
 
     /// <summary>
     /// Shared normalization (AiText): folds hamza/alef forms, ta marbuta,
@@ -201,13 +269,13 @@ public sealed partial class HowToService : IHowToService
             return ("To search for halls: go to the Browse & Search page from the navigation bar. You can filter halls by region (North Gaza, Gaza, Middle Area, South Gaza), by area, by date, or by hall name. You can combine multiple filters. Only approved halls appear in results.", "search");
 
         if (ContainsAny(question, "book", "reserve", "booking", "book a hall"))
-            return ("To book a hall: open the hall details page and tap the Book button. Select your preferred date, then choose one or more 60-minute slots. Submit your booking request and the hall owner will review it. You need a registered account to book.", "booking");
+            return ("To book a hall: sign in to your registered account as a Registered User, open the hall details page, select a date and one or more 60-minute slots, then submit your request. It starts as Pending while the Hall Owner reviews it, and you can follow it in My Bookings.", "booking");
 
         if (ContainsAny(question, "rate", "rating", "star", "rate a hall"))
-            return ("To rate a hall: open the hall details page while logged in as a Registered User. You will see a 5-star rating control. Tap the number of stars (1-5) to submit your rating. You can update your rating later. Hall Owners cannot rate halls.", "ratings");
+            return ("Rating eligibility and requirements are not confirmed in the current product information. Please contact Wesal support to confirm.", "ratings");
 
         if (ContainsAny(question, "comment", "review", "feedback", "add comment"))
-            return ("To comment on a hall: open the hall details page while logged in as a Registered User. Find the comment section and type your comment. Submit it and it will appear publicly with your name and date. Hall Owners cannot post comments.", "comments");
+            return ("Comment eligibility and visibility requirements are not confirmed in the current product information. Please contact Wesal support to confirm.", "comments");
 
         if (ContainsAny(question, "contact", "message", "owner", "chat", "contact owner"))
             return ("To contact a hall owner: open the hall details page while logged in as a Registered User. Tap the Contact Hall Owner button next to the Book button. This opens a conversation with the owner where you can ask about pricing, availability, or any other details.", "messaging");
@@ -224,11 +292,14 @@ public sealed partial class HowToService : IHowToService
         if (ContainsAny(question, "availability", "calendar", "available", "slot", "hour", "free date"))
             return ("To check availability: open a hall's details page and select a date. The page shows the hall's hourly slots for that day. Available slots are shown in green and booked slots in red, or hidden when the owner chooses not to show them.", "availability");
 
-        if (ContainsAny(question, "hall owner", "add hall", "manage hall", "dashboard"))
-            return ("Hall Owners can add halls, manage hourly settings and day blocks, handle booking requests, and respond to customer messages from their dashboard. Tap the Profile icon to access the management interface with a sidebar for managing all your halls.", "hall-owner");
+        if (ContainsAny(question, "add hall", "add my hall", "register my hall", "hall owner", "manage hall", "dashboard"))
+            return ("To add a hall, sign in with a Hall Owner account and upload an identity document to your profile. In the owner dashboard, choose Add Hall and enter the hall name, contact phone, region and matching address, and capacity. Price, description, features, hourly window, and photos are optional in the form. After submission, the hall enters Pending Review for Admin approval. Public visibility also requires confirmed subscription payment and that the hall is not locked or deleted.", "hall-owner");
 
         if (ContainsAny(question, "language", "arabic", "english", "toggle"))
             return ("To switch the site language: tap the language toggle button in the top navigation bar. The site supports Arabic (default, RTL) and English (LTR). All content and layout adjust automatically when you switch.", "language");
+
+        if (ContainsAny(question, "install", "download app", "add to home screen", "pwa"))
+            return ("If the Install Wesal button is available in your browser, use it to install. On iPhone/iPad Safari, use Share, then Add to Home Screen. The install option may not appear on every browser or device.", "install");
 
         if (ContainsAny(question, "payment", "subscription", "pay", "ils"))
         {
@@ -237,10 +308,10 @@ public sealed partial class HowToService : IHowToService
         }
 
         if (ContainsAny(question, "how to use", "how do i", "help", "guide", "tutorial", "what can", "what is wesal", "about wesal", "about this site"))
-            return ("Wesal is a wedding hall booking platform for Gaza. You can browse approved wedding halls, search by region and date, view hall details and availability, book halls, rate and comment on halls, and message hall owners directly. Register for free to access booking, commenting, rating, and messaging features.", "general");
+            return ("Wesal helps people in Gaza browse approved wedding halls, view their details and current availability, and submit booking requests. Photographers and wedding planners are Coming Soon and cannot currently be booked; catering is not available. Sign in with a Registered User account to submit a booking request.", "general");
 
         if (ContainsAny(question, "cancel", "cancellation"))
-            return ("To cancel a booking request while it is still pending: go to your bookings and select the pending request you want to cancel. Once the hall owner accepts or rejects your request, it can no longer be cancelled. Contact the hall owner through the conversation to discuss any changes.", "booking");
+            return ("From My Bookings, open the request and cancel it if it is Pending or Accepted and the deposit has not been confirmed as paid. The system blocks cancellation after payment confirmation. Refund amounts, fees, and timing require confirmation from Wesal support.", "booking-cancel");
 
         return ("I can help you with how to use Wesal. You can ask about: searching for halls, booking a hall, viewing hall details, rating and commenting on halls, contacting hall owners, registration, login, language switching, and more. What would you like to know?", "general");
     }
@@ -272,7 +343,7 @@ public sealed partial class HowToService : IHowToService
         // contains حجز and must not receive booking instructions.
         if ((ContainsAny(question, "الغاء", "الغي", "الغيه", "يلغي", "بطلت", "بلاش") && ContainsAny(question, "حجز", "حجزي", "الحجز"))
             || (ContainsAny(question, "مش", "ما") && ContainsAny(question, "بدي") && ContainsAny(question, "حجز", "احجز")))
-            return ("تمام، لا مشكلة! إذا عندك طلب حجز معلق وبدك تلغيه: روح على حجوزاتك واختار الطلب المعلق والغيه. بس انتبه: بعد ما صاحب القاعة يقبل الطلب أو يرفضه ما بتقدر تلغيه، وساعتها تواصل معه عبر المحادثة. وإذا غيّرت رأيك وحابب تحجز قاعة ثانية، أنا جاهز أساعدك.", "booking-cancel");
+            return ("من صفحة حجوزاتي افتح الطلب وألغيه إذا كان «معلق» أو «مقبول» ولم يتم تأكيد دفع العربون. بعد تأكيد الدفع لا يسمح النظام بالإلغاء. تفاصيل الرسوم أو المبالغ المستردة ومواعيدها غير مؤكدة عندي؛ تواصل مع دعم وصال للتأكد.", "booking-cancel");
 
         // "ليش الحجز مرفوض؟" needs the reason, not booking instructions.
         if (ContainsAny(question, "ليش", "ليه", "لماذا") && ContainsAny(question, "مرفوض", "رفض", "انرفض", "الحجز", "حجزي"))
@@ -287,13 +358,13 @@ public sealed partial class HowToService : IHowToService
             return ("للتحقق من التوفر: افتح صفحة تفاصيل القاعة واختر التاريخ. تعرض الصفحة الفترات المتاحة بالساعة في ذلك اليوم. الفترات المتاحة باللون الأخضر والمحجوزة باللون الأحمر، أو تُخفى إذا اختار صاحب القاعة ذلك.", "availability");
 
         if (ContainsAny(question, "حجز", "احجز", "حجزت", "about booking", "about reserve", "book", "reserve", "booking"))
-            return ("لحجز قاعة: افتح صفحة تفاصيل القاعة واضغط على زر حجز. اختر التاريخ المفضل، ثم اختر فترة ساعة أو أكثر متتالية. أرسل طلب الحجز وسيراجعه صاحب القاعة. تحتاج إلى حساب مسجل للحجز.", "booking");
+            return ("لحجز قاعة: سجّل الدخول بحساب مسجل كمستخدم عادي، وافتح تفاصيل القاعة واختر التاريخ وفترة أو أكثر، مدة كل منها ساعة. أرسل الطلب؛ يبدأ بحالة «معلق» إلى أن يراجعه صاحب القاعة، وتتابعه من صفحة حجوزاتي.", "booking");
 
         if (ContainsAny(question, "تقييم", "قيم", "نجمه", "about rating", "about rate", "about star"))
-            return ("لتقييم قاعة: افتح صفحة تفاصيل القاعة وأنت مسجل الدخول كمستخدم عادي. سترى عناصر النجوم الخمسة. اضغط على عدد النجوم (1-5) لإرسال تقييمك. يمكنك تحديث تقييمك لاحقاً. أصحاب القاعات لا يمكنهم تقييم القاعات.", "ratings");
+            return ("شروط أهلية التقييم ومتطلباته غير مؤكدة في معلومات المنتج الحالية. تواصل مع دعم وصال للتأكد.", "ratings");
 
         if (ContainsAny(question, "تعليق", "اكتب تعليق", "about comment", "about review", "about feedback"))
-            return ("لإضافة تعليق على قاعة: افتح صفحة تفاصيل القاعة وأنت مسجل الدخول. اختر قسم التعليقات واكتب تعليقك. أرسله وسيظهر للجميع مع اسمك وتاريخه. أصحاب القاعات لا يمكنهم كتابة تعليقات.", "comments");
+            return ("شروط أهلية التعليق وظهوره غير مؤكدة في معلومات المنتج الحالية. تواصل مع دعم وصال للتأكد.", "comments");
 
         if (ContainsAny(question, "تواصل", "مراسله", "اتصال", "صاحب القاعه", "صاحب الصاله", "مالك القاعه", "about contact", "about message", "about owner", "about chat"))
             return ("للتواصل مع صاحب القاعة: افتح صفحة تفاصيل القاعة وأنت مسجل الدخول. اضغط على زر التواصل مع صاحب القاعة بجانب زر الحجز. سيفتح لك محادثة مع الصاحب حيث يمكنك السؤال عن الأسعار أو التفاصيل أو أي معلومات أخرى.", "messaging");
@@ -320,11 +391,14 @@ public sealed partial class HowToService : IHowToService
         if (ContainsAny(question, "دوام", "دوامكم", "ساعات العمل", "ساعات الدوام", "بتفتحو", "بتسكرو", "وينتا بتفتحو", "about hours", "about working hours"))
             return ("بتقدر تتواصل مع فريق وصال في أي وقت من صفحة مركز المساعدة، وطلبات الحجز والرسائل بتنبعت لأصحاب القاعات مباشرة وبيردوا عليك من حساباتهم. لمواعيد قاعة معينة (وينتا بتفتح أبوابها للمناسبات) شوف صفحة تفاصيلها أو اسأل صاحبها عبر المحادثة.", "hours");
 
-        if (ContainsAny(question, "صاحب القاعه", "اضافه قاعه", "اداره قاعه", "لوحه التحكم", "about hall owner", "about add hall", "about manage hall", "about dashboard"))
-            return ("أصحاب القاعات يمكنهم إضافة قاعات، إدارة إعدادات الساعات وحظر الأيام، التعامل مع طلبات الحجز، والرد على رسائل العملاء من لوحة التحكم. اضغط على أيقونة الملف الشخصي للوصول إلى واجهة الإدارة مع الشريط الجانبي لإدارة جميع قاعاتك.", "hall-owner");
+        if (ContainsAny(question, "اضافه قاعه", "اضيف قاعه", "اسجل قاعه", "سجل قاعتي", "بضيف قاعتي", "صاحب قاعه", "صاحب صاله", "مالك قاعه", "اداره قاعه", "لوحه التحكم", "about hall owner", "about add hall", "about manage hall", "about dashboard"))
+            return ("لإضافة قاعة، يلزم حساب صاحب قاعة وتسجيل الدخول، مع رفع وثيقة إثبات الهوية في ملفك. من لوحة صاحب القاعة اختر «إضافة قاعة» واملأ اسم القاعة ورقم التواصل والمنطقة والعنوان التابع لها والسعة. السعر والوصف والمزايا وساعات الحجز والصور اختيارية حسب النموذج. بعد الإرسال تدخل القاعة «قيد المراجعة» حتى يراجعها المدير. لظهورها للناس يجب اعتمادها وتأكيد دفع اشتراكها وألا تكون مقفلة أو محذوفة.", "hall-owner");
 
         if (ContainsAny(question, "لغه", "عربيه", "انجليزيه", "تبديل", "about language", "about arabic", "about english", "about toggle"))
             return ("لتبديل لغة الموقع: اضغط على زر تبديل اللغة في شريط التنقل العلوي. الموقع يدعم العربية (الافتراضي، من اليمين لليسار) والإنجليزية (من اليسار لليمين). جميع المحتوى والتخطيط يتكيفون تلقائياً عند التبديل.", "language");
+
+        if (ContainsAny(question, "انزل وصال", "اثبت وصال", "نزل التطبيق", "تثبيت التطبيق", "اضيف للشاشه الرئيسيه", "تطبيق وصال", "pwa", "install app"))
+            return ("إذا ظهر زر «تثبيت وصال» في متصفحك اضغط عليه. على iPhone أو iPad افتح وصال في Safari، ثم اختر «مشاركة» وبعدها «إضافة إلى الشاشة الرئيسية». قد لا يظهر خيار التثبيت في كل متصفح أو جهاز.", "install");
 
         if (ContainsAny(question, "دفع", "اشتراك", "ريال", "about payment", "about subscription", "about pay", "about ils"))
         {
@@ -333,12 +407,12 @@ public sealed partial class HowToService : IHowToService
         }
 
         if (ContainsAny(question, "كيف استخدم", "كيف يمكنني", "مساعده", "دليل", "تعليم", "ما هو وصال", "عن وصال", "عن هذا الموقع", "about how to use", "about how do i", "about help", "about guide", "about tutorial", "about what can", "about what is wesal", "about about wesal", "about about this site"))
-            return ("وصال هو منصة حجز قاعات أفراح في غزة. يمكنك تصفح القاعات المعتمدة، البحث حسب المنطقة والتاريخ، عرض تفاصيل القاعات والتوفر، حجز القاعات، تقييم وتعليق على القاعات، والتواصل مع أصحاب القاعات مباشرة. سجل مجاناً للوصول إلى ميزات الحجز والتعليق والتقييم والمراسلة.", "general");
+            return ("وصال بتساعدك تتصفح قاعات الأفراح المعتمدة في غزة وتشوف تفاصيلها وتوفرها الحالي وترسل طلب حجز. خدمات المصورين ومنسقي المناسبات قيد التجهيز ولا يمكن حجزها حالياً، والضيافة والبوفيه غير متاحة. لإرسال طلب حجز يلزم تسجيل الدخول بحساب مستخدم مسجل.", "general");
 
         // What Wesal offers ("بتقدموا انتو؟", "شو خدماتكم؟"). Late on purpose:
         // a combined question ("شو بتقدمو غير الحجز؟") keeps its specific answer.
         if (ContainsAny(question, "بتقدمو", "بتقدموا", "بتوفر", "بتوفرو", "بتسوو", "بتعملو", "شو بتقدم", "شو بتقدمو", "شو خدماتكم", "ايش خدماتكم", "شو فيكم تساعدوني", "شو بتسوو", "about services", "about features", "about offer"))
-            return ("وصال منصة حجز قاعات أفراح في غزة، وهاي خدماتنا: تصفح القاعات المعتمدة والبحث حسب المنطقة والتاريخ، عرض تفاصيل كل قاعة (الصور والسعة والأسعار والتوفر)، حجز القاعات ومتابعة الطلب، تقييم القاعات والتعليق عليها، والتواصل المباشر مع أصحاب القاعات. سجّل حساب مجاني عشان تستخدم الحجز والمراسلة والتقييم. شو حابب تعمل أول شي؟", "capabilities");
+            return ("وصال بتوفر تصفح القاعات المعتمدة والبحث عنها وعرض تفاصيلها وتوفرها الحالي وإرسال طلب حجز ومتابعته. المصورون ومنسقو المناسبات قيد التجهيز ولا يمكن البحث عنهم أو حجزهم حالياً، والضيافة والبوفيه غير متاحة.", "capabilities");
 
         // Greetings and thanks come last (before the fallback) so a greeting
         // combined with a real request ("مرحبا بدي احجز") still routes by intent.
@@ -360,18 +434,13 @@ public sealed partial class HowToService : IHowToService
         var normalized = AiText.Normalize(question);
         // English intent
         if (ContainsAny(normalized,
-                "creator", "who created", "who made", "who built", "who developed", "who developed wesal",
-                "who is the creator", "who is the developer", "who is behind", "developer of wesal",
-                "made wesal", "built wesal", "developed wesal", "created wesal", "team leader",
-                "create wesal", "make wesal", "build wesal",
-                "mohammed shamaa", "mohammad shamaa", "shamaa"))
+                "who created mabrook", "who made mabrook", "who built mabrook", "who created you", "who made you",
+                "who is your creator", "who built you", "who developed you", "your creator"))
             return true;
 
         // Arabic intent (MSA + Gazan: مين عملك، احكيلي عن حالك، عرفني عليك)
         if (ContainsAny(normalized,
-                "منشي", "من انشا", "المنشي", "منشيو", "صانع", "الصانع", "من صنع", "من طور",
-                "المطور", "مطور", "مطورو", "من بني", "من اعد", "فريق وصال", "القايمين",
-                "محمد شمعه", "محمد شما", "شمعه", "قايد الفريق",
+                "من عمل مبروك", "مين عمل مبروك", "مين عامل مبروك", "مين صنع مبروك", "مين طور مبروك", "مين انشا مبروك",
                 "مين عملك", "مين سواك", "مين صنعك", "مين صانعك", "مين مطورك", "مين انت", "شو انت",
                 "احكيلي عن حالك", "احكي عن حالك", "عرفني عليك", "عرفني علي حالك", "مين مبروك", "شو مبروك"))
             return true;
