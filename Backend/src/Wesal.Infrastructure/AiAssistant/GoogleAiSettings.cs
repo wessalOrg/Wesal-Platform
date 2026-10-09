@@ -25,6 +25,15 @@ public sealed class GoogleAiSettings
     /// <summary>Gemini model identifier (e.g. a supported Gemini Flash model).</summary>
     public string GeminiModel { get; set; } = "gemini-3.6-flash";
 
+    /// <summary>Reasoning policy for simple model requests. Supported values: low, medium, high.</summary>
+    public string FastThinkingLevel { get; set; } = "low";
+
+    /// <summary>Reasoning policy for ordinary multi-constraint requests.</summary>
+    public string NormalThinkingLevel { get; set; } = "medium";
+
+    /// <summary>Reasoning policy reserved for rare requests with several explicit constraints.</summary>
+    public string DeepThinkingLevel { get; set; } = "high";
+
     /// <summary>Base URL of the Gemini REST API (without model or key).</summary>
     public string BaseUrl { get; set; } = "https://generativelanguage.googleapis.com/v1beta";
 

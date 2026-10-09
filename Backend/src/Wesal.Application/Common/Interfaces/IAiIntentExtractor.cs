@@ -16,4 +16,12 @@ public interface IAiIntentExtractor
         string? language,
         CancellationToken cancellationToken = default,
         AiConversationContext? context = null);
+
+    /// <summary>Extracts using deterministic application rules only after a model attempt failed.</summary>
+    Task<AiAssistantIntentDto> ExtractWithoutModelAsync(
+        string message,
+        string? language,
+        CancellationToken cancellationToken = default,
+        AiConversationContext? context = null)
+        => ExtractAsync(message, language, cancellationToken, context);
 }

@@ -31,4 +31,16 @@ public interface IGeminiToolCallService
         string systemInstruction,
         IReadOnlyList<GeminiFunctionDeclaration> functions,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generates a tool turn using an application-selected reasoning effort. The
+    /// default implementation preserves existing provider fakes and adapters.
+    /// </summary>
+    Task<GeminiToolTurn?> GenerateToolTurnWithThinkingAsync(
+        IReadOnlyList<GeminiConversationMessage> contents,
+        string systemInstruction,
+        IReadOnlyList<GeminiFunctionDeclaration> functions,
+        string thinkingLevel,
+        CancellationToken cancellationToken = default)
+        => GenerateToolTurnAsync(contents, systemInstruction, functions, cancellationToken);
 }
