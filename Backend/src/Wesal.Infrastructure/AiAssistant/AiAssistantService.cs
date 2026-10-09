@@ -173,18 +173,52 @@ public sealed class AiAssistantService : IAiAssistantService
                 collectionIntent with { Intent = AiIntentType.SearchHalls }, halls: all), "hall_collection", policyMs, 0, 0, null);
         }
 
-        if (AiConversationStateResolver.IsNextResult(text) && context?.LastHalls is { Count: > 0 } shownHalls)
+        // "غيرها" walks the last shown results. The durable state keeps the result
+        // ids across turns that show no new list (a details turn wipes the
+        // short-lived LastHalls memory), so fall back to it when it is empty.
+        if (AiConversationStateResolver.IsNextResult(text))
         {
-            var nextIndex = (context.State?.SelectedResultIndex ?? -1) + 1;
-            if (nextIndex >= shownHalls.Count)
+            IReadOnlyList<Guid> resultIds = context?.LastHalls is { Count: > 0 } shownHalls
+                ? shownHalls.Select(hall => hall.HallId).ToList()
+                : context?.State?.ShownHallIds ?? (IReadOnlyList<Guid>)Array.Empty<Guid>();
+            if (resultIds.Count > 0)
             {
-                var end = language == "en" ? "That's the last result in this search. I can look with different criteria." : "هاي آخر نتيجة عندي من البحث الحالي. إذا بدك بدورلك بمعايير ثانية.";
-                return new AssistantRouteResult(Build(language, AiAssistantResponseKind.Answer, end, null), "result_navigation_end", policyMs, 0, 0, null);
+                var nextIndex = (context?.State?.SelectedResultIndex ?? -1) + 1;
+                if (nextIndex >= resultIds.Count)
+                {
+                    var end = language == "en" ? "That's the last result in this search. I can look with different criteria." : "هاي آخر نتيجة عندي من البحث الحالي. إذا بدك بدورلك بمعايير ثانية.";
+                    return new AssistantRouteResult(Build(language, AiAssistantResponseKind.Answer, end, null), "result_navigation_end", policyMs, 0, 0, null);
+                }
+                var selected = await _hallDetailsService.GetHallDetailsAsync(resultIds[nextIndex], cancellationToken);
+                var selectedMessage = language == "en" ? $"Another result: {selected.HallName}." : $"هاي نتيجة ثانية: {selected.HallName}.";
+                return new AssistantRouteResult(Build(language, AiAssistantResponseKind.HallDetails, selectedMessage,
+                    new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, selected.HallName), hallDetails: selected), "result_navigation", policyMs, 0, 0, null);
             }
-            var selected = await _hallDetailsService.GetHallDetailsAsync(shownHalls[nextIndex].HallId, cancellationToken);
-            var selectedMessage = language == "en" ? $"Another result: {selected.HallName}." : $"هاي نتيجة ثانية: {selected.HallName}.";
-            return new AssistantRouteResult(Build(language, AiAssistantResponseKind.HallDetails, selectedMessage,
-                new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, selected.HallName), hallDetails: selected), "result_navigation", policyMs, 0, 0, null);
+        }
+
+        // A bare ordinal ("الثانية") selects that result. Guarded to selection-only
+        // turns so an ordinal inside a real question ("الأولى شو سعرها؟") still
+        // reaches hall-context and gets the asked fact answered about that hall.
+        if (AiReferenceResolver.TryGetOrdinal(text) is { } ordinal
+            && AiHallQuestionClassifier.Classify(text) == AiHallQuestion.None
+            && AiReferenceResolver.TryGetExplicitHallName(text) is null)
+        {
+            IReadOnlyList<Guid> ordinalIds = context?.LastHalls is { Count: > 0 } ordinalHalls
+                ? ordinalHalls.Select(hall => hall.HallId).ToList()
+                : context?.State?.ShownHallIds ?? (IReadOnlyList<Guid>)Array.Empty<Guid>();
+            if (ordinalIds.Count > 0)
+            {
+                var resolvedIndex = ordinal < 0 ? ordinalIds.Count - 1 : ordinal;
+                if (resolvedIndex < 0 || resolvedIndex >= ordinalIds.Count)
+                {
+                    var end = language == "en" ? "That's the last result in this search. I can look with different criteria." : "هاي آخر نتيجة عندي من البحث الحالي. إذا بدك بدورلك بمعايير ثانية.";
+                    return new AssistantRouteResult(Build(language, AiAssistantResponseKind.Answer, end, null), "result_ordinal_end", policyMs, 0, 0, null);
+                }
+                var ordinalSelected = await _hallDetailsService.GetHallDetailsAsync(ordinalIds[resolvedIndex], cancellationToken);
+                var ordinalMessage = language == "en" ? $"Result {resolvedIndex + 1}: {ordinalSelected.HallName}." : $"النتيجة {resolvedIndex + 1}: {ordinalSelected.HallName}.";
+                return new AssistantRouteResult(Build(language, AiAssistantResponseKind.HallDetails, ordinalMessage,
+                    new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, ordinalSelected.HallName), hallDetails: ordinalSelected), "result_ordinal", policyMs, 0, 0, null);
+            }
         }
 
         // 1) Deterministic policies: navigation, unavailable services, support, payments.

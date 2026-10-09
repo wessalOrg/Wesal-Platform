@@ -7,7 +7,7 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// <summary>Deterministically advances the small, bounded task state after each answer.</summary>
 public static class AiConversationStateResolver
 {
-    public static AiConversationState Advance(AiConversationState? prior, string message, AiAssistantResponse response)
+    public static AiConversationState Advance(AiConversationState? prior, string message, AiAssistantResponse response, AiHallRef? conversationHall = null)
     {
         var state = prior ?? new AiConversationState();
         var intent = response.Intent;
@@ -34,6 +34,14 @@ public static class AiConversationStateResolver
 
         var pendingDate = response.Kind == AiAssistantResponseKind.Clarification
             && intent?.Intent == AiIntentType.CheckHallAvailability;
+        // A date clarification carries no hall payload, so without this the active
+        // hall resolved for the question (single search result / focused hall) would
+        // be lost and the later date reply could never resume (TryResume needs it).
+        if (pendingDate && activeHallId is null && conversationHall is not null)
+        {
+            activeHallId = conversationHall.HallId;
+            activeHallName = conversationHall.HallName;
+        }
         var date = intent?.Date ?? state.ResolvedDate;
         var requested = new List<string>();
         if (question == AiHallQuestion.Price || message.Contains("بكم", StringComparison.Ordinal)) requested.Add("price");
