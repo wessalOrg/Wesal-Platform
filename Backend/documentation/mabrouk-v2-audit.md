@@ -140,6 +140,10 @@ The backend has explicit tests for SDK wire compatibility against a loopback HTT
 - `npm audit --omit=dev --json`: 0 vulnerabilities. Full `npm audit` reports five high-severity entries, all from one development-only dependency chain ending in `braces@3.0.3` through `eslint-config-next` / `@next/eslint-plugin-next` / `fast-glob` / `micromatch`. The [GitHub advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) has no patched `braces` release. `npm audit fix --force` proposes downgrading `eslint-config-next` to 14.2.35, which would mismatch Next 16; that breaking downgrade was not applied. Compatible lockfile updates set `source-map-js` to 1.2.2, `js-yaml` to 4.3.2, and `brace-expansion` to 1.1.21 / 5.0.12.
 - `git diff --check`: passed. A secret-pattern scan over the changed branch files found no API-key, token, AWS-key, or private-key-header matches.
 
+## Merge recommendation
+
+**Safe to merge: NO, pending review of the remaining toolchain advisory and repository-wide lint result.** The production dependency audit is clean and all changed frontend files pass targeted lint, but the full audit still has one high-severity, development-only advisory with no upstream patch, and full lint reports four errors in files untouched by this branch. No downgrade or unrelated frontend code edit was made to conceal those findings.
+
 ## Security, cost, observability, and latency
 
 - All three model tools are public read-only lookups. Unknown tool names/arguments are rejected; no private booking, identity, payment, messaging, booking-write, approval, or owner mutation tool is exposed.
