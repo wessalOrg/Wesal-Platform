@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import Reveal from "@/components/ui/Reveal";
 import { useT } from "@/i18n";
@@ -21,8 +22,8 @@ function StoryStatValue({ target, active }: { target: number; active: boolean })
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) {
-      setValue(target);
-      return;
+      const frame = requestAnimationFrame(() => setValue(target));
+      return () => cancelAnimationFrame(frame);
     }
 
     const duration = 1400;
@@ -58,8 +59,8 @@ export default function StorySection() {
     if (!node) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setStatsActive(true);
-      return;
+      const frame = requestAnimationFrame(() => setStatsActive(true));
+      return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(
@@ -83,7 +84,7 @@ export default function StorySection() {
       <Reveal>
         <div className="story-layout">
           <div className="story-photo">
-            <img
+            <Image
               src="/home/story-collage.jpg"
               alt={t("home.story.imageAlt")}
               width={920}
