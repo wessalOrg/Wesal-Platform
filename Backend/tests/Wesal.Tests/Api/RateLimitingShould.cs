@@ -15,6 +15,17 @@ namespace Wesal.Tests.Api;
 /// </summary>
 public sealed class RateLimitingShould
 {
+    [Fact]
+    public void AssistantDefaults_AllowSixRequestBurstAndTwelvePerMinute()
+    {
+        var options = new AssistantRateLimitingOptions();
+
+        Assert.Equal(6, options.TokenLimit);
+        Assert.Equal(6, options.TokensPerPeriod);
+        Assert.Equal(30, options.ReplenishmentPeriodSeconds);
+        Assert.Equal(2, options.ConcurrencyLimit);
+    }
+
     private static (WebApplication App, HttpClient Client) BuildApp(
         bool enabled, int permitLimit)
     {
@@ -72,6 +83,35 @@ public sealed class RateLimitingShould
         {
             Assert.Equal(200, (int)(await client.GetAsync("/limited")).StatusCode);
         }
+    }
+
+    [Fact]
+    public async Task AssistantQuota_ThrottlesOnlyTheAssistantPolicy()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["RateLimiting:Enabled"] = "false",
+            ["RateLimiting:Assistant:Enabled"] = "true",
+            ["RateLimiting:Assistant:TokenLimit"] = "1",
+            ["RateLimiting:Assistant:TokensPerPeriod"] = "1",
+            ["RateLimiting:Assistant:ReplenishmentPeriodSeconds"] = "60",
+            ["RateLimiting:Assistant:ConcurrencyLimit"] = "1"
+        });
+        builder.Services.AddWesalRateLimiting(builder.Configuration);
+        var app = builder.Build();
+        app.UseRateLimiter();
+        app.MapGet("/assistant", () => Results.Ok()).RequireRateLimiting(AssistantRateLimitingOptions.PolicyName);
+        app.MapGet("/ordinary", () => Results.Ok());
+        await app.StartAsync();
+        await using var _ = app;
+        var client = app.GetTestClient();
+
+        Assert.Equal(200, (int)(await client.GetAsync("/assistant")).StatusCode);
+        Assert.Equal(429, (int)(await client.GetAsync("/assistant")).StatusCode);
+        Assert.Equal(200, (int)(await client.GetAsync("/ordinary")).StatusCode);
+        Assert.Equal(200, (int)(await client.GetAsync("/ordinary")).StatusCode);
     }
 
     [Fact]

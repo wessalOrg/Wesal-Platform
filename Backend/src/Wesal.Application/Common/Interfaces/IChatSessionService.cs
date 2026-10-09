@@ -17,7 +17,7 @@ public interface IChatSessionService
     Task<AiSessionResponse?> PeekSessionAsync(Guid sessionId, CancellationToken cancellationToken = default, string? userId = null);
 
     /// <summary>
-    /// Returns the bounded, in-memory conversation state (recent user turns plus the
+    /// Returns the bounded, short-lived conversation state (recent user turns plus the
     /// last structured intent) for a live session, or an empty context when the
     /// session is missing/expired or has no history yet. Read-only: never refreshes
     /// session expiry (safe alongside passive multi-tab polling).
@@ -34,9 +34,9 @@ public interface IChatSessionService
     Task SaveTurnAsync(Guid sessionId, string userMessage, AiAssistantIntentDto? intent, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Records one complete exchange — the user's message, the assistant's reply, the
-    /// structured intent, the halls that were shown and the hall the turn focused on —
-    /// so follow-ups ("الثانية شو سعرها؟") can be resolved. Bounded and in-memory.
+    /// Records one complete exchange — a sanitized, bounded user message, the assistant's
+    /// reply, structured intent, shown halls and focused hall — so follow-ups
+    /// ("الثانية شو سعرها؟") can be resolved. Storage expires after a short TTL.
     /// No-op for missing/expired sessions.
     /// </summary>
     Task SaveExchangeAsync(

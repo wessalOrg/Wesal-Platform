@@ -1,4 +1,3 @@
-using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Infrastructure.AiAssistant;
 
@@ -7,7 +6,7 @@ namespace Wesal.Tests.Infrastructure;
 public class ChatSessionServiceShould
 {
     [Fact]
-    public async Task Session_IsolatedByAuthenticatedOwner_AndEndedOnLogout()
+    public async Task AuthenticatedSession_IsolatedByOwner_AndRemovedOnLogout()
     {
         using var service = new ChatSessionService();
         var session = await service.InitializeSessionAsync("en", userId: "user-a");
@@ -19,7 +18,6 @@ public class ChatSessionServiceShould
         Assert.Empty((await service.GetConversationContextAsync(session.SessionId, userId: "user-b")).Turns);
 
         await service.EndSessionsForUserAsync("user-a");
-
         Assert.Null(await service.GetSessionAsync(session.SessionId, userId: "user-a"));
     }
 
@@ -34,375 +32,117 @@ public class ChatSessionServiceShould
     }
 
     [Fact]
-    public async Task InitializeSession_ReturnsNewSessionWithId()
-    {
-        using var service = new ChatSessionService();
-
-        var result = await service.InitializeSessionAsync(null);
-
-        Assert.NotEqual(Guid.Empty, result.SessionId);
-        Assert.Equal("ar", result.Language);
-        Assert.True(result.ExpiresAt > result.CreatedAt);
-    }
-
-    [Fact]
-    public async Task InitializeSession_WithEnglishLanguage_ReturnsEnglish()
-    {
-        using var service = new ChatSessionService();
-
-        var result = await service.InitializeSessionAsync("en");
-
-        Assert.Equal("en", result.Language);
-    }
-
-    [Fact]
-    public async Task InitializeSession_WithArabicLanguage_ReturnsArabic()
-    {
-        using var service = new ChatSessionService();
-
-        var result = await service.InitializeSessionAsync("ar");
-
-        Assert.Equal("ar", result.Language);
-    }
-
-    [Fact]
-    public async Task InitializeSession_WithNullLanguage_DefaultsToArabic()
-    {
-        using var service = new ChatSessionService();
-
-        var result = await service.InitializeSessionAsync(null);
-
-        Assert.Equal("ar", result.Language);
-    }
-
-    [Fact]
-    public async Task InitializeSession_WithEmptyLanguage_DefaultsToArabic()
-    {
-        using var service = new ChatSessionService();
-
-        var result = await service.InitializeSessionAsync("");
-
-        Assert.Equal("ar", result.Language);
-    }
-
-    [Fact]
-    public async Task InitializeSession_WithWhitespaceLanguage_DefaultsToArabic()
-    {
-        using var service = new ChatSessionService();
-
-        var result = await service.InitializeSessionAsync("   ");
-
-        Assert.Equal("ar", result.Language);
-    }
-
-    [Fact]
-    public async Task InitializeSession_CreatesSession30MinutesFromNow()
+    public async Task InitializeSession_DefaultsLanguageAndExpiresAfterThirtyMinutes()
     {
         using var service = new ChatSessionService();
         var before = DateTime.UtcNow;
-
-        var result = await service.InitializeSessionAsync(null);
+        var session = await service.InitializeSessionAsync(" ");
         var after = DateTime.UtcNow;
 
-        var expectedMin = before.AddMinutes(30);
-        var expectedMax = after.AddMinutes(30);
-        Assert.True(result.ExpiresAt >= expectedMin && result.ExpiresAt <= expectedMax);
+        Assert.NotEqual(Guid.Empty, session.SessionId);
+        Assert.Equal("ar", session.Language);
+        Assert.InRange(session.ExpiresAt, before.AddMinutes(30), after.AddMinutes(30));
     }
 
     [Fact]
-    public async Task GetSession_ExistingSession_ReturnsSession()
+    public async Task PeekDoesNotRefreshExpiry_ButGetDoes()
     {
         using var service = new ChatSessionService();
-        var created = await service.InitializeSessionAsync(null);
+        var created = await service.InitializeSessionAsync("ar");
+        var peek = await service.PeekSessionAsync(created.SessionId);
+        var refreshed = await service.GetSessionAsync(created.SessionId);
 
-        var result = await service.GetSessionAsync(created.SessionId);
-
-        Assert.NotNull(result);
-        Assert.Equal(created.SessionId, result!.SessionId);
-        Assert.Equal(created.Language, result.Language);
+        Assert.Equal(created.ExpiresAt, peek!.ExpiresAt);
+        Assert.True(refreshed!.ExpiresAt > created.ExpiresAt);
     }
 
     [Fact]
-    public async Task GetSession_NonexistentSession_ReturnsNull()
+    public async Task ExpiredSessionIsDeniedAndPurged()
+    {
+        var store = new InMemoryAiConversationSessionStore();
+        using var service = new ChatSessionService(store);
+        var created = await service.InitializeSessionAsync("ar");
+        store.SetExpiryForTesting(created.SessionId, DateTimeOffset.UtcNow.AddMinutes(-1));
+
+        Assert.Null(await service.GetSessionAsync(created.SessionId));
+        Assert.False(store.ContainsForTesting(created.SessionId));
+    }
+
+    [Fact]
+    public async Task ContextIncludesBoundedTurnsIntentAndHallReferences()
     {
         using var service = new ChatSessionService();
+        var session = await service.InitializeSessionAsync("ar");
+        var intent = new AiAssistantIntentDto(AiIntentType.SearchHalls, "Gaza", null, null, 300, null);
+        var hall = new AiHallRef(Guid.NewGuid(), "Hall A");
 
-        var result = await service.GetSessionAsync(Guid.NewGuid());
-
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetSession_ExpiredSession_ReturnsNull()
-    {
-        using var service = new ChatSessionService();
-        var created = await service.InitializeSessionAsync(null);
-
-        var expiredSession = new ChatSessionService.AiSession
-        {
-            SessionId = created.SessionId,
-            Language = created.Language,
-            CreatedAt = created.CreatedAt,
-            LastActivityAt = created.CreatedAt,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(-1)
-        };
-
-        var sessionsField = typeof(ChatSessionService)
-            .GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
-        sessions[created.SessionId] = expiredSession;
-
-        var result = await service.GetSessionAsync(created.SessionId);
-
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetSession_ActiveSession_RefreshesExpiry()
-    {
-        using var service = new ChatSessionService();
-        var created = await service.InitializeSessionAsync(null);
-
-        var result = await service.GetSessionAsync(created.SessionId);
-
-        Assert.NotNull(result);
-        Assert.True(result!.ExpiresAt > created.ExpiresAt);
-    }
-
-    [Fact]
-    public async Task GetSession_RemovesExpiredSessionFromStore()
-    {
-        using var service = new ChatSessionService();
-        var created = await service.InitializeSessionAsync(null);
-
-        var expiredSession = new ChatSessionService.AiSession
-        {
-            SessionId = created.SessionId,
-            Language = created.Language,
-            CreatedAt = created.CreatedAt,
-            LastActivityAt = created.CreatedAt,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(-1)
-        };
-
-        var sessionsField = typeof(ChatSessionService)
-            .GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
-        sessions[created.SessionId] = expiredSession;
-
-        await service.GetSessionAsync(created.SessionId);
-
-        Assert.False(sessions.ContainsKey(created.SessionId));
-    }
-
-    [Fact]
-    public async Task InitializeSession_MultipleCalls_ReturnsDifferentSessionIds()
-    {
-        using var service = new ChatSessionService();
-
-        var result1 = await service.InitializeSessionAsync(null);
-        var result2 = await service.InitializeSessionAsync(null);
-
-        Assert.NotEqual(result1.SessionId, result2.SessionId);
-    }
-
-    [Fact]
-    public void SweepExpiredSessions_RemovesExpiredSessions()
-    {
-        using var service = new ChatSessionService(TimeSpan.FromHours(1));
-
-        var sessionsField = typeof(ChatSessionService)
-            .GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
-
-        var expiredSession = new ChatSessionService.AiSession
-        {
-            SessionId = Guid.NewGuid(),
-            Language = "ar",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-60),
-            LastActivityAt = DateTime.UtcNow.AddMinutes(-60),
-            ExpiresAt = DateTime.UtcNow.AddMinutes(-1)
-        };
-        sessions[expiredSession.SessionId] = expiredSession;
-
-        service.SweepExpiredSessions();
-
-        Assert.False(sessions.ContainsKey(expiredSession.SessionId));
-    }
-
-    [Fact]
-    public void SweepExpiredSessions_PreservesActiveSessions()
-    {
-        using var service = new ChatSessionService(TimeSpan.FromHours(1));
-
-        var sessionsField = typeof(ChatSessionService)
-            .GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
-
-        var activeSession = new ChatSessionService.AiSession
-        {
-            SessionId = Guid.NewGuid(),
-            Language = "ar",
-            CreatedAt = DateTime.UtcNow,
-            LastActivityAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(30)
-        };
-        sessions[activeSession.SessionId] = activeSession;
-
-        service.SweepExpiredSessions();
-
-        Assert.True(sessions.ContainsKey(activeSession.SessionId));
-    }
-
-    [Fact]
-    public void SweepExpiredSessions_EmptyStore_DoesNotThrow()
-    {
-        using var service = new ChatSessionService(TimeSpan.FromHours(1));
-
-        var exception = Record.Exception(() => service.SweepExpiredSessions());
-
-        Assert.Null(exception);
-    }
-
-    [Fact]
-    public void SweepExpiredSessions_MixedSessions_RemovesOnlyExpired()
-    {
-        using var service = new ChatSessionService(TimeSpan.FromHours(1));
-
-        var sessionsField = typeof(ChatSessionService)
-            .GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
-
-        var expired1 = new ChatSessionService.AiSession
-        {
-            SessionId = Guid.NewGuid(),
-            Language = "ar",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-60),
-            LastActivityAt = DateTime.UtcNow.AddMinutes(-60),
-            ExpiresAt = DateTime.UtcNow.AddMinutes(-10)
-        };
-        var expired2 = new ChatSessionService.AiSession
-        {
-            SessionId = Guid.NewGuid(),
-            Language = "en",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-45),
-            LastActivityAt = DateTime.UtcNow.AddMinutes(-45),
-            ExpiresAt = DateTime.UtcNow.AddMinutes(-5)
-        };
-        var active = new ChatSessionService.AiSession
-        {
-            SessionId = Guid.NewGuid(),
-            Language = "ar",
-            CreatedAt = DateTime.UtcNow,
-            LastActivityAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(25)
-        };
-
-        sessions[expired1.SessionId] = expired1;
-        sessions[expired2.SessionId] = expired2;
-        sessions[active.SessionId] = active;
-
-        service.SweepExpiredSessions();
-
-        Assert.False(sessions.ContainsKey(expired1.SessionId));
-        Assert.False(sessions.ContainsKey(expired2.SessionId));
-        Assert.True(sessions.ContainsKey(active.SessionId));
-        Assert.Single(sessions);
-    }
-
-    [Fact]
-    public void Dispose_StopsTimer()
-    {
-        var service = new ChatSessionService(TimeSpan.FromMilliseconds(50));
-
-        var disposeException = Record.Exception(() => service.Dispose());
-
-        Assert.Null(disposeException);
-    }
-
-    [Fact]
-    public async Task SaveTurn_ThenGetContext_ReturnsTurnAndIntent()
-    {
-        using var service = new ChatSessionService();
-        var session = await service.InitializeSessionAsync(null);
-        var intent = new AiAssistantIntentDto(
-            AiIntentType.SearchHalls, "Gaza", null, null, 300, null);
-
-        await service.SaveTurnAsync(session.SessionId, "أريد قاعة في غزة لـ 300 شخص", intent);
+        await service.SaveExchangeAsync(session.SessionId, "دورلي قاعة بغزة لـ300", "لقيت قاعات", intent, [hall], hall);
         var context = await service.GetConversationContextAsync(session.SessionId);
 
-        Assert.Single(context.Turns);
-        Assert.Equal("user", context.Turns[0].Role);
-        Assert.Equal("أريد قاعة في غزة لـ 300 شخص", context.Turns[0].Text);
-        Assert.NotNull(context.LastIntent);
-        Assert.Equal(AiIntentType.SearchHalls, context.LastIntent!.Intent);
+        Assert.Collection(context.Turns,
+            turn => { Assert.Equal("user", turn.Role); Assert.Equal("دورلي قاعة بغزة لـ300", turn.Text); },
+            turn => { Assert.Equal("assistant", turn.Role); Assert.Equal("لقيت قاعات", turn.Text); });
         Assert.Equal(300, context.LastIntent!.Capacity);
+        Assert.Equal(hall, Assert.Single(context.LastHalls!));
+        Assert.Equal(hall, context.LastHall);
     }
 
     [Fact]
-    public async Task SaveTurn_MultipleTurns_BoundedToLimit()
+    public async Task ConversationHistoryKeepsOnlySixWholeExchanges()
     {
         using var service = new ChatSessionService();
-        var session = await service.InitializeSessionAsync(null);
+        var session = await service.InitializeSessionAsync("en");
 
         for (var i = 1; i <= 10; i++)
-        {
-            await service.SaveTurnAsync(session.SessionId, $"message {i}", null);
-        }
+            await service.SaveExchangeAsync(session.SessionId, $"question {i}", $"reply {i}", null, null, null);
 
         var context = await service.GetConversationContextAsync(session.SessionId);
-
-        Assert.Equal(6, context.Turns.Count);
-        Assert.Equal("message 5", context.Turns[0].Text);
-        Assert.Equal("message 10", context.Turns[^1].Text);
+        Assert.Equal(12, context.Turns.Count);
+        Assert.Equal("question 5", context.Turns[0].Text);
+        Assert.Equal("reply 10", context.Turns[^1].Text);
     }
 
     [Fact]
-    public async Task SaveTurn_EmptyMessage_DoesNotRecord()
+    public async Task SessionMemoryRedactsCredentialsAndOmitsLongDocumentLikeMessages()
+    {
+        using var service = new ChatSessionService();
+        var session = await service.InitializeSessionAsync("en");
+
+        await service.SaveTurnAsync(session.SessionId, "my token is abc.def", null);
+        await service.SaveTurnAsync(session.SessionId, new string('x', 700), null);
+
+        var turns = (await service.GetConversationContextAsync(session.SessionId)).Turns;
+        Assert.Contains("[redacted]", turns[0].Text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("abc.def", turns[0].Text, StringComparison.Ordinal);
+        Assert.Contains("omitted", turns[1].Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SeparateServiceInstancesShareDurableStoreAndSerializeConcurrentUpdates()
+    {
+        var store = new InMemoryAiConversationSessionStore();
+        using var firstInstance = new ChatSessionService(store);
+        using var secondInstance = new ChatSessionService(store);
+        var session = await firstInstance.InitializeSessionAsync("en", userId: "user-a");
+
+        await Task.WhenAll(Enumerable.Range(1, 8).Select(index =>
+            (index % 2 == 0 ? firstInstance : secondInstance)
+                .SaveTurnAsync(session.SessionId, $"turn {index}", null)));
+
+        var context = await secondInstance.GetConversationContextAsync(session.SessionId, userId: "user-a");
+        Assert.Equal(6, context.Turns.Count);
+        Assert.Equal(6, context.Turns.Select(turn => turn.Text).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task EmptyOrUnknownTurnsAreNoOps()
     {
         using var service = new ChatSessionService();
         var session = await service.InitializeSessionAsync(null);
-
-        await service.SaveTurnAsync(session.SessionId, "   ", null);
-        var context = await service.GetConversationContextAsync(session.SessionId);
-
-        Assert.Empty(context.Turns);
-    }
-
-    [Fact]
-    public async Task SaveTurn_MissingSession_NoOp()
-    {
-        using var service = new ChatSessionService();
-
+        await service.SaveTurnAsync(session.SessionId, "  ", null);
         await service.SaveTurnAsync(Guid.NewGuid(), "hello", null);
-        var context = await service.GetConversationContextAsync(Guid.NewGuid());
 
-        Assert.Empty(context.Turns);
-        Assert.Null(context.LastIntent);
-    }
-
-    [Fact]
-    public async Task GetContext_ExpiredSession_ReturnsEmpty()
-    {
-        using var service = new ChatSessionService();
-        var created = await service.InitializeSessionAsync(null);
-
-        var expiredSession = new ChatSessionService.AiSession
-        {
-            SessionId = created.SessionId,
-            Language = created.Language,
-            CreatedAt = created.CreatedAt,
-            LastActivityAt = created.CreatedAt,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(-1)
-        };
-
-        var sessionsField = typeof(ChatSessionService)
-            .GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
-        sessions[created.SessionId] = expiredSession;
-
-        var context = await service.GetConversationContextAsync(created.SessionId);
-
-        Assert.Empty(context.Turns);
-        Assert.Null(context.LastIntent);
+        Assert.Empty((await service.GetConversationContextAsync(session.SessionId)).Turns);
+        Assert.Empty((await service.GetConversationContextAsync(Guid.NewGuid())).Turns);
     }
 }

@@ -811,6 +811,7 @@ const en: MessageCatalog = {
   "errors.assistant.chat.tooLong": "That question is longer than allowed.",
   "errors.assistant.chat.validation": "The question could not be understood. Try a shorter or clearer phrasing.",
   "errors.assistant.chat.send": "Could not send the message. Please try again.",
+  "errors.assistant.chat.rateLimited": "Mabrouk is receiving requests too quickly. Wait a moment, then try again.",
   "errors.assistant.chat.expired": "Mabrouk’s session expired. Close it and open it again.",
   "errors.assistant.chat.unavailable":
     "Recommendations are unavailable right now. You can browse halls manually.",
