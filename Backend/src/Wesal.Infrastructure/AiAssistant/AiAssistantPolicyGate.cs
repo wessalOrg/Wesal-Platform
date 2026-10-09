@@ -176,16 +176,7 @@ public sealed class AiAssistantPolicyGate
     }
 
     private static string Compose(WesalKnowledgeArticle article, string language)
-    {
-        if (article.Status == WesalKnowledgeStatus.Verified)
-        {
-            return article.Content;
-        }
-
-        return article.Content + (language == "en"
-            ? "\n\nNote: some details in this answer are pending verification; please contact the Wesal team to confirm before relying on them."
-            : "\n\nملاحظة: بعض التفاصيل في هذه الإجابة قيد التحقق؛ يُنصح بالتواصل مع فريق وصال للتأكيد قبل الاعتماد عليها.");
-    }
+        => WesalKnowledgeAnswerComposer.Compose(article, language);
 
     internal static AiAssistantResponse BuildNavigation(string language, AiNavigationMatch match)
     {

@@ -192,17 +192,7 @@ public sealed partial class HowToService : IHowToService
 
     private static string ComposeAnswer(WesalKnowledgeArticle article, string language)
     {
-        var content = article.Content;
-
-        if (article.Status != WesalKnowledgeStatus.Verified)
-        {
-            var caveat = language == "en"
-                ? "\n\nNote: some details in this answer are pending verification; please contact the Wesal team to confirm before relying on them."
-                : "\n\nملاحظة: بعض التفاصيل في هذه الإجابة قيد التحقق؛ يُنصح بالتواصل مع فريق وصال للتأكيد قبل الاعتماد عليها.";
-            content += caveat;
-        }
-
-        return content;
+        return WesalKnowledgeAnswerComposer.Compose(article, language);
     }
 
     private (string Answer, string Category) MatchEnglish(string question)
@@ -388,4 +378,14 @@ public sealed partial class HowToService : IHowToService
 
         return false;
     }
+}
+
+internal static class WesalKnowledgeAnswerComposer
+{
+    public static string Compose(WesalKnowledgeArticle article, string language)
+        => article.Status == WesalKnowledgeStatus.Verified
+            ? article.Content
+            : language == "en"
+                ? "Wesal's policy for this case is not confirmed yet. Please contact Wesal support."
+                : "سياسة هذه الحالة غير مؤكدة عندي حاليًا، تواصل مع دعم وصال.";
 }

@@ -24,8 +24,8 @@ public class WesalKnowledgeServiceShould
         Assert.NotEmpty(articles);
         var about = Assert.Single(articles, a => a.Category == "platform" && a.Title.Contains("about", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("وصال", about.Content);
-        Assert.Contains("\u0645\u0646\u0633\u0642\u064a \u0627\u0644\u0623\u0641\u0631\u0627\u062d", about.Content, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(WesalKnowledgeStatus.NeedsVerification, about.Status);
+        Assert.Contains("قاعات الأفراح", about.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(WesalKnowledgeStatus.Verified, about.Status);
     }
 
     [Fact]
@@ -141,14 +141,15 @@ public class WesalKnowledgeServiceShould
     }
 
     [Fact]
-    public async Task PlatformDescription_NotLimitedToWeddingHalls()
+    public async Task PlatformDescription_ListsOnlyCurrentAndComingSoonServices()
     {
         var articles = await _service.SearchAsync("what is wesal platform", "en", 5);
 
         Assert.NotEmpty(articles);
         var about = Assert.Single(articles, a => a.Title.Contains("about", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("wedding planners", about.Content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("photography studios", about.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Coming Soon", about.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("photography studios", about.Content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -250,7 +251,7 @@ public class WesalKnowledgeServiceShould
         var articles = await _service.SearchAsync("wesal", "en", 10);
 
         Assert.Contains(articles, a => a.Title.Contains("contact", StringComparison.OrdinalIgnoreCase) && a.Status == WesalKnowledgeStatus.Verified);
-        Assert.Contains(articles, a => a.Title.Contains("about", StringComparison.OrdinalIgnoreCase) && a.Status == WesalKnowledgeStatus.NeedsVerification);
+        Assert.Contains(articles, a => a.Title.Contains("about", StringComparison.OrdinalIgnoreCase) && a.Status == WesalKnowledgeStatus.Verified);
     }
 
     [Fact]

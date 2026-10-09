@@ -4,7 +4,7 @@ category: user-guide
 language: ar,en
 source: official-project-team-and-repository
 lastUpdated: 2026-10-09
-status: needs-verification
+status: product-confirmation-required
 keywords: cancel|cancellation|withdraw|refund|إلغاء|الغاء|سحب الطلب|عربون
 ---
 

@@ -20,7 +20,7 @@
   {"id":"criteria-search-english","dimension":"English understanding","runner":"assistant","message":"Find a wedding hall in Gaza for 300 guests","language":"en","expectedIntent":"SearchHalls","expectedRegion":"Gaza","expectedCapacity":300},
   {"id":"search-needs-criteria","dimension":"Fallback quality","runner":"assistant","message":"بدي قاعة لعرس","language":"ar","expectedIntent":"SearchHalls","mustContain":["المنطقة"]},
   {"id":"search-guide-knowledge","dimension":"Knowledge retrieval","runner":"assistant","message":"كيف أبحث عن صالة؟","language":"ar","expectedActionPath":"/halls","expectedActionMode":"suggest","mustContain":["بحث"]},
-  {"id":"booking-payment-not-subscription","dimension":"Fallback quality","runner":"assistant","message":"كيف أدفع الحجز؟","language":"ar","mustContain":["عربون"],"mustNotContain":["120","+972597744476"]},
+  {"id":"booking-payment-not-subscription","dimension":"Fallback quality","runner":"assistant","message":"كيف أدفع الحجز؟","language":"ar","mustContain":["سياسة هذه الحالة غير مؤكدة"],"mustNotContain":["عربون","120","+972597744476"]},
   {"id":"owner-subscription-payment","dimension":"Fallback quality","runner":"assistant","message":"كم سعر الاشتراك لصاحب القاعة؟","language":"ar","mustContain":["120","+972597744476"]},
   {"id":"ambiguous-payment-asks","dimension":"Fallback quality","runner":"assistant","message":"كيف أدفع؟","language":"ar","expectedKind":"Clarification","mustContain":["أي دفع"]},
   {"id":"support-contact","dimension":"Knowledge retrieval","runner":"assistant","message":"شو رقم واتساب وصال؟","language":"ar","mustContain":["+970567581412"]},
@@ -82,7 +82,7 @@
   {"id":"reference-pronoun-not-ordinal","dimension":"Hall reference resolution","runner":"reference","message":"كم سعرها؟","expectNull":true},
   {"id":"reference-named-hall","dimension":"Hall reference resolution","runner":"reference","message":"كم سعر قاعة النخيل؟","expectedHallName":"النخيل"},
 
-  {"id":"knowledge-about-en","dimension":"Knowledge retrieval","runner":"knowledge","message":"what is wesal","language":"en","expectedTitleContains":"about","expectedStatus":"NeedsVerification"},
+  {"id":"knowledge-about-en","dimension":"Knowledge retrieval","runner":"knowledge","message":"what is wesal","language":"en","expectedTitleContains":"about","expectedStatus":"Verified"},
   {"id":"knowledge-about-ar","dimension":"Knowledge retrieval","runner":"knowledge","message":"شو هي وصال؟","language":"ar","expectedTitleContains":"about"},
   {"id":"knowledge-contact-ar","dimension":"Knowledge retrieval","runner":"knowledge","message":"شو رقم واتساب وصال","language":"ar","expectedTitleContains":"contact","expectedStatus":"Verified"},
   {"id":"knowledge-contact-en","dimension":"Knowledge retrieval","runner":"knowledge","message":"wesal contact support","language":"en","expectedTitleContains":"contact"},

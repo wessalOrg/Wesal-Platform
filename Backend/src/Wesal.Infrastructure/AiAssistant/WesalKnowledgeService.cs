@@ -271,6 +271,7 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
         {
             "verified" => WesalKnowledgeStatus.Verified,
             "draft" => WesalKnowledgeStatus.Draft,
+            "product-confirmation-required" => WesalKnowledgeStatus.NeedsVerification,
             _ => WesalKnowledgeStatus.NeedsVerification
         };
 

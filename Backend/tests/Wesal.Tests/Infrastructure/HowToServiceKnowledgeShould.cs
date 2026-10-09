@@ -18,23 +18,24 @@ public class HowToServiceKnowledgeShould
         => new HowToService(CreatePaymentService(), knowledgeService: new WesalKnowledgeService());
 
     [Fact]
-    public async Task ArabicPlatformQuestion_AnsweredFromKnowledgeBase()
+    public async Task ArabicPlatformQuestion_UsesVerifiedCurrentCapabilityKnowledge()
     {
         var result = await CreateService().AskHowToAsync("شو هي وصال؟", "ar", CancellationToken.None);
 
         Assert.Equal("ar", result.ResponseLanguage);
         Assert.Contains("وصال", result.Answer);
+        Assert.Contains("قاعات الأفراح", result.Answer);
         Assert.Equal("platform", result.Category);
     }
 
     [Fact]
-    public async Task EnglishPlatformQuestion_UsesOfficialDescription()
+    public async Task EnglishPlatformQuestion_UsesVerifiedCurrentCapabilityKnowledge()
     {
         var result = await CreateService().AskHowToAsync("what is wesal?", "en", CancellationToken.None);
 
         Assert.Equal("en", result.ResponseLanguage);
-        Assert.Contains("Wesal", result.Answer);
-        Assert.DoesNotContain("wedding hall booking platform for Gaza", result.Answer, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("platform", result.Answer, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("approved wedding halls", result.Answer, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -150,21 +151,21 @@ public class HowToServiceKnowledgeShould
     }
 
     [Fact]
-    public async Task PrivacyQuestion_ReturnedWithVerificationCaveat()
+    public async Task PrivacyQuestion_DoesNotRepeatUnconfirmedLegalPolicy()
     {
         var result = await CreateService().AskHowToAsync("what is the wesal privacy policy?", "en", CancellationToken.None);
 
         Assert.Equal("policies", result.Category);
-        Assert.Contains("privacy", result.Answer, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("pending verification", result.Answer, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Wesal's policy for this case is not confirmed yet. Please contact Wesal support.", result.Answer);
+        Assert.DoesNotContain("privacy", result.Answer, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task NeedsVerificationArticle_NotPresentedAsConfirmed()
+    public async Task VerifiedAboutArticle_IsAnsweredFromCurrentCapabilities()
     {
         var result = await CreateService().AskHowToAsync("what is wesal?", "en", CancellationToken.None);
 
-        Assert.Contains("pending verification", result.Answer, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("approved wedding halls", result.Answer, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
