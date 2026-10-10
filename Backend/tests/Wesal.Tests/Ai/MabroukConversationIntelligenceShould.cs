@@ -118,7 +118,8 @@ public sealed class MabroukConversationIntelligenceShould
         var creator = await harness.AskAsync("مين عمل مبروك؟");
         var addHall = await harness.AskAsync("كيف أضيف قاعة؟");
         Assert.Contains("عبد العزيز الخزندار", team.Message);
-        Assert.Contains("فريق وصال صنعني", creator.Message);
+        Assert.Contains("عبد الرحمن أبو سالم", creator.Message);
+        Assert.Contains("عبد العزيز الخزندار", creator.Message);
         Assert.Contains("إثبات الهوية", addHall.Message);
     }
 
@@ -323,7 +324,8 @@ public sealed class MabroukConversationIntelligenceShould
                 if (turn == "مين مطورين وصال؟")
                     Check(response.Message.Contains("عبد العزيز الخزندار"), $"{scenario.Id}: team answer lost");
                 if (turn == "مين عمل مبروك؟")
-                    Check(response.Message.Contains("فريق وصال صنعني"), $"{scenario.Id}: creator answer lost");
+                    Check(response.Message.Contains("عبد الرحمن أبو سالم")
+                        && response.Message.Contains("عبد العزيز الخزندار"), $"{scenario.Id}: Mabrouk developer fact lost");
                 if (turn == "كيف أضيف قاعة؟")
                     Check(response.Message.Contains("إثبات الهوية"), $"{scenario.Id}: add-hall answer lost");
                 if (turn is "كيف أتواصل مع وصال؟" or "طيب كيف أتواصل مع وصال؟")

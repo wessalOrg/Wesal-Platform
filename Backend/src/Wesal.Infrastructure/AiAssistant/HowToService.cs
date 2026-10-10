@@ -15,7 +15,7 @@ public sealed partial class HowToService : IHowToService
     /// (user-guide, hall-owner) stay with the tailored deterministic answers.
     /// </summary>
     private static readonly HashSet<string> OfficialFactCategories = new(
-        ["platform", "faq", "policies"],
+        ["platform", "faq", "policies", "mabrouk"],
         StringComparer.OrdinalIgnoreCase);
 
     private static readonly string[] SupportContactMarkers =
@@ -88,6 +88,29 @@ public sealed partial class HowToService : IHowToService
 
         if (IsCreatorQuestion(question))
         {
+            // The product owner supplied a specific, verified answer for the
+            // assistant's development team. Keep it distinct from the broader
+            // Wesal-team question handled by the fallback below.
+            if (_knowledgeService is not null)
+            {
+                var mabroukFacts = await _knowledgeService.SearchAsync(
+                    question,
+                    effectiveLanguage,
+                    maxResults: 1,
+                    cancellationToken);
+                var team = mabroukFacts.FirstOrDefault(article =>
+                    string.Equals(article.StableKey, "mabrouk-development-team", StringComparison.OrdinalIgnoreCase)
+                    && article.Status == WesalKnowledgeStatus.Verified);
+                if (team is not null)
+                {
+                    return new HowToResponse(
+                        WesalKnowledgeAnswerComposer.Compose(team, effectiveLanguage),
+                        "mabrouk-development-team",
+                        effectiveLanguage,
+                        DateTime.UtcNow);
+                }
+            }
+
             var creatorAnswer = effectiveLanguage == "en"
                 ? "I’m Wesal’s smart assistant 😄🇵🇸\n" +
                   "I was specially created to help you find the perfect wedding hall and answer your questions about halls, bookings, and the Wesal platform.\n\n" +
@@ -200,6 +223,7 @@ public sealed partial class HowToService : IHowToService
             "platform", "faq", "policies", "support", "creator", "booking", "booking-cancel",
             "booking-rejected", "registration", "login", "hall-owner", "hall-approval", "language",
             "install", "ratings", "comments", "messaging", "subscription", "availability", "booking-status",
+            "mabrouk-development-team",
             "hall-management", "hall-details", "search", "capabilities"
         };
         return knownCategories.Contains(answer.Category) ? answer : null;

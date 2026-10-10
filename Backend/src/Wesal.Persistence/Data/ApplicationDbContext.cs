@@ -52,6 +52,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<ConversationReadState> ConversationReadStates => Set<ConversationReadState>();
 
+    public DbSet<AiKnowledgeArticle> AiKnowledgeArticles => Set<AiKnowledgeArticle>();
+
+    public DbSet<AiKnowledgeAlias> AiKnowledgeAliases => Set<AiKnowledgeAlias>();
+
+    public DbSet<AiKnowledgeRevision> AiKnowledgeRevisions => Set<AiKnowledgeRevision>();
+
+    public DbSet<AiKnowledgeGapCluster> AiKnowledgeGapClusters => Set<AiKnowledgeGapCluster>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -74,6 +82,94 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(user => user.ProfilePictureUrl).HasMaxLength(500);
             entity.Property(user => user.IdentityDocumentUploadedAt).HasColumnType("timestamp with time zone");
             entity.HasIndex(user => user.PhoneNumber).IsUnique().HasFilter("\"PhoneNumber\" IS NOT NULL");
+        });
+
+        builder.Entity<AiKnowledgeArticle>(entity =>
+        {
+            entity.ToTable("AiKnowledgeArticles");
+            entity.HasKey(article => article.Id);
+            entity.Property(article => article.Key).IsRequired().HasMaxLength(120);
+            entity.Property(article => article.Title).IsRequired().HasMaxLength(200);
+            entity.Property(article => article.Category).IsRequired().HasMaxLength(80);
+            entity.Property(article => article.AnswerAr).IsRequired().HasMaxLength(12000);
+            entity.Property(article => article.AnswerEn).HasMaxLength(12000);
+            entity.Property(article => article.Source).IsRequired().HasMaxLength(500);
+            entity.Property(article => article.PublicationStatus).HasConversion<string>().HasMaxLength(24);
+            entity.Property(article => article.VerificationStatus).HasConversion<string>().HasMaxLength(32);
+            entity.Property(article => article.EffectiveFrom).HasColumnType("date");
+            entity.Property(article => article.EffectiveUntil).HasColumnType("date");
+            entity.Property(article => article.ReviewAt).HasColumnType("date");
+            entity.Property(article => article.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(article => article.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(article => article.PublishedAt).HasColumnType("timestamp with time zone");
+            entity.Property(article => article.CreatedByUserId).HasMaxLength(450);
+            entity.Property(article => article.UpdatedByUserId).HasMaxLength(450);
+            entity.Property(article => article.OverridesBuiltInKey).HasMaxLength(160);
+            entity.Property(article => article.DraftSnapshotJson).HasColumnType("text");
+            entity.Property(article => article.NormalizedSearchText).HasColumnType("text");
+            entity.HasIndex(article => article.Key).IsUnique();
+            entity.HasIndex(article => new { article.PublicationStatus, article.EffectiveFrom, article.EffectiveUntil });
+            entity.HasIndex(article => article.OverridesBuiltInKey);
+        });
+
+        builder.Entity<AiKnowledgeAlias>(entity =>
+        {
+            entity.ToTable("AiKnowledgeAliases");
+            entity.HasKey(alias => alias.Id);
+            entity.Property(alias => alias.Language).IsRequired().HasMaxLength(5);
+            entity.Property(alias => alias.Text).IsRequired().HasMaxLength(200);
+            entity.Property(alias => alias.NormalizedText).IsRequired().HasMaxLength(240);
+            entity.Property(alias => alias.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(alias => new { alias.ArticleId, alias.NormalizedText }).IsUnique();
+            entity.HasIndex(alias => alias.NormalizedText);
+            entity.HasOne(alias => alias.Article)
+                .WithMany(article => article.Aliases)
+                .HasForeignKey(alias => alias.ArticleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<AiKnowledgeRevision>(entity =>
+        {
+            entity.ToTable("AiKnowledgeRevisions");
+            entity.HasKey(revision => revision.Id);
+            entity.Property(revision => revision.Action).IsRequired().HasMaxLength(32);
+            entity.Property(revision => revision.SnapshotJson).IsRequired().HasColumnType("text");
+            entity.Property(revision => revision.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(revision => revision.CreatedByUserId).HasMaxLength(450);
+            entity.Property(revision => revision.ChangeNote).IsRequired().HasMaxLength(500);
+            entity.HasIndex(revision => new { revision.ArticleId, revision.Version }).IsUnique();
+            entity.HasOne(revision => revision.Article)
+                .WithMany(article => article.Revisions)
+                .HasForeignKey(revision => revision.ArticleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<AiKnowledgeGapCluster>(entity =>
+        {
+            entity.ToTable("AiKnowledgeGapClusters");
+            entity.HasKey(cluster => cluster.Id);
+            entity.Property(cluster => cluster.CanonicalQuestion).IsRequired().HasMaxLength(500);
+            entity.Property(cluster => cluster.NormalizedKey).IsRequired().HasMaxLength(500);
+            entity.Property(cluster => cluster.Language).IsRequired().HasMaxLength(5);
+            entity.Property(cluster => cluster.Status).HasConversion<string>().HasMaxLength(16);
+            entity.Property(cluster => cluster.Reason).HasConversion<string>().HasMaxLength(32);
+            entity.Property(cluster => cluster.SampleQuestionsJson).IsRequired().HasColumnType("text");
+            entity.Property(cluster => cluster.FirstSeenAt).HasColumnType("timestamp with time zone");
+            entity.Property(cluster => cluster.LastSeenAt).HasColumnType("timestamp with time zone");
+            entity.Property(cluster => cluster.ResolvedAt).HasColumnType("timestamp with time zone");
+            entity.Property(cluster => cluster.IgnoredAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(cluster => new { cluster.Status, cluster.LastSeenAt });
+            entity.HasIndex(cluster => cluster.NormalizedKey)
+                .IsUnique()
+                .HasFilter("\"Status\" IN ('New', 'Reviewed')");
+            entity.HasOne(cluster => cluster.LinkedArticle)
+                .WithMany()
+                .HasForeignKey(cluster => cluster.LinkedArticleId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<AiKnowledgeGapCluster>()
+                .WithMany()
+                .HasForeignKey(cluster => cluster.MergedIntoClusterId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         builder.Entity<Hall>(entity =>
