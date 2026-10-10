@@ -32,6 +32,9 @@ export const HALL_OWNER_ADD_HALL_PATH = "/owner/halls/add";
 /** Admin panel workspace (hall submissions). */
 export const ADMIN_MANAGEMENT_PATH = "/admin";
 
+/** Private Mabrouk Knowledge Studio workspace. */
+export const ADMIN_MABROUK_PATH = "/admin/mabrouk";
+
 /** Admin rejected-halls queue (Edit 26). Kept off `/admin/halls` so it does not share the pending-submissions active state. */
 export const ADMIN_REJECTED_HALLS_PATH = "/admin/rejected-halls";
 

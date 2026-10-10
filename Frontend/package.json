@@ -7,6 +7,7 @@
     "prebuild": "node scripts/verify-production-env.mjs",
     "verify:api-base-url": "node scripts/verify-api-base-url.mjs",
     "verify:assistant": "tsx scripts/verify-assistant-contract.ts",
+    "verify:mabrouk-knowledge": "tsx scripts/verify-mabrouk-knowledge-contract.ts",
     "verify:assistant-storage": "tsx scripts/verify-ai-chat-storage.ts",
     "build": "next build",
     "start": "next start",

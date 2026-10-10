@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import WesalLogo from "@/components/brand/WesalLogo";
 import {
   ADMIN_MANAGEMENT_PATH,
+  ADMIN_MABROUK_PATH,
   ADMIN_MESSAGES_PATH,
   ADMIN_REJECTED_HALLS_PATH,
   ADMIN_SUBSCRIPTIONS_PATH,
@@ -15,6 +16,7 @@ import {
 import { useT } from "@/i18n";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import UnreadBadge from "@/components/ui/UnreadBadge";
+import { adminMabroukService } from "@/services/admin-mabrouk";
 
 type AdminSidebarProps = {
   id?: string;
@@ -32,6 +34,7 @@ export default function AdminSidebar({
   const router = useRouter();
   const { logout, isLoggingOut } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [mabroukGapCount, setMabroukGapCount] = useState(0);
   const { count: unreadCount, ready: unreadReady } = useUnreadCount();
   const messagesUnread = unreadReady ? unreadCount : 0;
   const homeActive =
@@ -43,6 +46,25 @@ export default function AdminSidebar({
     pathname === ADMIN_SUBSCRIPTIONS_PATH || pathname.startsWith(`${ADMIN_SUBSCRIPTIONS_PATH}/`);
   const messagesActive =
     pathname === ADMIN_MESSAGES_PATH || pathname.startsWith(`${ADMIN_MESSAGES_PATH}/`);
+  const mabroukActive = pathname === ADMIN_MABROUK_PATH || pathname.startsWith(`${ADMIN_MABROUK_PATH}/`);
+
+  useEffect(() => {
+    let mounted = true;
+    const refreshGapCount = async () => {
+      try {
+        const count = await adminMabroukService.gapCount();
+        if (mounted) setMabroukGapCount(count);
+      } catch {
+        if (mounted) setMabroukGapCount(0);
+      }
+    };
+    void refreshGapCount();
+    const timer = window.setInterval(() => void refreshGapCount(), 60_000);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   return (
     <>
@@ -62,6 +84,33 @@ export default function AdminSidebar({
 
         <nav className="seeker-dash-sidebar-nav">
           <ul className="seeker-dash-sidebar-list seeker-dash-sidebar-list--static">
+            <li>
+              <Link
+                href={ADMIN_MABROUK_PATH}
+                prefetch
+                className={`seeker-dash-sidebar-link${
+                  mabroukActive ? " seeker-dash-sidebar-link--active" : ""
+                }`}
+                aria-current={mabroukActive ? "page" : undefined}
+                data-testid="admin-nav-mabrouk"
+                onClick={onNavigate}
+                onMouseEnter={() => router.prefetch(ADMIN_MABROUK_PATH)}
+              >
+                <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+                  <MabroukIcon />
+                </span>
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 truncate">{t("admin.nav.mabrouk")}</span>
+                  {mabroukGapCount > 0 ? (
+                    <UnreadBadge
+                      count={mabroukGapCount}
+                      label={t("admin.nav.mabroukGapCount", { count: mabroukGapCount })}
+                      data-testid="admin-nav-mabrouk-gaps"
+                    />
+                  ) : null}
+                </span>
+              </Link>
+            </li>
             <li>
               <Link
                 href={ADMIN_MANAGEMENT_PATH}
@@ -228,6 +277,16 @@ function MessagesIcon() {
         strokeWidth="1.7"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function MabroukIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <path d="M12 3.5a3.5 3.5 0 0 0-6.7 1.4A3.8 3.8 0 0 0 3 8.2a3.8 3.8 0 0 0 1.3 2.9A3.6 3.6 0 0 0 6 17.5V20h5v-3H9.5v-3H12v-3H9V8h3V3.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 3.5a3.5 3.5 0 0 1 6.7 1.4A3.8 3.8 0 0 1 21 8.2a3.8 3.8 0 0 1-1.3 2.9 3.6 3.6 0 0 1-1.7 6.4V20h-5v-3h1.5v-3H12v-3h3V8h-3V3.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 6.5h4M10 10h4M10 13.5h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     </svg>
   );
 }
