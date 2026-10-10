@@ -195,15 +195,37 @@ public sealed partial class HowToService : IHowToService
             return new HowToResponse(AddHallVisibility(language), "hall-approval", language ?? DefaultLanguage, DateTime.UtcNow);
 
         var answer = await AskHowToAsync(question, language, cancellationToken, allowModel: false);
-        var knownCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "platform", "faq", "policies", "support", "creator", "booking", "booking-cancel",
-            "booking-rejected", "registration", "login", "hall-owner", "hall-approval", "language",
-            "install", "ratings", "comments", "messaging", "subscription", "availability", "booking-status",
-            "hall-management", "hall-details", "search", "capabilities"
-        };
-        return knownCategories.Contains(answer.Category) ? answer : null;
+        return IsKnownAnswerCategory(answer.Category) ? answer : null;
     }
+
+    /// <summary>
+    /// Categories that carry trusted, deterministic product knowledge (official KB
+    /// articles, support/payment configuration, creator fact, and tailored feature
+    /// how-tos). Anything else from <see cref="AskHowToAsync"/> is either a trusted
+    /// narrow deterministic answer (photos/pricing/capacity/month-hint/hours/
+    /// payment/greeting) or the generic no-information fallback ("general").
+    /// </summary>
+    internal static bool IsKnownAnswerCategory(string? category)
+        => KnownAnswerCategories.Contains(category ?? string.Empty);
+
+    private static readonly HashSet<string> KnownAnswerCategories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "platform", "faq", "policies", "support", "creator", "booking", "booking-cancel",
+        "booking-rejected", "registration", "login", "hall-owner", "hall-approval", "language",
+        "install", "ratings", "comments", "messaging", "subscription", "availability", "booking-status",
+        "hall-management", "hall-details", "search", "capabilities"
+    };
+
+    /// <summary>
+    /// Learning-loop gap predicate (Mabrouk side, no Studio dependency): true only
+    /// for the generic no-trusted-information fallback. Narrow deterministic answers
+    /// (known categories above, plus photos/pricing/capacity/month-hint/hours/
+    /// payment/greeting) are trusted product behavior, not missing knowledge.
+    /// The future gap recorder must only fire for turns the assistant resolves
+    /// through the deterministic HowTo path with this predicate true.
+    /// </summary>
+    internal static bool IsGenericFallbackAnswer(HowToResponse? answer)
+        => string.Equals(answer?.Category, "general", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsTeamQuestion(string normalized)
         => ContainsAny(normalized, "مين مطور", "من مطور", "مين طور وصال", "من طور وصال", "مين عمل وصال", "مين عمل منصة وصال",
