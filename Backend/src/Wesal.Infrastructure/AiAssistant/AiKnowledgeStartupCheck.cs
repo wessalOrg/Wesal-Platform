@@ -11,10 +11,10 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// </summary>
 public sealed class AiKnowledgeStartupCheck : IHostedService
 {
-    private readonly IWesalKnowledgeService _knowledge;
+    private readonly IWesalKnowledgeStats _knowledge;
     private readonly ILogger<AiKnowledgeStartupCheck> _logger;
 
-    public AiKnowledgeStartupCheck(IWesalKnowledgeService knowledge, ILogger<AiKnowledgeStartupCheck> logger)
+    public AiKnowledgeStartupCheck(IWesalKnowledgeStats knowledge, ILogger<AiKnowledgeStartupCheck> logger)
     {
         _knowledge = knowledge;
         _logger = logger;
@@ -24,7 +24,7 @@ public sealed class AiKnowledgeStartupCheck : IHostedService
     {
         // Resolving the singleton already logged the count; repeat the verdict at the
         // application level so an empty KB is an unmistakable startup warning.
-        if (_knowledge is IWesalKnowledgeStats { ArticleCount: 0 })
+        if (_knowledge.ArticleCount == 0)
         {
             _logger.LogWarning("Wesal AI knowledge is EMPTY at startup; official answers will not be available.");
         }

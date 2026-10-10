@@ -18,4 +18,9 @@ public sealed record WesalKnowledgeArticle(
     string Source,
     DateOnly LastUpdated,
     WesalKnowledgeStatus Status,
-    string Content);
+    string Content,
+    string? StableKey = null,
+    bool IsDynamic = false,
+    int? PublishedVersion = null,
+    IReadOnlyList<string>? MatchedAliases = null,
+    int? MatchScore = null);

@@ -118,7 +118,8 @@ public sealed class MabroukConversationIntelligenceShould
         var creator = await harness.AskAsync("مين عمل مبروك؟");
         var addHall = await harness.AskAsync("كيف أضيف قاعة؟");
         Assert.Contains("عبد العزيز الخزندار", team.Message);
-        Assert.Contains("فريق وصال صنعني", creator.Message);
+        Assert.Contains("عبد الرحمن أبو سالم", creator.Message);
+        Assert.Contains("عبد العزيز الخزندار", creator.Message);
         Assert.Contains("إثبات الهوية", addHall.Message);
     }
 

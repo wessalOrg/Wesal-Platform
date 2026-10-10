@@ -21,7 +21,7 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// every returned article; callers must never present NeedsVerification or Draft
 /// content as confirmed platform policy.
 /// </summary>
-public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWesalKnowledgeStats
+public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWesalKnowledgeStats, IEmbeddedWesalKnowledgeSource
 {
     private static readonly string[] BilingualMarkers = ["WesalKnowledge.", "documentation.ai-knowledge", "documentation/ai-knowledge", "ai-knowledge"];
 
@@ -45,6 +45,18 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
 
     /// <summary>Number of knowledge articles loaded from the embedded Knowledge Base.</summary>
     public int ArticleCount => _documents.Count;
+
+    public IReadOnlyList<EmbeddedWesalKnowledgeArticle> GetArticles()
+        => _documents.Select(document => new EmbeddedWesalKnowledgeArticle(
+            document.Key,
+            document.Title,
+            document.Category,
+            document.Source,
+            document.LastUpdated,
+            document.Status,
+            GetLocalizedContent(document.Content, "ar"),
+            GetLocalizedContent(document.Content, "en"),
+            document.Keywords)).ToList();
 
     private void LogLoaded()
     {
@@ -103,7 +115,8 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
                 x.Document.Source,
                 x.Document.LastUpdated,
                 x.Document.Status,
-                GetLocalizedContent(x.Document.Content, language)))
+                GetLocalizedContent(x.Document.Content, language),
+                x.Document.Key))
             .ToList();
 
         return Task.FromResult(results);
@@ -124,6 +137,16 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
         IReadOnlySet<string> queryTokens,
         string? language)
     {
+        // Mabrouk-specific facts should not leak into broad Wesal questions just
+        // because both documents mention a generic term such as "developers".
+        if (document.Category.Equals("mabrouk", StringComparison.OrdinalIgnoreCase)
+            && !normalizedQuery.Contains("مبروك", StringComparison.Ordinal)
+            && !normalizedQuery.Contains("mabrouk", StringComparison.Ordinal)
+            && !normalizedQuery.Contains("mabrook", StringComparison.Ordinal))
+        {
+            return 0;
+        }
+
         var score = 0;
 
         if (!string.IsNullOrWhiteSpace(document.Title)
@@ -260,6 +283,7 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
 
         var title = meta.GetValueOrDefault("title")?.Trim() ?? string.Empty;
         var category = meta.GetValueOrDefault("category")?.Trim() ?? string.Empty;
+        var key = meta.GetValueOrDefault("key")?.Trim();
         var source = meta.GetValueOrDefault("source")?.Trim() ?? string.Empty;
         var statusText = meta.GetValueOrDefault("status")?.Trim() ?? string.Empty;
         var lastUpdated = ParseDate(meta.GetValueOrDefault("lastUpdated"));
@@ -277,6 +301,7 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
 
         return new KnowledgeDocument(
             resourceName,
+            string.IsNullOrWhiteSpace(key) ? BuildStableKey(category, title, resourceName) : key,
             title,
             category,
             source,
@@ -284,6 +309,21 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
             status,
             keywords,
             string.IsNullOrWhiteSpace(body) ? raw : body.Trim());
+    }
+
+    private static string BuildStableKey(string category, string title, string resourceName)
+    {
+        static string Slug(string value)
+            => Regex.Replace(value.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+
+        var categorySlug = Slug(category);
+        var titleSlug = Slug(title);
+        if (titleSlug.Length == 0)
+        {
+            titleSlug = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(resourceName)))[..12].ToLowerInvariant();
+        }
+
+        return string.IsNullOrEmpty(categorySlug) ? titleSlug : $"{categorySlug}.{titleSlug}";
     }
 
     private static Dictionary<string, string> ParseFrontMatter(string raw, out string body)
@@ -413,6 +453,7 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
 
     internal sealed record KnowledgeDocument(
         string ResourceName,
+        string Key,
         string Title,
         string Category,
         string Source,
