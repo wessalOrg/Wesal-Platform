@@ -38,6 +38,15 @@ public sealed partial class AiIntentFallbackClassifier
 
         if (hasCriteria || SearchIntentRegex().IsMatch(matchText))
         {
+            // A brand-bearing question without hall-search vocabulary asks ABOUT
+            // Wesal itself ("هل وصال عنده مكتب برفح؟"), even when it names a
+            // place/date/capacity. Routing it to hall search hides a genuine
+            // knowledge question (and a future inbox gap) behind hall results.
+            if (IsBrandBearingKnowledgeQuestion(text))
+            {
+                return new AiAssistantIntentDto(AiIntentType.HowTo, null, null, null, null, null);
+            }
+
             return new AiAssistantIntentDto(
                 AiIntentType.SearchHalls,
                 criteria.Region,
@@ -74,6 +83,42 @@ public sealed partial class AiIntentFallbackClassifier
     private static bool IsArabicDiacritic(char c)
         => c is '\u064B' or '\u064C' or '\u064D' or '\u064E' or '\u064F'
             or '\u0650' or '\u0651' or '\u0652' or '\u0670' or '\u0653' or '\u0654' or '\u0655';
+
+    /// <summary>
+    /// True when the message asks about Wesal/Mabrouk itself without hall-search
+    /// vocabulary (hall nouns, search verbs, بدي-family requests, availability or
+    /// capacity markers). Such questions are informational even if they name a
+    /// region, date, or capacity ("هل وصال عنده مكتب برفح؟", "متى وصال بيوصل
+    /// الجنوب؟"); "بدي صالة برفح" keeps its hall noun and still searches.
+    /// </summary>
+    private static bool IsBrandBearingKnowledgeQuestion(string message)
+    {
+        // AiText folding (hamza/alef, ة→ه, ى→ي, lowercase) so the vocabulary
+        // below matches spelled variants like "قاعة/قاعه".
+        var matchText = AiText.Normalize(message ?? string.Empty);
+        var hasBrand = matchText.Contains("وصال", StringComparison.Ordinal)
+            || matchText.Contains("مبروك", StringComparison.Ordinal)
+            || matchText.Contains("wesal", StringComparison.OrdinalIgnoreCase)
+            || matchText.Contains("mabrook", StringComparison.OrdinalIgnoreCase)
+            || matchText.Contains("mabrouk", StringComparison.OrdinalIgnoreCase);
+        if (!hasBrand)
+        {
+            return false;
+        }
+
+        return !ContainsHallSearchVocabulary(matchText);
+    }
+
+    private static bool ContainsHallSearchVocabulary(string matchText)
+        => ContainsAny(matchText,
+            "قاعه", "قاعات", "صاله", "صالات", "hall", "halls",
+            "دور", "ابحث", "بحث", "وريني", "فرجيني", "اعرض",
+            "بدي", "عايز", "عايزه", "اريد", "ابغى",
+            "متوفر", "متوفره", "فاضي", "فاضيه", "فاضية", "متاح", "متاحه", "available",
+            "شخص", "نفر", "ضيف", "سعه", "بتسع");
+
+    private static bool ContainsAny(string text, params string[] keywords)
+        => keywords.Any(keyword => text.Contains(keyword, StringComparison.OrdinalIgnoreCase));
 
     [GeneratedRegex(@"(?:كيف|how\s+(?:do\s+i|can\s+i|to|does|is)|i\s+(?:want|would\s+like)\s+to|أريد\s+أن|اريد\s+ان|أريد|اريد|عايز|عايزة|بِدِّي|بدي|ابغى|أبغي|أرغب\s+في)", RegexOptions.IgnoreCase)]
     private static partial Regex HowToRegex();

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
@@ -31,7 +32,7 @@ public sealed class MabroukKnowledgeStudioShould : IDisposable
         _db = new ApplicationDbContext(options);
         _repository = new AiKnowledgeStudioRepository(_db);
         _embedded = new WesalKnowledgeService();
-        _knowledge = new HybridWesalKnowledgeService(_embedded, _repository, _clock);
+        _knowledge = new HybridWesalKnowledgeService(_embedded, _repository, _clock, NullLogger<HybridWesalKnowledgeService>.Instance);
         _gemini = new Mock<IGeminiService>();
         _gemini.SetupGet(service => service.IsAvailable).Returns(false);
         _assistant = new Mock<IAiAssistantService>();

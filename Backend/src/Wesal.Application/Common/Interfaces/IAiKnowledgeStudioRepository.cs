@@ -20,6 +20,14 @@ public interface IAiKnowledgeStudioRepository
     void AddArticle(AiKnowledgeArticle article);
     void AddRevision(AiKnowledgeRevision revision);
     void AddGap(AiKnowledgeGapCluster cluster);
+
+    /// <summary>
+    /// States a new alias as Added explicitly. Plain navigation Add() cannot be
+    /// trusted here: change-tracker discovery marks dependents added to a
+    /// non-Added principal as Modified, producing an UPDATE for a row that was
+    /// never inserted (concurrency failure on alias churn).
+    /// </summary>
+    void MarkAliasAdded(AiKnowledgeAlias alias);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
 

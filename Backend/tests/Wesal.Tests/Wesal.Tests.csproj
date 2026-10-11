@@ -27,6 +27,8 @@
     <Content Update="Ai\Fixtures\mabrouk-golden-eval.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="Ai\Fixtures\mabrouk-knowledge-coverage.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="Ai\Fixtures\mabrouk-v3-conversations.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="Ai\Fixtures\mabrouk-legacy-must-preserve.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="Ai\Fixtures\mabrouk-real-user-regressions.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,236 +1,169 @@
-# Mabrouk Knowledge Studio - Handoff Checkpoint
+# Mabrouk Knowledge Studio - Handoff (forensically re-audited)
 
-**Branch:** `feat/mabrouk-conversation-intelligence-v3`  
-**Commit SHA:** `303805671348adfdf2bdbc8f9964b5a28c126857`  
-**Remote SHA:** `origin/feat/mabrouk-conversation-intelligence-v3` is up to date
+**Branch:** `feat/mabrouk-knowledge-studio`
+**PR:** #31 (DRAFT - must not be merged until the release gate below is green)
+**Last remote checkpoint before this audit:** `5e2305cb1e78bf8e561236cfe8d58751d375a31f`
 
----
-
-## ⚠️ INVALID E2E TEST RUNS (Process Death)
-
-The following E2E test runs were **invalid** and must be re-run from a clean state:
-
-| Run | Failures | Reason |
-|-----|----------|--------|
-| Run 1 | 11/19 failed | Backend process (`dotnet run` on port 5298) crashed due to missing `Jwt__SecretKey` env var |
-| Run 2 | 11/19 failed | Frontend dev server not running on port 3000; backend not reachable |
-| Run 3 | 11/19 failed | Both frontend and backend processes terminated between test starts |
-
-**Note:** All 11 failures are caused by `ERR_CONNECTION_REFUSED` on `http://127.0.0.1:5298` (backend) and `http://localhost:3000` (frontend). The tests themselves are valid — they require both services running.
+> This document replaces an earlier OpenCode handoff that contained stale and
+> inaccurate statements (a wrong preservation baseline, invented routes and
+> endpoints, an inaccurate "secret scan clean" claim, and literal local
+> credentials). Everything below is labelled **VERIFIED** (checked against the
+> code/git in the Phase A audit) or **UNVERIFIED** (carried over, must be
+> re-proven before it is relied on). Final release evidence is added in the
+> release phase; nothing here claims a green gate.
 
 ---
 
-## 📦 E2E Test Suite Status
+## 1. Status ladder (what is actually true)
 
-- **Total spec files:** 6
-- **Spec files:** `01-admin-auth.spec.ts`, `02-studio-library.spec.ts`, `03-inbox.spec.ts`, `04-learning-loop.spec.ts`, `05-i18n-responsive.spec.ts`, `06-states-simulator.spec.ts`
-- **Current pass rate:** 0/19 (process death — pending clean restart)
-- **E2E spec location:** `Frontend/e2e/`
+| Item | State |
+|---|---|
+| Studio + Learning Loop source changes | committed + pushed (this checkpoint and earlier) |
+| Browser E2E (Playwright, 19 tests) | **NOT YET PROVEN GREEN** - see section 5 |
+| Backend full suite / PG integration | **NOT YET RE-RUN** on this checkout |
+| Frontend `npm ci` / lint / build | **NOT YET RE-RUN** on this checkout |
+| CI on exact HEAD | not yet checked |
+| Merged / deployed / production smoked | **no** |
 
-### Known Remaining Test Failures (to fix after processes are running)
+## 2. Preservation baseline - VERIFIED against `Backend/documentation/mabrouk-knowledge-preservation-baseline.md`
 
-| Test | Failure | Fix Needed |
-|------|---------|------------|
-| `01-admin-auth.spec.ts:6` | anonymous admin visit redirects to landing | Increase timeout, add retry logic, ensure clean session state |
-| `01-admin-auth.spec.ts:12` | registered non-admin cannot open the studio | Fix rate limiting / stale session state |
-| `01-admin-auth.spec.ts:30` | admin login opens the studio overview with sidebar | Add retry logic after login |
-| `01-admin-auth.spec.ts:37` | admin login rejects a wrong password | Fix password comparison logic |
-| `02-studio-library.spec.ts:10` | search, filters and article rows | Expect >=1 instead of =1 (override duplicates) |
-| `03-inbox.spec.ts:36` | seeded gaps appear with detail, badge, review and ignore | Ensure gap seeding works post-login |
-| `04-learning-loop.spec.ts:12` | browser learning loop without restart | Add explicit wait after `saveDraft` click before `publish` click |
-| `05-i18n-responsive.spec.ts:4` | default Arabic renders RTL | Dispatch `wesal-lang-change` event after localStorage set |
-| `05-i18n-responsive.spec.ts:12` | English renders LTR with translated navigation | Same — dispatch language-change event after login |
-| `05-i18n-responsive.spec.ts:28` | mobile viewport keeps studio usable | Mobile helper must not require hidden desktop nav to be visible |
-| `06-states-simulator.spec.ts:10` | simulator answers read-only with source | Fix selector / read-only state handling |
+Captured from production `main` `1c53663`. Inventory only; article content was not modified.
 
----
+- Built-in Markdown files: **26**
+- Verified articles: **20**
+- Categories: **5** (`faq`, `hall-owner`, `platform`, `policies`, `user-guide`)
+- Allowed additive Studio article: `ai-knowledge/mabrouk/development-team.md`
+  (verified Mabrouk-developer fact; does **not** replace `platform/team.md`).
+  Expected totals with it: 27 articles / 21 verified (UNVERIFIED until the
+  preservation test is re-run).
+- Original audit docs that must stay: `mabrouk-knowledge-coverage-audit.md`,
+  `mabrouk-v2-audit.md`, `mabrouk-v3-conversation-audit.md`.
 
-## 🏗️ Architecture & Important Design Decisions
+The earlier handoff's "Arabic / English / French / Spanish / Others" categories
+were wrong and must not be used as a baseline.
 
-### Backend (ASP.NET Core + PostgreSQL)
+Hybrid trust order (target behavior): security/policy > live application truth >
+trusted entity/live facts > capability truth > published verified dynamic Studio
+knowledge > verified built-in Markdown > Gemini grounded reasoning > safe
+fallback. Built-ins stay read-only and permanent; archive/expiry/draft of a
+dynamic override must restore the built-in answer.
 
-- **API base URL (tests):** `http://127.0.0.1:5298/api/v1`
-- **Database:** PostgreSQL 16.15, port 5433, database `wesal_mabrouk_e2e`
-- **JWT Secret:** Must be set via `Jwt__SecretKey` env var (required outside Development mode)
-- **Admin provisioning:** Enabled via `AdminProvisioning__Enabled=true`; admin account `e2e.admin@wesal.test` with password `E2eAdmin_Test_9k4m!`
-- **Key services:**
-  - `WesalKnowledgeService.cs` — ranking/gate logic with `IsGenericFallbackAnswer` predicate fix
-  - `MabroukKnowledgeStudioService.cs` — Knowledge Studio integration (PR #31)
-  - `IAiKnowledgeStudioRepository.cs` — repository interface for PG persistence
-- **Migrations added:** See `Backend/tests/Wesal.Tests/Ai/MabroukStudioPgShould.cs` for PG integration test baseline
+## 3. Real routes and endpoints - VERIFIED from code
 
-### Frontend (Next.js 16 + Playwright)
+**Frontend** (`Frontend/src/app/admin/mabrouk/`): `/admin/mabrouk` (overview),
+`/admin/mabrouk/knowledge`, `/admin/mabrouk/unanswered`,
+`/admin/mabrouk/simulator`, `/admin/mabrouk/analytics`, `/admin/mabrouk/history`.
 
-- **Dev server:** `npm run dev -- --port 3000`
-- **API proxy:** Next.js proxies `/api/*` to backend on port 5298
-- **E2E tests:** Use `page.request.post` directly to `http://127.0.0.1:5298/api/v1` (bypasses proxy)
-- **Admin routes:** `/admin/mabrouk`, `/login`, `/studio`
-- **Key fixes applied:**
-  - `changeNote` uses `inputs.last()` instead of hardcoded index
-  - Date fields use `effectiveFrom`/`effectiveUntil`/`reviewAt` positions
-  - Learning Loop Arabic UNKNOWN encoding restored
-  - Language test dispatches `wesal-lang-change` event
-  - Mobile helper must not require hidden desktop nav to be visible
-  - Remove stale duplicate assertions/actions
+**Backend** (`AdminMabroukKnowledgeController`, route
+`api/v{version}/admin/mabrouk`, policy `RequireAdmin`):
 
-### Knowledge Studio Integration (PR #31)
+- `GET overview`, `GET analytics`, `GET export`, `POST simulate`
+- Knowledge: `GET knowledge`, `GET knowledge/{id}`, `POST knowledge`,
+  `PUT knowledge/{id}`, `POST knowledge/{id}/publish|archive|mark-reviewed|duplicate`,
+  `GET knowledge/{id}/revisions`, `POST knowledge/{id}/rollback/{revisionId}`,
+  `POST knowledge/built-in/{key}/override`, `POST knowledge/ai-draft`,
+  `POST knowledge/conflict-check`
+- Unanswered inbox: `GET unanswered`, `GET unanswered/count`, `GET unanswered/{id}`,
+  `POST unanswered/{id}/review|ignore|link|create-article`,
+  `POST unanswered/merge`, `POST unanswered/ai-cluster-suggestions`
 
-- Mabrouk V3 ↔ Knowledge Studio bidirectional sync
-- PostgreSQL persistence of knowledge gaps and articles
-- Admin browser access for gap management
-- Learning loop: public chat → gap recording → inbox → resolution
-- 27 AI articles loaded (21 verified), 5 categories in preservation baseline
+The earlier handoff's `/gaps`, `/library`, `/learning-loop`, `/states`, `/i18n`
+routes and `/knowledge/library`, `/learning-loop/record` endpoints do not exist.
 
-### Learning Loop Integration
+Latest EF migrations present: `20261009090000_AddDurableAiConversationSessions`,
+`20261009145828_AddMabroukKnowledgeStudio`, `20261009150000_AddAiConversationState`.
 
-- **Flow:** User asks unknown question in public chat → system records gap → gap appears in Unanswered Inbox → admin reviews → gap resolved → knowledge article created
-- **Arabic encoding:** UNKNOWN encoding restored for Arabic language support
-- **Chat input indices:** Corrected for library editor
-- **Save/Draft/Publish:** Fixed order of operations with explicit waits
+## 4. What the local (previously uncommitted) work contains - VERIFIED by diff review
 
-### Preservation Rules (26 files, 20 verified, 5 categories)
+Backend source:
 
-| Category | Files | Status |
-|----------|-------|--------|
-| HowTo | ... | 20 verified |
-| Categories: Arabic, English, French, Spanish, Others | ... | Baseline established |
+- `AiIntentFallbackClassifier` - brand-bearing questions without hall-search
+  vocabulary route to HowTo (so true knowledge gaps are not hidden behind hall
+  results).
+- `AiAssistantService` - fail-open knowledge-gap hook (`TryRecordKnowledgeGapAsync`)
+  that records only the generic no-trusted-answer outcome; "what do you offer
+  beyond halls" no longer lists halls.
+- `HowToService` - `IsGenericFallbackAnswer` / `IsKnownAnswerCategory` predicates,
+  strong verified dynamic match is servable, extra owner add-hall phrasing.
+- `WesalKnowledgeService` - brand-hijack guard: distinctive question words that
+  match nothing distinctive no longer get absorbed by a loosely related article.
+  **Touches built-in ranking - gated by preservation + legacy-parity tests.**
+- `HybridWesalKnowledgeService` - dynamic-layer failure degrades to built-ins only.
+- `MabroukKnowledgeStudioService` / repository - explicit `MarkAliasAdded` to fix
+  alias-churn concurrency failures.
 
----
+Tests/fixtures: preservation + real-user regression fixtures, legacy parity,
+learning-loop (incl. prep) and PostgreSQL integration tests
+(`MabroukStudioPgShould`, runs only when `WESAL_TEST_PG` is set, otherwise
+reports "skipped" - a skipped PG test is **not** a pass).
 
-## 📁 Frontend/Admin Routes
+Frontend: Playwright suite (`Frontend/e2e`, 6 spec files / 19 tests per the
+earlier handoff - UNVERIFIED count) and `playwright.config.ts`;
+`@playwright/test` added to devDependencies.
 
-| Route | Purpose |
-|-------|---------|
-| `/` | Landing page |
-| `/login` | User login page |
-| `/admin/mabrouk` | Admin studio overview (requires admin auth) |
-| `/admin/mabrouk/gaps` | Unanswered gaps inbox |
-| `/admin/mabrouk/library` | Knowledge library CRUD |
-| `/admin/mabrouk/learning-loop` | Learning loop dashboard |
-| `/admin/mabrouk/states` | States simulator and history |
-| `/admin/mabrouk/i18n` | Language switching (AR / EN) |
+**Open item:** `Frontend/package-lock.json` was regenerated with a different npm
+(11.x on Windows). Top-level `@emnapi/runtime` / `@emnapi/core` entries disappeared
+and many packages gained `"peer": true`. This may break `npm ci` on Linux CI /
+Vercel. Must be validated (clean `npm ci` + CI) and, if needed, rebuilt from the
+`main` lockfile with only the Playwright addition.
 
----
+## 5. E2E status - UNVERIFIED
 
-## 🔧 Backend Endpoints / Services / Entities
+The earlier "0/19" figure came from runs that were **invalid** (backend/frontend
+processes were killed by foreground tool timeouts, producing
+`ERR_CONNECTION_REFUSED`). Earlier valid runs had materially more passing tests,
+but no run on a verified-stable stack is on record. Reported fixes (must be
+re-inspected in the current spec files; stale duplicate assertions may remain):
+`changeNote` via `inputs.last()`, `effectiveFrom/effectiveUntil/reviewAt` input
+handling, Arabic UNKNOWN literal restored, i18n via the app's language-change
+event, mobile helper not requiring the desktop sidebar, robust FAB open fallback.
 
-| Endpoint | Description |
-|----------|-------------|
-| `POST /api/v1/auth/register` | Register new user |
-| `POST /api/v1/auth/login` | Login (admin or registered user) |
-| `GET /api/v1/admin/mabrouk` | Admin studio overview |
-| `GET /api/v1/admin/mabrouk/gaps` | Fetch unanswered gaps |
-| `POST /api/v1/admin/mabrouk/gaps/{id}/resolve` | Resolve a gap |
-| `GET /api/v1/knowledge/library` | List knowledge articles |
-| `POST /api/v1/knowledge/library` | Create new article |
-| `PUT /api/v1/knowledge/library/{id}` | Update article |
-| `DELETE /api/v1/knowledge/library/{id}` | Delete article |
-| `GET /api/v1/knowledge/studio` | Knowledge Studio status |
-| `POST /api/v1/learning-loop/record` | Record a learning loop gap |
+Specs read credentials from the environment (no literals in the repo):
+`E2E_ADMIN_EMAIL` (defaults to the provisioned test admin) and
+`E2E_ADMIN_PASSWORD` (required). Self-registered users and the wrong-password
+test use per-run random passwords.
 
----
+## 6. Local test stack (placeholders only - never commit real values)
 
-## 🧪 Important Test Changes (Preservation)
+Backend (port `5298`) needs, among others:
 
-### Custom test files created (13 files) for regression/preservation validation
-
-- Mabrouk knowledge coverage tests
-- Chat session exchange tests
-- Knowledge packager tests
-- Conversation intelligence tests
-- Gold evaluation JSON files
-
-### Key test fixes applied:
-
-1. **`changeNote`** — uses `.last()` instead of hardcoded index for input handling
-2. **Date fields** — use `effectiveFrom`/`effectiveUntil`/`reviewAt` positions correctly
-3. **Learning Loop Arabic** — UNKNOWN encoding restored for Arabic language
-4. **Language test** — dispatches `wesal-lang-change` event after `localStorage` set
-5. **Mobile helper** — must not require hidden desktop nav to be visible
-6. **Stale duplicate assertions** — removed where present
-
----
-
-## 🐳 Docker / PostgreSQL Local Setup
-
-- **PostgreSQL:** Version 16.15, running locally on port **5433**
-- **Database:** `wesal_mabrouk_e2e` (used by E2E tests)
-- **Connection string:** `Host=127.0.0.1;Port=5433;Database=wesal_mabrouk_e2e;Username=postgres;Password=Final_Local_Test_7q2z`
-- **Docker:** Desktop must be running; if Docker restarts, restart backend with the above env vars
-
----
-
-## ⚙️ Current Process-Lifetime / Orchestration Blocker
-
-- **Backend:** Must be started with these env vars:
-  ```
-  ConnectionStrings__DefaultConnection=Host=127.0.0.1;Port=5433;Database=wesal_mabrouk_e2e;Username=postgres;Password=Final_Local_Test_7q2z
-  ASPNETCORE_ENVIRONMENT=Development
-  PORT=5298
-  AdminProvisioning__Enabled=true
-  AdminProvisioning__Admins__0__Email=e2e.admin@wesal.test
-  AdminProvisioning__Admins__0__FullName=E2E Admin
-  AdminProvisioning__Admins__0__Password=E2eAdmin_Test_9k4m!
-  Jwt__SecretKey=test-secret-key-for-e2e-testing-only-32-chars-min
-  ```
-- **Frontend:** Must be started with `npm run dev -- --port 3000` (Next.js Turbopack)
-- **Both services must be running** for E2E tests to pass (currently 0/19 passing due to processes not running)
-
----
-
-## 🚫 DO NOT
-
-- Do NOT start Semantic Intelligence V4 yet
-- Do NOT merge PR #31 (already on branch, but not merged to main)
-- Do NOT deploy to production
-- Do NOT force push
-- Do NOT reset/rebase/checkout away current work
-
----
-
-## 📋 Exact Commands to Resume
-
-```powershell
-# 1. Start PostgreSQL (Docker) - ensure port 5433 is accessible
-# 2. Start Backend:
-$env:ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=5433;Database=wesal_mabrouk_e2e;Username=postgres;Password=Final_Local_Test_7q2z"
-$env:ASPNETCORE_ENVIRONMENT="Development"
-$env:PORT="5298"
-$env:AdminProvisioning__Enabled="true"
-$env:AdminProvisioning__Admins__0__Email="e2e.admin@wesal.test"
-$env:AdminProvisioning__Admins__0__FullName="E2E Admin"
-$env:AdminProvisioning__Admins__0__Password="E2eAdmin_Test_9k4m!"
-$env:Jwt__SecretKey="test-secret-key-for-e2e-testing-only-32-chars-min"
-dotnet run --project .\Backend\src\Wesal.API -c Release
-
-# 3. Start Frontend (in new terminal):
-cd Frontend
-npm run dev -- --port 3000
-
-# 4. Run E2E tests:
-npx playwright test --config=playwright.config.ts --reporter=line
-
-# 5. Fix remaining 11 failures (see table above)
+```
+ConnectionStrings__DefaultConnection=Host=127.0.0.1;Port=<LOCAL_E2E_DB_PORT>;Database=<LOCAL_E2E_DB_NAME>;Username=<LOCAL_E2E_DB_USER>;Password=<LOCAL_E2E_DB_PASSWORD>
+ASPNETCORE_ENVIRONMENT=Development
+PORT=5298
+AdminProvisioning__Enabled=true
+AdminProvisioning__Admins__0__Email=<LOCAL_E2E_ADMIN_EMAIL>
+AdminProvisioning__Admins__0__FullName=E2E Admin
+AdminProvisioning__Admins__0__Password=<LOCAL_E2E_ADMIN_PASSWORD>
+Jwt__SecretKey=<LOCAL_E2E_JWT_SECRET>
 ```
 
----
+Frontend (port `3000`): `npm run dev -- --port 3000`; Playwright then runs with
+`E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` exported to match the provisioned admin.
 
-## ✅ Secret Scan Result
+The processes must run **detached/persistent**. Starting `dotnet run` / `next dev`
+in a foreground tool call and letting the tool time out kills them and produces
+false connection-refused failures. A local, untracked runner under `.local-e2e/`
+(git-ignored) owns orchestration and holds the real local values.
 
-No secrets or tokens found in the staged diff (working tree is clean — no uncommitted changes).
+## 7. Known security note
 
----
+Literal local E2E database/admin/JWT test values were present in the previously
+pushed checkpoint `5e2305c`. They were throwaway values for an isolated local
+Docker database, are removed from the working tree here, and remain only in that
+one commit's history (history is not rewritten; no force push). If those values
+were ever reused anywhere real, rotate them.
 
-## 📤 Push Result
+## 8. Release gate for PR #31 (all required, none claimed yet)
 
-**Current branch:** `feat/mabrouk-conversation-intelligence-v3`  
-**Remote:** `origin/feat/mabrouk-conversation-intelligence-v3` is up to date  
-**Status:** No push needed — branch is already in sync with remote.
+Clean intended `git status`; preservation baseline PASS; backend full suite PASS;
+PG integration PASS (not skipped); frontend `npm ci` + lint + build PASS;
+Playwright 19/19 PASS with none skipped; scoped secret scan PASS; no committed
+credentials; no lost original knowledge; CI green on exact HEAD.
 
----
+## 9. Do not
 
-## 📌 PR #31 State
-
-- PR #31 (`feat/mabrouk-knowledge-studio`) exists on branch at HEAD `19a176c`
-- Changes are part of the current branch `feat/mabrouk-conversation-intelligence-v3`
-- **Do NOT merge** — the Knowledge Studio integration is already included in this branch's work
+- Do not start Semantic Intelligence V4 inside this PR/branch.
+- Do not merge PR #31 or mark it ready before the gate above is green.
+- Do not force push, reset, rebase, or discard untracked files.
+- Do not delete built-in or dynamic knowledge during any smoke test.

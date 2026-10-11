@@ -140,7 +140,7 @@ public sealed partial class HowToService : IHowToService
             // homepage overview) override a higher-ranked feature guide.
             var official = articles.FirstOrDefault();
             if (official is not null
-                && OfficialFactCategories.Contains(official.Category)
+                && (OfficialFactCategories.Contains(official.Category) || IsStrongDynamicMatch(official))
                 && !IsContactInterference(official, question))
             {
                 return new HowToResponse(
@@ -218,16 +218,38 @@ public sealed partial class HowToService : IHowToService
             return new HowToResponse(AddHallVisibility(language), "hall-approval", language ?? DefaultLanguage, DateTime.UtcNow);
 
         var answer = await AskHowToAsync(question, language, cancellationToken, allowModel: false);
-        var knownCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "platform", "faq", "policies", "support", "creator", "booking", "booking-cancel",
-            "booking-rejected", "registration", "login", "hall-owner", "hall-approval", "language",
-            "install", "ratings", "comments", "messaging", "subscription", "availability", "booking-status",
-            "mabrouk-development-team",
-            "hall-management", "hall-details", "search", "capabilities"
-        };
-        return knownCategories.Contains(answer.Category) ? answer : null;
+        return IsKnownAnswerCategory(answer.Category) ? answer : null;
     }
+
+    /// <summary>
+    /// Categories that carry trusted, deterministic product knowledge (official KB
+    /// articles, support/payment configuration, creator and Mabrouk-team facts,
+    /// and tailored feature how-tos). Anything else from
+    /// <see cref="AskHowToAsync"/> is either a trusted narrow deterministic
+    /// answer (photos/pricing/capacity/month-hint/hours/payment/greeting) or the
+    /// generic no-information fallback ("general").
+    /// </summary>
+    internal static bool IsKnownAnswerCategory(string? category)
+        => KnownAnswerCategories.Contains(category ?? string.Empty);
+
+    private static readonly HashSet<string> KnownAnswerCategories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "platform", "faq", "policies", "support", "creator", "booking", "booking-cancel",
+        "booking-rejected", "registration", "login", "hall-owner", "hall-approval", "language",
+        "install", "ratings", "comments", "messaging", "subscription", "availability", "booking-status",
+        "mabrouk-development-team",
+        "hall-management", "hall-details", "search", "capabilities"
+    };
+
+    /// <summary>
+    /// Learning-loop gap predicate (Mabrouk side): true only for the generic
+    /// no-trusted-information fallback. Narrow deterministic answers are trusted
+    /// product behavior, not missing knowledge. The gap hook
+    /// (<see cref="AiAssistantService.HandleHowToAsync"/>) must only record turns
+    /// resolved through the deterministic HowTo path with this predicate true.
+    /// </summary>
+    internal static bool IsGenericFallbackAnswer(HowToResponse? answer)
+        => string.Equals(answer?.Category, "general", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsTeamQuestion(string normalized)
         => ContainsAny(normalized, "مين مطور", "من مطور", "مين طور وصال", "من طور وصال", "مين عمل وصال", "مين عمل منصة وصال",
@@ -264,6 +286,18 @@ public sealed partial class HowToService : IHowToService
     /// form and match "أبحث/ابحث"، "صورة/صوره"، "قيّم/قيم" alike.
     /// </summary>
     private static string Normalize(string input) => AiText.Normalize(input);
+
+    /// <summary>
+    /// A verified Dynamic article that matches at alias/title level proves its
+    /// own relevance, so it must be servable even when its category is not in
+    /// the official set — otherwise Admin answers about genuinely new topics
+    /// could never reach Mabrouk. Token-coverage-level matches stay excluded,
+    /// exactly like weak built-in matches.
+    /// </summary>
+    private static bool IsStrongDynamicMatch(WesalKnowledgeArticle article)
+        => article.IsDynamic
+            && article.Status == WesalKnowledgeStatus.Verified
+            && (article.MatchScore ?? 0) >= 6000;
 
     /// <summary>
     /// When the top knowledge hit is the official support-contact article and the
@@ -415,7 +449,7 @@ public sealed partial class HowToService : IHowToService
         if (ContainsAny(question, "دوام", "دوامكم", "ساعات العمل", "ساعات الدوام", "بتفتحو", "بتسكرو", "وينتا بتفتحو", "about hours", "about working hours"))
             return ("بتقدر تتواصل مع فريق وصال في أي وقت من صفحة مركز المساعدة، وطلبات الحجز والرسائل بتنبعت لأصحاب القاعات مباشرة وبيردوا عليك من حساباتهم. لمواعيد قاعة معينة (وينتا بتفتح أبوابها للمناسبات) شوف صفحة تفاصيلها أو اسأل صاحبها عبر المحادثة.", "hours");
 
-        if (ContainsAny(question, "اضافه قاعه", "اضيف قاعه", "اسجل قاعه", "سجل قاعتي", "بضيف قاعتي", "صاحب قاعه", "صاحب صاله", "مالك قاعه", "اداره قاعه", "لوحه التحكم", "about hall owner", "about add hall", "about manage hall", "about dashboard"))
+        if (ContainsAny(question, "اضافه قاعه", "اضيف قاعه", "اسجل قاعه", "سجل قاعتي", "بضيف قاعتي", "بضيف", "بحط", "بنزل قاع", "بنزل صال", "انزل قاع", "انزل صال", "تبعتي", "تبعي", "صاحب قاعه", "صاحب صاله", "مالك قاعه", "اداره قاعه", "لوحه التحكم", "about hall owner", "about add hall", "about manage hall", "about dashboard"))
             return ("لإضافة قاعة، يلزم حساب صاحب قاعة وتسجيل الدخول، مع رفع وثيقة إثبات الهوية في ملفك. من لوحة صاحب القاعة اختر «إضافة قاعة» واملأ اسم القاعة ورقم التواصل والمنطقة والعنوان التابع لها والسعة. السعر والوصف والمزايا وساعات الحجز والصور اختيارية حسب النموذج. بعد الإرسال تدخل القاعة «قيد المراجعة» حتى يراجعها المدير. لظهورها للناس يجب اعتمادها وتأكيد دفع اشتراكها وألا تكون مقفلة أو محذوفة.", "hall-owner");
 
         if (ContainsAny(question, "لغه", "عربيه", "انجليزيه", "تبديل", "about language", "about arabic", "about english", "about toggle"))

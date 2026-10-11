@@ -142,6 +142,9 @@ public sealed class AiKnowledgeStudioRepository : IAiKnowledgeStudioRepository
 
     public void AddArticle(AiKnowledgeArticle article) => _context.AiKnowledgeArticles.Add(article);
 
+    public void MarkAliasAdded(AiKnowledgeAlias alias)
+        => _context.Entry(alias).State = EntityState.Added;
+
     public void AddRevision(AiKnowledgeRevision revision) => _context.AiKnowledgeRevisions.Add(revision);
 
     public void AddGap(AiKnowledgeGapCluster cluster) => _context.AiKnowledgeGapClusters.Add(cluster);

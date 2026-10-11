@@ -1,0 +1,18 @@
+[
+  { "id": "RU-ADD-01", "reportedBy": "friend-probe", "notes": "Owner phrasing: putting a hall on Wesal.", "prompt": "عندي صالة كيف بحطها عندكم؟", "expect": { "kind": "Answer", "contains": ["صاحب قاعة"] } },
+  { "id": "RU-ADD-02", "reportedBy": "friend-probe", "notes": "Owner phrasing: listing a hall.", "prompt": "بدي أنزل قاعتي ع وصال", "expect": { "kind": "Answer" } },
+  { "id": "RU-ADD-03", "reportedBy": "friend-probe", "notes": "Dialect variant of add-hall.", "prompt": "كيف بضيف الصالة تبعتي؟", "expect": { "kind": "Answer", "contains": ["إثبات الهوية"] } },
+  { "id": "RU-ADD-04", "reportedBy": "friend-probe", "notes": "Requirements follow-up.", "prompt": "شو لازم أعطيكم مشان القاعة؟", "expect": { "kind": "Answer" } },
+  { "id": "RU-ADD-05", "reportedBy": "friend-probe", "notes": "Post-submit follow-up needs add-hall context.", "prompt": "بعد ما أبعتها شو بصير؟", "turns": ["كيف أضيف قاعة؟"], "expect": { "kind": "Answer" } },
+  { "id": "RU-ADD-06", "reportedBy": "friend-probe", "notes": "Visibility follow-up needs add-hall context.", "prompt": "ليش مش مبينة عند الناس؟", "turns": ["كيف أضيف قاعة؟"], "expect": { "kind": "Answer" } },
+  { "id": "RU-BOOK-01", "reportedBy": "friend-probe", "notes": "My bookings location.", "prompt": "وين بلاقي حجوزاتي؟", "expect": { "kind": "Answer" } },
+  { "id": "RU-CONTACT-01", "reportedBy": "friend-probe", "notes": "Dialect owner-contact.", "prompt": "كيف بحكي مع صاحبها؟", "turns": ["بدي صالة ل300 شخص", "الأولى"], "expect": { "kind": "Answer" } },
+  { "id": "RU-CAP-01", "reportedBy": "friend-probe", "notes": "Beyond-halls services.", "prompt": "شو بتقدموا غير القاعات؟", "expect": { "kind": "Answer", "contains": ["قيد التجهيز"] } },
+  { "id": "RU-PAY-01", "reportedBy": "friend-probe", "notes": "Subscription price probe.", "prompt": "قديش الاشتراك؟", "expect": { "kind": "Answer" } },
+  { "id": "RU-INSTALL-01", "reportedBy": "friend-probe", "notes": "Mobile install with dialect verb.", "prompt": "كيف بنزل وصال عالموبايل؟", "expect": { "kind": "Answer" } },
+  { "id": "RU-CMP-01", "reportedBy": "friend-probe", "notes": "Compound add-hall + requirements.", "prompt": "كيف أضيف قاعة وشو بطلب مني؟", "expect": { "kind": "Answer", "contains": ["إثبات الهوية"] } },
+  { "id": "RU-CMP-02", "reportedBy": "friend-probe", "notes": "Compound booking flow.", "prompt": "بدي أحجز، كيف وبعدين شو بصير؟", "expect": { "kind": "Answer" } },
+  { "id": "RU-CMP-03", "reportedBy": "friend-probe", "notes": "Compound collection + prices.", "prompt": "شو القاعات الموجودة وقديش أسعارهم؟", "expect": { "kind": "Halls" } },
+  { "id": "RU-CMP-04", "reportedBy": "friend-probe", "notes": "Compound services + photographers.", "prompt": "شو بتقدموا وهل عندكم مصورين؟", "expect": { "kind": "Answer", "contains": ["قيد التجهيز"] } },
+  { "id": "RU-CMP-05", "reportedBy": "friend-probe", "notes": "Compound support + hours.", "prompt": "كيف أتواصل مع وصال ومتى دوامكم؟", "expect": { "kind": "Answer" } }
+]

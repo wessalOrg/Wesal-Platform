@@ -139,10 +139,12 @@ public sealed partial class MabroukKnowledgeStudioService : IAiKnowledgeStudioSe
             OverridesBuiltInKey = normalized.OverridesBuiltInKey, CreatedAt = now, UpdatedAt = now,
             CreatedByUserId = userId, UpdatedByUserId = userId
         };
-        ReplaceAliases(article, normalized.Aliases, now);
+        var addedAliases = ReplaceAliases(article, normalized.Aliases, now);
         article.NormalizedSearchText = BuildSearchText(article);
         article.CurrentVersion = 1;
         _repository.AddArticle(article);
+        foreach (var alias in addedAliases)
+            _repository.MarkAliasAdded(alias);
         _repository.AddRevision(CreateRevision(article, "DraftCreated", normalized.ChangeNote, userId, now));
         await _repository.SaveChangesAsync(cancellationToken);
         return ToDto(article);
@@ -169,7 +171,8 @@ public sealed partial class MabroukKnowledgeStudioService : IAiKnowledgeStudioSe
         }
         else
         {
-            ApplySnapshot(article, snapshot, now);
+            foreach (var alias in ApplySnapshot(article, snapshot, now))
+                _repository.MarkAliasAdded(alias);
         }
         article.CurrentVersion++;
         _repository.AddRevision(CreateRevision(article, "DraftSaved", normalized.ChangeNote, userId, now, snapshot));
@@ -193,7 +196,7 @@ public sealed partial class MabroukKnowledgeStudioService : IAiKnowledgeStudioSe
                 new Dictionary<string, string[]> { ["conflicts"] = conflicts.Conflicts.Select(conflict => conflict.Message).ToArray() });
 
         var now = _timeProvider.GetUtcNow();
-        ApplySnapshot(article, FromInput(normalized), now);
+        var publishedAliases = ApplySnapshot(article, FromInput(normalized), now);
         article.PublicationStatus = AiKnowledgePublicationStatus.Published;
         article.PublishedAt = now;
         article.UpdatedAt = now;
@@ -201,6 +204,8 @@ public sealed partial class MabroukKnowledgeStudioService : IAiKnowledgeStudioSe
         article.DraftSnapshotJson = null;
         article.CurrentVersion++;
         article.PublishedVersion = article.CurrentVersion;
+        foreach (var alias in publishedAliases)
+            _repository.MarkAliasAdded(alias);
         _repository.AddRevision(CreateRevision(article, "Published", RequireChangeNote(changeNote), userId, now));
         IReadOnlyList<AiKnowledgeGapCluster> linkedGaps = article.VerificationStatus == AiKnowledgeVerificationStatus.Verified && IsActive(article, Today)
             ? await _repository.GetUnresolvedGapsLinkedToArticleAsync(article.Id, cancellationToken)
@@ -274,7 +279,7 @@ public sealed partial class MabroukKnowledgeStudioService : IAiKnowledgeStudioSe
             throw new AiKnowledgeStudioException("CapabilityConflict", "The selected revision conflicts with current capability truth.", 409);
 
         var now = _timeProvider.GetUtcNow();
-        ApplySnapshot(article, FromInput(normalized), now);
+        var rolledBackAliases = ApplySnapshot(article, FromInput(normalized), now);
         article.PublicationStatus = AiKnowledgePublicationStatus.Published;
         article.PublishedAt = now;
         article.UpdatedAt = now;
@@ -282,6 +287,8 @@ public sealed partial class MabroukKnowledgeStudioService : IAiKnowledgeStudioSe
         article.DraftSnapshotJson = null;
         article.CurrentVersion++;
         article.PublishedVersion = article.CurrentVersion;
+        foreach (var alias in rolledBackAliases)
+            _repository.MarkAliasAdded(alias);
         _repository.AddRevision(CreateRevision(article, "RolledBack", RequireChangeNote(changeNote), userId, now));
         await _repository.SaveChangesAsync(cancellationToken);
         return ToDto(article);
@@ -421,9 +428,10 @@ public sealed partial class MabroukKnowledgeStudioService : IAiKnowledgeStudioSe
             distinctAliases, RequireChangeNote(changeNote));
     }
 
-    private static void ReplaceAliases(AiKnowledgeArticle article, IReadOnlyList<AiKnowledgeAliasInput> aliases, DateTimeOffset now)
+    private static List<AiKnowledgeAlias> ReplaceAliases(AiKnowledgeArticle article, IReadOnlyList<AiKnowledgeAliasInput> aliases, DateTimeOffset now)
     {
         var remaining = article.Aliases.ToList();
+        var added = new List<AiKnowledgeAlias>();
         foreach (var alias in aliases)
         {
             var normalized = AiText.Normalize(alias.Text);
@@ -437,25 +445,28 @@ public sealed partial class MabroukKnowledgeStudioService : IAiKnowledgeStudioSe
                 continue;
             }
 
-            article.Aliases.Add(new AiKnowledgeAlias
+            var entity = new AiKnowledgeAlias
             {
                 ArticleId = article.Id,
                 Language = alias.Language,
                 Text = alias.Text,
                 NormalizedText = normalized,
                 CreatedAt = now
-            });
+            };
+            article.Aliases.Add(entity);
+            added.Add(entity);
         }
 
         foreach (var obsolete in remaining)
             article.Aliases.Remove(obsolete);
+        return added;
     }
 
     private static string BuildSearchText(AiKnowledgeArticle article)
         => AiText.Normalize(string.Join(' ', article.Key, article.Title, article.Category, article.AnswerAr,
             article.AnswerEn, article.Source, string.Join(' ', article.Aliases.Select(alias => alias.Text))));
 
-    private static void ApplySnapshot(AiKnowledgeArticle article, AiKnowledgeSnapshot snapshot, DateTimeOffset now)
+    private static List<AiKnowledgeAlias> ApplySnapshot(AiKnowledgeArticle article, AiKnowledgeSnapshot snapshot, DateTimeOffset now)
     {
         article.Key = snapshot.Key;
         article.Title = snapshot.Title;
@@ -469,8 +480,9 @@ public sealed partial class MabroukKnowledgeStudioService : IAiKnowledgeStudioSe
         article.EffectiveUntil = snapshot.EffectiveUntil;
         article.ReviewAt = snapshot.ReviewAt;
         article.OverridesBuiltInKey = snapshot.OverridesBuiltInKey;
-        ReplaceAliases(article, snapshot.Aliases, now);
+        var added = ReplaceAliases(article, snapshot.Aliases, now);
         article.NormalizedSearchText = BuildSearchText(article);
+        return added;
     }
 
     private static AiKnowledgeSnapshot Capture(AiKnowledgeArticle article)

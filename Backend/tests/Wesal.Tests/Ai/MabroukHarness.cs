@@ -34,7 +34,10 @@ internal sealed class MabroukHarness
     public AiContextResolver ContextResolver { get; }
     public List<string> RouteLogs { get; } = [];
 
-    public MabroukHarness(bool geminiAvailable = false)
+    public MabroukHarness(
+        bool geminiAvailable = false,
+        IAiKnowledgeGapRecorder? gapRecorder = null,
+        IAiKnowledgeGapDetector? gapDetector = null)
     {
         Gemini.Available = geminiAvailable;
 
@@ -74,7 +77,9 @@ internal sealed class MabroukHarness
             orchestrator,
             ContextResolver,
             new AiAssistantPolicyGate(payment, knowledge),
-            new RecordingLogger<AiAssistantService>(RouteLogs));
+            new RecordingLogger<AiAssistantService>(RouteLogs),
+            gapRecorder,
+            gapDetector);
     }
 
     private sealed class RecordingLogger<T>(List<string> messages) : ILogger<T>

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
@@ -17,15 +18,18 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
     private readonly IEmbeddedWesalKnowledgeSource _embedded;
     private readonly IAiKnowledgeStudioRepository _repository;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<HybridWesalKnowledgeService> _logger;
 
     public HybridWesalKnowledgeService(
         IEmbeddedWesalKnowledgeSource embedded,
         IAiKnowledgeStudioRepository repository,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<HybridWesalKnowledgeService> logger)
     {
         _embedded = embedded;
         _repository = repository;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<WesalKnowledgeArticle>> SearchAsync(
@@ -45,7 +49,19 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
             .Distinct(StringComparer.Ordinal)
             .ToArray();
         var today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
-        var candidates = await _repository.SearchPublishedCandidatesAsync(tokens, today, 100, cancellationToken);
+        IReadOnlyList<AiKnowledgeArticle> candidates = [];
+        try
+        {
+            candidates = await _repository.SearchPublishedCandidatesAsync(tokens, today, 100, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // A temporary Dynamic-layer problem must never make built-in
+            // knowledge disappear: serve built-ins only and keep going.
+            _logger.LogWarning(
+                "Dynamic knowledge unavailable; serving built-in knowledge only. exceptionType={ExceptionType}",
+                ex.GetType().Name);
+        }
         var dynamicMatches = candidates
             .Select(article => (Article: article, Score: Score(article, normalizedQuestion, tokens)))
             .Where(match => match.Score > 0)
