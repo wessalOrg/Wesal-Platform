@@ -46,12 +46,11 @@ Browser and learning-loop evidence:
 ## Security evidence
 
 - A targeted scan of changed, non-ignored files checked six credential patterns and found no candidates.
-- The official Gitleaks binary/container could not be fetched from this machine because the GitHub/CDN requests timed out during TLS negotiation. A full Gitleaks scan remains unverified.
+- The official Gitleaks binary/container could not be fetched from this machine because the GitHub/CDN requests timed out during TLS negotiation. A Gitleaks job has been added to GitHub CI to scan the exact candidate diff; that result is pending.
 
 ## Release gates still pending
 
-- A full secret scan of the final candidate commit.
-- CI on the exact final PR head SHA, including PostgreSQL-backed backend tests.
+- CI on the exact final PR head SHA, including PostgreSQL-backed backend tests and the Gitleaks diff scan.
 - Merge and confirmation of the resulting `main` SHA.
 - Verification that Vercel and Render use that exact merge SHA.
 - Authenticated production smoke for Mabrouk and Knowledge Studio. Vercel team access is still awaiting approval; no production write was performed.
