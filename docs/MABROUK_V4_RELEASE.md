@@ -7,7 +7,9 @@
 - Repository: `wessalOrg/Wesal-Platform`
 - Base: `e96c755e66a15d59f5e3e8da310e805a7f0cfd57` (`origin/main`, freshly fetched)
 - Branch: `feat/mabrouk-semantic-intelligence-v4`
-- Pull request, final merge SHA, and post-merge `main` SHA: pending.
+- Implementation commit: `6098477cfffef3d53fe2cf9b7e2fa094943a4525`.
+- Draft pull request: [#34](https://github.com/wessalOrg/Wesal-Platform/pull/34).
+- Final merge SHA and post-merge `main` SHA: pending.
 - V4 adds a typed semantic plan for price/budget, date ranges, regions/areas, entity references, follow-up navigation, compound search requests, and bounded conversation result memory. Existing assistant and Knowledge Studio regressions remain covered.
 - The unanswered-question action creates a draft article that still requires admin editing, verification, and explicit publication. The button now shows its pending state and an inline error when the request fails.
 - No database schema migration is included.
@@ -49,7 +51,7 @@ Browser and learning-loop evidence:
 ## Release gates still pending
 
 - A full secret scan of the final candidate commit.
-- Push, pull request, and CI on the exact final PR head SHA, including PostgreSQL-backed backend tests.
+- CI on the exact final PR head SHA, including PostgreSQL-backed backend tests.
 - Merge and confirmation of the resulting `main` SHA.
 - Verification that Vercel and Render use that exact merge SHA.
 - Authenticated production smoke for Mabrouk and Knowledge Studio. Vercel team access is still awaiting approval; no production write was performed.
