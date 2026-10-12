@@ -193,6 +193,27 @@ public sealed class MabroukKnowledgeStudioShould : IDisposable
     }
 
     [Fact]
+    public async Task CreateGapDraftWithAliasesDistinctAfterNormalization()
+    {
+        var recorder = new AiKnowledgeGapRecorder(_repository, _clock);
+        Guid? gapId = null;
+        foreach (var question in new[] { "مين راعي الذواق؟", "مين راعي الذواق", "مين راعي الذواق!" })
+        {
+            gapId = await recorder.RecordAsync(new AiKnowledgeGapCandidate(
+                question, "ar", AiKnowledgeGapReason.NoTrustedKnowledge, "test", null));
+        }
+
+        var draft = await _studio.CreateArticleFromGapAsync(gapId!.Value, "admin-1");
+
+        Assert.NotNull(draft);
+        Assert.Equal("Draft", draft.PublicationStatus);
+        Assert.Equal(1, draft.Aliases.Select(alias => AiText.Normalize(alias.Text)).Distinct(StringComparer.Ordinal).Count());
+        Assert.Single(await _db.AiKnowledgeArticles.ToListAsync());
+        Assert.Single(await _db.AiKnowledgeRevisions.ToListAsync());
+        Assert.Single(await _db.AiKnowledgeAliases.ToListAsync());
+    }
+
+    [Fact]
     public async Task RedactSensitiveQuestionDataAndCapSamplesWhileClusteringArabicVariants()
     {
         var jwt = new string('h', 15) + "." + new string('p', 15) + "." + new string('s', 15);

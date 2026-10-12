@@ -339,6 +339,44 @@ public sealed class MabroukStudioPgShould
     }
 
     [Fact]
+    public async Task CreateGapDraftWithPunctuationVariantsOnPostgres()
+    {
+        var server = ServerConnectionString();
+        if (server is null) { _output.WriteLine("WESAL_TEST_PG not set; skipped."); return; }
+
+        var dbName = "wsltest_gapdraft_" + Guid.NewGuid().ToString("N")[..12];
+        var connectionString = (await CreateDatabaseAsync(server, dbName))!;
+        try
+        {
+            await using var provider = BuildProvider(connectionString);
+            using var scope = provider.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await MigrateLatestAsync(db);
+            var recorder = scope.ServiceProvider.GetRequiredService<IAiKnowledgeGapRecorder>();
+            var studio = scope.ServiceProvider.GetRequiredService<IAiKnowledgeStudioService>();
+            Guid? gapId = null;
+            foreach (var question in new[] { "مين راعي الذواق؟", "مين راعي الذواق", "مين راعي الذواق!" })
+            {
+                gapId = await recorder.RecordAsync(new AiKnowledgeGapCandidate(
+                    question, "ar", AiKnowledgeGapReason.NoTrustedKnowledge, "test", null));
+            }
+
+            var draft = await studio.CreateArticleFromGapAsync(gapId!.Value, "admin-1");
+
+            Assert.NotNull(draft);
+            Assert.Equal("Draft", draft.PublicationStatus);
+            Assert.Single(draft.Aliases);
+            Assert.Single(await db.AiKnowledgeArticles.ToListAsync());
+            Assert.Single(await db.AiKnowledgeRevisions.ToListAsync());
+            _output.WriteLine("Punctuation variants created one linked, unpublished draft with one unique alias.");
+        }
+        finally
+        {
+            await DropDatabaseDirectAsync(server, dbName);
+        }
+    }
+
+    [Fact]
     public async Task GapRecorderDatabaseFailureKeepsAssistantAlive()
     {
         var server = ServerConnectionString();
