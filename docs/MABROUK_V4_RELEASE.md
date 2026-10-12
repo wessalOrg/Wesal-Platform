@@ -1,62 +1,90 @@
-# Mabrouk V4 Candidate Evidence
+# Mabrouk V4 Release Closure
 
-**Status: candidate only. V4 is not released.** Merge, exact production deployments, and authenticated production smoke remain pending.
+**Verdict: `V4_RELEASE_BLOCKED` (verified 2026-10-12).** V4 is implemented, merged, and CI-green. The production deployment SHAs and end-to-end production smoke are not verified. The user-provided production screenshot also records a failed Create Answer attempt. Do not start V5 until these release gates pass.
 
-## Repository and scope
+## Source and merge
 
-- Repository: `wessalOrg/Wesal-Platform`
-- Base: `e96c755e66a15d59f5e3e8da310e805a7f0cfd57` (`origin/main`, freshly fetched)
-- Branch: `feat/mabrouk-semantic-intelligence-v4`
-- Implementation commit: `6098477cfffef3d53fe2cf9b7e2fa094943a4525`.
-- Draft pull request: [#34](https://github.com/wessalOrg/Wesal-Platform/pull/34).
-- CI-tested code/workflow commit: `5e06d66a6ec406f19886c6c7cee4715396fa214e`.
-- GitHub CI run [38274596753](https://github.com/wessalOrg/Wesal-Platform/actions/runs/38274596753): backend, frontend, and Gitleaks jobs passed on that commit.
-- Final merge SHA and post-merge `main` SHA: pending.
-- V4 adds a typed semantic plan for price/budget, date ranges, regions/areas, entity references, follow-up navigation, compound search requests, and bounded conversation result memory. Existing assistant and Knowledge Studio regressions remain covered.
-- The unanswered-question action creates a draft article that still requires admin editing, verification, and explicit publication. The button now shows its pending state and an inline error when the request fails.
-- No database schema migration is included.
+- Repository: `wessalOrg/Wesal-Platform`.
+- PR: [#34](https://github.com/wessalOrg/Wesal-Platform/pull/34), merged 2026-10-12.
+- V4 merge SHA and `origin/main` at closure: `99dd3b1d62f0637a4d1f62b719f38539508c7b11`.
+- `origin/main` contains PR #34 and preserves the preceding PR #31 (Knowledge Studio), #32 (budget/cheapest follow-ups), and #33 (Arabic area continuation).
+- The release-closure worktree was created from this exact `origin/main`; the older V4 candidate worktree and the original checkout were left untouched.
 
-## Local validation
+## CI on the exact merge SHA
 
-Backend:
+Two GitHub Actions push runs completed successfully on `99dd3b1d62f0637a4d1f62b719f38539508c7b11`:
 
-- `dotnet restore Backend/Wesal.slnx`: passed; projects up to date.
-- `dotnet build Backend/Wesal.slnx -c Release --no-restore`: passed, 0 warnings and 0 errors.
-- Full `Wesal.Tests` with `WESAL_TEST_PG` connected to the isolated local PostgreSQL container: 2,640 passed, 0 failed, 0 skipped.
-- `MabroukStudioPgShould`: 9 passed, 0 failed, 0 skipped.
+- [Run 38275560564](https://github.com/wessalOrg/Wesal-Platform/actions/runs/38275560564): backend restore/build/test, frontend install/lint/build, and changed-source secret scan all passed.
+- [Run 38275491358](https://github.com/wessalOrg/Wesal-Platform/actions/runs/38275491358): the same three jobs all passed.
+- Final CI result: **PASS** on the merge SHA. These CI results do not establish deployment or production behavior.
 
-Frontend:
+## Previously recorded candidate validation
 
-- `npm ci --legacy-peer-deps`: completed.
-- `npm run lint`: passed.
-- `npm exec -- tsc --noEmit`: passed.
-- `npm run verify:production-env`: passed.
-- `npm run verify:api-base-url`: 25 checks passed.
-- `npm run verify:assistant`: 23 checks passed.
-- `npm run verify:mabrouk-knowledge`: 7 checks passed.
-- `npm run verify:assistant-storage`: passed.
-- `npm run build` with the CI API base URL: passed.
-- `npm audit --omit=dev`: 0 production dependency vulnerabilities.
-- The dependency installation reported 5 high-severity vulnerabilities including development dependencies; the production-only audit is clean.
+The pre-merge candidate evidence recorded 2,640 backend tests passed, PostgreSQL Studio integration 9/9, Playwright 20/20, frontend install/lint/typecheck/build and assistant/knowledge checks passed, and zero production dependency vulnerabilities. These counts are candidate-run evidence; they were not re-run during this closure. The merge-SHA CI jobs above are the current exact-SHA verification.
 
-Browser and learning-loop evidence:
+## Vercel production
 
-- Local stack readiness and stability checks passed before and after the run.
-- Playwright: 20 passed. This includes creating a draft from an unanswered question, opening the editor, explicitly publishing the answer, and confirming Mabrouk uses it; a separate regression confirms a failed create request is shown beside the button.
-- The local E2E PostgreSQL database and copied local test credential file were removed after the run. The existing PostgreSQL container was preserved.
+- User-facing alias: [https://wesal-platform-alpha.vercel.app](https://wesal-platform-alpha.vercel.app).
+- The alias returned HTTP 200 from Vercel during this closure. This proves public reachability only.
+- GitHub deployment metadata lists the latest successful `Production` deployment for the matching `wesalplatformgaza-2838` Vercel project as deployment `7011650299`, built from `e96c755e66a15d59f5e3e8da310e805a7f0cfd57` at 2026-10-12 10:17 UTC. Its deployment URL is `https://wesal-platform-hahajpvvg-wesalplatformgaza-2838.vercel.app`.
+- That SHA predates the V4 merge. GitHub lists **no deployment for `99dd3b1d62f0637a4d1f62b719f38539508c7b11`**. The alias-to-deployment mapping could not be independently read from Vercel, so the alias's exact deployed SHA remains unverified.
+- Vercel status: **BLOCKED / NOT VERIFIED** for V4 production deployment.
 
-## Security evidence
+## Render production
 
-- A targeted scan of changed, non-ignored files checked six credential patterns and found no candidates.
-- The official Gitleaks binary/container could not be fetched from this machine because the GitHub/CDN requests timed out during TLS negotiation. The GitHub CI Gitleaks diff scan passed on commit `5e06d66a6ec406f19886c6c7cee4715396fa214e`.
+- Canonical service: [https://wesal-platform-p0iv.onrender.com](https://wesal-platform-p0iv.onrender.com).
+- `GET /health`: HTTP 200 (`Healthy`).
+- `GET /health/live`: HTTP 200 (`{"status":"healthy"}`).
+- `GET /`: HTTP 200 (`Wesal API`, status `running`, API version `v1`).
+- These endpoints prove the service responds; they do not identify its deployed Git SHA. Render deployment history, startup logs, and migration logs were not available in the connected session.
+- Render status: **HEALTHY RESPONSE / DEPLOYED SHA BLOCKED**.
 
-## Release gates still pending
+## Production smoke evidence
 
-- Merge and confirmation of the resulting `main` SHA.
-- Verification that Vercel and Render use that exact merge SHA.
-- Authenticated production smoke for Mabrouk and Knowledge Studio. Vercel team access is still awaiting approval; no production write was performed.
-- V5 must not begin until the exact production versions are verified and smoke-tested.
+### Public reachability
 
-## Current limitation
+- Public Vercel page: HTTP 200.
+- Public API session and featured-halls requests: HTTP 200.
+- Mabrouk search, budget, follow-up, entity, date, and compound-intent conversations were **NOT EXECUTED** against production in this closure because no authenticated production browser session was available.
 
-The local create-answer workflow is verified working. The production behavior is not verified against the current Vercel/Render deployment, so this candidate does not establish that the live site is running this code or that the production endpoint succeeds.
+### Knowledge Studio and Create Answer
+
+- The user-provided screenshot shows `/admin/mabrouk/unanswered` rendering real gap rows, while the page reports `تعذر تحميل معرفة مبروك. حاول مرة أخرى.` and the Create Answer action reports `تعذر تجهيز المسودة. تحقق من الاتصال وحاول مرة أخرى.`
+- Create Answer production result: **FAIL (observed)**. The screenshot confirms the action failed, but does not include its HTTP status or response body, so the underlying server cause is **UNKNOWN**.
+- Source behavior: the button POSTs `/api/v1/admin/mabrouk/unanswered/{id}/create-article` and catches any failure into the same generic inline message. The service allows `New` and `Reviewed` gaps; only `Resolved` and `Ignored` gaps are rejected as closed. The selected row's `Reviewed` state alone does not explain the failure.
+- A no-credentials POST to a dummy ID returned HTTP 401, as expected for an Admin-protected endpoint. This confirms neither an authenticated success nor the production failure cause.
+- No production draft was created or published during this closure.
+- Knowledge Studio overall: **FAIL / BLOCKED** because the user screenshot shows a live load error and no authenticated network response is available to diagnose it.
+
+### Authentication and security
+
+- The user screenshot visually shows an Admin session. The non-Admin production access check was **NOT EXECUTED**.
+- Source enforces `ApplicationPolicies.RequireAdmin` on the controller; exact-merge CI's changed-source secret scan passed.
+- Production Admin API authorization and role behavior were not fully smoke-tested.
+- Security checks: **PASS for source/CI evidence; production role smoke NOT EXECUTED**.
+
+## Why the Create Answer issue is not marked fixed
+
+The failure UX hides the actual HTTP error, and the connected browser session could not access the user's signed-in Edge tab (`Unable to load browser request-header policy`). The separate browser session was unauthenticated and redirected from the Admin path. The production API's public health endpoints cannot reveal the private request's error. Therefore there is not enough evidence to attribute this to credentials, authorization, deployment, or database state, and no production data was changed to probe it.
+
+Required evidence to finish diagnosis: the failed `create-article` request's HTTP status and response body from the existing browser Network log, with cookies and authorization headers omitted, or the matching sanitized Render error log. Do not repeat the production button action solely for diagnosis unless using a designated smoke record.
+
+## Release gate summary
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Implemented | PASS | V4 source merged in PR #34 |
+| Merged | PASS | `99dd3b1d62f0637a4d1f62b719f38539508c7b11` |
+| Exact-SHA CI | PASS | Runs 38275491358 and 38275560564 |
+| Vercel alias reachable | PASS | HTTP 200 |
+| Vercel deployment contains V4 | BLOCKED | Latest recorded Production deployment is pre-V4 `e96c755`; alias binding not independently available |
+| Render health | PASS | `/health` and `/health/live` HTTP 200 |
+| Render deployment contains V4 | BLOCKED | Exact deployed SHA/logs unavailable |
+| Production Mabrouk conversation matrix | NOT EXECUTED | No authenticated browser session |
+| Knowledge Studio production UI | FAIL / BLOCKED | User screenshot shows load error |
+| Create Answer production action | FAIL (observed) | User screenshot shows inline failure; server error unknown |
+| Non-Admin production security smoke | NOT EXECUTED | No safe non-Admin session |
+
+## Final decision
+
+V4 is **not production-verified**. Keep V5 stopped. First obtain the V4 deployment on both Vercel and Render, then run the production conversation matrix and diagnose/fix the observed Create Answer failure using its actual sanitized response or server log. Do not publish test knowledge or alter a real unanswered item as a diagnostic probe.
