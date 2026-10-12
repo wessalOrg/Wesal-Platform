@@ -9,6 +9,8 @@
 - Branch: `feat/mabrouk-semantic-intelligence-v4`
 - Implementation commit: `6098477cfffef3d53fe2cf9b7e2fa094943a4525`.
 - Draft pull request: [#34](https://github.com/wessalOrg/Wesal-Platform/pull/34).
+- CI-tested code/workflow commit: `5e06d66a6ec406f19886c6c7cee4715396fa214e`.
+- GitHub CI run [38274596753](https://github.com/wessalOrg/Wesal-Platform/actions/runs/38274596753): backend, frontend, and Gitleaks jobs passed on that commit.
 - Final merge SHA and post-merge `main` SHA: pending.
 - V4 adds a typed semantic plan for price/budget, date ranges, regions/areas, entity references, follow-up navigation, compound search requests, and bounded conversation result memory. Existing assistant and Knowledge Studio regressions remain covered.
 - The unanswered-question action creates a draft article that still requires admin editing, verification, and explicit publication. The button now shows its pending state and an inline error when the request fails.
@@ -46,11 +48,10 @@ Browser and learning-loop evidence:
 ## Security evidence
 
 - A targeted scan of changed, non-ignored files checked six credential patterns and found no candidates.
-- The official Gitleaks binary/container could not be fetched from this machine because the GitHub/CDN requests timed out during TLS negotiation. A Gitleaks job has been added to GitHub CI to scan the exact candidate diff; that result is pending.
+- The official Gitleaks binary/container could not be fetched from this machine because the GitHub/CDN requests timed out during TLS negotiation. The GitHub CI Gitleaks diff scan passed on commit `5e06d66a6ec406f19886c6c7cee4715396fa214e`.
 
 ## Release gates still pending
 
-- CI on the exact final PR head SHA, including PostgreSQL-backed backend tests and the Gitleaks diff scan.
 - Merge and confirmation of the resulting `main` SHA.
 - Verification that Vercel and Render use that exact merge SHA.
 - Authenticated production smoke for Mabrouk and Knowledge Studio. Vercel team access is still awaiting approval; no production write was performed.
