@@ -162,8 +162,8 @@ were ever reused anywhere real, rotate them.
 ## 8. Release gate for PR #31
 
 The Phase B evidence recorded in section 10 establishes the local release gates.
-The intended source changes and handoff document are not yet committed or
-pushed, so CI on that new candidate HEAD remains pending. The current remote
+The intended source changes and handoff document are committed locally as
+`ad31af9`; push and CI for that candidate remain pending. The current remote
 checkpoint `15ab156` has green CI. The historical-credential finding in section
 7 remains visible and was not removed by rewriting history.
 
@@ -177,9 +177,9 @@ checkpoint `15ab156` has green CI. The historical-credential finding in section
 ## 10. Phase B validation evidence - 2026-10-12
 
 All commands were run in the authoritative checkout `D:\Wesal-Knowledge-Studio`
-on `feat/mabrouk-knowledge-studio`, initially at `15ab15622941b8eb91fba64839abb86f34e48cc0`.
-The remote PR #31 was still OPEN and DRAFT at that checkpoint. Local intended
-changes are not yet included in that remote SHA.
+on `feat/mabrouk-knowledge-studio`, based on `15ab15622941b8eb91fba64839abb86f34e48cc0`.
+The remote PR #31 was OPEN and DRAFT at that checkpoint. The validated changes
+were committed locally as `ad31af9`; its CI and push are pending.
 
 ### Source changes under validation
 
