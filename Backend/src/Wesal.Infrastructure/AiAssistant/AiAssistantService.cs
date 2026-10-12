@@ -109,6 +109,7 @@ public sealed class AiAssistantService : IAiAssistantService
         var stage = Stopwatch.StartNew();
         var turn = await _contextResolver.ResolveAsync(requestContext, context, text, cancellationToken);
         var contextMs = stage.ElapsedMilliseconds;
+        var semanticPlan = AiSemanticPlanResolver.Resolve(text, effectiveLanguage, turn.Today, context, turn);
 
         var resumed = AiConversationStateResolver.TryResume(context?.State, text, turn.Today);
         if (resumed is not null)
@@ -123,14 +124,24 @@ public sealed class AiAssistantService : IAiAssistantService
             {
                 var availabilityTurn = turn with { Hall = hall, HallSource = "conversation" };
                 var resumedAnswer = await HandleHallAvailabilityAsync(text, effectiveLanguage, availabilityTurn, hall, cancellationToken);
+                resumedAnswer = resumedAnswer with { SemanticPlan = semanticPlan };
                 _logger.LogInformation("Assistant turn: route={Route} kind={Kind} resolvedGoal={ResolvedGoal} resolvedIntent={ResolvedIntent} activeHallSource={HallSource} hasPendingClarification={HasPendingClarification} pendingField={PendingField} selectedResultIndex={SelectedResultIndex} toolName={ToolName} fallbackReason={FallbackReason} totalMs={TotalMs}",
                     "slot_resume", resumedAnswer.Kind, "find_hall", "check_availability", "conversation", false, "-", context?.State?.SelectedResultIndex, "availability", "-", total.ElapsedMilliseconds);
                 return resumedAnswer;
             }
         }
 
-        var routed = await RouteAsync(text, effectiveLanguage, turn, context, cancellationToken);
-        var response = routed.Response;
+        var routed = await RouteAsync(text, effectiveLanguage, turn, context, semanticPlan, cancellationToken);
+        var response = routed.Response with
+        {
+            SemanticPlan = AiSemanticPlanResolver.Resolve(
+                text,
+                effectiveLanguage,
+                turn.Today,
+                context,
+                turn,
+                routed.Response.Intent)
+        };
         response = WithContextualActions(text, response, turn);
 
         _logger.LogInformation(
@@ -162,6 +173,7 @@ public sealed class AiAssistantService : IAiAssistantService
         string language,
         AiTurnContext turn,
         AiConversationContext? context,
+        AiSemanticPlan semanticPlan,
         CancellationToken cancellationToken)
     {
         var policyMs = 0L;
@@ -205,8 +217,27 @@ public sealed class AiAssistantService : IAiAssistantService
                 : context?.State?.ShownHallIds ?? (IReadOnlyList<Guid>)Array.Empty<Guid>();
             if (resultIds.Count > 0)
             {
+                var currentHallId = context?.State?.ActiveHallId ?? context?.LastHall?.HallId;
                 var nextIndex = (context?.State?.SelectedResultIndex ?? -1) + 1;
-                if (nextIndex >= resultIds.Count)
+                if (nextIndex < resultIds.Count
+                    && currentHallId is { } activeId
+                    && resultIds[nextIndex] == activeId)
+                {
+                    nextIndex = resultIds.ToList().FindIndex(id => id != activeId);
+                }
+                else if (nextIndex >= resultIds.Count
+                    && currentHallId is { } rankedHallId
+                    && context?.State?.LastSemanticPlan?.ComparisonIntent is
+                        AiComparisonIntent.Cheapest or AiComparisonIntent.MostExpensive
+                            or AiComparisonIntent.Largest or AiComparisonIntent.Smallest or AiComparisonIntent.BestBudgetFit)
+                {
+                    // A ranking answer ("cheapest", "largest") selects a result
+                    // independently of list position. "Another one" should show a
+                    // different result even when that ranked result was last in order.
+                    nextIndex = resultIds.ToList().FindIndex(id => id != rankedHallId);
+                }
+
+                if (nextIndex < 0 || nextIndex >= resultIds.Count)
                 {
                     var end = language == "en" ? "That's the last result in this search. I can look with different criteria." : "هاي آخر نتيجة عندي من البحث الحالي. إذا بدك بدورلك بمعايير ثانية.";
                     return new AssistantRouteResult(Build(language, AiAssistantResponseKind.Answer, end, null), "result_navigation_end", policyMs, 0, 0, null);
@@ -222,6 +253,7 @@ public sealed class AiAssistantService : IAiAssistantService
         // turns so an ordinal inside a real question ("الأولى شو سعرها؟") still
         // reaches hall-context and gets the asked fact answered about that hall.
         if (AiReferenceResolver.TryGetOrdinal(text) is { } ordinal
+            && semanticPlan.ComparisonIntent != AiComparisonIntent.CompareSelected
             && AiHallQuestionClassifier.Classify(text) == AiHallQuestion.None
             && AiReferenceResolver.TryGetExplicitHallName(text) is null)
         {
@@ -250,6 +282,59 @@ public sealed class AiAssistantService : IAiAssistantService
         if (gate is not null)
         {
             return new AssistantRouteResult(gate, "policy", policyMs, 0, 0, null);
+        }
+
+        if (LooksLikeBareHallName(text) && AiHallQuestionClassifier.Classify(text) == AiHallQuestion.None)
+        {
+            var namedHall = await TryResolveHallAsync(text, cancellationToken);
+            if (namedHall is not null)
+            {
+                try
+                {
+                    var details = await _hallDetailsService.GetHallDetailsAsync(namedHall.HallId, cancellationToken);
+                    var intent = new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, details.HallName);
+                    var message = language == "en"
+                        ? $"Here are the current details for {details.HallName}."
+                        : $"هاي التفاصيل الحالية لـ{HallLabel(language, details.HallName)}.";
+                    return new AssistantRouteResult(
+                        Build(language, AiAssistantResponseKind.HallDetails, message, intent, hallDetails: details),
+                        "bare_hall_entity",
+                        policyMs,
+                        0,
+                        0,
+                        null);
+                }
+                catch (NotFoundException)
+                {
+                    // The public result can disappear between name search and detail lookup.
+                }
+            }
+        }
+
+        if (semanticPlan.AvailabilityIntent && semanticPlan.DateRange is not null)
+        {
+            var rangeAnswer = await HandleAvailabilityRangeAsync(
+                semanticPlan,
+                turn,
+                language,
+                cancellationToken);
+            return new AssistantRouteResult(rangeAnswer, "availability_range", policyMs, 0, 0, null);
+        }
+
+        var hallIds = GetConversationHallIds(context);
+        if (semanticPlan.ComparisonIntent != AiComparisonIntent.None
+            && semanticPlan.ResultSetReference is not null
+            && hallIds.Count > 0)
+        {
+            var comparison = await HandleResultComparisonAsync(
+                semanticPlan,
+                hallIds,
+                language,
+                cancellationToken);
+            if (comparison is not null)
+            {
+                return new AssistantRouteResult(comparison, "result_comparison", policyMs, 0, 0, null);
+            }
         }
 
         var isBareArea = IsBareAreaRequest(text, parsedCriteria.Area);
@@ -301,9 +386,31 @@ public sealed class AiAssistantService : IAiAssistantService
             return new AssistantRouteResult(orchestration, "gemini", policyMs, hallContextMs, orchestrationMs, null);
         }
 
+        var fallbackIntent = await _intentExtractor.ExtractWithoutModelAsync(
+            text, language, cancellationToken, context);
+        var pendingCapacityAnswer = context?.State?.PendingClarification == "capacity"
+            && semanticPlan.Capacity.HasValue;
+        // Preserve the structured model/tool path when it can handle the turn. The
+        // validated semantic plan is the deterministic fallback, so numeric and
+        // conversational criteria remain available when Gemini is off or declines.
+        if (semanticPlan.Goal == AiSemanticGoal.FindHall
+            && (fallbackIntent.Intent is AiIntentType.SearchHalls or AiIntentType.Unknown || pendingCapacityAnswer)
+            && (semanticPlan.Region is not null
+                || semanticPlan.Area is not null
+                || semanticPlan.Capacity.HasValue
+                || semanticPlan.Date.HasValue
+                || semanticPlan.PriceBudget.IsSpecified
+                || semanticPlan.SortPreference != AiPriceSortPreference.Relevance))
+        {
+            var plannedIntent = AiSemanticPlanResolver.ToLegacyIntent(semanticPlan);
+            plannedIntent = MergeWithContext(plannedIntent, context);
+            var response = await HandleSearchHallsAsync(text, language, plannedIntent, cancellationToken);
+            return new AssistantRouteResult(response, "semantic_plan_search", policyMs, hallContextMs, orchestrationMs, fallbackReason);
+        }
+
         // 4) Deterministic degradation: fully functional without any model.
         cancellationToken.ThrowIfCancellationRequested();
-        var degraded = await HandleDeterministicAsync(text, language, turn, context, cancellationToken);
+        var degraded = await HandleDeterministicAsync(text, language, turn, context, cancellationToken, fallbackIntent);
         return new AssistantRouteResult(degraded, "deterministic", policyMs, hallContextMs, orchestrationMs, fallbackReason);
     }
 
@@ -443,7 +550,7 @@ public sealed class AiAssistantService : IAiAssistantService
         }
 
         var question = AiHallQuestionClassifier.Classify(text);
-        if (question is AiHallQuestion.None or AiHallQuestion.BookingHowTo or AiHallQuestion.ContactOwner)
+        if (question is AiHallQuestion.None or AiHallQuestion.BookingHowTo)
         {
             return null;
         }
@@ -454,6 +561,27 @@ public sealed class AiAssistantService : IAiAssistantService
         if (question == AiHallQuestion.Availability)
         {
             return await HandleHallAvailabilityAsync(text, language, turn, hall, cancellationToken);
+        }
+
+        if (question == AiHallQuestion.ContactOwner)
+        {
+            var contact = hall.ContactPhone?.Trim();
+            var contactMessage = !string.IsNullOrWhiteSpace(contact)
+                ? language == "en"
+                    ? $"The contact number published for {hall.HallName} is {contact}."
+                    : $"رقم التواصل المنشور لـ{HallLabel(language, hall.HallName)} هو {contact}."
+                : language == "en"
+                    ? $"No hall-owner contact number is published in the details I can verify. You can open {hall.HallName}'s page to see its available contact options."
+                    : $"ما في رقم تواصل منشور أقدر أتحقق منه لـ{HallLabel(language, hall.HallName)}. افتح صفحة القاعة لتشوف خيارات التواصل المتاحة.";
+            var contactResponse = Build(language, AiAssistantResponseKind.Answer, contactMessage, intent, hallDetails: hall);
+            return contactResponse with
+            {
+                Actions = AiAssistantPolicyGate.NavigateAction(
+                    language,
+                    WesalNavigationRegistry.HallDetails,
+                    AiNavigationMode.Suggest,
+                    hall.HallId) is { } open ? [open] : null
+            };
         }
 
         var message = ComposeHallMessage(question, language, hall);
@@ -479,8 +607,8 @@ public sealed class AiAssistantService : IAiAssistantService
         HallDetailsDto hall,
         CancellationToken cancellationToken)
     {
-        var date = CriteriaExtractor.Extract(text).Date
-            ?? AiRelativeDateResolver.Resolve(text, turn.Today);
+        var date = AiRelativeDateResolver.Resolve(text, turn.Today)
+            ?? CriteriaExtractor.Extract(text, turn.Today, allowBareCapacity: false).Date;
 
         var intent = new AiAssistantIntentDto(AiIntentType.CheckHallAvailability, null, null, date, null, hall.HallName);
 
@@ -643,9 +771,10 @@ public sealed class AiAssistantService : IAiAssistantService
         string language,
         AiTurnContext turn,
         AiConversationContext? context,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AiAssistantIntentDto? extractedIntent = null)
     {
-        var intent = await _intentExtractor.ExtractWithoutModelAsync(text, language, cancellationToken, context);
+        var intent = extractedIntent ?? await _intentExtractor.ExtractWithoutModelAsync(text, language, cancellationToken, context);
         intent = MergeWithContext(intent, context);
         intent = RefineIntent(text, intent, turn);
 
@@ -725,14 +854,22 @@ public sealed class AiAssistantService : IAiAssistantService
         var date = intent.Date ?? prior.Date;
         var capacity = intent.Capacity ?? prior.Capacity;
         var maximumPrice = intent.MaximumPrice ?? prior.MaximumPrice;
+        var minimumPrice = intent.MinimumPrice ?? prior.MinimumPrice;
+        var aroundPrice = intent.AroundPrice ?? prior.AroundPrice;
         var sortByPrice = intent.SortByPrice || prior.SortByPrice;
+        var sortPreference = intent.SortPreference != AiPriceSortPreference.Relevance
+            ? intent.SortPreference
+            : prior.SortPreference;
 
         if (region == intent.Region
             && area == intent.Area
             && date == intent.Date
             && capacity == intent.Capacity
             && maximumPrice == intent.MaximumPrice
-            && sortByPrice == intent.SortByPrice)
+            && minimumPrice == intent.MinimumPrice
+            && aroundPrice == intent.AroundPrice
+            && sortByPrice == intent.SortByPrice
+            && sortPreference == intent.SortPreference)
         {
             return intent;
         }
@@ -745,7 +882,11 @@ public sealed class AiAssistantService : IAiAssistantService
             capacity,
             intent.HallName,
             maximumPrice,
-            sortByPrice);
+            sortByPrice,
+            minimumPrice,
+            aroundPrice,
+            sortPreference,
+            intent.SemanticPlan);
     }
 
     private async Task<AiAssistantResponse> HandleHowToAsync(string text, string language, AiAssistantIntentDto intention, CancellationToken cancellationToken)
@@ -878,7 +1019,7 @@ public sealed class AiAssistantService : IAiAssistantService
             extra.Add(isArabic ? $"في {intent.Area}" : $"in {intent.Area}");
         }
 
-        if (already.Date is null && intent.Date is { } date)
+        if (intent.Date is { } date && already.Date != date)
         {
             extra.Add(date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         }
@@ -889,12 +1030,183 @@ public sealed class AiAssistantService : IAiAssistantService
             extra.Add(isArabic ? $"لحد {formattedPrice} شيكل" : "under " + formattedPrice + " NIS");
         }
 
-        if (!already.SortByPrice && intent.SortByPrice)
+        if (already.MinimumPrice is null && intent.MinimumPrice is { } minimumPrice)
         {
-            extra.Add(isArabic ? "الأرخص" : "cheapest");
+            var formattedPrice = minimumPrice.ToString("0.##", CultureInfo.InvariantCulture);
+            extra.Add(isArabic ? $"ابتداء من {formattedPrice} شيكل" : "at least " + formattedPrice + " NIS");
+        }
+
+        if (already.AroundPrice is null && intent.AroundPrice is { } aroundPrice)
+        {
+            var formattedPrice = aroundPrice.ToString("0.##", CultureInfo.InvariantCulture);
+            extra.Add(isArabic ? $"حوالي {formattedPrice} شيكل" : "around " + formattedPrice + " NIS");
+        }
+
+        if (!already.SortByPrice && intent.SortPreference is AiPriceSortPreference.LowestPrice or AiPriceSortPreference.HighestPrice)
+        {
+            extra.Add(intent.SortPreference == AiPriceSortPreference.HighestPrice
+                ? isArabic ? "الأغلى" : "most expensive"
+                : isArabic ? "الأرخص" : "cheapest");
         }
 
         return extra.Count == 0 ? text : $"{text} {string.Join(' ', extra)}";
+    }
+
+    private async Task<AiAssistantResponse> HandleAvailabilityRangeAsync(
+        AiSemanticPlan plan,
+        AiTurnContext turn,
+        string language,
+        CancellationToken cancellationToken)
+    {
+        var intent = AiSemanticPlanResolver.ToLegacyIntent(plan);
+        var range = plan.DateRange!;
+        if (range.End < turn.Today || range.Start > range.End || range.End.DayNumber - range.Start.DayNumber > 30)
+        {
+            return Build(language, AiAssistantResponseKind.Clarification, FutureDateMessage(language), intent);
+        }
+
+        HallDetailsDto? hall = plan.HallReference.Kind is AiHallReferenceKind.ExplicitName
+            ? null
+            : turn.Hall;
+        if (hall is null && !string.IsNullOrWhiteSpace(plan.HallReference.Name))
+        {
+            var match = await TryResolveHallAsync(plan.HallReference.Name, cancellationToken);
+            if (match is not null)
+            {
+                try { hall = await _hallDetailsService.GetHallDetailsAsync(match.HallId, cancellationToken); }
+                catch (NotFoundException) { hall = null; }
+            }
+        }
+
+        if (hall is null)
+        {
+            return Build(language, AiAssistantResponseKind.Clarification, WhichHallMessage(language), intent);
+        }
+
+        var firstDate = range.Start < turn.Today ? turn.Today : range.Start;
+        if (firstDate > range.End)
+        {
+            return Build(language, AiAssistantResponseKind.Clarification, FutureDateMessage(language), intent);
+        }
+
+        var availableDates = new List<DateOnly>();
+        for (var date = firstDate; date <= range.End; date = date.AddDays(1))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var catalog = await _hourlySlotService.GetHourlyCatalogAsync(hall.HallId, date, cancellationToken);
+            if (catalog.DayOpen && catalog.Slots.Any(slot => slot.IsSelectable))
+            {
+                availableDates.Add(date);
+            }
+        }
+
+        var period = $"{firstDate.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)}–{range.End.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)}";
+        var message = availableDates.Count == 0
+            ? language == "en"
+                ? $"No selectable hourly slots were returned for {hall.HallName} between {period}."
+                : $"ما ظهر عندي فترات ساعة قابلة للحجز لـ{HallLabel(language, hall.HallName)} بين {period}."
+            : language == "en"
+                ? $"{hall.HallName} has selectable hourly slots on: {string.Join(", ", availableDates.Select(date => date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)))}."
+                : $"ظهر توفر لـ{HallLabel(language, hall.HallName)} في الأيام التالية: {string.Join("، ", availableDates.Select(date => date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)))}.";
+
+        return Build(language, AiAssistantResponseKind.Answer, message, intent);
+    }
+
+    private async Task<AiAssistantResponse?> HandleResultComparisonAsync(
+        AiSemanticPlan plan,
+        IReadOnlyList<Guid> hallIds,
+        string language,
+        CancellationToken cancellationToken)
+    {
+        var selected = plan.SelectedResultReferences is { Count: > 0 }
+            ? plan.SelectedResultReferences.Select(reference => reference.Index).Distinct().Take(10).ToArray()
+            : plan.SelectedResultReference is { } single ? [single.Index] : [];
+
+        var ids = selected.Length == 0
+            ? hallIds.Take(10).ToArray()
+            : selected.Where(index => index >= 0 && index < hallIds.Count)
+                .Select(index => hallIds[index]).Distinct().Take(10).ToArray();
+
+        if (plan.ComparisonIntent == AiComparisonIntent.CompareSelected && ids.Length < 2)
+        {
+            var clarification = language == "en"
+                ? "Tell me which two results to compare, for example the first and third."
+                : "احكيلي أي نتيجتين بدك أقارن، مثلاً الأولى والثالثة.";
+            return Build(language, AiAssistantResponseKind.Clarification, clarification, null);
+        }
+
+        var current = new List<HallDetailsDto>();
+        foreach (var hallId in ids)
+        {
+            try { current.Add(await _hallDetailsService.GetHallDetailsAsync(hallId, cancellationToken)); }
+            catch (NotFoundException)
+            {
+                // Removed or no longer public results are omitted from a comparison.
+            }
+        }
+
+        if (current.Count == 0)
+        {
+            return null;
+        }
+
+        if (plan.ComparisonIntent == AiComparisonIntent.CompareSelected)
+        {
+            var facts = current.Select(hall =>
+            {
+                var price = hall.ShowPrice && hall.Price.HasValue
+                    ? $"{hall.Price.Value.ToString("0.##", CultureInfo.InvariantCulture)} { (language == "en" ? "ILS" : "شيكل") }"
+                    : (language == "en" ? "price not published" : "السعر غير منشور");
+                return language == "en"
+                    ? $"{hall.HallName}: capacity {hall.Capacity}, {price}, {hall.Address}."
+                    : $"{hall.HallName}: السعة {hall.Capacity}، {price}، {hall.Address}.";
+            });
+            var message = string.Join(language == "en" ? " " : "\n", facts);
+            return Build(language, AiAssistantResponseKind.Answer, message, null);
+        }
+
+        HallDetailsDto? winner = plan.ComparisonIntent switch
+        {
+            AiComparisonIntent.Cheapest => current.Where(HasPublishedPrice).OrderBy(hall => hall.Price).FirstOrDefault(),
+            AiComparisonIntent.MostExpensive => current.Where(HasPublishedPrice).OrderByDescending(hall => hall.Price).FirstOrDefault(),
+            AiComparisonIntent.Largest => current.OrderByDescending(hall => hall.Capacity).FirstOrDefault(),
+            AiComparisonIntent.Smallest => current.OrderBy(hall => hall.Capacity).FirstOrDefault(),
+            AiComparisonIntent.BestBudgetFit when plan.PriceBudget.AroundPrice is { } target
+                => current.Where(HasPublishedPrice).OrderBy(hall => Math.Abs(hall.Price!.Value - target)).FirstOrDefault(),
+            _ => null
+        };
+
+        if (winner is null)
+        {
+            var noPrice = language == "en"
+                ? "I can't compare these results because none has a currently published price."
+                : "ما بقدر أقارن الأسعار لأن ما في نتيجة بسعر منشور حالياً.";
+            return Build(language, AiAssistantResponseKind.Answer, noPrice, null);
+        }
+
+        var winnerMessage = plan.ComparisonIntent switch
+        {
+            AiComparisonIntent.Cheapest => language == "en"
+                ? $"The lowest currently published price among these results is {winner.HallName} at {winner.Price!.Value.ToString("0.##", CultureInfo.InvariantCulture)} ILS."
+                : $"أقل سعر منشور حالياً بين النتائج هو {winner.HallName}: {winner.Price!.Value.ToString("0.##", CultureInfo.InvariantCulture)} شيكل.",
+            AiComparisonIntent.MostExpensive => language == "en"
+                ? $"The highest currently published price among these results is {winner.HallName} at {winner.Price!.Value.ToString("0.##", CultureInfo.InvariantCulture)} ILS."
+                : $"أعلى سعر منشور حالياً بين النتائج هو {winner.HallName}: {winner.Price!.Value.ToString("0.##", CultureInfo.InvariantCulture)} شيكل.",
+            AiComparisonIntent.Largest => language == "en"
+                ? $"The largest capacity among these results is {winner.HallName}, for {winner.Capacity} guests."
+                : $"أكبر سعة بين النتائج هي لـ{winner.HallName}: {winner.Capacity} شخص.",
+            AiComparisonIntent.Smallest => language == "en"
+                ? $"The smallest capacity among these results is {winner.HallName}, for {winner.Capacity} guests."
+                : $"أقل سعة بين النتائج هي لـ{winner.HallName}: {winner.Capacity} شخص.",
+            _ => language == "en"
+                ? $"The closest currently published price to your budget is {winner.HallName} at {winner.Price!.Value.ToString("0.##", CultureInfo.InvariantCulture)} ILS."
+                : $"أقرب سعر منشور لميزانيتك هو {winner.HallName}: {winner.Price!.Value.ToString("0.##", CultureInfo.InvariantCulture)} شيكل."
+        };
+
+        var intent = new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, winner.HallName);
+        return Build(language, AiAssistantResponseKind.HallDetails, winnerMessage, intent, hallDetails: winner);
+
+        static bool HasPublishedPrice(HallDetailsDto hall) => hall.ShowPrice && hall.Price.HasValue;
     }
 
     private async Task<AiAssistantResponse> HandleCheapestShownHallAsync(
@@ -1087,23 +1399,123 @@ public sealed class AiAssistantService : IAiAssistantService
 
     private async Task<HallListItemDto?> TryResolveHallAsync(string hallName, CancellationToken cancellationToken)
     {
-        var normalized = hallName.Trim();
-        var page = await _hallSearchService.SearchHallsAsync(
-            new HallSearchRequest
-            {
-                Name = normalized,
-                PageNumber = 1,
-                PageSize = HallResolutionLimit
-            },
-            cancellationToken);
-
-        if (page.Items.Count == 0)
+        var terms = HallNameSearchTerms(hallName);
+        var candidates = new Dictionary<Guid, HallListItemDto>();
+        foreach (var term in terms.Take(6))
         {
-            return null;
+            var page = await _hallSearchService.SearchHallsAsync(
+                new HallSearchRequest { Name = term, PageNumber = 1, PageSize = HallResolutionLimit },
+                cancellationToken);
+            foreach (var hall in page.Items)
+                candidates.TryAdd(hall.HallId, hall);
         }
 
-        return page.Items.FirstOrDefault(hall => string.Equals(hall.HallName, normalized, StringComparison.OrdinalIgnoreCase))
-            ?? page.Items[0];
+        var ranked = candidates.Values
+            .Select(hall => (Hall: hall, Score: HallNameSimilarity(terms, hall.HallName)))
+            .Where(candidate => candidate.Score >= 0.9)
+            .OrderByDescending(candidate => candidate.Score)
+            .ThenBy(candidate => candidate.Hall.HallName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (ranked.Length == 0 || ranked.Length > 1 && ranked[0].Score - ranked[1].Score < 0.15)
+            return null;
+
+        return ranked[0].Hall;
+    }
+
+    private static IReadOnlyList<string> HallNameSearchTerms(string hallName)
+    {
+        var terms = new List<string> { hallName.Trim() };
+        var normalized = AiText.Normalize(hallName);
+        if (normalized.Contains("سيتي ستارز", StringComparison.Ordinal))
+            terms.Add("City Stars");
+        if (normalized.Contains("city stars", StringComparison.OrdinalIgnoreCase))
+            terms.Add("سيتي ستارز");
+
+        terms.AddRange(hallName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        return terms.Where(value => value.Length is > 0 and <= 120).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static double HallNameSimilarity(IReadOnlyList<string> searchTerms, string candidateName)
+    {
+        var candidate = HallNameTokens(candidateName);
+        if (candidate.Length == 0)
+            return 0;
+
+        var best = 0d;
+        foreach (var term in searchTerms)
+        {
+            var query = HallNameTokens(term);
+            if (query.Length != candidate.Length)
+                continue;
+
+            var matched = 0;
+            for (var index = 0; index < query.Length; index++)
+            {
+                if (string.Equals(query[index], candidate[index], StringComparison.Ordinal))
+                {
+                    matched++;
+                    continue;
+                }
+
+                if (query[index].Length >= 4 && candidate[index].Length >= 4
+                    && EditDistanceAtMostOne(query[index], candidate[index]))
+                    matched++;
+            }
+
+            var score = (double)matched / query.Length;
+            if (score > best)
+                best = score;
+        }
+
+        return best;
+    }
+
+    private static string[] HallNameTokens(string value)
+        => AiText.Normalize(value)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(token => token is not "hall" and not "قاعة" and not "قاعه" and not "صالة" and not "صاله")
+            .ToArray();
+
+    private static bool EditDistanceAtMostOne(string left, string right)
+    {
+        if (Math.Abs(left.Length - right.Length) > 1)
+            return false;
+
+        var leftIndex = 0;
+        var rightIndex = 0;
+        var edits = 0;
+        while (leftIndex < left.Length && rightIndex < right.Length)
+        {
+            if (left[leftIndex] == right[rightIndex])
+            {
+                leftIndex++;
+                rightIndex++;
+                continue;
+            }
+
+            if (++edits > 1)
+                return false;
+            if (left.Length > right.Length) leftIndex++;
+            else if (right.Length > left.Length) rightIndex++;
+            else { leftIndex++; rightIndex++; }
+        }
+
+        return edits + (leftIndex < left.Length || rightIndex < right.Length ? 1 : 0) <= 1;
+    }
+
+    private static bool LooksLikeBareHallName(string text)
+    {
+        var words = text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return words.Length is > 0 and <= 4
+            && words.All(word => word.All(character => char.IsAsciiLetter(character) || character is '-' or '&' or '\''))
+            && !words.Any(word => word.Equals("hall", StringComparison.OrdinalIgnoreCase)
+                || word.Equals("halls", StringComparison.OrdinalIgnoreCase)
+                || word.Equals("wedding", StringComparison.OrdinalIgnoreCase)
+                || word.Equals("weddings", StringComparison.OrdinalIgnoreCase)
+                || word.Equals("please", StringComparison.OrdinalIgnoreCase)
+                || word.Equals("show", StringComparison.OrdinalIgnoreCase)
+                || word.Equals("find", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string BuildAvailabilityMessage(

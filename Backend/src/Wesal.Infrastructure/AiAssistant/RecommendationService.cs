@@ -38,6 +38,8 @@ public sealed class RecommendationService : IRecommendationService
             && !criteria.Capacity.HasValue
             && !criteria.Date.HasValue
             && !criteria.MaximumPrice.HasValue
+            && !criteria.MinimumPrice.HasValue
+            && !criteria.AroundPrice.HasValue
             && !criteria.SortByPrice)
         {
             var hint = effectiveLanguage == "en"

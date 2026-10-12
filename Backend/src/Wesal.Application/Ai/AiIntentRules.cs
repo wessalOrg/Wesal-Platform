@@ -149,7 +149,7 @@ public static class AiHallQuestionClassifier
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Contact = new(
-        @"(?:كيف|ازاي|شلون|how).{0,20}(?:اتواصل|تواصل|اكلم|احكي|contact|reach|message|call)|(?:اتواصل|اكلم|احكي)\s+(?:مع)?\s*(?:ه?م|ها|ه|صاحب)",
+        @"(?:كيف|ازاي|شلون|how).{0,20}(?:اتواصل|تواصل|اكلم|احكي|contact|reach|message|call)|(?:اتواصل|اكلم|احكي)\s+(?:مع)?\s*(?:ه?م|ها|ه|صاحب)|(?:رقم|واتساب|هاتف|تلفون|جوال|phone|number|whatsapp).{0,18}(?:صاحب|مالك|القاعة|قاعة|صالة|ها|ه|owner|hall)|(?:صاحب|مالك)(?:ها|ه)?\s+(?:رقم|هاتف|تلفون)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Price = AiText.AnyWord([
@@ -275,6 +275,7 @@ public static class AiReferenceResolver
         // question / filler words that follow "hall" in questions
         "كم", "شو", "ايش", "وين", "وينتا", "ليش", "قديش", "مين", "متاحه", "متاح", "فيها", "فيه", "في", "ب", "بكم", "سعرها", "سعر", "سعتها", "هل", "كيف", "دورلي", "فرجيني", "هات", "بدي", "بلاقي",
         "available", "price", "capacity", "has", "have", "is", "are", "for", "in", "at", "near", "how", "what", "where", "which", "does",
+        "i", "want", "need", "find", "show", "me", "looking", "please", "about", "tell",
         // generic "hall" qualifiers
         "افراح", "الافراح", "اعراس", "مناسبات", "wedding", "weddings", "event", "events"
     };
@@ -292,6 +293,18 @@ public static class AiReferenceResolver
         }
 
         return null;
+    }
+
+    /// <summary>Returns distinct result positions in the order they occur in a comparison request.</summary>
+    public static IReadOnlyList<int> GetOrdinals(string? message)
+    {
+        var text = AiText.Normalize(message);
+        return Ordinals
+            .Where(item => item.Index >= 0 && item.Pattern.IsMatch(text))
+            .Select(item => item.Index)
+            .Distinct()
+            .Take(10)
+            .ToArray();
     }
 
     public static bool IsNextResult(string? message)
@@ -319,24 +332,45 @@ public static class AiReferenceResolver
 
             if (isNoun && i + 1 < words.Count && noun != "hall")
             {
-                var candidate = words[i + 1];
-                var normalized = AiText.Normalize(candidate);
-                if (!NotAName.Contains(normalized) && !IsRegionOrLocationWord(normalized))
+                var nameWords = new List<string>();
+                for (var candidateIndex = i + 1; candidateIndex < Math.Min(words.Count, i + 5); candidateIndex++)
                 {
-                    return candidate;
+                    var candidate = words[candidateIndex];
+                    var normalized = AiText.Normalize(candidate);
+                    if (NotAName.Contains(normalized)
+                        || IsRegionOrLocationWord(normalized)
+                        || normalized.All(char.IsDigit))
+                    {
+                        break;
+                    }
+
+                    nameWords.Add(candidate);
                 }
+
+                if (nameWords.Count > 0)
+                    return string.Join(' ', nameWords);
             }
 
             // English: the name comes BEFORE the noun ("Orchid hall").
             if (noun == "hall" && i > 0)
             {
-                var candidate = words[i - 1];
-                var normalized = AiText.Normalize(candidate);
-                if (normalized.Length > 1 && normalized.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9')
-                    && !NotAName.Contains(normalized))
+                var nameWords = new List<string>();
+                for (var candidateIndex = i - 1; candidateIndex >= Math.Max(0, i - 3); candidateIndex--)
                 {
-                    return candidate;
+                    var candidate = words[candidateIndex];
+                    var normalized = AiText.Normalize(candidate);
+                    if (NotAName.Contains(normalized)
+                        || normalized.Length <= 1
+                        || !normalized.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9'))
+                    {
+                        break;
+                    }
+
+                    nameWords.Insert(0, candidate);
                 }
+
+                if (nameWords.Count > 0)
+                    return string.Join(' ', nameWords);
             }
         }
 

@@ -939,6 +939,8 @@ const ar: MessageCatalog = {
   "admin.mabrouk.gaps.samples": "عينات منقحة",
   "admin.mabrouk.gaps.status": "الحالة",
   "admin.mabrouk.gaps.createAnswer": "إنشاء إجابة",
+  "admin.mabrouk.gaps.creatingAnswer": "جارٍ تجهيز مسودة الإجابة...",
+  "admin.mabrouk.gaps.createAnswerFailure": "تعذر تجهيز المسودة. تحقق من الاتصال وحاول مرة أخرى.",
   "admin.mabrouk.gaps.linkArticle": "ربط بمقالة موجودة",
   "admin.mabrouk.gaps.review": "تحديد كمراجعة",
   "admin.mabrouk.gaps.ignore": "تجاهل",

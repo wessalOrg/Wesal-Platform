@@ -350,10 +350,214 @@ public sealed class MabroukConversationIntelligenceShould
             $"Fixture execution failures ({failures.Count}/{assertions} assertions): " + string.Join("; ", failures.Take(20)));
     }
 
+    [Fact]
+    public async Task RunTheV4GoldenSearchBudgetDetailsAndAvailabilityConversation()
+    {
+        var harness = new MabroukHarness();
+        using var sessions = new ChatSessionService();
+        var session = await sessions.InitializeSessionAsync("ar");
+        AiAssistantResponse? search = null;
+        AiAssistantResponse? cheapest = null;
+        AiAssistantResponse? price = null;
+        AiAssistantResponse? location = null;
+        AiAssistantResponse? availabilityQuestion = null;
+        AiAssistantResponse? tomorrow = null;
+        AiAssistantResponse? another = null;
+
+        foreach (var message in new[]
+        {
+            "بدي صالة بغزة ل150 شخص",
+            "ارخص وحدة",
+            "قديش سعرها؟",
+            "وين؟",
+            "متى فاضية؟",
+            "بكرة",
+            "غيرها"
+        })
+        {
+            var context = await sessions.GetConversationContextAsync(session.SessionId);
+            var response = await harness.AskAsync(message, conversation: context);
+            var nextState = AdvanceLikeController(context, message, response);
+            await sessions.SaveExchangeAsync(
+                session.SessionId,
+                message,
+                response.Message,
+                response.Intent,
+                AiResponseMemory.ShownHalls(response),
+                AiResponseMemory.FocusedHall(response),
+                conversationState: nextState);
+
+            switch (message)
+            {
+                case "بدي صالة بغزة ل150 شخص": search = response; break;
+                case "ارخص وحدة": cheapest = response; break;
+                case "قديش سعرها؟": price = response; break;
+                case "وين؟": location = response; break;
+                case "متى فاضية؟": availabilityQuestion = response; break;
+                case "بكرة": tomorrow = response; break;
+                case "غيرها": another = response; break;
+            }
+        }
+
+        Assert.NotNull(search?.SemanticPlan);
+        Assert.Equal(150, search.SemanticPlan.Capacity);
+        Assert.NotEmpty(search.Halls);
+        Assert.All(search.Halls, hall => Assert.True(hall.Capacity >= 150));
+
+        Assert.Equal(AiComparisonIntent.Cheapest, cheapest?.SemanticPlan?.ComparisonIntent);
+        Assert.Equal("قاعة الأوركيد", cheapest?.HallDetails?.HallName);
+        Assert.Contains("5000", cheapest?.Message);
+        Assert.Equal("قاعة الأوركيد", price?.HallDetails?.HallName);
+        Assert.Equal(5000, price?.HallDetails?.Price);
+        Assert.Equal("قاعة الأوركيد", location?.HallDetails?.HallName);
+        Assert.Contains("النصر", location?.Message);
+        Assert.Equal(AiAssistantResponseKind.Clarification, availabilityQuestion?.Kind);
+        Assert.Equal(AiAssistantResponseKind.Availability, tomorrow?.Kind);
+        Assert.Equal(harness.OrchidId, tomorrow?.Availability?.HallId);
+        Assert.Equal(new DateOnly(2026, 10, 2), tomorrow?.Availability?.Date);
+        Assert.Equal(AiAssistantResponseKind.HallDetails, another?.Kind);
+        Assert.Equal(harness.NakheelId, another?.HallDetails?.HallId);
+    }
+
+    [Fact]
+    public async Task ReturnOnlyTheTrustedHallOwnerContactForAnActiveHall()
+    {
+        var harness = new MabroukHarness();
+        var context = new AiConversationContext(
+            [],
+            new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, "قاعة الأوركيد"),
+            [new AiHallRef(harness.OrchidId, "قاعة الأوركيد")],
+            new AiHallRef(harness.OrchidId, "قاعة الأوركيد"),
+            new AiConversationState(
+                ActiveGoal: "hall_details",
+                ActiveHallId: harness.OrchidId,
+                ActiveHallName: "قاعة الأوركيد"));
+
+        var response = await harness.AskAsync("بدي رقم صاحبها", conversation: context);
+
+        Assert.Equal(AiAssistantResponseKind.Answer, response.Kind);
+        Assert.Contains("+970599000222", response.Message);
+        Assert.DoesNotContain("+970567581412", response.Message);
+        Assert.Equal(AiRequestedFact.Contact, Assert.Single(response.SemanticPlan!.RequestedFacts));
+    }
+
+    [Fact]
+    public async Task ResolveTheArabicAndEnglishCityStarsNameWithoutTreatingStarsAsARating()
+    {
+        var harness = new MabroukHarness();
+        var cityStarsId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        harness.Details.Add(MabroukHarness.Hall(cityStarsId, "City Stars", "غزة", "مخيم الشاطئ", 300, 3500m, []));
+        harness.Search.Items = harness.Search.Items.Append(new HallListItemDto
+        {
+            HallId = cityStarsId,
+            HallName = "City Stars",
+            Region = "Gaza",
+            Address = "مخيم الشاطئ",
+            Capacity = 300,
+            Price = 3500m
+        }).ToArray();
+
+        var english = await harness.AskAsync("city stars", "en");
+        var arabic = await harness.AskAsync("صالة سيتي ستارز بكم", "ar");
+
+        Assert.Equal(AiAssistantResponseKind.HallDetails, english.Kind);
+        Assert.Equal("City Stars", english.HallDetails?.HallName);
+        Assert.Equal(AiAssistantResponseKind.HallDetails, arabic.Kind);
+        Assert.Equal("City Stars", arabic.HallDetails?.HallName);
+        Assert.Equal(3500, arabic.HallDetails?.Price);
+        Assert.Equal(AiComparisonIntent.None, AiSemanticPlanResolver.Resolve(
+            "سيتي ستارز", "ar", new DateOnly(2026, 10, 1), null,
+            AiTurnContext.Empty(new DateOnly(2026, 10, 1))).ComparisonIntent);
+    }
+
+    [Fact]
+    public async Task CheckOnlyBoundedLiveAvailabilityDaysForTheRequestedMonth()
+    {
+        var harness = new MabroukHarness();
+        var context = new AiConversationContext(
+            [],
+            new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, "قاعة الأوركيد"),
+            [new AiHallRef(harness.OrchidId, "قاعة الأوركيد")],
+            new AiHallRef(harness.OrchidId, "قاعة الأوركيد"),
+            new AiConversationState(
+                ActiveGoal: "hall_details",
+                ActiveHallId: harness.OrchidId,
+                ActiveHallName: "قاعة الأوركيد"));
+
+        var response = await harness.AskAsync("متى فاضية بالشهر الجاي", conversation: context);
+
+        Assert.Equal(AiAssistantResponseKind.Answer, response.Kind);
+        Assert.Contains("01/11/2026", response.Message);
+        Assert.Contains("30/11/2026", response.Message);
+        Assert.Equal(30, harness.Slots.Calls.Count);
+        Assert.All(harness.Slots.Calls, call => Assert.Equal(harness.OrchidId, call.HallId));
+        Assert.Equal(new DateOnly(2026, 11, 1), harness.Slots.Calls[0].Date);
+        Assert.Equal(new DateOnly(2026, 11, 30), harness.Slots.Calls[^1].Date);
+    }
+
+    [Fact]
+    public async Task CompareOnlyTheSelectedResultsAfterRefetchingTheirCurrentDetails()
+    {
+        var harness = new MabroukHarness();
+        var palmId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        harness.Details.Add(MabroukHarness.Hall(palmId, "Palm Hall", "غزة", "الرمال", 600, 8000m, []));
+        harness.Search.Items = harness.Search.Items.Append(new HallListItemDto
+        {
+            HallId = palmId,
+            HallName = "Palm Hall",
+            Region = "Gaza",
+            Address = "الرمال",
+            Capacity = 600,
+            Price = 8000m
+        }).ToArray();
+
+        var search = await harness.AskAsync("بدي صالات بغزة");
+        var shown = AiResponseMemory.ShownHalls(search);
+        var context = new AiConversationContext(
+            [],
+            search.Intent,
+            shown,
+            AiResponseMemory.FocusedHall(search),
+            AiConversationStateResolver.WithCollectionResults(null, shown, search.SemanticPlan));
+
+        var comparison = await harness.AskAsync("قارن الأولى والثالثة", conversation: context);
+
+        Assert.Equal(AiAssistantResponseKind.Answer, comparison.Kind);
+        Assert.Equal(AiComparisonIntent.CompareSelected, comparison.SemanticPlan?.ComparisonIntent);
+        Assert.Contains("قاعة النخيل", comparison.Message);
+        Assert.Contains("Palm Hall", comparison.Message);
+        Assert.Contains("7000", comparison.Message);
+        Assert.Contains("8000", comparison.Message);
+    }
+
+    [Fact]
+    public async Task SearchGazaForTheCapacityInTheColloquialOneHundredFiftyPhrase()
+    {
+        var harness = new MabroukHarness();
+
+        var response = await harness.AskAsync("بغزة عندي 150 واحد");
+
+        Assert.Null(response.SemanticPlan?.PriceBudget.MaximumPrice);
+        Assert.Null(response.Intent?.MaximumPrice);
+        var builtQuery = AiAssistantService.BuildSearchQuery("بغزة عندي 150 واحد", response.Intent!, "ar");
+        Assert.Null(new NaturalLanguageCriteriaExtractor().Extract(builtQuery).MaximumPrice);
+        var request = Assert.Single(harness.Search.Requests);
+        Assert.Equal(Wesal.Domain.Enums.HallRegion.Gaza, request.Region);
+        Assert.Equal(150, request.MinimumCapacity);
+        Assert.Null(request.Area);
+        Assert.Null(request.MaximumPrice);
+        Assert.Null(request.MinimumPrice);
+        Assert.Null(request.AroundPrice);
+        Assert.False(request.SortByPrice);
+        Assert.Null(request.Date);
+        Assert.Equal(AiAssistantResponseKind.Halls, response.Kind);
+        Assert.All(response.Halls, hall => Assert.True(hall.Capacity >= 150));
+    }
+
     private static AiConversationState AdvanceLikeController(AiConversationContext context, string message, AiAssistantResponse response)
     {
         if (response.Intent?.Intent == AiIntentType.SearchHalls && response.Halls.Count > 0)
-            return AiConversationStateResolver.WithCollectionResults(context.State, AiResponseMemory.ShownHalls(response));
+            return AiConversationStateResolver.WithCollectionResults(context.State, AiResponseMemory.ShownHalls(response), response.SemanticPlan);
         if (AiReferenceResolver.TryGetOrdinal(message) is { } ordinal)
         {
             IReadOnlyList<Guid> ids = context.LastHalls is { Count: > 0 } halls
@@ -361,10 +565,10 @@ public sealed class MabroukConversationIntelligenceShould
                 : context.State?.ShownHallIds ?? (IReadOnlyList<Guid>)Array.Empty<Guid>();
             if (ids.Count > (ordinal < 0 ? ids.Count - 1 : ordinal)
                 && AiResponseMemory.FocusedHall(response) is { } ordinalHall)
-                return AiConversationStateResolver.AdvanceSelection(context.State, ordinalHall, ordinal < 0 ? ids.Count - 1 : ordinal);
+                return AiConversationStateResolver.AdvanceSelection(context.State, ordinalHall, ordinal < 0 ? ids.Count - 1 : ordinal, response.SemanticPlan);
         }
         if (AiConversationStateResolver.IsNextResult(message) && AiResponseMemory.FocusedHall(response) is { } nextHall)
-            return AiConversationStateResolver.AdvanceSelection(context.State, nextHall, (context.State?.SelectedResultIndex ?? -1) + 1);
+            return AiConversationStateResolver.AdvanceSelection(context.State, nextHall, (context.State?.SelectedResultIndex ?? -1) + 1, response.SemanticPlan);
         var conversationHall = context.LastHall ?? (context.LastHalls is { Count: 1 } single ? single[0] : null);
         return AiConversationStateResolver.Advance(context.State, message, response, conversationHall);
     }

@@ -945,6 +945,8 @@ const en: MessageCatalog = {
   "admin.mabrouk.gaps.samples": "Redacted samples",
   "admin.mabrouk.gaps.status": "Status",
   "admin.mabrouk.gaps.createAnswer": "Create answer",
+  "admin.mabrouk.gaps.creatingAnswer": "Preparing answer draft...",
+  "admin.mabrouk.gaps.createAnswerFailure": "Could not prepare the draft. Check your connection and try again.",
   "admin.mabrouk.gaps.linkArticle": "Link existing article",
   "admin.mabrouk.gaps.review": "Mark reviewed",
   "admin.mabrouk.gaps.ignore": "Ignore",

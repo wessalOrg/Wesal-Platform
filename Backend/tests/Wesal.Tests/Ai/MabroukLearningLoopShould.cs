@@ -64,7 +64,9 @@ public sealed class MabroukLearningLoopShould : IDisposable
         Assert.Equal(AiAssistantResponseKind.Clarification, (await TurnAsync(sessionA.SessionId, "بكم ومتى متوفرة")).Kind);
         var resumed = await TurnAsync(sessionA.SessionId, "بكرة");
         Assert.Equal(AiAssistantResponseKind.Availability, resumed.Kind);
-        Assert.Equal(AiAssistantResponseKind.HallDetails, (await TurnAsync(sessionA.SessionId, "غيرها")).Kind);
+        var exhaustedSearch = await TurnAsync(sessionA.SessionId, "غيرها");
+        Assert.Equal(AiAssistantResponseKind.Answer, exhaustedSearch.Kind);
+        Assert.Contains("آخر نتيجة", exhaustedSearch.Message);
         var price = await TurnAsync(sessionA.SessionId, "قديش سعرها؟");
         Assert.Contains("7000", price.Message);
 
@@ -74,7 +76,12 @@ public sealed class MabroukLearningLoopShould : IDisposable
         Assert.Equal(AiAssistantResponseKind.HallDetails, second.Kind);
         var facts = await TurnAsync(sessionB.SessionId, "وين موجودة وكم بتسع وقديش سعرها");
         Assert.Contains("5000", facts.Message);
-        Assert.Equal(AiAssistantResponseKind.Answer, (await TurnAsync(sessionB.SessionId, "غيرها")).Kind);
+        var selectedSecond = await sessions.GetConversationContextAsync(sessionB.SessionId);
+        Assert.Equal(harness.OrchidId, selectedSecond.State?.ActiveHallId);
+        Assert.Equal(1, selectedSecond.State?.SelectedResultIndex);
+        var exhaustedCollection = await TurnAsync(sessionB.SessionId, "غيرها");
+        Assert.Equal(AiAssistantResponseKind.Answer, exhaustedCollection.Kind);
+        Assert.Contains("آخر نتيجة", exhaustedCollection.Message);
 
         Assert.Empty(await studio.ListGapsAsync());
     }

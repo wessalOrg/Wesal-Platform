@@ -101,9 +101,19 @@ public class HallRepository : IHallRepository
             ApplySearchFilters(ApprovedHallsQuery(), request.Name, request.Region, request.Area,
                 request.DetailedAddress, request.Date, request.StartTime, request.MinimumCapacity),
             request);
-        var ordered = request.SortByPrice
-            ? query.OrderBy(hall => hall.Price).ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name)
-            : query.OrderByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name);
+        var ordered = request.SortPreference switch
+        {
+            AiPriceSortPreference.HighestPrice => query.OrderByDescending(hall => hall.Price)
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            AiPriceSortPreference.ClosestToTarget when request.AroundPrice is { } target => query
+                .OrderBy(hall => Math.Abs(hall.Price!.Value - target))
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            AiPriceSortPreference.LowestPrice => query.OrderBy(hall => hall.Price)
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            _ when request.SortByPrice => query.OrderBy(hall => hall.Price)
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            _ => query.OrderByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name)
+        };
 
         return await ordered.Skip(skip).Take(take).ToListAsync(cancellationToken);
     }
@@ -169,7 +179,14 @@ public class HallRepository : IHallRepository
         {
             query = query.Where(hall => hall.ShowPrice && hall.Price.HasValue && hall.Price.Value <= maximumPrice);
         }
-        else if (request.SortByPrice)
+
+        if (request.MinimumPrice is { } minimumPrice)
+        {
+            query = query.Where(hall => hall.ShowPrice && hall.Price.HasValue && hall.Price.Value >= minimumPrice);
+        }
+
+        if (request.SortByPrice || request.AroundPrice.HasValue
+            || request.SortPreference != AiPriceSortPreference.Relevance)
         {
             // A hidden or missing price cannot be ranked honestly as the cheapest.
             query = query.Where(hall => hall.ShowPrice && hall.Price.HasValue);
