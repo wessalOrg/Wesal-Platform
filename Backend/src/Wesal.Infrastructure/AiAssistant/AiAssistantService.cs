@@ -5,6 +5,7 @@ using Wesal.Application.Ai;
 using Wesal.Application.Ai.Navigation;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Halls;
@@ -49,6 +50,8 @@ public sealed class AiAssistantService : IAiAssistantService
     private readonly AiContextResolver _contextResolver;
     private readonly AiAssistantPolicyGate _policyGate;
     private readonly ILogger<AiAssistantService> _logger;
+    private readonly IAiKnowledgeGapRecorder? _gapRecorder;
+    private readonly IAiKnowledgeGapDetector? _gapDetector;
 
     private static readonly NaturalLanguageCriteriaExtractor CriteriaExtractor = new();
 
@@ -64,7 +67,9 @@ public sealed class AiAssistantService : IAiAssistantService
         IGeminiToolOrchestrator toolOrchestrator,
         AiContextResolver contextResolver,
         AiAssistantPolicyGate policyGate,
-        ILogger<AiAssistantService> logger)
+        ILogger<AiAssistantService> logger,
+        IAiKnowledgeGapRecorder? gapRecorder = null,
+        IAiKnowledgeGapDetector? gapDetector = null)
     {
         _intentExtractor = intentExtractor;
         _howToService = howToService;
@@ -78,6 +83,8 @@ public sealed class AiAssistantService : IAiAssistantService
         _contextResolver = contextResolver;
         _policyGate = policyGate;
         _logger = logger;
+        _gapRecorder = gapRecorder;
+        _gapDetector = gapDetector;
     }
 
     public async Task<AiAssistantResponse> ProcessMessageAsync(
@@ -158,7 +165,10 @@ public sealed class AiAssistantService : IAiAssistantService
         CancellationToken cancellationToken)
     {
         var policyMs = 0L;
-        if (AiConversationStateResolver.IsCollectionQuestion(text))
+        // "شو بتقدموا غير القاعات؟" asks about services, not for a hall
+        // listing, even though it names halls. Only the explicit exclusion
+        // flips it; mixed listing+services questions still list.
+        if (AiConversationStateResolver.IsCollectionQuestion(text) && !AsksBeyondHalls(text))
         {
             var collectionIntent = await _intentExtractor.ExtractWithoutModelAsync(text, language, cancellationToken, context);
             var collectionQuestion = AiHallQuestionClassifier.Classify(text);
@@ -365,6 +375,20 @@ public sealed class AiAssistantService : IAiAssistantService
         long HallContextMs,
         long OrchestrationMs,
         string? FallbackReason);
+
+    /// <summary>
+    /// True when the turn asks what Wesal offers beyond halls ("شو بتقدموا غير
+    /// القاعات؟"). Mirrors the capabilities answer keywords; the explicit
+    /// "غير" keeps mixed listing+services questions on the listing path.
+    /// </summary>
+    private static bool AsksBeyondHalls(string text)
+        => text.Contains("غير", StringComparison.Ordinal)
+            && (text.Contains("بتقدم", StringComparison.Ordinal)
+                || text.Contains("بتوفر", StringComparison.Ordinal)
+                || text.Contains("بتسو", StringComparison.Ordinal)
+                || text.Contains("بتعمل", StringComparison.Ordinal)
+                || text.Contains("خدمات", StringComparison.Ordinal)
+                || text.Contains("services", StringComparison.OrdinalIgnoreCase));
 
     // ───────────────────────── hall context (pinned / page / ordinal) ─────────────────────────
 
@@ -691,11 +715,58 @@ public sealed class AiAssistantService : IAiAssistantService
         // Deterministic only: the orchestrator already tried (and failed to use) Gemini.
         var answer = await _howToService.AskHowToAsync(text, language, cancellationToken, allowModel: false);
 
+        await TryRecordKnowledgeGapAsync(text, language, answer, cancellationToken);
+
         return Build(
             language,
             AiAssistantResponseKind.Answer,
             answer.Answer,
             intention);
+    }
+
+    /// <summary>
+    /// Learning-inbox hook: records at most one gap candidate per turn, only for
+    /// genuine no-trusted-information outcomes, and never breaks the turn.
+    /// Recording is best-effort and fail-open; the returned response is built
+    /// independently of whether recording succeeded.
+    /// </summary>
+    private async Task TryRecordKnowledgeGapAsync(
+        string text,
+        string language,
+        HowToResponse answer,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (_gapRecorder is null || _gapDetector is null)
+            {
+                return;
+            }
+
+            if (!HowToService.IsGenericFallbackAnswer(answer))
+            {
+                return;
+            }
+
+            if (!_gapDetector.IsRecordable(AiKnowledgeGapOutcome.GenericNoTrustedAnswer))
+            {
+                return;
+            }
+
+            await _gapRecorder.RecordAsync(new AiKnowledgeGapCandidate(
+                AiKnowledgeGapSanitizer.Sanitize(text, 500),
+                language,
+                AiKnowledgeGapReason.GenericFallback,
+                "deterministic-howto",
+                DateTimeOffset.UtcNow), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // Never leak the raw question; the response path is unaffected.
+            _logger.LogWarning(
+                "Knowledge gap recording failed; assistant response unaffected. exceptionType={ExceptionType}",
+                ex.GetType().Name);
+        }
     }
 
     private async Task<AiAssistantResponse> HandleSearchHallsAsync(string text, string language, AiAssistantIntentDto intention, CancellationToken cancellationToken)

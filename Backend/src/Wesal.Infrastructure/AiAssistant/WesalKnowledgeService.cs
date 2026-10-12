@@ -21,7 +21,7 @@ namespace Wesal.Infrastructure.AiAssistant;
 /// every returned article; callers must never present NeedsVerification or Draft
 /// content as confirmed platform policy.
 /// </summary>
-public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWesalKnowledgeStats
+public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWesalKnowledgeStats, IEmbeddedWesalKnowledgeSource
 {
     private static readonly string[] BilingualMarkers = ["WesalKnowledge.", "documentation.ai-knowledge", "documentation/ai-knowledge", "ai-knowledge"];
 
@@ -31,6 +31,29 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
         "wesal",
         "مبروك",
         "mabrook"
+    };
+
+    /// <summary>
+    /// Category markers, not intent discriminators: brand names, bare hall
+    /// nouns, and the platform word itself. A question made only of these
+    /// ("شو هو وصال؟", "قاعة", "ما هي منصة وصال؟") asks about the category in
+    /// general and keeps legacy matching; anything else distinctive must
+    /// actually match the article (see Score).
+    /// </summary>
+    private static readonly HashSet<string> ContextTokens = new(StringComparer.Ordinal)
+    {
+        "وصال",
+        "wesal",
+        "مبروك",
+        "mabrook",
+        "قاعه",
+        "قاعات",
+        "صاله",
+        "صالات",
+        "hall",
+        "halls",
+        "منصه",
+        "platform"
     };
 
     private readonly IReadOnlyList<KnowledgeDocument> _documents;
@@ -45,6 +68,18 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
 
     /// <summary>Number of knowledge articles loaded from the embedded Knowledge Base.</summary>
     public int ArticleCount => _documents.Count;
+
+    public IReadOnlyList<EmbeddedWesalKnowledgeArticle> GetArticles()
+        => _documents.Select(document => new EmbeddedWesalKnowledgeArticle(
+            document.Key,
+            document.Title,
+            document.Category,
+            document.Source,
+            document.LastUpdated,
+            document.Status,
+            GetLocalizedContent(document.Content, "ar"),
+            GetLocalizedContent(document.Content, "en"),
+            document.Keywords)).ToList();
 
     private void LogLoaded()
     {
@@ -103,14 +138,22 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
                 x.Document.Source,
                 x.Document.LastUpdated,
                 x.Document.Status,
-                GetLocalizedContent(x.Document.Content, language)))
+                GetLocalizedContent(x.Document.Content, language),
+                x.Document.Key))
             .ToList();
 
         return Task.FromResult(results);
     }
 
-    // Minimum number of meaningful shared words for a hit that matched no title/keyword.
+    // Minimum overlap for legacy pure-brand questions (see Score).
     private const int MinContentOnlyOverlap = 1;
+
+    // A content-only hit needs genuinely broad overlap of MEANINGFUL,
+    // non-brand words: a single incidental shared word (or a bare brand
+    // mention such as "وصال") must never prove the article answers the
+    // question, otherwise roadmap/office unknowns get absorbed by the
+    // platform overview and never reach the learning inbox.
+    private const int MinDistinctiveOverlap = 2;
 
     private static readonly HashSet<string> StopWords = new(StringComparer.Ordinal)
     {
@@ -124,12 +167,24 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
         IReadOnlySet<string> queryTokens,
         string? language)
     {
+        // Mabrouk-specific facts should not leak into broad Wesal questions just
+        // because both documents mention a generic term such as "developers".
+        if (document.Category.Equals("mabrouk", StringComparison.OrdinalIgnoreCase)
+            && !normalizedQuery.Contains("مبروك", StringComparison.Ordinal)
+            && !normalizedQuery.Contains("mabrouk", StringComparison.Ordinal)
+            && !normalizedQuery.Contains("mabrook", StringComparison.Ordinal))
+        {
+            return 0;
+        }
+
         var score = 0;
+        var distinctive = false;
 
         if (!string.IsNullOrWhiteSpace(document.Title)
             && normalizedQuery.Contains(Normalize(document.Title), StringComparison.Ordinal))
         {
             score += 2;
+            distinctive = true;
         }
 
         foreach (var keyword in document.Keywords)
@@ -145,10 +200,17 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
                 // Longer, more descriptive keywords carry more intent signal than
                 // short brand mentions (e.g. "what is wesal" vs "wesal"). Brand
                 // words still score so generic platform questions resolve, but they
-                // must not outrank a doc that answers the actual intent.
-                score += BrandKeywords.Contains(normalized)
-                    ? 2
-                    : Math.Max(normalized.Length, 2);
+                // must not outrank a doc that answers the actual intent — and a
+                // brand-only match below never qualifies as a hit on its own.
+                if (BrandKeywords.Contains(normalized))
+                {
+                    score += 2;
+                }
+                else
+                {
+                    score += Math.Max(normalized.Length, 2);
+                    distinctive = true;
+                }
                 continue;
             }
 
@@ -158,10 +220,11 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
             // signal instead of zero. Exact substring matches above always win
             // because they score the full keyword weight. Short words are
             // excluded so coincidental overlaps ("star"/"start") cannot hijack
-            // ranking.
-            if (SharesStem(queryTokens, normalized))
+            // ranking. A shared stem with a bare brand word is still just brand.
+            if (!BrandKeywords.Contains(normalized) && SharesStem(queryTokens, normalized))
             {
                 score += Math.Max(normalized.Length / 2, 2);
+                distinctive = true;
             }
         }
 
@@ -171,14 +234,33 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
         // on their own (they made "كيف أحجزها؟" return the pricing FAQ).
         var contentTokens = Tokenize(Normalize(GetLocalizedContent(document.Content, language)));
         var overlap = queryTokens.Count(token => token.Length > 2 && !StopWords.Contains(token) && contentTokens.Contains(token));
+        var distinctiveOverlap = queryTokens.Count(token => token.Length > 2 && !StopWords.Contains(token) && !BrandKeywords.Contains(token) && contentTokens.Contains(token));
+
+        // A pure context question ("شو هو وصال؟", "قاعة") carries no distinctive
+        // words, so the legacy match stands. A question WITH distinctive words
+        // that match nothing distinctive is about something uncovered: it must
+        // not be absorbed by a loosely related article (brand-hijack guard).
+        var hasDistinctiveQuery = HasDistinctiveQuery(queryTokens);
+        if (!hasDistinctiveQuery)
+        {
+            if (score > 0)
+            {
+                return score + overlap;
+            }
+
+            return overlap >= MinContentOnlyOverlap ? overlap : 0;
+        }
 
         if (score > 0)
         {
-            return score + overlap;
+            return distinctive || distinctiveOverlap >= MinDistinctiveOverlap ? score + overlap : 0;
         }
 
-        return overlap >= MinContentOnlyOverlap ? overlap : 0;
+        return distinctiveOverlap >= MinDistinctiveOverlap ? overlap : 0;
     }
+
+    private static bool HasDistinctiveQuery(IReadOnlySet<string> queryTokens)
+        => queryTokens.Any(token => token.Length > 2 && !StopWords.Contains(token) && !ContextTokens.Contains(token));
 
     /// <summary>
     /// Returns true when any query word shares a word stem of at least six
@@ -260,6 +342,7 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
 
         var title = meta.GetValueOrDefault("title")?.Trim() ?? string.Empty;
         var category = meta.GetValueOrDefault("category")?.Trim() ?? string.Empty;
+        var key = meta.GetValueOrDefault("key")?.Trim();
         var source = meta.GetValueOrDefault("source")?.Trim() ?? string.Empty;
         var statusText = meta.GetValueOrDefault("status")?.Trim() ?? string.Empty;
         var lastUpdated = ParseDate(meta.GetValueOrDefault("lastUpdated"));
@@ -277,6 +360,7 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
 
         return new KnowledgeDocument(
             resourceName,
+            string.IsNullOrWhiteSpace(key) ? BuildStableKey(category, title, resourceName) : key,
             title,
             category,
             source,
@@ -284,6 +368,21 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
             status,
             keywords,
             string.IsNullOrWhiteSpace(body) ? raw : body.Trim());
+    }
+
+    private static string BuildStableKey(string category, string title, string resourceName)
+    {
+        static string Slug(string value)
+            => Regex.Replace(value.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+
+        var categorySlug = Slug(category);
+        var titleSlug = Slug(title);
+        if (titleSlug.Length == 0)
+        {
+            titleSlug = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(resourceName)))[..12].ToLowerInvariant();
+        }
+
+        return string.IsNullOrEmpty(categorySlug) ? titleSlug : $"{categorySlug}.{titleSlug}";
     }
 
     private static Dictionary<string, string> ParseFrontMatter(string raw, out string body)
@@ -413,6 +512,7 @@ public sealed partial class WesalKnowledgeService : IWesalKnowledgeService, IWes
 
     internal sealed record KnowledgeDocument(
         string ResourceName,
+        string Key,
         string Title,
         string Category,
         string Source,

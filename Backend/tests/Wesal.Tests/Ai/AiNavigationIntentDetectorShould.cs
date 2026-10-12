@@ -70,6 +70,8 @@ public class AiNavigationIntentDetectorShould
     [InlineData("وديني عالتصوير", "photographers.marketplace")]
     [InlineData("I want a photographer", "photographers.marketplace")]
     [InlineData("بدي مصور للعرس", "photographers.marketplace")]
+    [InlineData("هل يوجد مستشار زفاف معتمد لدى وصال؟", "event_planners.marketplace")]
+    [InlineData("Do you have a wedding consultant?", "event_planners.marketplace")]
     [InlineData("وين بلاقي بوفيه", "catering")]
     public void DetectUnavailableTopic_FindsServicesWithoutAPage(string message, string topic)
     {

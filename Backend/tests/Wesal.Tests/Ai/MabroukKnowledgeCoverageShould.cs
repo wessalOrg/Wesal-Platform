@@ -45,7 +45,9 @@ public sealed class MabroukKnowledgeCoverageShould
         Assert.Contains("محمد شمعة", team.Answer);
         Assert.DoesNotContain("صنعني", team.Answer);
         Assert.NotNull(creator);
-        Assert.Contains("فريق وصال صنعني", creator!.Answer);
+        Assert.Contains("عبد الرحمن أبو سالم", creator!.Answer);
+        Assert.Contains("عبد العزيز الخزندار", creator.Answer);
+        Assert.DoesNotContain("فريق وصال صنعني", creator.Answer);
     }
 
     [Fact]

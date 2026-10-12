@@ -16,6 +16,9 @@ logs/
 [Tt]est[Rr]esults/
 coverage/
 
+## Local E2E runner (holds local-only credentials and process state)
+.local-e2e/
+
 ## User-specific files
 *.rsuser
 *.suo

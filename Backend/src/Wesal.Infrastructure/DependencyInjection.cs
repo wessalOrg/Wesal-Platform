@@ -43,6 +43,7 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services.AddHttpContextAccessor();
+        services.AddSingleton(TimeProvider.System);
 
         services.AddOptions<HomepageIntroductionOptions>()
             .Bind(configuration.GetSection(HomepageIntroductionOptions.SectionName));
@@ -120,9 +121,15 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddScoped<IOwnerBookingRequestsService, OwnerBookingRequestsService>();
         services.AddScoped<ILanguageService, LanguageService>();
         services.AddScoped<IChatSessionService, ChatSessionService>();
-        services.AddSingleton<IWesalKnowledgeService, WesalKnowledgeService>();
+        services.AddSingleton<WesalKnowledgeService>();
+        services.AddSingleton<IEmbeddedWesalKnowledgeSource>(sp => sp.GetRequiredService<WesalKnowledgeService>());
+        services.AddSingleton<IWesalKnowledgeStats>(sp => sp.GetRequiredService<WesalKnowledgeService>());
+        services.AddScoped<IWesalKnowledgeService, HybridWesalKnowledgeService>();
+        services.AddScoped<IAiKnowledgeGapRecorder, AiKnowledgeGapRecorder>();
+        services.AddSingleton<IAiKnowledgeGapDetector, AiKnowledgeGapDetector>();
+        services.AddScoped<IAiKnowledgeStudioService, MabroukKnowledgeStudioService>();
         services.AddHostedService<AiKnowledgeStartupCheck>();
-        services.AddSingleton<IHowToService, HowToService>();
+        services.AddScoped<IHowToService, HowToService>();
         services.AddScoped<IRecommendationService, RecommendationService>();
         services.AddSingleton<ISubscriptionPaymentService, SubscriptionPaymentService>();
         services.AddScoped<IHallRecommendationMatcher, HallRecommendationMatcher>();
