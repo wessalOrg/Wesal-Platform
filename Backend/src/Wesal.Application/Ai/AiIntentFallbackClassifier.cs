@@ -31,12 +31,17 @@ public sealed partial class AiIntentFallbackClassifier
         var matchText = NormalizeArabic(text);
 
         var criteria = _criteriaExtractor.Extract(text);
-        var hasCriteria = !string.IsNullOrWhiteSpace(criteria.Region)
+        var hasLocationOrEventCriteria = !string.IsNullOrWhiteSpace(criteria.Region)
             || !string.IsNullOrWhiteSpace(criteria.Area)
             || criteria.Date.HasValue
             || criteria.Capacity.HasValue;
+        var hasPriceCriteria = criteria.MaximumPrice.HasValue || criteria.SortByPrice;
+        var hasHallSearchVocabulary = ContainsHallSearchVocabulary(matchText);
+        var hasCriteria = hasLocationOrEventCriteria || (hasPriceCriteria && hasHallSearchVocabulary);
+        var isHowToQuestion = matchText.StartsWith("كيف ", StringComparison.Ordinal)
+            || matchText.StartsWith("how ", StringComparison.OrdinalIgnoreCase);
 
-        if (hasCriteria || SearchIntentRegex().IsMatch(matchText))
+        if (!isHowToQuestion && (hasCriteria || SearchIntentRegex().IsMatch(matchText)))
         {
             // A brand-bearing question without hall-search vocabulary asks ABOUT
             // Wesal itself ("هل وصال عنده مكتب برفح؟"), even when it names a
@@ -53,7 +58,9 @@ public sealed partial class AiIntentFallbackClassifier
                 criteria.Area,
                 criteria.Date,
                 criteria.Capacity,
-                null);
+                null,
+                criteria.MaximumPrice,
+                criteria.SortByPrice);
         }
 
         // Asking "how" (or expressing intent) must stay informational; only a direct
@@ -130,7 +137,7 @@ public sealed partial class AiIntentFallbackClassifier
     /// with booking/how-to phrasing ("احجز قاعة", "كيف أحجز قاعة؟"). Classifying these
     /// as a hall search lets the recommendation service ask a focused follow-up.
     /// </summary>
-    [GeneratedRegex(@"(?:عرس|زفاف|زواج|خطوبة|حفلة|حفله|حفل|فرح|مناسبة|استقبال|تخرج|\bwedding\b|\bengagement\b|\bgraduation\b)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:عرس|زفاف|زواج|خطوبة|حفلة|حفله|حفل|فرح|مناسبة|استقبال|تخرج|\bwedding\b|\bengagement\b|\bgraduation\b|(?:^|\s)(?:دورلي|دور\s+لي|دور\s+على|ابحثلي|ابحث\s+لي|ابحث\s+عن|وريني|فرجيني|اعرض|find\s+me|search\s+for|show\s+me)(?:\s|$))", RegexOptions.IgnoreCase)]
     private static partial Regex SearchIntentRegex();
 
     [GeneratedRegex(@"(?:^|\s)(?:book|reserve|cancel|pay|subscribe|renew|create\s+an?(?:\s+booking|\s+account)|أحجز|احجز|حجز\s+لي|ألغِ|الغاء|إلغاء|ادفع|أدفع|جدد|جددّ)(?:\s|$)", RegexOptions.IgnoreCase)]

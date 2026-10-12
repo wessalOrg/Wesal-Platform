@@ -1,12 +1,26 @@
 using System.Text.RegularExpressions;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Catalogs;
 using Wesal.Domain.Enums;
 
 namespace Wesal.Application.Ai;
 
 public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCriteriaExtractor
 {
+    public static bool IsCatalogArea(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var folded = AiText.Normalize(value);
+        return Enum.GetValues<HallRegion>()
+            .SelectMany(RegionAddressCatalog.GetAddresses)
+            .Any(area => string.Equals(AiText.Normalize(area), folded, StringComparison.Ordinal));
+    }
+
     public ExtractedCriteriaDto Extract(string message)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -15,12 +29,28 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         var normalized = message.Trim();
         var numericNormalized = NormalizeNumerals(normalized);
 
-        var region = ExtractRegion(normalized);
-        var area = ExtractArea(normalized, region);
+        var (catalogArea, catalogRegion) = ExtractCatalogArea(normalized);
+        var region = catalogRegion ?? ExtractRegion(normalized);
+        var area = catalogArea ?? ExtractArea(normalized, region);
         var date = ExtractDate(numericNormalized);
         var capacity = ExtractCapacity(numericNormalized);
+        var maximumPrice = ExtractMaximumPrice(numericNormalized);
+        var sortByPrice = maximumPrice.HasValue || IsCheapestPreference(normalized);
 
-        return new ExtractedCriteriaDto(region, area, date, capacity);
+        return new ExtractedCriteriaDto(region, area, date, capacity, maximumPrice, sortByPrice);
+    }
+
+    private static (string? Area, string? Region) ExtractCatalogArea(string message)
+    {
+        var folded = AiText.Normalize(message);
+        var match = Enum.GetValues<HallRegion>()
+            .SelectMany(region => RegionAddressCatalog.GetAddresses(region)
+                .Select(area => (Area: area, Region: region.ToString(), Folded: AiText.Normalize(area))))
+            .Where(candidate => folded.Contains(candidate.Folded, StringComparison.Ordinal))
+            .OrderByDescending(candidate => candidate.Folded.Length)
+            .FirstOrDefault();
+
+        return match.Area is null ? (null, null) : (match.Area, match.Region);
     }
 
     private static string? ExtractRegion(string message)
@@ -159,6 +189,30 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         return null;
     }
 
+    private static decimal? ExtractMaximumPrice(string message)
+    {
+        var currency = PriceWithCurrencyRegex().Match(message);
+        var amount = currency.Success
+            ? currency.Groups["before"].Success ? currency.Groups["before"].Value : currency.Groups["after"].Value
+            : BudgetAmountRegex().Match(message) is { Success: true } budget ? budget.Groups["amount"].Value : null;
+
+        return decimal.TryParse(amount, System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out var price) && price > 0
+            ? price
+            : null;
+    }
+
+    private static bool IsCheapestPreference(string message)
+    {
+        var folded = AiText.Normalize(message);
+        return folded.Contains("ارخص", StringComparison.Ordinal)
+            || folded.Contains("اقل سعر", StringComparison.Ordinal)
+            || folded.Contains("رخيص", StringComparison.Ordinal)
+            || folded.Contains("cheapest", StringComparison.OrdinalIgnoreCase)
+            || folded.Contains("lowest price", StringComparison.OrdinalIgnoreCase)
+            || folded.Contains("cheap", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string NormalizeNumerals(string message)
         => string.Create(message.Length, message, static (buffer, value) =>
         {
@@ -213,6 +267,12 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
     [GeneratedRegex(@"\b(?<day>\d{1,2})\s+(?<month>january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\b", RegexOptions.IgnoreCase)]
     private static partial Regex DayMonthRegex();
 
-    [GeneratedRegex(@"(?:capacity\s*[:\-]?\s*|سعة\s*[:\-]?\s*|لكذا|بـ?سعة\s*|for\s+)(\d{2,4})\b|(\d{2,4})\s*(?:people|persons|person|guest|شخص|أشخاص|ناس|فرد|نفر|ضيف)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:capacity\s*[:\-]?\s*|سعة\s*[:\-]?\s*|لكذا|بـ?سعة\s*|for\s+)(\d{2,4})\b|(\d{2,4})\s*(?:people|persons|person|guest|شخص|أشخاص|ناس|فرد|نفر|ضيف|واحد|واحدة)", RegexOptions.IgnoreCase)]
     private static partial Regex CapacityRegex();
+
+    [GeneratedRegex(@"(?:₪|ILS|NIS)\s*(?<before>\d{2,7})|(?<after>\d{2,7})\s*(?:₪|شيكل(?:ات)?|شواكل|شيقل(?:ات)?|ILS|NIS)", RegexOptions.IgnoreCase)]
+    private static partial Regex PriceWithCurrencyRegex();
+
+    [GeneratedRegex(@"(?:ميزاني[هة]|بميزاني[هة]|بسعر|سعرها|سعر|أقل\s+من|اقل\s+من|تحت|لحد|حد\s+أقصى|حد\s+اقصى|under|below|budget(?:\s+of)?|price(?:\s+of)?)\s*(?:[:=]\s*)?(?<amount>\d{2,7})", RegexOptions.IgnoreCase)]
+    private static partial Regex BudgetAmountRegex();
 }

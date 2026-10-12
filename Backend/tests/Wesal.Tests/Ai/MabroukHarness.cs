@@ -178,6 +178,21 @@ internal sealed class MabroukHarness
                 query = query.Where(h => h.Capacity >= minimumCapacity);
             }
 
+            if (!string.IsNullOrWhiteSpace(request.Area))
+            {
+                query = query.Where(h => h.Address.Contains(request.Area!, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (request.MaximumPrice is { } maximumPrice)
+            {
+                query = query.Where(h => h.Price.HasValue && h.Price.Value <= maximumPrice);
+            }
+
+            if (request.SortByPrice)
+            {
+                query = query.Where(h => h.Price.HasValue).OrderBy(h => h.Price);
+            }
+
             var list = query.ToList();
             return Task.FromResult(new PagedResult<HallListItemDto>(list, 1, request.PageSize, list.Count));
         }

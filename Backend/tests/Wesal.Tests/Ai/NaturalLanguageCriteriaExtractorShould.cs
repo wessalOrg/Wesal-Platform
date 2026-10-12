@@ -9,6 +9,7 @@ public sealed class NaturalLanguageCriteriaExtractorShould
     [Theory]
     [InlineData("بدي صالة لـ ٣٠٠ شخص", 300)]
     [InlineData("بدي قاعة ل ٣٠٠ ضيف", 300)]
+    [InlineData("بغزة عندي 150 واحد", 150)]
     [InlineData("قاعة بسعة ۳۰۰", 300)]
     [InlineData("hall for 300 guests", 300)]
     public void Capacity_ParsesArabicPersianAndWesternDigits(string message, int expected)
@@ -17,4 +18,36 @@ public sealed class NaturalLanguageCriteriaExtractorShould
     [Fact]
     public void Date_ParsesArabicIndicNumerals()
         => Assert.Equal(new DateOnly(2026, 10, 25), _extractor.Extract("قاعة يوم ٢٥/١٠/٢٠٢٦").Date);
+
+    [Fact]
+    public void Area_ParsesBareCatalogNeighborhood()
+    {
+        var result = _extractor.Extract("حي الرمال");
+
+        Assert.Equal("Gaza", result.Region);
+        Assert.Equal("حي الرمال", result.Area);
+    }
+
+    [Theory]
+    [InlineData("بدي صالة ب1500شيكل", 1500)]
+    [InlineData("ميزانيتي ١٥٠٠ شيكل", 1500)]
+    [InlineData("hall under 1500 NIS", 1500)]
+    public void Price_ParsesArabicBudgetAndCurrency(string message, decimal expected)
+        => Assert.Equal(expected, _extractor.Extract(message).MaximumPrice);
+
+    [Theory]
+    [InlineData("بدي صالة رخيصة")]
+    [InlineData("أرخص قاعة في غزة")]
+    [InlineData("cheapest hall")]
+    public void PricePreference_RequestsCheapestFirst(string message)
+        => Assert.True(_extractor.Extract(message).SortByPrice);
+
+    [Fact]
+    public void Capacity_IsNotMistakenForPrice()
+    {
+        var result = _extractor.Extract("قاعة لـ ١٥٠ شخص");
+
+        Assert.Equal(150, result.Capacity);
+        Assert.Null(result.MaximumPrice);
+    }
 }
