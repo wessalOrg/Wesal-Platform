@@ -284,6 +284,40 @@ public class MabroukContextualAssistantShould
     }
 
     [Fact]
+    public async Task ArabicAreaFollowUp_KeepsArabicWhenPriorPriceCriteriaAreCarriedForward()
+    {
+        var h = new MabroukHarness();
+        var pricedHallId = Guid.NewGuid();
+        h.Search.Items =
+        [
+            .. h.Search.Items,
+            new HallListItemDto
+            {
+                HallId = pricedHallId,
+                HallName = "صالة الرمال",
+                Region = "Gaza",
+                Address = "حي الرمال",
+                Capacity = 200,
+                Price = 1500m
+            }
+        ];
+        var shown = new[] { new AiHallRef(pricedHallId, "صالة الرمال") };
+        var context = new AiConversationContext(
+            [],
+            new AiAssistantIntentDto(AiIntentType.SearchHalls, "Gaza", null, null, null, null, 1500m, true),
+            shown,
+            State: new AiConversationState(ActiveGoal: "find_hall", ShownHallIds: [pricedHallId]));
+
+        var response = await h.AskAsync("حي الرمال", conversation: context);
+
+        Assert.Equal("ar", response.ResponseLanguage);
+        Assert.Contains("وجدت", response.Message);
+        Assert.Equal(pricedHallId, Assert.Single(response.Halls).HallId);
+        Assert.Equal(1500m, h.Search.Requests[^1].MaximumPrice);
+        Assert.Equal("حي الرمال", h.Search.Requests[^1].Area);
+    }
+
+    [Fact]
     public async Task ConversationFocus_AllowsAPronounFollowUp_WithoutAPin()
     {
         var h = new MabroukHarness();

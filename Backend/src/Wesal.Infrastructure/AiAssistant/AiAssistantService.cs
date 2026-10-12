@@ -810,7 +810,7 @@ public sealed class AiAssistantService : IAiAssistantService
     private async Task<AiAssistantResponse> HandleSearchHallsAsync(string text, string language, AiAssistantIntentDto intention, CancellationToken cancellationToken)
     {
         // Search against the MERGED intent (carry-forward from earlier turns), not just the raw text.
-        var query = BuildSearchQuery(text, intention);
+        var query = BuildSearchQuery(text, intention, language);
         var result = await _recommendationService.GetRecommendationsAsync(query, language, cancellationToken);
 
         return result.Status switch
@@ -843,14 +843,23 @@ public sealed class AiAssistantService : IAiAssistantService
     /// Appends carried-forward criteria to the user's wording so the recommendation
     /// extractor sees them ("300 شخص" after "قاعات بغزة" searches Gaza for 300).
     /// </summary>
-    internal static string BuildSearchQuery(string text, AiAssistantIntentDto intent)
+    internal static string BuildSearchQuery(string text, AiAssistantIntentDto intent, string language)
     {
         var extra = new List<string>();
         var already = CriteriaExtractor.Extract(text);
+        var isArabic = language.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
 
         if (already.Region is null && !string.IsNullOrWhiteSpace(intent.Region))
         {
-            extra.Add(intent.Region switch
+            extra.Add(isArabic
+                ? intent.Region switch
+                {
+                    "NorthGaza" => "شمال غزة",
+                    "SouthGaza" => "جنوب غزة",
+                    "MiddleArea" => "الوسطى",
+                    _ => "غزة"
+                }
+                : intent.Region switch
             {
                 "NorthGaza" => "North Gaza",
                 "SouthGaza" => "South Gaza",
@@ -861,12 +870,12 @@ public sealed class AiAssistantService : IAiAssistantService
 
         if (already.Capacity is null && intent.Capacity is { } capacity)
         {
-            extra.Add($"for {capacity} people");
+            extra.Add(isArabic ? $"لـ {capacity} شخص" : $"for {capacity} people");
         }
 
         if (already.Area is null && !string.IsNullOrWhiteSpace(intent.Area))
         {
-            extra.Add($"in {intent.Area}");
+            extra.Add(isArabic ? $"في {intent.Area}" : $"in {intent.Area}");
         }
 
         if (already.Date is null && intent.Date is { } date)
@@ -876,12 +885,13 @@ public sealed class AiAssistantService : IAiAssistantService
 
         if (already.MaximumPrice is null && intent.MaximumPrice is { } maximumPrice)
         {
-            extra.Add("under " + maximumPrice.ToString("0.##", CultureInfo.InvariantCulture) + " NIS");
+            var formattedPrice = maximumPrice.ToString("0.##", CultureInfo.InvariantCulture);
+            extra.Add(isArabic ? $"لحد {formattedPrice} شيكل" : "under " + formattedPrice + " NIS");
         }
 
         if (!already.SortByPrice && intent.SortByPrice)
         {
-            extra.Add("cheapest");
+            extra.Add(isArabic ? "الأرخص" : "cheapest");
         }
 
         return extra.Count == 0 ? text : $"{text} {string.Join(' ', extra)}";
