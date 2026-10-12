@@ -18,18 +18,40 @@ export function randomPassword(): string {
   return `E2e!${randomBytes(9).toString("base64url")}9a`;
 }
 
+/**
+ * Server-rendered inputs are visible long before React hydrates them. Text typed
+ * into a controlled input before hydration reaches the DOM but never React state
+ * (the submit button then stays disabled forever), so wait until React has
+ * actually attached to the element instead of sleeping for a fixed time.
+ */
+async function waitForHydration(page: Page, selector: string) {
+  await page.waitForFunction(
+    (sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return false;
+      const propsKey = Object.keys(el).find((key) => key.startsWith("__reactProps$"));
+      if (!propsKey) return false;
+      const props = (el as HTMLElement & Record<string, unknown>)[propsKey];
+      return typeof props === "object" && props !== null
+        && typeof (props as { onChange?: unknown }).onChange === "function";
+    },
+    selector,
+    { timeout: 60000 },
+  );
+}
+
 export async function fillLogin(page: Page, email: string, password: string) {
   const emailBox = page.locator('input[type="email"]');
   const passwordBox = page.locator('input[type="password"]');
   const submit = page.locator('button[type="submit"]');
   await expect(emailBox).toBeVisible({ timeout: 30000 });
   await expect(passwordBox).toBeVisible({ timeout: 30000 });
-  await page.waitForTimeout(2000);
-  await emailBox.click();
-  await emailBox.pressSequentially(email, { delay: 15 });
-  await passwordBox.click();
-  await passwordBox.pressSequentially(password, { delay: 15 });
-  await page.waitForTimeout(1500);
+  await waitForHydration(page, 'input[type="email"]');
+  await waitForHydration(page, 'input[type="password"]');
+  await emailBox.fill(email);
+  await passwordBox.fill(password);
+  await expect(emailBox).toHaveValue(email);
+  await expect(passwordBox).toHaveValue(password);
   await expect(submit).toBeEnabled({ timeout: 20000 });
   await submit.click();
 }
@@ -38,8 +60,17 @@ export async function loginAsAdmin(page: Page) {
   await page.goto("/login");
   await fillLogin(page, ADMIN_EMAIL, adminPassword());
   await expect
-    .poll(async () => (page.url().includes("/login") ? false : true), { timeout: 60000 })
-    .toBeTruthy();
+    .poll(
+      async () => {
+        if (page.url().includes("/login")) return false;
+        return (
+          (await page.getByTestId("navbar-authenticated").count()) > 0 ||
+          (await page.getByTestId("admin-management").count()) > 0
+        );
+      },
+      { timeout: 60000 },
+    )
+    .toBe(true);
 }
 
 export async function gotoAdmin(page: Page, path: string) {
@@ -67,16 +98,34 @@ export async function askChat(page: Page, question: string): Promise<string> {
   const input = page.getByTestId("ai-chat-input");
   await expect(input).toBeVisible({ timeout: 60000 });
   const panel = page.getByTestId("ai-assistant-panel");
-  const before = ((await panel.innerText()) ?? "").length;
+  const assistantReplies = panel.locator(
+    '[data-testid="ai-chat-message"][data-role="assistant"]',
+  );
   await input.fill(question);
+  const assistantResponse = page.waitForResponse(
+    (response) => {
+      const requestUrl = new URL(response.url());
+      return (
+        response.request().method() === "POST" &&
+        /^\/api\/v1\/ai\/sessions\/[^/]+\/assistant$/.test(requestUrl.pathname)
+      );
+    },
+    { timeout: 90000 },
+  );
   await page.getByTestId("ai-chat-send").click();
-  await expect
-    .poll(
-      async () => (((await panel.innerText()) ?? "").length > before + question.length ? 1 : 0),
-      { timeout: 90000 },
-    )
-    .toBe(1);
-  return (await panel.innerText()) ?? "";
+  const response = await assistantResponse;
+  expect(response.status(), "assistant request should complete successfully").toBe(200);
+
+  const payload = (await response.json()) as { message?: string };
+  expect(typeof payload.message).toBe("string");
+  expect(payload.message?.trim().length).toBeGreaterThan(0);
+  // The initial greeting can mount after the composer becomes visible. Match
+  // the completed response so that delayed greeting cannot satisfy this wait.
+  const reply = assistantReplies.last();
+  await expect(reply).toContainText(payload.message!, { timeout: 90000 });
+  const text = (await reply.innerText()).trim();
+  expect(text.length).toBeGreaterThan(0);
+  return text;
 }
 
 export function stamp(): string {

@@ -312,6 +312,44 @@ public sealed class MabroukKnowledgeStudioShould : IDisposable
     }
 
     [Fact]
+    public async Task BlockPositiveClaimsForComingSoonWeddingConsultants()
+    {
+        var proposed = Article("wedding-consultant-claim", "هل يوجد مستشار زفاف معتمد لدى وصال؟", "wedding consultant",
+            "نعم، يوجد مستشار زفاف معتمد لدى وصال.", "Wesal has a certified wedding consultant.");
+
+        var conflicts = await _studio.CheckConflictsAsync(proposed);
+
+        Assert.False(conflicts.CanPublish);
+        Assert.Contains(conflicts.Conflicts, conflict => conflict.Code == "capability-planners-coming-soon"
+            && conflict.Severity == "block");
+    }
+
+    [Theory]
+    [InlineData("مستشار زفاف", "مستشارو الزفاف قيد التجهيز ولا تتوفر الخدمة حاليا.", "Wedding consultants are not yet available; the service is coming soon.")]
+    [InlineData("مصور", "لا يوجد مصورون حاليا، وخدمة التصوير قيد التجهيز.", "Wesal does not have photographers yet; photography is coming soon.")]
+    public async Task AllowTruthfulComingSoonCapabilityStatements(string title, string answerAr, string answerEn)
+    {
+        var proposed = Article("coming-soon-truth", title, title, answerAr, answerEn);
+
+        var conflicts = await _studio.CheckConflictsAsync(proposed);
+
+        Assert.DoesNotContain(conflicts.Conflicts, conflict => conflict.Severity == "block"
+            && conflict.Code.StartsWith("capability-", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ConflictCheckCanExcludeTheDraftBeingPublished()
+    {
+        var draft = Article("draft-publish-check", "Local draft", "local draft", "إجابة اختبارية.", "Test answer.");
+        var saved = await _studio.CreateKnowledgeAsync(draft, "admin-1");
+
+        var conflicts = await _studio.CheckConflictsAsync(draft, saved.Id);
+
+        Assert.True(conflicts.CanPublish);
+        Assert.DoesNotContain(conflicts.Conflicts, conflict => conflict.Code == "duplicate-key");
+    }
+
+    [Fact]
     public async Task KeepGeminiDraftingUnavailableWithoutSavingAnyArticle()
     {
         await Assert.ThrowsAsync<AiKnowledgeStudioException>(() =>

@@ -82,7 +82,7 @@ public sealed class MabroukLearningLoopShould : IDisposable
     [Fact]
     public async Task UnknownRecordsExactlyOneGapWithoutChangingTheAnswer()
     {
-        const string unknown = "هل يوجد خصم لمجموعات الضيوف الكبيرة؟";
+        const string unknown = "كم يساوي اثنان زائد اثنين؟";
         var plain = new MabroukHarness();
         var recording = RecordingHarness(out _);
         var studio = StudioService();
@@ -98,9 +98,22 @@ public sealed class MabroukLearningLoopShould : IDisposable
     }
 
     [Fact]
+    public async Task ComingSoonCapabilityQuestionIsAnsweredWithoutRecordingAGap()
+    {
+        const string question = "هل يوجد مستشار زفاف معتمد لدى وصال؟";
+        var recording = RecordingHarness(out _);
+
+        var response = await recording.AskAsync(question);
+
+        Assert.Equal(AiAssistantResponseKind.Answer, response.Kind);
+        Assert.Contains("قيد التجهيز", response.Message);
+        Assert.Empty(await StudioService().ListGapsAsync());
+    }
+
+    [Fact]
     public async Task ThrowingRecorderKeepsResponseIdentical()
     {
-        const string unknown = "هل يوجد خصم لمجموعات الضيوف الكبيرة؟";
+        const string unknown = "كم يساوي اثنان زائد اثنين؟";
         var plain = new MabroukHarness();
         var throwing = new Mock<IAiKnowledgeGapRecorder>();
         throwing.Setup(recorder => recorder.RecordAsync(It.IsAny<AiKnowledgeGapCandidate>(), It.IsAny<CancellationToken>()))

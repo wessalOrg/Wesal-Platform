@@ -164,7 +164,7 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
     setBusy(true);
     setError("");
     try {
-      const check = await adminMabroukService.conflictCheck(buildInput());
+      const check = await adminMabroukService.conflictCheck(buildInput(), saved.id);
       setConflicts(check.conflicts);
       if (!check.canPublish) {
         setError(t("admin.mabrouk.editor.conflicts"));

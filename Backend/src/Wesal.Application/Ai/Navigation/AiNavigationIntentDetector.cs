@@ -90,7 +90,10 @@ public static class AiNavigationIntentDetector
         (new AiUnavailableTopic("suit_rental", "تأجير بدل", "suit rental"),
             AiText.AnyWord(["بدل", "بدله", "فستان", "فساتين", "suit", "suits", "dress", "dresses"])),
         (new AiUnavailableTopic("event_planners.marketplace", "منسقي أفراح", "event planners", WesalNavigationRegistry.EventPlanners),
-            AiText.AnyWord(["منسق", "منسقه", "منسقين", "planner", "planners", "decorator", "decorators"]))
+            AiText.AnyWord([
+                "منسق", "منسقه", "منسقين", "مستشار زفاف", "مستشارة زفاف", "مستشارين زفاف",
+                "wedding consultant", "wedding consultants", "planner", "planners", "decorator", "decorators"
+            ]))
     ];
 
     /// <summary>

@@ -12,16 +12,49 @@ test("default Arabic renders RTL", async ({ page }) => {
 test("English renders LTR with translated navigation", async ({ page }) => {
   await page.goto("/login");
   await loginAsAdmin(page);
+  await gotoAdmin(page, "/admin/mabrouk");
   await page.evaluate(() => {
-    window.localStorage.setItem("wesal_ui_lang", "en");
-    window.dispatchEvent(new Event("wesal-lang-change"));
+    const browserWindow = window as Window & { __wesalLanguageEventSeen?: boolean };
+    browserWindow.__wesalLanguageEventSeen = false;
+    window.addEventListener(
+      "wesal-lang-change",
+      () => {
+        browserWindow.__wesalLanguageEventSeen = true;
+      },
+      { once: true },
+    );
   });
+  const savedLanguage = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" && new URL(response.url()).pathname.endsWith("/language"),
+    { timeout: 15000 },
+  );
+  await page.getByTestId("language-toggle").click();
+  await expect
+    .poll(async () => page.evaluate(() => window.localStorage.getItem("wesal_ui_lang")))
+    .toBe("en");
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(
+          () => (window as Window & { __wesalLanguageEventSeen?: boolean }).__wesalLanguageEventSeen,
+        ),
+    )
+    .toBe(true);
+  expect((await savedLanguage).status()).toBe(200);
+  await expect
+    .poll(async () => page.evaluate(() => document.documentElement.dir), { timeout: 15000 })
+    .toBe("ltr");
+  expect(await page.evaluate(() => document.documentElement.lang)).toBe("en");
+  await expect(page.getByTestId("admin-nav-mabrouk")).toContainText("Mabrouk");
+
   await page.reload();
   await expect
     .poll(async () => page.evaluate(() => document.documentElement.dir), { timeout: 15000 })
     .toBe("ltr");
   expect(await page.evaluate(() => document.documentElement.lang)).toBe("en");
-  await expect(page.getByTestId("admin-nav-mabrouk")).toBeVisible();
+  expect(await page.evaluate(() => window.localStorage.getItem("wesal_ui_lang"))).toBe("en");
+  await expect(page.getByTestId("admin-nav-mabrouk")).toContainText("Mabrouk");
   await expect(page.getByTestId("mabrouk-overview")).toBeVisible();
 });
 

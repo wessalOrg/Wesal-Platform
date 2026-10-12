@@ -53,6 +53,12 @@ test.describe.serial("knowledge library lifecycle", () => {
     const card = library.locator("article", { hasText: title }).first();
     await expect(card).toBeVisible({ timeout: 30000 });
 
+    // Save draft deliberately keeps the editor open so the Admin can continue
+    // editing or publish from it. Close it explicitly: while it is open its
+    // modal overlay intercepts pointer events on the library card actions.
+    await editor.locator("button.btn-outline").first().click();
+    await expect(editor).toBeHidden({ timeout: 15000 });
+
     await card.locator("button.btn-primary").click();
     await expect(card.locator("button.btn-primary")).toHaveCount(0, { timeout: 30000 });
 
@@ -92,15 +98,29 @@ test.describe.serial("knowledge library lifecycle", () => {
   });
 
   test("ai draft without a key fails gracefully and creates nothing", async ({ page }) => {
+    const knowledgeResponse = page.waitForResponse((response) => {
+      const requestUrl = new URL(response.url());
+      return requestUrl.pathname.endsWith("/api/v1/admin/mabrouk/knowledge")
+        && response.request().method() === "GET";
+    });
     await gotoAdmin(page, "/admin/mabrouk/knowledge");
     const library = page.getByTestId("mabrouk-knowledge-library");
+    expect((await knowledgeResponse).status()).toBe(200);
+    await expect(library.locator("article").first()).toBeVisible({ timeout: 30000 });
     const before = await library.locator("article").count();
     await library.locator("button.btn-primary").first().click();
     const editor = page.getByTestId("mabrouk-knowledge-editor");
     await editor.locator("textarea").first().fill("Draft question about E2E probe topic");
+    const draftResponse = page.waitForResponse((response) => {
+      const requestUrl = new URL(response.url());
+      return requestUrl.pathname.endsWith("/api/v1/admin/mabrouk/knowledge/ai-draft")
+        && response.request().method() === "POST";
+    });
     await editor.locator("button.btn-outline").nth(1).click();
+    expect((await draftResponse).status()).toBe(503);
+    await expect(editor.getByRole("alert")).toContainText("تعذر حفظ التغيير");
     await expect(editor).toBeVisible({ timeout: 30000 });
     await editor.locator("button.btn-outline").first().click();
-    expect(await library.locator("article").count()).toBeLessThanOrEqual(before + 1);
+    expect(await library.locator("article").count()).toBe(before);
   });
 });

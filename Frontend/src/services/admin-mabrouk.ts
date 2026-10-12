@@ -58,8 +58,9 @@ export const adminMabroukService = {
   async aiDraft(roughInput: string, language?: string): Promise<KnowledgeDraftSuggestion> {
     return (await api.post<KnowledgeDraftSuggestion>(root + "/knowledge/ai-draft", { roughInput, language })).data;
   },
-  async conflictCheck(input: KnowledgeArticleInput): Promise<{ conflicts: KnowledgeConflict[]; canPublish: boolean }> {
-    return (await api.post<{ conflicts: KnowledgeConflict[]; canPublish: boolean }>(root + "/knowledge/conflict-check", input)).data;
+  async conflictCheck(input: KnowledgeArticleInput, excludedArticleId?: string): Promise<{ conflicts: KnowledgeConflict[]; canPublish: boolean }> {
+    const query = excludedArticleId ? `?excludedArticleId=${encodeURIComponent(excludedArticleId)}` : "";
+    return (await api.post<{ conflicts: KnowledgeConflict[]; canPublish: boolean }>(root + "/knowledge/conflict-check" + query, input)).data;
   },
   async gaps(unresolvedOnly = true): Promise<KnowledgeGap[]> {
     return (await api.get<KnowledgeGap[]>(root + "/unanswered", { params: { unresolvedOnly } })).data;

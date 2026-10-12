@@ -1,7 +1,8 @@
 ﻿import { expect, test } from "@playwright/test";
 import { askChat, gotoAdmin, loginAsAdmin, openChat } from "./helpers";
 
-const UNKNOWN = "هل يوجد مستشار زفاف معتمد لدى وصال؟";
+const COMING_SOON_CAPABILITY = "هل يوجد مستشار زفاف معتمد لدى وصال؟";
+const UNKNOWN = "كم يساوي اثنان زائد اثنين؟";
 const MARKER = "E2ELOOP-RAFAH-MARKER";
 
 test.describe.serial("browser learning loop without restart", () => {
@@ -11,6 +12,9 @@ test.describe.serial("browser learning loop without restart", () => {
 
   test("unknown via public chat lands in the inbox", async ({ page }) => {
     await openChat(page);
+    const capabilityReply = await askChat(page, COMING_SOON_CAPABILITY);
+    expect(capabilityReply).toContain("قيد التجهيز");
+
     const reply = await askChat(page, UNKNOWN);
     expect(reply.length).toBeGreaterThan(10);
 
@@ -18,6 +22,7 @@ test.describe.serial("browser learning loop without restart", () => {
     await gotoAdmin(page, "/admin/mabrouk/unanswered");
     const inbox = page.getByTestId("mabrouk-unanswered");
     await expect(inbox).toContainText(UNKNOWN, { timeout: 30000 });
+    await expect(inbox).not.toContainText(COMING_SOON_CAPABILITY);
   });
 
   test("admin answers and publishes, public chat learns immediately", async ({ page }) => {
@@ -32,7 +37,7 @@ test.describe.serial("browser learning loop without restart", () => {
 
     const editor = page.getByTestId("mabrouk-knowledge-editor");
     await expect(editor).toBeVisible({ timeout: 30000 });
-    await editor.locator("textarea").nth(1).fill(`نعم، يوجد ${MARKER} مستشار زفاف معتمد.`);
+    await editor.locator("textarea").nth(1).fill(`اثنان زائد اثنين يساوي أربعة. ${MARKER}`);
     await editor.locator("select").selectOption("Verified");
     const inputs = editor.locator("input");
     await inputs.last().fill("E2E loop publish");

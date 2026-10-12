@@ -154,14 +154,28 @@ public sealed partial class MabroukKnowledgeStudioService
             conflicts.Add(new AiKnowledgeConflict("capability-booking-write", "block",
                 "Mabrouk is read-only for booking changes. Knowledge cannot claim that it creates bookings."));
 
-        var photographerClaim = ContainsAny(normalizedText, "مصور", "مصورين", "photographer")
-            && ContainsAny(normalizedText, "متاح", "احجز", "ابحث", "bookable", "available now", "search photographers");
+        var claimsServiceAvailability = ContainsAny(normalizedText,
+                "متاح", "متاحة", "متوفر", "متوفرة", "احجز", "ابحث", "يوجد", "عندكم", "بتوفر", "بتوفروا",
+                "bookable", "available", "have", "has", "offer", "offers", "search")
+            && !ContainsAny(normalizedText,
+                "قيد التجهيز", "قريبا", "غير متاح", "مش متاح", "مش موجود", "لا يوجد", "ما في", "ما عنا", "مش عنا",
+                "coming soon", "not available", "not yet available", "not currently available", "unavailable",
+                "no photographers", "no wedding consultants", "do not have", "does not have", "don't have", "doesn't have",
+                "does not offer", "do not offer", "doesn't offer", "don't offer", "not offered", "not yet offered");
+
+        var photographerClaim = ContainsAny(normalizedText,
+                "مصور", "مصورين", "photographer", "photographers")
+            && claimsServiceAvailability;
         if (photographerClaim)
             conflicts.Add(new AiKnowledgeConflict("capability-photographers-coming-soon", "block",
                 "Photographers are marked Coming Soon in the capability registry."));
 
-        var plannerClaim = ContainsAny(normalizedText, "منسق مناسبات", "منسقي المناسبات", "event planner")
-            && ContainsAny(normalizedText, "متاح", "احجز", "ابحث", "bookable", "available now", "search event planners");
+        var plannerClaim = ContainsAny(normalizedText,
+                "منسق مناسبات", "منسقي المناسبات", "منسق أفراح", "منسقي أفراح",
+                "مستشار زفاف", "مستشارة زفاف", "مستشارين زفاف",
+                "event planner", "event planners", "wedding planner", "wedding planners",
+                "wedding consultant", "wedding consultants")
+            && claimsServiceAvailability;
         if (plannerClaim)
             conflicts.Add(new AiKnowledgeConflict("capability-planners-coming-soon", "block",
                 "Event planners are marked Coming Soon in the capability registry."));

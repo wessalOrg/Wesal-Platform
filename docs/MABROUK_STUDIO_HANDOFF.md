@@ -2,15 +2,13 @@
 
 **Branch:** `feat/mabrouk-knowledge-studio`
 **PR:** #31 (DRAFT - must not be merged until the release gate below is green)
-**Last remote checkpoint before this audit:** `5e2305cb1e78bf8e561236cfe8d58751d375a31f`
+**Remote checkpoint at the start of Phase B:** `15ab15622941b8eb91fba64839abb86f34e48cc0`
 
 > This document replaces an earlier OpenCode handoff that contained stale and
 > inaccurate statements (a wrong preservation baseline, invented routes and
 > endpoints, an inaccurate "secret scan clean" claim, and literal local
-> credentials). Everything below is labelled **VERIFIED** (checked against the
-> code/git in the Phase A audit) or **UNVERIFIED** (carried over, must be
-> re-proven before it is relied on). Final release evidence is added in the
-> release phase; nothing here claims a green gate.
+> credentials). Sections 1-7 retain the Phase A source audit; Section 10 records
+> the current Phase B validation run dated 2026-10-12.
 
 ---
 
@@ -19,10 +17,11 @@
 | Item | State |
 |---|---|
 | Studio + Learning Loop source changes | committed + pushed (this checkpoint and earlier) |
-| Browser E2E (Playwright, 19 tests) | **NOT YET PROVEN GREEN** - see section 5 |
-| Backend full suite / PG integration | **NOT YET RE-RUN** on this checkout |
-| Frontend `npm ci` / lint / build | **NOT YET RE-RUN** on this checkout |
-| CI on exact HEAD | not yet checked |
+| Browser E2E (Playwright, 19 tests) | **PASS** - 19 passed, 0 failed/skipped/did-not-run; see section 10 |
+| Backend full suite / PG integration | **PASS** - 2,583 tests; PG suite 9/9; see section 10 |
+| Frontend install / lint / typecheck / build | **PASS** - exact CI install command; see section 10 |
+| Secret scan | **PASS** for current tracked and non-ignored tree; historical note remains in section 7 |
+| CI on candidate HEAD | pending push; remote checkpoint `15ab156` is green |
 | Merged / deployed / production smoked | **no** |
 
 ## 2. Preservation baseline - VERIFIED against `Backend/documentation/mabrouk-knowledge-preservation-baseline.md`
@@ -34,8 +33,9 @@ Captured from production `main` `1c53663`. Inventory only; article content was n
 - Categories: **5** (`faq`, `hall-owner`, `platform`, `policies`, `user-guide`)
 - Allowed additive Studio article: `ai-knowledge/mabrouk/development-team.md`
   (verified Mabrouk-developer fact; does **not** replace `platform/team.md`).
-  Expected totals with it: 27 articles / 21 verified (UNVERIFIED until the
-  preservation test is re-run).
+  Current checked-in totals with it: 27 articles / 21 verified. The preservation
+  test re-confirmed the original 26 files / 20 verified and the addition's
+  presence; the added article's verified status is in its front matter.
 - Original audit docs that must stay: `mabrouk-knowledge-coverage-audit.md`,
   `mabrouk-v2-audit.md`, `mabrouk-v3-conversation-audit.md`.
 
@@ -73,7 +73,7 @@ routes and `/knowledge/library`, `/learning-loop/record` endpoints do not exist.
 Latest EF migrations present: `20261009090000_AddDurableAiConversationSessions`,
 `20261009145828_AddMabroukKnowledgeStudio`, `20261009150000_AddAiConversationState`.
 
-## 4. What the local (previously uncommitted) work contains - VERIFIED by diff review
+## 4. What was included in the remote checkpoint - VERIFIED by source review
 
 Backend source:
 
@@ -97,17 +97,22 @@ learning-loop (incl. prep) and PostgreSQL integration tests
 (`MabroukStudioPgShould`, runs only when `WESAL_TEST_PG` is set, otherwise
 reports "skipped" - a skipped PG test is **not** a pass).
 
-Frontend: Playwright suite (`Frontend/e2e`, 6 spec files / 19 tests per the
-earlier handoff - UNVERIFIED count) and `playwright.config.ts`;
+Frontend: Playwright suite (`Frontend/e2e`, 6 spec files / 19 tests, verified
+green in the Phase B run) and `playwright.config.ts`;
 `@playwright/test` added to devDependencies.
 
-**Open item:** `Frontend/package-lock.json` was regenerated with a different npm
-(11.x on Windows). Top-level `@emnapi/runtime` / `@emnapi/core` entries disappeared
-and many packages gained `"peer": true`. This may break `npm ci` on Linux CI /
-Vercel. Must be validated (clean `npm ci` + CI) and, if needed, rebuilt from the
-`main` lockfile with only the Playwright addition.
+**Resolved in Phase A:** the lockfile install concern was fixed and validated
+with the repository's exact `npm ci --legacy-peer-deps` command. GitHub CI on
+remote checkpoint `15ab156` passed both backend and frontend jobs, including
+Vercel preview. Current Phase B validation is recorded in section 10.
 
-## 5. E2E status - UNVERIFIED
+## 5. E2E status
+
+**Current status (2026-10-12): PASS.** A stable run completed all 19 Playwright
+tests with 19 passed, 0 failed, 0 skipped, and 0 did-not-run. The strict stack
+runner recorded its readiness/stability checks and controlled shutdown. The
+earlier invalid connection-refused runs and the prior partial failures below
+are historical evidence only; they were superseded by the passing full run.
 
 The earlier "0/19" figure came from runs that were **invalid** (backend/frontend
 processes were killed by foreground tool timeouts, producing
@@ -154,12 +159,13 @@ Docker database, are removed from the working tree here, and remain only in that
 one commit's history (history is not rewritten; no force push). If those values
 were ever reused anywhere real, rotate them.
 
-## 8. Release gate for PR #31 (all required, none claimed yet)
+## 8. Release gate for PR #31
 
-Clean intended `git status`; preservation baseline PASS; backend full suite PASS;
-PG integration PASS (not skipped); frontend `npm ci` + lint + build PASS;
-Playwright 19/19 PASS with none skipped; scoped secret scan PASS; no committed
-credentials; no lost original knowledge; CI green on exact HEAD.
+The Phase B evidence recorded in section 10 establishes the local release gates.
+The intended source changes and handoff document are not yet committed or
+pushed, so CI on that new candidate HEAD remains pending. The current remote
+checkpoint `15ab156` has green CI. The historical-credential finding in section
+7 remains visible and was not removed by rewriting history.
 
 ## 9. Do not
 
@@ -167,3 +173,62 @@ credentials; no lost original knowledge; CI green on exact HEAD.
 - Do not merge PR #31 or mark it ready before the gate above is green.
 - Do not force push, reset, rebase, or discard untracked files.
 - Do not delete built-in or dynamic knowledge during any smoke test.
+
+## 10. Phase B validation evidence - 2026-10-12
+
+All commands were run in the authoritative checkout `D:\Wesal-Knowledge-Studio`
+on `feat/mabrouk-knowledge-studio`, initially at `15ab15622941b8eb91fba64839abb86f34e48cc0`.
+The remote PR #31 was still OPEN and DRAFT at that checkpoint. Local intended
+changes are not yet included in that remote SHA.
+
+### Source changes under validation
+
+- Conflict checking now excludes the article being edited, so an unchanged
+  saved article does not conflict with itself.
+- Wedding-consultant aliases route to the event-planner page, and capability
+  claims that are unavailable stay truthful as Coming Soon instead of being
+  presented as current service or recorded as knowledge gaps.
+- Learning-loop and navigation regressions cover those outcomes. Playwright
+  waits for the actual assistant response, React form readiness, API completion,
+  and language persistence instead of racing delayed UI state.
+
+### Backend
+
+- `dotnet restore Backend/Wesal.slnx`: passed; dependencies up to date.
+- `dotnet build Wesal.slnx -c Release --no-restore`: passed, 0 warnings and
+  0 errors.
+- Full `Wesal.Tests` run with PostgreSQL configured: **2,583 passed, 0 failed,
+  0 skipped**.
+- Separately named gates: Knowledge Studio **16/16**; Learning Loop **12/12**;
+  preservation/preparation **22/22** (including the 26-file, 20-verified,
+  five-category baseline and additive development-team article); V3 conversation
+  intelligence **18/18**; knowledge coverage **8/8** (including the 13-prompt
+  assistant-router corpus); legacy knowledge-recovery corpus **1/1**; real-user
+  regressions **1/1**; PostgreSQL integration **9/9**, with `WESAL_TEST_PG`
+  configured. None of these runs skipped tests.
+- The focused edited behavior suite also passed **63/63**.
+
+### Frontend and browser
+
+- `npm ci --legacy-peer-deps`: passed (the repository CI workflow uses this exact
+  command); 394 packages installed. `npm run lint` passed, and
+  `npm exec -- tsc --noEmit` passed.
+- Production `npm run build`: passed, including production environment
+  verification, TypeScript, and all 44 static pages.
+- Contract checks passed: API base URL **25**, assistant **23**, Mabrouk
+  knowledge **7**, and assistant storage sanitization.
+- `npm audit --omit=dev`: **0 vulnerabilities**. The full dependency tree audit
+  reported 5 high-severity advisories in development dependencies.
+- Stable Playwright run: **19 passed, 0 failed, 0 skipped, 0 did-not-run**.
+
+### Secret scan and release boundary
+
+- Scanned 1,352 tracked and non-ignored files for exact local E2E/JWT/PostgreSQL
+  runtime values plus high-confidence credential patterns. **No current-tree
+  matches.** `.local-e2e/` remains ignored and local; no runtime values were
+  added to this handoff.
+- This scan covers the current tree. It does not erase or reclassify the
+  previously documented throwaway local test values in historical commit
+  `5e2305c`; history was not rewritten.
+- Not yet done: commit, push, CI on the candidate SHA, PR ready/merge, deployment
+  verification, and production smoke. Do not start V4 until those are complete.

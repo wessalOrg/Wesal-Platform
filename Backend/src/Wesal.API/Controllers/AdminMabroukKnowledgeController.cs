@@ -89,8 +89,10 @@ public sealed class AdminMabroukKnowledgeController : ControllerBase
 
     [HttpPost("knowledge/conflict-check")]
     public Task<ActionResult<AiKnowledgeConflictResult>> ConflictCheck(
-        AiKnowledgeArticleInput input, CancellationToken cancellationToken)
-        => Execute(() => _studio.CheckConflictsAsync(input, null, cancellationToken));
+        AiKnowledgeArticleInput input,
+        [FromQuery] Guid? excludedArticleId,
+        CancellationToken cancellationToken)
+        => Execute(() => _studio.CheckConflictsAsync(input, excludedArticleId, cancellationToken));
 
     [HttpGet("unanswered")]
     public Task<ActionResult<IReadOnlyList<AiKnowledgeGapClusterDto>>> Unanswered(
