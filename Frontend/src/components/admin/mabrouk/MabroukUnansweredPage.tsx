@@ -19,6 +19,8 @@ export default function MabroukUnansweredPage() {
   const [includeClosed, setIncludeClosed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [creatingAnswer, setCreatingAnswer] = useState(false);
+  const [createAnswerError, setCreateAnswerError] = useState(false);
   const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
@@ -74,12 +76,16 @@ export default function MabroukUnansweredPage() {
   async function createAnswer() {
     if (!selected) return;
     setBusy(true);
+    setCreatingAnswer(true);
+    setCreateAnswerError(false);
     try {
       const article = await adminMabroukService.createArticleFromGap(selected.id);
       router.push(ADMIN_MABROUK_PATH + "/knowledge?edit=" + encodeURIComponent(article.id));
     } catch {
       setError(true);
+      setCreateAnswerError(true);
     } finally {
+      setCreatingAnswer(false);
       setBusy(false);
     }
   }
@@ -205,6 +211,8 @@ export default function MabroukUnansweredPage() {
               linkArticleId={linkArticleId}
               setLinkArticleId={setLinkArticleId}
               busy={busy}
+              creatingAnswer={creatingAnswer}
+              createAnswerError={createAnswerError}
               onCreateAnswer={() => void createAnswer()}
               onReview={() => void refreshSelected(() => adminMabroukService.reviewGap(selected.id))}
               onIgnore={() => {
@@ -225,13 +233,15 @@ export default function MabroukUnansweredPage() {
 }
 
 function GapDetail({
-  gap, articles, linkArticleId, setLinkArticleId, busy, onCreateAnswer, onReview, onIgnore, onLink, t,
+  gap, articles, linkArticleId, setLinkArticleId, busy, creatingAnswer, createAnswerError, onCreateAnswer, onReview, onIgnore, onLink, t,
 }: {
   gap: KnowledgeGap;
   articles: KnowledgeArticle[];
   linkArticleId: string;
   setLinkArticleId: (value: string) => void;
   busy: boolean;
+  creatingAnswer: boolean;
+  createAnswerError: boolean;
   onCreateAnswer: () => void;
   onReview: () => void;
   onIgnore: () => void;
@@ -258,7 +268,14 @@ function GapDetail({
       </ul>
       {gap.status === "New" || gap.status === "Reviewed" ? (
         <div className="mt-5 space-y-2">
-          <button type="button" className="btn-primary w-full" disabled={busy} onClick={onCreateAnswer}>{t("admin.mabrouk.gaps.createAnswer")}</button>
+          <button type="button" className="btn-primary w-full" disabled={busy} onClick={onCreateAnswer} aria-busy={creatingAnswer}>
+            {creatingAnswer ? t("admin.mabrouk.gaps.creatingAnswer") : t("admin.mabrouk.gaps.createAnswer")}
+          </button>
+          {createAnswerError ? (
+            <p className="rounded-xl bg-[var(--wesal-pink-soft)] px-3 py-2 text-sm text-[var(--wesal-maroon-dark)]" role="alert" data-testid="mabrouk-create-answer-error">
+              {t("admin.mabrouk.gaps.createAnswerFailure")}
+            </p>
+          ) : null}
           <div className="flex gap-2">
             <select className="min-h-10 min-w-0 flex-1 rounded-xl border border-[var(--wesal-border)] bg-white px-2 text-xs"
               value={linkArticleId} onChange={(event) => setLinkArticleId(event.target.value)}>

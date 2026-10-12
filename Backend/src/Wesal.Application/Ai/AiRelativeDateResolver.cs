@@ -30,7 +30,11 @@ public static class AiRelativeDateResolver
 
     private static readonly (DayOfWeek Day, Regex Pattern)[] Weekdays =
     [
-        (DayOfWeek.Sunday, AiText.AnyWord(["الاحد", "احد", "sunday", "sun"])),
+        // Keep the bare "احد" form, but do not treat "واحد" (one) as "احد"
+        // through the optional Arabic conjunction prefix handled by AnyWord.
+        (DayOfWeek.Sunday, new Regex(
+            $"(?:{AiText.WordWithArabicPrefixes("الاحد")}|(?<![\\p{{L}}\\p{{N}}])احد(?![\\p{{L}}\\p{{N}}])|{AiText.WordWithArabicPrefixes("sunday")}|{AiText.WordWithArabicPrefixes("sun")})",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant)),
         (DayOfWeek.Monday, AiText.AnyWord(["الاثنين", "اثنين", "الاتنين", "monday", "mon"])),
         (DayOfWeek.Tuesday, AiText.AnyWord(["الثلاثاء", "ثلاثاء", "التلات", "الثلاثا", "tuesday", "tue"])),
         (DayOfWeek.Wednesday, AiText.AnyWord(["الاربعاء", "اربعاء", "الاربعا", "wednesday", "wed"])),

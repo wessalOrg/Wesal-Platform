@@ -32,7 +32,10 @@ public sealed class HallRecommendationMatcher : IHallRecommendationMatcher
                 Date = criteria.Date,
                 MinimumCapacity = criteria.Capacity,
                 MaximumPrice = criteria.MaximumPrice,
+                MinimumPrice = criteria.MinimumPrice,
+                AroundPrice = criteria.AroundPrice,
                 SortByPrice = criteria.SortByPrice,
+                SortPreference = criteria.SortPreference,
                 PageNumber = 1,
                 PageSize = 50
             },

@@ -49,7 +49,9 @@ public interface IHallRepository
         int take,
         CancellationToken cancellationToken = default)
     {
-        if (request.MinimumCapacity.HasValue || request.MaximumPrice.HasValue || request.SortByPrice)
+        if (request.MinimumCapacity.HasValue || request.MaximumPrice.HasValue || request.MinimumPrice.HasValue
+            || request.AroundPrice.HasValue || request.SortByPrice
+            || request.SortPreference != AiPriceSortPreference.Relevance)
             throw new NotSupportedException("This hall repository does not support the requested capacity or price filtering.");
         return SearchApprovedHallsAsync(request.Name, request.Region, request.Area, request.DetailedAddress,
             request.Date, request.StartTime, skip, take, cancellationToken);
@@ -59,7 +61,9 @@ public interface IHallRepository
         HallSearchRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.MinimumCapacity.HasValue || request.MaximumPrice.HasValue || request.SortByPrice)
+        if (request.MinimumCapacity.HasValue || request.MaximumPrice.HasValue || request.MinimumPrice.HasValue
+            || request.AroundPrice.HasValue || request.SortByPrice
+            || request.SortPreference != AiPriceSortPreference.Relevance)
             throw new NotSupportedException("This hall repository does not support the requested capacity or price filtering.");
         return SearchApprovedHallsCountAsync(request.Name, request.Region, request.Area, request.DetailedAddress,
             request.Date, request.StartTime, cancellationToken);

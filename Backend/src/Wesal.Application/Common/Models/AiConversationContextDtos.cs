@@ -18,7 +18,8 @@ public sealed record AiConversationContext(
     AiAssistantIntentDto? LastIntent,
     IReadOnlyList<AiHallRef>? LastHalls = null,
     AiHallRef? LastHall = null,
-    AiConversationState? State = null);
+    AiConversationState? State = null,
+    AiSemanticPlan? CurrentSemanticPlan = null);
 
 /// <summary>Bounded, structured task state used for deterministic multi-turn resolution.</summary>
 public sealed record AiConversationState(
@@ -37,7 +38,8 @@ public sealed record AiConversationState(
     DateOnly? ResolvedDate = null,
     string? LastNavigationTarget = null,
     string? LastQuestionType = null,
-    string? ConversationStage = null);
+    string? ConversationStage = null,
+    AiSemanticPlan? LastSemanticPlan = null);
 
 /// <summary>A hall the conversation has shown or focused (id + display name only).</summary>
 public sealed record AiHallRef(Guid HallId, string HallName);

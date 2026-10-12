@@ -35,7 +35,8 @@ public sealed partial class AiIntentFallbackClassifier
             || !string.IsNullOrWhiteSpace(criteria.Area)
             || criteria.Date.HasValue
             || criteria.Capacity.HasValue;
-        var hasPriceCriteria = criteria.MaximumPrice.HasValue || criteria.SortByPrice;
+        var hasPriceCriteria = criteria.MaximumPrice.HasValue || criteria.MinimumPrice.HasValue
+            || criteria.AroundPrice.HasValue || criteria.SortByPrice;
         var hasHallSearchVocabulary = ContainsHallSearchVocabulary(matchText);
         var hasCriteria = hasLocationOrEventCriteria || (hasPriceCriteria && hasHallSearchVocabulary);
         var isHowToQuestion = matchText.StartsWith("كيف ", StringComparison.Ordinal)
@@ -60,7 +61,10 @@ public sealed partial class AiIntentFallbackClassifier
                 criteria.Capacity,
                 null,
                 criteria.MaximumPrice,
-                criteria.SortByPrice);
+                criteria.SortByPrice,
+                criteria.MinimumPrice,
+                criteria.AroundPrice,
+                criteria.SortPreference);
         }
 
         // Asking "how" (or expressing intent) must stay informational; only a direct

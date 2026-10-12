@@ -42,7 +42,7 @@ internal sealed class MabroukHarness
         Gemini.Available = geminiAvailable;
 
         Details.Add(Hall(NakheelId, "قاعة النخيل", "غزة", "حي الرمال", 400, 7000m, ["تكييف", "موقف سيارات"]));
-        Details.Add(Hall(OrchidId, "قاعة الأوركيد", "غزة", "النصر", 250, 5000m, []));
+        Details.Add(Hall(OrchidId, "قاعة الأوركيد", "غزة", "النصر", 250, 5000m, [], "+970599000222"));
 
         Search.Items =
         [
@@ -114,7 +114,7 @@ internal sealed class MabroukHarness
             new AiRequestContext(page, entity));
     }
 
-    public static HallDetailsDto Hall(Guid id, string name, string region, string address, int capacity, decimal? price, IReadOnlyList<string> features)
+    public static HallDetailsDto Hall(Guid id, string name, string region, string address, int capacity, decimal? price, IReadOnlyList<string> features, string? contactPhone = null)
         => new()
         {
             HallId = id,
@@ -125,6 +125,7 @@ internal sealed class MabroukHarness
             Capacity = capacity,
             Price = price,
             ShowPrice = price is not null,
+            ContactPhone = contactPhone,
             Features = features,
             Status = HallStatus.Approved,
             Photos = [new HallImageDto { Id = Guid.NewGuid(), Url = "/uploads/a.png", DisplayOrder = 1 }]

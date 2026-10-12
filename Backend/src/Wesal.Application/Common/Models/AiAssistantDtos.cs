@@ -59,7 +59,11 @@ public sealed record AiAssistantIntentDto(
     int? Capacity,
     string? HallName,
     decimal? MaximumPrice = null,
-    bool SortByPrice = false);
+    bool SortByPrice = false,
+    decimal? MinimumPrice = null,
+    decimal? AroundPrice = null,
+    AiPriceSortPreference SortPreference = AiPriceSortPreference.Relevance,
+    [property: System.Text.Json.Serialization.JsonIgnore] AiSemanticPlan? SemanticPlan = null);
 
 public enum AiIntentType
 {
@@ -112,4 +116,5 @@ public sealed record AiAssistantResponse(
     HallDetailsDto? HallDetails,
     AiAssistantAvailabilityDayDto? Availability,
     AiAssistantIntentDto? Intent,
-    IReadOnlyList<AiAssistantActionDto>? Actions = null);
+    IReadOnlyList<AiAssistantActionDto>? Actions = null,
+    [property: System.Text.Json.Serialization.JsonIgnore] AiSemanticPlan? SemanticPlan = null);

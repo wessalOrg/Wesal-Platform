@@ -14,5 +14,22 @@
   { "id": "RU-CMP-02", "reportedBy": "friend-probe", "notes": "Compound booking flow.", "prompt": "بدي أحجز، كيف وبعدين شو بصير؟", "expect": { "kind": "Answer" } },
   { "id": "RU-CMP-03", "reportedBy": "friend-probe", "notes": "Compound collection + prices.", "prompt": "شو القاعات الموجودة وقديش أسعارهم؟", "expect": { "kind": "Halls" } },
   { "id": "RU-CMP-04", "reportedBy": "friend-probe", "notes": "Compound services + photographers.", "prompt": "شو بتقدموا وهل عندكم مصورين؟", "expect": { "kind": "Answer", "contains": ["قيد التجهيز"] } },
-  { "id": "RU-CMP-05", "reportedBy": "friend-probe", "notes": "Compound support + hours.", "prompt": "كيف أتواصل مع وصال ومتى دوامكم؟", "expect": { "kind": "Answer" } }
+  { "id": "RU-CMP-05", "reportedBy": "friend-probe", "notes": "Compound support + hours.", "prompt": "كيف أتواصل مع وصال ومتى دوامكم؟", "expect": { "kind": "Answer" } },
+  { "id": "RU-V4-01", "reportedBy": "mabrouk-v4", "notes": "Capacity cue remains distinct from price.", "prompt": "بدي صالة ل100 شخص", "expect": { "kind": "Halls", "intent": "SearchHalls" } },
+  { "id": "RU-V4-02", "reportedBy": "mabrouk-v4", "notes": "Cheapest is selected from the current shown result set.", "turns": ["بدي صالة ل100 شخص"], "prompt": "طيب شو ارخص وحدة", "expect": { "kind": "HallDetails", "intent": "GetHallDetails" } },
+  { "id": "RU-V4-03", "reportedBy": "mabrouk-v4", "notes": "Price follow-up stays on the selected result.", "turns": ["بدي صالة ل100 شخص", "ارخص وحدة"], "prompt": "شو السعر", "expect": { "kind": "HallDetails", "contains": ["5000"] } },
+  { "id": "RU-V4-04", "reportedBy": "mabrouk-v4", "notes": "Cheapest wording with an explicit price term.", "turns": ["بدي صالة ل100 شخص"], "prompt": "ارخص وحدة بالسعر", "expect": { "kind": "HallDetails", "contains": ["5000"] } },
+  { "id": "RU-V4-05", "reportedBy": "mabrouk-v4", "notes": "Explicit currency makes the amount a budget, not capacity.", "prompt": "بدي عقد 1500شيكل", "expect": { "kind": "Answer" } },
+  { "id": "RU-V4-06", "reportedBy": "mabrouk-v4", "notes": "A hall budget without a space before currency is parsed.", "prompt": "بدي صالة ب1500شيكل", "expect": { "kind": "Answer" } },
+  { "id": "RU-V4-07", "reportedBy": "mabrouk-v4", "notes": "Currency makes a standalone amount an explicit price.", "prompt": "1500شيكل", "expect": { "kind": "Answer" } },
+  { "id": "RU-V4-08", "reportedBy": "mabrouk-v4", "notes": "Region and lowest-price intent work together.", "prompt": "بدي صالة رخيصة بغزة", "expect": { "kind": "Halls", "intent": "SearchHalls" } },
+  { "id": "RU-V4-09", "reportedBy": "mabrouk-v4", "notes": "Gazan capacity wording is parsed while preserving region.", "prompt": "بغزة عندي 150 واحد", "expect": { "kind": "Halls", "intent": "SearchHalls" } },
+  { "id": "RU-V4-10", "reportedBy": "mabrouk-v4", "notes": "A catalog neighborhood stays an area filter.", "prompt": "حي الرمال", "expect": { "kind": "Halls", "intent": "SearchHalls" } },
+  { "id": "RU-V4-11", "reportedBy": "mabrouk-v4", "notes": "Owner contact resolves only against the active hall.", "turns": ["بدي صالة ل300 شخص", "الأولى"], "prompt": "بدي رقم صاحبها", "expect": { "kind": "Answer", "notContains": ["+970567581412"] } },
+  { "id": "RU-V4-12", "reportedBy": "mabrouk-v4", "notes": "Compound wedding, low-price, and positive wording still searches halls.", "prompt": "بدي اعمل عرسي في صالة رخيصة وحلوة", "expect": { "kind": "Halls", "intent": "SearchHalls" } },
+  { "id": "RU-V4-13", "reportedBy": "mabrouk-v4", "notes": "Area, capacity, and target price are preserved together.", "prompt": "بدي صالة بالرمال بتسع 150 وبحدود 1500", "expect": { "kind": "Halls", "intent": "SearchHalls" } },
+  { "id": "RU-V4-14", "reportedBy": "mabrouk-v4", "notes": "A month reply resumes the pending availability question for the same hall.", "turns": ["بدي صالة ل300 شخص", "الأولى", "متى فاضية؟"], "prompt": "الشهر الجاي", "expect": { "kind": "Answer" } },
+  { "id": "RU-V4-15", "reportedBy": "mabrouk-v4", "notes": "An ordinal price follow-up resolves the previous result.", "turns": ["بدي صالة ل100 شخص"], "prompt": "الثانية بكم؟", "expect": { "kind": "HallDetails", "contains": ["5000"] } },
+  { "id": "RU-V4-16", "reportedBy": "mabrouk-v4", "notes": "The planner compares exactly the explicitly selected results.", "turns": ["بدي صالة ل100 شخص"], "prompt": "قارن الأولى والثانية", "expect": { "kind": "Answer", "contains": ["قاعة النخيل", "قاعة الأوركيد"] } },
+  { "id": "RU-V4-17", "reportedBy": "mabrouk-v4", "notes": "Another result stays in the last result set.", "turns": ["بدي صالة ل100 شخص"], "prompt": "غيرها", "expect": { "kind": "HallDetails" } }
 ]

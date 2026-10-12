@@ -105,7 +105,7 @@ public sealed class MabroukLegacyParityShould
     private static AiConversationState AdvanceLikeController(AiConversationContext context, string message, AiAssistantResponse response)
     {
         if (response.Intent?.Intent == AiIntentType.SearchHalls && response.Halls.Count > 0)
-            return AiConversationStateResolver.WithCollectionResults(context.State, AiResponseMemory.ShownHalls(response));
+            return AiConversationStateResolver.WithCollectionResults(context.State, AiResponseMemory.ShownHalls(response), response.SemanticPlan);
         if (AiReferenceResolver.TryGetOrdinal(message) is { } ordinal)
         {
             IReadOnlyList<Guid> ids = context.LastHalls is { Count: > 0 } halls
@@ -113,10 +113,10 @@ public sealed class MabroukLegacyParityShould
                 : context.State?.ShownHallIds ?? (IReadOnlyList<Guid>)Array.Empty<Guid>();
             if (ids.Count > (ordinal < 0 ? ids.Count - 1 : ordinal)
                 && AiResponseMemory.FocusedHall(response) is { } ordinalHall)
-                return AiConversationStateResolver.AdvanceSelection(context.State, ordinalHall, ordinal < 0 ? ids.Count - 1 : ordinal);
+                return AiConversationStateResolver.AdvanceSelection(context.State, ordinalHall, ordinal < 0 ? ids.Count - 1 : ordinal, response.SemanticPlan);
         }
         if (AiConversationStateResolver.IsNextResult(message) && AiResponseMemory.FocusedHall(response) is { } nextHall)
-            return AiConversationStateResolver.AdvanceSelection(context.State, nextHall, (context.State?.SelectedResultIndex ?? -1) + 1);
+            return AiConversationStateResolver.AdvanceSelection(context.State, nextHall, (context.State?.SelectedResultIndex ?? -1) + 1, response.SemanticPlan);
         var conversationHall = context.LastHall ?? (context.LastHalls is { Count: 1 } single ? single[0] : null);
         return AiConversationStateResolver.Advance(context.State, message, response, conversationHall);
     }

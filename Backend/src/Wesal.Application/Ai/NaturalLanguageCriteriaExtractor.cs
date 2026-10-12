@@ -22,6 +22,13 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
     }
 
     public ExtractedCriteriaDto Extract(string message)
+        => Extract(message, today: null, allowBareCapacity: false);
+
+    /// <summary>
+    /// Parses one turn using the caller's trusted local date. A bare number can only
+    /// be accepted as capacity while the conversation is explicitly awaiting capacity.
+    /// </summary>
+    public ExtractedCriteriaDto Extract(string message, DateOnly? today, bool allowBareCapacity)
     {
         if (string.IsNullOrWhiteSpace(message))
             return new ExtractedCriteriaDto(null, null, null, null);
@@ -32,12 +39,13 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         var (catalogArea, catalogRegion) = ExtractCatalogArea(normalized);
         var region = catalogRegion ?? ExtractRegion(normalized);
         var area = catalogArea ?? ExtractArea(normalized, region);
-        var date = ExtractDate(numericNormalized);
-        var capacity = ExtractCapacity(numericNormalized);
-        var maximumPrice = ExtractMaximumPrice(numericNormalized);
-        var sortByPrice = maximumPrice.HasValue || IsCheapestPreference(normalized);
+        var date = ExtractDate(numericNormalized, today ?? DateOnly.FromDateTime(DateTime.UtcNow));
+        var capacity = ExtractCapacity(numericNormalized, allowBareCapacity);
+        var (priceBudget, sortPreference) = AiPriceBudgetExtractor.Extract(normalized);
+        var sortByPrice = sortPreference is AiPriceSortPreference.LowestPrice or AiPriceSortPreference.HighestPrice;
 
-        return new ExtractedCriteriaDto(region, area, date, capacity, maximumPrice, sortByPrice);
+        return new ExtractedCriteriaDto(region, area, date, capacity, priceBudget.MaximumPrice, sortByPrice,
+            priceBudget.MinimumPrice, priceBudget.AroundPrice, sortPreference);
     }
 
     private static (string? Area, string? Region) ExtractCatalogArea(string message)
@@ -80,6 +88,9 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
             if (string.IsNullOrWhiteSpace(area))
                 return null;
 
+            if (IsNonAreaToken(area))
+                return null;
+
             // Exact match (case-insensitive)
             if (string.Equals(area, region, StringComparison.OrdinalIgnoreCase))
                 return null;
@@ -93,22 +104,37 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         return null;
     }
 
+    private static bool IsNonAreaToken(string value)
+    {
+        var folded = AiText.Normalize(value);
+        return folded is "اليوم" or "بكره" or "غدا" or "بعد" or "الشهر" or "الاسبوع"
+            or "يناير" or "فبراير" or "مارس" or "ابريل" or "مايو" or "يونيو" or "يوليو"
+            or "اغسطس" or "سبتمبر" or "اكتوبر" or "نوفمبر" or "ديسمبر"
+            or "january" or "february" or "march" or "april" or "may" or "june" or "july"
+            or "august" or "september" or "october" or "november" or "december"
+            or "the"
+            or "صاله" or "قاعه" or "عرس" or "عرسي" or "زفاف" or "رخيص" or "رخيصه"
+            or "حلو" or "حلوه" or "حفله" or "مناسبه" or "حي" or "منطقه" or "شارع";
+    }
+
     private static bool IsSameRegion(string area, string? region)
     {
         if (string.IsNullOrWhiteSpace(region))
             return false;
 
+        var foldedArea = AiText.Normalize(area);
         return region.ToLowerInvariant() switch
         {
-            "gaza" => area is "غزة" or "مدينة غزة",
-            "northgaza" => area.Contains("شمال غزة") || area.Contains("شمال"),
-            "southgaza" => area.Contains("جنوب غزة") || area.Contains("جنوب"),
-            "middlearea" => area.Contains("الوسطى") || area.Contains("الوسطي") || area.Contains("وسط غزة"),
+            "gaza" => foldedArea is "غزه" or "مدينه غزه" or "gaza" or "city of gaza",
+            "northgaza" => foldedArea.Contains("شمال") || foldedArea is "north" or "north gaza" or "northgaza",
+            "southgaza" => foldedArea.Contains("جنوب") || foldedArea is "south" or "south gaza" or "southgaza",
+            "middlearea" => foldedArea.Contains("الوسطي") || foldedArea.Contains("وسط غزة")
+                || foldedArea is "middle" or "middle area" or "middlearea",
             _ => false
         };
     }
 
-    private static DateOnly? ExtractDate(string message)
+    private static DateOnly? ExtractDate(string message, DateOnly today)
     {
         // Try ISO date yyyy-MM-dd
         var isoMatch = IsoDateRegex().Match(message);
@@ -137,12 +163,12 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
             {
                 if (TryParseMonth(monthName, out var month))
                 {
-                    var year = DateTime.UtcNow.Year;
+                    var year = today.Year;
                     // If date already passed this year, assume next year
                     try
                     {
                         var candidate = new DateOnly(year, month, day);
-                        if (candidate < DateOnly.FromDateTime(DateTime.UtcNow))
+                        if (candidate < today)
                             candidate = candidate.AddYears(1);
                         return candidate;
                     }
@@ -161,11 +187,11 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
             {
                 if (TryParseMonth(monthName, out var month))
                 {
-                    var year = DateTime.UtcNow.Year;
+                    var year = today.Year;
                     try
                     {
                         var candidate = new DateOnly(year, month, day);
-                        if (candidate < DateOnly.FromDateTime(DateTime.UtcNow))
+                        if (candidate < today)
                             candidate = candidate.AddYears(1);
                         return candidate;
                     }
@@ -177,7 +203,7 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         return null;
     }
 
-    private static int? ExtractCapacity(string message)
+    private static int? ExtractCapacity(string message, bool allowBareCapacity)
     {
         var match = CapacityRegex().Match(message);
         if (match.Success)
@@ -186,31 +212,15 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
             if (int.TryParse(val, out var cap) && cap > 0 && cap < 10000)
                 return cap;
         }
+
+        if (allowBareCapacity && BareCapacityRegex().Match(message) is { Success: true } bare
+            && int.TryParse(bare.Groups["capacity"].Value, out var bareCapacity)
+            && bareCapacity is > 0 and < 10000)
+        {
+            return bareCapacity;
+        }
+
         return null;
-    }
-
-    private static decimal? ExtractMaximumPrice(string message)
-    {
-        var currency = PriceWithCurrencyRegex().Match(message);
-        var amount = currency.Success
-            ? currency.Groups["before"].Success ? currency.Groups["before"].Value : currency.Groups["after"].Value
-            : BudgetAmountRegex().Match(message) is { Success: true } budget ? budget.Groups["amount"].Value : null;
-
-        return decimal.TryParse(amount, System.Globalization.NumberStyles.Number,
-            System.Globalization.CultureInfo.InvariantCulture, out var price) && price > 0
-            ? price
-            : null;
-    }
-
-    private static bool IsCheapestPreference(string message)
-    {
-        var folded = AiText.Normalize(message);
-        return folded.Contains("ارخص", StringComparison.Ordinal)
-            || folded.Contains("اقل سعر", StringComparison.Ordinal)
-            || folded.Contains("رخيص", StringComparison.Ordinal)
-            || folded.Contains("cheapest", StringComparison.OrdinalIgnoreCase)
-            || folded.Contains("lowest price", StringComparison.OrdinalIgnoreCase)
-            || folded.Contains("cheap", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeNumerals(string message)
@@ -267,12 +277,9 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
     [GeneratedRegex(@"\b(?<day>\d{1,2})\s+(?<month>january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\b", RegexOptions.IgnoreCase)]
     private static partial Regex DayMonthRegex();
 
-    [GeneratedRegex(@"(?:capacity\s*[:\-]?\s*|سعة\s*[:\-]?\s*|لكذا|بـ?سعة\s*|for\s+)(\d{2,4})\b|(\d{2,4})\s*(?:people|persons|person|guest|شخص|أشخاص|ناس|فرد|نفر|ضيف|واحد|واحدة)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:capacity\s*[:\-]?\s*|سعة\s*[:\-]?\s*|لكذا|بـ?سعة\s*|(?:بتسع|بتتسع|تتسع)\s*|for\s+)(\d{2,4})\b|(\d{2,4})\s*(?:people|persons|person|guest|شخص|أشخاص|ناس|فرد|نفر|ضيف|واحد|واحدة)", RegexOptions.IgnoreCase)]
     private static partial Regex CapacityRegex();
 
-    [GeneratedRegex(@"(?:₪|ILS|NIS)\s*(?<before>\d{2,7})|(?<after>\d{2,7})\s*(?:₪|شيكل(?:ات)?|شواكل|شيقل(?:ات)?|ILS|NIS)", RegexOptions.IgnoreCase)]
-    private static partial Regex PriceWithCurrencyRegex();
-
-    [GeneratedRegex(@"(?:ميزاني[هة]|بميزاني[هة]|بسعر|سعرها|سعر|أقل\s+من|اقل\s+من|تحت|لحد|حد\s+أقصى|حد\s+اقصى|under|below|budget(?:\s+of)?|price(?:\s+of)?)\s*(?:[:=]\s*)?(?<amount>\d{2,7})", RegexOptions.IgnoreCase)]
-    private static partial Regex BudgetAmountRegex();
+    [GeneratedRegex(@"^\s*(?<capacity>\d{1,4})\s*$", RegexOptions.CultureInvariant)]
+    private static partial Regex BareCapacityRegex();
 }
