@@ -57,7 +57,9 @@ public sealed record AiAssistantIntentDto(
     string? Area,
     DateOnly? Date,
     int? Capacity,
-    string? HallName);
+    string? HallName,
+    decimal? MaximumPrice = null,
+    bool SortByPrice = false);
 
 public enum AiIntentType
 {

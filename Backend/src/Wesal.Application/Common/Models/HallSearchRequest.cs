@@ -25,6 +25,12 @@ public class HallSearchRequest
     /// <summary>Optional lower bound for venue guest capacity.</summary>
     public int? MinimumCapacity { get; init; }
 
+    /// <summary>Optional maximum published hall price.</summary>
+    public decimal? MaximumPrice { get; init; }
+
+    /// <summary>Order halls with a published price from lowest to highest.</summary>
+    public bool SortByPrice { get; init; }
+
     public int PageNumber { get; init; } = 1;
 
     public int PageSize { get; init; } = 12;

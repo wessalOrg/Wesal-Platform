@@ -165,6 +165,18 @@ public sealed class AiAssistantService : IAiAssistantService
         CancellationToken cancellationToken)
     {
         var policyMs = 0L;
+
+        var parsedCriteria = CriteriaExtractor.Extract(text);
+        var previousHallResults = GetConversationHallIds(context);
+        if (parsedCriteria.SortByPrice
+            && !parsedCriteria.MaximumPrice.HasValue
+            && IsHallSearchContext(context)
+            && previousHallResults.Count > 0)
+        {
+            var cheapest = await HandleCheapestShownHallAsync(previousHallResults, language, cancellationToken);
+            return new AssistantRouteResult(cheapest, "cheapest_shown_hall", policyMs, 0, 0, null);
+        }
+
         // "شو بتقدموا غير القاعات؟" asks about services, not for a hall
         // listing, even though it names halls. Only the explicit exclusion
         // flips it; mixed listing+services questions still list.
@@ -238,6 +250,26 @@ public sealed class AiAssistantService : IAiAssistantService
         if (gate is not null)
         {
             return new AssistantRouteResult(gate, "policy", policyMs, 0, 0, null);
+        }
+
+        var isBareArea = IsBareAreaRequest(text, parsedCriteria.Area);
+        var priorPriceSearch = context?.LastIntent is
+            { Intent: AiIntentType.SearchHalls, MaximumPrice: not null } or
+            { Intent: AiIntentType.SearchHalls, SortByPrice: true };
+        if (parsedCriteria.MaximumPrice.HasValue || parsedCriteria.SortByPrice || isBareArea || priorPriceSearch)
+        {
+            var deterministicIntent = await _intentExtractor.ExtractWithoutModelAsync(text, language, cancellationToken, context);
+            deterministicIntent = MergeWithContext(deterministicIntent, context);
+            if (deterministicIntent.Intent == AiIntentType.SearchHalls
+                && (parsedCriteria.MaximumPrice.HasValue
+                    || parsedCriteria.SortByPrice
+                    || deterministicIntent.MaximumPrice.HasValue
+                    || deterministicIntent.SortByPrice
+                    || isBareArea))
+            {
+                var response = await HandleSearchHallsAsync(text, language, deterministicIntent, cancellationToken);
+                return new AssistantRouteResult(response, isBareArea ? "catalog_area_search" : "price_aware_hall_search", policyMs, 0, 0, null);
+            }
         }
 
         // 2) The hall in context answers its own data questions from live data.
@@ -692,11 +724,15 @@ public sealed class AiAssistantService : IAiAssistantService
         var area = intent.Area ?? prior.Area;
         var date = intent.Date ?? prior.Date;
         var capacity = intent.Capacity ?? prior.Capacity;
+        var maximumPrice = intent.MaximumPrice ?? prior.MaximumPrice;
+        var sortByPrice = intent.SortByPrice || prior.SortByPrice;
 
         if (region == intent.Region
             && area == intent.Area
             && date == intent.Date
-            && capacity == intent.Capacity)
+            && capacity == intent.Capacity
+            && maximumPrice == intent.MaximumPrice
+            && sortByPrice == intent.SortByPrice)
         {
             return intent;
         }
@@ -707,7 +743,9 @@ public sealed class AiAssistantService : IAiAssistantService
             area,
             date,
             capacity,
-            intent.HallName);
+            intent.HallName,
+            maximumPrice,
+            sortByPrice);
     }
 
     private async Task<AiAssistantResponse> HandleHowToAsync(string text, string language, AiAssistantIntentDto intention, CancellationToken cancellationToken)
@@ -826,12 +864,100 @@ public sealed class AiAssistantService : IAiAssistantService
             extra.Add($"for {capacity} people");
         }
 
+        if (already.Area is null && !string.IsNullOrWhiteSpace(intent.Area))
+        {
+            extra.Add($"in {intent.Area}");
+        }
+
         if (already.Date is null && intent.Date is { } date)
         {
             extra.Add(date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         }
 
+        if (already.MaximumPrice is null && intent.MaximumPrice is { } maximumPrice)
+        {
+            extra.Add("under " + maximumPrice.ToString("0.##", CultureInfo.InvariantCulture) + " NIS");
+        }
+
+        if (!already.SortByPrice && intent.SortByPrice)
+        {
+            extra.Add("cheapest");
+        }
+
         return extra.Count == 0 ? text : $"{text} {string.Join(' ', extra)}";
+    }
+
+    private async Task<AiAssistantResponse> HandleCheapestShownHallAsync(
+        IReadOnlyList<Guid> hallIds,
+        string language,
+        CancellationToken cancellationToken)
+    {
+        var candidates = new List<HallDetailsDto>();
+        foreach (var hallId in hallIds.Take(10))
+        {
+            try
+            {
+                var hall = await _hallDetailsService.GetHallDetailsAsync(hallId, cancellationToken);
+                if (hall.ShowPrice && hall.Price.HasValue)
+                {
+                    candidates.Add(hall);
+                }
+            }
+            catch (NotFoundException)
+            {
+                // A hall can become unavailable after a result was shown. Ignore it
+                // and compare only currently public, re-fetched hall details.
+            }
+        }
+
+        var cheapest = candidates.OrderBy(hall => hall.Price).FirstOrDefault();
+        if (cheapest is null)
+        {
+            var unavailable = language == "en"
+                ? "I can't compare these halls because none has a published price. I can show halls whose owners publish their prices."
+                : "ما بقدر أحدد الأرخص لأن أسعار القاعات في النتائج غير منشورة. بقدر أعرض القاعات اللي أصحابها ناشرين أسعارها.";
+            return Build(language, AiAssistantResponseKind.Answer, unavailable, null);
+        }
+
+        var price = cheapest.Price!.Value.ToString("0.##", CultureInfo.InvariantCulture);
+        var message = language == "en"
+            ? $"The lowest published price among these results is {cheapest.HallName} at {price} ILS."
+            : $"أرخص قاعة من النتائج هي {cheapest.HallName} بسعر {price} شيكل.";
+        var intent = new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, cheapest.HallName);
+        return Build(language, AiAssistantResponseKind.HallDetails, message, intent, hallDetails: cheapest);
+    }
+
+    private static IReadOnlyList<Guid> GetConversationHallIds(AiConversationContext? context)
+    {
+        if (context?.LastHalls is { Count: > 0 } halls)
+        {
+            return halls.Select(hall => hall.HallId).Distinct().Take(10).ToArray();
+        }
+
+        return context?.State?.ShownHallIds?.Distinct().Take(10).ToArray() ?? [];
+    }
+
+    private static bool IsHallSearchContext(AiConversationContext? context)
+        => context?.LastIntent?.Intent == AiIntentType.SearchHalls
+            || string.Equals(context?.State?.ActiveGoal, "find_hall", StringComparison.Ordinal);
+
+    private static bool IsBareAreaRequest(string message, string? area)
+    {
+        if (string.IsNullOrWhiteSpace(area))
+        {
+            return false;
+        }
+
+        if (!NaturalLanguageCriteriaExtractor.IsCatalogArea(area))
+        {
+            return false;
+        }
+
+        var foldedMessage = AiText.Normalize(message).Trim();
+        var foldedArea = AiText.Normalize(area).Trim();
+        return foldedMessage == foldedArea
+            || foldedMessage == $"في {foldedArea}"
+            || foldedMessage == $"ب{foldedArea}";
     }
 
     private async Task<AiAssistantResponse> HandleFeaturedHallsAsync(string language, AiAssistantIntentDto intention, CancellationToken cancellationToken)

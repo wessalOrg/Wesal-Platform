@@ -36,7 +36,9 @@ public sealed class RecommendationService : IRecommendationService
         if (string.IsNullOrWhiteSpace(criteria.Region)
             && string.IsNullOrWhiteSpace(criteria.Area)
             && !criteria.Capacity.HasValue
-            && !criteria.Date.HasValue)
+            && !criteria.Date.HasValue
+            && !criteria.MaximumPrice.HasValue
+            && !criteria.SortByPrice)
         {
             var hint = effectiveLanguage == "en"
                 ? "I need a bit more detail to find the perfect hall. Could you tell me the region (e.g., Gaza, North Gaza), number of guests, or a preferred date?"
