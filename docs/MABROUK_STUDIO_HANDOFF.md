@@ -21,7 +21,7 @@
 | Backend full suite / PG integration | **PASS** - 2,583 tests; PG suite 9/9; see section 10 |
 | Frontend install / lint / typecheck / build | **PASS** - exact CI install command; see section 10 |
 | Secret scan | **PASS** for current tracked and non-ignored tree; historical note remains in section 7 |
-| CI on candidate HEAD | pending push; remote checkpoint `15ab156` is green |
+| CI on candidate HEAD | **PASS** on pushed SHA `36d4dcd`; see section 10 |
 | Merged / deployed / production smoked | **no** |
 
 ## 2. Preservation baseline - VERIFIED against `Backend/documentation/mabrouk-knowledge-preservation-baseline.md`
@@ -162,10 +162,10 @@ were ever reused anywhere real, rotate them.
 ## 8. Release gate for PR #31
 
 The Phase B evidence recorded in section 10 establishes the local release gates.
-The intended source changes and handoff document are committed locally as
-`ad31af9`; push and CI for that candidate remain pending. The current remote
-checkpoint `15ab156` has green CI. The historical-credential finding in section
-7 remains visible and was not removed by rewriting history.
+The intended source changes and handoff document are committed and pushed.
+GitHub CI and Vercel Preview passed on `36d4dcd`; PR #31 is still OPEN and DRAFT
+at the time of this snapshot. The historical-credential finding in section 7
+remains visible and was not removed by rewriting history.
 
 ## 9. Do not
 
@@ -178,8 +178,12 @@ checkpoint `15ab156` has green CI. The historical-credential finding in section
 
 All commands were run in the authoritative checkout `D:\Wesal-Knowledge-Studio`
 on `feat/mabrouk-knowledge-studio`, based on `15ab15622941b8eb91fba64839abb86f34e48cc0`.
-The remote PR #31 was OPEN and DRAFT at that checkpoint. The validated changes
-were committed locally as `ad31af9`; its CI and push are pending.
+The remote PR #31 was OPEN and DRAFT at that checkpoint. Validated source
+changes were committed as `ad31af9`, followed by handoff status commit
+`36d4dcd`, then pushed. GitHub Actions run `38225170485` passed both the backend
+restore/build/test job and frontend install/lint/contracts/build job; Vercel
+Preview also passed. The documentation-only status update that follows is
+covered by PR #31 checks; check the current PR status before merge.
 
 ### Source changes under validation
 
@@ -230,5 +234,6 @@ were committed locally as `ad31af9`; its CI and push are pending.
 - This scan covers the current tree. It does not erase or reclassify the
   previously documented throwaway local test values in historical commit
   `5e2305c`; history was not rewritten.
-- Not yet done: commit, push, CI on the candidate SHA, PR ready/merge, deployment
-  verification, and production smoke. Do not start V4 until those are complete.
+- Remaining at the time of this snapshot: mark PR ready, merge, verify the
+  production deployment, and run the required production smoke. Do not start V4
+  until those are complete.
