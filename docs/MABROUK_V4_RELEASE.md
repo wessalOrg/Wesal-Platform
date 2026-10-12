@@ -28,6 +28,7 @@ The pre-merge candidate evidence recorded 2,640 backend tests passed, PostgreSQL
 - The alias returned HTTP 200 from Vercel during this closure. This proves public reachability only.
 - GitHub deployment metadata lists the latest successful `Production` deployment for the matching `wesalplatformgaza-2838` Vercel project as deployment `7011650299`, built from `e96c755e66a15d59f5e3e8da310e805a7f0cfd57` at 2026-10-12 10:17 UTC. Its deployment URL is `https://wesal-platform-hahajpvvg-wesalplatformgaza-2838.vercel.app`.
 - That SHA predates the V4 merge. GitHub lists **no deployment for `99dd3b1d62f0637a4d1f62b719f38539508c7b11`**. The alias-to-deployment mapping could not be independently read from Vercel, so the alias's exact deployed SHA remains unverified.
+- The user-provided Admin screenshot displays the inline Create Answer failure state added in V4. This is evidence that the observed page includes that V4 frontend behavior, but it does not identify the exact deployment SHA or prove the full app/backend release is current.
 - Vercel status: **BLOCKED / NOT VERIFIED** for V4 production deployment.
 
 ## Render production
@@ -65,7 +66,7 @@ The pre-merge candidate evidence recorded 2,640 backend tests passed, PostgreSQL
 
 ## Why the Create Answer issue is not marked fixed
 
-The failure UX hides the actual HTTP error, and the connected browser session could not access the user's signed-in Edge tab (`Unable to load browser request-header policy`). The separate browser session was unauthenticated and redirected from the Admin path. The production API's public health endpoints cannot reveal the private request's error. Therefore there is not enough evidence to attribute this to credentials, authorization, deployment, or database state, and no production data was changed to probe it.
+The failure UX hides the actual HTTP error, and the connected browser session could not access the user's signed-in Edge tab (`Unable to load browser request-header policy`). The separate browser session was unauthenticated and redirected from the Admin path. The screenshot's V4 inline failure state means a stale frontend is not established as the cause. The production API's public health endpoints cannot reveal the private request's error. Therefore there is not enough evidence to attribute this to credentials, authorization, backend deployment, or database state, and no production data was changed to probe it.
 
 Required evidence to finish diagnosis: the failed `create-article` request's HTTP status and response body from the existing browser Network log, with cookies and authorization headers omitted, or the matching sanitized Render error log. Do not repeat the production button action solely for diagnosis unless using a designated smoke record.
 
