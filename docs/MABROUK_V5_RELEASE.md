@@ -22,7 +22,7 @@
 
 - Backend restore: passed (`dotnet restore Wesal.slnx`).
 - Release backend build: passed (`dotnet build Wesal.slnx -c Release --no-restore`; existing test analyzer warnings remain).
-- Full Release backend regression: 2,652 passed, 0 failed, 0 skipped in the local runner. This run does not establish PostgreSQL validation: `WESAL_TEST_PG` was unset, and the repository's PG test fixtures return without connecting when it is absent.
+- Full Release backend regression: 2,653 passed, 0 failed, 0 skipped in the local runner. This run does not establish PostgreSQL validation: `WESAL_TEST_PG` was unset, and the repository's PG test fixtures return without connecting when it is absent.
 - Focused V5 retrieval benchmark/regressions and six recommendation regressions are included in the passing full suite.
 - PostgreSQL: pending. No local PostgreSQL service or Docker daemon is available. PR CI provisions PostgreSQL 16 and should provide the real integration result.
 - Frontend install: passed with repository CI command `npm ci --legacy-peer-deps` (394 packages).
@@ -34,7 +34,7 @@
 - Production dependency audit: `npm audit --omit=dev` found 0 vulnerabilities. Install reported 5 high-severity issues in the full dependency tree; production-only audit is clean.
 - Browser E2E: pending. Local Playwright requires the isolated PostgreSQL-backed Admin stack; Docker and a PostgreSQL service are unavailable. No invalid browser run was counted.
 - Secret scan: local Gitleaks binary unavailable; the repository PR CI runs Gitleaks v8.30.1 on the candidate diff.
-- PR CI at initial head: backend, frontend, and changed-source secret scan pending; Vercel Preview check pending. Recheck against the final pushed head before reporting CI status.
+- PR CI at head `76965812e0b5e267d6cc2bf7503d48a1be2b2c55`: frontend and changed-source Gitleaks passed; backend failed one PostgreSQL-backed built-in-override restoration assertion because lexical results accompanied a verified exact alias. V5 now returns only verified exact-alias matches when one exists, with a focused regression. Recheck all gates on the corrected head; Vercel Preview remains separate from production verification.
 - `git diff --check`: passed before final documentation/commit.
 
 ## Retrieval and recommendation
