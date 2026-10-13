@@ -5,15 +5,16 @@
 - V4 engineering: `V4_ENGINEERING_COMPLETE`.
 - V4 automated validation: `V4_AUTOMATED_VALIDATION_PASS`.
 - V4 production: `V4_PRODUCTION_VERIFICATION_PENDING` because exact Render/Vercel deployment SHA and authenticated smoke evidence are unavailable.
-- V5: implementation and local backend/frontend checks are complete; PostgreSQL, browser E2E, remote CI, and PR review are pending. Do not describe V5 as merged or production verified.
+- V5: implementation and local backend/frontend checks are complete; PR #39 is open as a draft. Remote CI and PR review are pending; local PostgreSQL and browser E2E remain unavailable. Do not describe V5 as merged or production verified.
 
 ## Source
 
 - Repository: `wessalOrg/Wesal-Platform`.
 - Base SHA: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c`.
 - Branch: `feat/mabrouk-retrieval-recommendation-v5`.
-- Implementation HEAD SHA: `50d4f0c` (`feat: add Mabrouk V5 retrieval and recommendations`). This release-record update follows that implementation commit.
-- Pull request: pending.
+- Implementation commit SHA: `50d4f0c` (`feat: add Mabrouk V5 retrieval and recommendations`).
+- Pull request: [#39](https://github.com/wessalOrg/Wesal-Platform/pull/39), draft.
+- Initial PR head SHA: `1df87d2b0a0b2f646c41a72650282c246bd949db`; this release-record update advances the PR head, so final checks must be read from the latest PR revision.
 - Merge SHA: none.
 - Current `origin/main`: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c` at work start.
 
@@ -33,6 +34,7 @@
 - Production dependency audit: `npm audit --omit=dev` found 0 vulnerabilities. Install reported 5 high-severity issues in the full dependency tree; production-only audit is clean.
 - Browser E2E: pending. Local Playwright requires the isolated PostgreSQL-backed Admin stack; Docker and a PostgreSQL service are unavailable. No invalid browser run was counted.
 - Secret scan: local Gitleaks binary unavailable; the repository PR CI runs Gitleaks v8.30.1 on the candidate diff.
+- PR CI at initial head: backend, frontend, and changed-source secret scan pending; Vercel Preview check pending. Recheck against the final pushed head before reporting CI status.
 - `git diff --check`: passed before final documentation/commit.
 
 ## Retrieval and recommendation
