@@ -179,7 +179,7 @@ public static class AiHallQuestionClassifier
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Details = new(
-        @"(?:تفاصيل|احكيلي|حكيلي|عرفني|اخبرني|خبرني|فهمني|اشرحلي|اشرح|معلومات|عنها|details|tell\s+me|about\s+(?:it|this|the)|info)",
+        @"(?:تفاصيل|احكيلي|حكيلي|عرفني|اخبرني|خبرني|فهمني|اشرحلي|اشرح|معلومات|عنها|ليش\s+(?:هاي|هي)|ليش\s+اختر|why\s+(?:this|did\s+you\s+choose)|details|tell\s+me|about\s+(?:it|this|the)|info)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex PlatformWords = AiText.AnyWord([

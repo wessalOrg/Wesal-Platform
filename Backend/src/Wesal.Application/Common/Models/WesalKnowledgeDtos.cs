@@ -23,4 +23,5 @@ public sealed record WesalKnowledgeArticle(
     bool IsDynamic = false,
     int? PublishedVersion = null,
     IReadOnlyList<string>? MatchedAliases = null,
-    int? MatchScore = null);
+    int? MatchScore = null,
+    string? RetrievalMethod = null);

@@ -178,6 +178,14 @@ public sealed class AiAssistantService : IAiAssistantService
     {
         var policyMs = 0L;
 
+        if (AsksWhyThisHall(text) && turn.Hall is not null)
+        {
+            var explanation = await TryHandleHallContextAsync(
+                text, language, turn, context?.State?.LastSemanticPlan, cancellationToken);
+            if (explanation is not null)
+                return new AssistantRouteResult(explanation, "recommendation_explanation", policyMs, 0, 0, null);
+        }
+
         var parsedCriteria = CriteriaExtractor.Extract(text);
         var previousHallResults = GetConversationHallIds(context);
         if (parsedCriteria.SortByPrice
@@ -229,7 +237,7 @@ public sealed class AiAssistantService : IAiAssistantService
                     && currentHallId is { } rankedHallId
                     && context?.State?.LastSemanticPlan?.ComparisonIntent is
                         AiComparisonIntent.Cheapest or AiComparisonIntent.MostExpensive
-                            or AiComparisonIntent.Largest or AiComparisonIntent.Smallest or AiComparisonIntent.BestBudgetFit)
+                            or AiComparisonIntent.Largest or AiComparisonIntent.Smallest or AiComparisonIntent.BestBudgetFit or AiComparisonIntent.MostSuitable)
                 {
                     // A ranking answer ("cheapest", "largest") selects a result
                     // independently of list position. "Another one" should show a
@@ -359,7 +367,7 @@ public sealed class AiAssistantService : IAiAssistantService
 
         // 2) The hall in context answers its own data questions from live data.
         stage.Restart();
-        var hallAnswer = await TryHandleHallContextAsync(text, language, turn, cancellationToken);
+        var hallAnswer = await TryHandleHallContextAsync(text, language, turn, context?.State?.LastSemanticPlan, cancellationToken);
         var hallContextMs = stage.ElapsedMilliseconds;
         if (hallAnswer is not null)
         {
@@ -394,7 +402,8 @@ public sealed class AiAssistantService : IAiAssistantService
         // validated semantic plan is the deterministic fallback, so numeric and
         // conversational criteria remain available when Gemini is off or declines.
         if (semanticPlan.Goal == AiSemanticGoal.FindHall
-            && (fallbackIntent.Intent is AiIntentType.SearchHalls or AiIntentType.Unknown || pendingCapacityAnswer)
+            && (fallbackIntent.Intent is AiIntentType.SearchHalls or AiIntentType.Unknown || pendingCapacityAnswer
+                || semanticPlan.PriceBudget.IsSpecified)
             && (semanticPlan.Region is not null
                 || semanticPlan.Area is not null
                 || semanticPlan.Capacity.HasValue
@@ -529,18 +538,46 @@ public sealed class AiAssistantService : IAiAssistantService
                 || text.Contains("خدمات", StringComparison.Ordinal)
                 || text.Contains("services", StringComparison.OrdinalIgnoreCase));
 
+    private static bool AsksWhyThisHall(string text)
+    {
+        var folded = AiText.Normalize(text);
+        return folded.Contains("ليش هاي", StringComparison.Ordinal)
+            || folded.Contains("ليش هي", StringComparison.Ordinal)
+            || folded.Contains("ليش اختر", StringComparison.Ordinal)
+            || folded.Contains("why this", StringComparison.Ordinal)
+            || folded.Contains("why did you choose", StringComparison.Ordinal);
+    }
+
     // ───────────────────────── hall context (pinned / page / ordinal) ─────────────────────────
 
     private async Task<AiAssistantResponse?> TryHandleHallContextAsync(
         string text,
         string language,
         AiTurnContext turn,
+        AiSemanticPlan? priorPlan,
         CancellationToken cancellationToken)
     {
         var hall = turn.Hall;
         if (hall is null)
         {
             return null;
+        }
+
+        if (AsksWhyThisHall(text))
+        {
+            var reasons = priorPlan?.ComparisonIntent == AiComparisonIntent.MostSuitable
+                ? SuitabilityReasons(hall, priorPlan, language)
+                : Array.Empty<string>();
+            var why = reasons.Length > 0
+                ? string.Join(language == "en" ? " and " : "، ", reasons)
+                : language == "en"
+                    ? "I can explain it against a budget, guest count, or preferred area if you share those criteria."
+                    : "بقدر أوضح سبب الاختيار حسب الميزانية أو عدد الضيوف أو المنطقة إذا بتحددلي المعايير.";
+            var whyMessage = language == "en"
+                ? $"{hall.HallName} was selected from the shown results because {why}."
+                : $"اخترت {hall.HallName} من النتائج المعروضة للأسباب التالية: {why}.";
+            return Build(language, AiAssistantResponseKind.Answer, whyMessage,
+                new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, hall.HallName), hallDetails: hall);
         }
 
         // An explicitly named hall always beats the pinned/page one.
@@ -850,7 +887,7 @@ public sealed class AiAssistantService : IAiAssistantService
         }
 
         var region = intent.Region ?? prior.Region;
-        var area = intent.Area ?? prior.Area;
+        var area = intent.SemanticPlan?.ClearAreaPreference == true ? null : intent.Area ?? prior.Area;
         var date = intent.Date ?? prior.Date;
         var capacity = intent.Capacity ?? prior.Capacity;
         var maximumPrice = intent.MaximumPrice ?? prior.MaximumPrice;
@@ -987,7 +1024,14 @@ public sealed class AiAssistantService : IAiAssistantService
     internal static string BuildSearchQuery(string text, AiAssistantIntentDto intent, string language)
     {
         var extra = new List<string>();
-        var already = CriteriaExtractor.Extract(text);
+        var queryText = text;
+        if (intent.SemanticPlan is { ClearAreaPreference: true, ClearedArea: { Length: > 0 } clearedArea })
+        {
+            var areaToken = clearedArea.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? clearedArea;
+            var pattern = $@"(?:مش|ليس|not)\s+(?:في\s+|بال|ب)?{System.Text.RegularExpressions.Regex.Escape(areaToken)}";
+            queryText = System.Text.RegularExpressions.Regex.Replace(queryText, pattern, " ", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        }
+        var already = CriteriaExtractor.Extract(queryText);
         var isArabic = language.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
 
         if (already.Region is null && !string.IsNullOrWhiteSpace(intent.Region))
@@ -1049,7 +1093,7 @@ public sealed class AiAssistantService : IAiAssistantService
                 : isArabic ? "الأرخص" : "cheapest");
         }
 
-        return extra.Count == 0 ? text : $"{text} {string.Join(' ', extra)}";
+        return extra.Count == 0 ? queryText : $"{queryText} {string.Join(' ', extra)}";
     }
 
     private async Task<AiAssistantResponse> HandleAvailabilityRangeAsync(
@@ -1135,6 +1179,15 @@ public sealed class AiAssistantService : IAiAssistantService
             return Build(language, AiAssistantResponseKind.Clarification, clarification, null);
         }
 
+        if (plan.ComparisonIntent == AiComparisonIntent.MostSuitable && !HasSuitabilityCriteria(plan))
+        {
+            var clarify = language == "en"
+                ? "What matters most for a suitable hall: staying under a budget, guest capacity, or a specific area?"
+                : "شو الأهم بالنسبة للقاعة الأنسب: الميزانية، عدد الضيوف، ولا منطقة معيّنة؟";
+            return Build(language, AiAssistantResponseKind.Clarification, clarify, null);
+        }
+
+        var rankingTimer = Stopwatch.StartNew();
         var current = new List<HallDetailsDto>();
         foreach (var hallId in ids)
         {
@@ -1173,11 +1226,33 @@ public sealed class AiAssistantService : IAiAssistantService
             AiComparisonIntent.Smallest => current.OrderBy(hall => hall.Capacity).FirstOrDefault(),
             AiComparisonIntent.BestBudgetFit when plan.PriceBudget.AroundPrice is { } target
                 => current.Where(HasPublishedPrice).OrderBy(hall => Math.Abs(hall.Price!.Value - target)).FirstOrDefault(),
+            AiComparisonIntent.MostSuitable when HasSuitabilityCriteria(plan)
+                => current.Where(hall => IsWithinHardConstraints(hall, plan))
+                    .OrderBy(hall => SuitabilityScore(hall, plan))
+                    .ThenBy(hall => hall.HallName, StringComparer.Ordinal)
+                    .FirstOrDefault(),
             _ => null
         };
+        rankingTimer.Stop();
+        if (plan.ComparisonIntent == AiComparisonIntent.MostSuitable)
+        {
+            _logger.LogInformation(
+                "Hall recommendation ranking: candidateCount={CandidateCount} validCount={ValidCount} rankingMs={RankingMs} method={Method}",
+                ids.Length,
+                current.Count(hall => IsWithinHardConstraints(hall, plan)),
+                rankingTimer.ElapsedMilliseconds,
+                "explicit-criteria");
+        }
 
         if (winner is null)
         {
+            if (plan.ComparisonIntent == AiComparisonIntent.MostSuitable)
+            {
+                var noMatch = language == "en"
+                    ? "None of the shown halls meets all those criteria. You can adjust the budget, guest count, or area and I can search again."
+                    : "ما في قاعة من النتائج المعروضة بتطابق كل هالمعايير. ممكن نعدّل الميزانية أو عدد الضيوف أو المنطقة وببحث من جديد.";
+                return Build(language, AiAssistantResponseKind.Answer, noMatch, null);
+            }
             var noPrice = language == "en"
                 ? "I can't compare these results because none has a currently published price."
                 : "ما بقدر أقارن الأسعار لأن ما في نتيجة بسعر منشور حالياً.";
@@ -1198,6 +1273,7 @@ public sealed class AiAssistantService : IAiAssistantService
             AiComparisonIntent.Smallest => language == "en"
                 ? $"The smallest capacity among these results is {winner.HallName}, for {winner.Capacity} guests."
                 : $"أقل سعة بين النتائج هي لـ{winner.HallName}: {winner.Capacity} شخص.",
+            AiComparisonIntent.MostSuitable => SuitabilityMessage(winner, plan, language),
             _ => language == "en"
                 ? $"The closest currently published price to your budget is {winner.HallName} at {winner.Price!.Value.ToString("0.##", CultureInfo.InvariantCulture)} ILS."
                 : $"أقرب سعر منشور لميزانيتك هو {winner.HallName}: {winner.Price!.Value.ToString("0.##", CultureInfo.InvariantCulture)} شيكل."
@@ -1207,6 +1283,80 @@ public sealed class AiAssistantService : IAiAssistantService
         return Build(language, AiAssistantResponseKind.HallDetails, winnerMessage, intent, hallDetails: winner);
 
         static bool HasPublishedPrice(HallDetailsDto hall) => hall.ShowPrice && hall.Price.HasValue;
+        static bool HasSuitabilityCriteria(AiSemanticPlan candidatePlan)
+            => candidatePlan.PriceBudget.IsSpecified || candidatePlan.Capacity.HasValue
+                || !string.IsNullOrWhiteSpace(candidatePlan.Region) || !string.IsNullOrWhiteSpace(candidatePlan.Area);
+        static bool IsWithinHardConstraints(HallDetailsDto hall, AiSemanticPlan candidatePlan)
+            => (!candidatePlan.PriceBudget.MinimumPrice.HasValue || hall.ShowPrice && hall.Price >= candidatePlan.PriceBudget.MinimumPrice)
+                && (!candidatePlan.PriceBudget.MaximumPrice.HasValue || hall.ShowPrice && hall.Price <= candidatePlan.PriceBudget.MaximumPrice)
+                && (!candidatePlan.Capacity.HasValue || hall.Capacity >= candidatePlan.Capacity.Value)
+                && (string.IsNullOrWhiteSpace(candidatePlan.Area) || hall.Address.Contains(candidatePlan.Area, StringComparison.OrdinalIgnoreCase))
+                && (string.IsNullOrWhiteSpace(candidatePlan.Region) || hall.Region.Contains(candidatePlan.Region, StringComparison.OrdinalIgnoreCase));
+        static decimal SuitabilityScore(HallDetailsDto hall, AiSemanticPlan candidatePlan)
+        {
+            decimal score = 0;
+            if (candidatePlan.PriceBudget.AroundPrice is { } target && HasPublishedPrice(hall))
+                score += Math.Abs(hall.Price!.Value - target) / Math.Max(1m, target);
+            else if (candidatePlan.PriceBudget.MaximumPrice is not null && HasPublishedPrice(hall))
+                score += hall.Price!.Value / Math.Max(1m, candidatePlan.PriceBudget.MaximumPrice.Value);
+            if (candidatePlan.Capacity is { } capacity && hall.Capacity >= capacity)
+                score += (hall.Capacity - capacity) / (decimal)Math.Max(capacity, 1) * 0.5m;
+            if (!string.IsNullOrWhiteSpace(candidatePlan.Area)
+                && !hall.Address.Contains(candidatePlan.Area, StringComparison.OrdinalIgnoreCase))
+                score += 2m;
+            if (!string.IsNullOrWhiteSpace(candidatePlan.Region)
+                && !hall.Region.Contains(candidatePlan.Region, StringComparison.OrdinalIgnoreCase))
+                score += 2m;
+            if (!HasPublishedPrice(hall) && candidatePlan.PriceBudget.IsSpecified)
+                score += 0.25m;
+            return score;
+        }
+        static string SuitabilityMessage(HallDetailsDto hall, AiSemanticPlan candidatePlan, string responseLanguage)
+        {
+            var publishedPrice = hall.ShowPrice && hall.Price.HasValue;
+            var price = publishedPrice
+                ? $"{hall.Price!.Value.ToString("0.##", CultureInfo.InvariantCulture)} {(responseLanguage == "en" ? "ILS" : "شيكل")}"
+                : (responseLanguage == "en" ? "price not published" : "السعر غير منشور");
+            var reasons = new List<string>();
+            if (publishedPrice && candidatePlan.PriceBudget.IsSpecified)
+                reasons.Add(responseLanguage == "en" ? $"published price {price}" : $"سعرها المنشور {price}");
+            if (candidatePlan.Capacity is { } requested)
+                reasons.Add(responseLanguage == "en"
+                    ? $"capacity {hall.Capacity} for about {requested} guests"
+                    : $"سعتها {hall.Capacity} لـ{requested} ضيف");
+            if (!string.IsNullOrWhiteSpace(candidatePlan.Area))
+                reasons.Add(responseLanguage == "en" ? $"area {hall.Address}" : $"موقعها {hall.Address}");
+            if (!string.IsNullOrWhiteSpace(candidatePlan.Region) && reasons.Count == 0)
+                reasons.Add(responseLanguage == "en" ? $"region {hall.Region}" : $"منطقتها {hall.Region}");
+            var why = reasons.Count == 0
+                ? (responseLanguage == "en" ? "it best matches your stated criteria" : "هي الأقرب لمعاييرك المذكورة")
+                : string.Join(responseLanguage == "en" ? " and " : "، ", reasons);
+            return responseLanguage == "en"
+                ? $"Based on the results and your criteria, {hall.HallName} is the best fit because {why}."
+                : $"اخترت {hall.HallName} من النتائج لأنها تطابق معاييرك: {why}.";
+        }
+    }
+
+    private static string[] SuitabilityReasons(HallDetailsDto hall, AiSemanticPlan plan, string language)
+    {
+        var reasons = new List<string>();
+        if (hall.ShowPrice && hall.Price is { } price && plan.PriceBudget.IsSpecified)
+        {
+            var formatted = price.ToString("0.##", CultureInfo.InvariantCulture);
+            if (plan.PriceBudget.MaximumPrice is { } max && price <= max)
+                reasons.Add(language == "en" ? $"its published price {formatted} ILS is within your {max:0.##} ILS budget" : $"سعرها المنشور {formatted} شيكل ضمن ميزانيتك {max:0.##} شيكل");
+            else if (plan.PriceBudget.MinimumPrice is { } min && price >= min)
+                reasons.Add(language == "en" ? $"its published price {formatted} ILS meets your minimum budget" : $"سعرها المنشور {formatted} شيكل يحقق الحد الأدنى لميزانيتك");
+            else if (plan.PriceBudget.AroundPrice is { } target)
+                reasons.Add(language == "en" ? $"its published price {formatted} ILS is close to your {target:0.##} ILS target" : $"سعرها المنشور {formatted} شيكل قريب من ميزانيتك المستهدفة {target:0.##} شيكل");
+        }
+        if (plan.Capacity is { } capacity)
+            reasons.Add(language == "en" ? $"its capacity of {hall.Capacity} covers about {capacity} guests" : $"سعتها {hall.Capacity} شخص وتكفي العدد المطلوب {capacity}");
+        if (!string.IsNullOrWhiteSpace(plan.Area))
+            reasons.Add(language == "en" ? $"its address is {hall.Address}" : $"عنوانها {hall.Address} في المنطقة المطلوبة");
+        if (!string.IsNullOrWhiteSpace(plan.Region) && reasons.Count == 0)
+            reasons.Add(language == "en" ? $"it is in {hall.Region}" : $"تقع في {hall.Region}");
+        return reasons.ToArray();
     }
 
     private async Task<AiAssistantResponse> HandleCheapestShownHallAsync(

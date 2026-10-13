@@ -65,7 +65,7 @@ public static class AiConversationStateResolver
         var navigation = response.Actions?.FirstOrDefault(a => a.Type == AiAssistantActionTypes.Navigate)?.PageKey;
         var preserveRankedSelection = plan?.ContinuationType is AiContinuationType.ContextualFollowUp or AiContinuationType.ClarificationAnswer
             && state.LastSemanticPlan?.ComparisonIntent is AiComparisonIntent.Cheapest or AiComparisonIntent.MostExpensive
-                or AiComparisonIntent.Largest or AiComparisonIntent.Smallest or AiComparisonIntent.BestBudgetFit;
+                or AiComparisonIntent.Largest or AiComparisonIntent.Smallest or AiComparisonIntent.BestBudgetFit or AiComparisonIntent.MostSuitable;
         return state with
         {
             ActiveGoal = task,

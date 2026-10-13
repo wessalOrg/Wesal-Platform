@@ -1,0 +1,124 @@
+using System.Diagnostics;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Wesal.Application.Common.Models;
+using Wesal.Domain.Entities;
+using Wesal.Infrastructure.AiAssistant;
+using Wesal.Persistence.Data;
+using Wesal.Persistence.Repositories;
+
+namespace Wesal.Tests.Ai;
+
+/// <summary>Measures the unchanged V4 hybrid retrieval against a labeled corpus.</summary>
+public sealed class MabroukV5RetrievalBaselineShould
+{
+    [Fact]
+    public async Task RecordLabeledCorpusMetricsAgainstCurrentHybridRetriever()
+    {
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "Ai", "Fixtures", "mabrouk-v5-retrieval-eval.json");
+        using var fixture = JsonDocument.Parse(await File.ReadAllTextAsync(fixturePath));
+        var cases = fixture.RootElement.EnumerateArray().ToArray();
+        Assert.True(cases.Length >= 15);
+
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase("MabroukV5RetrievalBaseline-" + Guid.NewGuid())
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        var repository = new AiKnowledgeStudioRepository(db);
+        var clock = new FixedClock(new DateTimeOffset(2026, 10, 13, 12, 0, 0, TimeSpan.Zero));
+        var embedded = new WesalKnowledgeService();
+        var retriever = new HybridWesalKnowledgeService(embedded, repository, clock, NullLogger<HybridWesalKnowledgeService>.Instance);
+        var rows = new List<EvalRow>(cases.Length);
+
+        foreach (var item in cases)
+        {
+            var query = item.GetProperty("query").GetString()!;
+            var language = item.GetProperty("language").GetString()!;
+            _ = await retriever.SearchAsync(query, language, 5); // warm JIT and embedded document cache
+            var samples = new List<double>(10);
+            IReadOnlyList<WesalKnowledgeArticle> results = [];
+            for (var sample = 0; sample < 10; sample++)
+            {
+                var timer = Stopwatch.StartNew();
+                results = await retriever.SearchAsync(query, language, 5);
+                timer.Stop();
+                samples.Add(timer.Elapsed.TotalMilliseconds);
+            }
+            var expectedKeys = item.TryGetProperty("expectedKeys", out var expectedKeyValues)
+                ? expectedKeyValues.EnumerateArray().Select(value => value.GetString()!).ToArray()
+                : [];
+            var acceptableFallback = item.GetProperty("acceptableFallback").GetBoolean();
+            var forbidden = item.GetProperty("forbiddenKeys").EnumerateArray().Select(value => value.GetString()!).ToArray();
+            var top1 = results.FirstOrDefault();
+            var top3 = results.Take(3).ToArray();
+            rows.Add(new EvalRow(
+                item.GetProperty("id").GetString()!,
+                language,
+                item.GetProperty("kind").GetString()!,
+                expectedKeys,
+                top1?.StableKey,
+                expectedKeys.Contains(top1?.StableKey, StringComparer.Ordinal),
+                top3.Any(result => expectedKeys.Contains(result.StableKey, StringComparer.Ordinal)),
+                results.Count == 0,
+                forbidden.Any(key => results.Any(result => result.StableKey == key))
+                    || (expectedKeys.Length > 0 && !acceptableFallback && results.Count > 0
+                        && !results.Any(result => expectedKeys.Contains(result.StableKey, StringComparer.Ordinal))),
+                acceptableFallback,
+                samples.Average(),
+                Percentile(samples.Order().ToArray(), 0.95)));
+        }
+
+        var report = new
+        {
+            version = 1,
+            baseline = "origin/main 5a60fdb3cc24e8936659cb1b335cc8ec33f1288c",
+            retriever = "HybridWesalKnowledgeService (exact aliases + deterministic lexical ranking; no vectors)",
+            corpusSize = rows.Count,
+            top1Accuracy = Ratio(rows.Count(row => row.Top1Correct), rows.Count(row => row.ExpectedKeys.Length > 0)),
+            top3Recall = Ratio(rows.Count(row => row.Top3Correct), rows.Count(row => row.ExpectedKeys.Length > 0)),
+            wrongSourceRate = Ratio(rows.Count(row => row.WrongSource), rows.Count),
+            fallbackRate = Ratio(rows.Count(row => row.Fallback), rows.Count),
+            averageLatencyMs = Math.Round(rows.Average(row => row.AverageLatencyMs), 3),
+            p95LatencyMs = Math.Round(Percentile(rows.Select(row => row.P95LatencyMs).Order().ToArray(), 0.95), 3),
+            byLanguage = rows.GroupBy(row => row.Language).OrderBy(group => group.Key).Select(group => new
+            {
+                language = group.Key,
+                cases = group.Count(),
+                top1Accuracy = Ratio(group.Count(row => row.Top1Correct), group.Count(row => row.ExpectedKeys.Length > 0)),
+                top3Recall = Ratio(group.Count(row => row.Top3Correct), group.Count(row => row.ExpectedKeys.Length > 0)),
+                fallbackRate = Ratio(group.Count(row => row.Fallback), group.Count())
+            }),
+            byKind = rows.GroupBy(row => row.Kind).OrderBy(group => group.Key).Select(group => new
+            {
+                kind = group.Key,
+                cases = group.Count(),
+                top1Accuracy = Ratio(group.Count(row => row.Top1Correct), group.Count(row => row.ExpectedKeys.Length > 0)),
+                top3Recall = Ratio(group.Count(row => row.Top3Correct), group.Count(row => row.ExpectedKeys.Length > 0)),
+                wrongSourceRate = Ratio(group.Count(row => row.WrongSource), group.Count())
+            }),
+            cases = rows
+        };
+
+        var output = Path.Combine(Path.GetTempPath(), "mabrouk-v5-retrieval-baseline.json");
+        await File.WriteAllTextAsync(output, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine("Baseline report: " + output);
+        Console.WriteLine(JsonSerializer.Serialize(report));
+        // Wrong-source cases are intentionally reported as baseline failures;
+        // they must not prevent the benchmark from producing usable metrics.
+    }
+
+    private static double Ratio(int numerator, int denominator)
+        => denominator == 0 ? 0 : Math.Round((double)numerator / denominator, 4);
+
+    private static double Percentile(IReadOnlyList<double> sorted, double percentile)
+        => sorted.Count == 0 ? 0 : sorted[Math.Clamp((int)Math.Ceiling(percentile * sorted.Count) - 1, 0, sorted.Count - 1)];
+
+    private sealed record EvalRow(string Id, string Language, string Kind, string[] ExpectedKeys, string? Top1Key,
+        bool Top1Correct, bool Top3Correct, bool Fallback, bool WrongSource, bool AcceptableFallback, double AverageLatencyMs, double P95LatencyMs);
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+}

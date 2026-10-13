@@ -23,6 +23,21 @@ public static class AiSemanticPlanResolver
         var criteria = CriteriaExtractor.Extract(message, today, pendingCapacity);
         var dates = AiDateRangeResolver.Resolve(message, today);
         var (priceBudget, sortPreference) = AiPriceBudgetExtractor.Extract(message);
+        var priorPlanBudget = context?.State?.LastSemanticPlan?.PriceBudget;
+        var priorIntentBudget = context?.LastIntent is { Intent: AiIntentType.SearchHalls } priorSearch
+            ? new AiPriceBudget(priorSearch.MinimumPrice, priorSearch.MaximumPrice, priorSearch.AroundPrice)
+            : null;
+        var priorBudget = priorPlanBudget?.IsSpecified == true ? priorPlanBudget : priorIntentBudget;
+        var amendedBudget = AiPriceBudgetExtractor.ApplyConversationalAmendment(message, priceBudget, priorBudget);
+        if (amendedBudget != priceBudget)
+        {
+            priceBudget = amendedBudget;
+            sortPreference = priceBudget.AroundPrice.HasValue
+                ? AiPriceSortPreference.ClosestToTarget
+                : priceBudget.MaximumPrice.HasValue
+                    ? AiPriceSortPreference.LowestPrice
+                    : sortPreference;
+        }
         var question = AiHallQuestionClassifier.Classify(message);
         var comparison = ResolveComparison(message, priceBudget);
         var explicitName = AiReferenceResolver.TryGetExplicitHallName(message);
@@ -33,7 +48,10 @@ public static class AiSemanticPlanResolver
         var hasActiveHall = turn.Hall is not null || context?.State?.ActiveHallId is not null;
         var comparisonOrdinals = AiReferenceResolver.GetOrdinals(message);
         var hasConcreteSearchFilters = HasConcreteSearchFilters(criteria);
-        var resultReference = ordinal.HasValue || comparison != AiComparisonIntent.None && hasResults && !hasConcreteSearchFilters;
+        var priorArea = context?.State?.LastSemanticPlan?.Area ?? context?.LastIntent?.Area;
+        var clearedArea = !string.IsNullOrWhiteSpace(priorArea) && NegatesArea(message, priorArea) ? priorArea : null;
+        var resultReference = ordinal.HasValue || comparison != AiComparisonIntent.None && hasResults
+            && (!hasConcreteSearchFilters || comparison == AiComparisonIntent.MostSuitable);
 
         var hallReference = explicitName is not null
             ? new AiHallReference(AiHallReferenceKind.ExplicitName, Limit(explicitName, 120))
@@ -53,6 +71,9 @@ public static class AiSemanticPlanResolver
                     ? AiSemanticGoal.FindHall
                     : hasResults ? AiSemanticGoal.CompareHalls : AiSemanticGoal.FindHall
             : ResolveGoal(message, criteria, question, comparison, hallReference, intentGoal);
+        if (comparison == AiComparisonIntent.None && priceBudget.IsSpecified
+            && context?.LastIntent?.Intent == AiIntentType.SearchHalls)
+            goal = AiSemanticGoal.FindHall;
         if (context?.State?.PendingClarification == "date")
             goal = AiSemanticGoal.CheckAvailability;
         else if (context?.State?.PendingClarification == "capacity" && criteria.Capacity.HasValue)
@@ -61,7 +82,7 @@ public static class AiSemanticPlanResolver
             ? AiContinuationType.ClarificationAnswer
             : resultReference
                 ? AiContinuationType.ResultFollowUp
-                : context?.LastIntent?.Intent == AiIntentType.SearchHalls && HasSearchCriteria(criteria)
+                : context?.LastIntent?.Intent == AiIntentType.SearchHalls && (HasSearchCriteria(criteria) || priceBudget.IsSpecified)
                     ? AiContinuationType.RefineSearch
                     : hasActiveHall && question != AiHallQuestion.None
                         ? AiContinuationType.ContextualFollowUp
@@ -106,7 +127,7 @@ public static class AiSemanticPlanResolver
             comparison,
             requestedFacts,
             criteria.Region,
-            Limit(criteria.Area, 80),
+            Limit(clearedArea is null ? criteria.Area : null, 80),
             resolvedDate,
             range,
             month,
@@ -119,7 +140,9 @@ public static class AiSemanticPlanResolver
             clarification,
             confidence,
             language?.StartsWith("en", StringComparison.OrdinalIgnoreCase) == true ? "en" : "ar",
-            comparisonOrdinals.Select(index => new AiSelectedResultReference(index)).ToArray());
+            comparisonOrdinals.Select(index => new AiSelectedResultReference(index)).ToArray(),
+            ClearAreaPreference: clearedArea is not null,
+            ClearedArea: Limit(clearedArea, 80));
 
         return Validate(plan, message, today, context);
     }
@@ -156,6 +179,16 @@ public static class AiSemanticPlanResolver
         var criteria = CriteriaExtractor.Extract(message, today,
             string.Equals(context?.State?.PendingClarification, "capacity", StringComparison.Ordinal));
         var prices = AiPriceBudgetExtractor.Extract(message);
+        var priorBudget = context?.State?.LastSemanticPlan?.PriceBudget is { IsSpecified: true } remembered
+            ? remembered
+            : context?.LastIntent is { Intent: AiIntentType.SearchHalls } priorSearch
+                ? new AiPriceBudget(priorSearch.MinimumPrice, priorSearch.MaximumPrice, priorSearch.AroundPrice)
+                : null;
+        var validatedBudget = AiPriceBudgetExtractor.ApplyConversationalAmendment(message, prices.Budget, priorBudget);
+        var validatedSort = validatedBudget != prices.Budget
+            ? validatedBudget.AroundPrice.HasValue ? AiPriceSortPreference.ClosestToTarget
+                : validatedBudget.MaximumPrice.HasValue ? AiPriceSortPreference.LowestPrice : prices.SortPreference
+            : prices.SortPreference;
         var currentMessageArea = criteria.Area;
         var name = AiReferenceResolver.TryGetExplicitHallName(message);
         var ordinal = AiReferenceResolver.TryGetOrdinal(message);
@@ -172,13 +205,13 @@ public static class AiSemanticPlanResolver
                     : plan.HallReference,
             SelectedResultReference = ordinal is { } selected ? new AiSelectedResultReference(selected) : null,
             Region = criteria.Region,
-            Area = Limit(currentMessageArea, 80),
+            Area = plan.ClearAreaPreference ? null : Limit(currentMessageArea, 80),
             Date = dates?.Date ?? criteria.Date,
             DateRange = dates?.Range is { } dateRange && dateRange.End.DayNumber - dateRange.Start.DayNumber <= 30 ? dateRange : null,
             Month = dates?.Month,
             Capacity = criteria.Capacity is > 0 and < 10000 ? criteria.Capacity : null,
-            PriceBudget = prices.Budget,
-            SortPreference = prices.SortPreference,
+            PriceBudget = validatedBudget,
+            SortPreference = validatedSort,
             RequestedFacts = plan.RequestedFacts.Distinct().Take(8).ToArray(),
             CompoundGoals = plan.CompoundGoals.Distinct().Take(8).ToArray(),
             NavigationIntent = IsNavigationRequest(message) ? "halls" : null,
@@ -232,6 +265,7 @@ public static class AiSemanticPlanResolver
     {
         var folded = AiText.Normalize(message);
         if (ContainsAny(folded, "قارن", "compare")) return AiComparisonIntent.CompareSelected;
+        if (ContainsAny(folded, "انسب", "الانسب", "انسب وحدة", "انسب قاعة", "افضل وحدة", "افضل قاعة", "most suitable", "best fit", "best for me", "best hall", "best one")) return AiComparisonIntent.MostSuitable;
         if (ContainsAny(folded, "اغلي", "most expensive", "highest price")) return AiComparisonIntent.MostExpensive;
         if (ContainsAny(folded, "ارخص", "اقل سعر", "cheapest", "lowest price")) return AiComparisonIntent.Cheapest;
         if (ContainsAny(folded, "اكبر", "اعلى سعه", "largest", "biggest")) return AiComparisonIntent.Largest;
@@ -286,6 +320,21 @@ public static class AiSemanticPlanResolver
     {
         var folded = AiText.Normalize(message);
         return phrases.Any(phrase => folded.Contains(AiText.Normalize(phrase), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool NegatesArea(string message, string area)
+    {
+        var folded = AiText.Normalize(message);
+        var normalizedArea = AiText.Normalize(area);
+        if (normalizedArea.Length == 0)
+            return false;
+        var areaToken = normalizedArea.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? normalizedArea;
+        var forms = new[] { normalizedArea, areaToken,
+                areaToken.StartsWith("ال", StringComparison.Ordinal) ? areaToken[2..] : areaToken }
+            .Distinct(StringComparer.Ordinal);
+        return forms.Any(form => ContainsAny(folded,
+            $"مش {form}", $"مش في {form}", $"مش ب{form}", $"مش بال{form}",
+            $"not {form}", $"not in {form}"));
     }
 
     private static string? Limit(string? value, int length)
