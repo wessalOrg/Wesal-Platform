@@ -45,6 +45,16 @@ public sealed class MabroukV5HybridRetrievalShould : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ReturnOnlyTheTrustedExactAliasForAnExactBuiltInQuestion()
+    {
+        var result = await _service.SearchAsync("Who developed Wesal?", "en", 5);
+
+        var article = Assert.Single(result);
+        Assert.Equal("platform.wesal-team", article.StableKey);
+        Assert.Equal("exact-alias", article.RetrievalMethod);
+    }
+
+    [Fact]
     public async Task RejectSubstringOnlyDynamicCandidateForUnknownQuestion()
     {
         var booking = Article("booking-help", "Booking help", "booking reserve a hall", 10,

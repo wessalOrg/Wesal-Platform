@@ -168,7 +168,11 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
         }
 
         var rerankingTimer = Stopwatch.StartNew();
-        var results = ranked
+        var exactTrustedAliases = ranked
+            .Where(item => item.Verified && item.ExactAlias)
+            .ToList();
+        var resultPool = exactTrustedAliases.Count > 0 ? exactTrustedAliases : ranked;
+        var results = resultPool
             .OrderByDescending(item => item.Verified)
             .ThenByDescending(item => item.ExactAlias)
             .ThenByDescending(item => item.Score)
