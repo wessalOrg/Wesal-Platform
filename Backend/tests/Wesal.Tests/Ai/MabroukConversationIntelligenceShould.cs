@@ -12,6 +12,163 @@ public sealed class MabroukConversationIntelligenceShould
     private sealed record ConversationCase(string Id, string Category, string[] Turns);
 
     [Fact]
+    public async Task RecommendMostSuitableShownHallUsingLivePriceAndCapacity()
+    {
+        var harness = new MabroukHarness();
+        var shown = new[]
+        {
+            new AiHallRef(harness.NakheelId, "قاعة النخيل"),
+            new AiHallRef(harness.OrchidId, "قاعة الأوركيد")
+        };
+        var context = new AiConversationContext(
+            [],
+            new AiAssistantIntentDto(AiIntentType.SearchHalls, null, null, null, null, null),
+            shown,
+            null,
+            AiConversationStateResolver.WithCollectionResults(new AiConversationState(ActiveGoal: "find_hall"), shown));
+
+        var response = await harness.AskAsync("انسب وحدة إلي لحد 6000 ولـ200 ضيف", conversation: context);
+
+        Assert.Equal(AiComparisonIntent.MostSuitable, response.SemanticPlan?.ComparisonIntent);
+        Assert.True(response.HallDetails?.HallId == harness.OrchidId,
+            $"{response.Kind}: {response.Message}; plan={response.SemanticPlan}; requests={string.Join(',', harness.Details.Requested)}");
+        Assert.Contains("5000", response.Message);
+        Assert.Contains("250", response.Message);
+        Assert.Equal(new[] { harness.NakheelId, harness.OrchidId }, harness.Details.Requested);
+    }
+
+    [Fact]
+    public async Task ClarifyWhatSuitableMeansWhenNoCriteriaWereGiven()
+    {
+        var harness = new MabroukHarness();
+        var shown = new[]
+        {
+            new AiHallRef(harness.NakheelId, "قاعة النخيل"),
+            new AiHallRef(harness.OrchidId, "قاعة الأوركيد")
+        };
+        var context = new AiConversationContext(
+            [],
+            new AiAssistantIntentDto(AiIntentType.SearchHalls, null, null, null, null, null),
+            shown,
+            null,
+            AiConversationStateResolver.WithCollectionResults(new AiConversationState(ActiveGoal: "find_hall"), shown));
+
+        var response = await harness.AskAsync("انسب وحدة إلي؟", conversation: context);
+
+        Assert.Equal(AiAssistantResponseKind.Clarification, response.Kind);
+        Assert.Contains("الميزانية", response.Message);
+        Assert.Empty(harness.Details.Requested);
+    }
+
+    [Fact]
+    public async Task DoNotRelaxHardConstraintsWhenNoShownHallMatchesSuitabilityRequest()
+    {
+        var harness = new MabroukHarness();
+        var shown = new[]
+        {
+            new AiHallRef(harness.NakheelId, "قاعة النخيل"),
+            new AiHallRef(harness.OrchidId, "قاعة الأوركيد")
+        };
+        var context = new AiConversationContext(
+            [],
+            new AiAssistantIntentDto(AiIntentType.SearchHalls, null, null, null, null, null),
+            shown,
+            null,
+            AiConversationStateResolver.WithCollectionResults(new AiConversationState(ActiveGoal: "find_hall"), shown));
+
+        var response = await harness.AskAsync("انسب وحدة إلي بميزانية 4000 ولـ200 ضيف", conversation: context);
+
+        Assert.Equal(AiAssistantResponseKind.Answer, response.Kind);
+        Assert.Null(response.HallDetails);
+        Assert.Contains("ما في قاعة", response.Message);
+        Assert.Empty(harness.Search.Requests);
+    }
+
+    [Fact]
+    public async Task ExplainWhyTheSelectedHallWasSuitableUsingItsLiveFields()
+    {
+        var harness = new MabroukHarness();
+        var plan = AiSemanticPlanResolver.Resolve(
+            "انسب وحدة إلي لحد 6000 ولـ200 ضيف", "ar", new DateOnly(2026, 10, 1), null,
+            AiTurnContext.Empty(new DateOnly(2026, 10, 1)));
+        var shown = new[]
+        {
+            new AiHallRef(harness.NakheelId, "قاعة النخيل"),
+            new AiHallRef(harness.OrchidId, "قاعة الأوركيد")
+        };
+        var context = new AiConversationContext(
+            [],
+            new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, "قاعة الأوركيد"),
+            shown,
+            shown[1],
+            new AiConversationState(
+                ActiveGoal: "find_hall",
+                ActiveHallId: harness.OrchidId,
+                ActiveHallName: "قاعة الأوركيد",
+                ShownHallIds: shown.Select(hall => hall.HallId).ToArray(),
+                SelectedResultIndex: 1,
+                LastSemanticPlan: plan));
+
+        var response = await harness.AskAsync("ليش هاي؟", conversation: context);
+
+        Assert.Equal(AiAssistantResponseKind.Answer, response.Kind);
+        Assert.True(response.HallDetails?.HallId == harness.OrchidId,
+            $"{response.Kind}: {response.Message}; requests={string.Join(',', harness.Details.Requested)}");
+        Assert.Contains("5000", response.Message);
+        Assert.Contains("250", response.Message);
+        Assert.Empty(harness.Search.Requests);
+    }
+
+    [Fact]
+    public async Task UpdateTheSessionBudgetAndKeepTheOtherSearchCriteria()
+    {
+        var harness = new MabroukHarness();
+        var initial = AiSemanticPlanResolver.Resolve(
+            "بدي صالة بغزة لـ200 شخص وبحدود 5000", "ar", new DateOnly(2026, 10, 1), null,
+            AiTurnContext.Empty(new DateOnly(2026, 10, 1)));
+        var priorIntent = AiSemanticPlanResolver.ToLegacyIntent(initial);
+        var context = new AiConversationContext(
+            [],
+            priorIntent,
+            [],
+            null,
+            new AiConversationState(ActiveGoal: "find_hall", LastSemanticPlan: initial));
+
+        var response = await harness.AskAsync("لا ممكن 6000", conversation: context);
+
+        Assert.True(response.Kind == AiAssistantResponseKind.Halls,
+            $"{response.Kind}: {response.Message}; plan={response.SemanticPlan}; intent={response.Intent}");
+        Assert.Equal(6000m, response.Intent?.AroundPrice);
+        var search = Assert.Single(harness.Search.Requests);
+        Assert.Equal(Wesal.Domain.Enums.HallRegion.Gaza, search.Region);
+        Assert.Equal(200, search.MinimumCapacity);
+        Assert.Equal(6000m, search.AroundPrice);
+    }
+
+    [Fact]
+    public async Task ClearThePreviousAreaWhenTheUserRejectsIt()
+    {
+        var harness = new MabroukHarness();
+        var priorPlan = AiSemanticPlanResolver.Resolve(
+            "بدي صالة في حي الرمال لـ150 شخص", "ar", new DateOnly(2026, 10, 1), null,
+            AiTurnContext.Empty(new DateOnly(2026, 10, 1)));
+        var priorIntent = AiSemanticPlanResolver.ToLegacyIntent(priorPlan);
+        var context = new AiConversationContext(
+            [], priorIntent, [], null,
+            new AiConversationState(ActiveGoal: "find_hall", LastSemanticPlan: priorPlan));
+
+        var response = await harness.AskAsync("مش بالرمال", conversation: context);
+
+        Assert.Equal(AiAssistantResponseKind.Halls, response.Kind);
+        Assert.True(response.SemanticPlan?.ClearAreaPreference,
+            $"priorArea={priorPlan.Area}; planArea={response.SemanticPlan?.Area}; cleared={response.SemanticPlan?.ClearedArea}");
+        var search = Assert.Single(harness.Search.Requests);
+        Assert.Equal(Wesal.Domain.Enums.HallRegion.Gaza, search.Region);
+        Assert.Null(search.Area);
+        Assert.Equal(150, search.MinimumCapacity);
+    }
+
+    [Fact]
     public async Task LoadAtLeastFiftyMultiTurnConversationScenariosIncludingTheExactProductionRegression()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "Ai", "Fixtures", "mabrouk-v3-conversations.json");

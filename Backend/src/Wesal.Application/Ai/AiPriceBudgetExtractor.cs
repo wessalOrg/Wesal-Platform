@@ -7,6 +7,26 @@ namespace Wesal.Application.Ai;
 /// <summary>Extracts explicit price constraints without treating an unqualified number as price or capacity.</summary>
 public static partial class AiPriceBudgetExtractor
 {
+    public static AiPriceBudget ApplyConversationalAmendment(string? message, AiPriceBudget current, AiPriceBudget? prior)
+    {
+        if (current.IsSpecified || prior is null)
+            return current;
+
+        var text = NormalizeNumerals(message?.Trim() ?? string.Empty);
+        if (!AmendmentLanguageRegex().IsMatch(AiText.Normalize(text))
+            || ReplacementAmountRegex().Match(text) is not { Success: true } match
+            || !TryAmount(match.Groups["amount"].Value, out var amount))
+            return current;
+
+        if (prior.AroundPrice.HasValue)
+            return new AiPriceBudget(AroundPrice: amount);
+        if (prior.MaximumPrice.HasValue)
+            return new AiPriceBudget(MaximumPrice: amount);
+        if (prior.MinimumPrice.HasValue)
+            return new AiPriceBudget(MinimumPrice: amount);
+        return current;
+    }
+
     public static (AiPriceBudget Budget, AiPriceSortPreference SortPreference) Extract(string? message)
     {
         var text = NormalizeNumerals(message?.Trim() ?? string.Empty);
@@ -111,4 +131,10 @@ public static partial class AiPriceBudgetExtractor
 
     [GeneratedRegex(@"(?:^|[\s،])ب(?:ـ)?(?<amount>\d{1,7}(?:,\d{3})*(?:\.\d{1,2})?)(?=$|[\s،]|شيكل|شيقل|NIS|ILS)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex BoundHallPriceRegex();
+
+    [GeneratedRegex(@"(?<amount>\d{1,7}(?:,\d{3})*(?:\.\d{1,2})?)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ReplacementAmountRegex();
+
+    [GeneratedRegex(@"(?:لا|ممكن|بدل|غير|خلينا|actually|instead|maybe|rather)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex AmendmentLanguageRegex();
 }

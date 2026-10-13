@@ -27,7 +27,9 @@ public sealed record AiSemanticPlan(
     AiClarificationRequirement? ClarificationRequirement,
     AiPlanConfidence Confidence,
     string Language,
-    IReadOnlyList<AiSelectedResultReference>? SelectedResultReferences = null);
+    IReadOnlyList<AiSelectedResultReference>? SelectedResultReferences = null,
+    bool ClearAreaPreference = false,
+    string? ClearedArea = null);
 
 public enum AiSemanticGoal
 {
@@ -80,6 +82,7 @@ public enum AiComparisonIntent
     Largest,
     Smallest,
     BestBudgetFit,
+    MostSuitable,
     CompareSelected
 }
 
