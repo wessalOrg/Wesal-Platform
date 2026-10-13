@@ -5,7 +5,7 @@
 - V4 engineering: `V4_ENGINEERING_COMPLETE`.
 - V4 automated validation: `V4_AUTOMATED_VALIDATION_PASS`.
 - V4 production: `V4_PRODUCTION_VERIFICATION_PENDING` because exact Render/Vercel deployment SHA and authenticated smoke evidence are unavailable.
-- V5: implementation and local backend/frontend checks are complete; PR #39 is open as a draft. Remote CI and PR review are pending; local PostgreSQL and browser E2E remain unavailable. Do not describe V5 as merged or production verified.
+- V5: implementation and CI are complete on the source candidate; PR #39 remains a draft while browser E2E is pending. V5 is not merged or production verified.
 
 ## Source
 
@@ -13,8 +13,9 @@
 - Base SHA: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c`.
 - Branch: `feat/mabrouk-retrieval-recommendation-v5`.
 - Implementation commit SHA: `50d4f0c` (`feat: add Mabrouk V5 retrieval and recommendations`).
+- Retrieval fix commit SHA: `ec8273600cd67c285ef55392b862638a802ab412`.
 - Pull request: [#39](https://github.com/wessalOrg/Wesal-Platform/pull/39), draft.
-- Initial PR head SHA: `1df87d2b0a0b2f646c41a72650282c246bd949db`; this release-record update advances the PR head, so final checks must be read from the latest PR revision.
+- CI-validated source SHA: `ec8273600cd67c285ef55392b862638a802ab412`; a documentation-only follow-up records this evidence.
 - Merge SHA: none.
 - Current `origin/main`: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c` at work start.
 
@@ -22,9 +23,9 @@
 
 - Backend restore: passed (`dotnet restore Wesal.slnx`).
 - Release backend build: passed (`dotnet build Wesal.slnx -c Release --no-restore`; existing test analyzer warnings remain).
-- Full Release backend regression: 2,653 passed, 0 failed, 0 skipped in the local runner. This run does not establish PostgreSQL validation: `WESAL_TEST_PG` was unset, and the repository's PG test fixtures return without connecting when it is absent.
+- Full Release backend regression: 2,653 passed, 0 failed, 0 skipped in both local runner and PR CI. Local `WESAL_TEST_PG` was unset, but PR CI provisioned PostgreSQL 16 and exercised the real PostgreSQL integration tests.
 - Focused V5 retrieval benchmark/regressions and six recommendation regressions are included in the passing full suite.
-- PostgreSQL: pending. No local PostgreSQL service or Docker daemon is available. PR CI provisions PostgreSQL 16 and should provide the real integration result.
+- PostgreSQL: passed on PR CI with PostgreSQL 16. Local PostgreSQL remains unavailable.
 - Frontend install: passed with repository CI command `npm ci --legacy-peer-deps` (394 packages).
 - Frontend TypeScript: passed (`npm exec -- tsc --noEmit`).
 - Frontend lint: passed; CI marks this step advisory.
@@ -32,9 +33,11 @@
 - Production environment gate: passed.
 - Frontend production build: passed; all 44 static pages generated.
 - Production dependency audit: `npm audit --omit=dev` found 0 vulnerabilities. Install reported 5 high-severity issues in the full dependency tree; production-only audit is clean.
+- Production-image knowledge check: passed; image contains all 27 of 27 Markdown source articles.
 - Browser E2E: pending. Local Playwright requires the isolated PostgreSQL-backed Admin stack; Docker and a PostgreSQL service are unavailable. No invalid browser run was counted.
-- Secret scan: local Gitleaks binary unavailable; the repository PR CI runs Gitleaks v8.30.1 on the candidate diff.
-- PR CI at head `76965812e0b5e267d6cc2bf7503d48a1be2b2c55`: frontend and changed-source Gitleaks passed; backend failed one PostgreSQL-backed built-in-override restoration assertion because lexical results accompanied a verified exact alias. V5 now returns only verified exact-alias matches when one exists, with a focused regression. Recheck all gates on the corrected head; Vercel Preview remains separate from production verification.
+- Secret scan: passed on PR CI using Gitleaks v8.30.1.
+- PR CI run `38373205013` on source SHA `ec8273600cd67c285ef55392b862638a802ab412`: backend, PostgreSQL 16, frontend, and changed-source Gitleaks all passed. An earlier CI revision exposed exact-alias lexical leakage after archiving a built-in override; the fix and regression are included in this validated source SHA.
+- Vercel Preview check passed for this PR. This is preview evidence, not production deployment/SHA or authenticated smoke evidence.
 - `git diff --check`: passed before final documentation/commit.
 
 ## Retrieval and recommendation
@@ -47,6 +50,6 @@
 ## Preservation and remaining work
 
 - Built-in knowledge Markdown: 27 files total (the original 26 plus the existing additive Mabrouk development-team entry); no built-in Markdown file changed in this V5 diff. The source baseline remains the existing 20 verified entries and five categories.
-- Learning Loop / Create Answer: full backend regression passed locally, including existing punctuation-only duplicate-alias coverage; the real PostgreSQL version remains pending.
-- Before merge: run PR CI on the exact candidate SHA, obtain real PostgreSQL integration results, complete stable-stack Playwright E2E, review the final secret scan, then reassess merge readiness.
+- Learning Loop / Create Answer: full backend regression passed locally, including existing punctuation-only duplicate-alias coverage; PR CI also exercised the PostgreSQL-backed suite.
+- Before merge: complete stable-stack Playwright E2E, then reassess merge readiness. CI and the secret scan passed on the source candidate listed above.
 - Production verification: V5 Render/Vercel deployment SHA and authenticated smoke remain `PRODUCTION_VERIFICATION_PENDING` until access and evidence are available.
