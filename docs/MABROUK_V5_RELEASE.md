@@ -12,7 +12,7 @@
 - Repository: `wessalOrg/Wesal-Platform`.
 - Base SHA: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c`.
 - Branch: `feat/mabrouk-retrieval-recommendation-v5`.
-- Implementation commit: pending.
+- Implementation HEAD SHA: `50d4f0c` (`feat: add Mabrouk V5 retrieval and recommendations`). This release-record update follows that implementation commit.
 - Pull request: pending.
 - Merge SHA: none.
 - Current `origin/main`: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c` at work start.
