@@ -16,8 +16,9 @@
 - Retrieval fix commit SHA: `ec8273600cd67c285ef55392b862638a802ab412`.
 - Pull request: [#39](https://github.com/wessalOrg/Wesal-Platform/pull/39), draft.
 - CI-validated source SHA: `ec8273600cd67c285ef55392b862638a802ab412`; a documentation-only follow-up records this evidence.
+- Documentation follow-up source head: `4458c52cc6e765b1c1b2e056c2ba50378c8436c9`.
 - Merge SHA: none.
-- Current `origin/main`: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c` at work start.
+- Current `origin/main`: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c` (unchanged at this continuation).
 
 ## Validation evidence
 
@@ -34,10 +35,11 @@
 - Frontend production build: passed; all 44 static pages generated.
 - Production dependency audit: `npm audit --omit=dev` found 0 vulnerabilities. Install reported 5 high-severity issues in the full dependency tree; production-only audit is clean.
 - Production-image knowledge check: passed; image contains all 27 of 27 Markdown source articles.
-- Browser E2E: pending. Local Playwright requires the isolated PostgreSQL-backed Admin stack; Docker and a PostgreSQL service are unavailable. No invalid browser run was counted.
+- Browser E2E: `NOT EXECUTED` — 20 discovered, 0 passed, 0 failed, 0 skipped, 20 did-not-run. The V5 and preserved original checkouts have no `.local-e2e` runner; no local PostgreSQL service, `psql`, or listener on ports 5432/5433 was available. Docker Desktop's service could not be opened and its CLI did not return. This is an invalid-environment block, not a product failure.
 - Secret scan: passed on PR CI using Gitleaks v8.30.1.
 - PR CI run `38373205013` on source SHA `ec8273600cd67c285ef55392b862638a802ab412`: backend, PostgreSQL 16, frontend, and changed-source Gitleaks all passed. An earlier CI revision exposed exact-alias lexical leakage after archiving a built-in override; the fix and regression are included in this validated source SHA.
 - Vercel Preview check passed for this PR. This is preview evidence, not production deployment/SHA or authenticated smoke evidence.
+- Latest checks on documentation head `4458c52cc6e765b1c1b2e056c2ba50378c8436c9` passed in CI run `38373722312` (backend, PostgreSQL-backed suite, frontend, Gitleaks, and Vercel Preview).
 - `git diff --check`: passed before final documentation/commit.
 
 ## Retrieval and recommendation
@@ -53,3 +55,4 @@
 - Learning Loop / Create Answer: full backend regression passed locally, including existing punctuation-only duplicate-alias coverage; PR CI also exercised the PostgreSQL-backed suite.
 - Before merge: complete stable-stack Playwright E2E, then reassess merge readiness. CI and the secret scan passed on the source candidate listed above.
 - Production verification: V5 Render/Vercel deployment SHA and authenticated smoke remain `PRODUCTION_VERIFICATION_PENDING` until access and evidence are available.
+- Production smoke (2026-10-13): frontend and `/health`, `/health/live` returned HTTP 200; deployed SHA was not exposed, and the active Render CLI workspace does not contain the Wesal service. Two booking questions returned the same trusted guidance. The current served assistant returned generic help for recommendation follow-ups and an honest no-result for an impossible request. Since V5 is unmerged, these observations describe the currently served version and do not verify V5.
