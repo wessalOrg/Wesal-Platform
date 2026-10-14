@@ -7,7 +7,7 @@
 - V5 release-record PR #41 merged as `96d23555688073ac49c1d3f56804cb76b46dfa78`; `main` CI passed on `9c01dfd8e6456d2476c51ab3281b8ba763827e97` in run `38555188933`.
 - V5 stable local Playwright run passed 20/20. Production deployment SHA and authenticated smoke remain `PRODUCTION_VERIFICATION_PENDING`.
 - V6 branch: `feat/mabrouk-v6-evaluation-coverage`, updated from latest `main` `9c01dfd8e6456d2476c51ab3281b8ba763827e97`.
-- Draft PR [#40](https://github.com/wessalOrg/Wesal-Platform/pull/40). Initial exact-head CI passed on `c99ac785872c382f2ee56c61a8856e5234e2e591` (run `38544574808`) and `517e126a3bb1dc0ef37347e4a0e00df378d62608` (run `38544972314`): backend/PostgreSQL, knowledge image, frontend, Gitleaks, and Vercel Preview. The V6 branch is being revalidated after syncing latest main and canonicalizing all fixture keys.
+- Draft PR [#40](https://github.com/wessalOrg/Wesal-Platform/pull/40). Initial exact-head CI passed on `c99ac785872c382f2ee56c61a8856e5234e2e591` (run `38544574808`) and `517e126a3bb1dc0ef37347e4a0e00df378d62608` (run `38544972314`): backend/PostgreSQL, knowledge image, frontend, Gitleaks, and Vercel Preview. The canonicalized V6 evaluation commit `9d21f0300ee1d73e39d47505c0e4e1aceaf9cf20`, synced with latest `main`, passed exact-head CI in run `38567114102` across backend/PostgreSQL, frontend lint/build, secret scan, and Vercel Preview.
 
 ## V6 first engineering slice: evaluation coverage
 
