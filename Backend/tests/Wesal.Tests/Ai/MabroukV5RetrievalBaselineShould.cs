@@ -10,7 +10,7 @@ using Wesal.Persistence.Repositories;
 
 namespace Wesal.Tests.Ai;
 
-/// <summary>Measures the unchanged V4 hybrid retrieval against a labeled corpus.</summary>
+/// <summary>Measures the production hybrid retriever against the reviewed Mabrouk corpus.</summary>
 public sealed class MabroukV5RetrievalBaselineShould
 {
     [Fact]
@@ -19,7 +19,9 @@ public sealed class MabroukV5RetrievalBaselineShould
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Ai", "Fixtures", "mabrouk-v5-retrieval-eval.json");
         using var fixture = JsonDocument.Parse(await File.ReadAllTextAsync(fixturePath));
         var cases = fixture.RootElement.EnumerateArray().ToArray();
-        Assert.True(cases.Length >= 15);
+        Assert.True(cases.Length >= 30);
+        var ids = cases.Select(item => item.GetProperty("id").GetString()!).ToArray();
+        Assert.Equal(ids.Length, ids.Distinct(StringComparer.Ordinal).Count());
 
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase("MabroukV5RetrievalBaseline-" + Guid.NewGuid())
@@ -48,22 +50,28 @@ public sealed class MabroukV5RetrievalBaselineShould
             var expectedKeys = item.TryGetProperty("expectedKeys", out var expectedKeyValues)
                 ? expectedKeyValues.EnumerateArray().Select(value => value.GetString()!).ToArray()
                 : [];
+            if (item.TryGetProperty("expectedKey", out var legacyExpectedKey)
+                && legacyExpectedKey.ValueKind == JsonValueKind.String)
+                expectedKeys = [legacyExpectedKey.GetString()!];
             var acceptableFallback = item.GetProperty("acceptableFallback").GetBoolean();
             var forbidden = item.GetProperty("forbiddenKeys").EnumerateArray().Select(value => value.GetString()!).ToArray();
             var top1 = results.FirstOrDefault();
             var top3 = results.Take(3).ToArray();
+            var actualTop1Key = top1?.StableKey;
+            var labelMatch = expectedKeys.Contains(actualTop1Key, StringComparer.Ordinal);
+            var forbiddenMatch = forbidden.Any(key => results.Any(result => result.StableKey == key));
+            var wrongSource = forbiddenMatch
+                || (expectedKeys.Length > 0 && !acceptableFallback && results.Count > 0 && !labelMatch);
             rows.Add(new EvalRow(
                 item.GetProperty("id").GetString()!,
                 language,
                 item.GetProperty("kind").GetString()!,
                 expectedKeys,
-                top1?.StableKey,
-                expectedKeys.Contains(top1?.StableKey, StringComparer.Ordinal),
+                actualTop1Key,
+                labelMatch,
                 top3.Any(result => expectedKeys.Contains(result.StableKey, StringComparer.Ordinal)),
                 results.Count == 0,
-                forbidden.Any(key => results.Any(result => result.StableKey == key))
-                    || (expectedKeys.Length > 0 && !acceptableFallback && results.Count > 0
-                        && !results.Any(result => expectedKeys.Contains(result.StableKey, StringComparer.Ordinal))),
+                wrongSource,
                 acceptableFallback,
                 samples.Average(),
                 Percentile(samples.Order().ToArray(), 0.95)));
@@ -71,9 +79,10 @@ public sealed class MabroukV5RetrievalBaselineShould
 
         var report = new
         {
-            version = 1,
-            baseline = "origin/main 5a60fdb3cc24e8936659cb1b335cc8ec33f1288c",
+            version = 2,
+            baseline = "origin/main 950a4b0a4da9f7007642cd8691f0f3118d81a0cc",
             retriever = "HybridWesalKnowledgeService (exact aliases + deterministic lexical ranking; no vectors)",
+            note = "Offline embedded corpus, in-memory empty dynamic repository; latency excludes database and network time.",
             corpusSize = rows.Count,
             top1Accuracy = Ratio(rows.Count(row => row.Top1Correct), rows.Count(row => row.ExpectedKeys.Length > 0)),
             top3Recall = Ratio(rows.Count(row => row.Top3Correct), rows.Count(row => row.ExpectedKeys.Length > 0)),
@@ -100,12 +109,23 @@ public sealed class MabroukV5RetrievalBaselineShould
             cases = rows
         };
 
-        var output = Path.Combine(Path.GetTempPath(), "mabrouk-v5-retrieval-baseline.json");
+        var output = Path.Combine(Path.GetTempPath(), "mabrouk-v6-retrieval-baseline.json");
         await File.WriteAllTextAsync(output, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine("Baseline report: " + output);
-        Console.WriteLine(JsonSerializer.Serialize(report));
-        // Wrong-source cases are intentionally reported as baseline failures;
-        // they must not prevent the benchmark from producing usable metrics.
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            report.baseline,
+            report.corpusSize,
+            report.top1Accuracy,
+            report.top3Recall,
+            report.wrongSourceRate,
+            report.fallbackRate,
+            report.averageLatencyMs,
+            report.p95LatencyMs,
+            report.byLanguage,
+            failures = rows.Where(row => !row.Top1Correct && !row.AcceptableFallback)
+                .Select(row => new { row.Id, row.ExpectedKeys, row.Top1Key, row.Fallback, row.WrongSource })
+        }));
     }
 
     private static double Ratio(int numerator, int denominator)
