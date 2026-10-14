@@ -10,7 +10,6 @@ test("default Arabic renders RTL", async ({ page }) => {
 });
 
 test("English renders LTR with translated navigation", async ({ page }) => {
-  await page.goto("/login");
   await loginAsAdmin(page);
   await gotoAdmin(page, "/admin/mabrouk");
   await page.evaluate(() => {

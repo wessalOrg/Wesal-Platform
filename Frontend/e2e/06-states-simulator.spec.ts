@@ -33,6 +33,7 @@ test.describe.serial("studio states, simulator and history", () => {
   test("gemini draft without a key degrades gracefully", async ({ page }) => {
     await gotoAdmin(page, "/admin/mabrouk/knowledge");
     const library = page.getByTestId("mabrouk-knowledge-library");
+    await expect(library.locator("article").first()).toBeVisible({ timeout: 30000 });
     const before = await library.locator("article").count();
     await library.locator("button.btn-primary").first().click();
     const editor = page.getByTestId("mabrouk-knowledge-editor");
@@ -40,6 +41,6 @@ test.describe.serial("studio states, simulator and history", () => {
     await editor.locator("button.btn-outline").nth(1).click();
     await expect(editor).toBeVisible({ timeout: 30000 });
     await editor.locator("button.btn-outline").first().click();
-    expect(await library.locator("article").count()).toBeLessThanOrEqual(before + 1);
+    expect(await library.locator("article").count()).toBe(before);
   });
 });

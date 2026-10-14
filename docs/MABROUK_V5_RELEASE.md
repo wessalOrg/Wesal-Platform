@@ -5,7 +5,7 @@
 - V4 engineering: `V4_ENGINEERING_COMPLETE`.
 - V4 automated validation: `V4_AUTOMATED_VALIDATION_PASS`.
 - V4 production: `V4_PRODUCTION_VERIFICATION_PENDING` because exact Render/Vercel deployment SHA and authenticated smoke evidence are unavailable.
-- V5: implementation and CI are complete on the source candidate; PR #39 remains a draft while browser E2E is pending. V5 is not merged or production verified.
+- V5: implementation, full local browser E2E, and prior source CI are complete. The final E2E/login-readiness follow-up is committed for fresh CI; PR #39 remains a draft until that exact head passes. V5 is not merged or production verified.
 
 ## Source
 
@@ -17,7 +17,8 @@
 - Pull request: [#39](https://github.com/wessalOrg/Wesal-Platform/pull/39), draft.
 - CI-validated source SHA: `ec8273600cd67c285ef55392b862638a802ab412`; a documentation-only follow-up records this evidence.
 - Documentation follow-up source head: `4458c52cc6e765b1c1b2e056c2ba50378c8436c9`.
-- Current pushed candidate head: `ff437301e5f8c1fd781f8e2c1add7a99f204cd40`.
+- Previous pushed candidate head: `2d64acf0e76bf2baf6c3804133c7cdb50895fdac`.
+- Final E2E follow-up commit: pending; record exact SHA after commit.
 - Merge SHA: none.
 - Current `origin/main`: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c` (unchanged at this continuation).
 
@@ -36,12 +37,12 @@
 - Frontend production build: passed; all 44 static pages generated.
 - Production dependency audit: `npm audit --omit=dev` found 0 vulnerabilities. Install reported 5 high-severity issues in the full dependency tree; production-only audit is clean.
 - Production-image knowledge check: passed; image contains all 27 of 27 Markdown source articles.
-- Browser E2E: a stable isolated PostgreSQL-backed stack ran the full 20-test suite on 2026-10-14: 15 passed, 2 failed, 0 skipped, and 3 did-not-run. One failure came from a temporary React-internal-value wait in the login helper; that wait was removed. The other exposed a brittle helper condition: the admin login POST and subsequent session request returned 200 and the browser left `/login`, but the helper timed out waiting for navbar test IDs. The helper now waits for the successful login response and navigation; protected admin navigation is asserted by `gotoAdmin`. This correction has not yet been rerun. A rerun was refused when C: had 0.23 GB free (minimum 2 GB); after stopping runner-owned services and the dedicated PostgreSQL container, C: had 1.02 GB free. A runner copy placed on D: with its temp directory redirected to D: was then tried; its unchanged disk safety gate reported C: 0.84 GB and D: 144.61 GB and refused to start. Docker Desktop's `docker_data.vhdx` is still on C:. Full browser E2E remains a release blocker until C: meets the runner's 2 GB minimum.
+- Browser E2E: the final stable isolated PostgreSQL-backed run on 2026-10-14 passed **20/20, 0 failed, 0 skipped** in 5.8 minutes; the runner confirmed the stack remained healthy throughout. It used a runner copy and temp directory on D: while leaving the existing 2 GB C: free-space guard intact. C: had 3.43 GB free and D: 128.80 GB at completion. Focused follow-ups also passed: knowledge library 5/5, learning loop 2/2, admin auth 4/4, English RTL/LTR persistence 1/1, and the final simulator draft test 1/1. Fixes covered React login-form remembered-email initialization readiness, locale-aware error copy, and waiting for knowledge rows before measuring the no-create invariant.
 - Secret scan: passed on PR CI using Gitleaks v8.30.1.
 - PR CI run `38373205013` on source SHA `ec8273600cd67c285ef55392b862638a802ab412`: backend, PostgreSQL 16, frontend, and changed-source Gitleaks all passed. An earlier CI revision exposed exact-alias lexical leakage after archiving a built-in override; the fix and regression are included in this validated source SHA.
 - Vercel Preview check passed for this PR. This is preview evidence, not production deployment/SHA or authenticated smoke evidence.
 - Latest checks on documentation head `4458c52cc6e765b1c1b2e056c2ba50378c8436c9` passed in CI run `38373722312` (backend, PostgreSQL-backed suite, frontend, Gitleaks, and Vercel Preview).
-- Current candidate CI run `38531563003` passed on `ff437301e5f8c1fd781f8e2c1add7a99f204cd40`: backend 2,654/2,654 including PostgreSQL integration, frontend lint/contracts/environment/build, changed-source Gitleaks, and Vercel Preview. This does not replace the blocked browser E2E rerun.
+- Candidate CI run `38531924141` passed on `2d64acf0e76bf2baf6c3804133c7cdb50895fdac`: backend 2,654/2,654 including PostgreSQL integration, frontend lint/contracts/environment/build, changed-source Gitleaks, and Vercel Preview. Fresh CI for the final E2E/login-readiness follow-up commit is required before marking PR ready or merging.
 - `git diff --check`: passed before final documentation/commit.
 
 ## Retrieval and recommendation
@@ -55,6 +56,6 @@
 
 - Built-in knowledge Markdown: 27 files total (the original 26 plus the existing additive Mabrouk development-team entry); no built-in Markdown file changed in this V5 diff. The source baseline remains the existing 20 verified entries and five categories.
 - Learning Loop / Create Answer: full backend regression passed locally, including existing punctuation-only duplicate-alias coverage; PR CI also exercised the PostgreSQL-backed suite.
-- Before merge: rerun the full stable-stack Playwright suite after the login-helper correction, then reassess merge readiness. The 2026-10-14 run is not a passing acceptance result. Backend Release, PostgreSQL integration, frontend production build, and secret scan passed on the current candidate head in CI.
+- Before merge: push the final verified follow-up, require all CI/security/preview checks on its exact SHA, inspect PR #39 for mergeability and unresolved blocking reviews, then mark ready and merge under the repository policy. The stable-stack Playwright gate is now PASS (20/20). Production deployment SHA/authenticated smoke remains separate external verification debt and does not block engineering merge when source gates are green.
 - Production verification: V5 Render/Vercel deployment SHA and authenticated smoke remain `PRODUCTION_VERIFICATION_PENDING` until access and evidence are available.
 - Production smoke (2026-10-13): frontend and `/health`, `/health/live` returned HTTP 200; deployed SHA was not exposed, and the active Render CLI workspace does not contain the Wesal service. Two booking questions returned the same trusted guidance. The current served assistant returned generic help for recommendation follow-ups and an honest no-result for an impossible request. Since V5 is unmerged, these observations describe the currently served version and do not verify V5.

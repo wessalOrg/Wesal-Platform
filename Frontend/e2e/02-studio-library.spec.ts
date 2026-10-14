@@ -125,7 +125,9 @@ test.describe.serial("knowledge library lifecycle", () => {
     });
     await editor.locator("button.btn-outline").nth(1).click();
     expect((await draftResponse).status()).toBe(503);
-    await expect(editor.getByRole("alert")).toContainText("تعذر حفظ التغيير");
+    await expect(editor.getByRole("alert")).toContainText(
+      /تعذر حفظ التغيير|The change could not be saved/,
+    );
     await expect(editor).toBeVisible({ timeout: 30000 });
     await editor.locator("button.btn-outline").first().click();
     expect(await library.locator("article").count()).toBe(before);
