@@ -5,7 +5,7 @@
 - V4 engineering: `V4_ENGINEERING_COMPLETE`.
 - V4 automated validation: `V4_AUTOMATED_VALIDATION_PASS`.
 - V4 production: `V4_PRODUCTION_VERIFICATION_PENDING` because exact Render/Vercel deployment SHA and authenticated smoke evidence are unavailable.
-- V5: implementation, full local browser E2E, and prior source CI are complete. The final E2E/login-readiness follow-up is committed for fresh CI; PR #39 remains a draft until that exact head passes. V5 is not merged or production verified.
+- V5: `V5_ENGINEERING_COMPLETE`; PR #39 is merged. Full local browser E2E, exact-head GitHub CI, and Vercel Preview passed. Production deployment SHA and authenticated smoke remain pending.
 
 ## Source
 
@@ -14,13 +14,13 @@
 - Branch: `feat/mabrouk-retrieval-recommendation-v5`.
 - Implementation commit SHA: `50d4f0c` (`feat: add Mabrouk V5 retrieval and recommendations`).
 - Retrieval fix commit SHA: `ec8273600cd67c285ef55392b862638a802ab412`.
-- Pull request: [#39](https://github.com/wessalOrg/Wesal-Platform/pull/39), draft.
+- Pull request: [#39](https://github.com/wessalOrg/Wesal-Platform/pull/39), merged 2026-10-14.
 - CI-validated source SHA: `ec8273600cd67c285ef55392b862638a802ab412`; a documentation-only follow-up records this evidence.
 - Documentation follow-up source head: `4458c52cc6e765b1c1b2e056c2ba50378c8436c9`.
 - Previous pushed candidate head: `2d64acf0e76bf2baf6c3804133c7cdb50895fdac`.
-- Final E2E follow-up commit: pending; record exact SHA after commit.
-- Merge SHA: none.
-- Current `origin/main`: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c` (unchanged at this continuation).
+- Final E2E/login-readiness follow-up commit SHA: `4beaa36599178bde4e32f9295bbdebe9af94dde0`.
+- Merge SHA: `950a4b0a4da9f7007642cd8691f0f3118d81a0cc`.
+- Current `origin/main` at merge: `950a4b0a4da9f7007642cd8691f0f3118d81a0cc`.
 
 ## Validation evidence
 
@@ -42,7 +42,7 @@
 - PR CI run `38373205013` on source SHA `ec8273600cd67c285ef55392b862638a802ab412`: backend, PostgreSQL 16, frontend, and changed-source Gitleaks all passed. An earlier CI revision exposed exact-alias lexical leakage after archiving a built-in override; the fix and regression are included in this validated source SHA.
 - Vercel Preview check passed for this PR. This is preview evidence, not production deployment/SHA or authenticated smoke evidence.
 - Latest checks on documentation head `4458c52cc6e765b1c1b2e056c2ba50378c8436c9` passed in CI run `38373722312` (backend, PostgreSQL-backed suite, frontend, Gitleaks, and Vercel Preview).
-- Candidate CI run `38531924141` passed on `2d64acf0e76bf2baf6c3804133c7cdb50895fdac`: backend 2,654/2,654 including PostgreSQL integration, frontend lint/contracts/environment/build, changed-source Gitleaks, and Vercel Preview. Fresh CI for the final E2E/login-readiness follow-up commit is required before marking PR ready or merging.
+- Candidate CI run `38531924141` passed on `2d64acf0e76bf2baf6c3804133c7cdb50895fdac`. Final exact-head CI run `38541782983` passed on `4beaa36599178bde4e32f9295bbdebe9af94dde0`: backend Release build/test with PostgreSQL 16 (2,654 tests), production knowledge image check, frontend lint/contracts/environment/build, changed-source Gitleaks, and Vercel Preview. No blocking reviews were present and GitHub reported the PR mergeable before it was marked ready and merged.
 - `git diff --check`: passed before final documentation/commit.
 
 ## Retrieval and recommendation
@@ -56,6 +56,6 @@
 
 - Built-in knowledge Markdown: 27 files total (the original 26 plus the existing additive Mabrouk development-team entry); no built-in Markdown file changed in this V5 diff. The source baseline remains the existing 20 verified entries and five categories.
 - Learning Loop / Create Answer: full backend regression passed locally, including existing punctuation-only duplicate-alias coverage; PR CI also exercised the PostgreSQL-backed suite.
-- Before merge: push the final verified follow-up, require all CI/security/preview checks on its exact SHA, inspect PR #39 for mergeability and unresolved blocking reviews, then mark ready and merge under the repository policy. The stable-stack Playwright gate is now PASS (20/20). Production deployment SHA/authenticated smoke remains separate external verification debt and does not block engineering merge when source gates are green.
+- Engineering closure: PR #39 merged as `950a4b0a4da9f7007642cd8691f0f3118d81a0cc` after exact-head checks passed. Stable-stack Playwright gate passed 20/20. Production deployment SHA/authenticated smoke remains separate external verification debt and does not block engineering merge when source gates are green.
 - Production verification: V5 Render/Vercel deployment SHA and authenticated smoke remain `PRODUCTION_VERIFICATION_PENDING` until access and evidence are available.
-- Production smoke (2026-10-13): frontend and `/health`, `/health/live` returned HTTP 200; deployed SHA was not exposed, and the active Render CLI workspace does not contain the Wesal service. Two booking questions returned the same trusted guidance. The current served assistant returned generic help for recommendation follow-ups and an honest no-result for an impossible request. Since V5 is unmerged, these observations describe the currently served version and do not verify V5.
+- Production smoke (2026-10-13): frontend and `/health`, `/health/live` returned HTTP 200; deployed SHA was not exposed, and the active Render CLI workspace did not contain the Wesal service. Two booking questions returned the same trusted guidance. The served assistant returned generic help for recommendation follow-ups and an honest no-result for an impossible request. These observations predate the V5 merge and do not verify V5 production behavior.
