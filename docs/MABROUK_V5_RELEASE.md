@@ -17,7 +17,7 @@
 - Pull request: [#39](https://github.com/wessalOrg/Wesal-Platform/pull/39), draft.
 - CI-validated source SHA: `ec8273600cd67c285ef55392b862638a802ab412`; a documentation-only follow-up records this evidence.
 - Documentation follow-up source head: `4458c52cc6e765b1c1b2e056c2ba50378c8436c9`.
-- Current pushed candidate head: `e418033d0a0d20f5de5ef3e08ee66512f69de01b`.
+- Current pushed candidate head: `ff437301e5f8c1fd781f8e2c1add7a99f204cd40`.
 - Merge SHA: none.
 - Current `origin/main`: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c` (unchanged at this continuation).
 
@@ -41,7 +41,7 @@
 - PR CI run `38373205013` on source SHA `ec8273600cd67c285ef55392b862638a802ab412`: backend, PostgreSQL 16, frontend, and changed-source Gitleaks all passed. An earlier CI revision exposed exact-alias lexical leakage after archiving a built-in override; the fix and regression are included in this validated source SHA.
 - Vercel Preview check passed for this PR. This is preview evidence, not production deployment/SHA or authenticated smoke evidence.
 - Latest checks on documentation head `4458c52cc6e765b1c1b2e056c2ba50378c8436c9` passed in CI run `38373722312` (backend, PostgreSQL-backed suite, frontend, Gitleaks, and Vercel Preview).
-- Current candidate CI run `38530695203` passed on `e418033d0a0d20f5de5ef3e08ee66512f69de01b`: backend 2,654/2,654 including PostgreSQL integration, frontend lint/contracts/environment/build, changed-source Gitleaks, and Vercel Preview. This does not replace the blocked browser E2E rerun.
+- Current candidate CI run `38531563003` passed on `ff437301e5f8c1fd781f8e2c1add7a99f204cd40`: backend 2,654/2,654 including PostgreSQL integration, frontend lint/contracts/environment/build, changed-source Gitleaks, and Vercel Preview. This does not replace the blocked browser E2E rerun.
 - `git diff --check`: passed before final documentation/commit.
 
 ## Retrieval and recommendation
