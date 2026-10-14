@@ -41,36 +41,47 @@ async function waitForHydration(page: Page, selector: string) {
 }
 
 export async function fillLogin(page: Page, email: string, password: string) {
+  await expect(page.getByTestId("login-form-fields")).toHaveAttribute("data-ready", "true", {
+    timeout: 30000,
+  });
   const emailBox = page.locator('input[type="email"]');
   const passwordBox = page.locator('input[type="password"]');
   const submit = page.locator('button[type="submit"]');
   await expect(emailBox).toBeVisible({ timeout: 30000 });
   await expect(passwordBox).toBeVisible({ timeout: 30000 });
-  await waitForHydration(page, 'input[type="email"]');
-  await waitForHydration(page, 'input[type="password"]');
-  await emailBox.fill(email);
-  await passwordBox.fill(password);
-  await expect(emailBox).toHaveValue(email);
-  await expect(passwordBox).toHaveValue(password);
-  await expect(submit).toBeEnabled({ timeout: 20000 });
+  let lastFillError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await waitForHydration(page, 'input[type="email"]');
+    await waitForHydration(page, 'input[type="password"]');
+    await emailBox.fill(email);
+    await passwordBox.fill(password);
+    try {
+      // React may finish hydrating between fields and reset an earlier DOM-only
+      // edit. Confirm both controlled values and retry the pair if that happens.
+      await expect(emailBox).toHaveValue(email, { timeout: 3000 });
+      await expect(passwordBox).toHaveValue(password, { timeout: 3000 });
+      await expect(submit).toBeEnabled({ timeout: 5000 });
+      lastFillError = undefined;
+      break;
+    } catch (error) {
+      lastFillError = error;
+    }
+  }
+  if (lastFillError) throw lastFillError;
   await submit.click();
 }
 
 export async function loginAsAdmin(page: Page) {
   await page.goto("/login");
+  const loginResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST"
+      && new URL(response.url()).pathname.endsWith("/api/v1/auth/login"),
+    { timeout: 30000 },
+  );
   await fillLogin(page, ADMIN_EMAIL, adminPassword());
-  await expect
-    .poll(
-      async () => {
-        if (page.url().includes("/login")) return false;
-        return (
-          (await page.getByTestId("navbar-authenticated").count()) > 0 ||
-          (await page.getByTestId("admin-management").count()) > 0
-        );
-      },
-      { timeout: 60000 },
-    )
-    .toBe(true);
+  expect((await loginResponse).status(), "admin login request should succeed").toBe(200);
+  await expect(page).not.toHaveURL(/\/login(?:[?#]|$)/, { timeout: 30000 });
 }
 
 export async function gotoAdmin(page: Page, path: string) {

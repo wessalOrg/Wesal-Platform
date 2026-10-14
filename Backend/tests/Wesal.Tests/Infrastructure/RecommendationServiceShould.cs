@@ -89,6 +89,9 @@ public class RecommendationServiceShould : IDisposable
 
         Assert.Equal(RecommendationStatus.NoResults, result.Status);
         Assert.Empty(result.Recommendations);
+        Assert.Contains("change", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("SouthGaza", result.ExtractedCriteria?.Region);
+        Assert.Equal(5000, result.ExtractedCriteria?.Capacity);
     }
 
     [Fact]

@@ -59,8 +59,8 @@ public sealed class RecommendationService : IRecommendationService
         if (matches.Count == 0)
         {
             var noResults = effectiveLanguage == "en"
-                ? "I searched but couldn't find a hall matching your criteria right now. Try adjusting the region, date, or capacity."
-                : "بحثت لكن لم أجد قاعة تطابق معاييرك حاليًا. جرّب تغيير المنطقة أو التاريخ أو السعة.";
+                ? "I couldn't find a hall matching all those criteria. Would you like to change the area, guest count, date, or budget? I won't change them unless you choose."
+                : "ما لقيت قاعة تطابق كل هالمعايير. بتحب تغيّر المنطقة أو عدد الضيوف أو التاريخ أو الميزانية؟ ما رح أغيّر أي معيار إلا إذا اخترت.";
             return new RecommendationResponse(
                 RecommendationStatus.NoResults,
                 criteria,

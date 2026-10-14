@@ -66,7 +66,14 @@ test.describe.serial("knowledge library lifecycle", () => {
     await expect(page.getByTestId("mabrouk-history")).toBeVisible({ timeout: 20000 });
     const rollbacks = page.getByTestId("mabrouk-history").locator("button.btn-outline");
     await expect(rollbacks.first()).toBeVisible();
+    const rollbackResponse = page.waitForResponse((response) => {
+      const requestUrl = new URL(response.url());
+      return requestUrl.pathname.includes("/api/v1/admin/mabrouk/knowledge/")
+        && requestUrl.pathname.includes("/rollback/")
+        && response.request().method() === "POST";
+    });
     await rollbacks.first().click();
+    expect((await rollbackResponse).status()).toBe(200);
     await expect(page.getByTestId("mabrouk-history")).toBeVisible({ timeout: 30000 });
   });
 
@@ -118,7 +125,9 @@ test.describe.serial("knowledge library lifecycle", () => {
     });
     await editor.locator("button.btn-outline").nth(1).click();
     expect((await draftResponse).status()).toBe(503);
-    await expect(editor.getByRole("alert")).toContainText("تعذر حفظ التغيير");
+    await expect(editor.getByRole("alert")).toContainText(
+      /تعذر حفظ التغيير|The change could not be saved/,
+    );
     await expect(editor).toBeVisible({ timeout: 30000 });
     await editor.locator("button.btn-outline").first().click();
     expect(await library.locator("article").count()).toBe(before);
