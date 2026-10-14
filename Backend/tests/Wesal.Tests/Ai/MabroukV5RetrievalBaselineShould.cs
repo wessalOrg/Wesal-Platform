@@ -10,7 +10,7 @@ using Wesal.Persistence.Repositories;
 
 namespace Wesal.Tests.Ai;
 
-/// <summary>Measures production hybrid retrieval against the inherited diagnostic corpus.</summary>
+/// <summary>Measures production hybrid retrieval against labeled knowledge cases.</summary>
 public sealed class MabroukV5RetrievalBaselineShould
 {
     [Fact]
@@ -55,6 +55,10 @@ public sealed class MabroukV5RetrievalBaselineShould
                 expectedKeys = [legacyExpectedKey.GetString()!];
             var acceptableFallback = item.GetProperty("acceptableFallback").GetBoolean();
             var forbidden = item.GetProperty("forbiddenKeys").EnumerateArray().Select(value => value.GetString()!).ToArray();
+            var embeddedKeys = embedded.GetArticles().Select(article => article.Key).ToHashSet(StringComparer.Ordinal);
+            Assert.All(expectedKeys.Concat(forbidden), key => Assert.True(
+                embeddedKeys.Contains(key),
+                $"{item.GetProperty("id").GetString()}: labeled key '{key}' is not present in the embedded knowledge corpus."));
             var top1 = results.FirstOrDefault();
             var top3 = results.Take(3).ToArray();
             var actualTop1Key = top1?.StableKey;
@@ -80,9 +84,9 @@ public sealed class MabroukV5RetrievalBaselineShould
         var report = new
         {
             version = 2,
-            baseline = "origin/main 950a4b0a4da9f7007642cd8691f0f3118d81a0cc",
+            baseline = "origin/main 9c01dfd8e6456d2476c51ab3281b8ba763827e97",
             retriever = "HybridWesalKnowledgeService (exact aliases + deterministic lexical ranking; no vectors)",
-            note = "Diagnostic only: inherited expected keys include shorthand aliases that differ from returned stable keys. Offline embedded corpus, in-memory empty dynamic repository; latency excludes database and network time.",
+            note = "Offline embedded corpus, in-memory empty dynamic repository; latency excludes database and network time.",
             corpusSize = rows.Count,
             top1Accuracy = Ratio(rows.Count(row => row.Top1Correct), rows.Count(row => row.ExpectedKeys.Length > 0)),
             top3Recall = Ratio(rows.Count(row => row.Top3Correct), rows.Count(row => row.ExpectedKeys.Length > 0)),
