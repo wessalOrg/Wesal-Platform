@@ -36,9 +36,10 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         var normalized = message.Trim();
         var numericNormalized = NormalizeNumerals(normalized);
 
-        var (catalogArea, catalogRegion) = ExtractCatalogArea(normalized);
-        var region = catalogRegion ?? ExtractRegion(normalized);
-        var area = catalogArea ?? ExtractArea(normalized, region);
+        var explicitRegion = ExtractRegion(normalized);
+        var resolved = AiLocationResolver.Resolve(normalized, ParseRegion(explicitRegion));
+        var region = resolved.Area?.Region.ToString() ?? explicitRegion;
+        var area = resolved.Area?.CanonicalLabel ?? ExtractArea(normalized, region);
         var date = ExtractDate(numericNormalized, today ?? DateOnly.FromDateTime(DateTime.UtcNow));
         var capacity = ExtractCapacity(numericNormalized, allowBareCapacity);
         var (priceBudget, sortPreference) = AiPriceBudgetExtractor.Extract(normalized);
@@ -48,18 +49,8 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
             priceBudget.MinimumPrice, priceBudget.AroundPrice, sortPreference);
     }
 
-    private static (string? Area, string? Region) ExtractCatalogArea(string message)
-    {
-        var folded = AiText.Normalize(message);
-        var match = Enum.GetValues<HallRegion>()
-            .SelectMany(region => RegionAddressCatalog.GetAddresses(region)
-                .Select(area => (Area: area, Region: region.ToString(), Folded: AiText.Normalize(area))))
-            .Where(candidate => folded.Contains(candidate.Folded, StringComparison.Ordinal))
-            .OrderByDescending(candidate => candidate.Folded.Length)
-            .FirstOrDefault();
-
-        return match.Area is null ? (null, null) : (match.Area, match.Region);
-    }
+    private static HallRegion? ParseRegion(string? region)
+        => Enum.TryParse<HallRegion>(region, true, out var parsed) ? parsed : null;
 
     private static string? ExtractRegion(string message)
     {
