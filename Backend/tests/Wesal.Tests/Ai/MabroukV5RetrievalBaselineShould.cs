@@ -10,7 +10,7 @@ using Wesal.Persistence.Repositories;
 
 namespace Wesal.Tests.Ai;
 
-/// <summary>Measures the production hybrid retriever against the reviewed Mabrouk corpus.</summary>
+/// <summary>Measures production hybrid retrieval against the inherited diagnostic corpus.</summary>
 public sealed class MabroukV5RetrievalBaselineShould
 {
     [Fact]
@@ -82,7 +82,7 @@ public sealed class MabroukV5RetrievalBaselineShould
             version = 2,
             baseline = "origin/main 950a4b0a4da9f7007642cd8691f0f3118d81a0cc",
             retriever = "HybridWesalKnowledgeService (exact aliases + deterministic lexical ranking; no vectors)",
-            note = "Offline embedded corpus, in-memory empty dynamic repository; latency excludes database and network time.",
+            note = "Diagnostic only: inherited expected keys include shorthand aliases that differ from returned stable keys. Offline embedded corpus, in-memory empty dynamic repository; latency excludes database and network time.",
             corpusSize = rows.Count,
             top1Accuracy = Ratio(rows.Count(row => row.Top1Correct), rows.Count(row => row.ExpectedKeys.Length > 0)),
             top3Recall = Ratio(rows.Count(row => row.Top3Correct), rows.Count(row => row.ExpectedKeys.Length > 0)),
