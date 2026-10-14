@@ -39,7 +39,17 @@ public sealed record AiConversationState(
     string? LastNavigationTarget = null,
     string? LastQuestionType = null,
     string? ConversationStage = null,
-    AiSemanticPlan? LastSemanticPlan = null);
+    AiSemanticPlan? LastSemanticPlan = null,
+    // Booking-related state
+    Guid? BookingHallId = null,
+    string? BookingHallName = null,
+    DateOnly? BookingDate = null,
+    TimeOnly? BookingStartTime = null,
+    TimeOnly? BookingEndTime = null,
+    string? BookingCustomerName = null,
+    string? PendingBookingCustomerName = null,
+    bool? AwaitingCustomerName = null,
+    string? PendingBookingStatus = null);
 
 /// <summary>A hall the conversation has shown or focused (id + display name only).</summary>
 public sealed record AiHallRef(Guid HallId, string HallName);

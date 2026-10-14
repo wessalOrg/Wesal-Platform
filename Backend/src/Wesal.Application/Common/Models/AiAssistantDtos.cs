@@ -93,7 +93,8 @@ public enum AiAssistantResponseKind
     Availability,
     Clarification,
     Unsupported,
-    Error
+    Error,
+    Booking
 }
 
 public sealed record AiAssistantAvailabilityDayDto(
@@ -101,6 +102,44 @@ public sealed record AiAssistantAvailabilityDayDto(
     string HallName,
     DateOnly Date,
     IReadOnlyList<HallHourlySlotDto> Slots);
+
+/// <summary>
+/// Detailed information about a created booking, returned to the user after
+/// successful submission. Contains the hall, date, time range, and the requester's
+/// name as recorded in the booking.
+/// </summary>
+public sealed record BookingDto
+{
+    /// <summary>
+    /// The name displayed on the booking (the customer/ requester name).
+    /// </summary>
+    public string? NameOnBooking { get; init; }
+
+    /// <summary>
+    /// The hall that was booked.
+    /// </summary>
+    public string HallName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The hall's region (e.g. Gaza, North Gaza).
+    /// </summary>
+    public string Region { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The date of the booking.
+    /// </summary>
+    public DateOnly Date { get; init; }
+
+    /// <summary>
+    /// The time range covered by the booking, e.g. "12:00 - 14:00".
+    /// </summary>
+    public string HourlyTimeRange { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The booking identifier, if available from the persisted record.
+    /// </summary>
+    public Guid? BookingId { get; init; }
+}
 
 /// <summary>
 /// Stable response contract for the unified assistant. <see cref="Halls"/>,
@@ -117,4 +156,5 @@ public sealed record AiAssistantResponse(
     AiAssistantAvailabilityDayDto? Availability,
     AiAssistantIntentDto? Intent,
     IReadOnlyList<AiAssistantActionDto>? Actions = null,
-    [property: System.Text.Json.Serialization.JsonIgnore] AiSemanticPlan? SemanticPlan = null);
+    [property: System.Text.Json.Serialization.JsonIgnore] AiSemanticPlan? SemanticPlan = null,
+    BookingDto? Booking = null);

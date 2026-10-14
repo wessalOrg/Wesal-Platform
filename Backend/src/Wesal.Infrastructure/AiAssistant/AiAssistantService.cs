@@ -346,17 +346,46 @@ public sealed class AiAssistantService : IAiAssistantService
         }
 
         var isBareArea = IsBareAreaRequest(text, parsedCriteria.Area);
+        var priorSearch = context?.LastIntent is { Intent: AiIntentType.SearchHalls };
         var priorPriceSearch = context?.LastIntent is
             { Intent: AiIntentType.SearchHalls, MaximumPrice: not null } or
             { Intent: AiIntentType.SearchHalls, SortByPrice: true };
-        if (parsedCriteria.MaximumPrice.HasValue || parsedCriteria.SortByPrice || isBareArea || priorPriceSearch)
+        // A stated price constraint (max/min/target or a price sort) means the user is
+        // shopping by budget, so the price-aware branch must own the turn.
+        var hasPriceConstraint = parsedCriteria.MaximumPrice.HasValue
+            || parsedCriteria.MinimumPrice.HasValue
+            || parsedCriteria.AroundPrice.HasValue
+            || parsedCriteria.SortByPrice;
+        if (hasPriceConstraint || isBareArea || priorPriceSearch)
         {
             var deterministicIntent = await _intentExtractor.ExtractWithoutModelAsync(text, language, cancellationToken, context);
             deterministicIntent = MergeWithContext(deterministicIntent, context);
+            // A bare budget refinement ("طيب لو ميزانيتي 2200؟") states a price but no
+            // hall-search vocabulary, so the deterministic classifier answers it as a
+            // how-to question. When the user is refining an ongoing hall search, rebuild
+            // the search intent from the stated price and carry the rest forward.
+            if (deterministicIntent.Intent != AiIntentType.SearchHalls && priorSearch && hasPriceConstraint)
+            {
+                deterministicIntent = new AiAssistantIntentDto(
+                    AiIntentType.SearchHalls,
+                    parsedCriteria.Region,
+                    parsedCriteria.Area,
+                    parsedCriteria.Date,
+                    parsedCriteria.Capacity,
+                    null,
+                    parsedCriteria.MaximumPrice,
+                    parsedCriteria.SortByPrice,
+                    parsedCriteria.MinimumPrice,
+                    parsedCriteria.AroundPrice,
+                    parsedCriteria.SortPreference);
+                deterministicIntent = MergeWithContext(deterministicIntent, context);
+            }
+
             if (deterministicIntent.Intent == AiIntentType.SearchHalls
-                && (parsedCriteria.MaximumPrice.HasValue
-                    || parsedCriteria.SortByPrice
+                && (hasPriceConstraint
                     || deterministicIntent.MaximumPrice.HasValue
+                    || deterministicIntent.MinimumPrice.HasValue
+                    || deterministicIntent.AroundPrice.HasValue
                     || deterministicIntent.SortByPrice
                     || isBareArea))
             {
