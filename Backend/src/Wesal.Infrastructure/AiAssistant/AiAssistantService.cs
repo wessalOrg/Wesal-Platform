@@ -9,6 +9,8 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Halls;
+using System.Text.Json.Nodes;
+using Wesal.Infrastructure.OwnerDashboard;
 
 namespace Wesal.Infrastructure.AiAssistant;
 
@@ -52,6 +54,9 @@ public sealed class AiAssistantService : IAiAssistantService
     private readonly ILogger<AiAssistantService> _logger;
     private readonly IAiKnowledgeGapRecorder? _gapRecorder;
     private readonly IAiKnowledgeGapDetector? _gapDetector;
+    private readonly ICurrentUserService? _currentUserService;
+    private readonly IWesalToolGateway? _toolGateway;
+    private readonly IOwnerBookingRequestNotifier _ownerBookingRequestNotifier;
 
     private static readonly NaturalLanguageCriteriaExtractor CriteriaExtractor = new();
 
@@ -69,7 +74,10 @@ public sealed class AiAssistantService : IAiAssistantService
         AiAssistantPolicyGate policyGate,
         ILogger<AiAssistantService> logger,
         IAiKnowledgeGapRecorder? gapRecorder = null,
-        IAiKnowledgeGapDetector? gapDetector = null)
+        IAiKnowledgeGapDetector? gapDetector = null,
+        ICurrentUserService? currentUserService = null,
+        IWesalToolGateway? toolGateway = null,
+        IOwnerBookingRequestNotifier? ownerBookingRequestNotifier = null)
     {
         _intentExtractor = intentExtractor;
         _howToService = howToService;
@@ -85,6 +93,9 @@ public sealed class AiAssistantService : IAiAssistantService
         _logger = logger;
         _gapRecorder = gapRecorder;
         _gapDetector = gapDetector;
+        _currentUserService = currentUserService;
+        _toolGateway = toolGateway;
+        _ownerBookingRequestNotifier = ownerBookingRequestNotifier ?? new OwnerBookingRequestNotifier(null!);
     }
 
     public async Task<AiAssistantResponse> ProcessMessageAsync(
@@ -319,6 +330,23 @@ public sealed class AiAssistantService : IAiAssistantService
                 language,
                 cancellationToken);
             return new AssistantRouteResult(rangeAnswer, "availability_range", policyMs, 0, 0, null);
+        }
+
+        // Handle booking conversation flow
+        if (semanticPlan.Goal == AiSemanticGoal.FindHall
+            && context?.State?.BookingHallId is not null
+            && context?.State?.BookingDate is not null
+            && context?.State?.BookingStartTime is not null
+            && context?.State?.BookingEndTime is not null
+            && context?.State?.BookingCustomerName is not null)
+        {
+            var bookingResponse = await HandleBookingConversationAsync(
+                text,
+                language,
+                turn,
+                context,
+                cancellationToken);
+            return new AssistantRouteResult(bookingResponse, "booking_conversation", policyMs, 0, 0, null);
         }
 
         var hallIds = GetConversationHallIds(context);
@@ -1139,6 +1167,83 @@ public sealed class AiAssistantService : IAiAssistantService
                 : $"ظهر توفر لـ{HallLabel(language, hall.HallName)} في الأيام التالية: {string.Join("، ", availableDates.Select(date => date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)))}.";
 
         return Build(language, AiAssistantResponseKind.Answer, message, intent);
+    }
+
+    private async Task<AiAssistantResponse> CreateBookingThroughToolAsync(
+        AiConversationContext context,
+        string language,
+        string customerName,
+        Guid hallId,
+        DateOnly date,
+        TimeOnly startTime,
+        TimeOnly endTime,
+        CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService?.UserId ?? "anonymous";
+        var arguments = new JsonObject
+        {
+            ["hallId"] = hallId.ToString(),
+            ["date"] = date.ToString("yyyy-MM-dd"),
+            ["startTime"] = startTime.ToString("HH:mm"),
+            ["endTime"] = endTime.ToString("HH:mm"),
+            ["customerName"] = customerName
+        };
+        var invocation = new Wesal.Application.Common.Models.WesalToolInvocation(
+            WesalToolNames.CreateBooking, arguments);
+        var result = await _toolGateway!.ExecuteAsync(invocation, cancellationToken);
+        return Build(
+            language,
+            AiAssistantResponseKind.Booking,
+            result.ErrorMessage ?? "Booking request submitted successfully.",
+            new AiAssistantIntentDto(AiIntentType.Unknown, null, null, null, null, hallId.ToString()));
+    }
+
+    private async Task<AiAssistantResponse> HandleBookingConversationAsync(
+        string text,
+        string language,
+        AiTurnContext turn,
+        AiConversationContext context,
+        CancellationToken cancellationToken)
+    {
+        var hallId = context?.State?.ActiveHallId ?? turn.Hall?.HallId;
+        if (hallId is null)
+        {
+            return Build(language, AiAssistantResponseKind.Clarification, "Please specify which hall you want to book.", null);
+        }
+
+        var hall = await _hallDetailsService.GetHallDetailsAsync(hallId.Value, cancellationToken);
+        if (hall is null)
+        {
+            return Build(language, AiAssistantResponseKind.Clarification, "Hall not found.", null);
+        }
+
+        // Check if we have all required booking information from state
+        var hasDate = context?.State?.BookingDate is not null;
+        var hasTimes = context?.State?.BookingStartTime is not null && context?.State?.BookingEndTime is not null;
+        var hasCustomerName = !string.IsNullOrWhiteSpace(context?.State?.BookingCustomerName);
+
+        if (!hasDate)
+        {
+            return Build(language, AiAssistantResponseKind.Clarification, "Please provide the date for the booking.", null);
+        }
+
+        if (!hasTimes)
+        {
+            return Build(language, AiAssistantResponseKind.Clarification, "Please provide the start and end time for the booking.", null);
+        }
+
+        if (!hasCustomerName)
+        {
+            return Build(language, AiAssistantResponseKind.Clarification, "Please provide the customer name for the booking.", null);
+        }
+
+        // All information gathered, create the booking
+        var date = context!.State!.BookingDate.Value;
+        var startTime = context!.State!.BookingStartTime.Value;
+        var endTime = context!.State!.BookingEndTime.Value;
+        var customerName = context.State.BookingCustomerName;
+
+        return await CreateBookingThroughToolAsync(context, language, customerName, hallId.Value, date, startTime, endTime, cancellationToken);
     }
 
     private async Task<AiAssistantResponse?> HandleResultComparisonAsync(

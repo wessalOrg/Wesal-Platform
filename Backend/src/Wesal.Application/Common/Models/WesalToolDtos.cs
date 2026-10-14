@@ -12,6 +12,7 @@ public static class WesalToolNames
     public const string SearchHalls = "search_halls";
     public const string GetHallDetails = "get_hall_details";
     public const string CheckHallAvailability = "check_hall_availability";
+    public const string CreateBooking = "create_booking";
 }
 
 /// <summary>
