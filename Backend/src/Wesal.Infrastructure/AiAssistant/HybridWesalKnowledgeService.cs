@@ -89,7 +89,12 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
                 ex.GetType().Name);
         }
         var dynamicMatches = candidates
-            .Where(article => IsSourceFamilyEligible(article.Category, normalizedQuestion))
+            // A verified, exact/title-level Admin answer is direct evidence for
+            // an otherwise unknown question. Keep broad category isolation for
+            // weak Mabrouk matches, but do not hide a deliberately curated answer
+            // merely because the user did not say "Mabrouk" in the question.
+            .Where(article => IsSourceFamilyEligible(article.Category, normalizedQuestion)
+                || IsStrongMabroukMatch(article, normalizedQuestion))
             .Select(article => (Article: article, Score: Score(article, normalizedQuestion, tokens, conceptTerms, language)))
             .Where(match => match.Score > 0)
             .ToList();
@@ -275,6 +280,13 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
         return !(category.Equals("mabrouk", StringComparison.OrdinalIgnoreCase) && !mentionsMabrouk)
             && !(category.Equals("platform", StringComparison.OrdinalIgnoreCase) && mentionsMabrouk && !mentionsWesal);
     }
+
+    private static bool IsStrongMabroukMatch(AiKnowledgeArticle article, string normalizedQuestion)
+        => article.Category.Equals("mabrouk", StringComparison.OrdinalIgnoreCase)
+            && article.VerificationStatus == AiKnowledgeVerificationStatus.Verified
+            && (IsExactAlias(article.Aliases, normalizedQuestion, null)
+                || AiText.Normalize(article.Title) == normalizedQuestion
+                || $" {AiText.Normalize(article.Title)} ".Contains($" {normalizedQuestion} ", StringComparison.Ordinal));
 
     private static string RetrievalMethod(AiKnowledgeArticle article, string query)
         => IsExactAlias(article.Aliases, query, null) ? "exact-alias"

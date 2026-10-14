@@ -74,6 +74,25 @@ public sealed class MabroukKnowledgeStudioShould : IDisposable
     }
 
     [Fact]
+    public async Task ExactMabroukAnswerWinsOverBroadPlatformKnowledge()
+    {
+        const string question = "كم يساوي اثنان زائد اثنان؟";
+        var howTo = new HowToService(Mock.Of<ISubscriptionPaymentService>(), knowledgeService: _knowledge);
+        var draft = await _studio.CreateKnowledgeAsync(new AiKnowledgeArticleInput(
+            "mabrouk-e2e-math-answer", question, "mabrouk", "اثنان زائد اثنان يساوي أربعة.", null,
+            "Admin verified source", 50, AiKnowledgeVerificationStatus.Verified, null, null, null, null,
+            [new AiKnowledgeAliasInput("ar", question)], "Verified answer for the Learning Loop regression."), "admin-1");
+        await _studio.PublishKnowledgeAsync(draft.Id, "Publish the verified Mabrouk answer.", "admin-1");
+
+        var matches = await _knowledge.SearchAsync(question, "ar", 10);
+        Assert.Contains(matches, article => article.StableKey == "mabrouk-e2e-math-answer");
+        var answer = await howTo.AskHowToAsync(question, "ar", allowModel: false);
+
+        Assert.Contains("اثنان زائد اثنان يساوي أربعة", answer.Answer, StringComparison.Ordinal);
+        Assert.DoesNotContain("يمكنني مساعدتك في كيفية استخدام وصال", answer.Answer, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task KeepMabroukAndWesalTeamFactsDistinct()
     {
         var howTo = new HowToService(Mock.Of<ISubscriptionPaymentService>(), knowledgeService: _knowledge);
