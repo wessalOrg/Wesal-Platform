@@ -17,6 +17,7 @@
 - Pull request: [#39](https://github.com/wessalOrg/Wesal-Platform/pull/39), draft.
 - CI-validated source SHA: `ec8273600cd67c285ef55392b862638a802ab412`; a documentation-only follow-up records this evidence.
 - Documentation follow-up source head: `4458c52cc6e765b1c1b2e056c2ba50378c8436c9`.
+- Current pushed candidate head: `e418033d0a0d20f5de5ef3e08ee66512f69de01b`.
 - Merge SHA: none.
 - Current `origin/main`: `5a60fdb3cc24e8936659cb1b335cc8ec33f1288c` (unchanged at this continuation).
 
@@ -24,7 +25,7 @@
 
 - Backend restore: passed (`dotnet restore Wesal.slnx`).
 - Release backend build: passed (`dotnet build Wesal.slnx -c Release --no-restore`; existing test analyzer warnings remain).
-- Full Release backend regression: 2,653 passed, 0 failed, 0 skipped in both local runner and PR CI. Local `WESAL_TEST_PG` was unset, but PR CI provisioned PostgreSQL 16 and exercised the real PostgreSQL integration tests.
+- Full Release backend regression: 2,654 passed, 0 failed, 0 skipped on current head `e418033d0a0d20f5de5ef3e08ee66512f69de01b` in PR CI run `38530695203`; PostgreSQL 16 was provisioned and 16 integration tests ran. The preceding candidate passed 2,653 tests.
 - Focused V5 retrieval benchmark/regressions and six recommendation regressions are included in the passing full suite.
 - PostgreSQL: passed on PR CI with PostgreSQL 16. Local PostgreSQL remains unavailable.
 - Frontend install: passed with repository CI command `npm ci --legacy-peer-deps` (394 packages).
@@ -35,11 +36,12 @@
 - Frontend production build: passed; all 44 static pages generated.
 - Production dependency audit: `npm audit --omit=dev` found 0 vulnerabilities. Install reported 5 high-severity issues in the full dependency tree; production-only audit is clean.
 - Production-image knowledge check: passed; image contains all 27 of 27 Markdown source articles.
-- Browser E2E: a stable isolated PostgreSQL-backed stack is now available. On 2026-10-14, the full 20-test suite ran with 15 passed, 2 failed, 0 skipped, and 3 did-not-run. One failure was caused by a temporary React-internal-value wait in the login helper; that wait was removed. The other exposed a brittle helper condition: the admin login POST and subsequent session request returned 200 and the browser left `/login`, but the helper timed out waiting for navbar test IDs. The helper now waits for the successful login response and navigation; protected admin navigation is asserted by `gotoAdmin`. This correction has not yet been rerun. The runner then refused a new run because C: had 0.23 GB free (minimum 2 GB); after stopping runner-owned services, C: had 0.63 GB free. Full browser E2E remains a release blocker until rerun on a stable stack.
+- Browser E2E: a stable isolated PostgreSQL-backed stack ran the full 20-test suite on 2026-10-14: 15 passed, 2 failed, 0 skipped, and 3 did-not-run. One failure came from a temporary React-internal-value wait in the login helper; that wait was removed. The other exposed a brittle helper condition: the admin login POST and subsequent session request returned 200 and the browser left `/login`, but the helper timed out waiting for navbar test IDs. The helper now waits for the successful login response and navigation; protected admin navigation is asserted by `gotoAdmin`. This correction has not yet been rerun. A rerun was refused when C: had 0.23 GB free (minimum 2 GB); after stopping runner-owned services and the dedicated PostgreSQL container, C: had 1.02 GB free. Full browser E2E remains a release blocker until rerun on a stable stack.
 - Secret scan: passed on PR CI using Gitleaks v8.30.1.
 - PR CI run `38373205013` on source SHA `ec8273600cd67c285ef55392b862638a802ab412`: backend, PostgreSQL 16, frontend, and changed-source Gitleaks all passed. An earlier CI revision exposed exact-alias lexical leakage after archiving a built-in override; the fix and regression are included in this validated source SHA.
 - Vercel Preview check passed for this PR. This is preview evidence, not production deployment/SHA or authenticated smoke evidence.
 - Latest checks on documentation head `4458c52cc6e765b1c1b2e056c2ba50378c8436c9` passed in CI run `38373722312` (backend, PostgreSQL-backed suite, frontend, Gitleaks, and Vercel Preview).
+- Current candidate CI run `38530695203` passed on `e418033d0a0d20f5de5ef3e08ee66512f69de01b`: backend 2,654/2,654 including PostgreSQL integration, frontend lint/contracts/environment/build, changed-source Gitleaks, and Vercel Preview. This does not replace the blocked browser E2E rerun.
 - `git diff --check`: passed before final documentation/commit.
 
 ## Retrieval and recommendation
@@ -53,6 +55,6 @@
 
 - Built-in knowledge Markdown: 27 files total (the original 26 plus the existing additive Mabrouk development-team entry); no built-in Markdown file changed in this V5 diff. The source baseline remains the existing 20 verified entries and five categories.
 - Learning Loop / Create Answer: full backend regression passed locally, including existing punctuation-only duplicate-alias coverage; PR CI also exercised the PostgreSQL-backed suite.
-- Before merge: rerun the full stable-stack Playwright suite after the login-helper correction, then reassess merge readiness. The run on 2026-10-14 is not a passing acceptance result. Re-run backend Release, PostgreSQL integration, production build, and secret scan on the new exact head as part of final acceptance.
+- Before merge: rerun the full stable-stack Playwright suite after the login-helper correction, then reassess merge readiness. The 2026-10-14 run is not a passing acceptance result. Backend Release, PostgreSQL integration, frontend production build, and secret scan passed on the current candidate head in CI.
 - Production verification: V5 Render/Vercel deployment SHA and authenticated smoke remain `PRODUCTION_VERIFICATION_PENDING` until access and evidence are available.
 - Production smoke (2026-10-13): frontend and `/health`, `/health/live` returned HTTP 200; deployed SHA was not exposed, and the active Render CLI workspace does not contain the Wesal service. Two booking questions returned the same trusted guidance. The current served assistant returned generic help for recommendation follow-ups and an honest no-result for an impossible request. Since V5 is unmerged, these observations describe the currently served version and do not verify V5.
