@@ -66,7 +66,14 @@ test.describe.serial("knowledge library lifecycle", () => {
     await expect(page.getByTestId("mabrouk-history")).toBeVisible({ timeout: 20000 });
     const rollbacks = page.getByTestId("mabrouk-history").locator("button.btn-outline");
     await expect(rollbacks.first()).toBeVisible();
+    const rollbackResponse = page.waitForResponse((response) => {
+      const requestUrl = new URL(response.url());
+      return requestUrl.pathname.includes("/api/v1/admin/mabrouk/knowledge/")
+        && requestUrl.pathname.includes("/rollback/")
+        && response.request().method() === "POST";
+    });
     await rollbacks.first().click();
+    expect((await rollbackResponse).status()).toBe(200);
     await expect(page.getByTestId("mabrouk-history")).toBeVisible({ timeout: 30000 });
   });
 

@@ -58,19 +58,15 @@ export async function fillLogin(page: Page, email: string, password: string) {
 
 export async function loginAsAdmin(page: Page) {
   await page.goto("/login");
+  const loginResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST"
+      && new URL(response.url()).pathname.endsWith("/api/v1/auth/login"),
+    { timeout: 30000 },
+  );
   await fillLogin(page, ADMIN_EMAIL, adminPassword());
-  await expect
-    .poll(
-      async () => {
-        if (page.url().includes("/login")) return false;
-        return (
-          (await page.getByTestId("navbar-authenticated").count()) > 0 ||
-          (await page.getByTestId("admin-management").count()) > 0
-        );
-      },
-      { timeout: 60000 },
-    )
-    .toBe(true);
+  expect((await loginResponse).status(), "admin login request should succeed").toBe(200);
+  await expect(page).not.toHaveURL(/\/login(?:[?#]|$)/, { timeout: 30000 });
 }
 
 export async function gotoAdmin(page: Page, path: string) {
