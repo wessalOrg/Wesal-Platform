@@ -31,16 +31,17 @@ Test status from this V7 worktree:
 - Frontend TypeScript, ESLint, assistant contract (23 checks), storage contract, API-base contract (25 checks), and optimized production build passed after a clean lockfile install.
 - `npm ci --dry-run` and `npm ci` succeeded after adding the single missing optional `@emnapi/wasi-threads@1.2.3` lock entry.
 - Production-only npm audit reported 0 vulnerabilities. Full audit reports 5 high-severity development-tree findings through `eslint-config-next` → `@next/eslint-plugin-next` → `fast-glob` → `micromatch` → `braces`; npm currently offers no compatible in-place fix in the existing Next toolchain. The advisory identifies `braces <=3.0.3` as affected ([GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)).
-- Playwright discovered 23 existing tests. They were not run: this checkout has no local E2E runner or live local app, and the automatic command review rejected the API background-launch attempt before it executed. No browser result is claimed.
+- Playwright now contains 28 tests: five V7 contextual acceptance cases plus the 23 existing regressions. The five V7 cases passed, then the existing suite passed 23/23 as the final regression gate. Runs used a local API/frontend stack and isolated PostgreSQL 16 seeded with three controlled, published Gaza halls; Google AI was disabled. No production data was used.
 - No provider call or production mutation was made.
 
 ## Known limitations pending acceptance
 
-- The fixture is a transcript inventory; it does not itself prove all ten multi-turn flows. Backend behavior is covered by focused deterministic regressions, but browser proof for the requested full workflows remains outstanding.
+- The browser tests found that “وديني هناك” after choosing a result fell through to generic help: the resolved turn had no hall payload despite a trusted session `LastSelectedHallId`. `AiAssistantService` now re-fetches the hall by that saved ID for the narrow navigation phrase and returns the registered details-page action. The scoped flow passes in the browser.
+- The fixture remains a transcript inventory and does not itself prove all ten broader conversation families. Availability lookup, booking-detail collection, preview, and booking-form handoff still need end-to-end browser acceptance.
 - Returning to a selected hall is a safe details-page navigation; booking form continuity depends on the existing frontend session behavior and still requires browser validation.
 - Availability and booking preview remain dependent on the existing date, authentication, and availability services.
 - Production frontend/API responded with HTTP 200, API `/health` returned `Healthy`, and API root returned generic version `v1`; these are availability checks, not source SHA proof. The authenticated Render account currently exposes no service for `wessalOrg/Wesal-Platform`, Vercel CLI/project access is unavailable, and no public frontend/backend commit provenance was found. Production SHA and release verification remain pending.
 
 ## Release decision
 
-Not releasable yet. Backend, isolated PostgreSQL, frontend contracts, and build are locally verified; existing/new Playwright browser acceptance, full-audit remediation or accepted review, exact-head CI, review policy, and merge requirements remain outstanding. Merge must not bypass repository protections. Production verification is separately gated from engineering CI.
+Not releasable yet. Backend, isolated PostgreSQL, frontend contracts, build, the five scoped V7 browser cases, and all 23 existing Playwright regressions are locally verified. Broader availability/booking workflow acceptance, full-audit remediation or accepted review, exact-head CI for the follow-up commit, review policy, merge requirements, and production SHA verification remain outstanding. Keep PR #45 in Draft; merge must not bypass repository protections. Production verification is separately gated from engineering CI.

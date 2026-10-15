@@ -142,7 +142,15 @@ public sealed class AiAssistantService : IAiAssistantService
             }
         }
 
-        if (turn.Hall is { } contextualHall && IsContextualHallNavigation(text))
+        var contextualHall = turn.Hall;
+        if (contextualHall is null && context?.State?.LastSelectedHallId is { } rememberedHallId
+            && IsContextualHallNavigation(text))
+        {
+            try { contextualHall = await _hallDetailsService.GetHallDetailsAsync(rememberedHallId, cancellationToken); }
+            catch (NotFoundException) { contextualHall = null; }
+        }
+
+        if (contextualHall is not null && IsContextualHallNavigation(text))
         {
             var action = AiAssistantPolicyGate.NavigateAction(
                 effectiveLanguage,
