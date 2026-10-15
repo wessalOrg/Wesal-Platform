@@ -74,6 +74,35 @@ public static class AiPaymentIntentClassifier
     }
 }
 
+/// <summary>Recognizes booking cancellation/refund questions before generic payment routing.</summary>
+public static class AiCancellationIntentDetector
+{
+    private static readonly Regex SubscriptionWords = AiText.AnyWord([
+        "اشتراك", "اشتراكي", "اشتراكات", "subscription", "subscriptions", "renew", "renewal", "تجديد"
+    ]);
+
+    private static readonly Regex CancellationWords = AiText.AnyWord([
+        "cancel", "cancellation", "cancelled", "canceled", "change my mind",
+        "الغاء", "الغي", "الغى", "الغيت", "بدي الغي", "غيرت رايي", "غير رايي",
+        "بطلت بدي احجز", "مش بدي احجز", "ما بدي احجز"
+    ]);
+
+    private static readonly Regex RefundWords = AiText.AnyWord([
+        "refund", "refunded", "refunding", "استرداد", "مسترد", "برجعولي", "يرجعولي", "رجعولي"
+    ]);
+
+    public static bool IsBookingCancellationQuestion(string? message)
+    {
+        var text = AiText.Normalize(message);
+        if (text.Length == 0 || SubscriptionWords.IsMatch(text))
+        {
+            return false;
+        }
+
+        return CancellationWords.IsMatch(text) || RefundWords.IsMatch(text);
+    }
+}
+
 /// <summary>
 /// Recognizes requests for Wesal's own technical/customer support (official contact,
 /// support hours, a problem with the website) as opposed to contacting a Hall Owner.

@@ -60,7 +60,7 @@ public sealed class WesalToolGateway : IWesalToolGateway
                 BuildAvailabilitySchema()),
             [WesalToolNames.CreateBooking] = new(
                 WesalToolNames.CreateBooking,
-                "Creates a new booking request for a Wesal wedding hall. Requires hallId, date, start time, end time, and customer name. The booking request is sent to the hall owner for approval.",
+                "Validates and prepares a booking request preview for a public Wesal hall. This tool does not submit or confirm a booking; the user must review and submit the request through the hall's booking form.",
                 BuildCreateBookingSchema())
         };
 
@@ -291,7 +291,8 @@ public sealed class WesalToolGateway : IWesalToolGateway
             return WesalToolResult.Fail("The requested hall was not found or is not publicly available.");
         }
 
-        // Return success payload with booking confirmation details
+        // Return a validated preview only. Booking persistence requires a separately
+        // authorized, user-confirmed workflow and is not enabled through this tool.
         var payload = new JsonObject
         {
             ["hallId"] = hallId.ToString(),

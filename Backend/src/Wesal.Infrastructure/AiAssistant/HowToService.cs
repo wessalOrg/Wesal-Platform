@@ -18,6 +18,10 @@ public sealed partial class HowToService : IHowToService
         ["platform", "faq", "policies", "mabrouk"],
         StringComparer.OrdinalIgnoreCase);
 
+    private static readonly HashSet<string> CancellationKnowledgeKeys = new(
+        ["user-guide.cancel-a-booking-request", "user-guide.booking-request-statuses", "policies.cancellation-refunds-and-fees"],
+        StringComparer.OrdinalIgnoreCase);
+
     private static readonly string[] SupportContactMarkers =
     [
         "wesal", "وصال", "support", "دعم", "whatsapp", "واتساب", "phone", "هاتف",
@@ -52,6 +56,35 @@ public sealed partial class HowToService : IHowToService
     {
         var detected = _languageDetector.Detect(question);
         var effectiveLanguage = detected ?? (string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language);
+
+        // Cancellation/refund facts are safety-sensitive and must come from the
+        // reviewed knowledge sources before payment or broad how-to fallbacks.
+        if (AiCancellationIntentDetector.IsBookingCancellationQuestion(question))
+        {
+            if (_knowledgeService is not null)
+            {
+                var cancellationArticles = await _knowledgeService.SearchAsync(
+                    question,
+                    effectiveLanguage,
+                    maxResults: 5,
+                    cancellationToken);
+                var cancellationArticle = cancellationArticles.FirstOrDefault(article =>
+                    CancellationKnowledgeKeys.Contains(article.StableKey ?? string.Empty));
+                if (cancellationArticle is not null)
+                {
+                    return new HowToResponse(
+                        ComposeAnswer(cancellationArticle, effectiveLanguage),
+                        "booking-cancel",
+                        effectiveLanguage,
+                        DateTime.UtcNow);
+                }
+            }
+
+            var cancellationFallback = effectiveLanguage == "en"
+                ? "From My Bookings, open the request and cancel it if it is Pending or Accepted and the deposit has not been confirmed as paid. The system blocks cancellation after payment confirmation. Refund amounts, fees, and timing require confirmation from Wesal support."
+                : "من صفحة حجوزاتي، افتح الطلب واختر الإلغاء إذا كان الطلب بحالة «معلق» أو «مقبول» ولم يتم تأكيد دفع العربون. لا يسمح النظام بالإلغاء بعد تأكيد العربون. أما الرسوم أو المبالغ المستردة ومواعيدها فتحتاج تأكيداً من دعم وصال.";
+            return new HowToResponse(cancellationFallback, "booking-cancel", effectiveLanguage, DateTime.UtcNow);
+        }
 
         if (IsOtherHallBookingPolicyQuestion(question))
         {
@@ -192,6 +225,11 @@ public sealed partial class HowToService : IHowToService
         CancellationToken cancellationToken = default,
         AiConversationContext? context = null)
     {
+        if (AiCancellationIntentDetector.IsBookingCancellationQuestion(question))
+        {
+            return await AskHowToAsync(question, language, cancellationToken, allowModel: false);
+        }
+
         var normalized = Normalize(question);
         var hallQuestion = AiHallQuestionClassifier.Classify(question);
         var platformOverview = AiHallQuestionClassifier.MentionsPlatform(question)

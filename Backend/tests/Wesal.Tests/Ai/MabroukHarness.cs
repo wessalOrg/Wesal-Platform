@@ -37,7 +37,8 @@ internal sealed class MabroukHarness
     public MabroukHarness(
         bool geminiAvailable = false,
         IAiKnowledgeGapRecorder? gapRecorder = null,
-        IAiKnowledgeGapDetector? gapDetector = null)
+        IAiKnowledgeGapDetector? gapDetector = null,
+        IWesalKnowledgeService? knowledgeService = null)
     {
         Gemini.Available = geminiAvailable;
 
@@ -52,7 +53,7 @@ internal sealed class MabroukHarness
 
         var detector = new AiLanguageDetector();
         var criteria = new NaturalLanguageCriteriaExtractor();
-        var knowledge = new WesalKnowledgeService();
+        var knowledge = knowledgeService ?? new WesalKnowledgeService();
         var payment = new SubscriptionPaymentService(Options.Create(new SubscriptionPaymentOptions()));
         var clock = new AiClock(Clock);
 
@@ -79,7 +80,8 @@ internal sealed class MabroukHarness
             new AiAssistantPolicyGate(payment, knowledge),
             new RecordingLogger<AiAssistantService>(RouteLogs),
             gapRecorder,
-            gapDetector);
+            gapDetector,
+            toolGateway: gateway);
     }
 
     private sealed class RecordingLogger<T>(List<string> messages) : ILogger<T>
