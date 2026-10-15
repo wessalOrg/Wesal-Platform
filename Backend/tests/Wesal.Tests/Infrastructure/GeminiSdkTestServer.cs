@@ -45,7 +45,7 @@ internal sealed class GeminiSdkTestServer
                 {
                     // The endpoint closes shortly after the last call so tests
                     // that intentionally make no request do not leak listeners.
-                    context = await _listener.GetContextAsync().WaitAsync(TimeSpan.FromSeconds(2));
+                    context = await _listener.GetContextAsync().WaitAsync(TimeSpan.FromSeconds(20));
                 }
                 catch (TimeoutException)
                 {

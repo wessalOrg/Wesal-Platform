@@ -49,7 +49,14 @@ public sealed record AiConversationState(
     string? BookingCustomerName = null,
     string? PendingBookingCustomerName = null,
     bool? AwaitingCustomerName = null,
-    string? PendingBookingStatus = null);
+    string? PendingBookingStatus = null,
+    IReadOnlyList<Guid>? SeenHallIds = null,
+    Guid? LastSelectedHallId = null,
+    string? CurrentTopic = null,
+    string? PendingNavigationTarget = null,
+    string? LastAction = null,
+    string? LastToolOutcome = null,
+    string? TaskStatus = null);
 
 /// <summary>A hall the conversation has shown or focused (id + display name only).</summary>
 public sealed record AiHallRef(Guid HallId, string HallName);
