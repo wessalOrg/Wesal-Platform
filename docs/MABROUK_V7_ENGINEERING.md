@@ -44,4 +44,13 @@ Test status from this V7 worktree:
 
 ## Release decision
 
-Engineering acceptance locally verified: backend, isolated PostgreSQL, frontend contracts, build, eight scoped V7 browser cases, and all 23 existing Playwright regressions. Merge eligibility still depends on exact-head CI, required approvals and branch protection, plus review of the known development dependency audit findings. PR #45 remains Draft until exact-head checks pass; do not bypass repository protections. Production SHA verification and deployment remain separate tasks.
+Engineering acceptance passed locally: backend, isolated PostgreSQL, frontend contracts, build, all eight scoped V7 browser cases, and all 23 existing Playwright regressions. PR #45 was marked Ready for Review and merged after exact-head checks passed. GitHub reported no branch protection or repository rulesets for `main`, no mandatory approval requirement, and no review records. No safeguards were bypassed.
+
+## Merge and post-merge verification
+
+- PR: [#45](https://github.com/wessalOrg/Wesal-Platform/pull/45), merged 2026-10-15.
+- PR head: `3fa8282d1d64ae542c932c0e350983ac6b56aaa2`.
+- Merge commit: `beceadc51eb4dd245aa6b0f6c8bb14f179248520`.
+- Exact-head PR checks passed: Backend restore/build/test, Frontend install/lint/build, changed-source secret scan, Vercel Preview Comments, and Vercel Preview deployment.
+- Main CI run `38740749751` passed on merge commit `beceadc51eb4dd245aa6b0f6c8bb14f179248520`.
+- Production deployment and deployed-source SHA verification remain separate and were not performed by this merge.
