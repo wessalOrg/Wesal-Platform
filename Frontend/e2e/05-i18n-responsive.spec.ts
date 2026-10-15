@@ -57,6 +57,20 @@ test("English renders LTR with translated navigation", async ({ page }) => {
   expect(await page.evaluate(() => window.localStorage.getItem("wesal_ui_lang"))).toBe("en");
   await expect(page.getByTestId("admin-nav-mabrouk")).toContainText("Mabrouk");
   await expect(page.getByTestId("mabrouk-overview")).toBeVisible();
+
+  const restoredLanguage = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" && new URL(response.url()).pathname.endsWith("/language"),
+    { timeout: 15000 },
+  );
+  await page.getByTestId("language-toggle").click();
+  expect((await restoredLanguage).status()).toBe(200);
+  await expect
+    .poll(async () => page.evaluate(() => window.localStorage.getItem("wesal_ui_lang")))
+    .toBe("ar");
+  await expect
+    .poll(async () => page.evaluate(() => document.documentElement.dir))
+    .toBe("rtl");
 });
 
 test("mobile viewport keeps studio usable", async ({ page }) => {

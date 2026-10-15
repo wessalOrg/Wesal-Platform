@@ -10,7 +10,7 @@ public static partial class AiBookingDraftResolver
     public static bool IsBookingRequest(string message)
     {
         var text = AiText.Normalize(message);
-        return BookingRequestRegex().IsMatch(text);
+        return BookingRequestRegex().IsMatch(text) && !BookingGuidanceRegex().IsMatch(text);
     }
 
     public static DateOnly? ExtractDate(string message, DateOnly today)
@@ -35,8 +35,11 @@ public static partial class AiBookingDraftResolver
         return string.IsNullOrWhiteSpace(name) || name.Length > 120 ? null : name;
     }
 
-    [GeneratedRegex(@"(?:^|\s)(?:بدي|اريد|حابب|حابه|نفسي)\s+(?:احجز|احجزها|احجزه|احجزها|حجز|احجزلي)|(?:^|\s)(?:احجزها|احجزه|book\s+it|reserve\s+it)(?:\s|$)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"(?:^|\s)(?:بدي|اريد|حابب|حابه|نفسي)\s+(?:احجز|احجزها|احجزه|حجز|احجزلي)|(?:^|\s)(?:book\s+it|reserve\s+it)(?:\s|$)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex BookingRequestRegex();
+
+    [GeneratedRegex(@"كيف|شو\s+(?:بصير|بعدين)|what\s+happens|how\s+(?:do\s+i|to)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex BookingGuidanceRegex();
 
     [GeneratedRegex(@"(?<start>\d{1,2}:\d{2})\s*(?:إلى|الى|حتى|لغاية|[-–]|to)\s*(?<end>\d{1,2}:\d{2})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex TimeRangeRegex();
