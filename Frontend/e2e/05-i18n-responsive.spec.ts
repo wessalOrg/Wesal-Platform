@@ -3,6 +3,7 @@ import { gotoAdmin, loginAsAdmin } from "./helpers";
 
 test("default Arabic renders RTL", async ({ page }) => {
   await loginAsAdmin(page);
+  await expect.poll(async () => page.evaluate(() => document.documentElement.dir)).toBe("rtl");
   await gotoAdmin(page, "/admin/mabrouk");
   expect(await page.evaluate(() => document.documentElement.dir)).toBe("rtl");
   expect(await page.evaluate(() => document.documentElement.lang)).toBe("ar");
@@ -11,6 +12,7 @@ test("default Arabic renders RTL", async ({ page }) => {
 
 test("English renders LTR with translated navigation", async ({ page }) => {
   await loginAsAdmin(page);
+  await expect.poll(async () => page.evaluate(() => document.documentElement.dir)).toBe("rtl");
   await gotoAdmin(page, "/admin/mabrouk");
   await page.evaluate(() => {
     const browserWindow = window as Window & { __wesalLanguageEventSeen?: boolean };

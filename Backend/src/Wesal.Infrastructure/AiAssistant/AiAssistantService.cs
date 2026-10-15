@@ -189,6 +189,61 @@ public sealed class AiAssistantService : IAiAssistantService
             }
         }
 
+        var bookingRequested = AiBookingDraftResolver.IsBookingRequest(text);
+        var bookingInProgress = context?.State?.PendingBookingStatus == "collecting";
+        var bookingTimes = AiBookingDraftResolver.ExtractTimeRange(text);
+        var bookingDateInput = AiBookingDraftResolver.ExtractDate(text, turn.Today);
+        var bookingNameInput = AiBookingDraftResolver.ExtractCustomerName(text);
+        var bookingContribution = bookingDateInput is not null || bookingTimes.Start is not null || bookingNameInput is not null;
+        if (bookingRequested || bookingInProgress && bookingContribution)
+        {
+            var bookingHallId = context?.State?.BookingHallId
+                ?? context?.State?.LastSelectedHallId
+                ?? context?.State?.ActiveHallId
+                ?? turn.Hall?.HallId
+                ?? context?.LastHall?.HallId;
+            if (bookingHallId is null)
+            {
+                var missingHall = Build(effectiveLanguage, AiAssistantResponseKind.Clarification,
+                    effectiveLanguage == "en" ? "Which hall would you like to book?" : "أي صالة بدك تحجز؟", null);
+                return missingHall with { SemanticPlan = semanticPlan with { Goal = AiSemanticGoal.BookingHelp } };
+            }
+
+            HallDetailsDto? bookingHall;
+            try { bookingHall = await _hallDetailsService.GetHallDetailsAsync(bookingHallId.Value, cancellationToken); }
+            catch (NotFoundException) { bookingHall = null; }
+            if (bookingHall is null)
+            {
+                var missingHall = Build(effectiveLanguage, AiAssistantResponseKind.Clarification,
+                    effectiveLanguage == "en" ? "I can no longer find that public hall. Please choose another hall." : "ما عدت ألاقي الصالة المنشورة. اختار صالة ثانية لو سمحت.", null);
+                return missingHall with { SemanticPlan = semanticPlan with { Goal = AiSemanticGoal.BookingHelp } };
+            }
+
+            var state = context?.State;
+            var date = bookingDateInput ?? state?.BookingDate ?? state?.ResolvedDate;
+            var startTime = bookingTimes.Start ?? state?.BookingStartTime;
+            var endTime = bookingTimes.End ?? state?.BookingEndTime;
+            var customerName = bookingNameInput ?? state?.BookingCustomerName;
+            var bookingPlan = semanticPlan with { Goal = AiSemanticGoal.BookingHelp };
+            if (date is null)
+                return BookingClarification(effectiveLanguage, "booking_date", "لأي تاريخ بدك الحجز؟", "What date would you like to book?", bookingPlan);
+            if (startTime is null || endTime is null)
+                return BookingClarification(effectiveLanguage, "booking_time", "من أي ساعة لأي ساعة؟", "What start and end time would you like?", bookingPlan);
+            if (string.IsNullOrWhiteSpace(customerName))
+                return BookingClarification(effectiveLanguage, "booking_name", "بأي اسم أسجل طلب الحجز؟", "What name should I put on the booking request?", bookingPlan);
+
+            var preview = await CreateBookingThroughToolAsync(
+                effectiveLanguage, bookingHall, customerName, bookingHallId.Value, date.Value,
+                startTime.Value, endTime.Value, cancellationToken);
+            var action = AiAssistantPolicyGate.NavigateAction(
+                effectiveLanguage, WesalNavigationRegistry.HallDetails, AiNavigationMode.Suggest, bookingHallId.Value);
+            return preview with
+            {
+                SemanticPlan = bookingPlan,
+                Actions = action is null ? preview.Actions : [action]
+            };
+        }
+
         var routed = await RouteAsync(text, effectiveLanguage, turn, context, semanticPlan, cancellationToken);
         var response = routed.Response with
         {
@@ -1333,6 +1388,21 @@ public sealed class AiAssistantService : IAiAssistantService
                 : $"ظهر توفر لـ{HallLabel(language, hall.HallName)} في الأيام التالية: {string.Join("، ", availableDates.Select(date => date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)))}.";
 
         return Build(language, AiAssistantResponseKind.Answer, message, intent);
+    }
+
+    private AiAssistantResponse BookingClarification(
+        string language,
+        string field,
+        string arabicQuestion,
+        string englishQuestion,
+        AiSemanticPlan plan)
+    {
+        var question = language == "en" ? englishQuestion : arabicQuestion;
+        var response = Build(language, AiAssistantResponseKind.Clarification, question, null);
+        return response with
+        {
+            SemanticPlan = plan with { ClarificationRequirement = new AiClarificationRequirement(field, question) }
+        };
     }
 
     private async Task<AiAssistantResponse> CreateBookingThroughToolAsync(

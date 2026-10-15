@@ -12,6 +12,23 @@ public static class AiConversationStateResolver
         var state = prior ?? new AiConversationState();
         var intent = response.Intent;
         var plan = response.SemanticPlan ?? intent?.SemanticPlan;
+        var bookingFlow = plan?.Goal == AiSemanticGoal.BookingHelp || state.PendingBookingStatus == "collecting";
+        var bookingTimes = AiBookingDraftResolver.ExtractTimeRange(message);
+        var bookingDate = plan?.Date
+            ?? AiBookingDraftResolver.ExtractDate(message, DateOnly.FromDateTime(DateTime.UtcNow))
+            ?? state.ResolvedDate;
+        var bookingName = AiBookingDraftResolver.ExtractCustomerName(message);
+        var bookingHallId = bookingFlow
+            ? state.BookingHallId ?? state.LastSelectedHallId ?? conversationHall?.HallId ?? response.HallDetails?.HallId
+            : state.BookingHallId;
+        var bookingHallName = bookingFlow
+            ? state.BookingHallName ?? conversationHall?.HallName ?? response.HallDetails?.HallName
+            : state.BookingHallName;
+        var bookingStart = bookingTimes.Start ?? state.BookingStartTime;
+        var bookingEnd = bookingTimes.End ?? state.BookingEndTime;
+        var bookingCustomer = bookingName ?? state.BookingCustomerName;
+        var bookingPreviewReady = response.Message.Contains("معاينة طلب الحجز", StringComparison.Ordinal)
+            || response.Message.Contains("Booking request preview", StringComparison.OrdinalIgnoreCase);
         var halls = response.Halls?.Select(h => h.HallId).Take(10).ToArray() ?? [];
         var question = AiHallQuestionClassifier.Classify(message);
         var topicSwitch = intent?.Intent == AiIntentType.HowTo && !string.IsNullOrWhiteSpace(message)
@@ -79,7 +96,7 @@ public static class AiConversationStateResolver
                 or AiComparisonIntent.Largest or AiComparisonIntent.Smallest or AiComparisonIntent.BestBudgetFit or AiComparisonIntent.MostSuitable;
         return state with
         {
-            ActiveGoal = topicSwitch || isPlatformTopic ? state.ActiveGoal : task,
+            ActiveGoal = bookingFlow ? "booking" : topicSwitch || isPlatformTopic ? state.ActiveGoal : task,
             ActiveIntent = intent?.Intent.ToString() ?? state.ActiveIntent,
             PendingIntent = clarificationField is null ? null : intent?.Intent.ToString(),
             PendingClarification = clarificationField,
@@ -119,7 +136,14 @@ public static class AiConversationStateResolver
                 : "active",
             LastQuestionType = question == AiHallQuestion.None ? state.LastQuestionType : question.ToString(),
             ConversationStage = clarificationField is not null ? $"awaiting_{clarificationField}" : response.Kind.ToString(),
-            LastSemanticPlan = preserveRankedSelection ? state.LastSemanticPlan : plan ?? state.LastSemanticPlan
+            LastSemanticPlan = preserveRankedSelection ? state.LastSemanticPlan : plan ?? state.LastSemanticPlan,
+            BookingHallId = bookingHallId,
+            BookingHallName = bookingHallName,
+            BookingDate = bookingFlow ? bookingDate ?? state.BookingDate : state.BookingDate,
+            BookingStartTime = bookingFlow ? bookingStart : state.BookingStartTime,
+            BookingEndTime = bookingFlow ? bookingEnd : state.BookingEndTime,
+            BookingCustomerName = bookingFlow ? bookingCustomer : state.BookingCustomerName,
+            PendingBookingStatus = bookingPreviewReady ? "preview_ready" : bookingFlow ? "collecting" : state.PendingBookingStatus
         };
     }
 

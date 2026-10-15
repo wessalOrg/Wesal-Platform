@@ -1,9 +1,10 @@
-﻿import { expect, test } from "@playwright/test";
+import { randomBytes } from "node:crypto";
+import { expect, test } from "@playwright/test";
 import { askChat, gotoAdmin, loginAsAdmin, openChat } from "./helpers";
 
 const COMING_SOON_CAPABILITY = "هل يوجد مستشار زفاف معتمد لدى وصال؟";
-const UNKNOWN = "كم يساوي اثنان زائد اثنين؟";
-const MARKER = "E2ELOOP-RAFAH-MARKER";
+const MARKER = `E2ELOOP-RAFAH-${randomBytes(8).toString("hex").replace(/[0-9]/g, "a")}`;
+const UNKNOWN = `كم يساوي اثنان زائد اثنين؟ ${MARKER}`;
 
 test.describe.serial("browser learning loop without restart", () => {
   test.beforeEach(async ({ page }) => {

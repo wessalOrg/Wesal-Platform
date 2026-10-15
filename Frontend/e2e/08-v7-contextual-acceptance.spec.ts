@@ -6,9 +6,20 @@ type AssistantPayload = {
   kind: string;
   halls: Array<{ hallId: string; hallName: string; region?: string | null; capacity?: number | null; price?: number | null }>;
   hallDetails?: { hallId: string; hallName: string; region: string; capacity: number; price?: number | null } | null;
+  availability?: { hallId: string; date: string; periods: Array<{ startTime: string; endTime: string; status: string }> } | null;
   criteria?: { capacity?: number | null } | null;
   actions?: Array<{ href: string; mode: string }>;
 };
+
+async function selectFirstHall(page: Parameters<typeof askChat>[0]) {
+  await openChat(page);
+  const search = await askWithPayload(page, "بدي صالة بغزة");
+  expect(search.payload.halls.length).toBeGreaterThan(0);
+  const selected = await askWithPayload(page, "الأولى");
+  const hallId = selected.payload.hallDetails?.hallId;
+  expect(hallId).toBeTruthy();
+  return hallId!;
+}
 
 async function askWithPayload(page: Parameters<typeof askChat>[0], question: string) {
   const pending = page.waitForResponse((response) => {
@@ -95,4 +106,58 @@ test("V7 exhaustion follow-up asks a safe clarification", async ({ page }) => {
   expect(continuation.payload.kind).toBe("Clarification");
   expect(continuation.text).not.toMatch(/تعذر إكمال|خطأ|error/i);
   expect(continuation.text.length).toBeGreaterThan(10);
+});
+
+test("V7 checks a selected hall's real hourly availability for a requested date", async ({ page }) => {
+  const hallId = await selectFirstHall(page);
+  const date = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const result = await askWithPayload(page, `متى فاضية بتاريخ ${date}`);
+  expect(result.payload.kind).toBe("Availability");
+  expect(result.payload.availability?.hallId).toBe(hallId);
+  expect(result.payload.availability?.date).toBe(date);
+  await expect(page.getByTestId("ai-chat-availability").last()).toBeVisible();
+});
+
+test("V7 collects booking date, hours and name then returns an unsubmitted preview", async ({ page }) => {
+  const hallId = await selectFirstHall(page);
+  const date = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const availability = await askWithPayload(page, `متى فاضية بتاريخ ${date}`);
+  expect(availability.payload.kind).toBe("Availability");
+  expect(availability.payload.availability?.hallId).toBe(hallId);
+  expect(availability.payload.availability?.date).toBe(date);
+  const bookingPosts: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && /\/api\/v1\/halls\/[^/]+\/hourly-bookings/.test(request.url())) {
+      bookingPosts.push(request.url());
+    }
+  });
+  const start = await askWithPayload(page, "بدي أحجزها");
+  expect(start.payload.kind).toBe("Clarification");
+  expect(start.text).toMatch(/وقت|ساع|time/i);
+  const timeTurn = await askWithPayload(page, "من 18:00 إلى 20:00");
+  expect(timeTurn.payload.kind).toBe("Clarification");
+  expect(timeTurn.text).toMatch(/اسم|name/i);
+  const preview = await askWithPayload(page, "باسم سامر الخطيب");
+  expect(preview.payload.kind).toBe("Answer");
+  expect(preview.text).toContain(date);
+  expect(preview.text).toContain("18:00");
+  expect(preview.text).toContain("20:00");
+  expect(preview.text).toContain("سامر الخطيب");
+  expect(preview.text).toMatch(/لم يتم إرسال|لم يتم.*حجز/);
+  expect(preview.payload.actions?.some((action) => action.href === `/halls/${hallId}`)).toBe(true);
+  expect(bookingPosts).toHaveLength(0);
+});
+
+test("V7 preview action opens the existing hall booking form", async ({ page }) => {
+  const hallId = await selectFirstHall(page);
+  const date = new Date(Date.now() + 9 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  await askWithPayload(page, `بدي أحجزها بتاريخ ${date} من 18:00 إلى 20:00 باسم سامر`);
+  const preview = page.getByTestId("ai-chat-message").filter({ hasText: /معاينة طلب الحجز/ }).last();
+  await expect(preview).toBeVisible();
+  const action = preview.getByTestId("ai-chat-action");
+  await expect(action).toHaveAttribute("data-href", `/halls/${hallId}`);
+  await action.click();
+  await expect(page).toHaveURL(new RegExp(`/halls/${hallId}$`));
+  await expect(page.locator(".hall-details-page")).toBeVisible();
+  await expect(page.getByTestId("hall-hourly-booking")).toBeVisible();
 });
