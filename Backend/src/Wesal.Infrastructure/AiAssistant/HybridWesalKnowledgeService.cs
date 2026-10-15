@@ -14,6 +14,9 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
     [
         ("غيرت رايي", ["الغاء", "الغاء الطلب", "العربون مؤكد", "cancel request"]),
         ("غير رايي", ["الغاء", "الغاء الطلب", "العربون مؤكد", "cancel request"]),
+        ("بطلت بدي احجز", ["الغاء", "الغاء الطلب", "cancel request"]),
+        ("مش بدي احجز", ["الغاء", "الغاء الطلب", "cancel request"]),
+        ("ما بدي احجز", ["الغاء", "الغاء الطلب", "cancel request"]),
         ("change my mind", ["cancel request", "deposit confirmed"]),
         ("بحجز", ["registered user", "submit booking", "hourly slots"]),
         ("احجز", ["registered user", "submit booking", "hourly slots"]),
@@ -25,6 +28,29 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
         ("list it", ["hall owner", "owner dashboard", "add a hall", "identity document"]),
         ("صاحب صالة", ["hall owner", "owner dashboard", "add a hall"]),
         ("مصورين", ["المصورين", "photographers"])
+    ];
+
+    // These compact bilingual intent hints disambiguate common overlapping terms
+    // without making unrelated verified articles outrank a closer source.
+    private static readonly QueryKeyHint[] QueryKeyHints =
+    [
+        new(["refund", "refunded", "refund amount", "refund take", "cancellation fee", "استرداد", "كم برجعولي", "كم يرجعولي", "مبلغ مسترد", "رسوم الإلغاء"], "policies.cancellation-refunds-and-fees", 7_800),
+        new(["refund", "refunded", "refund amount", "refund take", "cancellation fee", "استرداد", "كم برجعولي", "كم يرجعولي", "مبلغ مسترد", "رسوم الإلغاء"], "user-guide.cancel-a-booking-request", 6_400),
+        new(["cancel", "cancellation", "change my mind", "غيرت رايي", "غير رايي", "الغاء", "ألغي", "الغي", "بدي الغي", "بطلت بدي احجز", "مش بدي احجز", "ما بدي احجز", "العربون"], "user-guide.cancel-a-booking-request", 7_600),
+        new(["cancel", "cancellation", "change my mind", "غيرت رايي", "غير رايي", "الغاء", "ألغي", "الغي", "بدي الغي", "بطلت بدي احجز", "مش بدي احجز", "ما بدي احجز", "العربون"], "user-guide.booking-request-statuses", 5_900),
+        new(["cancellation policy", "سياسة الالغاء", "سياسة الغاء", "سياسه الالغاء"], "user-guide.cancel-a-booking-request", 7_600),
+        new(["cancellation policy", "سياسة الالغاء", "سياسة الغاء", "سياسه الالغاء"], "user-guide.booking-request-statuses", 5_900),
+        new(["where can i see", "approved my request", "booking status", "request status", "حالة الحجز", "وين بشوف", "وافق على طلبي", "حجوزاتي"], "user-guide.booking-request-statuses", 7_700),
+        new(["browse venues", "browse halls", "visitors browse", "guest", "visitor", "without creating an account", "زائر", "ضيف", "بدون ما اعمل حساب", "بدون حساب", "اتصفح", "أتصفح"], "user-guide.guest-users", 7_700),
+        new(["need an account to submit", "submit a reservation request", "submit a booking", "sign in to book", "reserve a venue", "book a hall", "لازم اسجل دخول", "اسجل دخول", "تسجيل الدخول", "طلب حجز", "اقدم طلب", "تقدم طلب"], "user-guide.booking-a-hall", 6_900),
+        new(["need an account to submit", "submit a reservation request", "submit a booking", "sign in to book", "لازم اسجل دخول", "اسجل دخول", "تسجيل الدخول", "طلب حجز", "اقدم طلب", "تقدم طلب"], "user-guide.guest-users", 5_700),
+        new(["missing from public", "public results", "not visible", "not showing", "newly listed hall", "مش ظاهرة", "مش مبينة", "مش ظاهر", "بعد ما ضفتها", "اعتماد القاعة"], "hall-owner.hall-approval-and-visibility", 7_500),
+        new(["missing from public", "public results", "not visible", "not showing", "newly listed hall", "مش ظاهرة", "مش مبينة", "مش ظاهر", "بعد ما ضفتها", "اعتماد القاعة"], "hall-owner.hall-owner-guide", 6_100),
+        new(["identity document", "what documents", "upload to list", "documents must i upload", "هوية", "الهوية", "الاوراق", "الأوراق", "ارفعها", "ارفع", "تسجيل قاعتي"], "hall-owner.hall-owner-guide", 7_500),
+        new(["own a venue", "list it", "list my venue", "add my hall", "add a hall", "hall owner", "صاحب صالة", "اضيف قاعتي", "أضيف قاعتي", "اسجل قاعتي", "أسجل قاعتي"], "hall-owner.hall-owner-guide", 7_200),
+        new(["wesal team", "team at wesal", "فريق وصال", "فريق wesal"], "platform.wesal-team", 7_700),
+        new(["who made mabrouk", "built mabrouk", "mabrouk assistant", "مساعد مبروك", "طور مبروك", "طوروا مبروك", "بنوا مساعد مبروك"], "mabrouk-development-team", 7_700),
+        new(["photographers", "مصورين", "مصورون"], "platform.about-wesal", 7_200)
     ];
 
     private static readonly HashSet<string> StopWords = new(StringComparer.Ordinal)
@@ -69,10 +95,11 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
             .Distinct(StringComparer.Ordinal)
             .ToArray();
         var conceptTerms = QueryConcepts
-            .Where(concept => normalizedQuestion.Contains(concept.Trigger, StringComparison.Ordinal))
+            .Where(concept => ContainsPhrase(normalizedQuestion, concept.Trigger))
             .SelectMany(concept => concept.Terms)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
+        var topicKeys = MatchingTopicKeys(normalizedQuestion);
         var candidateTokens = tokens.Concat(conceptTerms).Distinct(StringComparer.Ordinal).ToArray();
         var today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
         IReadOnlyList<AiKnowledgeArticle> candidates = [];
@@ -95,7 +122,10 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
             // merely because the user did not say "Mabrouk" in the question.
             .Where(article => IsSourceFamilyEligible(article.Category, normalizedQuestion)
                 || IsStrongMabroukMatch(article, normalizedQuestion))
-            .Select(article => (Article: article, Score: Score(article, normalizedQuestion, tokens, conceptTerms, language)))
+            .Where(article => IsTopicEligible(article.OverridesBuiltInKey ?? article.Key, topicKeys)
+                || IsVerifiedExactOrTitleMatch(article, normalizedQuestion, language))
+            .Select(article => (Article: article, Score: Score(article,
+                article.OverridesBuiltInKey ?? article.Key, normalizedQuestion, tokens, conceptTerms, language)))
             .Where(match => match.Score > 0)
             .ToList();
 
@@ -151,6 +181,7 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
         {
             if (metadata.Status == WesalKnowledgeStatus.Draft
                 || !IsSourceFamilyEligible(metadata.Category, normalizedQuestion)
+                || !IsTopicEligible(metadata.Key, topicKeys)
                 || activeVerifiedOverrides.Contains(metadata.Key))
                 continue;
 
@@ -160,14 +191,17 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
                 continue;
 
             var content = IsEnglish(language) ? metadata.AnswerEn : metadata.AnswerAr;
+            var retrievalMethod = exactAlias ? "exact-alias"
+                : TopicScore(metadata.Key, normalizedQuestion) > 0 ? "topic"
+                : score >= 7_000 ? "title" : "lexical";
             var article = new WesalKnowledgeArticle(metadata.Title, metadata.Category, metadata.Source,
                 metadata.LastUpdated, metadata.Status, content, metadata.Key, false, null,
                 metadata.Aliases.Where(alias => AiText.Normalize(alias) == normalizedQuestion).Take(5).ToArray(), score,
-                exactAlias ? "exact-alias" : score >= 7_000 ? "title" : "lexical");
+                retrievalMethod);
             ranked.Add(new RankedArticle(article with
             {
                 MatchScore = score,
-                RetrievalMethod = exactAlias ? "exact-alias" : score >= 7_000 ? "title" : "lexical"
+                RetrievalMethod = retrievalMethod
             }, score, metadata.Status == WesalKnowledgeStatus.Verified, exactAlias,
                 metadata.Aliases.Count == 0 ? 0 : 1, 0, false));
         }
@@ -178,9 +212,9 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
             .ToList();
         var resultPool = exactTrustedAliases.Count > 0 ? exactTrustedAliases : ranked;
         var results = resultPool
-            .OrderByDescending(item => item.Verified)
-            .ThenByDescending(item => item.ExactAlias)
+            .OrderByDescending(item => item.ExactAlias)
             .ThenByDescending(item => item.Score)
+            .ThenByDescending(item => item.Verified)
             .ThenByDescending(item => item.LanguageMatch)
             .ThenByDescending(item => item.IsOverride)
             .ThenByDescending(item => item.Priority)
@@ -202,9 +236,10 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
         return results;
     }
 
-    private static int Score(AiKnowledgeArticle article, string normalizedQuestion, IReadOnlyList<string> tokens,
+    private static int Score(AiKnowledgeArticle article, string stableKey, string normalizedQuestion, IReadOnlyList<string> tokens,
         IReadOnlyList<string> conceptTerms, string? language)
     {
+        var topicScore = TopicScore(stableKey, normalizedQuestion);
         if (IsExactAlias(article.Aliases, normalizedQuestion, language)) return 10_000;
         if (article.Aliases.Any(alias => AliasLanguageMatches(alias.Language, language)
                 && alias.NormalizedText.Length >= normalizedQuestion.Length + 3
@@ -214,21 +249,23 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
         if (normalizedTitle == normalizedQuestion) return 7_000;
         if ($" {normalizedTitle} ".Contains($" {normalizedQuestion} ", StringComparison.Ordinal)) return 6_000;
 
-        if (tokens.Count == 0) return 0;
+        if (tokens.Count == 0) return topicScore;
         var searchTokens = AiText.Tokens(article.NormalizedSearchText).ToHashSet(StringComparer.Ordinal);
         var matched = tokens.Count(searchTokens.Contains);
         var coverage = (double)matched / tokens.Count;
         var conceptMatches = conceptTerms.Count(term => AiText.Tokens(AiText.Normalize(term)).All(searchTokens.Contains));
-        if (conceptMatches > 0) return 1_500 + conceptMatches * 100 + Math.Clamp(article.Priority, -100, 100);
-        if ((tokens.Count == 1 && coverage < 1) || (tokens.Count > 1 && coverage < 0.5)) return 0;
+        if (conceptMatches > 0)
+            return Math.Max(topicScore, 1_500 + conceptMatches * 100 + Math.Clamp(article.Priority, -100, 100));
+        if ((tokens.Count == 1 && coverage < 1) || (tokens.Count > 1 && coverage < 0.5)) return topicScore;
         var languageMatch = article.Aliases.Any(alias => AliasLanguageMatches(alias.Language, language)
             && tokens.All(token => AiText.Tokens(alias.NormalizedText).Contains(token, StringComparer.Ordinal))) ? 50 : 0;
-        return 500 + matched * 250 + languageMatch + Math.Clamp(article.Priority, -100, 100);
+        return Math.Max(topicScore, 500 + matched * 250 + languageMatch + Math.Clamp(article.Priority, -100, 100));
     }
 
     private static int BuiltInScore(EmbeddedWesalKnowledgeArticle metadata,
         string normalizedQuestion, IReadOnlyList<string> tokens, IReadOnlyList<string> conceptTerms)
     {
+        var topicScore = TopicScore(metadata.Key, normalizedQuestion);
         var title = AiText.Normalize(metadata.Title);
         if (title == normalizedQuestion) return 7_000;
         if ($" {title} ".Contains($" {normalizedQuestion} ", StringComparison.Ordinal)) return 6_000;
@@ -240,10 +277,42 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
             .ToHashSet(StringComparer.Ordinal);
         var conceptMatches = conceptTerms.Count(term => AiText.Tokens(AiText.Normalize(term))
             .Where(token => !StopWords.Contains(token)).All(searchable.Contains));
-        if (conceptMatches > 0) return 1_500 + conceptMatches * 100;
+        if (conceptMatches > 0) return Math.Max(topicScore, 1_500 + conceptMatches * 100);
         var overlap = tokens.Count(token => TokenForms(token).Any(searchable.Contains));
         var coverage = tokens.Count == 0 ? 0 : (double)overlap / tokens.Count;
-        return overlap == 0 || (tokens.Count > 1 && coverage < 0.5) ? 0 : 500 + overlap * 250;
+        return overlap == 0 || (tokens.Count > 1 && coverage < 0.5)
+            ? topicScore
+            : Math.Max(topicScore, 500 + overlap * 250);
+    }
+
+    private static int TopicScore(string stableKey, string normalizedQuestion)
+        => QueryKeyHints
+            .Where(hint => hint.Key.Equals(stableKey, StringComparison.OrdinalIgnoreCase)
+                && hint.Triggers.Any(trigger => ContainsPhrase(normalizedQuestion, trigger)))
+            .Select(hint => hint.Score)
+            .DefaultIfEmpty(0)
+            .Max();
+
+    private static HashSet<string> MatchingTopicKeys(string normalizedQuestion)
+        => QueryKeyHints
+            .Where(hint => hint.Triggers.Any(trigger => ContainsPhrase(normalizedQuestion, trigger)))
+            .Select(hint => hint.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static bool IsTopicEligible(string stableKey, IReadOnlySet<string> topicKeys)
+        => topicKeys.Count == 0 || topicKeys.Contains(stableKey);
+
+    private static bool IsVerifiedExactOrTitleMatch(AiKnowledgeArticle article, string normalizedQuestion, string? language)
+        => article.VerificationStatus == AiKnowledgeVerificationStatus.Verified
+            && (IsExactAlias(article.Aliases, normalizedQuestion, language)
+                || AiText.Normalize(article.Title) == normalizedQuestion
+                || $" {AiText.Normalize(article.Title)} ".Contains($" {normalizedQuestion} ", StringComparison.Ordinal));
+
+    private static bool ContainsPhrase(string normalizedQuestion, string phrase)
+    {
+        var normalizedPhrase = AiText.Normalize(phrase);
+        return normalizedPhrase.Length > 0
+            && $" {normalizedQuestion} ".Contains($" {normalizedPhrase} ", StringComparison.Ordinal);
     }
 
     private static IEnumerable<string> TokenForms(string token)
@@ -294,6 +363,8 @@ public sealed class HybridWesalKnowledgeService : IWesalKnowledgeService
 
     private sealed record RankedArticle(WesalKnowledgeArticle Article, int Score, bool Verified, bool ExactAlias,
         int LanguageMatch, int Priority, bool IsOverride);
+
+    private sealed record QueryKeyHint(string[] Triggers, string Key, int Score);
 
     private static bool IsEnglish(string? language)
         => language?.StartsWith("en", StringComparison.OrdinalIgnoreCase) == true;
