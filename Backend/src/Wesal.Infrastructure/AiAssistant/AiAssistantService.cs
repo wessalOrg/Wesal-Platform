@@ -1214,8 +1214,8 @@ public sealed class AiAssistantService : IAiAssistantService
     }
 
     private async Task<AiAssistantResponse> CreateBookingThroughToolAsync(
-        AiConversationContext context,
         string language,
+        HallDetailsDto hall,
         string customerName,
         Guid hallId,
         DateOnly date,
@@ -1223,7 +1223,6 @@ public sealed class AiAssistantService : IAiAssistantService
         TimeOnly endTime,
         CancellationToken cancellationToken)
     {
-        var userId = _currentUserService?.UserId ?? "anonymous";
         var arguments = new JsonObject
         {
             ["hallId"] = hallId.ToString(),
@@ -1235,10 +1234,24 @@ public sealed class AiAssistantService : IAiAssistantService
         var invocation = new Wesal.Application.Common.Models.WesalToolInvocation(
             WesalToolNames.CreateBooking, arguments);
         var result = await _toolGateway!.ExecuteAsync(invocation, cancellationToken);
+        if (!result.Success)
+        {
+            return Build(
+                language,
+                AiAssistantResponseKind.Clarification,
+                result.ErrorMessage ?? (language == "en"
+                    ? "I could not prepare the booking request preview. No booking was submitted."
+                    : "تعذر تجهيز معاينة طلب الحجز. لم يتم إرسال أي طلب."),
+                new AiAssistantIntentDto(AiIntentType.Unknown, null, null, null, null, hallId.ToString()));
+        }
+
+        var preview = language == "en"
+            ? $"Booking request preview for {hall.HallName}: {date:yyyy-MM-dd}, {startTime:HH:mm}–{endTime:HH:mm}, name: {customerName}. No booking was submitted or confirmed. Review and submit it through the hall's booking form."
+            : $"معاينة طلب الحجز لقاعة {hall.HallName}: بتاريخ {date:yyyy-MM-dd} من {startTime:HH:mm} إلى {endTime:HH:mm} باسم {customerName}. لم يتم إرسال الطلب أو تأكيد الحجز. راجع التفاصيل وأرسل الطلب من نموذج الحجز في صفحة القاعة.";
         return Build(
             language,
-            AiAssistantResponseKind.Booking,
-            result.ErrorMessage ?? "Booking request submitted successfully.",
+            AiAssistantResponseKind.Answer,
+            preview,
             new AiAssistantIntentDto(AiIntentType.Unknown, null, null, null, null, hallId.ToString()));
     }
 
@@ -1249,7 +1262,8 @@ public sealed class AiAssistantService : IAiAssistantService
         AiConversationContext context,
         CancellationToken cancellationToken)
     {
-        var hallId = context?.State?.ActiveHallId ?? turn.Hall?.HallId;
+        var state = context.State;
+        var hallId = state?.BookingHallId ?? state?.ActiveHallId ?? turn.Hall?.HallId;
         if (hallId is null)
         {
             return Build(language, AiAssistantResponseKind.Clarification, "Please specify which hall you want to book.", null);
@@ -1261,33 +1275,25 @@ public sealed class AiAssistantService : IAiAssistantService
             return Build(language, AiAssistantResponseKind.Clarification, "Hall not found.", null);
         }
 
-        // Check if we have all required booking information from state
-        var hasDate = context?.State?.BookingDate is not null;
-        var hasTimes = context?.State?.BookingStartTime is not null && context?.State?.BookingEndTime is not null;
-        var hasCustomerName = !string.IsNullOrWhiteSpace(context?.State?.BookingCustomerName);
-
-        if (!hasDate)
+        if (state?.BookingDate is not { } date)
         {
             return Build(language, AiAssistantResponseKind.Clarification, "Please provide the date for the booking.", null);
         }
 
-        if (!hasTimes)
+        if (state.BookingStartTime is not { } startTime || state.BookingEndTime is not { } endTime)
         {
             return Build(language, AiAssistantResponseKind.Clarification, "Please provide the start and end time for the booking.", null);
         }
 
-        if (!hasCustomerName)
+        var customerName = state.BookingCustomerName;
+        if (string.IsNullOrWhiteSpace(customerName))
         {
             return Build(language, AiAssistantResponseKind.Clarification, "Please provide the customer name for the booking.", null);
         }
 
-        // All information gathered, create the booking
-        var date = context!.State!.BookingDate.Value;
-        var startTime = context!.State!.BookingStartTime.Value;
-        var endTime = context!.State!.BookingEndTime.Value;
-        var customerName = context.State.BookingCustomerName;
-
-        return await CreateBookingThroughToolAsync(context, language, customerName, hallId.Value, date, startTime, endTime, cancellationToken);
+        // This path only prepares a preview; it never creates or submits a booking.
+        return await CreateBookingThroughToolAsync(
+            language, hall, customerName, hallId.Value, date, startTime, endTime, cancellationToken);
     }
 
     private async Task<AiAssistantResponse?> HandleResultComparisonAsync(

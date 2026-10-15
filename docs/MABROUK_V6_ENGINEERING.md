@@ -47,3 +47,58 @@ The current run shows fallback on cancellation after deposit, Arabic booking log
 3. Re-run the expanded corpus plus legacy parity, knowledge coverage, learning loop, and PostgreSQL-backed integration suites.
 4. Compare before/after against the same 34 cases; require lower wrong-source rate without reducing answerable Top-3 recall.
 5. Keep production deployment/SHA/authenticated smoke as a distinct evidence gate.
+
+## V6 retrieval and answer safety closure (2026-10-15)
+
+### Corrected evaluation and retrieval result
+
+The evaluation fixture was audited against the checked-in knowledge source keys and semantics. The V5 18-case cohort remains separately reported within the 34-case corpus. Top-1 source correctness accepts any documented acceptable source; preferred Top-1 is reported separately. Wrong-source is distinct from known forbidden-source selection, and fallback correctness is scored against each case's required/allowed/forbidden fallback expectation. The report records corpus version, stable case IDs, per-case failures, language/cohort breakdowns, average latency, and a global p95 over all measured answerable query runs. These hand-labeled offline results are not a population quality claim.
+
+On the stable 34-case run after retrieval changes:
+
+| Measure | Corrected baseline on latest main | V6 candidate |
+|---|---:|---:|
+| Top-1 acceptable source, 32 answerable | 46.88% (15/32) | 100% (32/32) |
+| Preferred Top-1 | 46.88% (15/32) | 100% (32/32) |
+| Top-3 acceptable-source recall | 56.25% (18/32) | 100% (32/32) |
+| Wrong Top-1, all 34 cases | 14.71% (5/34) | 0% (0/34) |
+| Forbidden Top-1 / Top-3 | baseline not separately emitted | 0% / 0% |
+| Fallback rate | 38.24% (13/34) | 5.88% (2/34) |
+| Fallback expectation accuracy | not measured correctly in baseline | 100% (34/34) |
+| Mean local in-process latency | 12.32 ms | 6.547 ms |
+| Global p95 local in-process latency | 18.904 ms | 22.157 ms |
+
+The baseline and candidate timing came from separate local runs. Mean latency improved in this run; global p95 increased by 3.253 ms. Both are local in-process measurements with an empty in-memory dynamic repository and exclude database/network latency; local scheduling makes small samples variable. Do not interpret the 34 cases as statistically representative.
+
+| Cohort/language | Cases / answerable | Top-1 | Preferred Top-1 | Top-3 recall | Fallback |
+|---|---:|---:|---:|---:|---:|
+| Historical V5 cohort | 18 / 16 | 100% | 100% | 100% | 11.11% |
+| Expanded V6 cohort | 16 / 16 | 100% | 100% | 100% | 0% |
+| Arabic | 20 / 19 | 100% | 100% | 100% | 5.00% |
+| English | 14 / 13 | 100% | 100% | 100% | 7.14% |
+
+Candidate report: `D:\WesalMabroukV6Temp\mabrouk-v6-retrieval-evaluation.json`. The fixture includes the 2 genuine unknowns; both correctly take the required safe fallback. Retrieval remains deterministic and lexical/topic based; no vector database, embeddings, or paid model dependency was introduced.
+
+### Defects fixed
+
+- Added bilingual, including Palestinian Arabic colloquial, cancellation/refund intent routing and ensured it bypasses the unrelated generic payment guard. The answer path prioritizes verified cancellation/refund knowledge, states when refund amounts/timing are unspecified, and uses a cautious no-model fallback.
+- Tightened source-family eligibility, token-aware query matching, topical ranking and dynamic-override safety. The reviewed 34-case corpus now has zero known forbidden Top-1/Top-3 results.
+- The latest `main` introduced a booking tool whose implementation only validated and returned preview data while the tool description and assistant response claimed a booking was submitted. Updated the tool description and response to say explicitly that the booking is only a preview and remains unsubmitted/unconfirmed, corrected booking hall state selection, and added Arabic/English assistant and gateway tests.
+- Corrected the existing Learning Loop browser flow to return to the public homepage and reopen Mabrouk after the Admin publish modal closes. This was an E2E navigation assumption; backend traces showed successful 200 assistant responses. The full suite now passes with the actual public learning check.
+
+### Local gates
+
+- Backend Release solution tests against isolated PostgreSQL: **2667 passed, 0 failed, 0 skipped**. TRX: `D:\WesalMabroukV6Temp\test-results-final3\v6-backend-full-pg-final3.trx`.
+- PostgreSQL-backed Studio integration tests are included in that full run; the prior exact filtered integration cohort passed 10/10.
+- Playwright full Admin/Knowledge Studio/Learning Loop plus V6 safety suite: **23 passed**, both API `/health` and frontend `/login` ended HTTP 200. This was a stable monitored run on isolated PostgreSQL, with no paid AI key configured.
+- Frontend `npm exec -- tsc --noEmit`: passed. API-base URL gate: 25/25; assistant contract: 23/23; Mabrouk Knowledge Studio contract: 7/7; assistant storage sanitization: passed; production environment gate: passed.
+- Frontend lint completed with no reported findings on the staged production-dependency installation. CI still treats lint as advisory until its pre-existing findings are cleared.
+- Production dependency audit from the staged lockfile: 0 vulnerabilities across 62 production dependencies.
+- Production Next build completed successfully on the staged D: copy (Turbopack compile, typecheck, and route collection passed). The C: to D: dependency junction remains untouched.
+- Changed-source Gitleaks and real production Docker-image knowledge inclusion are delegated to exact-head GitHub CI; no local result is claimed for those gates.
+
+### Merge and deployment state
+
+Current branch is `feat/mabrouk-v6-evaluation-coverage`; source base is latest fetched `origin/main` `bd2c75c` (the two core retrieval files were confirmed unchanged from the corrected-baseline commit `9c01dfd`). PR #40 is the existing V6 PR. The pre-follow-up candidate is `47ee765`; the safe booking preview follow-up and this closure record are included in the final pushed head recorded by GitHub after push.
+
+Production status remains `PRODUCTION_VERIFICATION_PENDING`: the Render CLI is installed, but this session has no verified Wesal service identity/account access or authenticated production test user. Public health or Preview checks cannot establish the deployed commit or authenticated production behavior. Do not call V6 production verified. V6 engineering and merge status are determined separately by exact-head CI, review requirements and GitHub merge confirmation.

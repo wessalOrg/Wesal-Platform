@@ -80,7 +80,8 @@ internal sealed class MabroukHarness
             new AiAssistantPolicyGate(payment, knowledge),
             new RecordingLogger<AiAssistantService>(RouteLogs),
             gapRecorder,
-            gapDetector);
+            gapDetector,
+            toolGateway: gateway);
     }
 
     private sealed class RecordingLogger<T>(List<string> messages) : ILogger<T>
