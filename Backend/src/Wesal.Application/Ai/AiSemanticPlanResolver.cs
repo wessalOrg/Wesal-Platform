@@ -40,14 +40,27 @@ public static class AiSemanticPlanResolver
         }
         var question = AiHallQuestionClassifier.Classify(message);
         var comparison = ResolveComparison(message, priceBudget);
-        var explicitName = AiReferenceResolver.TryGetExplicitHallName(message);
-        var ordinal = AiReferenceResolver.TryGetOrdinal(message);
+        var priorPlan = context?.State?.LastSemanticPlan;
         var hasResults = (context?.LastHalls is { Count: > 0 } || context?.State?.ShownHallIds is { Count: > 0 })
             && (context?.LastIntent?.Intent == AiIntentType.SearchHalls
                 || string.Equals(context?.State?.ActiveGoal, "find_hall", StringComparison.Ordinal));
+        var isRecommendationFollowUp = comparison == AiComparisonIntent.MostSuitable
+            && hasResults
+            && priorPlan is not null;
+        if (isRecommendationFollowUp && !priceBudget.IsSpecified)
+        {
+            priceBudget = priorPlan!.PriceBudget;
+            sortPreference = priorPlan.SortPreference;
+        }
+        var explicitName = AiReferenceResolver.TryGetExplicitHallName(message);
+        var ordinal = AiReferenceResolver.TryGetOrdinal(message);
         var hasActiveHall = turn.Hall is not null || context?.State?.ActiveHallId is not null;
         var comparisonOrdinals = AiReferenceResolver.GetOrdinals(message);
-        var hasConcreteSearchFilters = HasConcreteSearchFilters(criteria);
+        var hasConcreteSearchFilters = HasConcreteSearchFilters(criteria)
+            || isRecommendationFollowUp && (priorPlan!.Capacity.HasValue
+                || !string.IsNullOrWhiteSpace(priorPlan.Region)
+                || !string.IsNullOrWhiteSpace(priorPlan.Area)
+                || priorPlan.PriceBudget.IsSpecified);
         var priorArea = context?.State?.LastSemanticPlan?.Area ?? context?.LastIntent?.Area;
         var clearedArea = !string.IsNullOrWhiteSpace(priorArea) && NegatesArea(message, priorArea) ? priorArea : null;
         var resultReference = ordinal.HasValue || comparison != AiComparisonIntent.None && hasResults
@@ -67,7 +80,7 @@ public static class AiSemanticPlanResolver
         var goal = comparison != AiComparisonIntent.None
             ? comparison == AiComparisonIntent.CompareSelected
                 ? AiSemanticGoal.CompareHalls
-                : hasConcreteSearchFilters
+                : HasConcreteSearchFilters(criteria)
                     ? AiSemanticGoal.FindHall
                     : hasResults ? AiSemanticGoal.CompareHalls : AiSemanticGoal.FindHall
             : ResolveGoal(message, criteria, question, comparison, hallReference, intentGoal);
@@ -126,12 +139,12 @@ public static class AiSemanticPlanResolver
             ordinal is { } index ? new AiSelectedResultReference(index) : null,
             comparison,
             requestedFacts,
-            criteria.Region,
-            Limit(clearedArea is null ? criteria.Area : null, 80),
+            criteria.Region ?? (isRecommendationFollowUp ? priorPlan!.Region : null),
+            Limit(clearedArea is null ? criteria.Area ?? (isRecommendationFollowUp ? priorPlan!.Area : null) : null, 80),
             resolvedDate,
             range,
             month,
-            criteria.Capacity,
+            criteria.Capacity ?? (isRecommendationFollowUp ? priorPlan!.Capacity : null),
             priceBudget,
             sortPreference,
             question == AiHallQuestion.Availability || resolvedDate.HasValue || range is not null,
@@ -193,6 +206,9 @@ public static class AiSemanticPlanResolver
         var name = AiReferenceResolver.TryGetExplicitHallName(message);
         var ordinal = AiReferenceResolver.TryGetOrdinal(message);
         var dates = AiDateRangeResolver.Resolve(message, today);
+        var preserveRecommendationContext = plan.ComparisonIntent == AiComparisonIntent.MostSuitable
+            && plan.ResultSetReference is not null
+            && context?.State?.LastSemanticPlan is not null;
 
         // Never preserve a planner-supplied entity, number, region or calendar value
         // unless deterministic parsing found it in the current turn.
@@ -204,14 +220,14 @@ public static class AiSemanticPlanResolver
                     ? new AiHallReference(AiHallReferenceKind.ResultSetSelection)
                     : plan.HallReference,
             SelectedResultReference = ordinal is { } selected ? new AiSelectedResultReference(selected) : null,
-            Region = criteria.Region,
-            Area = plan.ClearAreaPreference ? null : Limit(currentMessageArea, 80),
+            Region = criteria.Region ?? (preserveRecommendationContext ? context!.State!.LastSemanticPlan!.Region : null),
+            Area = plan.ClearAreaPreference ? null : Limit(currentMessageArea ?? (preserveRecommendationContext ? context!.State!.LastSemanticPlan!.Area : null), 80),
             Date = dates?.Date ?? criteria.Date,
             DateRange = dates?.Range is { } dateRange && dateRange.End.DayNumber - dateRange.Start.DayNumber <= 30 ? dateRange : null,
             Month = dates?.Month,
-            Capacity = criteria.Capacity is > 0 and < 10000 ? criteria.Capacity : null,
-            PriceBudget = validatedBudget,
-            SortPreference = validatedSort,
+            Capacity = criteria.Capacity is > 0 and < 10000 ? criteria.Capacity : preserveRecommendationContext ? context!.State!.LastSemanticPlan!.Capacity : null,
+            PriceBudget = validatedBudget.IsSpecified || !preserveRecommendationContext ? validatedBudget : context!.State!.LastSemanticPlan!.PriceBudget,
+            SortPreference = validatedBudget.IsSpecified || !preserveRecommendationContext ? validatedSort : context!.State!.LastSemanticPlan!.SortPreference,
             RequestedFacts = plan.RequestedFacts.Distinct().Take(8).ToArray(),
             CompoundGoals = plan.CompoundGoals.Distinct().Take(8).ToArray(),
             NavigationIntent = IsNavigationRequest(message) ? "halls" : null,

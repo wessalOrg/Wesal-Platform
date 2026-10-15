@@ -182,6 +182,7 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
                     ActiveHallName = Limit(conversationState.ActiveHallName, 160),
                     Region = Limit(conversationState.Region, 80),
                     ShownHallIds = conversationState.ShownHallIds?.Take(MaxRememberedHalls).ToArray(),
+                    SeenHallIds = conversationState.SeenHallIds?.Distinct().Take(MaxRememberedHalls).ToArray(),
                     RequestedFacts = conversationState.RequestedFacts?.Take(8).Select(value => Limit(value, 40) ?? string.Empty).ToArray(),
                     LastSemanticPlan = BoundSemanticPlan(conversationState.LastSemanticPlan)
                 };

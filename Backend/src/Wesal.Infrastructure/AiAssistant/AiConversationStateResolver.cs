@@ -63,19 +63,34 @@ public static class AiConversationStateResolver
         if (question == AiHallQuestion.Capacity) requested.Add("capacity");
 
         var navigation = response.Actions?.FirstOrDefault(a => a.Type == AiAssistantActionTypes.Navigate)?.PageKey;
+        var isPlatformTopic = plan?.Goal is AiSemanticGoal.PlatformKnowledge or AiSemanticGoal.OwnerWorkflow or AiSemanticGoal.BookingHelp;
+        var currentTopic = topicSwitch || isPlatformTopic
+            ? "platform"
+            : plan?.Goal is AiSemanticGoal.FindHall or AiSemanticGoal.CompareHalls or AiSemanticGoal.HallDetails or AiSemanticGoal.CheckAvailability
+                ? "hall"
+                : state.CurrentTopic;
+        var seenHallIds = halls.Length > 0
+            ? Array.Empty<Guid>()
+            : response.HallDetails is not null && activeHallId is { } selectedHallId
+                ? (state.SeenHallIds ?? Array.Empty<Guid>()).Append(selectedHallId).Distinct().Take(10).ToArray()
+                : state.SeenHallIds;
         var preserveRankedSelection = plan?.ContinuationType is AiContinuationType.ContextualFollowUp or AiContinuationType.ClarificationAnswer
             && state.LastSemanticPlan?.ComparisonIntent is AiComparisonIntent.Cheapest or AiComparisonIntent.MostExpensive
                 or AiComparisonIntent.Largest or AiComparisonIntent.Smallest or AiComparisonIntent.BestBudgetFit or AiComparisonIntent.MostSuitable;
         return state with
         {
-            ActiveGoal = task,
+            ActiveGoal = topicSwitch || isPlatformTopic ? state.ActiveGoal : task,
             ActiveIntent = intent?.Intent.ToString() ?? state.ActiveIntent,
             PendingIntent = clarificationField is null ? null : intent?.Intent.ToString(),
             PendingClarification = clarificationField,
             MissingField = clarificationField,
-            ActiveHallId = topicSwitch ? null : activeHallId,
-            ActiveHallName = topicSwitch ? null : activeHallName,
+            ActiveHallId = activeHallId,
+            ActiveHallName = activeHallName,
+            LastSelectedHallId = response.HallDetails is not null || response.Availability is not null
+                ? activeHallId ?? state.LastSelectedHallId
+                : state.LastSelectedHallId,
             ShownHallIds = halls.Length > 0 ? halls : state.ShownHallIds,
+            SeenHallIds = halls.Length > 0 ? Array.Empty<Guid>() : seenHallIds,
             SelectedResultIndex = selectedIndex,
             Region = plan?.Region ?? intent?.Region ?? state.Region,
             Capacity = plan?.Capacity ?? intent?.Capacity ?? state.Capacity,
@@ -84,6 +99,24 @@ public static class AiConversationStateResolver
                 : requested.Count > 0 ? requested : state.RequestedFacts,
             ResolvedDate = date,
             LastNavigationTarget = navigation ?? state.LastNavigationTarget,
+            PendingNavigationTarget = navigation ?? (plan?.NavigationIntent is not null ? plan.NavigationIntent : state.PendingNavigationTarget),
+            LastAction = response.Actions?.FirstOrDefault()?.Type ?? (response.Kind switch
+            {
+                AiAssistantResponseKind.Halls => "search_halls",
+                AiAssistantResponseKind.HallDetails => "select_hall",
+                AiAssistantResponseKind.Availability => "check_availability",
+                _ => state.LastAction
+            }),
+            LastToolOutcome = response.Kind is AiAssistantResponseKind.Error or AiAssistantResponseKind.Unsupported
+                ? "blocked"
+                : response.Kind is AiAssistantResponseKind.Halls or AiAssistantResponseKind.HallDetails or AiAssistantResponseKind.Availability
+                    ? "success"
+                    : state.LastToolOutcome,
+            CurrentTopic = currentTopic,
+            TaskStatus = clarificationField is not null ? "blocked"
+                : response.Kind is AiAssistantResponseKind.Error or AiAssistantResponseKind.Unsupported ? "blocked"
+                : IsNextResult(message) && response.HallDetails is null && response.Halls is not { Count: > 0 } ? "exhausted"
+                : "active",
             LastQuestionType = question == AiHallQuestion.None ? state.LastQuestionType : question.ToString(),
             ConversationStage = clarificationField is not null ? $"awaiting_{clarificationField}" : response.Kind.ToString(),
             LastSemanticPlan = preserveRankedSelection ? state.LastSemanticPlan : plan ?? state.LastSemanticPlan
@@ -143,12 +176,16 @@ public static class AiConversationStateResolver
     }
 
     public static AiConversationState AdvanceSelection(AiConversationState? prior, AiHallRef selected, int index, AiSemanticPlan? plan = null)
-        => (prior ?? new AiConversationState()) with
+    {
+        var state = prior ?? new AiConversationState();
+        return state with
         {
             ActiveGoal = "find_hall",
             ActiveIntent = nameof(AiIntentType.GetHallDetails),
             ActiveHallId = selected.HallId,
             ActiveHallName = selected.HallName,
+            LastSelectedHallId = selected.HallId,
+            SeenHallIds = (state.SeenHallIds ?? Array.Empty<Guid>()).Append(selected.HallId).Distinct().Take(10).ToArray(),
             SelectedResultIndex = index,
             ShownHallIds = prior?.ShownHallIds,
             Capacity = plan?.Capacity ?? prior?.Capacity,
@@ -158,6 +195,7 @@ public static class AiConversationStateResolver
             MissingField = null,
             ConversationStage = "result_selected"
         };
+    }
 
     public static AiConversationState AdvanceOrdinal(AiConversationState? prior, AiHallRef selected, int index, AiSemanticPlan? plan = null)
         => AdvanceSelection(prior, selected, index, plan) with { ConversationStage = "ordinal_selected" };
@@ -171,6 +209,10 @@ public static class AiConversationStateResolver
             PendingClarification = null,
             MissingField = null,
             ShownHallIds = shown.Select(hall => hall.HallId).Take(10).ToArray(),
+            SeenHallIds = Array.Empty<Guid>(),
+            ActiveHallId = null,
+            ActiveHallName = null,
+            LastSelectedHallId = null,
             SelectedResultIndex = -1,
             Region = plan?.Region ?? prior?.Region,
             Capacity = plan?.Capacity ?? prior?.Capacity,

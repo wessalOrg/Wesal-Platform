@@ -12,6 +12,117 @@ public sealed class MabroukConversationIntelligenceShould
     private sealed record ConversationCase(string Id, string Category, string[] Turns);
 
     [Fact]
+    public async Task PreserveSearchCriteriaWhenRecommendingFromTheSameResultSet()
+    {
+        var harness = new MabroukHarness();
+        var initialPlan = AiSemanticPlanResolver.Resolve("بدي صالة بغزة لـ200 شخص وميزانيتي 3000 شيكل", "ar",
+            new DateOnly(2026, 10, 1), null, AiTurnContext.Empty(new DateOnly(2026, 10, 1)));
+        Assert.Equal(200, initialPlan.Capacity);
+        var shown = new[] { new AiHallRef(harness.NakheelId, "قاعة النخيل"), new AiHallRef(harness.OrchidId, "قاعة الأوركيد") };
+        var prior = AiConversationStateResolver.WithCollectionResults(null, shown, initialPlan);
+        var context = new AiConversationContext([], AiSemanticPlanResolver.ToLegacyIntent(initialPlan), shown, null, prior);
+
+        var response = await harness.AskAsync("مين الأنسب من اللي عرضتهم وليش؟", conversation: context);
+
+        Assert.Equal(AiComparisonIntent.MostSuitable, response.SemanticPlan?.ComparisonIntent);
+        Assert.Equal(200, response.SemanticPlan?.Capacity);
+        Assert.Equal(3000m, response.SemanticPlan?.PriceBudget.MaximumPrice);
+        Assert.Equal("Gaza", response.SemanticPlan?.Region);
+        Assert.Equal(AiAssistantResponseKind.Answer, response.Kind);
+        Assert.Null(response.HallDetails); // controlled fixture candidates exceed the hard budget
+        Assert.Contains("ما في قاعة", response.Message);
+        Assert.Empty(harness.Search.Requests);
+    }
+
+    [Fact]
+    public void TrackSelectedHallsWithoutMarkingEveryShownResultAsSeen()
+    {
+        var first = new AiHallRef(Guid.NewGuid(), "Hall A");
+        var second = new AiHallRef(Guid.NewGuid(), "Hall B");
+        var state = AiConversationStateResolver.WithCollectionResults(null, [first, second]);
+
+        Assert.Empty(state.SeenHallIds!);
+        state = AiConversationStateResolver.AdvanceSelection(state, second, 1);
+
+        Assert.Equal(second.HallId, state.LastSelectedHallId);
+        Assert.Equal([second.HallId], state.SeenHallIds);
+        Assert.Equal([first.HallId, second.HallId], state.ShownHallIds);
+    }
+
+    [Fact]
+    public async Task AskWhichHardFilterMayChangeAfterAnAffirmativeContinuationAtExhaustion()
+    {
+        var harness = new MabroukHarness();
+        var shown = new[] { new AiHallRef(harness.NakheelId, "قاعة النخيل"), new AiHallRef(harness.OrchidId, "قاعة الأوركيد") };
+        var state = new AiConversationState(ActiveGoal: "find_hall", ShownHallIds: shown.Select(hall => hall.HallId).ToArray(),
+            SelectedResultIndex: 1, TaskStatus: "exhausted", LastSemanticPlan: new AiSemanticPlan(
+                AiSemanticGoal.FindHall, AiContinuationType.NewRequest, new AiHallReference(AiHallReferenceKind.None),
+                null, null, AiComparisonIntent.None, [], "Gaza", "Al-Shati", null, null, null, 200,
+                new AiPriceBudget(MaximumPrice: 3000), AiPriceSortPreference.LowestPrice, false, null, [], null,
+                AiPlanConfidence.High, "ar"));
+        var context = new AiConversationContext([], new AiAssistantIntentDto(AiIntentType.SearchHalls, "Gaza", "Al-Shati", null, 200, null,
+            MaximumPrice: 3000), shown, null, state);
+
+        var response = await harness.AskAsync("طيب اه دور", conversation: context);
+
+        Assert.Equal(AiAssistantResponseKind.Clarification, response.Kind);
+        Assert.Contains("أي شرط", response.Message);
+        Assert.Contains("باقي الشروط", response.Message);
+        Assert.Equal("search_filter", response.SemanticPlan?.ClarificationRequirement?.Field);
+        Assert.Empty(harness.Search.Requests);
+    }
+
+    [Fact]
+    public async Task ResolveShortHallNavigationOnlyAsAnActionFromAValidatedHallContext()
+    {
+        var harness = new MabroukHarness();
+        var response = await harness.AskAsync("بتقدر توديني هناك", pinnedHall: harness.OrchidId);
+
+        var action = Assert.Single(response.Actions!);
+        Assert.Equal(AiAssistantActionTypes.Navigate, action.Type);
+        Assert.Equal(AiAssistantActionTypes.ModeAuto, action.Mode);
+        Assert.Equal(WesalNavigationRegistry.HallDetails, action.PageKey);
+        Assert.Equal($"/halls/{harness.OrchidId:D}", action.Href);
+        Assert.Contains("ما تم إرسال أي حجز", response.Message);
+    }
+
+    [Fact]
+    public async Task SwitchToPlatformServicesAndResumeThePreviouslySelectedHall()
+    {
+        var harness = new MabroukHarness();
+        var selected = new AiHallRef(harness.OrchidId, "قاعة الأوركيد");
+        var context = new AiConversationContext([], new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, selected.HallName),
+            [selected], selected, new AiConversationState(ActiveGoal: "hall_details", ActiveHallId: selected.HallId,
+                ActiveHallName: selected.HallName, LastSelectedHallId: selected.HallId, ShownHallIds: [selected.HallId]));
+
+        var platform = await harness.AskAsync("طيب احكيلي شو بتقدموا", conversation: context);
+        Assert.Equal(AiSemanticGoal.PlatformKnowledge, platform.SemanticPlan?.Goal);
+        Assert.DoesNotContain("الأوركيد", platform.Message);
+
+        var switched = AiConversationStateResolver.Advance(context.State, "طيب احكيلي شو بتقدموا", platform, context.LastHall);
+        Assert.Equal("platform", switched.CurrentTopic);
+        Assert.Equal("hall_details", switched.ActiveGoal);
+        Assert.Equal(selected.HallId, switched.LastSelectedHallId);
+
+        var resumedContext = context with { State = switched, LastHall = null };
+        var resume = await harness.AskAsync("ارجع للصالة", conversation: resumedContext);
+        Assert.Equal($"/halls/{selected.HallId:D}", Assert.Single(resume.Actions!).Href);
+    }
+
+    [Fact]
+    public async Task KeepTheTenReviewedV7TranscriptFamiliesInTheRegressionDataset()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Ai", "Fixtures", "mabrouk-v7-real-conversation-regressions.json");
+        var cases = JsonSerializer.Deserialize<List<ConversationCase>>(await File.ReadAllTextAsync(path),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        Assert.NotNull(cases);
+        Assert.Equal(10, cases.Count);
+        Assert.Equal(34, cases.Sum(item => item.Turns.Length));
+        Assert.All(cases, item => Assert.NotEmpty(item.Turns));
+    }
+
+    [Fact]
     public async Task RecommendMostSuitableShownHallUsingLivePriceAndCapacity()
     {
         var harness = new MabroukHarness();

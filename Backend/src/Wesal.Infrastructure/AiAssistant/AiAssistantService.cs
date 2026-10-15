@@ -142,16 +142,58 @@ public sealed class AiAssistantService : IAiAssistantService
             }
         }
 
+        if (turn.Hall is { } contextualHall && IsContextualHallNavigation(text))
+        {
+            var action = AiAssistantPolicyGate.NavigateAction(
+                effectiveLanguage,
+                WesalNavigationRegistry.HallDetails,
+                AiNavigationMode.Auto,
+                contextualHall.HallId);
+            if (action is not null)
+            {
+                var navigationResponse = Build(
+                    effectiveLanguage,
+                    AiAssistantResponseKind.Answer,
+                    effectiveLanguage == "en"
+                        ? $"Opening {contextualHall.HallName}. You can continue booking from its hall page. No booking has been submitted."
+                        : $"بفتحلك صفحة {contextualHall.HallName}. بتقدر تكمّل طلب الحجز من صفحة القاعة. ما تم إرسال أي حجز.",
+                    new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, contextualHall.HallName));
+                navigationResponse = navigationResponse with { Actions = [action], SemanticPlan = semanticPlan };
+                return navigationResponse;
+            }
+        }
+
+        if (IsHallResumeRequest(text) && context?.State?.LastSelectedHallId is { } selectedHallId)
+        {
+            HallDetailsDto? hall = null;
+            try { hall = await _hallDetailsService.GetHallDetailsAsync(selectedHallId, cancellationToken); }
+            catch (NotFoundException) { }
+            if (hall is not null)
+            {
+                var action = AiAssistantPolicyGate.NavigateAction(effectiveLanguage, WesalNavigationRegistry.HallDetails, AiNavigationMode.Auto, hall.HallId);
+                if (action is not null)
+                {
+                    var resumeResponse = Build(effectiveLanguage, AiAssistantResponseKind.Answer,
+                        effectiveLanguage == "en" ? $"Returning to {hall.HallName}. No booking has been submitted." : $"برجعك لصفحة {hall.HallName}. ما تم إرسال أي حجز.",
+                        new AiAssistantIntentDto(AiIntentType.GetHallDetails, null, null, null, null, hall.HallName));
+                    return resumeResponse with { Actions = [action], SemanticPlan = semanticPlan };
+                }
+            }
+        }
+
         var routed = await RouteAsync(text, effectiveLanguage, turn, context, semanticPlan, cancellationToken);
         var response = routed.Response with
         {
-            SemanticPlan = AiSemanticPlanResolver.Resolve(
-                text,
-                effectiveLanguage,
-                turn.Today,
-                context,
-                turn,
-                routed.Response.Intent)
+            SemanticPlan = IsPlatformServicesQuestion(text)
+                ? semanticPlan with { Goal = AiSemanticGoal.PlatformKnowledge, HallReference = new AiHallReference(AiHallReferenceKind.None), ResultSetReference = null }
+                : routed.Route == "search_exhausted_affirmative"
+                    ? semanticPlan with
+                    {
+                        Goal = AiSemanticGoal.FindHall,
+                        ClarificationRequirement = new AiClarificationRequirement("search_filter",
+                            effectiveLanguage == "en" ? "Which filter may I change: area, guest capacity, or budget?" : "أي شرط بتحب نعدّله عشان أوسع البحث: المنطقة، عدد الضيوف، ولا الميزانية؟")
+                    }
+                    : AiSemanticPlanResolver.Resolve(text, effectiveLanguage, turn.Today, context, turn, routed.Response.Intent)
         };
         response = WithContextualActions(text, response, turn);
 
@@ -189,6 +231,25 @@ public sealed class AiAssistantService : IAiAssistantService
     {
         var policyMs = 0L;
 
+        if (IsPlatformServicesQuestion(text))
+        {
+            var services = await _howToService.TryAnswerKnownQuestionAsync(text, language, cancellationToken, context);
+            services ??= await _howToService.TryAnswerKnownQuestionAsync(
+                language == "en" ? "What does Wesal offer?" : "شو بتقدموا؟", language, cancellationToken, context);
+            if (services is not null)
+                return new AssistantRouteResult(Build(language, AiAssistantResponseKind.Answer, services.Answer, null),
+                    "platform_services_topic_switch", policyMs, 0, 0, null);
+        }
+
+        if (IsAffirmativeContinueSearch(text) && context?.State?.TaskStatus == "exhausted")
+        {
+            var clarify = language == "en"
+                ? "Which filter may I change: area, guest capacity, or budget? I will keep all other constraints."
+                : "أي شرط بتحب نعدّله عشان أوسع البحث: المنطقة، عدد الضيوف، ولا الميزانية؟ بخلّي باقي الشروط زي ما هي.";
+            return new AssistantRouteResult(Build(language, AiAssistantResponseKind.Clarification, clarify, null),
+                "search_exhausted_affirmative", policyMs, 0, 0, null);
+        }
+
         if (AsksWhyThisHall(text) && turn.Hall is not null)
         {
             var explanation = await TryHandleHallContextAsync(
@@ -199,6 +260,23 @@ public sealed class AiAssistantService : IAiAssistantService
 
         var parsedCriteria = CriteriaExtractor.Extract(text);
         var previousHallResults = GetConversationHallIds(context);
+        if (semanticPlan.ComparisonIntent == AiComparisonIntent.MostSuitable
+            && semanticPlan.ResultSetReference is not null
+            && context?.State?.LastSemanticPlan is { } previousPlan)
+        {
+            // Short recommendation follow-ups reuse prior explicit hard constraints.
+            // Current-turn values are parsed first and always take precedence.
+            semanticPlan = semanticPlan with
+            {
+                Region = semanticPlan.Region ?? previousPlan.Region,
+                Area = semanticPlan.Area ?? previousPlan.Area,
+                Capacity = semanticPlan.Capacity ?? previousPlan.Capacity,
+                PriceBudget = semanticPlan.PriceBudget.IsSpecified ? semanticPlan.PriceBudget : previousPlan.PriceBudget,
+                SortPreference = semanticPlan.SortPreference == AiPriceSortPreference.Relevance
+                    ? previousPlan.SortPreference
+                    : semanticPlan.SortPreference
+            };
+        }
         if (parsedCriteria.SortByPrice
             && !parsedCriteria.MaximumPrice.HasValue
             && IsHallSearchContext(context)
@@ -236,15 +314,15 @@ public sealed class AiAssistantService : IAiAssistantService
                 : context?.State?.ShownHallIds ?? (IReadOnlyList<Guid>)Array.Empty<Guid>();
             if (resultIds.Count > 0)
             {
-                var currentHallId = context?.State?.ActiveHallId ?? context?.LastHall?.HallId;
+                var currentHallId = context?.State?.LastSelectedHallId ?? context?.State?.ActiveHallId ?? context?.LastHall?.HallId;
                 var nextIndex = (context?.State?.SelectedResultIndex ?? -1) + 1;
-                if (nextIndex < resultIds.Count
-                    && currentHallId is { } activeId
-                    && resultIds[nextIndex] == activeId)
+                var seenHallIds = context?.State?.SeenHallIds ?? Array.Empty<Guid>();
+                while (nextIndex < resultIds.Count
+                    && (currentHallId == resultIds[nextIndex] || seenHallIds.Contains(resultIds[nextIndex])))
                 {
-                    nextIndex = resultIds.ToList().FindIndex(id => id != activeId);
+                    nextIndex++;
                 }
-                else if (nextIndex >= resultIds.Count
+                if (nextIndex >= resultIds.Count
                     && currentHallId is { } rankedHallId
                     && context?.State?.LastSemanticPlan?.ComparisonIntent is
                         AiComparisonIntent.Cheapest or AiComparisonIntent.MostExpensive
@@ -594,6 +672,42 @@ public sealed class AiAssistantService : IAiAssistantService
                 || text.Contains("بتعمل", StringComparison.Ordinal)
                 || text.Contains("خدمات", StringComparison.Ordinal)
                 || text.Contains("services", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsPlatformServicesQuestion(string text)
+    {
+        var folded = AiText.Normalize(text);
+        return folded is "شو بتقدموا" or "احكيلي شو بتقدموا" or "شو بتقدموا بالزبط"
+            or "شو خدمات وصال" or "شو خدمات wesal" or "شو غير القاعات بتقدموا"
+            or "ايش عندكم خدمات" or "ايش خدماتكم" or "what does wesal offer"
+            or "what services do you offer" or "what does wesal provide"
+            || folded.Contains("شو بتقدموا", StringComparison.Ordinal)
+                && !folded.Contains("قاعة", StringComparison.Ordinal)
+                && !folded.Contains("صالة", StringComparison.Ordinal);
+    }
+
+    private static bool IsContextualHallNavigation(string text)
+    {
+        var folded = AiText.Normalize(text);
+        return folded is "وديني هناك" or "بتقدر توديني هناك" or "بتقدر توديني لهناك"
+            or "وديني على هاي الصاله" or "وديني لهاي الصاله"
+            or "وديني عالصاله" or "افتحها" or "افتحلي هاي" or "افتحلي الصاله"
+            or "فرجيني القاعه" or "ورجيني القاعه" or "فرجيني تفاصيلها"
+            or "take me there" or "open it" or "show this hall" or "show me its details";
+    }
+
+    private static bool IsHallResumeRequest(string text)
+    {
+        var folded = AiText.Normalize(text);
+        return folded is "ارجع للصاله" or "رجعني للصاله" or "رجعني الها"
+            or "ارجع لها" or "back to the hall" or "return to the hall";
+    }
+
+    private static bool IsAffirmativeContinueSearch(string text)
+    {
+        var folded = AiText.Normalize(text);
+        return folded is "طيب اه دور" or "اه دور" or "ايوه دور" or "نعم ابحث"
+            or "yes search" or "okay search" or "go ahead and search";
+    }
 
     private static bool AsksWhyThisHall(string text)
     {
