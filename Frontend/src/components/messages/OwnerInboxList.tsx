@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 import {
@@ -37,11 +37,13 @@ export default function OwnerInboxList({
   const t = useT();
   const lang = useUiLang();
   const [filter, setFilter] = useState<InboxFilter>(focusAdmin ? "admin" : "all");
+  const [trackedFocusAdmin, setTrackedFocusAdmin] = useState(focusAdmin);
   const [query, setQuery] = useState("");
 
-  useEffect(() => {
+  if (focusAdmin !== trackedFocusAdmin) {
+    setTrackedFocusAdmin(focusAdmin);
     if (focusAdmin) setFilter("admin");
-  }, [focusAdmin]);
+  }
 
   const rows = useMemo(
     () => conversations.filter((item) => item?.conversationId),

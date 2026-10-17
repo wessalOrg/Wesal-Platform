@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import HallAddReviewCard from "@/components/halls/HallAddReviewCard";
 import HallCommentList from "@/components/halls/HallCommentList";
-import HallCommentPanel from "@/components/halls/HallCommentPanel";
-import HallGuestFeedbackPrompt from "@/components/halls/HallGuestFeedbackPrompt";
-import HallRatingPanel from "@/components/halls/HallRatingPanel";
-import { GoldStars } from "@/components/ui/GoldStar";
+import { GoldStar, GoldStars } from "@/components/ui/GoldStar";
 import { useT } from "@/i18n";
 import { fetchHallRatingSummary } from "@/services/ratings";
 import type { HallReview } from "@/types/hall";
@@ -82,12 +80,14 @@ export default function HallReviewsSection({
 
   return (
     <section
+      id="hall-reviews"
       aria-labelledby="hall-reviews-heading"
-      className="hall-section-card hall-reviews-card"
+      className="hall-section-card hall-reviews-card scroll-mt-28"
       data-testid="hall-reviews-section"
     >
-      <h2 id="hall-reviews-heading" className="hall-section-title">
-        {t("halls.details.reviewsTitle")}
+      <h2 id="hall-reviews-heading" className="hall-section-title flex items-center gap-2">
+        <GoldStar size={20} />
+        <span>{t("halls.details.reviewsTitle")}</span>
       </h2>
 
       <div className="hall-reviews-summary">
@@ -131,27 +131,17 @@ export default function HallReviewsSection({
         onCommentDeleted={onCommentDeleted}
       />
 
-      <div className="hall-add-review">
-        <p className="hall-add-review-title">{t("halls.details.addReview")}</p>
-        <HallRatingPanel
-          hallId={hallId}
-          isHallOwner={isHallOwner}
-          embedded
-          onRated={(result) => {
-            setSummary({
-              averageRating: result.averageRating,
-              totalRatings: result.totalRatings,
-            });
-          }}
-        />
-        <HallCommentPanel
-          hallId={hallId}
-          isHallOwner={isHallOwner}
-          embedded
-          onSubmitted={onCommentSubmitted}
-        />
-        <HallGuestFeedbackPrompt hallId={hallId} isHallOwner={isHallOwner} />
-      </div>
+      <HallAddReviewCard
+        hallId={hallId}
+        isHallOwner={isHallOwner}
+        onRated={(result) => {
+          setSummary({
+            averageRating: result.averageRating,
+            totalRatings: result.totalRatings,
+          });
+        }}
+        onCommentSubmitted={onCommentSubmitted}
+      />
     </section>
   );
 }

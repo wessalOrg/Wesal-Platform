@@ -249,6 +249,7 @@ export async function submitHourlyBooking(input: HourlyBookingInput): Promise<Ho
           slotStarts: starts.map(toSlotStartPayload),
           nameOnBooking: name,
           requesterName,
+          contactPhone: input.contactPhone?.trim() || undefined,
         },
         { timeout: 10000 },
       );

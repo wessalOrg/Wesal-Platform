@@ -8,16 +8,42 @@ type HallQuickInfoProps = {
   hall: HallDetail;
 };
 
-function startingPriceLabel(slotPrices: HallSlotPrice[], fromLabel: string): string {
+function startingPriceLabel(slotPrices: HallSlotPrice[], fromLabel: string): ReactNode {
   const priced = slotPrices
     .map((slot) => slot.price)
     .filter((price): price is number => typeof price === "number" && Number.isFinite(price));
   if (priced.length) {
     const min = Math.min(...priced);
-    return `${fromLabel} ${min.toLocaleString("en-US")} ₪`;
+    return (
+      <>
+        {fromLabel}{" "}
+        <span dir="ltr" className="inline-flex items-baseline gap-1">
+          {min.toLocaleString("en-US")}
+          <ShekelMark />
+        </span>
+      </>
+    );
   }
   const labeled = slotPrices.find((slot) => slot.priceLabel?.trim())?.priceLabel?.trim();
-  return labeled ? `${fromLabel} ${labeled}` : "—";
+  if (!labeled) return "—";
+  const amount = labeled.replace(/₪/g, "").trim();
+  return (
+    <>
+      {fromLabel}{" "}
+      <span dir="ltr" className="inline-flex items-baseline gap-1">
+        {amount}
+        <ShekelMark />
+      </span>
+    </>
+  );
+}
+
+function ShekelMark() {
+  return (
+    <span className="font-['Segoe_UI','Arial',sans-serif] text-[0.95em] leading-none" aria-hidden="true">
+      ₪
+    </span>
+  );
 }
 
 function capacityLabel(hall: HallDetail, peopleWord: string): string {
@@ -29,16 +55,9 @@ function capacityLabel(hall: HallDetail, peopleWord: string): string {
 
 export default function HallQuickInfo({ hall }: HallQuickInfoProps) {
   const t = useT();
-  const rating =
-    hall.rating != null && Number.isFinite(hall.rating)
-      ? hall.rating.toFixed(1)
-      : "—";
-  const ratingValue =
-    hall.reviewCount != null && hall.reviewCount > 0 && rating !== "—"
-      ? `${rating} (${hall.reviewCount} ${t("halls.details.reviewsCount")})`
-      : rating;
-
-  const items: { id: string; label: string; value: string; icon: ReactNode }[] = [
+  const regionKey = `region.${hall.region}`;
+  const regionLabel = t(regionKey);
+  const items: { id: string; label: string; value: ReactNode; icon: ReactNode }[] = [
     {
       id: "capacity",
       label: t("halls.details.capacity"),
@@ -46,22 +65,22 @@ export default function HallQuickInfo({ hall }: HallQuickInfoProps) {
       icon: <CapacityIcon />,
     },
     {
-      id: "location",
-      label: t("halls.details.location"),
-      value: hall.location,
-      icon: <LocationIcon />,
-    },
-    {
-      id: "rating",
-      label: t("halls.details.ratingLabel"),
-      value: ratingValue,
-      icon: <StarIcon />,
-    },
-    {
       id: "price",
       label: t("halls.details.priceLabel"),
       value: startingPriceLabel(hall.slotPrices, t("halls.details.priceFrom")),
       icon: <PriceIcon />,
+    },
+    {
+      id: "region",
+      label: t("halls.details.area"),
+      value: regionLabel || hall.location,
+      icon: <LocationIcon />,
+    },
+    {
+      id: "booking",
+      label: t("halls.details.bookingOptions"),
+      value: t("halls.details.bookingHourly"),
+      icon: <ClockIcon />,
     },
   ];
 
@@ -72,9 +91,6 @@ export default function HallQuickInfo({ hall }: HallQuickInfoProps) {
     >
       {items.map((item) => (
         <li key={item.id} className="hall-quick-info-card">
-          <span className="hall-quick-info-icon" aria-hidden="true">
-            {item.icon}
-          </span>
           <div className="min-w-0">
             <p className="text-[0.7rem] font-semibold text-[var(--wesal-muted)] sm:text-xs">
               {item.label}
@@ -83,9 +99,21 @@ export default function HallQuickInfo({ hall }: HallQuickInfoProps) {
               {item.value}
             </p>
           </div>
+          <span className="hall-quick-info-icon" aria-hidden="true">
+            {item.icon}
+          </span>
         </li>
       ))}
     </ul>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+      <circle cx="12" cy="12" r="8.25" />
+      <path d="M12 7.5V12l3 2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -109,22 +137,13 @@ function LocationIcon() {
   );
 }
 
-function StarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-      <path d="m12 3.6 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18.5l.9-5.4L4.2 9.3l5.4-.8L12 3.6Z" />
-    </svg>
-  );
-}
-
 function PriceIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
-      <circle cx="12" cy="12" r="8.25" />
-      <path
-        d="M12 7.5v9M9.5 9.5c.6-.8 1.5-1.2 2.5-1.2 1.5 0 2.6.8 2.6 2.1S13.5 12.5 12 12.5 9.4 13.3 9.4 14.6c0 1.3 1.2 2.1 2.6 2.1 1 0 1.9-.4 2.5-1.2"
-        strokeLinecap="round"
-      />
-    </svg>
+    <span
+      className="relative -top-[3px] text-[1.7rem] font-bold leading-none"
+      style={{ fontFamily: '"Segoe UI", Arial, sans-serif' }}
+    >
+      ₪
+    </span>
   );
 }

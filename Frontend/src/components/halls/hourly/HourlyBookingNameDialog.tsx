@@ -5,7 +5,9 @@ import { useT } from "@/i18n";
 type HourlyBookingNameDialogProps = {
   open: boolean;
   name: string;
+  phone: string;
   onNameChange: (value: string) => void;
+  onPhoneChange: (value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -17,7 +19,9 @@ type HourlyBookingNameDialogProps = {
 export default function HourlyBookingNameDialog({
   open,
   name,
+  phone,
   onNameChange,
+  onPhoneChange,
   onClose,
   onSubmit,
   submitting,
@@ -69,6 +73,20 @@ export default function HourlyBookingNameDialog({
           className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] px-3 py-2.5 text-sm outline-none focus:border-[var(--wesal-maroon)]"
           disabled={submitting}
         />
+        <label className="mt-3 block text-sm font-semibold text-[var(--wesal-text)]" htmlFor="hourly-phone">
+          {t("halls.hourly.phone")}
+        </label>
+        <input
+          id="hourly-phone"
+          type="tel"
+          inputMode="tel"
+          dir="ltr"
+          value={phone}
+          onChange={(event) => onPhoneChange(event.target.value)}
+          autoComplete="tel"
+          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] px-3 py-2.5 text-sm outline-none focus:border-[var(--wesal-maroon)]"
+          disabled={submitting}
+        />
         {errorText ? (
           <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             {errorText}
@@ -82,7 +100,7 @@ export default function HourlyBookingNameDialog({
             type="button"
             className="btn-primary flex-1 disabled:opacity-60"
             onClick={onSubmit}
-            disabled={submitting || !name.trim()}
+            disabled={submitting || !name.trim() || !phone.trim()}
             data-testid="hourly-name-submit"
           >
             {submitting ? t("halls.booking.submitting") : t("halls.booking.submit")}

@@ -28,6 +28,7 @@ export type HourlyBookingInput = {
   slotTimes?: string[];
   customerName: string;
   requesterName?: string;
+  contactPhone?: string;
 };
 
 export type HourlyBookingResult = HourlyBookingInput & {

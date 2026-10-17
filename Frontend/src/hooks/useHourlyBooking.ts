@@ -5,7 +5,10 @@ import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { ApiError } from "@/lib/api-error";
 import { formatBookingDateLabel, isFutureBookingDate } from "@/lib/booking-date";
 import { emitBookingSubmitted } from "@/lib/booking-events";
+import { isValidRegisterPhone } from "@/lib/register-validation";
+import { pushPlatformNotification } from "@/lib/platform-notifications-store";
 import {
+  formatClockRange,
   formatHourlyRange,
   hourChoicesFromSlots,
   resolveHourlyDayStatus,
@@ -15,15 +18,22 @@ import { rememberUserBookings } from "@/lib/user-bookings-store";
 import {
   fetchHourlyDay,
   fetchHourlyMonth,
+  hourlyUsesLiveApi,
   submitHourlyBooking,
 } from "@/services/hourly-bookings";
 import type { HourlyDay, HourlyDayStatus, HourlySlot } from "@/types/hourly-booking";
+
+export type HourlySummarySelection = {
+  dateLabel: string;
+  timeLabel: string;
+};
 
 type Options = {
   hallId: string;
   hallName?: string;
   locale: string;
   canSubmit: boolean;
+  onConfirmed?: (selection: HourlySummarySelection | null) => void;
 };
 
 type VisibleMonth = { year: number; monthIndex: number };
@@ -36,7 +46,7 @@ function mergeDay(days: HourlyDay[], next: HourlyDay): HourlyDay[] {
   return copy;
 }
 
-export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Options) {
+export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfirmed }: Options) {
   const identity = useUserIdentity();
   const [visibleMonth, setVisibleMonth] = useState<VisibleMonth>(() => {
     const now = new Date();
@@ -52,6 +62,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
   const [rangeTo, setRangeTo] = useState("");
   const [confirmedStarts, setConfirmedStarts] = useState<string[]>([]);
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [promptOpen, setPromptOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -157,9 +168,10 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
       setRangeTo("");
       setConfirmedStarts([]);
       setErrorKey(null);
+      onConfirmed?.(null);
       void loadCatalog(iso);
     },
-    [days, loadCatalog],
+    [days, loadCatalog, onConfirmed],
   );
 
   const confirmRange = useCallback(() => {
@@ -168,6 +180,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
     if (starts.length === 0) {
       setErrorKey("halls.hourly.rangeInvalid");
       setConfirmedStarts([]);
+      onConfirmed?.(null);
       return;
     }
 
@@ -180,14 +193,31 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
     if (unavailable) {
       setConfirmedStarts([]);
       setErrorKey("errors.hourly.slotBooked");
+      onConfirmed?.(null);
       return;
     }
 
     setConfirmedStarts(starts);
     setErrorKey(null);
-    if (!canSubmit) return;
+    if (dateIso) {
+      onConfirmed?.({
+        dateLabel: formatBookingDateLabel(dateIso, locale),
+        timeLabel: formatClockRange(rangeFrom, rangeTo, locale),
+      });
+    }
+  }, [submitting, rangeFrom, rangeTo, selectedDay, dateIso, locale, onConfirmed]);
+
+  const openPrompt = useCallback(() => {
+    if (submitting || !canSubmit || confirmedStarts.length === 0) return;
+    if (!name.trim() && identity.displayName?.trim()) {
+      setName(identity.displayName.trim());
+    }
+    if (!phone.trim() && identity.phoneNumber?.trim()) {
+      setPhone(identity.phoneNumber.trim());
+    }
+    setErrorKey(null);
     setPromptOpen(true);
-  }, [submitting, rangeFrom, rangeTo, selectedDay, canSubmit]);
+  }, [submitting, canSubmit, confirmedStarts.length, name, phone, identity.displayName, identity.phoneNumber]);
 
   const closePrompt = useCallback(() => {
     if (submitting) return;
@@ -197,8 +227,17 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
   const submit = useCallback(async () => {
     if (!canSubmit || !dateIso || confirmedStarts.length === 0 || submitting) return;
     const customerName = name.trim();
+    const customerPhone = phone.trim();
     if (!customerName) {
       setErrorKey("errors.hourly.nameRequired");
+      return;
+    }
+    if (!customerPhone) {
+      setErrorKey("errors.hourly.phoneRequired");
+      return;
+    }
+    if (!isValidRegisterPhone(customerPhone)) {
+      setErrorKey("errors.hourly.phoneInvalid");
       return;
     }
 
@@ -212,6 +251,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
         slotTimes: confirmedStarts,
         customerName,
         requesterName: identity.displayName?.trim() || customerName,
+        contactPhone: customerPhone,
       });
       if (result.bookingId) {
         rememberUserBookings([
@@ -232,10 +272,33 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
           bookingId: result.bookingId,
           timeRange: selectedRangeLabel,
         });
+        if (!hourlyUsesLiveApi(hallId)) {
+          pushPlatformNotification({
+            type: "booking_submitted",
+            audience: "owner",
+            titleKey: "notify.ownerBookingRequest.title",
+            bodyKey: "notify.ownerBookingRequest.bodyPhone",
+            actionLabelKey: "notify.ownerBookingRequest.action",
+            params: {
+              userName: customerName,
+              hallName: hallName?.trim() || "",
+              date: formatBookingDateLabel(dateIso, locale),
+              phone: customerPhone,
+            },
+            metadata: {
+              hall_id: hallId,
+              booking_id: result.bookingId,
+              hall_name: hallName?.trim() || "",
+              date: dateIso,
+            },
+          });
+        }
       }
       setPromptOpen(false);
       setName("");
+      setPhone("");
       setConfirmedStarts([]);
+      onConfirmed?.(null);
       await reload();
     } catch (err) {
       const key =
@@ -252,11 +315,14 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
     confirmedStarts,
     submitting,
     name,
+    phone,
     hallId,
     hallName,
+    locale,
     identity.displayName,
     selectedRangeLabel,
     reload,
+    onConfirmed,
   ]);
 
   const shiftMonth = useCallback((delta: number) => {
@@ -287,11 +353,14 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
     setRangeFrom,
     setRangeTo,
     confirmRange,
+    openPrompt,
     selectedRangeLabel,
     promptOpen,
     closePrompt,
     name,
     setName,
+    phone,
+    setPhone,
     submit,
     submitting,
     errorKey,

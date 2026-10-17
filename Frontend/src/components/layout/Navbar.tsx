@@ -17,9 +17,7 @@ const NAV_HREFS = [
   { href: "/halls", key: "nav.halls" },
   { href: "/event-planners", key: "nav.eventPlanners" },
   { href: "/photographers", key: "nav.photographers" },
-  { href: "/#how-it-works", key: "nav.howItWorks" },
   { href: "/about", key: "nav.about" },
-  { href: "/#contact", key: "nav.contact" },
 ] as const;
 
 function navPath(href: string) {

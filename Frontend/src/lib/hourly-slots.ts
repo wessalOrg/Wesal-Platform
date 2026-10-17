@@ -2,7 +2,8 @@ import { isFutureBookingDate } from "@/lib/booking-date";
 import type { HourlyDay, HourlyDayStatus, HourlySlot } from "@/types/hourly-booking";
 
 export const HOURLY_SLOT_START = 8;
-export const HOURLY_SLOT_END = 21;
+/** Exclusive end of the last slot. 24 is midnight, shown as 12 at night. */
+export const HOURLY_SLOT_END = 24;
 
 function pad(value: number): string {
   return String(value).padStart(2, "0");
@@ -73,6 +74,20 @@ export function normalizeTimeOnly(value: unknown): string {
     .match(/^(\d{1,2}):(\d{2})/);
   if (!match) return "";
   return `${pad(Number(match[1]))}:${match[2]}`;
+}
+
+/** 13:00 → "1 م", 24:00 → "12 ص". Noon stays "12 م". */
+export function formatClockHour(value: string, locale: string): string {
+  const hour = Number(String(value).split(":")[0]);
+  if (!Number.isFinite(hour)) return value;
+  const face = String(hour % 12 || 12);
+  const morning = hour >= 24 || hour < 12;
+  if (locale.startsWith("ar")) return `${face} ${morning ? "ص" : "م"}`;
+  return `${face} ${morning ? "AM" : "PM"}`;
+}
+
+export function formatClockRange(from: string, to: string, locale: string): string {
+  return `${formatClockHour(from, locale)} – ${formatClockHour(to, locale)}`;
 }
 
 export function formatHourlyRange(start: string, end: string, locale: string): string {

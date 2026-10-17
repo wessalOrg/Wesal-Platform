@@ -21,8 +21,8 @@ function StoryStatValue({ target, active }: { target: number; active: boolean })
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) {
-      setValue(target);
-      return;
+      const frame = requestAnimationFrame(() => setValue(target));
+      return () => cancelAnimationFrame(frame);
     }
 
     const duration = 1400;
@@ -58,8 +58,8 @@ export default function StorySection() {
     if (!node) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setStatsActive(true);
-      return;
+      const frame = requestAnimationFrame(() => setStatsActive(true));
+      return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(

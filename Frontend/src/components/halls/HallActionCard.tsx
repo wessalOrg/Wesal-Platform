@@ -8,6 +8,7 @@ import type { HallSlotPrice } from "@/types/hall";
 
 type HallActionCardProps = {
   hallName: string;
+  location?: string | null;
   capacity?: number | null;
   capacityMax?: number | null;
   /** @deprecated Prefer capacity + capacityMax for correct RTL range order. */
@@ -72,6 +73,7 @@ function fallbackPrice(slotPrices: HallSlotPrice[]): string {
 
 export default function HallActionCard({
   hallName,
+  location = null,
   capacity = null,
   capacityMax = null,
   capacityLabel = null,
@@ -108,7 +110,16 @@ export default function HallActionCard({
       className="hall-action-card hall-section-card hall-booking-summary relative flex w-full flex-col"
       data-testid="hall-action-card"
     >
-      <h2 className="hall-section-title">{t("halls.details.bookingSummary")}</h2>
+      <h2 className="hall-section-title flex items-center gap-2">
+        <img
+          src="/icons/booking-summary.jpg"
+          alt=""
+          width={36}
+          height={36}
+          className="size-9 shrink-0 mix-blend-multiply"
+        />
+        <span>{t("halls.details.bookingSummary")}</span>
+      </h2>
 
       <p className="mt-4 text-sm font-bold text-[var(--wesal-text)]">
         {t("halls.details.summaryDetails")}
@@ -121,6 +132,14 @@ export default function HallActionCard({
             {hallName}
           </dd>
         </div>
+        {location?.trim() ? (
+          <div className="flex items-start justify-between gap-3 py-2.5">
+            <dt className="text-[var(--wesal-muted)]">{t("halls.details.location")}</dt>
+            <dd className="max-w-[58%] text-end font-semibold text-[var(--wesal-text)]">
+              {location.trim()}
+            </dd>
+          </div>
+        ) : null}
         <div className="flex items-start justify-between gap-3 py-2.5">
           <dt className="text-[var(--wesal-muted)]">{t("halls.details.summaryDate")}</dt>
           <dd className="max-w-[58%] text-end font-semibold text-[var(--wesal-text)]">
@@ -158,9 +177,6 @@ export default function HallActionCard({
           </p>
           <p className="text-base font-extrabold text-[var(--wesal-maroon)]">{price}</p>
         </div>
-        <p className="mt-2 text-[0.7rem] leading-5 text-[var(--wesal-muted)]">
-          {t("halls.details.summaryPriceNote")}
-        </p>
       </div>
 
       {showGuestAuth ? (

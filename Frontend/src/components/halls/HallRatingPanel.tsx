@@ -86,18 +86,27 @@ export default function HallRatingPanel({
     <div
       className={
         embedded
-          ? "mt-3"
+          ? "mt-5"
           : "mt-4 rounded-2xl bg-[#f7f1ec] px-4 py-5 shadow-[0_12px_30px_rgba(110,60,55,0.08)] sm:px-6 sm:py-6"
       }
       data-testid="hall-rating-control"
     >
-      {embedded ? null : (
+      {embedded ? (
+        <p className="text-sm font-bold text-[#2c2624]">
+          {t("halls.rating.field")}
+          <span className="text-[var(--wesal-maroon)]"> *</span>
+        </p>
+      ) : (
         <p className="text-center text-base font-bold text-[var(--wesal-maroon)] sm:text-start">
           {existing ? t("halls.rating.edit") : t("halls.rating.title")}
         </p>
       )}
       <div
-        className="mt-1 flex flex-wrap items-center justify-center gap-1 sm:justify-start"
+        className={
+          embedded
+            ? "mt-1.5 flex flex-wrap items-center justify-start gap-0.5"
+            : "mt-1 flex flex-wrap items-center justify-center gap-1 sm:justify-start"
+        }
         role="radiogroup"
         aria-label={t("halls.rating.title")}
       >
@@ -111,7 +120,12 @@ export default function HallRatingPanel({
               aria-checked={value === star}
               aria-label={`${star}`}
               disabled={submitting}
-              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition hover:bg-[var(--wesal-pink-soft)] disabled:cursor-not-allowed disabled:opacity-60"
+              className={
+                embedded
+                  ? "inline-flex h-10 w-10 cursor-pointer items-center justify-center text-[#c9beb8] transition hover:text-[var(--wesal-maroon-soft)] disabled:cursor-not-allowed disabled:opacity-60 data-[active=true]:text-[var(--wesal-maroon)]"
+                  : "inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition hover:bg-[var(--wesal-pink-soft)] disabled:cursor-not-allowed disabled:opacity-60"
+              }
+              data-active={embedded && active ? "true" : undefined}
               onMouseEnter={() => setHover(star)}
               onMouseLeave={() => setHover(0)}
               onClick={() => {
@@ -147,13 +161,20 @@ export default function HallRatingPanel({
                 }
               }}
             >
-              <span className={active ? "opacity-100" : "opacity-30"}>
-                <GoldStar size={22} />
-              </span>
+              {embedded ? (
+                <ReviewOutlineStar filled={active} />
+              ) : (
+                <span className={active ? "opacity-100" : "opacity-30"}>
+                  <GoldStar size={22} />
+                </span>
+              )}
             </button>
           );
         })}
       </div>
+      {embedded ? (
+        <p className="mt-1 text-xs text-[#9a8d86]">{t("halls.rating.pickStars")}</p>
+      ) : null}
       <div className={`mt-3 flex flex-col gap-2 ${embedded ? "" : "items-center sm:flex-row sm:items-center"}`}>
         {embedded ? null : (
           <button
@@ -196,5 +217,19 @@ export default function HallRatingPanel({
         </p>
       ) : null}
     </div>
+  );
+}
+
+function ReviewOutlineStar({ filled }: { filled: boolean }) {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 3.2l2.2 4.5 5 .7-3.6 3.5.9 5L12 14.8 7.5 17l.9-5L4.8 8.4l5-.7L12 3.2Z"
+        fill={filled ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
