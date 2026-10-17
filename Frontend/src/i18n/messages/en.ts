@@ -1894,6 +1894,7 @@ const en: MessageCatalog = {
   "messages.role.admin": "Admin",
   "messages.selectConversation": "Select a conversation to view messages.",
   "messages.backToInbox": "Back to inbox",
+  "messages.backToPreviousPage": "Back to the previous page",
   "messages.closeInbox": "Close inbox",
   "messages.resizeInbox": "Resize messages window",
   "messages.expandInbox": "Enlarge chat",
@@ -2091,6 +2092,7 @@ const en: MessageCatalog = {
   "halls.details.features": "Features",
   "halls.details.otherFeatures": "Additional features",
   "halls.details.youtube": "YouTube video",
+  "halls.details.youtubeWatch": "Watch the hall video",
   "auth.register.heroTitle": "What suits you in one place",
   "auth.register.heroSub":
     "Whether you're looking for your ideal hall or managing yours, Wesal makes everything closer and easier.",

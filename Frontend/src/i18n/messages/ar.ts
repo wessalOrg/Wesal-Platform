@@ -1839,6 +1839,7 @@ const ar: MessageCatalog = {
   "messages.role.admin": "إدارة",
   "messages.selectConversation": "اختر محادثة لعرض الرسائل.",
   "messages.backToInbox": "العودة إلى صندوق الرسائل",
+  "messages.backToPreviousPage": "العودة للصفحة السابقة",
   "messages.closeInbox": "إغلاق صندوق الرسائل",
   "messages.resizeInbox": "تغيير حجم نافذة الرسائل",
   "messages.expandInbox": "تكبير النافذة",
@@ -2035,6 +2036,7 @@ const ar: MessageCatalog = {
   "halls.details.features": "المميزات",
   "halls.details.otherFeatures": "مميزات إضافية",
   "halls.details.youtube": "فيديو يوتيوب",
+  "halls.details.youtubeWatch": "شاهد فيديو القاعة",
   "auth.register.heroTitle": "ما يليق بك في مكان واحد",
   "auth.register.heroSub":
     "سواء كنت تبحث عن قاعتك المثالية أو تدير قاعتك، وصال يجعل كل شيء أقرب وأسهل.",
