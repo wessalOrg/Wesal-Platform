@@ -9,7 +9,8 @@ export type PlatformNotificationType =
   | "hall_submitted"
   | "hall_approved"
   | "hall_rejected"
-  | "hall_review_request";
+  | "hall_review_request"
+  | "subscription";
 
 export type PlatformNotificationTone = "success" | "danger" | "info";
 

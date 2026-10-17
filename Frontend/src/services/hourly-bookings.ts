@@ -231,6 +231,20 @@ function mapHourlySubmitError(err: unknown): ApiError {
   return new ApiError("errors.hourly.generic", err.status);
 }
 
+const NAME_ON_BOOKING_MAX = 100;
+
+/**
+ * The hourly-booking API has no phone field; the owner sees `nameOnBooking`, so the
+ * booker's phone is appended to it (e.g. "Sara - 0599123456"), within the 100-char limit.
+ */
+function nameWithPhone(name: string, phone?: string): string {
+  const number = phone?.trim();
+  if (!number) return name.slice(0, NAME_ON_BOOKING_MAX);
+  const suffix = ` - ${number}`;
+  const room = Math.max(NAME_ON_BOOKING_MAX - suffix.length, 0);
+  return `${name.slice(0, room).trim()}${suffix}`;
+}
+
 export async function submitHourlyBooking(input: HourlyBookingInput): Promise<HourlyBookingResult> {
   const name = input.customerName.trim();
   if (!name) {
@@ -247,7 +261,7 @@ export async function submitHourlyBooking(input: HourlyBookingInput): Promise<Ho
           hallId: input.hallId,
           date: input.date,
           slotStarts: starts.map(toSlotStartPayload),
-          nameOnBooking: name,
+          nameOnBooking: nameWithPhone(name, input.phoneNumber),
           requesterName,
         },
         { timeout: 10000 },

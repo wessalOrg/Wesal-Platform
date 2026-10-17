@@ -5,6 +5,10 @@ import { t } from "@/i18n";
 
 type Props = {
   children: ReactNode;
+  /** Custom fallback (e.g. a floating card). Receives a retry callback. */
+  fallback?: (retry: () => void) => ReactNode;
+  /** Called when the boundary catches a render error. */
+  onError?: () => void;
 };
 
 type State = {
@@ -19,12 +23,17 @@ export default class MessagesErrorBoundary extends Component<Props, State> {
     return { failed: true };
   }
 
+  componentDidCatch() {
+    this.props.onError?.();
+  }
+
   handleRetry = () => {
     this.setState({ failed: false });
   };
 
   render() {
     if (this.state.failed) {
+      if (this.props.fallback) return this.props.fallback(this.handleRetry);
       return (
         <section
           className="rounded-2xl border border-[var(--wesal-border)] bg-white px-5 py-8 text-center shadow-[0_12px_30px_rgba(90,55,45,0.08)]"

@@ -337,13 +337,13 @@ export default function AdminOwnerMessagePanel() {
         }}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--wesal-maroon)]/15 px-3 py-2.5">
-          <h2
-            id="admin-owner-message-title"
-            className="truncate text-base font-bold text-[var(--wesal-maroon)]"
-          >
-            {t("admin.halls.message.title")}
-          </h2>
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <h2
+              id="admin-owner-message-title"
+              className="truncate text-base font-bold text-[var(--wesal-maroon)]"
+            >
+              {t("admin.halls.message.title")}
+            </h2>
             <button
               type="button"
               className={`${iconBtnClass} wesal-messages-inbox-resize`}
@@ -355,16 +355,16 @@ export default function AdminOwnerMessagePanel() {
             >
               <ResizeIcon />
             </button>
-            <button
-              type="button"
-              className={iconBtnClass}
-              aria-label={t("messages.closeInbox")}
-              data-testid="admin-owner-message-close"
-              onClick={close}
-            >
-              ✕
-            </button>
           </div>
+          <button
+            type="button"
+            className={iconBtnClass}
+            aria-label={t("messages.closeInbox")}
+            data-testid="admin-owner-message-close"
+            onClick={close}
+          >
+            ✕
+          </button>
         </div>
 
         <MessageThreadView

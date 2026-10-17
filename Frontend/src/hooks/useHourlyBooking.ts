@@ -28,6 +28,20 @@ type Options = {
 
 type VisibleMonth = { year: number; monthIndex: number };
 
+/** Same shape the backend profile validation accepts. */
+const PHONE_PATTERN = /^\+?[0-9][0-9\s-]{6,19}$/;
+
+function accountDisplayName(
+  displayName: string | null | undefined,
+  email: string | null | undefined,
+): string {
+  const name = displayName?.trim() ?? "";
+  if (name && !name.includes("@")) return name;
+  const source = name || email?.trim() || "";
+  const at = source.indexOf("@");
+  return (at > 0 ? source.slice(0, at) : source).trim();
+}
+
 function mergeDay(days: HourlyDay[], next: HourlyDay): HourlyDay[] {
   const index = days.findIndex((day) => day.dateIso === next.dateIso);
   if (index < 0) return [...days, next];
@@ -51,7 +65,11 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
   const [rangeFrom, setRangeFrom] = useState("");
   const [rangeTo, setRangeTo] = useState("");
   const [confirmedStarts, setConfirmedStarts] = useState<string[]>([]);
-  const [name, setName] = useState("");
+  // The booking name always comes from the signed-in account (never typed); the phone is
+  // prefilled from the account and may be edited for this booking.
+  const accountName = accountDisplayName(identity.displayName, identity.email);
+  const [phoneDraft, setPhoneDraft] = useState<string | null>(null);
+  const phone = phoneDraft ?? identity.phoneNumber?.trim() ?? "";
   const [promptOpen, setPromptOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -196,9 +214,18 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
 
   const submit = useCallback(async () => {
     if (!canSubmit || !dateIso || confirmedStarts.length === 0 || submitting) return;
-    const customerName = name.trim();
+    const customerName = accountName;
     if (!customerName) {
       setErrorKey("errors.hourly.nameRequired");
+      return;
+    }
+    const phoneNumber = phone.trim();
+    if (!phoneNumber) {
+      setErrorKey("errors.hourly.phoneRequired");
+      return;
+    }
+    if (!PHONE_PATTERN.test(phoneNumber)) {
+      setErrorKey("errors.hourly.phoneInvalid");
       return;
     }
 
@@ -211,7 +238,8 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
         slotTime: confirmedStarts[0],
         slotTimes: confirmedStarts,
         customerName,
-        requesterName: identity.displayName?.trim() || customerName,
+        phoneNumber,
+        requesterName: customerName,
       });
       if (result.bookingId) {
         rememberUserBookings([
@@ -234,7 +262,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
         });
       }
       setPromptOpen(false);
-      setName("");
+      setPhoneDraft(null);
       setConfirmedStarts([]);
       await reload();
     } catch (err) {
@@ -251,10 +279,10 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
     dateIso,
     confirmedStarts,
     submitting,
-    name,
+    accountName,
+    phone,
     hallId,
     hallName,
-    identity.displayName,
     selectedRangeLabel,
     reload,
   ]);
@@ -290,11 +318,13 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit }: Option
     selectedRangeLabel,
     promptOpen,
     closePrompt,
-    name,
-    setName,
+    accountName,
+    phone,
+    setPhone: setPhoneDraft,
     submit,
     submitting,
     errorKey,
+    clearError: () => setErrorKey(null),
     showBookedSlots,
     canSubmit,
   };

@@ -38,6 +38,18 @@ const cairo = Cairo({
 export const metadata: Metadata = {
   title: translate("meta.siteTitle", "ar"),
   description: translate("meta.siteDescription", "ar"),
+  openGraph: {
+    title: translate("meta.siteTitle", "ar"),
+    description: translate("meta.siteDescription", "ar"),
+    siteName: "Wesal",
+    locale: "ar",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: translate("meta.siteTitle", "ar"),
+    description: translate("meta.siteDescription", "ar"),
+  },
   icons: {
     icon: [{ url: "/icon.png", type: "image/png" }, { url: "/favicon.ico" }],
     apple: [{ url: "/apple-icon.png", type: "image/png" }],

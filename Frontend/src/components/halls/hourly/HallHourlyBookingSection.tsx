@@ -2,6 +2,7 @@
 
 import HallMonthCalendar from "@/components/halls/HallMonthCalendar";
 import HallHourlyRangePicker from "@/components/halls/hourly/HallHourlyRangePicker";
+import HourlyBookedAlertPopup from "@/components/halls/hourly/HourlyBookedAlertPopup";
 import HourlyBookingNameDialog from "@/components/halls/hourly/HourlyBookingNameDialog";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useHourlyBooking } from "@/hooks/useHourlyBooking";
@@ -23,7 +24,8 @@ export default function HallHourlyBookingSection({
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const booking = useHourlyBooking({ hallId, hallName, locale, canSubmit });
-  const errorText = booking.errorKey ? t(booking.errorKey) : null;
+  const bookedAlert = booking.errorKey === "errors.hourly.slotBooked";
+  const errorText = booking.errorKey && !bookedAlert ? t(booking.errorKey) : null;
 
   return (
     <section
@@ -74,10 +76,20 @@ export default function HallHourlyBookingSection({
         ) : null}
       </div>
 
+      <HourlyBookedAlertPopup
+        open={bookedAlert}
+        message={t("errors.hourly.slotBooked")}
+        onClose={() => {
+          booking.clearError();
+          booking.closePrompt();
+        }}
+      />
+
       <HourlyBookingNameDialog
         open={booking.promptOpen}
-        name={booking.name}
-        onNameChange={booking.setName}
+        name={booking.accountName}
+        phone={booking.phone}
+        onPhoneChange={booking.setPhone}
         onClose={booking.closePrompt}
         onSubmit={() => {
           void booking.submit();

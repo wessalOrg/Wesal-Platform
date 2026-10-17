@@ -87,6 +87,26 @@ export async function createHallConversation(hallId: string): Promise<Conversati
   return thread;
 }
 
+/**
+ * Hall owner "Contact Admin": resolves (and creates when missing) the owner ↔ Admin thread
+ * for one of the owner's halls. Idempotent on the backend.
+ */
+export async function contactAdminForHall(hallId: string): Promise<ConversationThread> {
+  if (conversationsUseMock()) {
+    return mockCreateHallConversation(hallId);
+  }
+  const { data } = await api.post<ConversationResponse>(
+    `/halls/${encodeURIComponent(hallId)}/conversations/contact-admin`,
+    undefined,
+    { timeout: 8000 },
+  );
+  const thread = mapResponse(data, hallId);
+  if (!thread.conversationId) {
+    throw new ApiError(t("errors.conversation.create"), 500);
+  }
+  return thread;
+}
+
 function mapInboxItem(data: unknown): ConversationSummary | null {
   return mapInboxItemDto(data);
 }
