@@ -750,6 +750,9 @@ const en: MessageCatalog = {
   "seeker.favoritesSubtitle": "Halls you saved to revisit later.",
   "seeker.favoritesEmpty":
     "No favorite halls yet. Explore halls and save the ones you like.",
+  "seeker.favorites.remove": "Remove from favorites",
+  "seeker.favorites.unavailable": "This hall is no longer available.",
+  "seeker.favorites.open": "View hall",
   "bookings.period.first": "First period",
   "bookings.period.second": "Second period",
   "assistant.title": "Mabrouk",
@@ -1235,6 +1238,10 @@ const en: MessageCatalog = {
   "owner.nav.halls": "My halls",
   "owner.nav.calendar": "Bookings calendar",
   "owner.nav.messages": "Messages",
+  "owner.nav.notifications": "Notifications",
+  "owner.notifications.feedSubtitle": "Every update and alert for your halls.",
+  "owner.notifications.feedEmpty": "There are no notifications yet.",
+  "owner.notifications.unreadCount": "{count} unread notifications",
   "owner.messages.subtitle": "Messages with users and with admin.",
   "owner.messages.users": "Hall seekers",
   "owner.messages.admin": "Wesal admin",
@@ -1393,7 +1400,7 @@ const en: MessageCatalog = {
   "owner.management.notifications.title": "Booking request notifications",
   "owner.management.notifications.subtitle":
     "Incoming booking requests for this hall only.",
-  "owner.management.notifications.viewAll": "View all requests",
+  "owner.management.notifications.viewAll": "View all notifications",
   "owner.management.notifications.empty":
     "No incoming booking requests yet for this hall.",
   "owner.management.notifications.refreshing": "Updating…",

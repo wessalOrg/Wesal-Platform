@@ -7,6 +7,7 @@ import NotificationItem from "@/components/notifications/NotificationItem";
 import SeekerAcceptedBookingNotices from "@/components/bookings/SeekerAcceptedBookingNotices";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { SEEKER_NOTIFICATIONS_PATH } from "@/constants/seekerDashboardNav";
+import { OWNER_NOTIFICATIONS_PATH } from "@/constants/hallOwnerManagementNav";
 import { useHallBookingRequests } from "@/hooks/useHallBookingRequests";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -16,7 +17,6 @@ import { formatBookingDateLabel } from "@/lib/booking-date";
 import { bookingWhenLabels } from "@/lib/booking-when-label";
 import {
   ownerBookingsPath,
-  ownerHallNotificationsPath,
   parseOwnerHallIdFromPathname,
 } from "@/lib/hall-owner-query-keys";
 import { useT } from "@/i18n";
@@ -240,9 +240,7 @@ function OwnerHallNotificationsBody({
     ? requests.filter((item) => item.status === "Pending").slice(0, 4)
     : [];
   const previewItems = items.slice(0, 4);
-  const notificationsHref = hallId
-    ? ownerHallNotificationsPath(hallId)
-    : "/owner/bookings";
+  const notificationsHref = OWNER_NOTIFICATIONS_PATH;
   const empty =
     previewItems.length === 0 && activeRequests.length === 0 && !isLoading;
 

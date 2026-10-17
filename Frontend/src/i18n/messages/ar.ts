@@ -744,6 +744,9 @@ const ar: MessageCatalog = {
   "seeker.favoritesSubtitle": "القاعات التي حفظتها للرجوع إليها لاحقاً.",
   "seeker.favoritesEmpty":
     "لا توجد قاعات في المفضلة بعد. استكشف القاعات وأضف ما يعجبك.",
+  "seeker.favorites.remove": "إزالة من المفضلة",
+  "seeker.favorites.unavailable": "هذه القاعة لم تعد متاحة.",
+  "seeker.favorites.open": "عرض القاعة",
   "bookings.period.first": "الفترة الأولى",
   "bookings.period.second": "الفترة الثانية",
   "assistant.title": "مبروك",
@@ -1227,6 +1230,10 @@ const ar: MessageCatalog = {
   "owner.nav.halls": "قاعاتي",
   "owner.nav.calendar": "تقويم الحجوزات",
   "owner.nav.messages": "الرسائل",
+  "owner.nav.notifications": "الإشعارات",
+  "owner.notifications.feedSubtitle": "كل التحديثات والتنبيهات الخاصة بقاعاتك.",
+  "owner.notifications.feedEmpty": "لا توجد إشعارات حالياً.",
+  "owner.notifications.unreadCount": "{count} إشعارات غير مقروءة",
   "owner.messages.subtitle": "رسائل المستخدمين ورسائل الإدارة.",
   "owner.messages.users": "باحثون عن قاعات",
   "owner.messages.admin": "إدارة وصال",
@@ -1283,7 +1290,7 @@ const ar: MessageCatalog = {
   "owner.management.addHall.fields.ownerPhone": "رقم هاتف التواصل",
   "owner.management.addHall.fields.region": "المنطقة",
   "owner.management.addHall.fields.regionPlaceholder": "اختر المنطقة",
-  "owner.management.addHall.fields.detailedAddress": "العنوان التفصيلي",
+  "owner.management.addHall.fields.detailedAddress": "العنوان بالتفصيل",
   "owner.management.addHall.fields.description": "الوصف / المميزات",
   "owner.management.addHall.fields.guestCapacity": "سعة الضيوف",
   "owner.management.addHall.fields.rentalPrice": "سعر الإيجار",
@@ -1385,7 +1392,7 @@ const ar: MessageCatalog = {
   "owner.management.notifications.title": "إشعارات طلبات الحجز",
   "owner.management.notifications.subtitle":
     "طلبات الحجز الواردة لهذه القاعة فقط.",
-  "owner.management.notifications.viewAll": "عرض كل الطلبات",
+  "owner.management.notifications.viewAll": "عرض كل الإشعارات",
   "owner.management.notifications.empty":
     "لا توجد طلبات حجز واردة لهذه القاعة بعد.",
   "owner.management.notifications.refreshing": "جاري التحديث…",

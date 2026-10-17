@@ -2,9 +2,8 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { useT } from "@/i18n";
+import { isHallSaved, subscribeSavedHalls, toggleSavedHall } from "@/lib/saved-halls";
 import type { HallDetail } from "@/types/hall";
-
-const SAVED_HALLS_KEY = "wesal-saved-halls";
 
 type HallDetailsSection = {
   id: string;
@@ -17,32 +16,6 @@ type HallDetailsHeaderProps = {
   part?: "all" | "title" | "meta" | "tabs";
 };
 
-const savedHallListeners = new Set<() => void>();
-
-function subscribeSavedHalls(listener: () => void) {
-  savedHallListeners.add(listener);
-  return () => {
-    savedHallListeners.delete(listener);
-  };
-}
-
-function emitSavedHalls() {
-  savedHallListeners.forEach((listener) => listener());
-}
-
-function readSavedHallIds(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(SAVED_HALLS_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is string => typeof item === "string");
-  } catch {
-    return [];
-  }
-}
-
 export default function HallDetailsHeader({
   hall,
   sections,
@@ -51,7 +24,7 @@ export default function HallDetailsHeader({
   const t = useT();
   const saved = useSyncExternalStore(
     subscribeSavedHalls,
-    () => readSavedHallIds().includes(hall.id),
+    () => isHallSaved(hall.id),
     () => false,
   );
   const [copied, setCopied] = useState(false);
@@ -101,12 +74,7 @@ export default function HallDetailsHeader({
   };
 
   const toggleSaved = () => {
-    const current = readSavedHallIds();
-    const next = current.includes(hall.id)
-      ? current.filter((id) => id !== hall.id)
-      : [...current, hall.id];
-    window.localStorage.setItem(SAVED_HALLS_KEY, JSON.stringify(next));
-    emitSavedHalls();
+    toggleSavedHall(hall.id);
   };
 
   const openSection = (id: string) => {

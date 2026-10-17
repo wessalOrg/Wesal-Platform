@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import "@/components/halls/hall-deletion.css";
 import { GoldStar } from "@/components/ui/GoldStar";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useProtectedHallError } from "@/hooks/useProtectedHallError";
@@ -399,7 +400,7 @@ function DeleteCommentDialog({
               </button>
               <button
                 type="button"
-                className="btn-primary min-h-11 w-full sm:w-auto"
+                className="hall-destructive-confirm min-h-11 w-full sm:w-auto"
                 disabled={busy}
                 aria-busy={busy}
                 data-testid="hall-comment-delete-confirm"

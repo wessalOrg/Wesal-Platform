@@ -14,6 +14,7 @@ import {
   type HallOwnerDashboardNavId,
 } from "@/constants/hallOwnerManagementNav";
 import { useT } from "@/i18n";
+import { useNotifications } from "@/hooks/useNotifications";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import UnreadBadge from "@/components/ui/UnreadBadge";
 
@@ -49,6 +50,7 @@ function OwnerSidebarView({
   const [confirmLogout, setConfirmLogout] = useState(false);
   const { count: unreadCount, ready: unreadReady } = useUnreadCount();
   const messagesUnread = unreadReady ? unreadCount : 0;
+  const { unreadCount: notificationsUnread } = useNotifications("owner");
 
   return (
     <>
@@ -94,6 +96,15 @@ function OwnerSidebarView({
                           count={messagesUnread}
                           label={t("messages.unreadCount", { count: messagesUnread })}
                           data-testid="owner-nav-messages-unread"
+                        />
+                      ) : null}
+                      {item.id === "notifications" ? (
+                        <UnreadBadge
+                          count={notificationsUnread}
+                          label={t("owner.notifications.unreadCount", {
+                            count: notificationsUnread,
+                          })}
+                          data-testid="owner-nav-notifications-unread"
                         />
                       ) : null}
                     </span>
@@ -234,6 +245,18 @@ function NavIcon({ id }: { id: HallOwnerDashboardNavId }) {
             strokeWidth="1.7"
             strokeLinejoin="round"
           />
+        </svg>
+      );
+    case "notifications":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+          <path
+            d="M6.5 9.5a5.5 5.5 0 0 1 11 0v3.2l1.3 2.3H5.2l1.3-2.3V9.5Z"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinejoin="round"
+          />
+          <path d="M10 18.5a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
         </svg>
       );
     default:
