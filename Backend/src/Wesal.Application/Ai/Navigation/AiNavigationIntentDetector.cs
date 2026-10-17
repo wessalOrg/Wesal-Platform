@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using Wesal.Application.Ai;
+using Wesal.Application.Common.Models;
 
 namespace Wesal.Application.Ai.Navigation;
 
@@ -14,7 +16,7 @@ public enum AiNavigationMode
 public sealed record AiNavigationMatch(WesalPage Page, AiNavigationMode Mode);
 
 /// <summary>A service the user asked for that has no real Wesal page (yet).</summary>
-public sealed record AiUnavailableTopic(string Key, string LabelAr, string LabelEn);
+public sealed record AiUnavailableTopic(string Key, string LabelAr, string LabelEn, string? PageKey = null);
 
 /// <summary>
 /// Deterministic navigation understanding. It separates information questions
@@ -28,11 +30,22 @@ public static class AiNavigationIntentDetector
 {
     private const int MaxExplicitTokens = 9;
     private const int MaxDiscoveryTokens = 7;
+    private static readonly AiIntentFallbackClassifier FallbackIntentClassifier = new(new NaturalLanguageCriteriaExtractor());
+    private static readonly Regex AdministrativeSurface = AiText.AnyWord(["admin", "administrator", "ادمن", "الاداره"]);
+    private static readonly Regex ExplicitPageReference = AiText.AnyWord(["page", "صفحه", "صفحة"]);
 
     private static readonly Regex ExplicitVerbs = AiText.AnyWord([
         "وديني", "وصلني", "خديني", "خدني", "روحني", "افتح", "افتحلي", "افتحلى", "افتحلنا",
         "روح", "اذهب", "انتقل", "ودني", "سجلني", "take", "open", "navigate", "bring", "redirect", "go"
     ]);
+
+    private static readonly Regex AttachedHallNavigation = new(
+        @"(?:وديني|وصلني|روحني|روح|افتحلي|افتح)\s+(?:ع|عال|لل|ل)?\s*(?:ال)?(?:قاعات|صالات)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex AttachedHallNavigationSingleToken = new(
+        @"(?:وديني|وصلني|روحني|روح|افتحلي|افتح)\s+ع\s*لقاعات",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex ShowAllRegex = new(
         @"(?:ورجيني|وريني|اعرض|show\s+me)\s+(?:لي\s+|لنا\s+)?(?:كل|جميع|all)",
@@ -41,6 +54,10 @@ public static class AiNavigationIntentDetector
     private static readonly Regex DiscoveryMarkers = AiText.AnyWord([
         "بدي", "ابغى", "اريد", "ابي", "وين", "فين", "بلاقي", "الاقي", "ابحث", "ورجيني", "وريني",
         "اعرض", "where", "find", "show", "want", "need", "looking", "see", "browse", "wanna"
+    ]);
+
+    private static readonly Regex ServiceAvailabilityQuestion = AiText.AnyWord([
+        "عندكم", "متوفر", "متوفرة", "بتوفروا", "هل يوجد", "هل عندكم", "do you offer", "do you have", "available", "availability"
     ]);
 
     private static readonly Regex InfoMarkers = new(
@@ -64,16 +81,19 @@ public static class AiNavigationIntentDetector
 
     private static readonly (AiUnavailableTopic Topic, Regex Pattern)[] UnavailableTopics =
     [
-        (new AiUnavailableTopic("photography", "تصوير", "photography"),
-            AiText.AnyWord(["تصوير", "مصور", "مصورين", "فوتوغراف", "photography", "photographer", "photographers", "photo", "photos", "videography"])),
+        (new AiUnavailableTopic("photographers.marketplace", "تصوير", "photography", WesalNavigationRegistry.Photographers),
+            AiText.AnyWord(["تصوير", "مصور", "مصورين", "فوتوغراف", "photography", "photographer", "photographers", "videography"])),
         (new AiUnavailableTopic("catering", "ضيافة وبوفيه", "catering"),
             AiText.AnyWord(["بوفيه", "ضيافه", "كاترينج", "طعام", "catering", "buffet"])),
         (new AiUnavailableTopic("invitations", "تصميم دعوات", "invitation design"),
             AiText.AnyWord(["دعوات", "بطاقات", "invitation", "invitations", "cards"])),
         (new AiUnavailableTopic("suit_rental", "تأجير بدل", "suit rental"),
             AiText.AnyWord(["بدل", "بدله", "فستان", "فساتين", "suit", "suits", "dress", "dresses"])),
-        (new AiUnavailableTopic("planners", "منسقي أفراح", "wedding planners"),
-            AiText.AnyWord(["منسق", "منسقه", "منسقين", "planner", "planners", "decorator", "decorators"]))
+        (new AiUnavailableTopic("event_planners.marketplace", "منسقي أفراح", "event planners", WesalNavigationRegistry.EventPlanners),
+            AiText.AnyWord([
+                "منسق", "منسقه", "منسقين", "مستشار زفاف", "مستشارة زفاف", "مستشارين زفاف",
+                "wedding consultant", "wedding consultants", "planner", "planners", "decorator", "decorators"
+            ]))
     ];
 
     /// <summary>
@@ -88,9 +108,36 @@ public static class AiNavigationIntentDetector
             return null;
         }
 
+        // Search requests stay in the assistant flow, where missing criteria can
+        // be clarified, rather than becoming a route suggestion.
+        if (FallbackIntentClassifier.Classify(text).Intent == AiIntentType.SearchHalls
+            || AdministrativeSurface.IsMatch(text))
+        {
+            if (!(AttachedHallNavigation.IsMatch(text) || AttachedHallNavigationSingleToken.IsMatch(text)) || DataQuestionBlockers.IsMatch(text)
+                || WesalNavigationRegistry.Find(WesalNavigationRegistry.Halls) is not { } hallsPage)
+                return null;
+            return new AiNavigationMatch(hallsPage, AiNavigationMode.Auto);
+        }
+
         var tokens = AiText.Tokens(text);
         var page = FindPage(text);
         if (page is null)
+        {
+            if ((AttachedHallNavigation.IsMatch(text) || AttachedHallNavigationSingleToken.IsMatch(text))
+                && !DataQuestionBlockers.IsMatch(text)
+                && WesalNavigationRegistry.Find(WesalNavigationRegistry.Halls) is { } hallPage)
+                return new AiNavigationMatch(hallPage, AiNavigationMode.Auto);
+            return null;
+        }
+
+        // A service that is marked Coming Soon may have a truthful status page,
+        // but a request for that service is not a request to browse that page.
+        // Require an explicit page reference before treating it as navigation.
+        var comingSoonServicePage = UnavailableTopics.Any(x =>
+            x.Topic.PageKey == page.Key
+            && WesalCapabilityRegistry.Find(x.Topic.Key) is
+                { Status: WesalCapabilityStatus.ComingSoon or WesalCapabilityStatus.Unavailable });
+        if (comingSoonServicePage && !ExplicitVerbs.IsMatch(text) && !ExplicitPageReference.IsMatch(text))
         {
             return null;
         }
@@ -114,7 +161,14 @@ public static class AiNavigationIntentDetector
 
         if (InfoMarkers.IsMatch(text) && tokens.Count <= MaxDiscoveryTokens)
         {
-            return new AiNavigationMatch(page, AiNavigationMode.Suggest);
+            // The homepage knowledge article answers content questions without
+            // sending the user away from the page they asked about.
+            if (page.Key == WesalNavigationRegistry.Home)
+            {
+                return null;
+            }
+
+        return new AiNavigationMatch(page, AiNavigationMode.Suggest);
         }
 
         // A lone page name ("الصالات", "FAQ", "صفحة المساعدة") is a navigation wish; a
@@ -137,6 +191,12 @@ public static class AiNavigationIntentDetector
     {
         var text = AiText.Normalize(message);
         if (text.Length == 0)
+        {
+            return null;
+        }
+
+        if (FallbackIntentClassifier.Classify(text).Intent == AiIntentType.SearchHalls
+            || AdministrativeSurface.IsMatch(text))
         {
             return null;
         }
@@ -170,14 +230,21 @@ public static class AiNavigationIntentDetector
             return null;
         }
 
-        if (!DiscoveryMarkers.IsMatch(text) && !ExplicitVerbs.IsMatch(text))
+        if (!DiscoveryMarkers.IsMatch(text) && !ExplicitVerbs.IsMatch(text) && !ServiceAvailabilityQuestion.IsMatch(text))
         {
             return null;
         }
 
         foreach (var (topic, pattern) in UnavailableTopics)
         {
-            if (pattern.IsMatch(text) && FindPage(text) is null)
+            if (!pattern.IsMatch(text))
+                continue;
+
+            var page = FindPage(text);
+            if (page is not null && page.Key == topic.PageKey && ExplicitVerbs.IsMatch(text))
+                return null; // explicit request to open the real Coming Soon page
+
+            if (WesalCapabilityRegistry.Find(topic.Key) is { Status: WesalCapabilityStatus.ComingSoon or WesalCapabilityStatus.Unavailable })
             {
                 return topic;
             }

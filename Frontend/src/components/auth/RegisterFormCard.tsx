@@ -65,10 +65,7 @@ export default function RegisterFormCard({
   const [success, setSuccess] = useState(previewSuccess);
 
   useEffect(() => {
-    if (!pending) {
-      setSlowServer(false);
-      return;
-    }
+    if (!pending) return;
     const timer = window.setTimeout(() => setSlowServer(true), 8000);
     return () => window.clearTimeout(timer);
   }, [pending]);
@@ -258,6 +255,7 @@ export default function RegisterFormCard({
     setShowConflictLogin(false);
     if (Object.keys(errors).length > 0) return;
 
+    setSlowServer(false);
     setPending(true);
     try {
       const result = await registerAccount({

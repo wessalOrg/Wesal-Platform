@@ -1,26 +1,56 @@
 using System.Text.RegularExpressions;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Catalogs;
 using Wesal.Domain.Enums;
 
 namespace Wesal.Application.Ai;
 
 public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCriteriaExtractor
 {
+    public static bool IsCatalogArea(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var folded = AiText.Normalize(value);
+        return Enum.GetValues<HallRegion>()
+            .SelectMany(RegionAddressCatalog.GetAddresses)
+            .Any(area => string.Equals(AiText.Normalize(area), folded, StringComparison.Ordinal));
+    }
+
     public ExtractedCriteriaDto Extract(string message)
+        => Extract(message, today: null, allowBareCapacity: false);
+
+    /// <summary>
+    /// Parses one turn using the caller's trusted local date. A bare number can only
+    /// be accepted as capacity while the conversation is explicitly awaiting capacity.
+    /// </summary>
+    public ExtractedCriteriaDto Extract(string message, DateOnly? today, bool allowBareCapacity)
     {
         if (string.IsNullOrWhiteSpace(message))
             return new ExtractedCriteriaDto(null, null, null, null);
 
         var normalized = message.Trim();
+        var numericNormalized = NormalizeNumerals(normalized);
 
-        var region = ExtractRegion(normalized);
-        var area = ExtractArea(normalized, region);
-        var date = ExtractDate(normalized);
-        var capacity = ExtractCapacity(normalized);
+        var explicitRegion = ExtractRegion(normalized);
+        var resolved = AiLocationResolver.Resolve(normalized, ParseRegion(explicitRegion));
+        var region = resolved.Area?.Region.ToString() ?? explicitRegion;
+        var area = resolved.Area?.CanonicalLabel ?? ExtractArea(normalized, region);
+        var date = ExtractDate(numericNormalized, today ?? DateOnly.FromDateTime(DateTime.UtcNow));
+        var capacity = ExtractCapacity(numericNormalized, allowBareCapacity);
+        var (priceBudget, sortPreference) = AiPriceBudgetExtractor.Extract(normalized);
+        var sortByPrice = sortPreference is AiPriceSortPreference.LowestPrice or AiPriceSortPreference.HighestPrice;
 
-        return new ExtractedCriteriaDto(region, area, date, capacity);
+        return new ExtractedCriteriaDto(region, area, date, capacity, priceBudget.MaximumPrice, sortByPrice,
+            priceBudget.MinimumPrice, priceBudget.AroundPrice, sortPreference);
     }
+
+    private static HallRegion? ParseRegion(string? region)
+        => Enum.TryParse<HallRegion>(region, true, out var parsed) ? parsed : null;
 
     private static string? ExtractRegion(string message)
     {
@@ -49,6 +79,9 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
             if (string.IsNullOrWhiteSpace(area))
                 return null;
 
+            if (IsNonAreaToken(area))
+                return null;
+
             // Exact match (case-insensitive)
             if (string.Equals(area, region, StringComparison.OrdinalIgnoreCase))
                 return null;
@@ -62,22 +95,37 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         return null;
     }
 
+    private static bool IsNonAreaToken(string value)
+    {
+        var folded = AiText.Normalize(value);
+        return folded is "اليوم" or "بكره" or "غدا" or "بعد" or "الشهر" or "الاسبوع"
+            or "يناير" or "فبراير" or "مارس" or "ابريل" or "مايو" or "يونيو" or "يوليو"
+            or "اغسطس" or "سبتمبر" or "اكتوبر" or "نوفمبر" or "ديسمبر"
+            or "january" or "february" or "march" or "april" or "may" or "june" or "july"
+            or "august" or "september" or "october" or "november" or "december"
+            or "the"
+            or "صاله" or "قاعه" or "عرس" or "عرسي" or "زفاف" or "رخيص" or "رخيصه"
+            or "حلو" or "حلوه" or "حفله" or "مناسبه" or "حي" or "منطقه" or "شارع";
+    }
+
     private static bool IsSameRegion(string area, string? region)
     {
         if (string.IsNullOrWhiteSpace(region))
             return false;
 
+        var foldedArea = AiText.Normalize(area);
         return region.ToLowerInvariant() switch
         {
-            "gaza" => area is "غزة" or "مدينة غزة",
-            "northgaza" => area.Contains("شمال غزة") || area.Contains("شمال"),
-            "southgaza" => area.Contains("جنوب غزة") || area.Contains("جنوب"),
-            "middlearea" => area.Contains("الوسطى") || area.Contains("الوسطي") || area.Contains("وسط غزة"),
+            "gaza" => foldedArea is "غزه" or "مدينه غزه" or "gaza" or "city of gaza",
+            "northgaza" => foldedArea.Contains("شمال") || foldedArea is "north" or "north gaza" or "northgaza",
+            "southgaza" => foldedArea.Contains("جنوب") || foldedArea is "south" or "south gaza" or "southgaza",
+            "middlearea" => foldedArea.Contains("الوسطي") || foldedArea.Contains("وسط غزة")
+                || foldedArea is "middle" or "middle area" or "middlearea",
             _ => false
         };
     }
 
-    private static DateOnly? ExtractDate(string message)
+    private static DateOnly? ExtractDate(string message, DateOnly today)
     {
         // Try ISO date yyyy-MM-dd
         var isoMatch = IsoDateRegex().Match(message);
@@ -106,12 +154,12 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
             {
                 if (TryParseMonth(monthName, out var month))
                 {
-                    var year = DateTime.UtcNow.Year;
+                    var year = today.Year;
                     // If date already passed this year, assume next year
                     try
                     {
                         var candidate = new DateOnly(year, month, day);
-                        if (candidate < DateOnly.FromDateTime(DateTime.UtcNow))
+                        if (candidate < today)
                             candidate = candidate.AddYears(1);
                         return candidate;
                     }
@@ -130,11 +178,11 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
             {
                 if (TryParseMonth(monthName, out var month))
                 {
-                    var year = DateTime.UtcNow.Year;
+                    var year = today.Year;
                     try
                     {
                         var candidate = new DateOnly(year, month, day);
-                        if (candidate < DateOnly.FromDateTime(DateTime.UtcNow))
+                        if (candidate < today)
                             candidate = candidate.AddYears(1);
                         return candidate;
                     }
@@ -146,7 +194,7 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
         return null;
     }
 
-    private static int? ExtractCapacity(string message)
+    private static int? ExtractCapacity(string message, bool allowBareCapacity)
     {
         var match = CapacityRegex().Match(message);
         if (match.Success)
@@ -155,8 +203,31 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
             if (int.TryParse(val, out var cap) && cap > 0 && cap < 10000)
                 return cap;
         }
+
+        if (allowBareCapacity && BareCapacityRegex().Match(message) is { Success: true } bare
+            && int.TryParse(bare.Groups["capacity"].Value, out var bareCapacity)
+            && bareCapacity is > 0 and < 10000)
+        {
+            return bareCapacity;
+        }
+
         return null;
     }
+
+    private static string NormalizeNumerals(string message)
+        => string.Create(message.Length, message, static (buffer, value) =>
+        {
+            for (var i = 0; i < value.Length; i++)
+            {
+                var character = value[i];
+                buffer[i] = character switch
+                {
+                    >= '\u0660' and <= '\u0669' => (char)('0' + character - '\u0660'),
+                    >= '\u06F0' and <= '\u06F9' => (char)('0' + character - '\u06F0'),
+                    _ => character
+                };
+            }
+        });
 
     private static bool TryParseMonth(string name, out int month)
     {
@@ -197,6 +268,9 @@ public sealed partial class NaturalLanguageCriteriaExtractor : IRecommendationCr
     [GeneratedRegex(@"\b(?<day>\d{1,2})\s+(?<month>january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\b", RegexOptions.IgnoreCase)]
     private static partial Regex DayMonthRegex();
 
-    [GeneratedRegex(@"(?:capacity\s*[:\-]?\s*|سعة\s*[:\-]?\s*|لكذا|بـ?سعة\s*|for\s+)(\d{2,4})\b|(\d{2,4})\s*(?:people|persons|person|guest|شخص|أشخاص|ناس|فرد|نفر|ضيف)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:capacity\s*[:\-]?\s*|سعة\s*[:\-]?\s*|لكذا|بـ?سعة\s*|(?:بتسع|بتتسع|تتسع)\s*|for\s+)(\d{2,4})\b|(\d{2,4})\s*(?:people|persons|person|guest|شخص|أشخاص|ناس|فرد|نفر|ضيف|واحد|واحدة)", RegexOptions.IgnoreCase)]
     private static partial Regex CapacityRegex();
+
+    [GeneratedRegex(@"^\s*(?<capacity>\d{1,4})\s*$", RegexOptions.CultureInvariant)]
+    private static partial Regex BareCapacityRegex();
 }

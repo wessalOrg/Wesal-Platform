@@ -78,7 +78,7 @@ export default function HallCommentPanel({
     <form
       className={
         embedded
-          ? "mt-3"
+          ? "mt-5"
           : "mt-4 rounded-2xl bg-[#f7f1ec] px-4 py-5 shadow-[0_12px_30px_rgba(110,60,55,0.08)] sm:px-6 sm:py-6"
       }
       data-testid="hall-comment-form"
@@ -87,7 +87,12 @@ export default function HallCommentPanel({
         void submit();
       }}
     >
-      {embedded ? null : (
+      {embedded ? (
+        <label htmlFor="hall-comment-body" className="block text-sm font-bold text-[#2c2624]">
+          {t("halls.comment.field")}
+          <span className="text-[var(--wesal-maroon)]"> *</span>
+        </label>
+      ) : (
         <label
           htmlFor="hall-comment-body"
           className="block text-center text-base font-bold text-[var(--wesal-maroon)] sm:text-start"
@@ -95,26 +100,51 @@ export default function HallCommentPanel({
           {t("halls.comment.title")}
         </label>
       )}
-      <textarea
-        id="hall-comment-body"
-        className="mt-2 min-h-28 w-full resize-y rounded-xl border border-[#eadfd6] bg-white px-3 py-3 text-sm leading-7 text-[#4a403c] outline-none transition focus:border-[var(--wesal-maroon)] focus:ring-2 focus:ring-[var(--wesal-maroon)]/15 disabled:opacity-60"
-        placeholder={t("halls.comment.placeholder")}
-        maxLength={COMMENT_MAX_LENGTH}
-        disabled={submitting}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? "hall-comment-error" : undefined}
-        value={body}
-        onChange={(event) => {
-          setBody(event.target.value);
-          setSuccess(false);
-          if (error) setError(null);
-        }}
-      />
-      <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[#8a7a70]">
-        <span>
-          {body.trim().length}/{COMMENT_MAX_LENGTH}
-        </span>
-      </div>
+      {embedded ? (
+        <div className="mt-2 overflow-hidden rounded-xl border border-[#ead3ce] bg-white transition focus-within:border-[var(--wesal-maroon)] focus-within:ring-2 focus-within:ring-[var(--wesal-maroon)]/15">
+          <textarea
+            id="hall-comment-body"
+            className="min-h-28 w-full resize-y border-0 bg-transparent px-3.5 py-3 text-sm leading-7 text-[#4a403c] outline-none disabled:opacity-60"
+            placeholder={t("halls.comment.placeholder")}
+            maxLength={COMMENT_MAX_LENGTH}
+            disabled={submitting}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "hall-comment-error" : undefined}
+            value={body}
+            onChange={(event) => {
+              setBody(event.target.value);
+              setSuccess(false);
+              if (error) setError(null);
+            }}
+          />
+          <p className="px-3.5 pb-2 text-end text-xs text-[#b5a8a2]">
+            {body.trim().length}/{COMMENT_MAX_LENGTH}
+          </p>
+        </div>
+      ) : (
+        <>
+          <textarea
+            id="hall-comment-body"
+            className="mt-2 min-h-28 w-full resize-y rounded-xl border border-[#eadfd6] bg-white px-3 py-3 text-sm leading-7 text-[#4a403c] outline-none transition focus:border-[var(--wesal-maroon)] focus:ring-2 focus:ring-[var(--wesal-maroon)]/15 disabled:opacity-60"
+            placeholder={t("halls.comment.placeholder")}
+            maxLength={COMMENT_MAX_LENGTH}
+            disabled={submitting}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "hall-comment-error" : undefined}
+            value={body}
+            onChange={(event) => {
+              setBody(event.target.value);
+              setSuccess(false);
+              if (error) setError(null);
+            }}
+          />
+          <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[#8a7a70]">
+            <span>
+              {body.trim().length}/{COMMENT_MAX_LENGTH}
+            </span>
+          </div>
+        </>
+      )}
       <div className="mt-4 flex justify-start">
         <button
           type="submit"

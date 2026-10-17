@@ -161,6 +161,9 @@ try
     // from R2, so no local mount is created (wwwroot static files above are unaffected).
     var mediaStorage = app.Services.GetRequiredService<IHallMediaStorage>();
     var documentStorage = app.Services.GetRequiredService<Wesal.Application.Common.Interfaces.IDocumentStorage>();
+    var identityDocumentStorage = Wesal.Infrastructure.Documents.IdentityDocumentStoreRegistration.DescribeIdentityDocumentStorage(configuration);
+    var messageAttachmentStorage = Wesal.Infrastructure.Documents.MessageAttachmentStoreRegistration.DescribeMessageAttachmentStorage(configuration);
+    var hallMediaStorage = Wesal.Infrastructure.Halls.HallMediaRegistration.DescribeHallMediaStorage(configuration);
     if (mediaStorage.Info is { IsLocal: true, LocalRoot: string localRoot })
     {
         app.UseStaticFiles(new StaticFileOptions
@@ -170,16 +173,31 @@ try
         });
     }
     ValidateHallMediaConfiguration(app.Environment, configuration);
-    WarnIfEphemeralUploadStorage(mediaStorage.Info, documentStorage.Root);
+    WarnIfEphemeralUploadStorage(mediaStorage.Info, documentStorage.Root, identityDocumentStorage, messageAttachmentStorage);
+    // Names the active providers and their buckets (never credentials) so a deploy that is
+    // still on ephemeral storage is visible in the logs.
+    Log.Information(
+        "Identity document storage: {Provider} (bucket {Bucket}); served only through authenticated endpoints.",
+        identityDocumentStorage.Provider,
+        identityDocumentStorage.Bucket ?? "n/a");
+    Log.Information(
+        "Conversation attachment storage: {Provider} (bucket {Bucket}); attachments survive redeploys only when durable.",
+        messageAttachmentStorage.Provider,
+        messageAttachmentStorage.Bucket ?? "n/a");
+    Log.Information(
+        "Hall media storage: {Provider} (bucket {Bucket}); hall images survive redeploys only when durable.",
+        hallMediaStorage.Provider,
+        hallMediaStorage.Bucket ?? "n/a");
 
     app.UseCors(CorsPolicyName);
 
-    if (rateLimitingOptions.Enabled)
+    app.UseAuthentication();
+    // Endpoint policies (including Mabrouk's dedicated quota) require routing
+    // and authentication metadata to be available before the limiter runs.
+    if (rateLimitingOptions.Enabled || configuration.GetValue("RateLimiting:Assistant:Enabled", true))
     {
         app.UseRateLimiter();
     }
-
-    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapControllers();
@@ -259,7 +277,9 @@ static bool IsEphemeralUploadRoot(string root)
 
 static void WarnIfEphemeralUploadStorage(
     Wesal.Infrastructure.Halls.HallMediaStorageInfo mediaInfo,
-    string documentRoot)
+    string documentRoot,
+    Wesal.Infrastructure.Documents.IdentityDocumentStorageInfo identityDocumentStorage,
+    Wesal.Infrastructure.Documents.MessageAttachmentStorageInfo messageAttachments)
 {
     // R2-backed hall media is durable by construction: nothing to warn about.
     if (mediaInfo is { IsLocal: true, LocalRoot: string mediaRoot } && IsEphemeralUploadRoot(mediaRoot))
@@ -269,29 +289,58 @@ static void WarnIfEphemeralUploadStorage(
             mediaRoot);
     }
 
-    if (IsEphemeralUploadRoot(documentRoot))
+    if (!IsEphemeralUploadRoot(documentRoot))
+    {
+        return;
+    }
+
+    if (!messageAttachments.IsDurable)
     {
         Log.Warning(
-            "Protected document storage is ephemeral ({Root}); identity documents and attachments will NOT survive instance replacement/redeploy. Set DocumentStorage:Directory (DocumentStorage__Directory) to durable storage.",
+            "Conversation attachment storage is ephemeral ({Root}); attachments will NOT survive instance replacement/redeploy. Set DocumentStorage:Provider=Supabase (DocumentStorage__Provider) with SupabaseStorage:Url / SupabaseStorage:SecretKey and a '{Bucket}' private bucket for durable attachments.",
+            documentRoot,
+            "conversation-attachments");
+    }
+
+    if (!identityDocumentStorage.IsRemote)
+    {
+        Log.Warning(
+            "Identity document storage is ephemeral ({Root}); identity documents will NOT survive instance replacement/redeploy. Set DocumentStorage:Provider=Supabase (DocumentStorage__Provider) with SupabaseStorage:Url / SupabaseStorage:SecretKey for durable identity documents.",
             documentRoot);
     }
 }
 
 /// <summary>
-/// Startup safety for durable hall media: when the R2 provider is selected, all
-/// required settings are validated here so a misconfigured deployment fails
-/// clearly at boot (naming settings, never secret values) instead of 500ing the
-/// first upload. Local development needs no R2 configuration.
+/// Startup safety for durable hall media: when a durable provider (R2 or Supabase) is
+/// selected, all required settings are validated here so a misconfigured deployment
+/// fails clearly at boot (naming settings, never secret values) instead of 500ing the
+/// first upload. Local development needs no external configuration.
 /// </summary>
 static void ValidateHallMediaConfiguration(Microsoft.AspNetCore.Hosting.IWebHostEnvironment environment, IConfiguration configuration)
 {
     var provider = configuration.GetSection("HallMedia")?.Get<Wesal.Infrastructure.Halls.HallMediaOptions>()?.Provider;
+
+    if (string.Equals(provider, Wesal.Infrastructure.Halls.HallMediaOptions.ProviderSupabase, StringComparison.OrdinalIgnoreCase))
+    {
+        var supabase = configuration.GetSection("SupabaseStorage")
+            .Get<Wesal.Infrastructure.Documents.SupabaseStorageOptions>();
+        if (supabase is null || !supabase.IsConfigured)
+        {
+            throw new InvalidOperationException(
+                "HallMedia:Provider is 'Supabase' but SupabaseStorage:Url / " +
+                "SupabaseStorage:SecretKey are missing or empty. Set the SupabaseStorage__Url / " +
+                "SupabaseStorage__SecretKey environment variables.");
+        }
+
+        return;
+    }
+
     if (!string.Equals(provider, Wesal.Infrastructure.Halls.HallMediaOptions.ProviderR2, StringComparison.OrdinalIgnoreCase))
     {
         if (!environment.IsDevelopment())
         {
             Log.Warning(
-                "HallMedia:Provider is '{Provider}'; production hall uploads use ephemeral container-local storage and will NOT survive restarts. Set HallMedia__Provider=R2 for durable storage.",
+                "HallMedia:Provider is '{Provider}'; production hall uploads use ephemeral container-local storage and will NOT survive restarts. Set HallMedia__Provider=R2 (with R2 settings) or HallMedia__Provider=Supabase (with SupabaseStorage settings) for durable storage.",
                 provider ?? "(unset)");
         }
 

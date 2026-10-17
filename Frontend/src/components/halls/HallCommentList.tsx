@@ -187,15 +187,13 @@ function CommentItem({
         <div className="flex min-w-0 items-center gap-2.5">
           <CommentAvatar name={review.author} userId={review.userId} avatarUrl={review.avatarUrl} />
           <div className="min-w-0 text-start">
-            <p className="truncate text-[15px] font-bold text-[var(--wesal-text)]">{review.author}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="truncate text-[15px] font-bold text-[var(--wesal-text)]">{review.author}</p>
+              {review.rating != null ? <GoldStars rating={review.rating} size={13} /> : null}
+            </div>
             {review.timeAgo ? <p className="text-xs text-[#b0a39c]">{review.timeAgo}</p> : null}
           </div>
         </div>
-        {review.rating != null ? (
-          <div className="shrink-0">
-            <GoldStars rating={review.rating} size={13} />
-          </div>
-        ) : null}
       </div>
 
       {editing ? (

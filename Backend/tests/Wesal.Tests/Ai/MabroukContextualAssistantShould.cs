@@ -194,6 +194,130 @@ public class MabroukContextualAssistantShould
     }
 
     [Fact]
+    public async Task CheapHallSearch_CarriesPriceOrderIntoAreaAndCapacityFollowUps()
+    {
+        var h = new MabroukHarness();
+
+        var cheap = await h.AskAsync("بدي صالة رخيصة");
+        Assert.Equal(AiAssistantResponseKind.Halls, cheap.Kind);
+        Assert.Equal(h.OrchidId, cheap.Halls[0].HallId);
+
+        var shown = cheap.Halls.Select(hall => new AiHallRef(hall.HallId, hall.HallName)).ToArray();
+        var context = new AiConversationContext(
+            [new AiConversationTurn("user", "بدي صالة رخيصة")],
+            cheap.Intent,
+            shown,
+            State: new AiConversationState(ActiveGoal: "find_hall", ShownHallIds: shown.Select(hall => hall.HallId).ToArray()));
+
+        var refined = await h.AskAsync("بغزة عندي 150 واحد", conversation: context);
+
+        Assert.Equal(AiAssistantResponseKind.Halls, refined.Kind);
+        Assert.Equal(h.OrchidId, refined.Halls[0].HallId);
+        Assert.Equal(150, h.Search.Requests[^1].MinimumCapacity);
+        Assert.True(h.Search.Requests[^1].SortByPrice);
+    }
+
+    [Fact]
+    public async Task ExplicitBudgetSearch_UsesPriceCapInsteadOfHowToFallback()
+    {
+        var h = new MabroukHarness();
+
+        var response = await h.AskAsync("بدي صالة ب1500شيكل");
+
+        Assert.Equal(AiAssistantResponseKind.Answer, response.Kind);
+        Assert.Empty(response.Halls);
+        Assert.Equal(1500m, h.Search.Requests[^1].MaximumPrice);
+        Assert.True(h.Search.Requests[^1].SortByPrice);
+        Assert.DoesNotContain(response.Actions ?? [], action => action.PageKey == "halls" && action.Mode == "suggest");
+    }
+
+    [Fact]
+    public async Task CapacitySearch_ExcludesHallsSmallerThanTheGuestCount()
+    {
+        var h = new MabroukHarness();
+        h.Search.Items =
+        [
+            .. h.Search.Items,
+            new HallListItemDto { HallId = Guid.NewGuid(), HallName = "قاعة صغيرة", Region = "Gaza", Address = "حي الرمال", Capacity = 111, Price = 1000m }
+        ];
+
+        var response = await h.AskAsync("بغزة عندي 150 واحد");
+
+        Assert.Equal(AiAssistantResponseKind.Halls, response.Kind);
+        Assert.DoesNotContain(response.Halls, hall => hall.Capacity < 150);
+        Assert.Equal(150, h.Search.Requests[^1].MinimumCapacity);
+    }
+
+    [Fact]
+    public async Task CheapestFollowUp_SelectsTheLowestPricedShownHall()
+    {
+        var h = new MabroukHarness();
+        var shown = new[]
+        {
+            new AiHallRef(h.NakheelId, "قاعة النخيل"),
+            new AiHallRef(h.OrchidId, "قاعة الأوركيد")
+        };
+        var context = new AiConversationContext(
+            [],
+            new AiAssistantIntentDto(AiIntentType.SearchHalls, "Gaza", null, null, 150, null),
+            shown,
+            State: new AiConversationState(ActiveGoal: "find_hall", ShownHallIds: shown.Select(hall => hall.HallId).ToArray()));
+
+        var response = await h.AskAsync("ارخص وحدة", conversation: context);
+
+        Assert.Equal(AiAssistantResponseKind.HallDetails, response.Kind);
+        Assert.Equal(h.OrchidId, response.HallDetails!.HallId);
+        Assert.Contains("5000", response.Message);
+        Assert.Empty(h.Search.Requests);
+    }
+
+    [Fact]
+    public async Task BareNeighborhood_FiltersByTheCatalogArea()
+    {
+        var h = new MabroukHarness();
+
+        var response = await h.AskAsync("حي الرمال");
+
+        var hall = Assert.Single(response.Halls);
+        Assert.Equal(h.NakheelId, hall.HallId);
+        Assert.Equal("حي الرمال", h.Search.Requests[^1].Area);
+    }
+
+    [Fact]
+    public async Task ArabicAreaFollowUp_KeepsArabicWhenPriorPriceCriteriaAreCarriedForward()
+    {
+        var h = new MabroukHarness();
+        var pricedHallId = Guid.NewGuid();
+        h.Search.Items =
+        [
+            .. h.Search.Items,
+            new HallListItemDto
+            {
+                HallId = pricedHallId,
+                HallName = "صالة الرمال",
+                Region = "Gaza",
+                Address = "حي الرمال",
+                Capacity = 200,
+                Price = 1500m
+            }
+        ];
+        var shown = new[] { new AiHallRef(pricedHallId, "صالة الرمال") };
+        var context = new AiConversationContext(
+            [],
+            new AiAssistantIntentDto(AiIntentType.SearchHalls, "Gaza", null, null, null, null, 1500m, true),
+            shown,
+            State: new AiConversationState(ActiveGoal: "find_hall", ShownHallIds: [pricedHallId]));
+
+        var response = await h.AskAsync("حي الرمال", conversation: context);
+
+        Assert.Equal("ar", response.ResponseLanguage);
+        Assert.Contains("وجدت", response.Message);
+        Assert.Equal(pricedHallId, Assert.Single(response.Halls).HallId);
+        Assert.Equal(1500m, h.Search.Requests[^1].MaximumPrice);
+        Assert.Equal("حي الرمال", h.Search.Requests[^1].Area);
+    }
+
+    [Fact]
     public async Task ConversationFocus_AllowsAPronounFollowUp_WithoutAPin()
     {
         var h = new MabroukHarness();
@@ -354,7 +478,7 @@ public class MabroukContextualAssistantShould
 
         Assert.True(response.Actions is null || response.Actions.Count == 0);
         Assert.DoesNotContain("/photography", response.Message);
-        Assert.Contains(response.ResponseLanguage == "en" ? "dedicated" : "ما في صفحة", response.Message);
+        Assert.Contains(response.ResponseLanguage == "en" ? "coming soon" : "قيد التجهيز", response.Message);
     }
 
     [Fact]
@@ -364,7 +488,9 @@ public class MabroukContextualAssistantShould
 
         var response = await h.AskAsync("كيف أبحث عن صالة؟");
 
-        Assert.Contains(response.Actions ?? [], a => a.PageKey == "halls" && a.Mode == "suggest");
+        Assert.True(
+            response.Actions?.Any(a => a.PageKey == "halls" && a.Mode == "suggest") == true,
+            $"Expected a halls suggestion; kind={response.Kind}, intent={response.Intent?.Intent}, message={response.Message}");
     }
 
     [Fact]
@@ -391,7 +517,7 @@ public class MabroukContextualAssistantShould
 
         Assert.DoesNotContain("+972597744476", response.Message);
         Assert.DoesNotContain("120", response.Message);
-        Assert.Contains("عربون", response.Message);
+        Assert.Equal("سياسة هذه الحالة غير مؤكدة عندي حاليًا، تواصل مع دعم وصال.", response.Message);
     }
 
     [Fact]
@@ -448,7 +574,7 @@ public class MabroukContextualAssistantShould
     [InlineData("شو هو وصال؟", "ar", "منصة")]
     [InlineData("ما هي ساعات الدعم؟", "ar", "9:00")]
     [InlineData("كيف أتواصل مع الدعم الفني؟", "ar", "wesal.platform.gaza@gmail.com")]
-    [InlineData("What is Wesal?", "en", "modern platform")]
+    [InlineData("What is Wesal?", "en", "approved wedding halls")]
     [InlineData("What are the support hours?", "en", "9:00")]
     public async Task KnowledgeQuestions_AreAnsweredFromTheKnowledgeBase_WithGeminiOff(string message, string language, string expected)
     {
@@ -600,7 +726,7 @@ public class MabroukContextualAssistantShould
 
         var secondCall = h.Gemini.Calls[1].Contents;
         Assert.Equal("model", secondCall[^2].Role);
-        Assert.Equal("function", secondCall[^1].Role);
+        Assert.Equal("user", secondCall[^1].Role);
     }
 
     [Fact]

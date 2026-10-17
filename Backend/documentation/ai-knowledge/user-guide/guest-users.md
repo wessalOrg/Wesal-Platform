@@ -2,20 +2,16 @@
 title: Guest users
 category: user-guide
 language: ar,en
-source: official-project-team-and-repository
-lastUpdated: 2026-09-16
-status: needs-verification
+source: current-public-routes-and-authorization
+lastUpdated: 2026-10-09
+status: verified
 keywords: guest|not logged in|anonymous|زائر|ضيف|بدون تسجيل|غير مسجل
 ---
 
 ## العربية
 
-يمكن للزائر تصفح القاعات المعتمدة وعرض تفاصيلها، وبدء التسجيل أو تسجيل الدخول. لا يمكنه إرسال طلب حجز أو إضافة تعليق.
-
-ملاحظة تحقق: التعريف الرسمي يذكر تصفح أماكن وخدمات ومزودي خدمات، بينما التنفيذ الحالي المتحقق يوفر تصفح القاعات فقط. كما أن عرض مالكي القاعات ليس واجهة عامة مستقلة في الخلفية الحالية.
+يمكن للزائر تصفح القاعات المعتمدة وعرض تفاصيلها، والانتقال إلى التسجيل أو تسجيل الدخول. يلزم تسجيل الدخول لإرسال طلب حجز أو إضافة تعليق.
 
 ## English
 
-A guest can browse approved halls, view their details, and start registration or login. A guest cannot submit a booking request or add a comment.
-
-Verification note: the official description mentions places, services, and providers, while the verified backend currently exposes hall browsing. It does not expose a separate public hall-owner directory.
+A guest can browse approved halls, view their details, and open registration or login. Signing in is required to submit a booking request or add a comment.

@@ -1,18 +1,16 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { GoldStar, GoldStars } from "@/components/ui/GoldStar";
+import { GoldStars } from "@/components/ui/GoldStar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import AskMabroukAboutHallButton from "@/components/assistant/AskMabroukAboutHallButton";
-import HallContactButton from "@/components/halls/HallContactButton";
 import HallGallery from "@/components/halls/HallGallery";
 import HallCommentList from "@/components/halls/HallCommentList";
-import HallCommentPanel from "@/components/halls/HallCommentPanel";
-import HallGuestFeedbackPrompt from "@/components/halls/HallGuestFeedbackPrompt";
+import HallAmenitiesGrid from "@/components/halls/HallAmenitiesGrid";
+import HallAddReviewCard from "@/components/halls/HallAddReviewCard";
 import HallLockedBadge from "@/components/halls/HallLockedBadge";
-import HallRatingPanel from "@/components/halls/HallRatingPanel";
 import HallUnavailableDialog from "@/components/halls/HallUnavailableDialog";
 import { DEMO_HALL_REVIEWS, findHallDetailsFallback } from "@/constants/hallDetailsFallback";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
@@ -23,7 +21,7 @@ import { buildHallDetailsPath } from "@/lib/booking-intent";
 import { localizeHallDetails, localizePriceLabel } from "@/lib/localize-hall-display";
 import { fetchHallComments, mapCommentToReview } from "@/services/comments";
 import { fetchHallById } from "@/services/halls";
-import type { HallAmenity, HallDetails } from "@/types/hall";
+import type { HallDetails } from "@/types/hall";
 
 type ViewStatus = "loading" | "ready" | "unavailable" | "error";
 
@@ -32,24 +30,41 @@ type HallDetailsViewProps = {
   onClose?: () => void;
 };
 
+function PopupGallery({ hallName, images }: { hallName: string; images: string[] }) {
+  const t = useT();
+  if (images.length === 0) {
+    return (
+      <p
+        className="rounded-xl border border-dashed border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-6 text-center text-sm text-[var(--wesal-muted)]"
+        role="status"
+        data-testid="hall-gallery-empty"
+      >
+        {t("halls.gallery.ownerEmpty")}
+      </p>
+    );
+  }
+  return <HallGallery hallName={hallName} images={images} />;
+}
+
 export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProps) {
   const t = useT();
   const lang = useUiLang();
   const router = useRouter();
   const { session, status: authStatus } = useAuth();
   const local = isDemoModeEnabled() ? findHallDetailsFallback(hallId) : undefined;
+  const seeded = local ? { ...local, images: [] as string[] } : null;
   const [loadedId, setLoadedId] = useState(hallId);
-  const [status, setStatus] = useState<ViewStatus>(local ? "ready" : "loading");
-  const [hall, setHall] = useState<HallDetails | null>(local ?? null);
+  const [status, setStatus] = useState<ViewStatus>(seeded ? "ready" : "loading");
+  const [hall, setHall] = useState<HallDetails | null>(seeded);
   const [message, setMessage] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [bookingBlockedOpen, setBookingBlockedOpen] = useState(false);
-  const { canBook, canContactOwner, isGuest, isOwnHall } = useHallPermissions(hall);
+  const { canBook, isGuest, isOwnHall } = useHallPermissions(hall);
 
   if (loadedId !== hallId) {
     setLoadedId(hallId);
-    setHall(local ?? null);
+    setHall(seeded);
     setStatus(local ? "ready" : "loading");
     setMessage(null);
     setWarning(null);
@@ -209,6 +224,8 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   }
 
   const viewHall = localizeHallDetails(hall, lang);
+  const detailedAddress = viewHall.detailedAddress?.trim() ?? "";
+  const featureLabels = ownerFeatureLabels(viewHall.features, viewHall.otherFeatures);
   const capacityLabel = viewHall.capacityMax
     ? t("common.peopleRange", { min: viewHall.capacity, max: viewHall.capacityMax })
     : t("common.peopleCount", { count: viewHall.capacity });
@@ -236,7 +253,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                 className="absolute start-3 top-3 z-10"
               />
             ) : null}
-            <HallGallery hallName={viewHall.name} images={viewHall.images} />
+            <PopupGallery hallName={viewHall.name} images={viewHall.images} />
           </div>
         </div>
 
@@ -250,7 +267,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                 className="absolute start-3 top-3 z-10"
               />
             ) : null}
-            <HallGallery hallName={viewHall.name} images={viewHall.images} />
+            <PopupGallery hallName={viewHall.name} images={viewHall.images} />
           </div>
         </div>
         <div className="px-4 pb-4 sm:px-6 lg:h-full lg:px-8 lg:pb-6 lg:pt-8">
@@ -281,43 +298,40 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                   {viewHall.name}
                 </h1>
               </button>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div className="mt-5 flex flex-nowrap items-center gap-2">
                 <button
                   type="button"
-                  className="btn-outline !min-h-10 !px-3 !text-sm"
+                  className="inline-flex !h-10 !w-52 items-center rounded-full bg-[var(--wesal-maroon)] py-0.5 pe-1 ps-0.5 text-start text-white transition-colors hover:bg-[var(--wesal-maroon-dark)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
                   data-testid="hall-popup-details-cta"
                   onClick={() => {
                     onClose?.();
                     router.push(buildHallDetailsPath(viewHall.id));
                   }}
                 >
-                  {t("halls.popup.clickForDetails")}
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)] ring-2 ring-white">
+                    <DetailsIcon />
+                  </span>
+                  <span className="min-w-0 flex-1 px-2 text-center text-xs font-extrabold leading-tight">
+                    {t("halls.popup.clickForDetails")}
+                  </span>
+                  <span
+                    className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]"
+                    aria-hidden="true"
+                  >
+                    <ChevronIcon />
+                  </span>
                 </button>
                 <AskMabroukAboutHallButton
                   hallId={viewHall.id}
                   hallName={viewHall.name}
                   variant="inline"
-                  className="!min-h-10"
+                  className="!h-10 !w-52"
                 />
               </div>
-              {viewHall.priceLabel ? (
-                <PriceLine
-                  label={
-                    localizePriceLabel(viewHall.priceLabel, lang) ??
-                    viewHall.priceLabel
-                  }
-                />
-              ) : null}
             </div>
-            {viewHall.rating != null ? (
-              <p className="mt-1 inline-flex shrink-0 items-center gap-1 text-[15px] font-semibold text-[var(--wesal-maroon)]">
-                <GoldStar size={16} />
-                {Number(viewHall.rating).toFixed(1)}
-              </p>
-            ) : null}
           </header>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 min-[400px]:grid-cols-2" data-testid="hall-location">
+          <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-3" data-testid="hall-location">
             <InfoCard
               icon={<PinIcon />}
               label={t("halls.details.location")}
@@ -328,37 +342,41 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
               label={t("halls.details.capacity")}
               value={capacityLabel}
             />
+            {viewHall.priceLabel ? (
+              <InfoCard
+                icon={<PriceIcon />}
+                label={t("halls.details.priceLabel")}
+                value={
+                  <PriceValue
+                    label={
+                      localizePriceLabel(viewHall.priceLabel, lang) ??
+                      viewHall.priceLabel
+                    }
+                  />
+                }
+              />
+            ) : null}
           </div>
 
-          {viewHall.description ? (
+          {detailedAddress ? (
             <section className="mt-7" data-testid="hall-main-info">
               <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">
-                {t("halls.details.description")}
+                {t("halls.details.tabs.address")}
               </h2>
               <p className="mt-2.5 text-[15px] font-medium leading-8 text-[#5c534e]">
-                {viewHall.description}
+                {detailedAddress}
               </p>
             </section>
           ) : null}
 
-          {viewHall.amenities.length > 0 ? (
-            <section className="mt-7">
+          {featureLabels.length > 0 ? (
+            <section className="mt-7" data-testid="hall-popup-features">
               <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">
-                {t("halls.details.amenities")}
+                {t("halls.details.tabs.features")}
               </h2>
-              <ul className="mt-4 grid grid-cols-1 gap-x-5 gap-y-4 min-[400px]:grid-cols-2">
-                {viewHall.amenities.map((amenity) => (
-                  <li
-                    key={amenity.id}
-                    className="flex min-w-0 items-center gap-2 text-[15px] font-medium leading-8 text-[#5c534e]"
-                  >
-                    <span className="shrink-0 text-[var(--wesal-maroon)]">
-                      <AmenityIcon icon={amenity.icon} />
-                    </span>
-                    {amenity.label}
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-4">
+                <HallAmenitiesGrid amenities={featureLabels} embedded />
+              </div>
             </section>
           ) : null}
 
@@ -367,46 +385,18 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
               {t("halls.details.reviews")}
             </h2>
             {viewHall.rating != null ? (
-              <div className="mt-4 flex items-center justify-center gap-5 rounded-2xl bg-[#f7f1ec] px-4 py-5 shadow-[0_12px_30px_rgba(110,60,55,0.12)] sm:gap-8 sm:px-8 sm:py-6">
-                <p className="text-4xl font-extrabold leading-none text-[var(--wesal-maroon)] sm:text-5xl lg:text-6xl">
+              <div className="mt-3 flex items-center gap-3">
+                <p className="text-3xl font-extrabold leading-none text-[var(--wesal-maroon)]">
                   {Number(viewHall.rating).toFixed(1)}
                 </p>
-                <div className="flex flex-col items-center">
-                  <GoldStars rating={viewHall.rating} size={18} />
-                  <p className="mt-1.5 text-center text-sm text-[var(--wesal-maroon)]">
+                <div>
+                  <GoldStars rating={viewHall.rating} size={16} />
+                  <p className="mt-1 text-sm text-[var(--wesal-muted)]">
                     {t("halls.details.basedOn", { count: viewHall.reviewCount ?? 0 })}
                   </p>
                 </div>
               </div>
             ) : null}
-
-            <HallRatingPanel
-              hallId={viewHall.id}
-              isHallOwner={isOwnHall}
-              onRated={({ averageRating, totalRatings }) => {
-                setHall((current) =>
-                  current
-                    ? {
-                        ...current,
-                        rating: averageRating,
-                        reviewCount: totalRatings,
-                      }
-                    : current,
-                );
-              }}
-            />
-
-            <HallCommentPanel
-              hallId={viewHall.id}
-              isHallOwner={isOwnHall}
-              onSubmitted={(review) => {
-                setHall((current) =>
-                  current
-                    ? { ...current, reviews: [review, ...current.reviews] }
-                    : current,
-                );
-              }}
-            />
 
             <HallCommentList
               comments={viewHall.reviews}
@@ -434,10 +424,29 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
               }}
             />
 
-            <HallGuestFeedbackPrompt
+            <HallAddReviewCard
               hallId={viewHall.id}
               isHallOwner={isOwnHall}
+              onRated={({ averageRating, totalRatings }) => {
+                setHall((current) =>
+                  current
+                    ? {
+                        ...current,
+                        rating: averageRating,
+                        reviewCount: totalRatings,
+                      }
+                    : current,
+                );
+              }}
+              onCommentSubmitted={(review) => {
+                setHall((current) =>
+                  current
+                    ? { ...current, reviews: [review, ...current.reviews] }
+                    : current,
+                );
+              }}
             />
+
           </section>
 
           {isOwnHall ? (
@@ -452,20 +461,13 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
         </div>
         </div>
 
-          {!isOwnHall && (isGuest || canContactOwner || canBook) ? (
+          {!isOwnHall && (isGuest || canBook) ? (
             <div
               className="shrink-0 border-t border-[var(--wesal-border)] bg-white px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8"
               data-testid="hall-actions"
             >
               {isGuest ? (
-                <div className="flex flex-col gap-2 sm:gap-3">
-                  <HallContactButton
-                    hallId={viewHall.id}
-                    isOwnHall={false}
-                    isAvailable={viewHall.isAvailable}
-                    onOpened={onClose}
-                  />
-                  <div className="flex gap-2 sm:gap-3">
+                <div className="flex gap-2 sm:gap-3">
                     <Link
                       href={`/login?redirect=/halls/${viewHall.id}&intent=book`}
                       className={`btn-outline min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold sm:!min-h-12 sm:!text-[15px] ${
@@ -486,17 +488,9 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                     >
                       {t("nav.register")}
                     </Link>
-                  </div>
                 </div>
-              ) : (
+              ) : canBook ? (
                 <div className="flex gap-2 sm:gap-3">
-                  <HallContactButton
-                    hallId={viewHall.id}
-                    isOwnHall={false}
-                    isAvailable={viewHall.isAvailable}
-                    onOpened={onClose}
-                  />
-                  {canBook ? (
                     <button
                       type="button"
                       className={`btn-primary min-w-0 flex-1 !min-h-11 !rounded-xl !px-2 !text-sm !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b] sm:!min-h-12 sm:!text-[15px] ${
@@ -515,9 +509,8 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                     >
                       {t("halls.details.bookNow")}
                     </button>
-                  ) : null}
                 </div>
-              )}
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -539,16 +532,14 @@ function InfoCard({
 }: {
   icon: ReactNode;
   label: string;
-  value: string;
+  value: ReactNode;
 }) {
   return (
-    <div className="group flex min-w-0 cursor-default items-center gap-3 rounded-2xl bg-[#f4eee9] px-3 py-3.5 shadow-[0_6px_18px_rgba(90,55,45,0.07)] transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#f8f3ef] hover:shadow-[0_14px_28px_rgba(90,55,45,0.14)] active:translate-y-0">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-maroon)] text-white transition duration-200 group-hover:scale-105 group-hover:bg-[var(--wesal-maroon-dark)] group-hover:shadow-[0_6px_14px_rgba(193,123,127,0.4)] sm:h-11 sm:w-11">
-        {icon}
-      </span>
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="shrink-0 text-[var(--wesal-maroon)]">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[15px] font-bold text-[var(--wesal-maroon)]">{label}</p>
-        <p className="break-words text-[12px] leading-5 text-[#8a7a70] sm:text-[13px]">{value}</p>
+        <p className="text-sm font-bold text-[var(--wesal-maroon)]">{label}</p>
+        <p className="break-words text-sm leading-5 text-[#5c534e]">{value}</p>
       </div>
     </div>
   );
@@ -598,19 +589,47 @@ function formatPriceLabel(label: string) {
   return withShekel.replace(/^([\d,.]+)\s*/, "$1 ₪ ");
 }
 
-function PriceLine({ label }: { label: string }) {
+function PriceValue({ label }: { label: string }) {
   const display = formatPriceLabel(label);
-  const match = display.match(/^([\d,.]+)\s*(.*)$/);
-  if (!match) {
-    return <p className="mt-1 text-[15px] text-[var(--wesal-maroon)]">{display}</p>;
-  }
+  const parts = display.split("₪");
+  if (parts.length < 2) return display;
   return (
-    <p className="mt-1 text-[var(--wesal-maroon)]">
-      <span className="text-xl font-bold">{match[1]}</span>
-      {match[2] ? (
-        <span className="text-[15px] font-medium"> {match[2]}</span>
-      ) : null}
-    </p>
+    <>
+      {parts[0]}
+      <span className='font-["Segoe_UI",Arial,sans-serif]'>₪</span>
+      {parts.slice(1).join("₪")}
+    </>
+  );
+}
+
+function PriceIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4.5 12.2 12 4.7a2 2 0 0 1 1.4-.6H19.5v6.1a2 2 0 0 1-.6 1.4L11.3 19.2a2 2 0 0 1-2.8 0L4.5 15a2 2 0 0 1 0-2.8Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <circle cx="16.2" cy="7.8" r="1.15" fill="currentColor" />
+    </svg>
+  );
+}
+
+function DetailsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-3.5 w-3.5" aria-hidden="true">
+      <path d="M7 4.5h7.2L19 9.2V19a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 6 19V6A1.5 1.5 0 0 1 7.5 4.5H7Z" strokeLinejoin="round" />
+      <path d="M14 4.8V9h4.2M8.8 12.5h6.4M8.8 16h4.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="h-3 w-3" aria-hidden="true">
+      <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -656,62 +675,19 @@ function GuestsIcon() {
   );
 }
 
-function AmenityIcon({ icon }: { icon: HallAmenity["icon"] }) {
-  if (icon === "ac") {
-    return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path
-          d="M12 3v18M4.8 7.2l14.4 9.6M19.2 7.2 4.8 16.8M3 12h18"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-        <path
-          d="M12 7.2 9.6 5.4M12 7.2l2.4-1.8M12 16.8 9.6 18.6M12 16.8l2.4 1.8"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
+function ownerFeatureLabels(
+  features: string[] | undefined,
+  otherFeatures: string | null | undefined,
+): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const label of features ?? []) {
+    const trimmed = label.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    labels.push(trimmed);
   }
-  if (icon === "sound") {
-    return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <rect x="8" y="4" width="8" height="16" rx="1.6" stroke="currentColor" strokeWidth="1.6" />
-        <circle cx="12" cy="15" r="2.1" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M10 7h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (icon === "parking") {
-    return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <rect x="4" y="3.5" width="16" height="17" rx="3" stroke="currentColor" strokeWidth="1.6" />
-        <path
-          d="M9 17V7h4.1a3.2 3.2 0 0 1 0 6.4H9"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 8.2h16l-8 3.2L4 8.2Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path d="M12 11.4V20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path
-        d="M7.2 8.2C7.2 6 9.2 4.4 12 4.4s4.8 1.6 4.8 3.8"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+  const extra = otherFeatures?.trim();
+  if (extra && !seen.has(extra)) labels.push(extra);
+  return labels;
 }

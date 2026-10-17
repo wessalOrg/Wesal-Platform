@@ -30,7 +30,7 @@ src/
 ```
 
 انسخ `.env.example` إلى `.env.local`. `NEXT_PUBLIC_API_BASE_URL` اختياري: في بناء الإنتاج، إذا لم يُضبط، يُستخدم API الرسمي على Render
-`https://wesal-platform.onrender.com/api/v1` (لا يعود أبداً إلى localhost)، وفي التطوير المحلي تُستخدم القيمة `http://localhost:5298/api/v1`.
+`https://wesal-platform-p0iv.onrender.com/api/v1` (لا يعود أبداً إلى localhost)، وفي التطوير المحلي تُستخدم القيمة `http://localhost:5298/api/v1`.
 أي قيمة صريحة في الإنتاج يجب أن تكون رابط https مطلقاً وإلا يفشل البناء.
 
 ## Documentation

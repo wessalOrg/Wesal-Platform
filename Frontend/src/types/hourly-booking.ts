@@ -30,6 +30,7 @@ export type HourlyBookingInput = {
   /** Booker's phone number; shown to the hall owner next to the booking name. */
   phoneNumber?: string;
   requesterName?: string;
+  contactPhone?: string;
 };
 
 export type HourlyBookingResult = HourlyBookingInput & {

@@ -74,6 +74,35 @@ public static class AiPaymentIntentClassifier
     }
 }
 
+/// <summary>Recognizes booking cancellation/refund questions before generic payment routing.</summary>
+public static class AiCancellationIntentDetector
+{
+    private static readonly Regex SubscriptionWords = AiText.AnyWord([
+        "اشتراك", "اشتراكي", "اشتراكات", "subscription", "subscriptions", "renew", "renewal", "تجديد"
+    ]);
+
+    private static readonly Regex CancellationWords = AiText.AnyWord([
+        "cancel", "cancellation", "cancelled", "canceled", "change my mind",
+        "الغاء", "الغي", "الغى", "الغيت", "بدي الغي", "غيرت رايي", "غير رايي",
+        "بطلت بدي احجز", "مش بدي احجز", "ما بدي احجز"
+    ]);
+
+    private static readonly Regex RefundWords = AiText.AnyWord([
+        "refund", "refunded", "refunding", "استرداد", "مسترد", "برجعولي", "يرجعولي", "رجعولي"
+    ]);
+
+    public static bool IsBookingCancellationQuestion(string? message)
+    {
+        var text = AiText.Normalize(message);
+        if (text.Length == 0 || SubscriptionWords.IsMatch(text))
+        {
+            return false;
+        }
+
+        return CancellationWords.IsMatch(text) || RefundWords.IsMatch(text);
+    }
+}
+
 /// <summary>
 /// Recognizes requests for Wesal's own technical/customer support (official contact,
 /// support hours, a problem with the website) as opposed to contacting a Hall Owner.
@@ -86,7 +115,10 @@ public static class AiSupportIntentDetector
     [
         new(@"(?:الدعم|دعم)\s*(?:ال)?(?:فني|تقني|وصال)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
         new(@"(?:بدي|ابغى|اريد|ابي|احتاج|محتاج)\s+(?:ال)?(?:دعم|دعما)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
-        new(@"(?:رقم|واتس(?:اب)?|ايميل|بريد|هاتف|تلفون|جوال)\s+(?:ال)?(?:وصال|دعم|فريق)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
+        new(@"(?:رقم|واتس(?:اب)?|ايميل|بريد|هاتف|تلفون|تلفونكم|جوال|جوالكم)\s+(?:ال)?(?:وصال|دعم|فريق)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
+        // Gazan "your number" without naming Wesal ("اعطيني رقمكم", "وين رقم تلفونكم").
+        // The OwnerContact guard above still excludes hall-owner numbers.
+        new(@"(?:رقمكم|رقمك|تلفونكم|تلفونك|جوالكم|جوالك|واتسابكم)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
         new(@"(?:تواصل|اتواصل|اكلم|احكي|اتصل)\s+(?:مع|ب|عبر)?\s*(?:ال)?(?:وصال|دعم|فريق\s+وصال|فريق\s+الدعم|الاداره)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
         new(@"(?:مشكله|مشاكل|عطل|خلل|خطا)\s+(?:في|ب|عندي\s+في)?\s*(?:ال)?(?:موقع|تطبيق|منصه|وصال|حسابي)", RegexOptions.Compiled | RegexOptions.CultureInvariant),
         new(@"عندي\s+مشكله", RegexOptions.Compiled | RegexOptions.CultureInvariant),
@@ -138,7 +170,7 @@ public enum AiHallQuestion
 public static class AiHallQuestionClassifier
 {
     private static readonly Regex Availability = AiText.AnyWord([
-        "متاح", "متاحه", "متوفر", "متوفره", "فاضيه", "فاضي", "شاغره", "محجوزه", "محجوز", "available", "availability", "free", "booked"
+        "متاح", "متاحه", "متوفر", "متوفره", "فاضيه", "فاضي", "شاغره", "شاغر", "فارغه", "فارغ", "محجوزه", "محجوز", "available", "availability", "free", "booked"
     ]);
 
     private static readonly Regex HowToBook = new(
@@ -146,11 +178,11 @@ public static class AiHallQuestionClassifier
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Contact = new(
-        @"(?:كيف|ازاي|شلون|how).{0,20}(?:اتواصل|تواصل|اكلم|احكي|contact|reach|message|call)|(?:اتواصل|اكلم|احكي)\s+(?:مع)?\s*(?:ه?م|ها|ه|صاحب)",
+        @"(?:كيف|ازاي|شلون|how).{0,20}(?:اتواصل|تواصل|اكلم|احكي|contact|reach|message|call)|(?:اتواصل|اكلم|احكي)\s+(?:مع)?\s*(?:ه?م|ها|ه|صاحب)|(?:رقم|واتساب|هاتف|تلفون|جوال|phone|number|whatsapp).{0,18}(?:صاحب|مالك|القاعة|قاعة|صالة|ها|ه|owner|hall)|(?:صاحب|مالك)(?:ها|ه)?\s+(?:رقم|هاتف|تلفون)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Price = AiText.AnyWord([
-        "سعر", "سعرها", "سعره", "اسعار", "ثمن", "تكلفه", "تكلفتها", "بكم", "price", "cost", "costs", "pricing", "fee", "fees"
+        "سعر", "سعرها", "سعره", "اسعار", "ثمن", "تكلفه", "تكلفتها", "بكم", "قديش", "بقديش", "price", "cost", "costs", "pricing", "fee", "fees"
     ]);
 
     private static readonly Regex HowMuch = new(@"كم\s+(?:سعر|ثمن|تكلف|بتكلف|بدفع)|how\s+much", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -160,7 +192,7 @@ public static class AiHallQuestionClassifier
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Location = new(
-        @"(?:وين|فين|مكان|موقع|عنوان|منطقه|بتقع|تقع|location|address|where|located|area)",
+        AiText.Bounded(@"وين|فين|مكان|موقع|عنوان|منطقه|بتقع|تقع|location|address|where|located|area"),
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Services = new(
@@ -168,7 +200,7 @@ public static class AiHallQuestionClassifier
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Photos = new(
-        @"(?:صور|صورها|صوره|معرض|photos?|pictures?|images?|gallery)",
+        AiText.Bounded(@"صور|صورها|صوره|معرض|photos?|pictures?|images?|gallery"),
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Description = new(
@@ -176,7 +208,7 @@ public static class AiHallQuestionClassifier
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex Details = new(
-        @"(?:تفاصيل|احكيلي|حكيلي|عرفني|اخبرني|معلومات|عنها|details|tell\s+me|about\s+(?:it|this|the)|info)",
+        @"(?:تفاصيل|احكيلي|حكيلي|عرفني|اخبرني|خبرني|فهمني|اشرحلي|اشرح|معلومات|عنها|ليش\s+(?:هاي|هي)|ليش\s+اختر|why\s+(?:this|did\s+you\s+choose)|details|tell\s+me|about\s+(?:it|this|the)|info)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex PlatformWords = AiText.AnyWord([
@@ -261,13 +293,18 @@ public static class AiReferenceResolver
         (-1, AiText.AnyWord(["الاخيره", "الاخير", "اخر", "اخيره", "last"]))
     ];
 
+    private static readonly Regex NextResult = new(
+        @"(?:غيرها|غيرو|هات\s+غيرها|فرجيني\s+غيرها|واحده\s+ثانيه|صاله\s+ثانيه|التالي|اللي\s+بعدها|next(?:\s+one)?|another\s+one)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static readonly HashSet<string> NotAName = new(StringComparer.Ordinal)
     {
         // demonstratives / pronoun-ish
         "هذه", "هاي", "هاذي", "هذي", "هادي", "هاده", "هاد", "هاذه", "الحاليه", "الحالي", "this", "that", "the", "it", "a", "an", "my",
         // question / filler words that follow "hall" in questions
-        "كم", "شو", "ايش", "وين", "متاحه", "متاح", "فيها", "فيه", "في", "ب", "بكم", "سعرها", "سعر", "سعتها", "هل", "مين", "كيف",
+        "كم", "شو", "ايش", "وين", "وينتا", "ليش", "قديش", "مين", "متاحه", "متاح", "فيها", "فيه", "في", "ب", "بكم", "سعرها", "سعر", "سعتها", "هل", "كيف", "دورلي", "فرجيني", "هات", "بدي", "بلاقي",
         "available", "price", "capacity", "has", "have", "is", "are", "for", "in", "at", "near", "how", "what", "where", "which", "does",
+        "i", "want", "need", "find", "show", "me", "looking", "please", "about", "tell",
         // generic "hall" qualifiers
         "افراح", "الافراح", "اعراس", "مناسبات", "wedding", "weddings", "event", "events"
     };
@@ -286,6 +323,21 @@ public static class AiReferenceResolver
 
         return null;
     }
+
+    /// <summary>Returns distinct result positions in the order they occur in a comparison request.</summary>
+    public static IReadOnlyList<int> GetOrdinals(string? message)
+    {
+        var text = AiText.Normalize(message);
+        return Ordinals
+            .Where(item => item.Index >= 0 && item.Pattern.IsMatch(text))
+            .Select(item => item.Index)
+            .Distinct()
+            .Take(10)
+            .ToArray();
+    }
+
+    public static bool IsNextResult(string? message)
+        => NextResult.IsMatch(AiText.Normalize(message));
 
     private static readonly Regex WordRegex = new(@"[\p{L}\p{N}]+", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
@@ -309,24 +361,45 @@ public static class AiReferenceResolver
 
             if (isNoun && i + 1 < words.Count && noun != "hall")
             {
-                var candidate = words[i + 1];
-                var normalized = AiText.Normalize(candidate);
-                if (!NotAName.Contains(normalized) && !IsRegionOrLocationWord(normalized))
+                var nameWords = new List<string>();
+                for (var candidateIndex = i + 1; candidateIndex < Math.Min(words.Count, i + 5); candidateIndex++)
                 {
-                    return candidate;
+                    var candidate = words[candidateIndex];
+                    var normalized = AiText.Normalize(candidate);
+                    if (NotAName.Contains(normalized)
+                        || IsRegionOrLocationWord(normalized)
+                        || normalized.All(char.IsDigit))
+                    {
+                        break;
+                    }
+
+                    nameWords.Add(candidate);
                 }
+
+                if (nameWords.Count > 0)
+                    return string.Join(' ', nameWords);
             }
 
             // English: the name comes BEFORE the noun ("Orchid hall").
             if (noun == "hall" && i > 0)
             {
-                var candidate = words[i - 1];
-                var normalized = AiText.Normalize(candidate);
-                if (normalized.Length > 1 && normalized.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9')
-                    && !NotAName.Contains(normalized))
+                var nameWords = new List<string>();
+                for (var candidateIndex = i - 1; candidateIndex >= Math.Max(0, i - 3); candidateIndex--)
                 {
-                    return candidate;
+                    var candidate = words[candidateIndex];
+                    var normalized = AiText.Normalize(candidate);
+                    if (NotAName.Contains(normalized)
+                        || normalized.Length <= 1
+                        || !normalized.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9'))
+                    {
+                        break;
+                    }
+
+                    nameWords.Insert(0, candidate);
                 }
+
+                if (nameWords.Count > 0)
+                    return string.Join(' ', nameWords);
             }
         }
 

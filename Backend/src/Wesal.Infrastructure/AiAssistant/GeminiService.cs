@@ -1,78 +1,87 @@
-using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
+using Google.GenAI;
+using Google.GenAI.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 
+using GenAiClient = Google.GenAI.Client;
+using GenAiContent = Google.GenAI.Types.Content;
+using GenAiFunctionCall = Google.GenAI.Types.FunctionCall;
+using GenAiFunctionResponse = Google.GenAI.Types.FunctionResponse;
+using GenAiFunctionDeclaration = Google.GenAI.Types.FunctionDeclaration;
+using GenAiPart = Google.GenAI.Types.Part;
+
 namespace Wesal.Infrastructure.AiAssistant;
 
 /// <summary>
-/// Communicates with the Google Gemini REST API using an HttpClient obtained
-/// from <see cref="IHttpClientFactory"/>. Each request uses a single configured
-/// API key and model. All HTTP/timeout/JSON failure modes are converted to a null
-/// result (recoverable) with diagnostic logging that never includes the API key.
-/// A circuit breaker opens for <see cref="CircuitBreakerCooldownSeconds"/> seconds
-/// after any failure, causing <see cref="IsAvailable"/> to return false so
-/// upstream consumers (e.g. <see cref="GeminiAiIntentExtractor"/>) fall back to
-/// deterministic classification without making another HTTP call. The API key is
-/// sent in the "x-goog-api-key" request header rather than as a URL query
-/// parameter, so it never appears in access logs, proxies, or the request line,
-/// and is never logged or returned. User/context input is truncated to
-/// <see cref="GoogleAiSettings.MaxContextCharacters"/> before being sent, so a
-/// maliciously large request cannot consume unbounded Gemini quota.
+/// Infrastructure adapter for Google's official Gen AI .NET SDK. Google types and
+/// wire formats stay inside Infrastructure; Application receives only Wesal DTOs.
+/// SDK-returned model content is carried as opaque, in-memory continuation state so
+/// thought signatures and all provider fields modeled by the SDK are replayed exactly.
 /// </summary>
-public sealed class GeminiService : IGeminiService, IGeminiToolCallService
+public sealed class GeminiService : IGeminiService, IGeminiToolCallService, IDisposable
 {
-    public const string HttpClientName = "gemini";
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    /// <summary>Hard ceiling on messages sent in one tool-calling request (defensive only;
-    /// the orchestrator already bounds history and tool rounds well below this).</summary>
     internal const int MaxToolRequestContents = 30;
+    private const int MaxProviderContinuationCharacters = 128_000;
+    private static readonly JsonSerializerOptions AppJsonOptions = new(JsonSerializerDefaults.Web);
 
-    // Per-instance (the service is a singleton) so unrelated service instances never
-    // share breaker state, and it only trips after several CONSECUTIVE failures so one
-    // slow or failed request cannot take the assistant down for everybody.
+    private readonly GoogleAiSettings _settings;
+    private readonly ILogger<GeminiService> _logger;
+    private readonly GenAiClient? _client;
     private long _circuitOpenUntilTicks;
     private int _consecutiveFailures;
 
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly GoogleAiSettings _settings;
-    private readonly ILogger<GeminiService> _logger;
-
-    public GeminiService(
-        IHttpClientFactory httpClientFactory,
-        IOptions<GoogleAiSettings> settings,
-        ILogger<GeminiService> logger)
+    public GeminiService(IOptions<GoogleAiSettings> settings, ILogger<GeminiService> logger)
     {
-        _httpClientFactory = httpClientFactory;
         _settings = settings.Value;
         _logger = logger;
+        if (_settings.Enabled && !string.IsNullOrWhiteSpace(_settings.ApiKey))
+        {
+            var (baseUrl, apiVersion) = GetEndpoint(_settings.BaseUrl);
+            _client = new GenAiClient(
+                apiKey: _settings.ApiKey,
+                httpOptions: new HttpOptions
+                {
+                    BaseUrl = baseUrl,
+                    ApiVersion = apiVersion,
+                    Timeout = Math.Clamp(_settings.TimeoutSeconds, 1, 120) * 1000,
+                    // Avoid hidden duplicate billable requests and keep the
+                    // orchestrator's whole-turn budget authoritative.
+                    RetryOptions = new HttpRetryOptions { Attempts = 1 }
+                });
+        }
+    }
+
+    // Kept as a source-compatible constructor for existing tests and callers while
+    // the adapter has moved to the SDK. The SDK owns its HTTP stack and endpoint.
+    public GeminiService(
+        IHttpClientFactory unusedHttpClientFactory,
+        IOptions<GoogleAiSettings> settings,
+        ILogger<GeminiService> logger)
+        : this(settings, logger)
+    {
+        _ = unusedHttpClientFactory;
     }
 
     public bool IsAvailable
     {
         get
         {
-            if (!_settings.Enabled || string.IsNullOrWhiteSpace(_settings.ApiKey))
+            if (_client is null)
                 return false;
+
             var until = Volatile.Read(ref _circuitOpenUntilTicks);
-            if (until > 0 && Environment.TickCount64 < until)
+            if (until > 0 && System.Environment.TickCount64 < until)
                 return false;
             if (until > 0)
             {
                 Volatile.Write(ref _circuitOpenUntilTicks, 0);
                 Volatile.Write(ref _consecutiveFailures, 0);
             }
+
             return true;
         }
     }
@@ -82,12 +91,10 @@ public sealed class GeminiService : IGeminiService, IGeminiToolCallService
         var threshold = Math.Max(1, _settings.CircuitFailureThreshold);
         var failures = Interlocked.Increment(ref _consecutiveFailures);
         if (failures < threshold)
-        {
             return;
-        }
 
         var cooldown = Math.Max(1, _settings.CircuitCooldownSeconds);
-        Volatile.Write(ref _circuitOpenUntilTicks, Environment.TickCount64 + cooldown * 1000L);
+        Volatile.Write(ref _circuitOpenUntilTicks, System.Environment.TickCount64 + cooldown * 1000L);
         _logger.LogWarning(
             "Gemini circuit opened for {Cooldown}s after {Failures} consecutive failures; deterministic paths serve requests meanwhile.",
             cooldown,
@@ -106,34 +113,54 @@ public sealed class GeminiService : IGeminiService, IGeminiToolCallService
         CancellationToken cancellationToken = default)
     {
         if (!IsAvailable)
-        {
-            _logger.LogInformation(
-                "Gemini is not available (disabled or missing API key); skipping Gemini request.");
             return null;
-        }
 
         var userPrompt = GeminiPromptBuilder.BuildUserPrompt(prompt, _settings.MaxContextCharacters);
         if (string.IsNullOrWhiteSpace(userPrompt))
+            return null;
+
+        try
         {
-            _logger.LogInformation("Gemini prompt is empty after context limiting; skipping Gemini request.");
+            var response = await _client!.Models.GenerateContentAsync(
+                GetModel(_settings.GeminiModel),
+                userPrompt,
+                new GenerateContentConfig
+                {
+                    SystemInstruction = TextContent(GeminiPromptBuilder.BuildSystemInstruction(
+                        language,
+                        _settings.MaxContextCharacters)),
+                    ThinkingConfig = BuildThinkingConfig(_settings.FastThinkingLevel)
+                },
+                cancellationToken);
+
+            LogUsage(response, "text");
+            var text = ExtractText(response);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                RecordFailure();
+                _logger.LogWarning("Gemini returned an empty text response; falling back to deterministic provider.");
+                return null;
+            }
+
+            RecordSuccess();
+            return text;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            RecordFailure();
+            _logger.LogWarning("Gemini text request timed out after {Timeout}s; falling back to deterministic provider.", _settings.TimeoutSeconds);
             return null;
         }
-
-        var systemInstruction = GeminiPromptBuilder.BuildSystemInstruction(language, _settings.MaxContextCharacters);
-
-        var result = await TryTextAttemptAsync(
-            userPrompt,
-            systemInstruction,
-            cancellationToken);
-
-        if (result is not null)
+        catch (OperationCanceledException)
         {
-            RecordSuccess();
-            return result;
+            throw;
         }
-
-        RecordFailure();
-        return null;
+        catch (Exception ex)
+        {
+            RecordFailure();
+            LogProviderFailure("text", ex);
+            return null;
+        }
     }
 
     public async Task<T?> GenerateStructuredAsync<T>(
@@ -143,185 +170,209 @@ public sealed class GeminiService : IGeminiService, IGeminiToolCallService
         CancellationToken cancellationToken = default) where T : class
     {
         if (!IsAvailable)
-        {
-            _logger.LogInformation(
-                "Gemini is not available (disabled or missing API key); skipping structured request.");
             return null;
-        }
 
         var userPrompt = GeminiPromptBuilder.BuildUserPrompt(prompt, _settings.MaxContextCharacters);
         if (string.IsNullOrWhiteSpace(userPrompt))
-        {
-            _logger.LogInformation("Gemini prompt is empty after context limiting; skipping structured request.");
             return null;
-        }
-
-        var result = await TryStructuredAttemptAsync<T>(
-            userPrompt,
-            systemInstruction,
-            responseSchema,
-            cancellationToken);
-
-        if (result is not null)
-        {
-            RecordSuccess();
-            return result;
-        }
-
-        RecordFailure();
-        return null;
-    }
-
-    public async Task<GeminiToolTurn?> GenerateToolTurnAsync(
-        IReadOnlyList<GeminiConversationMessage> contents,
-        string systemInstruction,
-        IReadOnlyList<GeminiFunctionDeclaration> functions,
-        CancellationToken cancellationToken = default)
-    {
-        if (!IsAvailable)
-        {
-            _logger.LogInformation(
-                "Gemini is not available (disabled or missing API key); skipping tool-calling request.");
-            return null;
-        }
-
-        var result = await TryToolTurnAttemptAsync(
-            contents,
-            systemInstruction,
-            functions,
-            cancellationToken);
-
-        if (result is not null)
-        {
-            RecordSuccess();
-            return result;
-        }
-
-        RecordFailure();
-        return null;
-    }
-
-    private async Task<GeminiToolTurn?> TryToolTurnAttemptAsync(
-        IReadOnlyList<GeminiConversationMessage> contents,
-        string systemInstruction,
-        IReadOnlyList<GeminiFunctionDeclaration> functions,
-        CancellationToken cancellationToken)
-    {
-        var safeContents = SanitizeToolContents(contents).Select(ToWireMessage).ToList();
-
-        var safeFunctions = functions is null
-            ? []
-            : functions.Take(25).Select(f => new GeminiWireFunctionDeclaration(
-                f.Name,
-                f.Description ?? string.Empty,
-                f.Parameters ?? new JsonObject())).ToList();
-
-        var client = _httpClientFactory.CreateClient(HttpClientName);
-        var model = GetModel(_settings.GeminiModel);
-        var url = $"{GetBaseUrl()}/models/{Uri.EscapeDataString(model)}:generateContent";
-        var body = new GeminiToolCallRequest(
-            safeContents,
-            new GeminiContent([new GeminiPart(systemInstruction)]),
-            safeFunctions.Count == 0 ? null : [new GeminiWireTools(safeFunctions)],
-            safeFunctions.Count == 0 ? null : new GeminiToolConfig(new GeminiWireFunctionCallingConfig("AUTO")),
-            new GeminiGenerationConfig());
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = JsonContent.Create(body, options: JsonOptions)
-        };
-        request.Headers.TryAddWithoutValidation("x-goog-api-key", _settings.ApiKey);
 
         try
         {
-            using var response = await client.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
+            var schema = Schema.FromJson(responseSchema.ToJsonString());
+            if (schema is null)
+                return null;
+
+            var response = await _client!.Models.GenerateContentAsync(
+                GetModel(_settings.GeminiModel),
+                userPrompt,
+                new GenerateContentConfig
+                {
+                    SystemInstruction = TextContent(GeminiPromptBuilder.BuildUserPrompt(
+                        systemInstruction,
+                        _settings.MaxContextCharacters)),
+                    ResponseMimeType = "application/json",
+                    ResponseSchema = schema,
+                    ThinkingConfig = BuildThinkingConfig(_settings.FastThinkingLevel)
+                },
                 cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
+            LogUsage(response, "structured");
+            var text = ExtractText(response);
+            if (string.IsNullOrWhiteSpace(text))
             {
-                var status = (int)response.StatusCode;
-                _logger.LogWarning(
-                    "Gemini tool-calling request failed with HTTP {Status}; stopping tool orchestration.",
-                    status);
+                RecordFailure();
                 return null;
             }
 
-            GeminiGenerateContentResponse? parsed;
-            try
+            var result = JsonSerializer.Deserialize<T>(text, AppJsonOptions);
+            if (result is null)
             {
-                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                parsed = await JsonSerializer.DeserializeAsync<GeminiGenerateContentResponse>(
-                    stream,
-                    JsonOptions,
-                    cancellationToken);
-            }
-            catch (JsonException)
-            {
-                _logger.LogWarning("Gemini returned malformed JSON for tool-calling; stopping tool orchestration.");
+                RecordFailure();
                 return null;
             }
 
-            var turn = ExtractToolTurn(parsed);
-            if (turn is null || (!turn.HasText && !turn.HasFunctionCall))
-            {
-                _logger.LogWarning("Gemini returned an empty tool-calling turn; stopping tool orchestration.");
-                return null;
-            }
-
-            return turn;
+            RecordSuccess();
+            return result;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("Gemini tool-calling request timed out after {Timeout}s; stopping tool orchestration.", _settings.TimeoutSeconds);
+            RecordFailure();
+            _logger.LogWarning("Gemini structured request timed out after {Timeout}s; deterministic classifier will be used.", _settings.TimeoutSeconds);
             return null;
         }
         catch (OperationCanceledException)
         {
             throw;
         }
-        catch (HttpRequestException)
+        catch (Exception ex)
         {
-            _logger.LogWarning("Gemini tool-calling request failed due to a network error; stopping tool orchestration.");
+            RecordFailure();
+            LogProviderFailure("structured", ex);
             return null;
         }
-        catch (JsonException)
+    }
+
+    public Task<GeminiToolTurn?> GenerateToolTurnAsync(
+        IReadOnlyList<GeminiConversationMessage> contents,
+        string systemInstruction,
+        IReadOnlyList<GeminiFunctionDeclaration> functions,
+        CancellationToken cancellationToken = default)
+        => GenerateToolTurnAsync(contents, systemInstruction, functions, _settings.FastThinkingLevel, cancellationToken);
+
+    public Task<GeminiToolTurn?> GenerateToolTurnWithThinkingAsync(
+        IReadOnlyList<GeminiConversationMessage> contents,
+        string systemInstruction,
+        IReadOnlyList<GeminiFunctionDeclaration> functions,
+        string thinkingLevel,
+        CancellationToken cancellationToken = default)
+        => GenerateToolTurnAsync(contents, systemInstruction, functions, thinkingLevel, cancellationToken);
+
+    public async Task<GeminiToolTurn?> GenerateToolTurnAsync(
+        IReadOnlyList<GeminiConversationMessage> contents,
+        string systemInstruction,
+        IReadOnlyList<GeminiFunctionDeclaration> functions,
+        string? thinkingLevel,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsAvailable)
+            return null;
+
+        try
         {
-            _logger.LogWarning("Gemini tool-calling request/response serialization failed; stopping tool orchestration.");
+            var safeContents = SanitizeToolContents(contents)
+                .Select(ToSdkContent)
+                .ToList();
+            var sdkFunctions = functions.Take(25).Select(ToSdkFunction).ToList();
+            var config = new GenerateContentConfig
+            {
+                SystemInstruction = TextContent(GeminiPromptBuilder.LimitContext(
+                    systemInstruction,
+                    _settings.MaxContextCharacters)),
+                Tools = sdkFunctions.Count == 0
+                    ? null
+                    : [new Tool { FunctionDeclarations = sdkFunctions }],
+                ToolConfig = sdkFunctions.Count == 0
+                    ? null
+                    : new ToolConfig
+                    {
+                        FunctionCallingConfig = new FunctionCallingConfig
+                        {
+                            Mode = FunctionCallingConfigMode.Auto
+                        }
+                    },
+                ThinkingConfig = BuildThinkingConfig(thinkingLevel)
+            };
+
+            var response = await _client!.Models.GenerateContentAsync(
+                GetModel(_settings.GeminiModel),
+                safeContents,
+                config,
+                cancellationToken);
+
+            LogUsage(response, "tools");
+            var content = response.Candidates?.FirstOrDefault()?.Content;
+            if (content?.Parts is null || content.Parts.Count == 0)
+            {
+                RecordFailure();
+                _logger.LogWarning("Gemini returned an empty tool-calling turn; stopping orchestration.");
+                return null;
+            }
+
+            var text = ExtractText(content);
+            var calls = content.Parts
+                .Where(part => part.FunctionCall is not null)
+                .Select(part => ToApplicationFunctionCall(part.FunctionCall!))
+                .Where(call => !string.IsNullOrWhiteSpace(call.Name))
+                .ToList();
+
+            if (calls.Count == 0 && string.IsNullOrWhiteSpace(text))
+            {
+                RecordFailure();
+                return null;
+            }
+
+            // SDK records carry JsonPropertyName attributes; this preserves the
+            // provider JSON fields, including the opaque thoughtSignature bytes.
+            var continuation = JsonSerializer.Serialize(content);
+            if (continuation.Length > MaxProviderContinuationCharacters)
+            {
+                RecordFailure();
+                _logger.LogWarning("Gemini model continuation exceeded the bounded size; stopping orchestration.");
+                return null;
+            }
+
+            RecordSuccess();
+            return new GeminiToolTurn(text, calls.FirstOrDefault())
+            {
+                FunctionCalls = calls,
+                ProviderContinuation = continuation
+            };
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            RecordFailure();
+            _logger.LogWarning("Gemini tool-calling request timed out after {Timeout}s; stopping orchestration.", _settings.TimeoutSeconds);
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            RecordFailure();
+            LogProviderFailure("tools", ex);
             return null;
         }
     }
 
     /// <summary>
-    /// Returns a valid Gemini history. Tool calls are atomic: a model message holding a
-    /// <c>functionCall</c> is only ever sent together with the <c>function</c> message
-    /// that answers it. If the history is over the ceiling, whole leading logical turns
-    /// (a user message, or a call/response pair) are dropped — a call is never separated
-    /// from its response — and any orphan call/response is removed defensively.
+    /// Keeps model tool calls adjacent to the matching tool responses and discards
+    /// orphaned calls/responses. The protocol pairing includes every call ID when
+    /// Google supplied one. Leading complete turns are removed to enforce the bound.
     /// </summary>
     internal static IReadOnlyList<GeminiConversationMessage> SanitizeToolContents(
         IReadOnlyList<GeminiConversationMessage>? contents)
     {
         if (contents is null || contents.Count == 0)
-        {
             return [];
-        }
 
-        // Group into atomic units: [model(functionCall) + function(functionResponse)] stay together.
         var units = new List<List<GeminiConversationMessage>>();
         for (var i = 0; i < contents.Count; i++)
         {
             var message = contents[i];
-            var hasCall = message.Parts.Any(part => part.FunctionCall is not null);
-            if (hasCall)
+            var calls = message.Parts.Where(part => part.FunctionCall is not null)
+                .Select(part => part.FunctionCall!).ToList();
+            if (calls.Count > 0)
             {
                 var next = i + 1 < contents.Count ? contents[i + 1] : null;
-                var answered = next is not null && next.Parts.Any(part => part.FunctionResponse is not null);
-                if (!answered)
-                {
-                    continue; // orphan functionCall: drop it
-                }
+                var responses = next?.Parts.Where(part => part.FunctionResponse is not null)
+                    .Select(part => part.FunctionResponse!).ToList() ?? [];
+                var paired = responses.Count == calls.Count && calls.All(call => responses.Any(result =>
+                    string.Equals(call.Name, result.Name, StringComparison.Ordinal)
+                    && (string.IsNullOrEmpty(call.Id) || string.Equals(call.Id, result.Id, StringComparison.Ordinal))));
+                if (!paired)
+                    continue;
 
                 units.Add([message, next!]);
                 i++;
@@ -329,9 +380,7 @@ public sealed class GeminiService : IGeminiService, IGeminiToolCallService
             }
 
             if (message.Parts.Any(part => part.FunctionResponse is not null))
-            {
-                continue; // orphan functionResponse: drop it
-            }
+                continue;
 
             units.Add([message]);
         }
@@ -347,330 +396,150 @@ public sealed class GeminiService : IGeminiService, IGeminiToolCallService
         return units.Skip(start).SelectMany(unit => unit).ToList();
     }
 
-    private static GeminiWireMessage ToWireMessage(GeminiConversationMessage message)
+    private static GenAiContent ToSdkContent(GeminiConversationMessage message)
     {
-        var parts = (message.Parts ?? []).Select(p => new GeminiWirePart(
-                p.Text,
-                p.FunctionCall is null
-                    ? null
-                    : new GeminiWireFunctionCall(p.FunctionCall.Name, p.FunctionCall.Arguments ?? new JsonObject()),
-                p.FunctionResponse is null
-                    ? null
-                    : new GeminiWireFunctionResponse(p.FunctionResponse.Name, p.FunctionResponse.Response)))
-            .ToList();
-
-        var role = message.Role?.Trim().ToLowerInvariant();
-        var normalizedRole = role switch
+        if (!string.IsNullOrWhiteSpace(message.ProviderContinuation))
         {
-            "user" or "model" or "function" => role,
+            return GenAiContent.FromJson(message.ProviderContinuation)
+                ?? throw new JsonException("Provider continuation was not a valid model message.");
+        }
+
+        var parts = (message.Parts ?? []).Select(part =>
+        {
+            if (part.FunctionCall is { } call)
+            {
+                return new GenAiPart
+                {
+                    FunctionCall = new GenAiFunctionCall
+                    {
+                        Name = call.Name,
+                        Id = call.Id,
+                        Args = ToDictionary(call.Arguments)
+                    }
+                };
+            }
+
+            if (part.FunctionResponse is { } result)
+            {
+                return new GenAiPart
+                {
+                    FunctionResponse = new GenAiFunctionResponse
+                    {
+                        Name = result.Name,
+                        Id = result.Id,
+                        Response = ToDictionary(result.Response)
+                    }
+                };
+            }
+
+            return GenAiPart.FromText(part.Text ?? string.Empty);
+        }).ToList();
+
+        var role = message.Role?.Trim().ToLowerInvariant() switch
+        {
+            "model" or "assistant" => "model",
             _ => "user"
         };
-
-        return new GeminiWireMessage(normalizedRole, parts);
+        return new GenAiContent { Role = role, Parts = parts };
     }
 
-    private static GeminiToolTurn? ExtractToolTurn(GeminiGenerateContentResponse? response)
-    {
-        if (response?.Candidates is null || response.Candidates.Count == 0)
+    private static GenAiContent TextContent(string text)
+        => new() { Parts = [GenAiPart.FromText(text)] };
+
+    private static GenAiFunctionDeclaration ToSdkFunction(GeminiFunctionDeclaration function)
+        => new()
         {
-            return null;
-        }
-
-        var candidate = response.Candidates[0];
-        if (candidate?.Content?.Parts is null)
-        {
-            return null;
-        }
-
-        var textBuilder = new StringBuilder();
-        GeminiFunctionCall? functionCall = null;
-
-        foreach (var part in candidate.Content.Parts)
-        {
-            if (!string.IsNullOrWhiteSpace(part?.Text))
-            {
-                textBuilder.Append(part.Text);
-            }
-
-            if (part?.FunctionCall is not null && functionCall is null)
-            {
-                var name = part.FunctionCall.Name?.Trim();
-                var arguments = part.FunctionCall.Args ?? new JsonObject();
-                if (!string.IsNullOrWhiteSpace(name))
-                {
-                    functionCall = new GeminiFunctionCall(name, arguments);
-                }
-            }
-        }
-
-        var text = textBuilder.Length == 0 ? null : textBuilder.ToString().Trim();
-        if (functionCall is null && string.IsNullOrWhiteSpace(text))
-        {
-            return null;
-        }
-
-        return new GeminiToolTurn(text, functionCall);
-    }
-
-    private async Task<string?> TryTextAttemptAsync(
-        string userPrompt,
-        string systemInstruction,
-        CancellationToken cancellationToken)
-    {
-        var client = _httpClientFactory.CreateClient(HttpClientName);
-        var model = GetModel(_settings.GeminiModel);
-        var url = $"{GetBaseUrl()}/models/{Uri.EscapeDataString(model)}:generateContent";
-        var body = new GeminiGenerateContentRequest(
-            [new GeminiContent([new GeminiPart(userPrompt)])],
-            new GeminiContent([new GeminiPart(systemInstruction)]),
-            new GeminiGenerationConfig());
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = JsonContent.Create(body, options: JsonOptions)
+            Name = function.Name,
+            Description = function.Description,
+            Parameters = Schema.FromJson(function.Parameters.ToJsonString())
         };
-        request.Headers.TryAddWithoutValidation("x-goog-api-key", _settings.ApiKey);
 
-        try
-        {
-            using var response = await client.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
+    private static GeminiFunctionCall ToApplicationFunctionCall(GenAiFunctionCall call)
+        => new(
+            call.Name?.Trim() ?? string.Empty,
+            ToJsonObject(call.Args),
+            call.Id);
 
-            if (!response.IsSuccessStatusCode)
-            {
-                var status = (int)response.StatusCode;
-                _logger.LogWarning(
-                    "Gemini request failed with HTTP {Status}; falling back to deterministic provider.",
-                    status);
-                return null;
-            }
+    private static Dictionary<string, object> ToDictionary(JsonObject value)
+        => JsonSerializer.Deserialize<Dictionary<string, object>>(value.ToJsonString(), AppJsonOptions) ?? [];
 
-            GeminiGenerateContentResponse? parsed;
-            try
-            {
-                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                parsed = await JsonSerializer.DeserializeAsync<GeminiGenerateContentResponse>(
-                    stream,
-                    JsonOptions,
-                    cancellationToken);
-            }
-            catch (JsonException)
-            {
-                _logger.LogWarning("Gemini returned malformed JSON; falling back to deterministic provider.");
-                return null;
-            }
-
-            var text = ExtractText(parsed);
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                _logger.LogWarning("Gemini returned an empty response; falling back to deterministic provider.");
-                return null;
-            }
-
-            return text;
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning("Gemini request timed out after {Timeout}s; falling back to deterministic provider.", _settings.TimeoutSeconds);
-            return null;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (HttpRequestException)
-        {
-            _logger.LogWarning("Gemini request failed due to a network error; falling back to deterministic provider.");
-            return null;
-        }
-        catch (JsonException)
-        {
-            _logger.LogWarning("Gemini request/response serialization failed; falling back to deterministic provider.");
-            return null;
-        }
-    }
-
-    private async Task<T?> TryStructuredAttemptAsync<T>(
-        string userPrompt,
-        string systemInstruction,
-        JsonNode responseSchema,
-        CancellationToken cancellationToken) where T : class
+    private static JsonObject ToJsonObject(Dictionary<string, object>? value)
     {
-        var client = _httpClientFactory.CreateClient(HttpClientName);
-        var model = GetModel(_settings.GeminiModel);
-        var url = $"{GetBaseUrl()}/models/{Uri.EscapeDataString(model)}:generateContent";
-        var body = new GeminiGenerateContentRequest(
-            [new GeminiContent([new GeminiPart(userPrompt)])],
-            new GeminiContent([new GeminiPart(systemInstruction)]),
-            new GeminiGenerationConfig("application/json", responseSchema));
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = JsonContent.Create(body, options: JsonOptions)
-        };
-        request.Headers.TryAddWithoutValidation("x-goog-api-key", _settings.ApiKey);
-
-        try
-        {
-            using var response = await client.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var status = (int)response.StatusCode;
-                _logger.LogWarning(
-                    "Gemini structured request failed with HTTP {Status}; falling back to deterministic classifier.",
-                    status);
-                return null;
-            }
-
-            GeminiGenerateContentResponse? parsed;
-            try
-            {
-                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                parsed = await JsonSerializer.DeserializeAsync<GeminiGenerateContentResponse>(
-                    stream,
-                    JsonOptions,
-                    cancellationToken);
-            }
-            catch (JsonException)
-            {
-                _logger.LogWarning("Gemini returned malformed JSON; falling back to deterministic classifier.");
-                return null;
-            }
-
-            var text = ExtractText(parsed);
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                _logger.LogWarning("Gemini returned an empty structured response; falling back to deterministic classifier.");
-                return null;
-            }
-
-            try
-            {
-                var deserialized = JsonSerializer.Deserialize<T>(text, JsonOptions);
-                return deserialized;
-            }
-            catch (JsonException)
-            {
-                _logger.LogWarning("Gemini structured output was not valid JSON; falling back to deterministic classifier.");
-                return null;
-            }
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning("Gemini structured request timed out after {Timeout}s; falling back to deterministic classifier.", _settings.TimeoutSeconds);
-            return null;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (HttpRequestException)
-        {
-            _logger.LogWarning("Gemini structured request failed due to a network error; falling back to deterministic classifier.");
-            return null;
-        }
-        catch (JsonException)
-        {
-            _logger.LogWarning("Gemini structured request/response serialization failed; falling back to deterministic classifier.");
-            return null;
-        }
+        if (value is null)
+            return new JsonObject();
+        return JsonNode.Parse(JsonSerializer.Serialize(value, AppJsonOptions)) as JsonObject ?? new JsonObject();
     }
 
-    private string GetModel(string configured)
+    private static string? ExtractText(GenerateContentResponse? response)
+        => response?.Candidates?.FirstOrDefault()?.Content is { } content ? ExtractText(content) : null;
+
+    private static string? ExtractText(GenAiContent content)
+    {
+        if (content.Parts is null)
+            return null;
+
+        var text = string.Concat(content.Parts
+            .Where(part => part.Thought != true)
+            .Select(part => part.Text)
+            .Where(part => !string.IsNullOrWhiteSpace(part)));
+        return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+    }
+
+    private static ThinkingConfig BuildThinkingConfig(string? level)
+    {
+        var configured = level?.Trim().ToLowerInvariant();
+        return new ThinkingConfig
+        {
+            ThinkingLevel = configured switch
+            {
+                "medium" => Google.GenAI.Types.ThinkingLevel.Medium,
+                "high" => Google.GenAI.Types.ThinkingLevel.High,
+                _ => Google.GenAI.Types.ThinkingLevel.Low
+            }
+        };
+    }
+
+    private string GetModel(string? configured)
         => string.IsNullOrWhiteSpace(configured) ? "gemini-3.6-flash" : configured.Trim();
 
-    private string GetBaseUrl()
-        => string.IsNullOrWhiteSpace(_settings.BaseUrl)
-            ? "https://generativelanguage.googleapis.com/v1beta"
-            : _settings.BaseUrl.TrimEnd('/');
-
-    private static string? ExtractText(GeminiGenerateContentResponse? response)
+    private static (string BaseUrl, string ApiVersion) GetEndpoint(string? configured)
     {
-        if (response?.Candidates is null || response.Candidates.Count == 0)
+        var candidate = string.IsNullOrWhiteSpace(configured)
+            ? "https://generativelanguage.googleapis.com/v1beta"
+            : configured.Trim();
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
         {
-            return null;
+            uri = new Uri("https://generativelanguage.googleapis.com/v1beta");
         }
 
-        var candidate = response.Candidates[0];
-        if (candidate?.Content?.Parts is null)
-        {
-            return null;
-        }
-
-        var builder = new StringBuilder();
-        foreach (var part in candidate.Content.Parts)
-        {
-            if (!string.IsNullOrWhiteSpace(part?.Text))
-            {
-                builder.Append(part.Text);
-            }
-        }
-
-        return builder.Length == 0 ? null : builder.ToString().Trim();
+        var version = uri.AbsolutePath.Trim('/');
+        return ($"{uri.Scheme}://{uri.Authority}", string.IsNullOrWhiteSpace(version) ? "v1beta" : version);
     }
 
-    private sealed record GeminiGenerateContentRequest(
-        IReadOnlyList<GeminiContent> Contents,
-        GeminiContent SystemInstruction,
-        GeminiGenerationConfig GenerationConfig);
+    private void LogUsage(GenerateContentResponse? response, string operation)
+    {
+        var usage = response?.UsageMetadata;
+        if (usage is null)
+            return;
 
-    private sealed record GeminiContent(IReadOnlyList<GeminiPart> Parts);
+        _logger.LogInformation(
+            "Gemini usage: operation={Operation} model={Model} promptTokens={PromptTokens} responseTokens={ResponseTokens} thoughtsTokens={ThoughtTokens} totalTokens={TotalTokens}",
+            operation,
+            GetModel(_settings.GeminiModel),
+            usage.PromptTokenCount,
+            usage.CandidatesTokenCount,
+            usage.ThoughtsTokenCount,
+            usage.TotalTokenCount);
+    }
 
-    private sealed record GeminiPart(string? Text);
+    private void LogProviderFailure(string operation, Exception exception)
+    {
+        _logger.LogWarning(
+            "Gemini {Operation} request failed with SDK error class {ErrorClass}; falling back to deterministic handling.",
+            operation,
+            exception.GetType().Name);
+    }
 
-    private sealed record GeminiGenerationConfig(
-        string? ResponseMimeType = null,
-        JsonNode? ResponseSchema = null);
-
-    private sealed record GeminiGenerateContentResponse(
-        IReadOnlyList<GeminiCandidate>? Candidates);
-
-    private sealed record GeminiCandidate(
-        [property: JsonPropertyName("content")] GeminiResponseContent? Content);
-
-    private sealed record GeminiResponseContent(IReadOnlyList<GeminiWirePart> Parts);
-
-    private sealed record GeminiToolCallRequest(
-        IReadOnlyList<GeminiWireMessage> Contents,
-        GeminiContent SystemInstruction,
-        IReadOnlyList<GeminiWireTools>? Tools,
-        GeminiToolConfig? ToolConfig,
-        GeminiGenerationConfig GenerationConfig);
-
-    private sealed record GeminiWireMessage(
-        string Role,
-        IReadOnlyList<GeminiWirePart> Parts);
-
-    private sealed record GeminiWirePart(
-        [property: JsonPropertyName("text")] string? Text = null,
-        [property: JsonPropertyName("functionCall")] GeminiWireFunctionCall? FunctionCall = null,
-        [property: JsonPropertyName("functionResponse")] GeminiWireFunctionResponse? FunctionResponse = null);
-
-    private sealed record GeminiWireFunctionCall(
-        [property: JsonPropertyName("name")] string Name,
-        [property: JsonPropertyName("args")] JsonObject Args);
-
-    private sealed record GeminiWireFunctionResponse(
-        [property: JsonPropertyName("name")] string Name,
-        [property: JsonPropertyName("response")] JsonObject Response);
-
-    private sealed record GeminiWireTools(
-        [property: JsonPropertyName("functionDeclarations")] IReadOnlyList<GeminiWireFunctionDeclaration> FunctionDeclarations);
-
-    private sealed record GeminiWireFunctionDeclaration(
-        [property: JsonPropertyName("name")] string Name,
-        [property: JsonPropertyName("description")] string Description,
-        [property: JsonPropertyName("parameters")] JsonObject Parameters);
-
-    private sealed record GeminiToolConfig(
-        [property: JsonPropertyName("functionCallingConfig")] GeminiWireFunctionCallingConfig FunctionCallingConfig);
-
-    private sealed record GeminiWireFunctionCallingConfig(
-        [property: JsonPropertyName("mode")] string Mode);
+    public void Dispose() => _client?.Dispose();
 }

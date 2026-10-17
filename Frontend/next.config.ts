@@ -68,6 +68,37 @@ const nextConfig: NextConfig = {
   // is adopted — see the hardening report).
   async headers() {
     return [
+      // Service Worker must revalidate on every load so new deployments
+      // activate immediately instead of serving a stale bundle.
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      {
+        source: "/manifest.webmanifest",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400" },
+          { key: "Content-Type", value: "application/manifest+json" },
+        ],
+      },
+      {
+        source: "/icons/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/offline.html",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+        ],
+      },
       {
         source: "/:path*",
         headers: [

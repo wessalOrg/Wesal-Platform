@@ -1,0 +1,757 @@
+[
+  {
+    "id": "conversation-01",
+    "category": "search-refinement",
+    "turns": [
+      "بدي صالة بغزة",
+      "ل300 شخص",
+      "الجمعة"
+    ]
+  },
+  {
+    "id": "conversation-02",
+    "category": "references",
+    "turns": [
+      "دورلي قاعة بغزة",
+      "300 شخص",
+      "بعد بكرة"
+    ]
+  },
+  {
+    "id": "conversation-03",
+    "category": "topic-switch",
+    "turns": [
+      "بدي صالة",
+      "غزة",
+      "بكرة"
+    ]
+  },
+  {
+    "id": "conversation-04",
+    "category": "navigation",
+    "turns": [
+      "بدي قاعات في رفح",
+      "ل250 شخص",
+      "السبت"
+    ]
+  },
+  {
+    "id": "conversation-05",
+    "category": "knowledge",
+    "turns": [
+      "قاعات بخانيونس",
+      "ل400 شخص",
+      "الخميس"
+    ]
+  },
+  {
+    "id": "conversation-06",
+    "category": "search-refinement",
+    "turns": [
+      "بدي قاعة بغزة",
+      "ل300 شخص",
+      "رفح"
+    ]
+  },
+  {
+    "id": "conversation-07",
+    "category": "references",
+    "turns": [
+      "وريني القاعات",
+      "الأولى",
+      "قديش سعرها"
+    ]
+  },
+  {
+    "id": "conversation-08",
+    "category": "topic-switch",
+    "turns": [
+      "فرجيني الصالات",
+      "الثانية",
+      "وين موجودة"
+    ]
+  },
+  {
+    "id": "conversation-09",
+    "category": "navigation",
+    "turns": [
+      "بدي صالة",
+      "الثالثة",
+      "شو خدماتها"
+    ]
+  },
+  {
+    "id": "conversation-10",
+    "category": "knowledge",
+    "turns": [
+      "دورلي قاعة",
+      "الأخيرة",
+      "كم بتسع"
+    ]
+  },
+  {
+    "id": "conversation-11",
+    "category": "search-refinement",
+    "turns": [
+      "بدي صالة بغزة",
+      "شو سعرها",
+      "غيرها"
+    ]
+  },
+  {
+    "id": "conversation-12",
+    "category": "references",
+    "turns": [
+      "وريني القاعات",
+      "غيرها",
+      "غيرها"
+    ]
+  },
+  {
+    "id": "conversation-13",
+    "category": "topic-switch",
+    "turns": [
+      "فرجيني قاعات",
+      "التالي",
+      "التالي"
+    ]
+  },
+  {
+    "id": "conversation-14",
+    "category": "navigation",
+    "turns": [
+      "ابحث عن قاعة",
+      "another one",
+      "next one"
+    ]
+  },
+  {
+    "id": "conversation-15",
+    "category": "knowledge",
+    "turns": [
+      "بدي صالة",
+      "هات غيرها",
+      "صالة ثانية"
+    ]
+  },
+  {
+    "id": "conversation-16",
+    "category": "search-refinement",
+    "turns": [
+      "احكيلي عن الصالات الموجودة",
+      "الثانية",
+      "وين موجودة"
+    ]
+  },
+  {
+    "id": "conversation-17",
+    "category": "references",
+    "turns": [
+      "شو القاعات الموجودة شو سعرهن",
+      "الثانية",
+      "قديش بتسع"
+    ]
+  },
+  {
+    "id": "conversation-18",
+    "category": "topic-switch",
+    "turns": [
+      "شو عندكم قاعات",
+      "الأولى",
+      "سعرها"
+    ]
+  },
+  {
+    "id": "conversation-19",
+    "category": "navigation",
+    "turns": [
+      "وريني القاعات",
+      "هاي",
+      "احكيلي عنها"
+    ]
+  },
+  {
+    "id": "conversation-20",
+    "category": "knowledge",
+    "turns": [
+      "كل القاعات",
+      "الثالثة",
+      "متوفرة بكرة؟"
+    ]
+  },
+  {
+    "id": "conversation-21",
+    "category": "search-refinement",
+    "turns": [
+      "بكم ومتى متوفرة",
+      "بكرة",
+      "الجمعة"
+    ]
+  },
+  {
+    "id": "conversation-22",
+    "category": "references",
+    "turns": [
+      "متى فاضية؟",
+      "اليوم",
+      "بعد بكرة"
+    ]
+  },
+  {
+    "id": "conversation-23",
+    "category": "topic-switch",
+    "turns": [
+      "هل متاحة؟",
+      "15/10",
+      "16 أكتوبر"
+    ]
+  },
+  {
+    "id": "conversation-24",
+    "category": "navigation",
+    "turns": [
+      "بدي صالة",
+      "الجمعة الجاي",
+      "كم سعرها"
+    ]
+  },
+  {
+    "id": "conversation-25",
+    "category": "knowledge",
+    "turns": [
+      "بدي صالة",
+      "الجمعة",
+      "بكم"
+    ]
+  },
+  {
+    "id": "conversation-26",
+    "category": "search-refinement",
+    "turns": [
+      "كم شخص تقريباً؟",
+      "300",
+      "غزة"
+    ]
+  },
+  {
+    "id": "conversation-27",
+    "category": "references",
+    "turns": [
+      "أي منطقة؟",
+      "غزة",
+      "ل300 شخص"
+    ]
+  },
+  {
+    "id": "conversation-28",
+    "category": "topic-switch",
+    "turns": [
+      "لأي يوم؟",
+      "السبت",
+      "متوفرة؟"
+    ]
+  },
+  {
+    "id": "conversation-29",
+    "category": "navigation",
+    "turns": [
+      "أي صالة تقصد؟",
+      "الثانية",
+      "قديش سعرها"
+    ]
+  },
+  {
+    "id": "conversation-30",
+    "category": "knowledge",
+    "turns": [
+      "بدي صالة",
+      "ل300 شخص",
+      "بكرة"
+    ]
+  },
+  {
+    "id": "conversation-31",
+    "category": "search-refinement",
+    "turns": [
+      "بدي قاعة ل300",
+      "مين مطورين وصال؟",
+      "طيب رجعني للقاعات"
+    ]
+  },
+  {
+    "id": "conversation-32",
+    "category": "references",
+    "turns": [
+      "دورلي صالة",
+      "كيف أضيف قاعة؟",
+      "وريني القاعات"
+    ]
+  },
+  {
+    "id": "conversation-33",
+    "category": "topic-switch",
+    "turns": [
+      "بدي صالة بغزة",
+      "شو بتقدموا؟",
+      "كمل البحث"
+    ]
+  },
+  {
+    "id": "conversation-34",
+    "category": "navigation",
+    "turns": [
+      "بدي صالة",
+      "كيف أحجز؟",
+      "وغيرها"
+    ]
+  },
+  {
+    "id": "conversation-35",
+    "category": "knowledge",
+    "turns": [
+      "ابحث عن قاعة",
+      "كيف أتواصل مع وصال؟",
+      "الثانية"
+    ]
+  },
+  {
+    "id": "conversation-36",
+    "category": "search-refinement",
+    "turns": [
+      "وديني عالقاعات",
+      "شو القاعات الموجودة",
+      "الأولى"
+    ]
+  },
+  {
+    "id": "conversation-37",
+    "category": "references",
+    "turns": [
+      "وديني علقاعات",
+      "بدي صالة بغزة",
+      "300 شخص"
+    ]
+  },
+  {
+    "id": "conversation-38",
+    "category": "topic-switch",
+    "turns": [
+      "افتحلي القاعات",
+      "غيرها",
+      "وديني عالصالات"
+    ]
+  },
+  {
+    "id": "conversation-39",
+    "category": "navigation",
+    "turns": [
+      "روح عصفحة الصالات",
+      "فرجيني القاعات",
+      "الثانية"
+    ]
+  },
+  {
+    "id": "conversation-40",
+    "category": "knowledge",
+    "turns": [
+      "افتح صفحة القاعات",
+      "وين موجودة",
+      "التالي"
+    ]
+  },
+  {
+    "id": "conversation-41",
+    "category": "search-refinement",
+    "turns": [
+      "عندكم مصورين؟",
+      "وديني عالمصورين",
+      "عندكم منسقي مناسبات؟"
+    ]
+  },
+  {
+    "id": "conversation-42",
+    "category": "references",
+    "turns": [
+      "عندكم منسق مناسبات؟",
+      "وديني عمنسقي المناسبات",
+      "عندكم تصوير؟"
+    ]
+  },
+  {
+    "id": "conversation-43",
+    "category": "topic-switch",
+    "turns": [
+      "مين مطورين وصال؟",
+      "مين طور وصال؟",
+      "مين عمل مبروك؟"
+    ]
+  },
+  {
+    "id": "conversation-44",
+    "category": "navigation",
+    "turns": [
+      "كيف أضيف قاعة؟",
+      "وشو بطلب مني؟",
+      "وبعد ما أرسلها؟"
+    ]
+  },
+  {
+    "id": "conversation-45",
+    "category": "knowledge",
+    "turns": [
+      "كيف أضيف قاعة؟",
+      "وبعد ما أرسلها؟",
+      "وليش ممكن ما تظهر؟"
+    ]
+  },
+  {
+    "id": "conversation-46",
+    "category": "search-refinement",
+    "turns": [
+      "كيف أتواصل مع صاحب القاعة؟",
+      "طيب كيف أتواصل مع وصال؟",
+      "كيف أحجز؟"
+    ]
+  },
+  {
+    "id": "conversation-47",
+    "category": "references",
+    "turns": [
+      "كيف أحجز؟",
+      "وين بشوف حجوزاتي؟",
+      "ليش انرفض حجزي؟"
+    ]
+  },
+  {
+    "id": "conversation-48",
+    "category": "topic-switch",
+    "turns": [
+      "بدي صالة بغزة",
+      "ل300 شخص",
+      "لا خلص بدي برفح"
+    ]
+  },
+  {
+    "id": "conversation-49",
+    "category": "navigation",
+    "turns": [
+      "وريني قاعة",
+      "بعد بكرة",
+      "غيرها"
+    ]
+  },
+  {
+    "id": "conversation-50",
+    "category": "knowledge",
+    "turns": [
+      "الثانية",
+      "غيرها",
+      "غيرها"
+    ]
+  },
+  {
+    "id": "conversation-51",
+    "category": "search-refinement",
+    "turns": [
+      "مرحبا",
+      "بدي صالة ل300 شخص",
+      "بكم ومتى متوفرة"
+    ]
+  },
+  {
+    "id": "conversation-52",
+    "category": "references",
+    "turns": [
+      "بكرة",
+      "وديني عالقاعات",
+      "شو القاعات الموجودة شو سعرعن"
+    ]
+  },
+  {
+    "id": "conversation-53",
+    "category": "topic-switch",
+    "turns": [
+      "طيب قلي شو قاعات موجودة",
+      "وريني القاعات",
+      "احكيلي عن الصالات الموجودة"
+    ]
+  },
+  {
+    "id": "conversation-54",
+    "category": "navigation",
+    "turns": [
+      "غيرها",
+      "عندكم مصورين؟",
+      "وديني عالمصورين"
+    ]
+  },
+  {
+    "id": "conversation-55",
+    "category": "knowledge",
+    "turns": [
+      "مين مطورين وصال؟",
+      "كيف أضيف قاعة؟",
+      "وشو بطلب مني?"
+    ]
+  },
+  {
+    "id": "production-exact",
+    "category": "exact-production-regression",
+    "turns": [
+      "هلا",
+      "بدي صالة ل300 شخص",
+      "بكم ومتى متوفرة",
+      "بكرة",
+      "وديني عالقاعات",
+      "شو القاعات الموجودة شو سعرعن",
+      "طيب قلي شو قاعات موجودة",
+      "وريني القاعات",
+      "احكيلي عن الصالات الموجودة",
+      "غيرها",
+      "عندكم مصورين؟",
+      "وديني عالمصورين",
+      "مين مطورين وصال؟",
+      "كيف أضيف قاعة؟",
+      "وشو بطلب مني؟",
+      "وبعد ما أرسلها؟"
+    ]
+  },
+  {
+    "id": "conversation-extra-01",
+    "category": "multi-intent",
+    "turns": [
+      "بدي قاعة بغزة",
+      "ل300 شخص",
+      "وين موجودة"
+    ]
+  },
+  {
+    "id": "conversation-extra-02",
+    "category": "slot-fill",
+    "turns": [
+      "وريني القاعات",
+      "الثانية",
+      "بكم ومتى متوفرة"
+    ]
+  },
+  {
+    "id": "conversation-extra-03",
+    "category": "topic-switch",
+    "turns": [
+      "بحث عن صالة برفح",
+      "ل250 شخص",
+      "الجمعة الجاي"
+    ]
+  },
+  {
+    "id": "conversation-extra-04",
+    "category": "capability",
+    "turns": [
+      "بدي قاعة",
+      "غزة",
+      "300 شخص"
+    ]
+  },
+  {
+    "id": "conversation-extra-05",
+    "category": "references",
+    "turns": [
+      "اعرض الصالات",
+      "الأولى",
+      "خدماتها"
+    ]
+  },
+  {
+    "id": "conversation-extra-06",
+    "category": "multi-intent",
+    "turns": [
+      "احكيلي عن القاعات الموجودة",
+      "غيرها",
+      "قديش سعرها"
+    ]
+  },
+  {
+    "id": "conversation-extra-07",
+    "category": "slot-fill",
+    "turns": [
+      "شو عندكم قاعات",
+      "الثانية",
+      "متوفرة السبت"
+    ]
+  },
+  {
+    "id": "conversation-extra-08",
+    "category": "topic-switch",
+    "turns": [
+      "فرجيني القاعات",
+      "غيرها",
+      "وين موقعها"
+    ]
+  },
+  {
+    "id": "conversation-extra-09",
+    "category": "capability",
+    "turns": [
+      "مين عمل مبروك؟",
+      "مين طور وصال؟",
+      "كيف أحجز؟"
+    ]
+  },
+  {
+    "id": "conversation-extra-10",
+    "category": "references",
+    "turns": [
+      "كيف أضيف قاعتي؟",
+      "وشو لازم أجهز؟",
+      "ليش ما بتظهر؟"
+    ]
+  },
+  {
+    "id": "conversation-extra-11",
+    "category": "multi-intent",
+    "turns": [
+      "عندكم مصورين؟",
+      "طيب افتح المصورين",
+      "عندكم بوفيه؟"
+    ]
+  },
+  {
+    "id": "conversation-extra-12",
+    "category": "slot-fill",
+    "turns": [
+      "وديني عالمصورين",
+      "عندكم منسقي مناسبات؟",
+      "وديني عمنسقي المناسبات"
+    ]
+  },
+  {
+    "id": "conversation-extra-13",
+    "category": "topic-switch",
+    "turns": [
+      "بدي صالة",
+      "بكرة",
+      "الثانية"
+    ]
+  },
+  {
+    "id": "conversation-extra-14",
+    "category": "capability",
+    "turns": [
+      "بدور على قاعة",
+      "15/10",
+      "الجمعة الجاي"
+    ]
+  },
+  {
+    "id": "conversation-extra-15",
+    "category": "references",
+    "turns": [
+      "وين الصالات؟",
+      "روح عالقاعات",
+      "شو عندكم قاعات"
+    ]
+  },
+  {
+    "id": "conversation-extra-16",
+    "category": "multi-intent",
+    "turns": [
+      "كيف أتواصل مع صاحب القاعة؟",
+      "شو رقم وصال؟",
+      "وين بشوف حجوزاتي؟"
+    ]
+  },
+  {
+    "id": "conversation-extra-17",
+    "category": "slot-fill",
+    "turns": [
+      "بدي صالة في غزة",
+      "لا خلص بدي برفح",
+      "ل300"
+    ]
+  },
+  {
+    "id": "conversation-extra-18",
+    "category": "topic-switch",
+    "turns": [
+      "وريني القاعات",
+      "آخر وحدة",
+      "غيرها"
+    ]
+  },
+  {
+    "id": "conversation-extra-19",
+    "category": "capability",
+    "turns": [
+      "search halls",
+      "Gaza",
+      "300 guests"
+    ]
+  },
+  {
+    "id": "conversation-extra-20",
+    "category": "references",
+    "turns": [
+      "show me halls",
+      "the second one",
+      "how much does it cost?"
+    ]
+  },
+  {
+    "id": "conversation-extra-21",
+    "category": "multi-intent",
+    "turns": [
+      "how do I book?",
+      "where are my bookings?",
+      "why was my booking rejected?"
+    ]
+  },
+  {
+    "id": "conversation-extra-22",
+    "category": "slot-fill",
+    "turns": [
+      "who developed Wesal?",
+      "who made Mabrouk?",
+      "how do I add a hall?"
+    ]
+  },
+  {
+    "id": "conversation-extra-23",
+    "category": "topic-switch",
+    "turns": [
+      "Are photographers available?",
+      "take me to photographers",
+      "do you have planners?"
+    ]
+  },
+  {
+    "id": "conversation-extra-24",
+    "category": "capability",
+    "turns": [
+      "find a hall",
+      "tomorrow",
+      "another one"
+    ]
+  },
+  {
+    "id": "production-exact",
+    "category": "exact-production-regression",
+    "turns": [
+      "هلا",
+      "بدي صالة ل300 شخص",
+      "بكم ومتى متوفرة",
+      "بكرة",
+      "وديني عالقاعات",
+      "شو القاعات الموجودة شو سعرعن",
+      "طيب قلي شو قاعات موجودة",
+      "وريني القاعات",
+      "احكيلي عن الصالات الموجودة",
+      "غيرها",
+      "عندكم مصورين؟",
+      "وديني عالمصورين",
+      "مين مطورين وصال؟",
+      "كيف أضيف قاعة؟",
+      "وشو بطلب مني؟",
+      "وبعد ما أرسلها؟"
+    ]
+  }
+]

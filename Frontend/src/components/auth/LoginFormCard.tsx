@@ -53,6 +53,7 @@ export default function LoginFormCard({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [formReady, setFormReady] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -60,11 +61,12 @@ export default function LoginFormCard({
       const preferRemember = isRememberMeEnabled() || Boolean(remembered);
       setRememberMe(preferRemember);
       if (remembered) setEmail(remembered);
+      setFormReady(true);
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
-  const canSubmit = email.trim().length > 0 && password.length > 0 && !pending;
+  const canSubmit = formReady && email.trim().length > 0 && password.length > 0 && !pending;
 
   const persistRememberPreference = (enabled: boolean, nextEmail: string) => {
     setRememberMeEnabled(enabled);
@@ -249,7 +251,13 @@ export default function LoginFormCard({
         </p>
       ) : null}
 
-      <form onSubmit={(event) => void onSubmit(event)} className="space-y-3.5" noValidate>
+      <form
+        onSubmit={(event) => void onSubmit(event)}
+        className="space-y-3.5"
+        noValidate
+        data-testid="login-form-fields"
+        data-ready={formReady ? "true" : "false"}
+      >
         <LoginField
           label={t("auth.login.form.email")}
           type="email"

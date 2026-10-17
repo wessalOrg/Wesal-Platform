@@ -9,6 +9,7 @@ import AuthAccountMenu from "@/components/layout/AuthAccountMenu";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import NavbarMessagesButton from "@/components/layout/NavbarMessagesButton";
 import NavbarNotificationsButton from "@/components/layout/NavbarNotificationsButton";
+import PwaInstallButton from "@/components/pwa/PwaInstallButton";
 import { useTranslateLang } from "@/i18n";
 import { getAccountProfilePath } from "@/lib/account-profile-path";
 import { markAuthNavigation } from "@/lib/auth-nav";
@@ -18,9 +19,7 @@ const NAV_HREFS = [
   { href: "/halls", key: "nav.halls" },
   { href: "/event-planners", key: "nav.eventPlanners" },
   { href: "/photographers", key: "nav.photographers" },
-  { href: "/#how-it-works", key: "nav.howItWorks" },
   { href: "/about", key: "nav.about" },
-  { href: "/#contact", key: "nav.contact" },
 ] as const;
 
 function navPath(href: string) {
@@ -145,6 +144,7 @@ export default function Navbar({
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:gap-3">
             <div className="hidden shrink-0 items-center gap-1.5 sm:gap-2 lg:flex">
+              <PwaInstallButton />
               <LanguageSwitcher />
               {authenticated ? <NavbarNotificationsButton /> : null}
               {authenticated ? <NavbarMessagesButton /> : null}
@@ -205,6 +205,7 @@ export default function Navbar({
               {authenticated ? <NavbarNotificationsButton /> : null}
               {authenticated ? <NavbarMessagesButton onNavigate={() => setOpen(false)} /> : null}
             </div>
+            <PwaInstallButton variant="full" />
             {status === "loading" ? (
               <div
                 className="h-11 w-full animate-pulse rounded-xl bg-[var(--wesal-pink)]"

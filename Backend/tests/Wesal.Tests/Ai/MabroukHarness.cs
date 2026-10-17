@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wesal.Application.Ai;
 using Wesal.Application.Common.Interfaces;
@@ -31,13 +32,18 @@ internal sealed class MabroukHarness
     public FakeClock Clock { get; } = new() { Now = Now };
     public AiAssistantService Service { get; }
     public AiContextResolver ContextResolver { get; }
+    public List<string> RouteLogs { get; } = [];
 
-    public MabroukHarness(bool geminiAvailable = false)
+    public MabroukHarness(
+        bool geminiAvailable = false,
+        IAiKnowledgeGapRecorder? gapRecorder = null,
+        IAiKnowledgeGapDetector? gapDetector = null,
+        IWesalKnowledgeService? knowledgeService = null)
     {
         Gemini.Available = geminiAvailable;
 
         Details.Add(Hall(NakheelId, "قاعة النخيل", "غزة", "حي الرمال", 400, 7000m, ["تكييف", "موقف سيارات"]));
-        Details.Add(Hall(OrchidId, "قاعة الأوركيد", "غزة", "النصر", 250, 5000m, []));
+        Details.Add(Hall(OrchidId, "قاعة الأوركيد", "غزة", "النصر", 250, 5000m, [], "+970599000222"));
 
         Search.Items =
         [
@@ -47,7 +53,7 @@ internal sealed class MabroukHarness
 
         var detector = new AiLanguageDetector();
         var criteria = new NaturalLanguageCriteriaExtractor();
-        var knowledge = new WesalKnowledgeService();
+        var knowledge = knowledgeService ?? new WesalKnowledgeService();
         var payment = new SubscriptionPaymentService(Options.Create(new SubscriptionPaymentOptions()));
         var clock = new AiClock(Clock);
 
@@ -72,7 +78,21 @@ internal sealed class MabroukHarness
             orchestrator,
             ContextResolver,
             new AiAssistantPolicyGate(payment, knowledge),
-            NullLogger<AiAssistantService>.Instance);
+            new RecordingLogger<AiAssistantService>(RouteLogs),
+            gapRecorder,
+            gapDetector,
+            toolGateway: gateway);
+    }
+
+    private sealed class RecordingLogger<T>(List<string> messages) : ILogger<T>
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel >= LogLevel.Information)
+                messages.Add(formatter(state, exception));
+        }
     }
 
     public Task<AiAssistantResponse> AskAsync(
@@ -96,7 +116,7 @@ internal sealed class MabroukHarness
             new AiRequestContext(page, entity));
     }
 
-    public static HallDetailsDto Hall(Guid id, string name, string region, string address, int capacity, decimal? price, IReadOnlyList<string> features)
+    public static HallDetailsDto Hall(Guid id, string name, string region, string address, int capacity, decimal? price, IReadOnlyList<string> features, string? contactPhone = null)
         => new()
         {
             HallId = id,
@@ -107,6 +127,7 @@ internal sealed class MabroukHarness
             Capacity = capacity,
             Price = price,
             ShowPrice = price is not null,
+            ContactPhone = contactPhone,
             Features = features,
             Status = HallStatus.Approved,
             Photos = [new HallImageDto { Id = Guid.NewGuid(), Url = "/uploads/a.png", DisplayOrder = 1 }]
@@ -153,6 +174,26 @@ internal sealed class MabroukHarness
             if (request.Region is { } region)
             {
                 query = query.Where(h => string.Equals(h.Region, region.ToString(), StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (request.MinimumCapacity is { } minimumCapacity)
+            {
+                query = query.Where(h => h.Capacity >= minimumCapacity);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Area))
+            {
+                query = query.Where(h => h.Address.Contains(request.Area!, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (request.MaximumPrice is { } maximumPrice)
+            {
+                query = query.Where(h => h.Price.HasValue && h.Price.Value <= maximumPrice);
+            }
+
+            if (request.SortByPrice)
+            {
+                query = query.Where(h => h.Price.HasValue).OrderBy(h => h.Price);
             }
 
             var list = query.ToList();

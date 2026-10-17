@@ -143,4 +143,34 @@ public class AiIntentFallbackClassifierShould
         var result = _classifier.Classify("كيف أحجز قاعة؟");
         Assert.Equal(AiIntentType.HowTo, result.Intent);
     }
+
+    [Theory]
+    [InlineData("بدي صالة رخيصة")]
+    [InlineData("دورلي على قاعة")]
+    [InlineData("بدي صالة ب1500شيكل")]
+    public void Classify_PalestinianHallSearchRequests_AsSearchHalls(string message)
+    {
+        var result = _classifier.Classify(message);
+
+        Assert.Equal(AiIntentType.SearchHalls, result.Intent);
+    }
+
+    [Fact]
+    public void Classify_BudgetSearch_PreservesBudgetAndPriceOrder()
+    {
+        var result = _classifier.Classify("بدي صالة ب1500شيكل");
+
+        Assert.Equal(1500m, result.MaximumPrice);
+        Assert.True(result.SortByPrice);
+    }
+
+    [Fact]
+    public void Classify_NeighborhoodOnly_AsSearchHalls()
+    {
+        var result = _classifier.Classify("حي الرمال");
+
+        Assert.Equal(AiIntentType.SearchHalls, result.Intent);
+        Assert.Equal("Gaza", result.Region);
+        Assert.Equal("حي الرمال", result.Area);
+    }
 }

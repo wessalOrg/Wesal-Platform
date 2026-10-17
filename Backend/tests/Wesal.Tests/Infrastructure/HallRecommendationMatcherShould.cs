@@ -35,8 +35,8 @@ public class HallRecommendationMatcherShould : IDisposable
 
     private void SeedHalls()
     {
-        var h1 = new Hall { Id = Guid.NewGuid(), Name = "Gaza Hall", Region = HallRegion.Gaza, Address = "Gaza City", Capacity = 300, Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = false, Price = 1000 };
-        var h2 = new Hall { Id = Guid.NewGuid(), Name = "North Hall", Region = HallRegion.NorthGaza, Address = "North Gaza", Capacity = 200, Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = false, Price = 800 };
+        var h1 = new Hall { Id = Guid.NewGuid(), Name = "Gaza Hall", Region = HallRegion.Gaza, Address = "Gaza City", Capacity = 300, Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = false, Price = 1000, ShowPrice = true };
+        var h2 = new Hall { Id = Guid.NewGuid(), Name = "North Hall", Region = HallRegion.NorthGaza, Address = "North Gaza", Capacity = 200, Status = HallStatus.Approved, PaymentStatus = HallPaymentStatus.Paid, IsDeleted = false, Price = 800, ShowPrice = true };
         var h3 = new Hall { Id = Guid.NewGuid(), Name = "Deleted Hall", Region = HallRegion.Gaza, Address = "Gaza", Capacity = 500, Status = HallStatus.Approved, IsDeleted = true, Price = 1200 };
         var h4 = new Hall { Id = Guid.NewGuid(), Name = "Pending Hall", Region = HallRegion.Gaza, Address = "Gaza", Capacity = 400, Status = HallStatus.PendingReview, IsDeleted = false, Price = 900 };
         _context.Halls.AddRange(h1, h2, h3, h4);
@@ -159,6 +159,34 @@ public class HallRecommendationMatcherShould : IDisposable
         // Gaza Hall 300, North Hall 200 -> only Gaza meets 250
         Assert.Contains(result, r => r.HallName == "Gaza Hall");
         Assert.DoesNotContain(result, r => r.HallName == "North Hall");
+    }
+
+    [Fact]
+    public async Task PriceBudget_FiltersAndSortsOnlyPublishedPrices()
+    {
+        var hidden = new Hall
+        {
+            Id = Guid.NewGuid(),
+            Name = "Hidden Price Hall",
+            Region = HallRegion.Gaza,
+            Address = "Gaza City",
+            Capacity = 250,
+            Status = HallStatus.Approved,
+            PaymentStatus = HallPaymentStatus.Paid,
+            IsDeleted = false,
+            Price = 100,
+            ShowPrice = false
+        };
+        _context.Halls.Add(hidden);
+        await _context.SaveChangesAsync();
+
+        var criteria = new ExtractedCriteriaDto(null, null, null, null, 1000m, true);
+
+        var result = await _matcher.FindMatchingHallsAsync(criteria);
+
+        Assert.Equal(new[] { "North Hall", "Gaza Hall" }, result.Select(hall => hall.HallName));
+        Assert.DoesNotContain(result, hall => hall.HallName == "Hidden Price Hall");
+        Assert.All(result, hall => Assert.InRange(hall.Price!.Value, 0m, 1000m));
     }
 
     [Fact]

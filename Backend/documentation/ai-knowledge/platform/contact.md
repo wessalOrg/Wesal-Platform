@@ -3,9 +3,9 @@ title: Wesal contact information
 category: platform
 language: ar,en
 source: official-project-team
-lastUpdated: 2026-09-16
+lastUpdated: 2026-10-09
 status: verified
-keywords: contact|support|whatsapp|phone|email|رقم|واتساب|دعم|تواصل|بريد
+keywords: contact|support contact|contact support|contact wesal support|how to reach wesal support|whatsapp|phone|email|رقم|واتساب|دعم|تواصل|التواصل مع دعم وصال|كيف اتواصل مع الدعم|تواصل مع فريق وصال|بريد
 ---
 
 ## العربية

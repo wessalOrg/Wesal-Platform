@@ -21,25 +21,9 @@ public class HallSearchService : IHallSearchService
         var pageSize = Math.Clamp(request.PageSize, 1, 50);
         var skip = (pageNumber - 1) * pageSize;
 
-        var halls = await _hallRepository.SearchApprovedHallsAsync(
-            request.Name,
-            request.Region,
-            request.Area,
-            request.DetailedAddress,
-            request.Date,
-            request.StartTime,
-            skip,
-            pageSize,
-            cancellationToken);
+        var halls = await _hallRepository.SearchApprovedHallsAsync(request, skip, pageSize, cancellationToken);
 
-        var totalCount = await _hallRepository.SearchApprovedHallsCountAsync(
-            request.Name,
-            request.Region,
-            request.Area,
-            request.DetailedAddress,
-            request.Date,
-            request.StartTime,
-            cancellationToken);
+        var totalCount = await _hallRepository.SearchApprovedHallsCountAsync(request, cancellationToken);
 
         // Edits 18/29: same gallery-cover fallback as the listing surface.
         var galleryCovers = await _hallRepository.GetFirstGalleryImageUrlsAsync(
