@@ -13,7 +13,25 @@ export type RatingSubmitResult = {
   averageRating: number;
   totalRatings: number;
   value: number;
+  /** True when this seeker had no rating on the hall yet. */
+  created: boolean;
 };
+
+export function nextRatingSummary(
+  current: { averageRating: number; totalRatings: number },
+  result: RatingSubmitResult,
+): { averageRating: number; totalRatings: number } {
+  const nextCount = result.created
+    ? Math.max(result.totalRatings, current.totalRatings + 1)
+    : Math.max(current.totalRatings, result.totalRatings);
+  const averageRating =
+    result.averageRating > 0
+      ? result.averageRating
+      : nextCount > 0
+        ? (current.averageRating * current.totalRatings + result.value) / nextCount
+        : result.value;
+  return { averageRating, totalRatings: nextCount };
+}
 
 type SummaryResponse = {
   hallId?: string;
@@ -63,6 +81,7 @@ export async function submitHallRating(
       averageRating: data.averageRating ?? 0,
       totalRatings: data.totalRatings ?? 0,
       value: data.value ?? value,
+      created: !updateExisting,
     };
   } catch (err) {
     if (!updateExisting && err instanceof ApiError && err.status === 409) {

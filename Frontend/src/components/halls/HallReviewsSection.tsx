@@ -5,7 +5,7 @@ import HallAddReviewCard from "@/components/halls/HallAddReviewCard";
 import HallCommentList from "@/components/halls/HallCommentList";
 import { GoldStar, GoldStars } from "@/components/ui/GoldStar";
 import { useT } from "@/i18n";
-import { fetchHallRatingSummary } from "@/services/ratings";
+import { fetchHallRatingSummary, nextRatingSummary } from "@/services/ratings";
 import type { HallReview } from "@/types/hall";
 
 type HallReviewsSectionProps = {
@@ -94,10 +94,17 @@ export default function HallReviewsSection({
         hallId={hallId}
         isHallOwner={isHallOwner}
         onRated={(result) => {
-          setSummary({
-            averageRating: result.averageRating,
-            totalRatings: result.totalRatings,
-          });
+          setSummary((current) =>
+            nextRatingSummary(
+              {
+                averageRating: current?.averageRating ?? (rating ?? 0),
+                totalRatings:
+                  current?.totalRatings ??
+                  (reviewCount != null && Number.isFinite(reviewCount) ? reviewCount : 0),
+              },
+              result,
+            ),
+          );
           setViewerRating(result.value);
         }}
         onCommentSubmitted={onCommentSubmitted}

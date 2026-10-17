@@ -19,6 +19,7 @@ import { useT } from "@/i18n";
 import { buildHallDetailsPath } from "@/lib/booking-intent";
 import { localizeHallDetails, localizePriceLabel } from "@/lib/localize-hall-display";
 import { fetchHallComments, mapCommentToReview } from "@/services/comments";
+import { nextRatingSummary } from "@/services/ratings";
 import { fetchHallById } from "@/services/halls";
 import type { HallDetails } from "@/types/hall";
 
@@ -405,17 +406,23 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             <HallAddReviewCard
               hallId={viewHall.id}
               isHallOwner={isOwnHall}
-              onRated={({ averageRating, totalRatings, value }) => {
-                setViewerRating(value);
-                setHall((current) =>
-                  current
-                    ? {
-                        ...current,
-                        rating: averageRating,
-                        reviewCount: totalRatings,
-                      }
-                    : current,
-                );
+              onRated={(result) => {
+                setViewerRating(result.value);
+                setHall((current) => {
+                  if (!current) return current;
+                  const next = nextRatingSummary(
+                    {
+                      averageRating: current.rating ?? 0,
+                      totalRatings: current.reviewCount ?? 0,
+                    },
+                    result,
+                  );
+                  return {
+                    ...current,
+                    rating: next.averageRating,
+                    reviewCount: next.totalRatings,
+                  };
+                });
               }}
               onCommentSubmitted={(review) => {
                 setHall((current) =>

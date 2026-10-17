@@ -10,7 +10,12 @@ import type { HallReview } from "@/types/hall";
 type HallAddReviewCardProps = {
   hallId: string;
   isHallOwner: boolean;
-  onRated?: (result: { averageRating: number; totalRatings: number; value: number }) => void;
+  onRated?: (result: {
+    averageRating: number;
+    totalRatings: number;
+    value: number;
+    created: boolean;
+  }) => void;
   onCommentSubmitted?: (review: HallReview) => void;
 };
 
