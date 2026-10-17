@@ -60,6 +60,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   const [warning, setWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [bookingBlockedOpen, setBookingBlockedOpen] = useState(false);
+  const [viewerRating, setViewerRating] = useState<number | null>(null);
   const { canBook, isGuest, isOwnHall } = useHallPermissions(hall);
 
   if (loadedId !== hallId) {
@@ -399,7 +400,9 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             ) : null}
 
             <HallCommentList
+              hallId={viewHall.id}
               comments={viewHall.reviews}
+              viewerRating={viewerRating}
               onCommentUpdated={(review) => {
                 setHall((current) =>
                   current
@@ -427,7 +430,8 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             <HallAddReviewCard
               hallId={viewHall.id}
               isHallOwner={isOwnHall}
-              onRated={({ averageRating, totalRatings }) => {
+              onRated={({ averageRating, totalRatings, value }) => {
+                setViewerRating(value);
                 setHall((current) =>
                   current
                     ? {

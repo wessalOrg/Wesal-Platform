@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GoldStars } from "@/components/ui/GoldStar";
+import { GoldStar } from "@/components/ui/GoldStar";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useProtectedHallError } from "@/hooks/useProtectedHallError";
 import { useT } from "@/i18n";
@@ -16,10 +16,14 @@ import {
   updateHallComment,
   validateCommentBody,
 } from "@/services/comments";
+import { fetchHallRatingSummary } from "@/services/ratings";
 import type { HallReview } from "@/types/hall";
 
 type HallCommentListProps = {
   comments: HallReview[];
+  hallId?: string;
+  /** The signed-in seeker's saved star rating for this hall, when just submitted. */
+  viewerRating?: number | null;
   onCommentUpdated?: (review: HallReview) => void;
   onCommentDeleted?: (commentId: string) => void;
 };
@@ -32,6 +36,8 @@ function initials(name: string) {
 
 export default function HallCommentList({
   comments,
+  hallId,
+  viewerRating = null,
   onCommentUpdated,
   onCommentDeleted,
 }: HallCommentListProps) {
@@ -41,6 +47,21 @@ export default function HallCommentList({
   const [pendingDelete, setPendingDelete] = useState<HallReview | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [savedRating, setSavedRating] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!hallId) return;
+    let active = true;
+    void fetchHallRatingSummary(hallId).then((summary) => {
+      if (!active) return;
+      setSavedRating(summary?.userRating ?? null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [hallId]);
+
+  const ownRating = viewerRating != null && viewerRating > 0 ? viewerRating : savedRating;
 
   if (comments.length === 0) {
     return (
@@ -81,6 +102,7 @@ export default function HallCommentList({
               Boolean(review.userId) &&
               isSameUserId(review.userId ?? "", userId || getCurrentUserId())
             }
+            viewerRating={ownRating}
             onUpdated={(next) => onCommentUpdated?.(next)}
             onDelete={() => {
               setDeleteError(null);
@@ -143,14 +165,34 @@ function CommentAvatar({
   );
 }
 
+function CommentStars({ rating }: { rating: number | null | undefined }) {
+  const t = useT();
+  if (rating == null || rating <= 0) return null;
+  const score = Math.max(1, Math.min(5, Math.round(rating)));
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-0.5"
+      aria-label={t("halls.rating.scoreLabel", { count: score })}
+    >
+      {Array.from({ length: 5 }, (_, index) => (
+        <span key={index} className={index < score ? "opacity-100" : "opacity-30"}>
+          <GoldStar size={13} />
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function CommentItem({
   review,
   isOwner,
+  viewerRating,
   onUpdated,
   onDelete,
 }: {
   review: HallReview;
   isOwner: boolean;
+  viewerRating: number | null;
   onUpdated: (review: HallReview) => void;
   onDelete: () => void;
 }) {
@@ -189,7 +231,7 @@ function CommentItem({
           <div className="min-w-0 text-start">
             <div className="flex flex-wrap items-center gap-2">
               <p className="truncate text-[15px] font-bold text-[var(--wesal-text)]">{review.author}</p>
-              {review.rating != null ? <GoldStars rating={review.rating} size={13} /> : null}
+              <CommentStars rating={review.rating ?? (isOwner ? viewerRating : null)} />
             </div>
             {review.timeAgo ? <p className="text-xs text-[#b0a39c]">{review.timeAgo}</p> : null}
           </div>
