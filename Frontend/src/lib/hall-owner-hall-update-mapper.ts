@@ -5,6 +5,7 @@ import {
 } from "@/lib/hall-owner-hall-management-mapper";
 import { normalizeTimeOnly } from "@/lib/hourly-slots";
 import { normalizeRegisterPhone } from "@/lib/register-validation";
+import { toStoredYouTubeUrl } from "@/lib/youtube-embed";
 import type { HallEditFormValues } from "@/types/hall-owner-hall-management";
 
 export type UpdateOwnerHallPhotoDto = {
@@ -72,7 +73,9 @@ export function mapHallFormToUpdateHallRequest(
     capacity: Number.parseInt(values.guestCapacity.trim(), 10),
     price: Number.isFinite(price as number) ? (price as number) : null,
     showPrice: priceRaw !== "",
-    youtubeVideoUrl: values.youtubeVideoUrl.trim() || null,
+    youtubeVideoUrl: values.youtubeVideoUrl.trim()
+      ? toStoredYouTubeUrl(values.youtubeVideoUrl)
+      : null,
     features: values.features,
     otherFeatures: values.otherFeatures.trim() || null,
     photos,

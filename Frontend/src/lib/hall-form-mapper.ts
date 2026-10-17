@@ -1,6 +1,7 @@
 import { toHallRegionApi } from "@/lib/hall-owner-api-region";
-import type { HallRegistrationFormValues } from "@/types/hall-registration";
 import { normalizeRegisterPhone } from "@/lib/register-validation";
+import { toStoredYouTubeUrl } from "@/lib/youtube-embed";
+import type { HallRegistrationFormValues } from "@/types/hall-registration";
 
 /**
  * Create Hall multipart contract (wesal-api OwnerController).
@@ -52,7 +53,7 @@ export function mapHallFormToCreateHallRequest(
   }
 
   appendIfPresent(formData, "detailedAddress", values.detailedAddress);
-  appendIfPresent(formData, "youtubeVideoUrl", values.youtubeVideoUrl);
+  appendIfPresent(formData, "youtubeVideoUrl", toStoredYouTubeUrl(values.youtubeVideoUrl));
   appendIfPresent(formData, "otherFeatures", values.otherFeatures);
 
   if (values.features.length > 0) {
