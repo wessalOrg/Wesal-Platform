@@ -8,9 +8,9 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "وصال — منصة حجز قاعات الأفراح في غزة",
+    name: "وصال منصة لتعيش فرحتك دون عناء",
     short_name: "وصال",
-    description: "منصة حجز قاعات الأفراح في غزة — ابحث، قارن، واحجز بثقة.",
+    description: "وصال منصة لتعيش فرحتك دون عناء — ابحث، قارن، واحجز بثقة.",
     start_url: "/",
     scope: "/",
     display: "standalone",
