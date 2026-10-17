@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useT } from "@/i18n";
+import { toHoursAfterFrom } from "@/lib/hourly-slots";
 
 type HallHourlyRangePickerProps = {
   from: string;
