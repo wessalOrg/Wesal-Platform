@@ -13,7 +13,7 @@ import { fetchOwnerHallBookingRequests } from "@/services/owner-hall-booking-req
 import type { OwnerHallBookingRequest } from "@/types/owner-hall-booking-requests";
 
 function isOpenRequest(status: OwnerHallBookingRequest["status"]): boolean {
-  return status === "Pending" || status === "AcceptedPendingDeposit";
+  return status === "Pending" || status === "Accepted";
 }
 
 /** Live alerts plus the booking requests still waiting on the owner. */
