@@ -1729,6 +1729,12 @@ const ar: MessageCatalog = {
   "halls.hourly.toHour": "إلى الساعة",
   "halls.hourly.pickHour": "اختر",
   "halls.hourly.applyRange": "حفظ الموعد",
+  "halls.hourly.savedTitle": "تم حفظ موعدك",
+  "halls.hourly.savedBody":
+    "تم نقل البيانات التي اخترتها إلى ملخص الحجز. يرجى مراجعة تفاصيل الحجز والتأكد من معلوماتك لتأكيد الحجز النهائي.",
+  "halls.hourly.goToSummary": "الانتقال إلى ملخص الحجز لتأكيد حجزك",
+  "halls.hourly.stayOnPage": "البقاء في الصفحة الحالية",
+  "halls.hourly.savedImageAlt": "مبروك يؤكد حفظ الموعد",
   "halls.hourly.rangeInvalid": "حدد ساعة البداية والنهاية بحيث تكون النهاية بعد البداية.",
   "halls.hourly.confirmTitle": "تأكيد هذا الوقت",
   "halls.hourly.fullName": "الاسم الكامل",

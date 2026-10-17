@@ -188,14 +188,14 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
     [days, loadCatalog, onConfirmed],
   );
 
-  const confirmRange = useCallback(() => {
-    if (submitting) return;
+  const confirmRange = useCallback((): boolean => {
+    if (submitting || !dateIso) return false;
     const starts = slotStartsBetween(rangeFrom, rangeTo);
     if (starts.length === 0) {
       setErrorKey("halls.hourly.rangeInvalid");
       setConfirmedStarts([]);
       onConfirmed?.(null);
-      return;
+      return false;
     }
 
     const catalog = selectedDay?.slots ?? [];
@@ -208,17 +208,16 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
       setConfirmedStarts([]);
       setErrorKey("errors.hourly.slotBooked");
       onConfirmed?.(null);
-      return;
+      return false;
     }
 
     setConfirmedStarts(starts);
     setErrorKey(null);
-    if (dateIso) {
-      onConfirmed?.({
-        dateLabel: formatBookingDateLabel(dateIso, locale),
-        timeLabel: formatClockRange(rangeFrom, rangeTo, locale),
-      });
-    }
+    onConfirmed?.({
+      dateLabel: formatBookingDateLabel(dateIso, locale),
+      timeLabel: formatClockRange(rangeFrom, rangeTo, locale),
+    });
+    return true;
   }, [submitting, rangeFrom, rangeTo, selectedDay, dateIso, locale, onConfirmed]);
 
   const openPrompt = useCallback(() => {

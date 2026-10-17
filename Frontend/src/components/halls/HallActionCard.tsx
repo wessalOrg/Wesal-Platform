@@ -107,7 +107,7 @@ export default function HallActionCard({
 
   return (
     <aside
-      className="hall-action-card hall-section-card hall-booking-summary relative flex w-full flex-col"
+      className="hall-action-card hall-section-card hall-booking-summary relative flex w-full scroll-mt-28 flex-col"
       data-testid="hall-action-card"
     >
       <h2 className="hall-section-title flex items-center gap-2">

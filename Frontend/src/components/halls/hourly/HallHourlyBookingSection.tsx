@@ -1,10 +1,11 @@
 "use client";
 
 import HallMonthCalendar from "@/components/halls/HallMonthCalendar";
+import AppointmentSavedModal from "@/components/halls/hourly/AppointmentSavedModal";
 import HallHourlyRangePicker from "@/components/halls/hourly/HallHourlyRangePicker";
 import HourlyBookedAlertPopup from "@/components/halls/hourly/HourlyBookedAlertPopup";
 import HourlyBookingNameDialog from "@/components/halls/hourly/HourlyBookingNameDialog";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useHourlyBooking, type HourlySummarySelection } from "@/hooks/useHourlyBooking";
 import { useT } from "@/i18n";
@@ -29,6 +30,8 @@ export default function HallHourlyBookingSection({
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const booking = useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfirmed });
+  const [savedOpen, setSavedOpen] = useState(false);
+  const closeSaved = useCallback(() => setSavedOpen(false), []);
   const bookedAlert = booking.errorKey === "errors.hourly.slotBooked";
   const errorText = booking.errorKey && !bookedAlert ? t(booking.errorKey) : null;
 
@@ -86,7 +89,9 @@ export default function HallHourlyBookingSection({
                 toHours={booking.hourChoices.toHours}
                 onFromChange={booking.setRangeFrom}
                 onToChange={booking.setRangeTo}
-                onApply={booking.confirmRange}
+                onApply={() => {
+                  if (booking.confirmRange()) setSavedOpen(true);
+                }}
                 disabled={booking.submitting}
               />
             )}
@@ -102,6 +107,8 @@ export default function HallHourlyBookingSection({
           booking.closePrompt();
         }}
       />
+
+      <AppointmentSavedModal open={savedOpen} onClose={closeSaved} />
 
       <HourlyBookingNameDialog
         open={booking.promptOpen}

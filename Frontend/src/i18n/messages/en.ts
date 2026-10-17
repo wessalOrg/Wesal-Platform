@@ -1783,6 +1783,12 @@ const en: MessageCatalog = {
   "halls.hourly.toHour": "To",
   "halls.hourly.pickHour": "Choose",
   "halls.hourly.applyRange": "Save the time",
+  "halls.hourly.savedTitle": "Your appointment is saved",
+  "halls.hourly.savedBody":
+    "The details you chose were moved to the booking summary. Please review them and confirm your information before the final booking.",
+  "halls.hourly.goToSummary": "Go to the booking summary to confirm your booking",
+  "halls.hourly.stayOnPage": "Stay on this page",
+  "halls.hourly.savedImageAlt": "Mabrouk confirming the saved appointment",
   "halls.hourly.rangeInvalid": "Choose a start and end so the end is after the start.",
   "halls.hourly.confirmTitle": "Confirm this time",
   "halls.hourly.fullName": "Full name",

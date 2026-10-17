@@ -60,14 +60,15 @@ export default function AiChatComposer({
     if (locked || composingRef.current) return;
     const text = value.trim();
     if (!text) return;
+    setValue("");
     let sent = false;
     try {
       sent = (await onSend(text)) === true;
     } catch {
       sent = false;
     }
-    if (sent) {
-      setValue("");
+    if (!sent) {
+      setValue((current) => (current.trim() ? current : text));
     }
     requestAnimationFrame(() => {
       const field = fieldRef.current;

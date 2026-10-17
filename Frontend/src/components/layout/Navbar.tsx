@@ -143,8 +143,8 @@ export default function Navbar({
           </nav>
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:gap-3">
+            <PwaInstallButton />
             <div className="hidden shrink-0 items-center gap-1.5 sm:gap-2 lg:flex">
-              <PwaInstallButton />
               <LanguageSwitcher />
               {authenticated ? <NavbarNotificationsButton /> : null}
               {authenticated ? <NavbarMessagesButton /> : null}

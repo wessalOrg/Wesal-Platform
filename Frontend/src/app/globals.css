@@ -3299,9 +3299,22 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     animation: none;
     background-position: 50% 50%;
   }
+
+  .appointment-saved-backdrop,
+  .appointment-saved-panel {
+    animation: none;
+  }
 }
 
 /* Hall details Ã¢â‚¬â€ lightbox + sticky card */
+.appointment-saved-backdrop {
+  animation: hall-lightbox-in 220ms ease;
+}
+
+.appointment-saved-panel {
+  animation: hall-lightbox-panel-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @keyframes hall-lightbox-in {
   from {
     opacity: 0;
