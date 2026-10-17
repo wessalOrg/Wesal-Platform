@@ -2,6 +2,7 @@
 
 import HallMonthCalendar from "@/components/halls/HallMonthCalendar";
 import HallHourlyRangePicker from "@/components/halls/hourly/HallHourlyRangePicker";
+import HourlyBookedAlertPopup from "@/components/halls/hourly/HourlyBookedAlertPopup";
 import HourlyBookingNameDialog from "@/components/halls/hourly/HourlyBookingNameDialog";
 import { useEffect } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
@@ -28,7 +29,8 @@ export default function HallHourlyBookingSection({
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const booking = useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfirmed });
-  const errorText = booking.errorKey ? t(booking.errorKey) : null;
+  const bookedAlert = booking.errorKey === "errors.hourly.slotBooked";
+  const errorText = booking.errorKey && !bookedAlert ? t(booking.errorKey) : null;
 
   useEffect(() => {
     onRegisterConfirm?.(booking.openPrompt);
@@ -92,11 +94,19 @@ export default function HallHourlyBookingSection({
         ) : null}
       </div>
 
+      <HourlyBookedAlertPopup
+        open={bookedAlert}
+        message={t("errors.hourly.slotBooked")}
+        onClose={() => {
+          booking.clearError();
+          booking.closePrompt();
+        }}
+      />
+
       <HourlyBookingNameDialog
         open={booking.promptOpen}
-        name={booking.name}
+        name={booking.accountName}
         phone={booking.phone}
-        onNameChange={booking.setName}
         onPhoneChange={booking.setPhone}
         onClose={booking.closePrompt}
         onSubmit={() => {

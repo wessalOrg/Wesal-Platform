@@ -1,4 +1,7 @@
+import { t } from "@/i18n";
 import { classifyAdminMessageCategory } from "@/lib/admin-message-category";
+import { conversationPreviewTitle } from "@/lib/conversation-display";
+import type { UiLang } from "@/lib/language";
 import { isPaymentReceiptNotice } from "@/lib/chat-image-message";
 import { conversationTimeValue } from "@/lib/conversation-mapper";
 import { isSubscriptionExpiryWarningContent } from "@/lib/subscription-expiry-warning-message";
@@ -48,6 +51,19 @@ export function isOwnerAdminConversation(
   if (ADMIN_NAME.test((item.otherParticipantName ?? "").trim())) return true;
   if (participantKey(item) === "system") return true;
   return isSameAdminAcrossHalls(item, allItems);
+}
+
+/**
+ * Title shown to a hall owner for a conversation. Messages from the platform admins
+ * always appear under the administration's name, never under the individual admin's.
+ */
+export function ownerConversationTitle(
+  item: ConversationSummary,
+  lang: UiLang,
+  allItems: ConversationSummary[] = [],
+): string {
+  if (isOwnerAdminConversation(item, allItems)) return t("owner.messages.admin");
+  return conversationPreviewTitle(item, lang);
 }
 
 function oldestInPool(pool: ConversationSummary[]): ConversationSummary | null {

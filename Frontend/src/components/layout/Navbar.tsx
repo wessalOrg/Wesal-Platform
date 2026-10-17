@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import WesalBrandLockup from "@/components/brand/WesalBrandLockup";
 import AuthAccountMenu from "@/components/layout/AuthAccountMenu";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import NavbarMessagesButton from "@/components/layout/NavbarMessagesButton";
 import NavbarNotificationsButton from "@/components/layout/NavbarNotificationsButton";
 import PwaInstallButton from "@/components/pwa/PwaInstallButton";
 import { useTranslateLang } from "@/i18n";
@@ -146,6 +147,7 @@ export default function Navbar({
               <PwaInstallButton />
               <LanguageSwitcher />
               {authenticated ? <NavbarNotificationsButton /> : null}
+              {authenticated ? <NavbarMessagesButton /> : null}
             </div>
             {status === "loading" ? (
               <span className="h-10 w-28 shrink-0 animate-pulse rounded-xl bg-[var(--wesal-pink)] sm:w-40" />
@@ -201,6 +203,7 @@ export default function Navbar({
             <div className="flex items-center gap-2">
               <LanguageSwitcher compact />
               {authenticated ? <NavbarNotificationsButton /> : null}
+              {authenticated ? <NavbarMessagesButton onNavigate={() => setOpen(false)} /> : null}
             </div>
             <PwaInstallButton variant="full" />
             {status === "loading" ? (

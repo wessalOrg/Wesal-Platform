@@ -3,6 +3,7 @@
 import Link from "next/link";
 import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
+import HallRejectionReasonNotice from "@/components/owner-management/halls/HallRejectionReasonNotice";
 import HallLockedBadge from "@/components/halls/HallLockedBadge";
 import OwnerHallAdminLockedNotice from "@/components/halls/OwnerHallAdminLockedNotice";
 import PaymentStatusBadge from "@/components/halls/PaymentStatusBadge";
@@ -217,6 +218,11 @@ export default function OwnerHallsPage() {
                   )}
                 </div>
               </div>
+              {hall.status === "Rejected" && !adminLocked ? (
+                <div className="mt-3">
+                  <HallRejectionReasonNotice hallId={hall.id} rejected />
+                </div>
+              ) : null}
               {adminLocked ? (
                 <div className="mt-3">
                   <OwnerHallAdminLockedNotice />

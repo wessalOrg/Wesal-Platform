@@ -35,6 +35,7 @@ import {
   ownerHallNotificationsPath,
 } from "@/lib/hall-owner-query-keys";
 import { subscribeOwnerBookingRequestEvents } from "@/services/booking-notification-realtime";
+import { subscribePlatformNotificationRealtime } from "@/services/platform-notification-realtime";
 import { loadRememberedBookings } from "@/lib/user-bookings-store";
 
 function locale() {
@@ -72,6 +73,13 @@ export default function NotificationEventsBridge() {
     }
     notifySeekerWelcome(account.userId);
   }, [account.authenticated, account.isAdmin, account.isHallOwner, account.ready, account.userId]);
+
+  // Live backend notifications (hall approved/rejected, subscription, booking decisions…).
+  // Re-subscribes whenever the signed-in account changes so a new token gets a new connection.
+  useEffect(() => {
+    if (!account.ready || !account.authenticated) return;
+    return subscribePlatformNotificationRealtime();
+  }, [account.authenticated, account.ready, account.sessionKey]);
 
   useEffect(() => {
     const onSubmitted = (event: Event) => {

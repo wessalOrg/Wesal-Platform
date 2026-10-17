@@ -4,9 +4,9 @@ import { useT } from "@/i18n";
 
 type HourlyBookingNameDialogProps = {
   open: boolean;
+  /** Account name — read-only, taken from the signed-in profile. */
   name: string;
   phone: string;
-  onNameChange: (value: string) => void;
   onPhoneChange: (value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
@@ -20,7 +20,6 @@ export default function HourlyBookingNameDialog({
   open,
   name,
   phone,
-  onNameChange,
   onPhoneChange,
   onClose,
   onSubmit,
@@ -61,19 +60,16 @@ export default function HourlyBookingNameDialog({
             </>
           ) : null}
         </p>
-        <label className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]" htmlFor="hourly-full-name">
-          {t("halls.hourly.fullName")}
-        </label>
-        <input
-          id="hourly-full-name"
-          type="text"
-          value={name}
-          onChange={(event) => onNameChange(event.target.value)}
-          autoComplete="name"
-          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] px-3 py-2.5 text-sm outline-none focus:border-[var(--wesal-maroon)]"
-          disabled={submitting}
-        />
-        <label className="mt-3 block text-sm font-semibold text-[var(--wesal-text)]" htmlFor="hourly-phone">
+        <p className="mt-4 text-sm font-semibold text-[var(--wesal-text)]">
+          {t("halls.hourly.bookingAs")}
+        </p>
+        <p
+          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink)]/50 px-3 py-2.5 text-sm text-[var(--wesal-text)]"
+          data-testid="hourly-account-name"
+        >
+          {name || "—"}
+        </p>
+        <label className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]" htmlFor="hourly-phone">
           {t("halls.hourly.phone")}
         </label>
         <input
@@ -84,9 +80,12 @@ export default function HourlyBookingNameDialog({
           value={phone}
           onChange={(event) => onPhoneChange(event.target.value)}
           autoComplete="tel"
-          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] px-3 py-2.5 text-sm outline-none focus:border-[var(--wesal-maroon)]"
+          placeholder="05xxxxxxxx"
+          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] px-3 py-2.5 text-sm outline-none focus:border-[var(--wesal-maroon)] rtl:text-right"
           disabled={submitting}
+          data-testid="hourly-phone-input"
         />
+        <p className="mt-1.5 text-xs text-[var(--wesal-muted)]">{t("halls.hourly.phoneHint")}</p>
         {errorText ? (
           <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             {errorText}

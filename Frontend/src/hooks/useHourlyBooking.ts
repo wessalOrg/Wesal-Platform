@@ -38,6 +38,17 @@ type Options = {
 
 type VisibleMonth = { year: number; monthIndex: number };
 
+function accountDisplayName(
+  displayName: string | null | undefined,
+  email: string | null | undefined,
+): string {
+  const name = displayName?.trim() ?? "";
+  if (name && !name.includes("@")) return name;
+  const source = name || email?.trim() || "";
+  const at = source.indexOf("@");
+  return (at > 0 ? source.slice(0, at) : source).trim();
+}
+
 function mergeDay(days: HourlyDay[], next: HourlyDay): HourlyDay[] {
   const index = days.findIndex((day) => day.dateIso === next.dateIso);
   if (index < 0) return [...days, next];
@@ -61,8 +72,11 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
   const [rangeFrom, setRangeFrom] = useState("");
   const [rangeTo, setRangeTo] = useState("");
   const [confirmedStarts, setConfirmedStarts] = useState<string[]>([]);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  // The booking name always comes from the signed-in account (never typed); the phone is
+  // prefilled from the account and may be edited for this booking.
+  const accountName = accountDisplayName(identity.displayName, identity.email);
+  const [phoneDraft, setPhoneDraft] = useState<string | null>(null);
+  const phone = phoneDraft ?? identity.phoneNumber?.trim() ?? "";
   const [promptOpen, setPromptOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -209,15 +223,9 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
 
   const openPrompt = useCallback(() => {
     if (submitting || !canSubmit || confirmedStarts.length === 0) return;
-    if (!name.trim() && identity.displayName?.trim()) {
-      setName(identity.displayName.trim());
-    }
-    if (!phone.trim() && identity.phoneNumber?.trim()) {
-      setPhone(identity.phoneNumber.trim());
-    }
     setErrorKey(null);
     setPromptOpen(true);
-  }, [submitting, canSubmit, confirmedStarts.length, name, phone, identity.displayName, identity.phoneNumber]);
+  }, [submitting, canSubmit, confirmedStarts.length]);
 
   const closePrompt = useCallback(() => {
     if (submitting) return;
@@ -226,7 +234,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
 
   const submit = useCallback(async () => {
     if (!canSubmit || !dateIso || confirmedStarts.length === 0 || submitting) return;
-    const customerName = name.trim();
+    const customerName = accountName;
     const customerPhone = phone.trim();
     if (!customerName) {
       setErrorKey("errors.hourly.nameRequired");
@@ -250,8 +258,9 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
         slotTime: confirmedStarts[0],
         slotTimes: confirmedStarts,
         customerName,
-        requesterName: identity.displayName?.trim() || customerName,
+        phoneNumber: customerPhone,
         contactPhone: customerPhone,
+        requesterName: customerName,
       });
       if (result.bookingId) {
         rememberUserBookings([
@@ -295,8 +304,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
         }
       }
       setPromptOpen(false);
-      setName("");
-      setPhone("");
+      setPhoneDraft(null);
       setConfirmedStarts([]);
       onConfirmed?.(null);
       await reload();
@@ -314,12 +322,11 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
     dateIso,
     confirmedStarts,
     submitting,
-    name,
+    accountName,
     phone,
     hallId,
     hallName,
     locale,
-    identity.displayName,
     selectedRangeLabel,
     reload,
     onConfirmed,
@@ -357,13 +364,13 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
     selectedRangeLabel,
     promptOpen,
     closePrompt,
-    name,
-    setName,
+    accountName,
     phone,
-    setPhone,
+    setPhone: setPhoneDraft,
     submit,
     submitting,
     errorKey,
+    clearError: () => setErrorKey(null),
     showBookedSlots,
     canSubmit,
   };
