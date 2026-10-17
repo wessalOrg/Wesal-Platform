@@ -8,7 +8,7 @@ import { isSubscriptionExpiryWarningContent } from "@/lib/subscription-expiry-wa
 import type { ConversationSummary } from "@/types/messages";
 
 const ADMIN_NAME =
-  /^(الإدارة|ادارة|إدارة المنصة|Admin|Administrator|Wesal Admin|مشرف)\b/i;
+  /^(الإدارة|ادارة|إدارة المنصة|إدارة وصال|Admin|Administrator|Wesal Admin|مشرف)(\b|$)/i;
 
 const ADMIN_PREVIEW =
   /تم اعتماد قاعتك|تم تأكيد دفع اشتراك|يجب دفع الاشتراك|إثبات الدفع|تم رفض صالة|تم رفض القاعة/;
