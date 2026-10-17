@@ -8,8 +8,9 @@ import { isValidHallId } from "@/lib/wesal-routes";
  * This is NOT authoritative memory — the backend owns conversation state and the
  * session may already be gone, in which case the chat recovers on its own.
  *
- * Never stored: JWTs, credentials, private documents, page content. Only the chat
- * text the user already sees, public hall ids/names and an opaque session id.
+ * Credential-like text is redacted and long user messages are omitted before storage.
+ * Only the bounded visible chat text, public hall ids/names and an opaque session id
+ * survive; page content is never captured.
  */
 /** Legacy unscoped key is intentionally discarded; ownership cannot be proven. */
 export const AI_CHAT_STORAGE_KEY = "wesal_ai_chat_v1";
@@ -20,6 +21,7 @@ export const AI_CHAT_SCHEMA_VERSION = 1;
 export const AI_CHAT_MAX_AGE_MS = 25 * 60 * 1000;
 export const AI_CHAT_MAX_MESSAGES = 40;
 const MAX_TEXT_LENGTH = 4000;
+const MAX_STORED_USER_TEXT_LENGTH = 600;
 const MAX_HALLS_PER_MESSAGE = 8;
 
 export type AiChatSnapshot = {
@@ -49,6 +51,17 @@ function cleanString(value: unknown, max = MAX_TEXT_LENGTH): string {
   return typeof value === "string" ? value.slice(0, max) : "";
 }
 
+function sanitizeStoredText(value: string, role: "user" | "assistant"): string {
+  if (role === "user" && value.length > MAX_STORED_USER_TEXT_LENGTH) {
+    return "[long message omitted from restored chat]";
+  }
+
+  return value
+    .replace(/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{8,}\b/g, "[redacted token]")
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer [redacted token]")
+    .replace(/\b(password|passcode|token|api[_ -]?key)\b\s*(?:is|[:=])\s*["']?[^\s"'&,;]+/gi, "$1=[redacted]");
+}
+
 const VARIANTS = new Set(["default", "help", "fallback", "error"]);
 
 /** Rebuilds a message from untrusted stored JSON, dropping anything malformed. */
@@ -56,7 +69,8 @@ function reviveMessage(raw: unknown): AiChatMessage | null {
   if (!isRecord(raw)) return null;
   const role = raw.role === "user" || raw.role === "assistant" ? raw.role : null;
   const id = cleanString(raw.id, 100);
-  const text = cleanString(raw.text);
+  const rawText = cleanString(raw.text);
+  const text = role ? sanitizeStoredText(rawText, role) : "";
   if (!role || !id || !text) return null;
 
   const halls = Array.isArray(raw.halls)
@@ -169,7 +183,7 @@ export function serializeChatSnapshot(
       .slice(-AI_CHAT_MAX_MESSAGES)
       .map((message) => ({
         ...message,
-        text: message.text.slice(0, MAX_TEXT_LENGTH),
+        text: sanitizeStoredText(message.text.slice(0, MAX_TEXT_LENGTH), message.role),
         availability: null,
         criteria: null,
         recommendationStatus: null,

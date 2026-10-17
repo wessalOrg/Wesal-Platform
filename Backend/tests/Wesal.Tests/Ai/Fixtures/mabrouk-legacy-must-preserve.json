@@ -1,0 +1,370 @@
+[
+  {
+    "id": "MP-HOME-EN",
+    "source": "old-matcher:homepage-en",
+    "prompt": "show me featured halls",
+    "expect": {
+      "kind": "Answer"
+    }
+  },
+  {
+    "id": "MP-HOME-AR",
+    "source": "old-matcher:homepage-ar",
+    "prompt": "وين القاعات المميزة؟",
+    "expect": {
+      "kind": "Answer"
+    }
+  },
+  {
+    "id": "MP-SEARCH-EN",
+    "source": "old-matcher:search-en",
+    "prompt": "how do I search for halls?",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "Browse"
+      ]
+    }
+  },
+  {
+    "id": "MP-SEARCH-AR",
+    "source": "old-matcher:search-ar",
+    "prompt": "كيف أبحث عن قاعة؟",
+    "expect": {
+      "kind": "Answer"
+    }
+  },
+  {
+    "id": "MP-BOOK-EN",
+    "source": "old-matcher:booking-en",
+    "prompt": "how do I book a hall?",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "Pending"
+      ]
+    }
+  },
+  {
+    "id": "MP-BOOK-AR",
+    "source": "old-matcher:booking-ar",
+    "prompt": "كيف أحجز قاعة؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "معلق"
+      ]
+    }
+  },
+  {
+    "id": "MP-RATE",
+    "source": "old-matcher:ratings-conservative",
+    "prompt": "كيف أقيم القاعة؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "غير مؤكدة"
+      ]
+    }
+  },
+  {
+    "id": "MP-COMMENT",
+    "source": "old-matcher:comments-conservative",
+    "prompt": "كيف أضيف تعليق؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "غير مؤكدة"
+      ]
+    }
+  },
+  {
+    "id": "MP-CONTACT",
+    "source": "old-matcher:messaging-ar",
+    "prompt": "كيف أتواصل مع صاحب القاعة؟",
+    "expect": {
+      "kind": "Answer",
+      "notContains": [
+        "+970567581412"
+      ]
+    }
+  },
+  {
+    "id": "MP-REGISTER",
+    "source": "old-matcher:registration-ar",
+    "prompt": "كيف أسجل حساب؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "حساب"
+      ]
+    }
+  },
+  {
+    "id": "MP-LOGIN",
+    "source": "old-matcher:login-ar",
+    "prompt": "كيف أسجل الدخول؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "الدخول"
+      ]
+    }
+  },
+  {
+    "id": "MP-HALLDETAILS",
+    "source": "old-matcher:hall-details-ar",
+    "prompt": "شو تفاصيل القاعة؟",
+    "expect": {
+      "kind": "Clarification"
+    }
+  },
+  {
+    "id": "MP-AVAIL-HOWTO",
+    "source": "old-matcher:availability-ar",
+    "prompt": "كيف أشوف التوفر؟",
+    "expect": {
+      "kind": "Answer"
+    }
+  },
+  {
+    "id": "MP-CAPACITY",
+    "source": "old-matcher:capacity-ar",
+    "prompt": "كم بتسع القاعة؟",
+    "expect": {
+      "kind": "Clarification"
+    }
+  },
+  {
+    "id": "MP-PHOTOS",
+    "source": "old-matcher:photos-ar",
+    "prompt": "فرجيني صور القاعة",
+    "expect": {
+      "kind": "Clarification"
+    }
+  },
+  {
+    "id": "MP-MONTH",
+    "source": "old-matcher:month-hint",
+    "prompt": "بدي قاعة بشهر 10",
+    "expect": {
+      "kind": "Answer"
+    }
+  },
+  {
+    "id": "MP-HOURS",
+    "source": "old-matcher:support-hours-ar",
+    "prompt": "وينتا بتفتحو؟",
+    "expect": {
+      "kind": "Answer"
+    }
+  },
+  {
+    "id": "MP-LANG",
+    "source": "old-matcher:language-ar",
+    "prompt": "كيف أبدل اللغة؟",
+    "expect": {
+      "kind": "Answer"
+    }
+  },
+  {
+    "id": "MP-INSTALL",
+    "source": "old-matcher:install-ar",
+    "prompt": "كيف بنزل التطبيق؟",
+    "expect": {
+      "kind": "Answer"
+    }
+  },
+  {
+    "id": "MP-PAYMENT",
+    "source": "old-matcher:payment-ar",
+    "prompt": "كيف أدفع الاشتراك؟",
+    "expect": {
+      "kind": "Answer"
+    }
+  },
+  {
+    "id": "MP-ABOUT",
+    "source": "old-matcher:about-ar",
+    "prompt": "شو هي وصال؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "قيد التجهيز"
+      ]
+    }
+  },
+  {
+    "id": "MP-CAPABILITIES",
+    "source": "old-matcher:capabilities-ar",
+    "prompt": "شو بتقدموا؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "قيد التجهيز"
+      ]
+    }
+  },
+  {
+    "id": "MP-GREET",
+    "source": "old-matcher:greeting-ar",
+    "prompt": "مرحبا",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "مبروك"
+      ]
+    }
+  },
+  {
+    "id": "MP-CANCEL",
+    "source": "old-matcher:booking-cancel-ar",
+    "prompt": "بدي ألغي الحجز",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "حجوزاتي"
+      ]
+    }
+  },
+  {
+    "id": "MP-REJECTED",
+    "source": "old-matcher:booking-rejected-ar",
+    "prompt": "ليش الحجز مرفوض؟",
+    "expect": {
+      "kind": "Answer"
+    }
+  },
+  {
+    "id": "MP-PRICE-Q",
+    "source": "old-matcher:pricing-ar",
+    "prompt": "بقديش الحجز؟",
+    "expect": {
+      "kind": "Clarification"
+    }
+  },
+  {
+    "id": "MP-ADDHALL",
+    "source": "knowledge-recovery",
+    "prompt": "كيف أضيف قاعة؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "إثبات الهوية"
+      ]
+    }
+  },
+  {
+    "id": "MP-TEAM",
+    "source": "knowledge-recovery",
+    "prompt": "مين مطورين وصال؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "عبد العزيز الخزندار"
+      ]
+    }
+  },
+  {
+    "id": "MP-CREATOR",
+    "source": "knowledge-recovery",
+    "prompt": "مين عمل مبروك؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "عبد الرحمن أبو سالم",
+        "عبد العزيز الخزندار"
+      ]
+    }
+  },
+  {
+    "id": "MP-MABROUK-TEAM",
+    "source": "studio:dev-team",
+    "prompt": "مين طور مبروك؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "عبد الرحمن أبو سالم",
+        "عبد العزيز الخزندار"
+      ]
+    }
+  },
+  {
+    "id": "MP-SUPPORT",
+    "source": "knowledge-recovery",
+    "prompt": "كيف أتواصل مع وصال؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "+970567581412"
+      ]
+    }
+  },
+  {
+    "id": "MP-PHOTOG-CAP",
+    "source": "v2-capability",
+    "prompt": "عندكم مصورين؟",
+    "expect": {
+      "kind": "Answer",
+      "contains": [
+        "قيد التجهيز"
+      ]
+    }
+  },
+  {
+    "id": "MP-PHOTOG-NAV",
+    "source": "v2-navigation",
+    "prompt": "وديني عالمصورين",
+    "expect": {
+      "kind": "Answer",
+      "action": "photographers"
+    }
+  },
+  {
+    "id": "MP-HALLS-NAV",
+    "source": "v2-navigation",
+    "prompt": "وديني عالقاعات",
+    "expect": {
+      "kind": "Answer",
+      "action": "halls"
+    }
+  },
+  {
+    "id": "MP-EVENT-NOUN",
+    "source": "dialect:event-noun",
+    "prompt": "بدي قاعة لعرس",
+    "expect": {
+      "kind": "Clarification"
+    }
+  },
+  {
+    "id": "MP-AR-DIGITS",
+    "source": "dialect:arabic-digits",
+    "prompt": "بدي صالة لـ ٣٠٠ شخص",
+    "expect": {
+      "kind": "Halls"
+    }
+  },
+  {
+    "id": "MP-CTX-SEARCH-REFINE",
+    "source": "v3-context",
+    "prompt": "300 شخص",
+    "turns": [
+      "بدي صالة بغزة"
+    ],
+    "expect": {
+      "kind": "Halls"
+    }
+  },
+  {
+    "id": "MP-CTX-ORDINAL-Q",
+    "source": "legacy:ordinal-question",
+    "prompt": "الثانية شو سعرها؟",
+    "turns": [
+      "اعرض الصالات"
+    ],
+    "expect": {
+      "kind": "HallDetails"
+    }
+  }
+]

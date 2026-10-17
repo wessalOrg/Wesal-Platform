@@ -1,21 +1,17 @@
 ---
-title: Booking cancellation
+title: Cancel a booking request
 category: user-guide
 language: ar,en
-source: official-project-team-and-repository
-lastUpdated: 2026-09-16
-status: needs-verification
-keywords: cancel|cancellation|withdraw|refund|إلغاء|الغاء|سحب الطلب|عربون
+source: current-repository-booking-cancellation-service
+lastUpdated: 2026-10-09
+status: verified
+keywords: cancel booking|cancel request|pending booking|accepted booking|deposit confirmed|إلغاء حجز|الغاء حجز|إلغاء الحجز|الغاء الحجز|الغاء حجزي|الغى الطلب|إلغاء الطلب|العربون مؤكد
 ---
 
 ## العربية
 
-يمكن لصاحب الطلب إلغاء طلب الحجز. وفق المعلومات الرسمية، قد يؤدي الإلغاء بعد دفع العربون إلى خسارة العربون، بينما يمكن سحب الطلب دون خسارة عربون مدفوع إذا لم يتم دفع عربون.
-
-ملاحظة تحقق: التنفيذ الحالي يسمح فقط لصاحب الطلب المصادق بإلغاء الطلبات ذات حالة Pending. لا تؤكد هذه المعرفة نسبة استرداد أو مهلة إلغاء أو رسوماً إضافية أو معالجة دفع عربون.
+من صفحة حجوزاتي، افتح الطلب واختر الإلغاء إذا كان الطلب بحالة «معلق» أو «مقبول» ولم يتم تأكيد دفع العربون. لا يسمح النظام بالإلغاء بعد تأكيد العربون. أما الرسوم أو المبالغ المستردة ومواعيدها فتحتاج تأكيداً من دعم وصال.
 
 ## English
 
-The requester can cancel a booking request. Official information says cancellation after a paid deposit can result in losing that deposit, while a request can be withdrawn without losing a paid deposit when no deposit was paid.
-
-Verification note: the current implementation allows only the authenticated requester to cancel Pending requests. This knowledge base does not confirm refund percentages, cancellation deadlines, extra fees, or deposit-payment handling.
+From My Bookings, open the request and cancel it if it is Pending or Accepted and the deposit has not been confirmed as paid. The system blocks cancellation after payment confirmation. Refund amounts, fees, and timing require confirmation from Wesal support.

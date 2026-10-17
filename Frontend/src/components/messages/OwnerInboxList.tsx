@@ -37,11 +37,11 @@ export default function OwnerInboxList({
   const t = useT();
   const lang = useUiLang();
   const [filter, setFilter] = useState<InboxFilter>(focusAdmin ? "admin" : "all");
-  const [trackedFocusAdmin, setTrackedFocusAdmin] = useState(focusAdmin);
+  const [previousFocusAdmin, setPreviousFocusAdmin] = useState(focusAdmin);
   const [query, setQuery] = useState("");
 
-  if (focusAdmin !== trackedFocusAdmin) {
-    setTrackedFocusAdmin(focusAdmin);
+  if (focusAdmin !== previousFocusAdmin) {
+    setPreviousFocusAdmin(focusAdmin);
     if (focusAdmin) setFilter("admin");
   }
 

@@ -33,13 +33,13 @@ public class HowToServiceShould
     }
 
     [Fact]
-    public async Task AskHowTo_RatingQuestion_ReturnsRatingAnswer()
+    public async Task AskHowTo_RatingQuestion_DoesNotInventEligibilityPolicy()
     {
         var result = await _service.AskHowToAsync("how do I rate a hall?", "en", CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Contains("rating", result.Category, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("star", result.Answer, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not confirmed", result.Answer, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -49,6 +49,7 @@ public class HowToServiceShould
 
         Assert.NotNull(result);
         Assert.Contains("comment", result.Category, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not confirmed", result.Answer, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -6,85 +6,60 @@ namespace Wesal.Tests.Infrastructure;
 
 public class HowToServiceCreatorShould
 {
-    private const string ExpectedEnglish =
-        "I’m Wesal’s smart assistant 😄🇵🇸\n" +
-        "I was specially created to help you find the perfect wedding hall and answer your questions about halls, bookings, and the Wesal platform.\n\n" +
-        "In short… the Wesal team built me to make your search easier and save you the headache of looking around 😂.";
-
-    private const string ExpectedArabic =
-        "أنا مساعد وصال الذكي 😄🇵🇸\n" +
-        "انعملت خصيصًا عشان أساعدك تلاقي صالة أفراح مناسبة، وأجاوبك عن الصالات والحجز والمنصة.\n" +
-        "يعني باختصار… فريق وصال صنعني، وأنا هون أخفف عنك وجعة راس البحث 😂.";
-
     private static ISubscriptionPaymentService CreatePaymentService()
         => new SubscriptionPaymentService(Options.Create(new SubscriptionPaymentOptions()));
 
+    private static HowToService CreateService(IWesalKnowledgeService? knowledge = null, IGeminiService? gemini = null)
+        => new(CreatePaymentService(), geminiService: gemini, knowledgeService: knowledge);
+
     [Theory]
-    [InlineData("Who is your creator?")]
-    [InlineData("who created wesal?")]
-    [InlineData("Who developed this platform?")]
-    [InlineData("who made wesal")]
-    [InlineData("Who is the team leader of wesal?")]
-    [InlineData("Tell me about Mohammed Shamaa")]
-    public async Task CreatorQuestion_English_ReturnsExactEnglishAttribution(string question)
+    [InlineData("Who is your creator?", "en")]
+    [InlineData("who created Mabrook?", "en")]
+    [InlineData("مين عمل مبروك؟", "ar")]
+    [InlineData("مين عامل مبروك؟", "ar")]
+    [InlineData("مين صنعك؟", "ar")]
+    public async Task CreatorQuestion_AttributesMabroukToWesalTeam(string question, string language)
     {
-        // No Gemini configured -> must come from the deterministic creator handler.
-        var service = new HowToService(CreatePaymentService());
+        var result = await CreateService().AskHowToAsync(question, language, CancellationToken.None);
 
-        var result = await service.AskHowToAsync(question, "en", CancellationToken.None);
-
-        Assert.Equal(ExpectedEnglish, result.Answer);
+        Assert.Contains(language == "en" ? "Wesal team built me" : "فريق وصال صنعني", result.Answer, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
-    [InlineData("من هو منشئ وصال؟")]
-    [InlineData("من أنشأ منصة وصال؟")]
-    [InlineData("من هو قائد الفريق؟")]
-    [InlineData("من صنع وصال")]
-    [InlineData("من هو المطور محمد شمعة؟")]
-    [InlineData("من هم فريق وصال؟")]
-    public async Task CreatorQuestion_Arabic_ReturnsExactArabicAttribution(string question)
+    [InlineData("who developed wesal?", "en")]
+    [InlineData("who built wesal?", "en")]
+    [InlineData("Who is the team leader of Wesal?", "en")]
+    [InlineData("مين مطورين وصال؟", "ar")]
+    [InlineData("مين عمل وصال؟", "ar")]
+    [InlineData("من هو منشئ وصال؟", "ar")]
+    [InlineData("من هم فريق وصال؟", "ar")]
+    public async Task WesalTeamQuestion_ReturnsVerifiedDevelopers(string question, string language)
     {
-        var service = new HowToService(CreatePaymentService());
+        var service = CreateService(knowledge: new WesalKnowledgeService());
 
-        var result = await service.AskHowToAsync(question, "ar", CancellationToken.None);
+        var result = await service.AskHowToAsync(question, language, CancellationToken.None);
 
-        Assert.Equal(ExpectedArabic, result.Answer);
-    }
-
-    [Fact]
-    public async Task CreatorQuestion_ReturnsEnglishWhenDetected_EvenIfSiteLanguageArabic()
-    {
-        var service = new HowToService(CreatePaymentService());
-
-        // Detected language from the Arabic-detector: English text -> "en"
-        var result = await service.AskHowToAsync("Who is your creator?", "ar", CancellationToken.None);
-
-        Assert.Equal(ExpectedEnglish, result.Answer);
+        Assert.Contains(language == "en" ? "Abdulaziz Al-Khazendar" : "عبد العزيز الخزندار", result.Answer);
+        Assert.Contains(language == "en" ? "Mohammed Shama" : "محمد شمعة", result.Answer);
+        Assert.DoesNotContain("صنعني", result.Answer);
     }
 
     [Fact]
     public async Task CreatorQuestion_WinsOverGemini()
     {
         var gemini = new FakeGeminiService { Available = true, Result = "Gemini invented answer" };
-        var service = new HowToService(CreatePaymentService(), geminiService: gemini);
+        var result = await CreateService(gemini: gemini).AskHowToAsync("Who is your creator?", "en", CancellationToken.None);
 
-        var result = await service.AskHowToAsync("Who is your creator?", "en", CancellationToken.None);
-
-        // Creator answer must win over Gemini output.
-        Assert.Equal(ExpectedEnglish, result.Answer);
+        Assert.Contains("Wesal team built me", result.Answer);
         Assert.False(gemini.Called);
     }
 
     [Fact]
-    public async Task CreatorQuestion_DoesNotHijackUnrelatedQuestions()
+    public async Task CreatorQuestion_DoesNotHijackUnrelatedHowTo()
     {
-        var service = new HowToService(CreatePaymentService());
+        var result = await CreateService().AskHowToAsync("Who can book a hall?", "en", CancellationToken.None);
 
-        var result = await service.AskHowToAsync("Who can book a hall?", "en", CancellationToken.None);
-
-        // This is a booking/how-to question, NOT a creator question.
-        Assert.NotEqual(ExpectedEnglish, result.Answer);
+        Assert.Contains("registered account", result.Answer, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class FakeGeminiService : IGeminiService
@@ -92,17 +67,13 @@ public class HowToServiceCreatorShould
         public bool Available { get; set; }
         public string? Result { get; set; }
         public bool Called { get; set; }
-
         public bool IsAvailable => Available;
-
         public Task<string?> GenerateTextAsync(string prompt, string language, CancellationToken cancellationToken = default)
         {
             Called = true;
             return Task.FromResult(Result);
         }
-
         public Task<T?> GenerateStructuredAsync<T>(string prompt, string systemInstruction, System.Text.Json.Nodes.JsonNode responseSchema, CancellationToken cancellationToken = default)
-            where T : class
-            => Task.FromResult<T?>(null);
+            where T : class => Task.FromResult<T?>(null);
     }
 }

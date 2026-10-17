@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Wesal.Application.Ai;
 using Wesal.Application.Ai.Navigation;
 
 namespace Wesal.Tests.Ai;
@@ -36,14 +37,36 @@ public class WesalNavigationRegistryShould
     }
 
     [Fact]
-    public void NoPhotographyPage_IsRegistered_BecauseNoSuchRouteExists()
+    public void ComingSoonProviderPages_AreNavigableOnlyAsRealPagesWithTruthfulStatus()
     {
-        Assert.DoesNotContain(WesalNavigationRegistry.Pages, p =>
-            p.Key.Contains("photo", StringComparison.OrdinalIgnoreCase)
-            || p.Path.Contains("photo", StringComparison.OrdinalIgnoreCase)
-            || p.Path.Contains("media", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(FrontendRoutes(), r => r.Contains("photo", StringComparison.OrdinalIgnoreCase));
-        Assert.Null(WesalNavigationRegistry.ResolveHref("photography"));
+        var photographers = WesalNavigationRegistry.Find(WesalNavigationRegistry.Photographers);
+        var planners = WesalNavigationRegistry.Find(WesalNavigationRegistry.EventPlanners);
+        Assert.NotNull(photographers);
+        Assert.NotNull(planners);
+        Assert.True(photographers!.AssistantNavigable);
+        Assert.True(planners!.AssistantNavigable);
+        Assert.Contains(WesalNavigationRegistry.NavigablePages, page => page.Key == WesalNavigationRegistry.Photographers);
+        Assert.Contains(WesalNavigationRegistry.NavigablePages, page => page.Key == WesalNavigationRegistry.EventPlanners);
+        Assert.Equal(WesalCapabilityStatus.ComingSoon, WesalCapabilityRegistry.Find("photographers.marketplace")!.Status);
+        Assert.Equal(WesalCapabilityStatus.ComingSoon, WesalCapabilityRegistry.Find("event_planners.marketplace")!.Status);
+        Assert.Equal("photographers.marketplace", AiNavigationIntentDetector.DetectUnavailableTopic("find photographers")!.Key);
+        Assert.Equal("event_planners.marketplace", AiNavigationIntentDetector.DetectUnavailableTopic("بدي منسق مناسبات")!.Key);
+        Assert.Null(AiNavigationIntentDetector.DetectUnavailableTopic("open the photographers page"));
+        Assert.Equal(WesalNavigationRegistry.Photographers, AiNavigationIntentDetector.Detect("open the photographers page")!.Page.Key);
+    }
+
+    [Fact]
+    public void CapabilityPromptContext_ExposesStatusRoutesActionsAndKnowledgeSources()
+    {
+        var context = WesalCapabilityRegistry.BuildAssistantContext();
+
+        Assert.Contains("photographers.marketplace", context);
+        Assert.Contains("status=ComingSoon", context);
+        Assert.Contains("route=/photographers", context);
+        Assert.Contains("search, compare or book photographers", context);
+        Assert.Contains("user-guide/booking", context);
+        Assert.Contains("status=Private", context);
+        Assert.Contains("read private booking records through public assistant tools", context);
     }
 
     [Theory]

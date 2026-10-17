@@ -10,7 +10,7 @@ The endpoint is part of `Wesal.API`, rather than a separate service, because the
 MCP host -> POST /mcp -> Wesal MCP tool -> application service -> repository -> EF Core/PostgreSQL
 ```
 
-Tools never execute SQL. `search_halls` calls `IHallSearchService`, `get_hall_details` calls `IHallDetailsService`, and `check_hall_availability` calls `IHallAvailabilityService`. The availability service is also used by the existing AI assistant, keeping its availability result consistent with MCP.
+Tools never execute SQL. `search_halls` calls `IHallSearchService`, `get_hall_details` calls `IHallDetailsService`, and `check_hall_availability` calls `IHourlySlotService`. These are the same application services used by the assistant, so both transports share Wesal's data and availability rules.
 
 The endpoint uses the official `ModelContextProtocol.AspNetCore` 2.2.0 package and its Streamable HTTP transport. The package targets .NET 8+ and is compatible with this `net10.0` application. The test project references the same package only to inspect the registered tool metadata.
 
@@ -18,9 +18,9 @@ The endpoint uses the official `ModelContextProtocol.AspNetCore` 2.2.0 package a
 
 | Tool | Inputs | Result |
 | --- | --- | --- |
-| `search_halls` | Optional `name`, `region` (`NorthGaza`, `Gaza`, `MiddleArea`, `SouthGaza`), `area`, ISO date, `bookingPeriod` (`FirstPeriod`/`SecondPeriod`), and `pageSize` (1–20) | Public approved hall listing results and total count. Capacity is intentionally absent because the existing public search service does not support it. |
+| `search_halls` | Optional `name`, `region` (`NorthGaza`, `Gaza`, `MiddleArea`, `SouthGaza`), `area`, ISO date, hourly `startTime` (`HH:mm`), and `pageSize` (1–20) | Public approved hall listing results and total count. Capacity is not part of the external MCP schema. |
 | `get_hall_details` | `hallId` GUID from `search_halls` | Public listing details, photos, and published availability. |
-| `check_hall_availability` | `hallId` GUID and ISO date | Configured booking periods and their current availability statuses. It never creates a booking. |
+| `check_hall_availability` | `hallId` GUID and ISO date | Hourly slots and their current availability statuses. It never creates a booking. |
 
 All tools reject invalid input. Non-existent, deleted, or unapproved halls are not exposed; normal Wesal error handling produces the corresponding error response. Calls are logged without secrets or credentials.
 
@@ -32,9 +32,18 @@ No private booking tool is exposed. In particular, there is no `userId` tool arg
 
 ## Relationship to the existing AI assistant
 
-The existing assistant endpoint is `POST /api/v1/ai/sessions/{sessionId}/assistant`. It remains unchanged: `AiAssistantController` obtains the anonymous chat session and conversation context, `AiAssistantService` asks `GeminiAiIntentExtractor` for a validated structured intent (with deterministic fallback), and then uses existing platform services to return a typed REST response.
+The assistant endpoint is `POST /api/v1/ai/sessions/{sessionId}/assistant`. Its current path is:
 
-Gemini is currently used for structured intent extraction, not Gemini function calling. As a result, the assistant does **not** make an unnecessary loopback MCP-client request to its own API. It now shares `IHallAvailabilityService` with the MCP server, while its existing search and detail handlers already use the same application-service layer. An external MCP host can use the MCP tools today; adding a true provider tool-calling loop later requires extending the Gemini adapter to send function declarations and map function calls to an MCP client, then generating a second natural-language response.
+```text
+frontend session -> AiAssistantController -> ChatSessionService -> AiAssistantService
+  -> validated page/pinned-hall context -> policy and live-hall fast paths
+  -> GeminiToolOrchestrator -> read-only WesalToolGateway -> application services
+  -> typed response, or deterministic fallback
+```
+
+`GeminiService` now uses the official Google Gen AI .NET SDK behind the existing application interface. The assistant makes provider function calls through `GeminiToolOrchestrator`; it does not call the local MCP endpoint. The gateway exposes exactly three public read-only functions (`search_halls`, `get_hall_details`, and `check_hall_availability`) and validates names and arguments before delegating to current Wesal services. Its `search_halls` tool also supports `minCapacity`, now applied by the shared application search request and repository before pagination. This assistant-specific function schema is distinct from the public MCP schema above.
+
+Static answers use the embedded bilingual Knowledge Base. Authenticated conversation state is stored in the dedicated `AiConversationSessions` table with a 30-minute sliding expiry, bounded history and owner checks; it is separate from authentication `AISessions`. Guest memory is keyed only by its random session id and expires on the same schedule. Provider failure, timeout, or an unavailable model falls through to deterministic handling without a second model call.
 
 ## Run locally
 

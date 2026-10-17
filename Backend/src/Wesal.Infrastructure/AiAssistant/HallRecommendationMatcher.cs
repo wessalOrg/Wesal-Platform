@@ -30,19 +30,18 @@ public sealed class HallRecommendationMatcher : IHallRecommendationMatcher
                 Region = region,
                 Area = criteria.Area,
                 Date = criteria.Date,
+                MinimumCapacity = criteria.Capacity,
+                MaximumPrice = criteria.MaximumPrice,
+                MinimumPrice = criteria.MinimumPrice,
+                AroundPrice = criteria.AroundPrice,
+                SortByPrice = criteria.SortByPrice,
+                SortPreference = criteria.SortPreference,
                 PageNumber = 1,
                 PageSize = 50
             },
             cancellationToken);
 
-        IEnumerable<HallListItemDto> candidates = page.Items;
-        if (criteria.Capacity.HasValue)
-        {
-            var requiredCapacity = criteria.Capacity.Value;
-            candidates = candidates.Where(hall => hall.Capacity >= requiredCapacity);
-        }
-
-        return candidates
+        return page.Items
             .Select(hall => new HallRecommendationDto(
                 hall.HallId,
                 hall.HallName,

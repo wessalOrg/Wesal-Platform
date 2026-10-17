@@ -34,6 +34,8 @@ public static class WesalNavigationRegistry
 {
     public const string Home = "home";
     public const string About = "about";
+    public const string Photographers = "photographers";
+    public const string EventPlanners = "event_planners";
     public const string Halls = "halls";
     public const string HallDetails = "hall_details";
     public const string Faq = "faq";
@@ -74,6 +76,10 @@ public static class WesalNavigationRegistry
             ["الصفحه الرئيسيه", "الرئيسيه", "الصفحه الاولى"], ["home", "homepage", "home page", "main page"]),
         Page(About, "/about", "من نحن", "About Wesal", false, true,
             ["من نحن", "عن وصال", "صفحه عن وصال"], ["about", "about us", "about wesal"]),
+        Page(Photographers, "/photographers", "المصورين", "Photographers", false, true,
+            ["المصورين", "المصور", "صفحه المصورين"], ["photographer", "photographers", "photography page"]),
+        Page(EventPlanners, "/event-planners", "منسقي المناسبات", "Event planners", false, true,
+            ["منسقي المناسبات", "منسقين", "منسق", "صفحه منسقي المناسبات"], ["event planners", "planner", "planners", "event planner page"]),
         Page(Halls, "/halls", "استعرض الصالات", "Browse halls", false, true,
             ["الصالات", "صالات", "القاعات", "قاعات", "صاله", "قاعه", "صفحه الصالات", "صفحه القاعات"],
             ["halls", "hall", "wedding halls", "venues", "hall list", "halls page"]),

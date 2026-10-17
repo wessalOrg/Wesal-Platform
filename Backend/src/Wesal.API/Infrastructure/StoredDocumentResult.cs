@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Exceptions;
 
 namespace Wesal.API.Infrastructure;
@@ -34,5 +35,32 @@ public static class StoredDocumentResult
         {
             FileDownloadName = fileDownloadName
         };
+    }
+
+    /// <summary>
+    /// Serves a document already read from its store. Object-store documents arrive as
+    /// buffered bytes (there is no filesystem path), local ones keep their path; both
+    /// produce the same inline response. Passing no download name keeps the response
+    /// inline so the admin's preview renders instead of triggering a download.
+    /// </summary>
+    public static async Task<IActionResult> ServeAsync(
+        StoredDocument document,
+        CancellationToken cancellationToken,
+        string? fileDownloadName = null)
+    {
+        if (document.Content is not null)
+        {
+            return new FileContentResult(document.Content, document.ContentType)
+            {
+                FileDownloadName = fileDownloadName
+            };
+        }
+
+        if (string.IsNullOrEmpty(document.FullPath))
+        {
+            throw new NotFoundException("The requested document was not found.");
+        }
+
+        return await ServeAsync(document.FullPath, document.ContentType, cancellationToken, fileDownloadName);
     }
 }

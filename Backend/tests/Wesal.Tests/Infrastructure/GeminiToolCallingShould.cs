@@ -33,9 +33,10 @@ public sealed class GeminiToolCallingShould
         Func<HttpRequestMessage, HttpResponseMessage> responder,
         GoogleAiSettings? settings = null)
     {
-        var handler = new FakeHttpHandler(responder);
-        var factory = new FakeHttpClientFactory(handler);
-        return new GeminiService(factory, Options.Create(settings ?? Settings()), NullLogger<GeminiService>.Instance);
+        var server = new GeminiSdkTestServer(responder);
+        var configured = settings ?? Settings();
+        configured.BaseUrl = server.BaseUrl;
+        return new GeminiService(Options.Create(configured), NullLogger<GeminiService>.Instance);
     }
 
     private static HttpResponseMessage Json(HttpStatusCode code, object body)
@@ -130,6 +131,106 @@ public sealed class GeminiToolCallingShould
         Assert.NotNull(result);
         Assert.True(result!.HasFunctionCall);
         Assert.Contains("Let me search", result.Text!);
+    }
+
+    [Fact]
+    public async Task RoundTripsThoughtSignatureAndFunctionCallIdThroughSdkHistory()
+    {
+        var requests = new List<JsonNode>();
+        var responseIndex = 0;
+        var server = new GeminiSdkTestServer(request =>
+        {
+            requests.Add(JsonNode.Parse(RequestBody(request))!);
+            responseIndex++;
+            return Json(HttpStatusCode.OK, responseIndex == 1
+                ? new
+                {
+                    candidates = new[]
+                    {
+                        new
+                        {
+                            content = new
+                            {
+                                role = "model",
+                                parts = new object[]
+                                {
+                                    new
+                                    {
+                                        functionCall = new { name = "search_halls", id = "call-search-1", args = new { region = "Gaza" } },
+                                        thoughtSignature = "AQIDBA=="
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                : TextEnvelope("Found two halls."));
+        });
+        var settings = Settings();
+        settings.BaseUrl = server.BaseUrl;
+        using var service = new GeminiService(Options.Create(settings), NullLogger<GeminiService>.Instance);
+
+        var first = await service.GenerateToolTurnAsync(SingleUserMessage("find halls in Gaza"), "system", SampleFunctions());
+        Assert.NotNull(first);
+        Assert.Equal("call-search-1", first!.FunctionCall!.Id);
+        Assert.Contains("thoughtSignature", first.ProviderContinuation);
+
+        var history = new List<GeminiConversationMessage>
+        {
+            User("find halls in Gaza"),
+            new GeminiConversationMessage("model", [new GeminiConversationPart(FunctionCall: first.FunctionCall)])
+            {
+                ProviderContinuation = first.ProviderContinuation
+            },
+            new GeminiConversationMessage("user",
+            [
+                new GeminiConversationPart(FunctionResponse: new GeminiFunctionResponse(
+                    "search_halls",
+                    new JsonObject { ["result"] = new JsonArray() },
+                    first.FunctionCall.Id))
+            ])
+        };
+
+        var second = await service.GenerateToolTurnAsync(history, "system", SampleFunctions());
+        Assert.Equal("Found two halls.", second!.Text);
+
+        var serializedModel = requests[1]["contents"]!.AsArray()[1]!;
+        Assert.Equal("model", serializedModel["role"]!.GetValue<string>());
+        Assert.Equal("call-search-1", serializedModel["parts"]![0]!["functionCall"]!["id"]!.GetValue<string>());
+        Assert.Equal("AQIDBA==", serializedModel["parts"]![0]!["thoughtSignature"]!.GetValue<string>());
+
+        var serializedResponse = requests[1]["contents"]!.AsArray()[2]!;
+        Assert.Equal("user", serializedResponse["role"]!.GetValue<string>());
+        Assert.Equal("call-search-1", serializedResponse["parts"]![0]!["functionResponse"]!["id"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task ExtractsEveryFunctionCallFromOneModelTurn()
+    {
+        var service = CreateService(_ => Json(HttpStatusCode.OK, new
+        {
+            candidates = new[]
+            {
+                new
+                {
+                    content = new
+                    {
+                        role = "model",
+                        parts = new object[]
+                        {
+                            new { functionCall = new { name = "search_halls", id = "call-1", args = new { region = "Gaza" } } },
+                            new { functionCall = new { name = "get_hall_details", id = "call-2", args = new { hallId = Guid.NewGuid().ToString() } } }
+                        }
+                    }
+                }
+            }
+        }));
+
+        var result = await service.GenerateToolTurnAsync(SingleUserMessage("show halls and details"), "system", SampleFunctions());
+
+        Assert.NotNull(result);
+        Assert.Equal(["call-1", "call-2"], result!.FunctionCalls.Select(call => call.Id));
+        Assert.Equal(["search_halls", "get_hall_details"], result.FunctionCalls.Select(call => call.Name));
     }
 
     [Fact]
@@ -230,7 +331,7 @@ public sealed class GeminiToolCallingShould
         => new("model", [new GeminiConversationPart(FunctionCall: new GeminiFunctionCall(name, new JsonObject()))]);
 
     private static GeminiConversationMessage Response(string name)
-        => new("function", [new GeminiConversationPart(FunctionResponse: new GeminiFunctionResponse(name, new JsonObject()))]);
+        => new("user", [new GeminiConversationPart(FunctionResponse: new GeminiFunctionResponse(name, new JsonObject()))]);
 
     private static GeminiConversationMessage User(string text)
         => new("user", [new GeminiConversationPart(Text: text)]);

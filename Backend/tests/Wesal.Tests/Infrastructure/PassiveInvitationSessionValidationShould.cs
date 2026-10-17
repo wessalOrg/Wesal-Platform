@@ -26,26 +26,15 @@ public class PassiveInvitationSessionValidationShould
     [Fact]
     public async Task PeekSession_ExpiredSession_ReturnsNullWithoutThrowingAndRemoves()
     {
-        using var service = new ChatSessionService(TimeSpan.FromHours(1));
+        var store = new InMemoryAiConversationSessionStore();
+        using var service = new ChatSessionService(store);
         var created = await service.InitializeSessionAsync(null);
-
-        var sessionsField = typeof(ChatSessionService).GetField("_sessions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        var sessions = (System.Collections.Concurrent.ConcurrentDictionary<Guid, ChatSessionService.AiSession>)sessionsField.GetValue(service)!;
-
-        var expired = new ChatSessionService.AiSession
-        {
-            SessionId = created.SessionId,
-            Language = created.Language,
-            CreatedAt = created.CreatedAt,
-            LastActivityAt = created.CreatedAt,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(-1)
-        };
-        sessions[created.SessionId] = expired;
+        store.SetExpiryForTesting(created.SessionId, DateTimeOffset.UtcNow.AddMinutes(-1));
 
         var result = await service.PeekSessionAsync(created.SessionId);
 
         Assert.Null(result);
-        Assert.False(sessions.ContainsKey(created.SessionId));
+        Assert.False(store.ContainsForTesting(created.SessionId));
     }
 
     [Fact]

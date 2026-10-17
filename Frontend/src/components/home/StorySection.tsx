@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import Reveal from "@/components/ui/Reveal";
 import { useT } from "@/i18n";
@@ -83,7 +84,7 @@ export default function StorySection() {
       <Reveal>
         <div className="story-layout">
           <div className="story-photo">
-            <img
+            <Image
               src="/home/story-collage.jpg"
               alt={t("home.story.imageAlt")}
               width={920}

@@ -4,6 +4,13 @@ namespace Wesal.Application.Common.Interfaces;
 
 public interface IHowToService
 {
+    /// <summary>Returns a deterministic answer for a recognized product/how-to question, or null when unknown.</summary>
+    Task<HowToResponse?> TryAnswerKnownQuestionAsync(
+        string question,
+        string? language,
+        CancellationToken cancellationToken = default,
+        Models.AiConversationContext? context = null) => Task.FromResult<HowToResponse?>(null);
+
     /// <summary>
     /// Processes a how-to/usage question about the platform.
     ///

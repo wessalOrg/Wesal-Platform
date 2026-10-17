@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import ConsultCityField from "@/components/home/ConsultCityField";
 import ConsultDateField from "@/components/home/ConsultDateField";
 import Reveal from "@/components/ui/Reveal";
@@ -164,7 +165,7 @@ export default function ConsultSection() {
             </form>
 
             <aside className="consult-aside">
-              <img
+              <Image
                 src="/home/consult-still.jpg"
                 alt={t("home.consult.imageAlt")}
                 width={1152}

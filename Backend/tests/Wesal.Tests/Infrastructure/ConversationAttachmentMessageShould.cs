@@ -84,6 +84,7 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
         public required FakeMessageRepository Messages { get; init; }
         public required FakeConversationNotifier Notifier { get; init; }
         public required FakeDocumentStorage Storage { get; init; }
+        public FakeMessageAttachmentStore? Store { get; init; }
     }
 
     /// <summary>
@@ -141,7 +142,8 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
         bool hallDeleted = false,
         string conversationSenderId = AdminId,
         string hallOwnerId = OwnerId,
-        string? storageRoot = null)
+        string? storageRoot = null,
+        FakeMessageAttachmentStore? attachmentStore = null)
     {
         var hall = new Hall
         {
@@ -175,14 +177,16 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
             new FakeHallRepository(),
             new FakeCurrentUserService(userId, roles),
             notifier,
-            storage);
+            storage,
+            attachmentStore);
 
         return new Harness
         {
             Service = service,
             Messages = messages,
             Notifier = notifier,
-            Storage = storage
+            Storage = storage,
+            Store = attachmentStore
         };
     }
 
@@ -284,6 +288,96 @@ public sealed class ConversationAttachmentMessageShould : IDisposable
         var document = await admin.Service.GetMessageAttachmentAsync(ConversationId, messageId);
 
         Assert.True(File.Exists(document.FullPath));
+    }
+
+    // --- Durable storage: the fix for attachments dying with the ephemeral container ---
+    //
+    // The payment proof was stored only on the container-local filesystem, and Render free
+    // has no persistent disk, so instance replacement/redeploy silently erased the bytes
+    // while the message row survived. These pin the durable mirror: sends persist the same
+    // bytes to the store, reads fall back to it when the local copy is gone, writes that
+    // the store rejects fail loudly, and lost duplicate-race sends clean up their durable
+    // copy too.
+
+    [Fact]
+    public async Task SendAttachment_WithDurableStore_PersistsRemoteCopy()
+    {
+        var harness = CreateHarness(OwnerId, [ApplicationRoles.HallOwner], attachmentStore: new FakeMessageAttachmentStore());
+
+        await Send(harness.Service, Upload());
+
+        var stored = Assert.Single(harness.Messages.Committed);
+        Assert.True(harness.Store!.IsDurable);
+        var remote = Assert.Single(harness.Store.Objects);
+        Assert.Equal(stored.AttachmentUrl, remote.Key);
+        Assert.Equal(Png(), remote.Value);
+    }
+
+    [Fact]
+    public async Task GetAttachment_LocalCopyVanished_DurableStoreServesBytes()
+    {
+        // The exact production regression: the container that wrote the local copy is
+        // replaced, the ephemeral file is gone, and the Admin still has to see the image.
+        var harness = CreateHarness(OwnerId, [ApplicationRoles.HallOwner], attachmentStore: new FakeMessageAttachmentStore());
+        await Send(harness.Service, Upload());
+        var messageId = Assert.Single(harness.Messages.Committed).Id;
+        var storedUrl = Assert.Single(harness.Messages.Committed).AttachmentUrl;
+
+        // Simulate instance replacement/redeploy wiping the local file.
+        File.Delete(Path.Combine(
+            harness.Storage.ConversationAttachmentsDirectory(ConversationId),
+            Path.GetFileName(storedUrl!)));
+
+        var document = await harness.Service.GetMessageAttachmentAsync(ConversationId, messageId);
+
+        Assert.Equal("proof.png", document.FileName);
+        Assert.Empty(document.FullPath);
+        Assert.Equal(Png(), document.Content);
+    }
+
+    [Fact]
+    public async Task GetAttachment_LocalAndDurableMissing_ThrowsNotFound()
+    {
+        var harness = CreateHarness(OwnerId, [ApplicationRoles.HallOwner], attachmentStore: new FakeMessageAttachmentStore());
+        await Send(harness.Service, Upload());
+        var messageId = Assert.Single(harness.Messages.Committed).Id;
+        var storedUrl = Assert.Single(harness.Messages.Committed).AttachmentUrl;
+
+        File.Delete(Path.Combine(
+            harness.Storage.ConversationAttachmentsDirectory(ConversationId),
+            Path.GetFileName(storedUrl!)));
+        harness.Store!.Clear();
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => harness.Service.GetMessageAttachmentAsync(ConversationId, messageId));
+    }
+
+    [Fact]
+    public async Task SendAttachment_DurableStoreRejectsWrite_FailsLoudlyWithoutRow()
+    {
+        // A durable write that fails must fail the send: recording a row whose bytes cannot
+        // survive a redeploy is exactly the data loss the store exists to prevent.
+        var harness = CreateHarness(OwnerId, [ApplicationRoles.HallOwner], attachmentStore: new FakeMessageAttachmentStore());
+        harness.Store!.StoreFails = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Send(harness.Service, Upload()));
+
+        Assert.Empty(harness.Messages.Committed);
+        Assert.Empty(harness.Store.Objects);
+    }
+
+    [Fact]
+    public async Task SendAttachment_DuplicateKeyRace_DurableCopyBestEffortRemoved()
+    {
+        var harness = CreateHarness(OwnerId, [ApplicationRoles.HallOwner], attachmentStore: new FakeMessageAttachmentStore());
+        var requestId = Guid.NewGuid().ToString("N");
+        harness.Messages.FailNextSaveWithUniqueViolation = true;
+
+        var result = await Send(harness.Service, Upload(), null, requestId);
+
+        Assert.Equal(Assert.Single(harness.Messages.Committed).Id, result.MessageId);
+        // Our lost copy is removed from the durable store too, not orphaned next to the winner.
+        Assert.Empty(harness.Store!.Objects);
     }
 
     [Fact]

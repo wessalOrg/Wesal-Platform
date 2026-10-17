@@ -24,7 +24,8 @@ Required outside Development (the app refuses to boot without them):
 Optional / feature-gated:
 
 - `Swagger__Enabled` — optional, keep unset/false in production
-- `RateLimiting__Enabled`, `RateLimiting__PermitLimit`, `RateLimiting__WindowSeconds` — optional, off by default
+- `RateLimiting__Enabled`, `RateLimiting__PermitLimit`, `RateLimiting__WindowSeconds` — optional global HTTP limiter, off by default
+- `RateLimiting__Assistant__Enabled`, `RateLimiting__Assistant__TokenLimit`, `RateLimiting__Assistant__TokensPerPeriod`, `RateLimiting__Assistant__ReplenishmentPeriodSeconds`, `RateLimiting__Assistant__ConcurrencyLimit` — assistant-only cost protection, enabled by default (6-token burst, 12 turns/minute, 2 concurrent turns)
 - `GoogleAI__GeminiModel`, `GoogleAI__ApiKey` — optional (deterministic fallbacks apply)
 - `Email__Enable`, `Email__Host`, `Email__From`, `Email__Port`, `Email__Username`, `Email__Password` — REQUIRED only if password-reset e-mail must deliver; otherwise the API answers forgot-password generically and logs that SMTP is unconfigured
 - `PasswordReset__FrontendBaseUrl` — must be the deployed Vercel origin when SMTP is on
@@ -37,7 +38,7 @@ Optional / feature-gated:
   - `HallMedia__R2__PublicBaseUrl=https://media.<YOUR_DOMAIN>` (custom domain; never `r2.dev` for final production; its path must not start with `/uploads/`)
   - Without these, the app boots with `Local` temp storage and logs a prominent ephemeral-storage warning; uploads then 404 after the next restart.
 - `DocumentStorage__Directory` — protected documents stay container-local for now (separate private-storage design later); plan durable private storage before relying on it.
-- `NEXT_PUBLIC_API_BASE_URL` (Vercel side) — OPTIONAL override; when unset, production builds use the canonical `https://wesal-platform.onrender.com/api/v1`. An explicit value must be an absolute https URL (not localhost) or the prebuild gate fails the deploy
+- `NEXT_PUBLIC_API_BASE_URL` (Vercel side) — OPTIONAL override; when unset, production builds use the canonical `https://wesal-platform-p0iv.onrender.com/api/v1`. An explicit value must be an absolute https URL (not localhost) or the prebuild gate fails the deploy
 - `NEXT_PUBLIC_DEMO_MODE` (Vercel side) — must NEVER be `true` in production (the Vercel prebuild gate fails the deploy if it is)
 
 ## 3. Deploy verification (every production deploy)

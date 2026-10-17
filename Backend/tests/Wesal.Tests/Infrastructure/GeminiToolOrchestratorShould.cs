@@ -51,6 +51,32 @@ public sealed class GeminiToolOrchestratorShould
     }
 
     [Fact]
+    public async Task ExecutesAndPairsEveryCallInOneParallelModelTurn()
+    {
+        var search = new GeminiFunctionCall("search_halls", new JsonObject { ["region"] = "Gaza" }, "call-search");
+        var details = new GeminiFunctionCall("get_hall_details", new JsonObject { ["hallId"] = Guid.NewGuid().ToString() }, "call-details");
+        _gemini.Script =
+        [
+            new GeminiToolTurn(null, search) { FunctionCalls = [search, details] },
+            new GeminiToolTurn("Done.", null)
+        ];
+
+        var result = await CreateOrchestrator().ExecuteAsync("find halls and inspect one", "en");
+
+        Assert.Equal("Done.", result.Answer);
+        Assert.Equal(2, _gateway.Invocations.Count);
+        Assert.Equal(2, result.ToolCalls.Count);
+        var nextTurn = _gemini.CapturedContentsPerCall[1];
+        var modelTurn = Assert.Single(nextTurn.Where(message => message.Role == "model"));
+        Assert.Equal(2, modelTurn.Parts.Count(part => part.FunctionCall is not null));
+        var toolTurn = Assert.Single(nextTurn.Where(message => message.Parts.Any(part => part.FunctionResponse is not null)));
+        Assert.Equal("user", toolTurn.Role);
+        Assert.Equal(
+            ["call-search", "call-details"],
+            toolTurn.Parts.Select(part => part.FunctionResponse?.Id));
+    }
+
+    [Fact]
     public async Task GeminiUnavailable_ReportsNotHandled_SoTheDeterministicPathRuns()
     {
         _gemini.Available = false;
@@ -275,8 +301,7 @@ public sealed class GeminiToolOrchestratorShould
         foreach (var contents in capturedContents)
         {
             var message = contents.LastOrDefault(m =>
-                string.Equals(m.Role, "function", StringComparison.Ordinal)
-                && m.Parts.Any(p => p.FunctionResponse?.Name == toolName));
+                m.Parts.Any(p => p.FunctionResponse?.Name == toolName));
             if (message is null)
                 continue;
 

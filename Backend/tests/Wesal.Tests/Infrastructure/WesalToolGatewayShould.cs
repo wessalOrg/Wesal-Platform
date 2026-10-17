@@ -25,12 +25,12 @@ public sealed class WesalToolGatewayShould
     }
 
     [Fact]
-    public void ExposeExactlyThreeToolDefinitions()
+    public void ExposeExactlyFourToolDefinitions()
     {
         var names = _gateway.ToolDefinitions.Select(d => d.Name).OrderBy(x => x).ToList();
 
         Assert.Equal(
-            [WesalToolNames.CheckHallAvailability, WesalToolNames.GetHallDetails, WesalToolNames.SearchHalls],
+            [WesalToolNames.CheckHallAvailability, WesalToolNames.CreateBooking, WesalToolNames.GetHallDetails, WesalToolNames.SearchHalls],
             names);
     }
 
@@ -51,9 +51,33 @@ public sealed class WesalToolGatewayShould
         Assert.True(_gateway.IsKnownTool(WesalToolNames.SearchHalls));
         Assert.True(_gateway.IsKnownTool(WesalToolNames.GetHallDetails));
         Assert.True(_gateway.IsKnownTool(WesalToolNames.CheckHallAvailability));
+        Assert.True(_gateway.IsKnownTool(WesalToolNames.CreateBooking));
         Assert.False(_gateway.IsKnownTool("get_my_bookings"));
         Assert.False(_gateway.IsKnownTool(""));
         Assert.False(_gateway.IsKnownTool("search_halls ") );
+    }
+
+    [Fact]
+    public async Task CreateBookingToolReturnsValidatedPreviewData()
+    {
+        var hallId = Guid.NewGuid();
+        var result = await _gateway.ExecuteAsync(new WesalToolInvocation(
+            WesalToolNames.CreateBooking,
+            new JsonObject
+            {
+                ["hallId"] = hallId.ToString(),
+                ["date"] = "2026-10-25",
+                ["startTime"] = "18:00",
+                ["endTime"] = "22:00",
+                ["customerName"] = "Abood"
+            }));
+
+        Assert.True(result.Success);
+        Assert.Equal(hallId.ToString(), result.Data!["hallId"]!.GetValue<string>());
+        Assert.Equal("2026-10-25", result.Data["date"]!.GetValue<string>());
+        Assert.Equal("18:00", result.Data["startTime"]!.GetValue<string>());
+        Assert.Equal("22:00", result.Data["endTime"]!.GetValue<string>());
+        Assert.Equal("Abood", result.Data["customerName"]!.GetValue<string>());
     }
 
     [Fact]
@@ -64,6 +88,14 @@ public sealed class WesalToolGatewayShould
 
         Assert.False(result.Success);
         Assert.Contains("not a supported", result.ErrorMessage);
+    }
+
+    [Fact]
+    public void RejectsUnimplementedWriteToolByName()
+    {
+        var result = _gateway.ExecuteAsync(new WesalToolInvocation("delete_hall", new JsonObject())).GetAwaiter().GetResult();
+        Assert.False(result.Success);
+        Assert.False(_gateway.IsKnownTool("delete_hall"));
     }
 
     [Fact]
@@ -89,6 +121,22 @@ public sealed class WesalToolGatewayShould
         var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
 
         Assert.False(result.Success);
+    }
+
+    [Theory]
+    [InlineData("ownerId")]
+    [InlineData("jwt")]
+    [InlineData("authorization")]
+    public void RejectInvocationCarryingAnyIdentityOrCredentialField(string key)
+    {
+        var invocation = new WesalToolInvocation(
+            WesalToolNames.SearchHalls,
+            new JsonObject { [key] = "untrusted-value" });
+
+        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+
+        Assert.False(result.Success);
+        Assert.Contains("authentication material", result.ErrorMessage);
     }
 
     [Fact]
@@ -221,6 +269,19 @@ public sealed class WesalToolGatewayShould
         Assert.Equal(HallRegion.Gaza, _search.LastRequest!.Region);
         Assert.Equal(10, _search.LastRequest.PageSize);
         Assert.NotNull(result.Data!["halls"]);
+    }
+
+    [Fact]
+    public async Task SearchCapacityCriterionIsOwnedByTheApplicationSearchService()
+    {
+        _search.Response = PagedResult<HallListItemDto>.Create([], 1, 12, 0);
+        var result = await _gateway.ExecuteAsync(new WesalToolInvocation(
+            WesalToolNames.SearchHalls,
+            new JsonObject { ["region"] = "Gaza", ["minCapacity"] = 300 }));
+
+        Assert.True(result.Success);
+        Assert.Equal(300, _search.LastRequest!.MinimumCapacity);
+        Assert.Equal(12, _search.LastRequest.PageSize);
     }
 
     [Fact]

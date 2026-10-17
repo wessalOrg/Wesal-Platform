@@ -17,7 +17,46 @@ public sealed record AiConversationContext(
     IReadOnlyList<AiConversationTurn> Turns,
     AiAssistantIntentDto? LastIntent,
     IReadOnlyList<AiHallRef>? LastHalls = null,
-    AiHallRef? LastHall = null);
+    AiHallRef? LastHall = null,
+    AiConversationState? State = null,
+    AiSemanticPlan? CurrentSemanticPlan = null);
+
+/// <summary>Bounded, structured task state used for deterministic multi-turn resolution.</summary>
+public sealed record AiConversationState(
+    string? ActiveGoal = null,
+    string? ActiveIntent = null,
+    string? PendingIntent = null,
+    string? PendingClarification = null,
+    string? MissingField = null,
+    Guid? ActiveHallId = null,
+    string? ActiveHallName = null,
+    IReadOnlyList<Guid>? ShownHallIds = null,
+    int? SelectedResultIndex = null,
+    string? Region = null,
+    int? Capacity = null,
+    IReadOnlyList<string>? RequestedFacts = null,
+    DateOnly? ResolvedDate = null,
+    string? LastNavigationTarget = null,
+    string? LastQuestionType = null,
+    string? ConversationStage = null,
+    AiSemanticPlan? LastSemanticPlan = null,
+    // Booking-related state
+    Guid? BookingHallId = null,
+    string? BookingHallName = null,
+    DateOnly? BookingDate = null,
+    TimeOnly? BookingStartTime = null,
+    TimeOnly? BookingEndTime = null,
+    string? BookingCustomerName = null,
+    string? PendingBookingCustomerName = null,
+    bool? AwaitingCustomerName = null,
+    string? PendingBookingStatus = null,
+    IReadOnlyList<Guid>? SeenHallIds = null,
+    Guid? LastSelectedHallId = null,
+    string? CurrentTopic = null,
+    string? PendingNavigationTarget = null,
+    string? LastAction = null,
+    string? LastToolOutcome = null,
+    string? TaskStatus = null);
 
 /// <summary>A hall the conversation has shown or focused (id + display name only).</summary>
 public sealed record AiHallRef(Guid HallId, string HallName);

@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Wesal.Persistence.Services;
 
 namespace Wesal.Persistence;
 
@@ -61,9 +63,12 @@ public static class DependencyInjection
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IAISessionRepository, AISessionRepository>();
+        services.AddScoped<IAiConversationSessionStore, AiConversationSessionStore>();
+        services.AddHostedService<AiConversationSessionCleanupService>();
         services.AddScoped<ITokenRevocationRepository, TokenRevocationRepository>();
         services.AddScoped<IOwnerDashboardRepository, OwnerDashboardRepository>();
         services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
+        services.AddScoped<IAiKnowledgeStudioRepository, AiKnowledgeStudioRepository>();
 
         return services;
     }
