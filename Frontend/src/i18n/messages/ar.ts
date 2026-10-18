@@ -1835,7 +1835,6 @@ const ar: MessageCatalog = {
   "messages.subscriptionExpiry.arrived": "وصل تنبيه بانتهاء الاشتراك",
   "messages.attachPaymentHint": "أرفق صورة إثبات دفع العربون من الزر أدناه.",
   "messages.attachReceipt": "إرفاق صورة / إيصال الدفع",
-  "messages.attachPaymentHint": "أرفق صورة إثبات دفع العربون من الزر أدناه.",
   "messages.attachRemove": "إزالة",
   "messages.attaching": "جاري رفع الإيصال…",
   "messages.attachInvalid": "اختر صورة JPG أو PNG أو WEBP بحجم 5 ميغابايت كحد أقصى.",
