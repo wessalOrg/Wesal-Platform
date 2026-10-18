@@ -5,10 +5,12 @@ import { useCancelBooking } from "@/hooks/useCancelBooking";
 import {
   BOOKING_ACCEPTED_EVENT,
   BOOKING_CANCELLED_EVENT,
+  BOOKING_PUBLISHED_EVENT,
   BOOKING_REJECTED_EVENT,
   emitBookingAccepted,
   type BookingAcceptedDetail,
   type BookingCancelledDetail,
+  type BookingPublishedDetail,
   type BookingRejectedDetail,
 } from "@/lib/booking-events";
 import { canCancelBooking } from "@/lib/booking-status";
@@ -142,6 +144,11 @@ export function useUserBookings() {
       if (!detail?.bookingId) return;
       applyStatus(detail.bookingId, "Accepted", { depositAmount: detail.depositAmount });
     };
+    const onPublished = (event: Event) => {
+      const detail = (event as CustomEvent<BookingPublishedDetail>).detail;
+      if (!detail?.bookingId) return;
+      applyStatus(detail.bookingId, "Confirmed");
+    };
     const onRemembered = () => {
       const next = loadRememberedBookings();
       setBookings(next);
@@ -152,11 +159,13 @@ export function useUserBookings() {
     window.addEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
     window.addEventListener(BOOKING_REJECTED_EVENT, onRejected);
     window.addEventListener(BOOKING_ACCEPTED_EVENT, onAccepted);
+    window.addEventListener(BOOKING_PUBLISHED_EVENT, onPublished);
     window.addEventListener(USER_BOOKINGS_CHANGED_EVENT, onRemembered);
     return () => {
       window.removeEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
       window.removeEventListener(BOOKING_REJECTED_EVENT, onRejected);
       window.removeEventListener(BOOKING_ACCEPTED_EVENT, onAccepted);
+      window.removeEventListener(BOOKING_PUBLISHED_EVENT, onPublished);
       window.removeEventListener(USER_BOOKINGS_CHANGED_EVENT, onRemembered);
     };
   }, [applyStatus]);

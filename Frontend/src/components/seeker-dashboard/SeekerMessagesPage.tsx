@@ -35,6 +35,7 @@ export default function SeekerMessagesPage() {
   const { isHallOwner, isAdmin } = useAccountAccess();
   const focusHallId = searchParams.get("hallId")?.trim() || null;
   const focusConversationId = searchParams.get("conversation_id")?.trim() || null;
+  const promptAttach = searchParams.get("attach") === "1";
   const ownerContactAdmin =
     pathname.startsWith("/owner/messages") && searchParams.get("contact") === "admin";
   const {
@@ -247,6 +248,7 @@ export default function SeekerMessagesPage() {
                 attachmentBusy={adminChat.attachmentBusy}
                 onPickAttachment={adminChat.pickAttachment}
                 onClearAttachment={adminChat.clearAttachment}
+                promptAttach={promptAttach}
               />
               </ProtectedHallMessageThread>
             ) : adminChat.missingConversation ? (

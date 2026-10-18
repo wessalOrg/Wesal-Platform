@@ -31,7 +31,12 @@ export function useStartHallConversation() {
   const start = useCallback(
     async (
       hallId: string,
-      options?: { onOpened?: () => void; loginHref?: string; draft?: string },
+      options?: {
+        onOpened?: () => void;
+        loginHref?: string;
+        draft?: string;
+        attach?: boolean;
+      },
     ) => {
       if (!hallId || inFlight.current || starting) return null;
       inFlight.current = true;
@@ -53,6 +58,7 @@ export function useStartHallConversation() {
           conversationMessagesPath(session.role, {
             conversationId: thread.conversationId,
             hallId: thread.hallId || hallId,
+            attach: options?.attach,
           }),
         );
         return thread;

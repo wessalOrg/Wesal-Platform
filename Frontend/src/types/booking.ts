@@ -1,6 +1,6 @@
 export type BookingPeriodType = "FirstPeriod" | "SecondPeriod";
 
-export type BookingStatus = "Pending" | "Accepted" | "Rejected" | "Cancelled";
+export type BookingStatus = "Pending" | "Accepted" | "Confirmed" | "Rejected" | "Cancelled";
 
 export type BookingRequestInput = {
   hallId: string;

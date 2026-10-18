@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
@@ -27,6 +28,7 @@ type MessagesInboxProps = {
 export default function MessagesInbox({ initialConversationId }: MessagesInboxProps) {
   const t = useT();
   const lang = useUiLang();
+  const promptAttach = useSearchParams().get("attach") === "1";
   const { ready, authenticated, isHallOwner, isAdmin } = useAccountAccess();
   const {
     selectedId,
@@ -190,6 +192,7 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
                 attachmentBusy={adminChat.attachmentBusy}
                 onPickAttachment={adminChat.pickAttachment}
                 onClearAttachment={adminChat.clearAttachment}
+                promptAttach={promptAttach}
               />
             </ProtectedHallMessageThread>
           ) : (

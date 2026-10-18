@@ -33,6 +33,8 @@ type HallNotificationCardProps = {
   onAccept?: (notification: HallBookingNotification) => void;
   onReject?: (notification: HallBookingNotification) => void;
   onConfirmPayment?: (notification: HallBookingNotification) => void;
+  onMessageSeeker?: (notification: HallBookingNotification) => void;
+  messagingSeeker?: boolean;
 };
 
 export default function HallNotificationCard({
@@ -51,6 +53,8 @@ export default function HallNotificationCard({
   onAccept,
   onReject,
   onConfirmPayment,
+  onMessageSeeker,
+  messagingSeeker = false,
 }: HallNotificationCardProps) {
   const t = useT();
   const lang = useUiLang();
@@ -170,6 +174,21 @@ export default function HallNotificationCard({
         <p className="mt-3 break-words text-sm leading-6 text-[var(--wesal-muted)] [overflow-wrap:anywhere]">
           {notification.rejectionReason}
         </p>
+      ) : null}
+
+      {notification.status === "Rejected" && onMessageSeeker ? (
+        <button
+          type="button"
+          className="btn-outline mt-3 min-h-11 w-full"
+          disabled={messagingSeeker}
+          aria-busy={messagingSeeker || undefined}
+          data-testid={`hall-notification-chat-seeker-${notification.id}`}
+          onClick={() => onMessageSeeker(notification)}
+        >
+          {messagingSeeker
+            ? t("owner.notifications.chatWithSeekerOpening")
+            : t("owner.notifications.chatWithSeeker")}
+        </button>
       ) : null}
 
       {showCancelled ? <AcceptanceFeedback kind="cancelled-status" /> : null}

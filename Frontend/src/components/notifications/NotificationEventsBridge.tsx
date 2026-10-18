@@ -104,7 +104,8 @@ export default function NotificationEventsBridge() {
       if (!detail?.bookingId) return;
       const hallName = lookupHallName(detail.hallId, detail.bookingId, detail.hallName);
       const date = formatBookingDateLabel(detail.date, locale());
-      const period = formatPeriods(detail.periods) || t("halls.period.generic");
+      const period =
+        detail.timeRange?.trim() || formatPeriods(detail.periods) || t("halls.period.generic");
       const amount =
         detail.depositAmount != null ? formatDepositAmount(detail.depositAmount) : "—";
       pushPlatformNotification({
@@ -263,13 +264,14 @@ export default function NotificationEventsBridge() {
       const hallName = event.hallName?.trim() || t("common.hall");
       const userName = event.requesterName?.trim() || t("common.user");
       const date = event.date ? formatBookingDateLabel(event.date, locale()) : "";
+      const period = event.timeRange || event.period || t("halls.period.generic");
       pushPlatformNotification({
         type: "booking_submitted",
         audience: "owner",
         titleKey: "notify.ownerBookingRequest.title",
         bodyKey: "notify.ownerBookingRequest.body",
         actionLabelKey: "notify.ownerBookingRequest.action",
-        params: { hallName, userName, date },
+        params: { hallName, userName, date, period },
         action_url: event.hallId
           ? ownerHallNotificationsPath(event.hallId, event.id)
           : ownerBookingsPath(event.id),

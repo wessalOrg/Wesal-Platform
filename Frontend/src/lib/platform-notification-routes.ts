@@ -52,7 +52,7 @@ export function resolveNotificationActionUrl(
       // An acceptance asks the seeker to send a deposit receipt, which is done in the
       // conversation with the owner, so the thread is the destination whenever we know it.
       // The bookings page stays the fallback for a notice with no conversation reference.
-      if (conversationId) return conversationMessagePath(conversationId);
+      if (conversationId) return conversationMessagePath(conversationId, true);
       return bookingId ? seekerBookingContactPath(bookingId) : SEEKER_BOOKINGS_PATH;
     case "booking_rejected":
       return bookingId ? seekerBookingContactPath(bookingId) : SEEKER_BOOKINGS_PATH;

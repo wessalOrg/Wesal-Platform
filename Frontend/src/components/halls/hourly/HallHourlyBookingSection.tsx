@@ -3,8 +3,9 @@
 import HallMonthCalendar from "@/components/halls/HallMonthCalendar";
 import HallHourlyRangePicker from "@/components/halls/hourly/HallHourlyRangePicker";
 import HourlyBookedAlertPopup from "@/components/halls/hourly/HourlyBookedAlertPopup";
+import HourlyBookingSentPopup from "@/components/halls/hourly/HourlyBookingSentPopup";
 import HourlyBookingNameDialog from "@/components/halls/hourly/HourlyBookingNameDialog";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useHourlyBooking, type HourlySummarySelection } from "@/hooks/useHourlyBooking";
 import { useT } from "@/i18n";
@@ -31,6 +32,7 @@ export default function HallHourlyBookingSection({
   const booking = useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfirmed });
   const bookedAlert = booking.errorKey === "errors.hourly.slotBooked";
   const errorText = booking.errorKey && !bookedAlert ? t(booking.errorKey) : null;
+  const [sentOpen, setSentOpen] = useState(false);
 
   useEffect(() => {
     onRegisterConfirm?.(booking.openPrompt);
@@ -110,13 +112,17 @@ export default function HallHourlyBookingSection({
         onPhoneChange={booking.setPhone}
         onClose={booking.closePrompt}
         onSubmit={() => {
-          void booking.submit();
+          void booking.submit().then((ok) => {
+            if (ok) setSentOpen(true);
+          });
         }}
         submitting={booking.submitting}
         errorText={errorText}
         slotLabel={booking.selectedRangeLabel}
         dateLabel={booking.dateLabel || formatBookingDateLabel(booking.dateIso ?? "", locale)}
       />
+
+      <HourlyBookingSentPopup open={sentOpen} onClose={() => setSentOpen(false)} />
     </section>
   );
 }

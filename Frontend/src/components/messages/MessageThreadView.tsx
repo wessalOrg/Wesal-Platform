@@ -43,6 +43,7 @@ type MessageThreadViewProps = {
   attachmentBusy?: boolean;
   onPickAttachment?: (file: File) => void;
   onClearAttachment?: () => void;
+  promptAttach?: boolean;
 };
 
 export default function MessageThreadView({
@@ -72,6 +73,7 @@ export default function MessageThreadView({
   attachmentBusy,
   onPickAttachment,
   onClearAttachment,
+  promptAttach = false,
 }: MessageThreadViewProps) {
   const t = useT();
   const lang = useUiLang();
@@ -247,6 +249,7 @@ export default function MessageThreadView({
         attachmentBusy={attachmentBusy}
         onPickAttachment={onPickAttachment}
         onClearAttachment={onClearAttachment}
+        promptAttach={promptAttach}
       />
     </section>
   );
