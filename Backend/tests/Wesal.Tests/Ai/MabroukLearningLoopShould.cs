@@ -105,6 +105,52 @@ public sealed class MabroukLearningLoopShould : IDisposable
     }
 
     [Fact]
+    public async Task PublishedAnswerFromInboxIsUsedImmediatelyAndDoesNotReopenTheGap()
+    {
+        const string question = "كم يساوي اثنان زائد اثنين؟";
+        const string expectedAnswer = "اثنان زائد اثنين يساوي أربعة.";
+        var embedded = new WesalKnowledgeService();
+        var dynamicKnowledge = new HybridWesalKnowledgeService(
+            embedded, _repository, Clock, NullLogger<HybridWesalKnowledgeService>.Instance);
+        var recorder = new AiKnowledgeGapRecorder(_repository, Clock);
+        var assistant = new MabroukHarness(
+            gapRecorder: recorder,
+            gapDetector: new AiKnowledgeGapDetector(),
+            knowledgeService: dynamicKnowledge);
+        var studio = StudioService();
+
+        var first = await assistant.AskAsync(question);
+        Assert.Equal(AiAssistantResponseKind.Answer, first.Kind);
+        var gap = Assert.Single(await studio.ListGapsAsync());
+        Assert.Equal(question, gap.CanonicalQuestion);
+
+        var draft = await studio.CreateArticleFromGapAsync(gap.Id, "admin-1");
+        Assert.NotNull(draft);
+        var input = new AiKnowledgeArticleInput(
+            draft.Key,
+            "إجابة مسألة اثنين زائد اثنين",
+            "mabrouk",
+            expectedAnswer,
+            "Two plus two equals four.",
+            draft.Source,
+            10,
+            AiKnowledgeVerificationStatus.Verified,
+            null,
+            null,
+            null,
+            null,
+            draft.Aliases.Select(alias => new AiKnowledgeAliasInput(alias.Language, alias.Text)).ToList(),
+            "Verified answer from the unanswered inbox.");
+        await studio.UpdateKnowledgeAsync(draft.Id, input, "admin-1");
+        await studio.PublishKnowledgeAsync(draft.Id, "Publish the verified answer.", "admin-1");
+
+        Assert.Empty(await studio.ListGapsAsync());
+        var second = await assistant.AskAsync(question);
+        Assert.Contains(expectedAnswer, second.Message, StringComparison.Ordinal);
+        Assert.Empty(await studio.ListGapsAsync());
+    }
+
+    [Fact]
     public async Task ComingSoonCapabilityQuestionIsAnsweredWithoutRecordingAGap()
     {
         const string question = "هل يوجد مستشار زفاف معتمد لدى وصال؟";

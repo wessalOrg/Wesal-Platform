@@ -999,6 +999,7 @@ const ar: MessageCatalog = {
   "admin.mabrouk.gaps.selectPrompt": "اختر مجموعة أسئلة لعرض عيناتها وإجراءاتها.",
   "admin.mabrouk.gaps.selectArticle": "اختر مقالة منشورة",
   "admin.mabrouk.gaps.linkedArticle": "المقالة المرتبطة",
+  "admin.mabrouk.gaps.linkedNotResolved": "سيظل السؤال مفتوحاً حتى تكون الإجابة المرتبطة منشورة وموثقة وسارية حالياً.",
   "admin.mabrouk.simulator.title": "محاكي الإجابات",
   "admin.mabrouk.simulator.subtitle": "قارن بين فهرس المعرفة ومعاينة مبروك أحادية الدور للقراءة فقط.",
   "admin.mabrouk.simulator.mode": "وضع المعاينة",

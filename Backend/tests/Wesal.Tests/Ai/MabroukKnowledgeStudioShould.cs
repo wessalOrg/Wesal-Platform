@@ -212,6 +212,46 @@ public sealed class MabroukKnowledgeStudioShould : IDisposable
     }
 
     [Fact]
+    public async Task PublishingVerifiedAnswerWithExactQuestionAliasResolvesGapAndServesAnswer()
+    {
+        const string question = "متى بيفتح مرصد القمر في رفح؟";
+        const string expectedAnswer = "يفتح مرصد القمر في رفح يومياً عند التاسعة صباحاً.";
+        var recorder = new AiKnowledgeGapRecorder(_repository, _clock);
+        var gapId = await recorder.RecordAsync(new AiKnowledgeGapCandidate(
+            question, "ar", AiKnowledgeGapReason.GenericFallback, "deterministic-howto", null));
+        Assert.NotNull(gapId);
+
+        var articleInput = Article(
+            "rafah-moon-observatory", "مرصد القمر في رفح", question,
+            expectedAnswer, "Rafah Moon Observatory opens daily at 9 a.m.",
+            verificationStatus: AiKnowledgeVerificationStatus.NeedsVerification) with
+        {
+            Aliases = [new AiKnowledgeAliasInput("ar", question)]
+        };
+        var draft = await _studio.CreateKnowledgeAsync(articleInput, "admin-1");
+
+        await _studio.PublishKnowledgeAsync(draft.Id, "Publish the reviewed observatory hours.", "admin-1");
+        Assert.Equal("New", (await _studio.GetGapAsync(gapId.Value))!.Status);
+
+        await _studio.UpdateKnowledgeAsync(draft.Id, articleInput with
+        {
+            VerificationStatus = AiKnowledgeVerificationStatus.Verified,
+            ChangeNote = "Verify observatory hours."
+        }, "admin-1");
+        await _studio.PublishKnowledgeAsync(draft.Id, "Publish verified observatory hours.", "admin-1");
+
+        var gap = await _studio.GetGapAsync(gapId.Value);
+        Assert.Equal("Resolved", gap!.Status);
+        Assert.Equal(draft.Id, gap.LinkedArticleId);
+
+        var howTo = new HowToService(Mock.Of<ISubscriptionPaymentService>(), knowledgeService: _knowledge);
+        var response = await howTo.AskHowToAsync(question, "ar", allowModel: false);
+        Assert.Equal(expectedAnswer, response.Answer);
+        Assert.Empty(await _studio.ListGapsAsync());
+
+    }
+
+    [Fact]
     public async Task CreateGapDraftWithAliasesDistinctAfterNormalization()
     {
         var recorder = new AiKnowledgeGapRecorder(_repository, _clock);

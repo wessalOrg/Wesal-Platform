@@ -13,6 +13,9 @@ public interface IAiKnowledgeStudioRepository
     Task<AiKnowledgeRevision?> GetRevisionAsync(Guid articleId, Guid revisionId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AiKnowledgeGapCluster>> ListGapsAsync(bool unresolvedOnly, int maximumResults = 500, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AiKnowledgeGapCluster>> GetUnresolvedGapsLinkedToArticleAsync(Guid articleId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AiKnowledgeGapCluster>> GetUnresolvedGapsMatchingAliasesAsync(
+        IReadOnlyCollection<(string Language, string NormalizedText)> aliases,
+        CancellationToken cancellationToken = default);
     Task<AiKnowledgeGapCluster?> GetGapAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AiKnowledgeGapCluster>> GetRecentUnresolvedGapsAsync(string language, int maximumResults = 300, CancellationToken cancellationToken = default);
     Task<int> CountGapsAsync(AiKnowledgeGapStatus? status = null, CancellationToken cancellationToken = default);

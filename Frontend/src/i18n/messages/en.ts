@@ -1005,6 +1005,7 @@ const en: MessageCatalog = {
   "admin.mabrouk.gaps.selectPrompt": "Choose a question group to see its samples and actions.",
   "admin.mabrouk.gaps.selectArticle": "Choose a published article",
   "admin.mabrouk.gaps.linkedArticle": "Linked article",
+  "admin.mabrouk.gaps.linkedNotResolved": "This question stays open until its linked answer is published, verified, and currently effective.",
   "admin.mabrouk.simulator.title": "Answer simulator",
   "admin.mabrouk.simulator.subtitle": "Compare the knowledge index with a single-turn, read-only Mabrouk preview.",
   "admin.mabrouk.simulator.mode": "Preview mode",
