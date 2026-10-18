@@ -7,6 +7,16 @@ import { ADMIN_MABROUK_PATH } from "@/lib/account-profile-path";
 import { adminMabroukService } from "@/services/admin-mabrouk";
 import type { KnowledgeArticle, KnowledgeGap, KnowledgeGapSuggestion } from "@/types/mabrouk-knowledge";
 
+function answerableArticles(articles: KnowledgeArticle[]): KnowledgeArticle[] {
+  const today = new Date().toISOString().slice(0, 10);
+  return articles.filter((article) =>
+    article.publicationStatus === "Published"
+      && article.verificationStatus === "Verified"
+      && (!article.effectiveFrom || article.effectiveFrom <= today)
+      && (!article.effectiveUntil || article.effectiveUntil >= today),
+  );
+}
+
 export default function MabroukUnansweredPage() {
   const t = useT();
   const router = useRouter();
@@ -30,7 +40,7 @@ export default function MabroukUnansweredPage() {
         adminMabroukService.listKnowledge({ source: "dynamic", publicationStatus: "Published" }),
       ]);
       setGaps(clusters);
-      setArticles(knowledge);
+      setArticles(answerableArticles(knowledge));
       setSelected((current) => current ? clusters.find((gap) => gap.id === current.id) ?? null : null);
     } catch {
       setError(true);
@@ -47,7 +57,7 @@ export default function MabroukUnansweredPage() {
     ]).then(([clusters, knowledge]) => {
       if (!active) return;
       setGaps(clusters);
-      setArticles(knowledge);
+      setArticles(answerableArticles(knowledge));
       setSelected((current) => current ? clusters.find((gap) => gap.id === current.id) ?? null : null);
       setError(false);
     }).catch(() => { if (active) setError(true); })
@@ -274,6 +284,11 @@ function GapDetail({
         </div>
       ) : null}
       {gap.linkedArticleId ? <p className="mt-3 break-all text-xs text-[var(--wesal-muted)]">{t("admin.mabrouk.gaps.linkedArticle")}: {gap.linkedArticleId}</p> : null}
+      {gap.linkedArticleId && gap.status === "Reviewed" ? (
+        <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900" role="status">
+          {t("admin.mabrouk.gaps.linkedNotResolved")}
+        </p>
+      ) : null}
     </aside>
   );
 }

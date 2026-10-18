@@ -109,6 +109,40 @@ public sealed class AiKnowledgeStudioRepository : IAiKnowledgeStudioRepository
                 && (cluster.Status == AiKnowledgeGapStatus.New || cluster.Status == AiKnowledgeGapStatus.Reviewed))
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<AiKnowledgeGapCluster>> GetUnresolvedGapsMatchingAliasesAsync(
+        IReadOnlyCollection<(string Language, string NormalizedText)> aliases,
+        CancellationToken cancellationToken = default)
+    {
+        var exactMatches = aliases
+            .Where(alias => !string.IsNullOrWhiteSpace(alias.Language)
+                && !string.IsNullOrWhiteSpace(alias.NormalizedText))
+            .Distinct()
+            .ToArray();
+        if (exactMatches.Length == 0)
+        {
+            return [];
+        }
+
+        var parameter = Expression.Parameter(typeof(AiKnowledgeGapCluster), "cluster");
+        var language = Expression.Property(parameter, nameof(AiKnowledgeGapCluster.Language));
+        var normalizedKey = Expression.Property(parameter, nameof(AiKnowledgeGapCluster.NormalizedKey));
+        Expression matchesAlias = Expression.Constant(false);
+        foreach (var alias in exactMatches)
+        {
+            var exactMatch = Expression.AndAlso(
+                Expression.Equal(language, Expression.Constant(alias.Language)),
+                Expression.Equal(normalizedKey, Expression.Constant(alias.NormalizedText)));
+            matchesAlias = Expression.OrElse(matchesAlias, exactMatch);
+        }
+
+        var predicate = Expression.Lambda<Func<AiKnowledgeGapCluster, bool>>(matchesAlias, parameter);
+        return await _context.AiKnowledgeGapClusters
+            .Where(cluster => cluster.Status == AiKnowledgeGapStatus.New
+                || cluster.Status == AiKnowledgeGapStatus.Reviewed)
+            .Where(predicate)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<AiKnowledgeGapCluster?> GetGapAsync(Guid id, CancellationToken cancellationToken = default)
         => _context.AiKnowledgeGapClusters.FirstOrDefaultAsync(cluster => cluster.Id == id, cancellationToken);
 

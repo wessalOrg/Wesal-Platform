@@ -207,11 +207,27 @@ public sealed partial class MabroukKnowledgeStudioService : IAiKnowledgeStudioSe
         foreach (var alias in publishedAliases)
             _repository.MarkAliasAdded(alias);
         _repository.AddRevision(CreateRevision(article, "Published", RequireChangeNote(changeNote), userId, now));
-        IReadOnlyList<AiKnowledgeGapCluster> linkedGaps = article.VerificationStatus == AiKnowledgeVerificationStatus.Verified && IsActive(article, Today)
-            ? await _repository.GetUnresolvedGapsLinkedToArticleAsync(article.Id, cancellationToken)
-            : [];
-        foreach (var gap in linkedGaps)
+        var canResolveGaps = article.VerificationStatus == AiKnowledgeVerificationStatus.Verified && IsActive(article, Today);
+        IReadOnlyList<AiKnowledgeGapCluster> resolvedCandidates = [];
+        if (canResolveGaps)
         {
+            var linkedGaps = await _repository.GetUnresolvedGapsLinkedToArticleAsync(article.Id, cancellationToken);
+            var exactAliasGaps = await _repository.GetUnresolvedGapsMatchingAliasesAsync(
+                article.Aliases.Select(alias => (alias.Language, alias.NormalizedText)).ToArray(),
+                cancellationToken);
+            resolvedCandidates = linkedGaps.Concat(exactAliasGaps).DistinctBy(gap => gap.Id).ToList();
+        }
+
+        foreach (var gap in resolvedCandidates)
+        {
+            // Exact, language-matched aliases let a separately authored answer
+            // close its question. Never replace a different Admin-selected link.
+            if (gap.LinkedArticleId.HasValue && gap.LinkedArticleId != article.Id)
+            {
+                continue;
+            }
+
+            gap.LinkedArticleId = article.Id;
             gap.Status = AiKnowledgeGapStatus.Resolved;
             gap.ResolvedAt = now;
         }
