@@ -308,13 +308,15 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
             href={youtubeHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-lg font-bold text-[var(--wesal-text)]"
+            className="group inline-flex items-center gap-2 text-base font-semibold text-[var(--wesal-text)]"
             data-testid="hall-youtube-link"
           >
             <YouTubeIcon />
             <span>
               {t("halls.details.youtubeLead")}{" "}
-              <span className="underline underline-offset-4">{t("halls.details.youtubeHere")}</span>
+              <span className="font-bold text-[var(--wesal-maroon)] underline decoration-[var(--wesal-maroon)]/40 underline-offset-4 transition duration-200 group-hover:text-[var(--wesal-maroon-dark)] group-hover:decoration-[var(--wesal-maroon-dark)]">
+                {t("halls.details.youtubeHere")}
+              </span>
             </span>
           </a>
         ) : null}
