@@ -313,7 +313,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           >
             <YouTubeIcon />
             <span>
-              {t("halls.details.youtubeLead")}{" "}
+              <span className="font-bold text-[#241c18]">{t("halls.details.youtubeLead")}</span>{" "}
               <span className="font-bold text-[var(--wesal-maroon)] underline decoration-[var(--wesal-maroon)]/40 underline-offset-4 transition duration-200 group-hover:text-[var(--wesal-maroon-dark)] group-hover:decoration-[var(--wesal-maroon-dark)]">
                 {t("halls.details.youtubeHere")}
               </span>
