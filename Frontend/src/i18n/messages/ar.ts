@@ -1504,6 +1504,8 @@ const ar: MessageCatalog = {
   "owner.hall.alreadyUnavailable": "هذه القاعة لم تعد متاحة للحذف.",
   "owner.subscription.daysRemainingLabel":
     "المتبقي على نهاية الاشتراك: {count} يوم",
+  "owner.subscription.hallsDaysNote": "المتبقي على الاشتراك: {count} يوم",
+  "owner.subscription.hallsExpiredNote": "انتهى الاشتراك",
   "owner.subscription.paymentNotice.section": "تنبيهات سداد الاشتراك",
   "owner.subscription.paymentNotice.badge": "بانتظار سداد الاشتراك",
   "owner.subscription.paymentNotice.body":

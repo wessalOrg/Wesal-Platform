@@ -1524,6 +1524,8 @@ const en: MessageCatalog = {
   "owner.hall.alreadyUnavailable": "This hall is no longer available to delete.",
   "owner.subscription.daysRemainingLabel":
     "Days left on this subscription: {count}",
+  "owner.subscription.hallsDaysNote": "Days left on the subscription: {count}",
+  "owner.subscription.hallsExpiredNote": "The subscription has ended",
   "owner.subscription.paymentNotice.section": "Subscription payment notices",
   "owner.subscription.paymentNotice.badge": "Subscription payment pending",
   "owner.subscription.paymentNotice.body":

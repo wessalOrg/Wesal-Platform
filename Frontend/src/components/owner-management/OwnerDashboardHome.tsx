@@ -15,6 +15,7 @@ import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { ownerHallPath } from "@/lib/hall-owner-query-keys";
 import { localizeHallName } from "@/lib/localize-hall-display";
 import { useT } from "@/i18n";
+import type { HallOwnerHall } from "@/types/hall-owner-halls";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
@@ -53,12 +54,6 @@ export default function OwnerDashboardHome() {
     hallsState.status === "ready" || hallsState.halls.length > 0
       ? hallsState.halls.filter(
           (item) => item.status === "Approved" && item.paymentStatus !== "Paid",
-        )
-      : [];
-  const paidHalls =
-    hallsState.status === "ready" || hallsState.halls.length > 0
-      ? hallsState.halls.filter(
-          (item) => item.status === "Approved" && item.paymentStatus === "Paid",
         )
       : [];
 
@@ -170,28 +165,6 @@ export default function OwnerDashboardHome() {
               hallName={localizeHallName(hall.id, hall.name, lang)}
               paymentStatus={hall.paymentStatus}
             />
-          ))}
-        </section>
-      ) : null}
-
-      {paidHalls.length > 0 ? (
-        <section
-          className="space-y-3"
-          aria-label={t("owner.subscription.activeSection")}
-          data-testid="owner-dashboard-active-subscriptions"
-        >
-          {paidHalls.map((hall) => (
-            <aside
-              key={hall.id}
-              className="rounded-2xl border border-[rgba(5,150,105,0.28)] bg-[rgba(5,150,105,0.06)] p-4 sm:p-5"
-            >
-              <p className="text-sm font-semibold text-[var(--wesal-text)]">
-                {localizeHallName(hall.id, hall.name, lang)}
-              </p>
-              <div className="mt-3">
-                <OwnerPaidSubscriptionDays hallId={hall.id} />
-              </div>
-            </aside>
           ))}
         </section>
       ) : null}
@@ -315,6 +288,7 @@ export default function OwnerDashboardHome() {
                     </p>
                     <HallApprovalStatusBadge status={hall.status} />
                   </div>
+                  <HallSubscriptionNote hall={hall} />
                 </Link>
               </li>
             ))}
@@ -335,6 +309,17 @@ export default function OwnerDashboardHome() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function HallSubscriptionNote({ hall }: { hall: HallOwnerHall }) {
+  if (hall.status !== "Approved") return null;
+  if (hall.paymentStatus !== "Paid" && !hall.systemLocked) return null;
+
+  return (
+    <div className="mt-1.5">
+      <OwnerPaidSubscriptionDays hallId={hall.id} ended={hall.systemLocked} />
     </div>
   );
 }
