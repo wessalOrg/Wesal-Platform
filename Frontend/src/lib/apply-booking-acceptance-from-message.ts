@@ -5,14 +5,14 @@ import {
   rememberUserBookings,
 } from "@/lib/user-bookings-store";
 
-/** Matches BookingAcceptanceService.BuildApprovalContent on the backend. */
-const APPROVAL_TEXT =
-  /تم قبول طلب الحجز الخاص بك\.?\s*برجاء دفع عربون قدره\s*([\d.]+)\s*للتأكيد النهائي للحجز/;
+/** Matches current and older owner-approval chat notices (catalog + legacy). */
+const APPROVAL_DEPOSIT =
+  /(?:عربون(?:\s+قدره)?|deposit(?: payment notice)?(?: of)?)\s*(?:والذي هو\s*)?["“”]?\s*([\d]+(?:[.,]\d+)?)\s*["“”]?\s*(?:شيكل|ILS)?/i;
 
 export function parseBookingApprovalDeposit(content: string): number | null {
-  const match = (content ?? "").trim().match(APPROVAL_TEXT);
+  const match = APPROVAL_DEPOSIT.exec((content ?? "").trim());
   if (!match) return null;
-  return parseDepositAmount(match[1]);
+  return parseDepositAmount(match[1].replace(",", "."));
 }
 
 /**

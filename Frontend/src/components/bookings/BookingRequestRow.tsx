@@ -193,7 +193,8 @@ function StatusPill({ status }: { status: BookingStatus }) {
   const t = useT();
   const styles: Record<BookingStatus, string> = {
     Pending: "bg-[rgba(193,123,127,0.16)] text-[var(--wesal-maroon)]",
-    Accepted: "bg-emerald-50 text-emerald-700",
+    Accepted: "bg-amber-50 text-[#8a6a2a]",
+    Confirmed: "bg-emerald-50 text-emerald-700",
     Rejected: "bg-[#fbf4f2] text-[var(--wesal-maroon-dark)]",
     Cancelled: "bg-[var(--wesal-pink-soft)] text-[var(--wesal-muted)]",
   };

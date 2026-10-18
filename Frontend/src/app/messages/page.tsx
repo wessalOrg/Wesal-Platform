@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -14,7 +15,13 @@ export default function MessagesIndexPage() {
     <>
       <Navbar />
       <main className="container-wesal min-h-[60svh] py-8">
-        <MessagesInbox />
+        <Suspense
+          fallback={
+            <div className="h-72 animate-pulse rounded-[1.4rem] bg-white/80" aria-busy="true" />
+          }
+        >
+          <MessagesInbox />
+        </Suspense>
       </main>
       <Footer />
     </>

@@ -232,20 +232,20 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
   }, [submitting]);
 
   const submit = useCallback(async () => {
-    if (!canSubmit || !dateIso || confirmedStarts.length === 0 || submitting) return;
+    if (!canSubmit || !dateIso || confirmedStarts.length === 0 || submitting) return false;
     const customerName = accountName;
     const customerPhone = phone.trim();
     if (!customerName) {
       setErrorKey("errors.hourly.nameRequired");
-      return;
+      return false;
     }
     if (!customerPhone) {
       setErrorKey("errors.hourly.phoneRequired");
-      return;
+      return false;
     }
     if (!isValidRegisterPhone(customerPhone)) {
       setErrorKey("errors.hourly.phoneInvalid");
-      return;
+      return false;
     }
 
     setSubmitting(true);
@@ -291,6 +291,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
               userName: customerName,
               hallName: hallName?.trim() || "",
               date: formatBookingDateLabel(dateIso, locale),
+              period: selectedRangeLabel,
               phone: customerPhone,
             },
             metadata: {
@@ -307,12 +308,14 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
       setConfirmedStarts([]);
       onConfirmed?.(null);
       await reload();
+      return true;
     } catch (err) {
       const key =
         err instanceof ApiError && err.message.startsWith("errors.")
           ? err.message
           : "errors.hourly.generic";
       setErrorKey(key);
+      return false;
     } finally {
       setSubmitting(false);
     }

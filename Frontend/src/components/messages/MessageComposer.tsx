@@ -27,6 +27,8 @@ type MessageComposerProps = {
   attachmentBusy?: boolean;
   onPickAttachment?: (file: File) => void;
   onClearAttachment?: () => void;
+  /** Highlights the receipt attach control (opened from a payment-notice action). */
+  promptAttach?: boolean;
 };
 
 function resizeField(el: HTMLTextAreaElement | null) {
@@ -48,6 +50,7 @@ export default function MessageComposer({
   attachmentBusy = false,
   onPickAttachment,
   onClearAttachment,
+  promptAttach = false,
 }: MessageComposerProps) {
   const t = useT();
   const fieldRef = useRef<HTMLTextAreaElement>(null);
@@ -122,6 +125,11 @@ export default function MessageComposer({
       <label className="sr-only" htmlFor={id}>
         {t("messages.composerPlaceholder")}
       </label>
+      {promptAttach && !attachmentPreviewUrl ? (
+        <p className="text-xs font-semibold text-[var(--wesal-maroon)]" data-testid="message-attach-hint">
+          {t("messages.attachPaymentHint")}
+        </p>
+      ) : null}
       {attachmentPreviewUrl ? (
         <div
           className="mb-2 flex min-w-0 items-center gap-2 rounded-xl border border-[var(--wesal-border)] bg-white p-2"
@@ -161,12 +169,17 @@ export default function MessageComposer({
               type="button"
               className={
                 owner
-                  ? "owner-chat-attach"
-                  : "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] disabled:opacity-60"
+                  ? `owner-chat-attach${promptAttach ? " ring-2 ring-[var(--wesal-gold)]" : ""}`
+                  : `inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-white text-[var(--wesal-maroon)] disabled:opacity-60 ${
+                      promptAttach
+                        ? "border-[var(--wesal-gold)] ring-2 ring-[var(--wesal-gold)]"
+                        : "border-[var(--wesal-border)]"
+                    }`
               }
               disabled={disabled || attachmentBusy}
               aria-label={t("messages.attachReceipt")}
               data-testid="message-attach-receipt"
+              data-prompt-attach={promptAttach ? "true" : undefined}
               onClick={() => fileRef.current?.click()}
             >
               <AttachIcon />

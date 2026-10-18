@@ -9,6 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
@@ -78,6 +79,7 @@ function storePanelSize(size: PanelSize): void {
 export default function MessagesInboxPanel() {
   const t = useT();
   const lang = useUiLang();
+  const promptAttach = useSearchParams().get("attach") === "1";
   const { isHallOwner, isAdmin } = useAccountAccess();
   const {
     isOpen,
@@ -461,6 +463,7 @@ export default function MessagesInboxPanel() {
                 attachmentBusy={adminChat.attachmentBusy}
                 onPickAttachment={adminChat.pickAttachment}
                 onClearAttachment={adminChat.clearAttachment}
+                promptAttach={promptAttach}
               />
               </ProtectedHallMessageThread>
             </div>

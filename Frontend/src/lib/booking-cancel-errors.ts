@@ -3,7 +3,7 @@ import { BookingError } from "@/lib/booking-errors";
 import type { BookingStatus } from "@/types/booking";
 
 export function finalizedCancelMessageKey(status: BookingStatus): string {
-  if (status === "Accepted") return "errors.booking.cancel.accepted";
+  if (status === "Accepted" || status === "Confirmed") return "errors.booking.cancel.accepted";
   if (status === "Rejected") return "errors.booking.cancel.rejected";
   if (status === "Cancelled") return "errors.booking.cancel.cancelled";
   return "errors.booking.cancel.finalized";

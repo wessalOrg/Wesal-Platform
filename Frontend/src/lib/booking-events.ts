@@ -24,6 +24,7 @@ export type BookingAcceptedDetail = {
   periods?: BookingPeriodType[];
   hallName?: string;
   depositAmount?: number | null;
+  timeRange?: string;
   /**
    * The seeker <-> hall owner thread the approval landed in. The backend resolves exactly
    * this conversation when it accepts a booking, so carrying it here lets the "deposit

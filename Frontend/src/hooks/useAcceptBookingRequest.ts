@@ -55,6 +55,7 @@ export function useAcceptBookingRequest(options?: UseAcceptBookingRequestOptions
           periods: result.periods,
           hallName: hallName?.trim() || undefined,
           depositAmount: result.depositAmount ?? depositAmount,
+          timeRange: result.timeRange,
         });
         return result;
       } catch (err) {

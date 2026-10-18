@@ -53,7 +53,7 @@ export function useBookingOwnerChat() {
       setBusyId(booking.bookingId);
       try {
         const draft = contextFor(booking);
-        const thread = await start(booking.hallId, { draft });
+        const thread = await start(booking.hallId, { draft, attach: true });
         if (!thread) return null;
         if (!thread.isExisting) {
           try {
