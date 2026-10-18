@@ -27,7 +27,6 @@ import { buildHallDetailsPath, hasBookingIntent, hasContactIntent } from "@/lib/
 import { saveBookingHallContext } from "@/lib/auth-storage";
 import { resetBodyScrollLock } from "@/lib/body-scroll-lock";
 import { localizeHallDetail, localizeReviews } from "@/lib/localize-hall-display";
-import { toStoredYouTubeUrl, toYouTubeVideoId } from "@/lib/youtube-embed";
 import {
   fetchHallComments,
   mapCommentToReview,
@@ -211,9 +210,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
   const viewHall = localizeHallDetail(hall, lang);
   const featureLabels = uniqueFeatureLabels(viewHall.features, viewHall.amenities);
-  const youtubeHref = toYouTubeVideoId(viewHall.youtubeVideoUrl)
-    ? toStoredYouTubeUrl(viewHall.youtubeVideoUrl ?? "")
-    : "";
   const notes = hallNotes(viewHall.otherFeatures, t("halls.details.summaryPriceNote"));
   const detailedAddress = viewHall.detailedAddress?.trim() || viewHall.location;
   const sections = [
@@ -301,24 +297,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
             </h2>
             <HallAmenitiesGrid amenities={featureLabels} embedded />
           </div>
-        ) : null}
-
-        {youtubeHref ? (
-          <a
-            href={youtubeHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2 text-base font-semibold text-[var(--wesal-text)]"
-            data-testid="hall-youtube-link"
-          >
-            <YouTubeIcon />
-            <span>
-              <span className="font-bold text-[#241c18]">{t("halls.details.youtubeLead")}</span>{" "}
-              <span className="font-bold text-[var(--wesal-maroon)] underline decoration-[var(--wesal-maroon)]/40 underline-offset-4 transition duration-200 group-hover:text-[var(--wesal-maroon-dark)] group-hover:decoration-[var(--wesal-maroon-dark)]">
-                {t("halls.details.youtubeHere")}
-              </span>
-            </span>
-          </a>
         ) : null}
 
         {notes.length > 0 || !isOwnHall ? (
@@ -592,18 +570,6 @@ function hallNotes(otherFeatures: string | null | undefined, priceNote: string):
     if (trimmed && !notes.includes(trimmed)) notes.push(trimmed);
   }
   return notes;
-}
-
-function YouTubeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-[#c4302b]" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M23 12.2s0-3.2-.4-4.6c-.2-.9-.9-1.6-1.8-1.8C19.2 5.4 12 5.4 12 5.4s-7.2 0-8.8.4c-.9.2-1.6.9-1.8 1.8C1 9 1 12.2 1 12.2s0 3.2.4 4.6c.2.9.9 1.6 1.8 1.8 1.6.4 8.8.4 8.8.4s7.2 0 8.8-.4c.9-.2 1.6-.9 1.8-1.8.4-1.4.4-4.6.4-4.6Z"
-      />
-      <path fill="#fff" d="M9.8 15.5v-6.6l6.2 3.3-6.2 3.3Z" />
-    </svg>
-  );
 }
 
 function InfoIcon() {
