@@ -304,17 +304,19 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
         ) : null}
 
         {youtubeHref ? (
-          <p className="text-sm leading-8 text-[var(--wesal-text)]" data-testid="hall-youtube-link">
-            {t("halls.details.youtubeLead")}{" "}
-            <a
-              href={youtubeHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-[var(--wesal-maroon)] underline underline-offset-4"
-            >
-              {t("halls.details.youtubeHere")}
-            </a>
-          </p>
+          <a
+            href={youtubeHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-lg font-bold text-[var(--wesal-text)]"
+            data-testid="hall-youtube-link"
+          >
+            <YouTubeIcon />
+            <span>
+              {t("halls.details.youtubeLead")}{" "}
+              <span className="underline underline-offset-4">{t("halls.details.youtubeHere")}</span>
+            </span>
+          </a>
         ) : null}
 
         {notes.length > 0 || !isOwnHall ? (
@@ -588,6 +590,18 @@ function hallNotes(otherFeatures: string | null | undefined, priceNote: string):
     if (trimmed && !notes.includes(trimmed)) notes.push(trimmed);
   }
   return notes;
+}
+
+function YouTubeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-[#c4302b]" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M23 12.2s0-3.2-.4-4.6c-.2-.9-.9-1.6-1.8-1.8C19.2 5.4 12 5.4 12 5.4s-7.2 0-8.8.4c-.9.2-1.6.9-1.8 1.8C1 9 1 12.2 1 12.2s0 3.2.4 4.6c.2.9.9 1.6 1.8 1.8 1.6.4 8.8.4 8.8.4s7.2 0 8.8-.4c.9-.2 1.6-.9 1.8-1.8.4-1.4.4-4.6.4-4.6Z"
+      />
+      <path fill="#fff" d="M9.8 15.5v-6.6l6.2 3.3-6.2 3.3Z" />
+    </svg>
+  );
 }
 
 function InfoIcon() {
