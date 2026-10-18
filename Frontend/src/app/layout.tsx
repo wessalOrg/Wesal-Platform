@@ -40,6 +40,18 @@ const cairo = Cairo({
 export const metadata: Metadata = {
   title: translate("meta.siteTitle", "ar"),
   description: translate("meta.siteDescription", "ar"),
+  openGraph: {
+    title: translate("meta.siteTitle", "ar"),
+    description: translate("meta.siteDescription", "ar"),
+    siteName: "Wesal",
+    locale: "ar",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: translate("meta.siteTitle", "ar"),
+    description: translate("meta.siteDescription", "ar"),
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

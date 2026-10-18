@@ -1,0 +1,12 @@
+[
+  { "id": "case-01-recommendation-after-search", "category": "hall-ranking", "turns": ["طيب بدي اشي بالشاطئ", "طيب شو بتنصحني"] },
+  { "id": "case-02-keep-budget-capacity-region", "category": "context-loss", "turns": ["بدي صالة بغزة لـ200 شخص وميزانيتي 3000 شيكل", "مين الأنسب من اللي عرضتهم وليش؟"] },
+  { "id": "case-03-no-repeat-selected-alternative", "category": "repetition", "turns": ["شو غيرها موجود", "هاي نتيجة ثانية", "شو غيرها موجود"] },
+  { "id": "case-04-affirmative-continuation", "category": "intent-classification", "turns": ["صالة غيرها", "طيب اه دور"] },
+  { "id": "case-05-platform-topic-switch-resume", "category": "wrong-source-retrieval", "turns": ["اختارلي هاي الصالة", "طيب احكيلي شو بتقدموا", "ارجع للصالة"] },
+  { "id": "case-06-booking-navigation", "category": "navigation-failure", "turns": ["بدي احجز صالة متى متوفرة", "باسم عبد الرحمن أبو سالم بتقدر تحجزلي", "بتقدر توديني هناك"] },
+  { "id": "case-07-budget-amendments", "category": "wrong-search-criteria", "turns": ["بدي صالة بغزة لـ200 شخص وميزانيتي 3000 شيكل", "طيب ميزانيتي صارت 2500", "طيب ميزانيتي صارت 1500", "طيب ميزانيتي صارت 1500 المعازيم 150"] },
+  { "id": "case-08-colloquial-ambiguity", "category": "unnecessary-clarification", "turns": ["وديني عصالات", "شو بتشرحلي صالة معي 2000شيكل وعندي 180 شخص", "ارخص وحدة", "لكم نفر بتسع", "صالة غيرها", "طيب اه دور", "وديني هناك", "ورجيني القاعة", "افتحلي هاي", "شو بتقدمو بالزبط"] },
+  { "id": "case-09-person-and-team-identity", "category": "wrong-source-retrieval", "turns": ["مين مطور وصال", "مين مطور مبروك", "مين عبد الرحمن أبو سالم", "عبد العزيز الخزندار"] },
+  { "id": "case-10-booking-truth", "category": "hallucinated-application-fact", "turns": ["بدي أعمل حجز لهذه الصالة. هل الحجز صار مؤكداً ولا لسه؟"] }
+]

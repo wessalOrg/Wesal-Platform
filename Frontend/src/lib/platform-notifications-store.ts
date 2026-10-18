@@ -18,9 +18,13 @@ export const PLATFORM_NOTIFICATION_TOAST = "wesal-platform-notification-toast";
 export type PushPlatformNotificationInput = {
   type: PlatformNotificationType;
   audience: NotificationAudience;
-  titleKey: string;
-  bodyKey: string;
+  titleKey?: string;
+  bodyKey?: string;
   actionLabelKey?: string;
+  /** Already-localized text from the server (used when no i18n key is given). */
+  title?: string;
+  body?: string;
+  actionLabel?: string;
   params?: Record<string, string>;
   action_url?: string;
   metadata?: PlatformNotificationMetadata;
@@ -171,9 +175,11 @@ export function pushPlatformNotification(
   }
 
   const params = input.params ?? {};
-  const title = t(input.titleKey, params);
-  const body = t(input.bodyKey, params);
-  const action_label = input.actionLabelKey ? t(input.actionLabelKey, params) : undefined;
+  const title = input.titleKey ? t(input.titleKey, params) : (input.title ?? "");
+  const body = input.bodyKey ? t(input.bodyKey, params) : (input.body ?? "");
+  const action_label = input.actionLabelKey
+    ? t(input.actionLabelKey, params)
+    : input.actionLabel;
   const item: PlatformNotification = {
     id: `notify-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     type: input.type,
@@ -192,8 +198,8 @@ export function pushPlatformNotification(
     is_read: false,
     created_at: new Date().toISOString(),
     tone: input.tone ?? defaultTone(input.type),
-    titleKey: input.titleKey,
-    bodyKey: input.bodyKey,
+    titleKey: input.titleKey ?? "",
+    bodyKey: input.bodyKey ?? "",
     actionLabelKey: input.actionLabelKey,
     params,
   };

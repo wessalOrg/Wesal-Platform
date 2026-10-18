@@ -750,6 +750,9 @@ type ApiHallDetails = {
   reviewCount?: number | null;
   description?: string | null;
   shortDescription?: string | null;
+  detailedAddress?: string | null;
+  features?: string[] | null;
+  otherFeatures?: string | null;
   amenities?: Array<{
     id?: string;
     label?: string;
@@ -813,15 +816,6 @@ function unwrapHallDetails(payload: HallDetailsResponse): ApiHallDetails {
   return payload;
 }
 
-function mapImageEntry(
-  entry: string | { url?: string; imageUrl?: string } | null | undefined,
-  index: number,
-): string | null {
-  if (!entry) return null;
-  if (typeof entry === "string") return resolveHallImage(entry, index);
-  return resolveHallImage(entry.url ?? entry.imageUrl, index);
-}
-
 function isHallUnavailable(raw: ApiHallDetails): boolean {
   if (isHallPubliclyUnavailable(hallAccessFromUnknown(raw))) return true;
   if (raw.isAvailable === false || raw.isDeleted === true) return true;
@@ -859,28 +853,35 @@ function mapReviews(
   }));
 }
 
+function ownerPopupImages(raw: ApiHallDetails): string[] {
+  const listed = (entries?: ApiHallDetails["images"]) =>
+    (entries ?? []).flatMap((entry) => {
+      if (!entry) return [];
+      if (typeof entry === "string") return [entry];
+      return [entry.url, entry.imageUrl].filter((item): item is string => Boolean(item));
+    });
+  const ordered = [
+    firstMediaReference(raw.mainImage, raw.mainImageUrl, raw.imageUrl),
+    ...extractPhotoUrls(raw.photos),
+    ...listed(raw.images),
+    ...listed(raw.gallery),
+  ];
+  const resolved = ordered
+    .map((item) => {
+      const url = resolveMediaUrl(item);
+      if (!url || url.startsWith("/halls/")) return null;
+      return url;
+    })
+    .filter((item): item is string => Boolean(item));
+  return Array.from(new Set(resolved));
+}
+
 function mapApiHallDetails(raw: ApiHallDetails): HallDetails {
   const fallback = isDemoModeEnabled()
     ? findHallDetailsFallback(String(raw.hallId ?? raw.id ?? ""))
     : undefined;
   const id = String(raw.hallId ?? raw.id ?? fallback?.id ?? "");
-  const photosUrls = extractPhotoUrls(raw.photos);
-  const galleryRaw = [...photosUrls, ...(raw.images ?? []), ...(raw.gallery ?? [])];
-  const gallery = galleryRaw
-    .map((entry, index) => mapImageEntry(entry, index))
-    .filter((url): url is string => Boolean(url));
-  const main = resolveHallImage(
-    firstMediaReference(
-      raw.mainImage,
-      raw.mainImageUrl,
-      raw.imageUrl,
-      photosUrls[0],
-    ),
-    0,
-  );
-  const images = Array.from(
-    new Set([main, ...gallery, ...(fallback?.images ?? [])].filter(Boolean)),
-  );
+  const images = ownerPopupImages(raw);
   const priceLabel =
     raw.showPrice === false
       ? null
@@ -899,9 +900,16 @@ function mapApiHallDetails(raw: ApiHallDetails): HallDetails {
     reviewCount: raw.reviewCount ?? fallback?.reviewCount ?? null,
     description:
       raw.description ?? raw.shortDescription ?? fallback?.description ?? null,
+    detailedAddress:
+      typeof raw.detailedAddress === "string" ? raw.detailedAddress.trim() || null : null,
+    features: Array.isArray(raw.features)
+      ? raw.features.map((feature) => String(feature).trim()).filter(Boolean)
+      : [],
+    otherFeatures:
+      typeof raw.otherFeatures === "string" ? raw.otherFeatures.trim() || null : null,
     amenities: mapAmenities(raw.amenities, fallback?.amenities),
     reviews: mapReviews(raw.reviews, fallback?.reviews),
-    images: images.length > 0 ? images : (fallback?.images ?? [main]),
+    images,
     isAvailable: !isHallUnavailable(raw),
     isOwner: raw.isOwner ?? false,
     availabilityDays: (() => {
@@ -949,7 +957,7 @@ export async function fetchHallById(id: string): Promise<HallByIdLoadResult> {
       if (local) {
         return {
           status: "ok",
-          hall: local,
+          hall: { ...local, images: [] },
           source: "fallback",
           warning: t("errors.offlineDemo"),
         };
@@ -963,7 +971,7 @@ export async function fetchHallById(id: string): Promise<HallByIdLoadResult> {
     if (local) {
       return {
         status: "ok",
-        hall: local,
+        hall: { ...local, images: [] },
         source: "fallback",
         warning: t("halls.details.offline"),
       };

@@ -57,4 +57,22 @@ test.describe.serial("unanswered inbox", () => {
     await expect(inbox).not.toContainText(GAP_B, { timeout: 30000 });
     await expect(inbox).toContainText(GAP_A);
   });
+
+  test("create-answer failures are shown beside the action", async ({ page }) => {
+    const question = "E2E: فشل إنشاء مسودة الإجابة";
+    await seedGap(question);
+    await gotoAdmin(page, "/admin/mabrouk/unanswered");
+    const inbox = page.getByTestId("mabrouk-unanswered");
+    await expect(inbox).toContainText(question, { timeout: 30000 });
+    await inbox.locator("button", { hasText: question }).first().click();
+
+    await page.route("**/admin/mabrouk/unanswered/*/create-article", (route) => route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ code: "TestFailure" }),
+    }));
+    const detail = page.getByTestId("mabrouk-gap-detail");
+    await detail.locator("button.btn-primary").click();
+    await expect(page.getByTestId("mabrouk-create-answer-error")).toBeVisible();
+  });
 });

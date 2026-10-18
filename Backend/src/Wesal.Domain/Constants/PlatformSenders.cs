@@ -34,6 +34,11 @@ public static class PlatformSenders
     /// <summary>Stands in for the Admin side when no real Admin account can be named.</summary>
     public const string AdminFallback = "admin";
 
+    /// <summary>
+    /// Name shown to a hall owner for any Admin, instead of that Admin's personal full name.
+    /// </summary>
+    public const string AdminDisplayName = "إدارة وصال";
+
     /// <summary>Stands in for the platform on automated owner-facing notices.</summary>
     public const string System = "system";
 

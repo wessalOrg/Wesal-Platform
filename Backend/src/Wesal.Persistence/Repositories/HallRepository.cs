@@ -96,19 +96,35 @@ public class HallRepository : IHallRepository
         int skip,
         int take,
         CancellationToken cancellationToken = default)
-        => await ApplySearchFilters(ApprovedHallsQuery(), request.Name, request.Region, request.Area,
-                request.DetailedAddress, request.Date, request.StartTime, request.MinimumCapacity)
-            .OrderByDescending(hall => hall.CreatedAt)
-            .ThenBy(hall => hall.Name)
-            .Skip(skip)
-            .Take(take)
-            .ToListAsync(cancellationToken);
+    {
+        var query = ApplyPriceFilters(
+            ApplySearchFilters(ApprovedHallsQuery(), request.Name, request.Region, request.Area,
+                request.DetailedAddress, request.Date, request.StartTime, request.MinimumCapacity),
+            request);
+        var ordered = request.SortPreference switch
+        {
+            AiPriceSortPreference.HighestPrice => query.OrderByDescending(hall => hall.Price)
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            AiPriceSortPreference.ClosestToTarget when request.AroundPrice is { } target => query
+                .OrderBy(hall => Math.Abs(hall.Price!.Value - target))
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            AiPriceSortPreference.LowestPrice => query.OrderBy(hall => hall.Price)
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            _ when request.SortByPrice => query.OrderBy(hall => hall.Price)
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            _ => query.OrderByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name)
+        };
+
+        return await ordered.Skip(skip).Take(take).ToListAsync(cancellationToken);
+    }
 
     public async Task<int> SearchApprovedHallsCountAsync(
         HallSearchRequest request,
         CancellationToken cancellationToken = default)
-        => await ApplySearchFilters(ApprovedHallsQuery(), request.Name, request.Region, request.Area,
-                request.DetailedAddress, request.Date, request.StartTime, request.MinimumCapacity)
+        => await ApplyPriceFilters(
+                ApplySearchFilters(ApprovedHallsQuery(), request.Name, request.Region, request.Area,
+                    request.DetailedAddress, request.Date, request.StartTime, request.MinimumCapacity),
+                request)
             .CountAsync(cancellationToken);
 
     public async Task<IReadOnlyList<HallImage>> GetHallImagesAsync(
@@ -156,6 +172,28 @@ public class HallRepository : IHallRepository
                 && !hall.IsAdminLocked
                 && !hall.SystemLocked
                 && hall.PaymentStatus == HallPaymentStatus.Paid);
+
+    private static IQueryable<Hall> ApplyPriceFilters(IQueryable<Hall> query, HallSearchRequest request)
+    {
+        if (request.MaximumPrice is { } maximumPrice)
+        {
+            query = query.Where(hall => hall.ShowPrice && hall.Price.HasValue && hall.Price.Value <= maximumPrice);
+        }
+
+        if (request.MinimumPrice is { } minimumPrice)
+        {
+            query = query.Where(hall => hall.ShowPrice && hall.Price.HasValue && hall.Price.Value >= minimumPrice);
+        }
+
+        if (request.SortByPrice || request.AroundPrice.HasValue
+            || request.SortPreference != AiPriceSortPreference.Relevance)
+        {
+            // A hidden or missing price cannot be ranked honestly as the cheapest.
+            query = query.Where(hall => hall.ShowPrice && hall.Price.HasValue);
+        }
+
+        return query;
+    }
 
     private IQueryable<Hall> ApplySearchFilters(
         IQueryable<Hall> query,

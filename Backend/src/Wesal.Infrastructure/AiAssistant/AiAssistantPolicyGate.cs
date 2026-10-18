@@ -47,7 +47,8 @@ public sealed class AiAssistantPolicyGate
 
         // Support and payment questions are about Wesal itself, never navigation.
         var payment = AiPaymentIntentClassifier.Classify(message);
-        if (payment != AiPaymentIntent.None)
+        if (payment != AiPaymentIntent.None
+            && !AiCancellationIntentDetector.IsBookingCancellationQuestion(message))
         {
             return await HandlePaymentAsync(payment, language, cancellationToken);
         }

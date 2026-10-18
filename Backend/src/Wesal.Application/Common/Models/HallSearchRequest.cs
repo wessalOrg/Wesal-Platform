@@ -25,6 +25,21 @@ public class HallSearchRequest
     /// <summary>Optional lower bound for venue guest capacity.</summary>
     public int? MinimumCapacity { get; init; }
 
+    /// <summary>Optional maximum published hall price.</summary>
+    public decimal? MaximumPrice { get; init; }
+
+    /// <summary>Optional minimum published hall price.</summary>
+    public decimal? MinimumPrice { get; init; }
+
+    /// <summary>Optional target price used to rank halls by distance from a stated budget.</summary>
+    public decimal? AroundPrice { get; init; }
+
+    /// <summary>Order halls with a published price from lowest to highest.</summary>
+    public bool SortByPrice { get; init; }
+
+    /// <summary>Explicit semantic price ordering; Relevance preserves normal catalog order.</summary>
+    public AiPriceSortPreference SortPreference { get; init; } = AiPriceSortPreference.Relevance;
+
     public int PageNumber { get; init; } = 1;
 
     public int PageSize { get; init; } = 12;

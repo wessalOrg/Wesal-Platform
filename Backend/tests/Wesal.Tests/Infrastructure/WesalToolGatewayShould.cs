@@ -25,12 +25,12 @@ public sealed class WesalToolGatewayShould
     }
 
     [Fact]
-    public void ExposeExactlyThreeToolDefinitions()
+    public void ExposeExactlyFourToolDefinitions()
     {
         var names = _gateway.ToolDefinitions.Select(d => d.Name).OrderBy(x => x).ToList();
 
         Assert.Equal(
-            [WesalToolNames.CheckHallAvailability, WesalToolNames.GetHallDetails, WesalToolNames.SearchHalls],
+            [WesalToolNames.CheckHallAvailability, WesalToolNames.CreateBooking, WesalToolNames.GetHallDetails, WesalToolNames.SearchHalls],
             names);
     }
 
@@ -51,9 +51,33 @@ public sealed class WesalToolGatewayShould
         Assert.True(_gateway.IsKnownTool(WesalToolNames.SearchHalls));
         Assert.True(_gateway.IsKnownTool(WesalToolNames.GetHallDetails));
         Assert.True(_gateway.IsKnownTool(WesalToolNames.CheckHallAvailability));
+        Assert.True(_gateway.IsKnownTool(WesalToolNames.CreateBooking));
         Assert.False(_gateway.IsKnownTool("get_my_bookings"));
         Assert.False(_gateway.IsKnownTool(""));
         Assert.False(_gateway.IsKnownTool("search_halls ") );
+    }
+
+    [Fact]
+    public async Task CreateBookingToolReturnsValidatedPreviewData()
+    {
+        var hallId = Guid.NewGuid();
+        var result = await _gateway.ExecuteAsync(new WesalToolInvocation(
+            WesalToolNames.CreateBooking,
+            new JsonObject
+            {
+                ["hallId"] = hallId.ToString(),
+                ["date"] = "2026-10-25",
+                ["startTime"] = "18:00",
+                ["endTime"] = "22:00",
+                ["customerName"] = "Abood"
+            }));
+
+        Assert.True(result.Success);
+        Assert.Equal(hallId.ToString(), result.Data!["hallId"]!.GetValue<string>());
+        Assert.Equal("2026-10-25", result.Data["date"]!.GetValue<string>());
+        Assert.Equal("18:00", result.Data["startTime"]!.GetValue<string>());
+        Assert.Equal("22:00", result.Data["endTime"]!.GetValue<string>());
+        Assert.Equal("Abood", result.Data["customerName"]!.GetValue<string>());
     }
 
     [Fact]

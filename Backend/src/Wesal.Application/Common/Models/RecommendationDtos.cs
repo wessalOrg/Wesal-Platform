@@ -21,7 +21,12 @@ public sealed record ExtractedCriteriaDto(
     string? Region,
     string? Area,
     DateOnly? Date,
-    int? Capacity);
+    int? Capacity,
+    decimal? MaximumPrice = null,
+    bool SortByPrice = false,
+    decimal? MinimumPrice = null,
+    decimal? AroundPrice = null,
+    AiPriceSortPreference SortPreference = AiPriceSortPreference.Relevance);
 
 public sealed record HallRecommendationDto(
     Guid HallId,

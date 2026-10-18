@@ -19,6 +19,7 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAdminChat } from "@/hooks/useAdminChat";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useT } from "@/i18n";
+import { isOwnerAdminConversation, ownerConversationTitle } from "@/lib/owner-admin-conversation";
 import { floatingPanelBounds } from "@/lib/floating-panel-bounds";
 import {
   conversationHallLabel,
@@ -303,7 +304,9 @@ export default function MessagesInboxPanel() {
   if (!isOpen) return null;
 
   const threadTitle = selected
-    ? conversationPreviewTitle(selected, lang)
+    ? isHallOwner
+      ? ownerConversationTitle(selected, lang, conversations)
+      : conversationPreviewTitle(selected, lang)
     : thread
       ? conversationHallLabel(thread, lang)
       : t("messages.title");
@@ -350,10 +353,10 @@ export default function MessagesInboxPanel() {
         }}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--wesal-maroon)]/15 px-3 py-2.5">
-          <h2 id="messages-inbox-title" className="text-base font-bold text-[var(--wesal-maroon)]">
-            {t("messages.inboxTitle")}
-          </h2>
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <h2 id="messages-inbox-title" className="text-base font-bold text-[var(--wesal-maroon)]">
+              {t("messages.inboxTitle")}
+            </h2>
             <button
               type="button"
               className={`${iconBtnClass} wesal-messages-inbox-resize`}
@@ -365,16 +368,16 @@ export default function MessagesInboxPanel() {
             >
               {isWide ? <CollapseIcon /> : <ExpandIcon />}
             </button>
-            <button
-              type="button"
-              className={iconBtnClass}
-              aria-label={t("messages.closeInbox")}
-              data-testid="messages-inbox-close"
-              onClick={closeInbox}
-            >
-              ✕
-            </button>
           </div>
+          <button
+            type="button"
+            className={iconBtnClass}
+            aria-label={t("messages.closeInbox")}
+            data-testid="messages-inbox-close"
+            onClick={closeInbox}
+          >
+            ✕
+          </button>
         </div>
 
         {!canUseMessaging ? (
@@ -416,6 +419,11 @@ export default function MessagesInboxPanel() {
                 title={threadTitle}
                 subtitle={threadSubtitle}
                 badge={showThread ? threadBadge : null}
+                peerDisplayName={
+                  isHallOwner && selected && isOwnerAdminConversation(selected, conversations)
+                    ? t("owner.messages.admin")
+                    : null
+                }
                 currentUserId={currentUserId}
                 onRetryLoad={retryThread}
                 onRetrySend={retrySend}

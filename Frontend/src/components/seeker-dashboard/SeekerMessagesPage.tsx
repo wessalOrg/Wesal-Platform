@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
@@ -13,6 +13,8 @@ import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessa
 import { SEEKER_MESSAGES_PATH } from "@/constants/seekerDashboardNav";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAdminChat } from "@/hooks/useAdminChat";
+import { useContactAdmin } from "@/hooks/useContactAdmin";
+import { conversationErrorMessage, contactAdminForHall } from "@/services/conversations";
 import { useT } from "@/i18n";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import {
@@ -21,7 +23,7 @@ import {
   conversationPreviewSubtitle,
   conversationPreviewTitle,
 } from "@/lib/conversation-display";
-import { isOwnerAdminConversation } from "@/lib/owner-admin-conversation";
+import { isOwnerAdminConversation, ownerConversationTitle } from "@/lib/owner-admin-conversation";
 
 /** Messages workspace embedded in the seeker dashboard shell. */
 export default function SeekerMessagesPage() {
@@ -65,6 +67,42 @@ export default function SeekerMessagesPage() {
     focusAdmin: ownerContactAdmin,
   });
 
+  // "Contact Admin" with no thread yet: create the owner ↔ Admin thread, then open it.
+  const { preferredHallId } = useContactAdmin();
+  const contactHallId = focusHallId ?? preferredHallId;
+  const needsAdminThread = adminChat.missingConversation && ownerContactAdmin;
+  const [creatingAdmin, setCreatingAdmin] = useState(false);
+  const [createAdminError, setCreateAdminError] = useState<string | null>(null);
+  const [createAttempt, setCreateAttempt] = useState(0);
+  // Latest callbacks kept in a ref so their identity can never re-trigger the request.
+  const adminThreadActions = useRef({ retryInbox, selectConversation });
+  useEffect(() => {
+    adminThreadActions.current = { retryInbox, selectConversation };
+  });
+
+  useEffect(() => {
+    if (!needsAdminThread || !contactHallId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async request lifecycle flag
+    setCreatingAdmin(true);
+    setCreateAdminError(null);
+    contactAdminForHall(contactHallId)
+      .then((created) => {
+        if (cancelled) return;
+        adminThreadActions.current.retryInbox();
+        adminThreadActions.current.selectConversation(created.conversationId);
+      })
+      .catch((err) => {
+        if (!cancelled) setCreateAdminError(conversationErrorMessage(err, "start"));
+      })
+      .finally(() => {
+        if (!cancelled) setCreatingAdmin(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [needsAdminThread, contactHallId, createAttempt]);
+
   useEffect(() => {
     if (!focusConversationId || ownerContactAdmin) return;
     if (selectedId === focusConversationId) return;
@@ -74,7 +112,9 @@ export default function SeekerMessagesPage() {
   const selected = conversations.find((item) => item.conversationId === selectedId) ?? null;
   const showThread = Boolean(selectedId);
   const threadTitle = selected
-    ? conversationPreviewTitle(selected, lang)
+    ? isHallOwner
+      ? ownerConversationTitle(selected, lang, conversations)
+      : conversationPreviewTitle(selected, lang)
     : thread
       ? conversationHallLabel(thread, lang)
       : t("messages.title");
@@ -212,7 +252,22 @@ export default function SeekerMessagesPage() {
                 className="seeker-messages-placeholder px-4"
                 data-testid="owner-admin-conversation-missing"
               >
-                <p>{t("messages.noAdminConversation")}</p>
+                {creatingAdmin ? (
+                  <p>{t("common.loading")}</p>
+                ) : createAdminError ? (
+                  <>
+                    <p role="alert">{createAdminError}</p>
+                    <button
+                      type="button"
+                      className="btn-outline mt-4"
+                      onClick={() => setCreateAttempt((value) => value + 1)}
+                    >
+                      {t("common.retry")}
+                    </button>
+                  </>
+                ) : (
+                  <p>{t("messages.noAdminConversation")}</p>
+                )}
               </div>
             ) : (
               <div className="seeker-messages-placeholder" data-testid="seeker-messages-placeholder">

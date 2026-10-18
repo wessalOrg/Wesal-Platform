@@ -32,7 +32,7 @@ export default function ComingSoonPage({ titleKey }: { titleKey: string }) {
   );
 }
 
-function BackHomeArrow({ flip }: { flip: boolean }) {
+export function BackHomeArrow({ flip }: { flip: boolean }) {
   return (
     <svg
       viewBox="0 0 24 24"

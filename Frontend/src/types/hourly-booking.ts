@@ -27,7 +27,10 @@ export type HourlyBookingInput = {
   slotTime: string;
   slotTimes?: string[];
   customerName: string;
+  /** Booker's phone number; shown to the hall owner next to the booking name. */
+  phoneNumber?: string;
   requesterName?: string;
+  contactPhone?: string;
 };
 
 export type HourlyBookingResult = HourlyBookingInput & {

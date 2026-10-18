@@ -77,6 +77,9 @@ export type HallDetails = {
   rating?: number | null;
   reviewCount?: number | null;
   description?: string | null;
+  detailedAddress?: string | null;
+  features?: string[];
+  otherFeatures?: string | null;
   amenities: HallAmenity[];
   reviews: HallReview[];
   images: string[];

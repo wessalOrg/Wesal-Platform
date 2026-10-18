@@ -8,13 +8,11 @@ import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 type HallHeroGalleryProps = {
   images: string[];
   hallName: string;
-  description?: string;
 };
 
 export default function HallHeroGallery({
   images,
   hallName,
-  description,
 }: HallHeroGalleryProps) {
   const t = useT();
   const isEmptyGallery = images.length === 0;
@@ -68,15 +66,11 @@ export default function HallHeroGallery({
     };
   }, [lightboxIndex, lightboxNext, lightboxPrev, closeLightbox]);
 
-  const blurb =
-    description?.trim() && description.trim().length > 140
-      ? `${description.trim().slice(0, 137)}…`
-      : description?.trim() || null;
-
   return (
     <>
       <section
-        className="hall-hero-gallery relative min-w-0 overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink)]"
+        id="hall-photos"
+        className="hall-hero-gallery relative min-w-0 scroll-mt-28 overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink)]"
         aria-label={t("halls.gallery.openFull", { name: hallName })}
         data-testid="hall-hero-gallery"
       >
@@ -101,20 +95,9 @@ export default function HallHeroGallery({
               alt={hallName}
               fill
               priority
-              className="object-cover transition duration-500 ease-out group-hover:scale-[1.015]"
+              className="object-cover"
               sizes="100vw"
             />
-            <div className="hall-hero-gallery-scrim" aria-hidden="true" />
-            <div className="absolute inset-x-0 bottom-0 z-10 p-4 pb-8 text-start sm:p-6 sm:pb-9 lg:p-8 lg:pb-10">
-              <h1 className="max-w-3xl text-2xl font-extrabold leading-tight text-white drop-shadow sm:text-3xl lg:text-[2.15rem]">
-                {hallName}
-              </h1>
-              {blurb ? (
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-white/90 sm:text-base">
-                  {blurb}
-                </p>
-              ) : null}
-            </div>
           </div>
         </button>
 

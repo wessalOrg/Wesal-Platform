@@ -1,10 +1,13 @@
 "use client";
 
 import HallMonthCalendar from "@/components/halls/HallMonthCalendar";
+import AppointmentSavedModal from "@/components/halls/hourly/AppointmentSavedModal";
 import HallHourlyRangePicker from "@/components/halls/hourly/HallHourlyRangePicker";
+import HourlyBookedAlertPopup from "@/components/halls/hourly/HourlyBookedAlertPopup";
 import HourlyBookingNameDialog from "@/components/halls/hourly/HourlyBookingNameDialog";
+import { useCallback, useEffect, useState } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
-import { useHourlyBooking } from "@/hooks/useHourlyBooking";
+import { useHourlyBooking, type HourlySummarySelection } from "@/hooks/useHourlyBooking";
 import { useT } from "@/i18n";
 import { formatBookingDateLabel } from "@/lib/booking-date";
 
@@ -12,18 +15,29 @@ type HallHourlyBookingSectionProps = {
   hallId: string;
   hallName?: string;
   canSubmit: boolean;
+  onConfirmed?: (selection: HourlySummarySelection | null) => void;
+  onRegisterConfirm?: (open: () => void) => void;
 };
 
 export default function HallHourlyBookingSection({
   hallId,
   hallName,
   canSubmit,
+  onConfirmed,
+  onRegisterConfirm,
 }: HallHourlyBookingSectionProps) {
   const t = useT();
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
-  const booking = useHourlyBooking({ hallId, hallName, locale, canSubmit });
-  const errorText = booking.errorKey ? t(booking.errorKey) : null;
+  const booking = useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfirmed });
+  const [savedOpen, setSavedOpen] = useState(false);
+  const closeSaved = useCallback(() => setSavedOpen(false), []);
+  const bookedAlert = booking.errorKey === "errors.hourly.slotBooked";
+  const errorText = booking.errorKey && !bookedAlert ? t(booking.errorKey) : null;
+
+  useEffect(() => {
+    onRegisterConfirm?.(booking.openPrompt);
+  }, [booking.openPrompt, onRegisterConfirm]);
 
   return (
     <section
@@ -31,7 +45,16 @@ export default function HallHourlyBookingSection({
       className="hall-section-card hall-inline-booking"
       data-testid="hall-hourly-booking"
     >
-      <h2 className="hall-section-title">{t("halls.hourly.title")}</h2>
+      <h2 className="hall-section-title flex items-center gap-2">
+        <img
+          src="/icons/hourly-calendar.jpg"
+          alt=""
+          width={36}
+          height={36}
+          className="size-9 shrink-0 mix-blend-multiply"
+        />
+        <span>{t("halls.hourly.title")}</span>
+      </h2>
       <p className="mt-1 text-sm text-[var(--wesal-muted)]">{t("halls.hourly.hint")}</p>
       {errorText && !booking.promptOpen ? (
         <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
@@ -66,7 +89,9 @@ export default function HallHourlyBookingSection({
                 toHours={booking.hourChoices.toHours}
                 onFromChange={booking.setRangeFrom}
                 onToChange={booking.setRangeTo}
-                onApply={booking.confirmRange}
+                onApply={() => {
+                  if (booking.confirmRange()) setSavedOpen(true);
+                }}
                 disabled={booking.submitting}
               />
             )}
@@ -74,10 +99,22 @@ export default function HallHourlyBookingSection({
         ) : null}
       </div>
 
+      <HourlyBookedAlertPopup
+        open={bookedAlert}
+        message={t("errors.hourly.slotBooked")}
+        onClose={() => {
+          booking.clearError();
+          booking.closePrompt();
+        }}
+      />
+
+      <AppointmentSavedModal open={savedOpen} onClose={closeSaved} />
+
       <HourlyBookingNameDialog
         open={booking.promptOpen}
-        name={booking.name}
-        onNameChange={booking.setName}
+        name={booking.accountName}
+        phone={booking.phone}
+        onPhoneChange={booking.setPhone}
         onClose={booking.closePrompt}
         onSubmit={() => {
           void booking.submit();

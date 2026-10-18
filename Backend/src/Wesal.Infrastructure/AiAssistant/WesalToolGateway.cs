@@ -57,7 +57,11 @@ public sealed class WesalToolGateway : IWesalToolGateway
             [WesalToolNames.CheckHallAvailability] = new(
                 WesalToolNames.CheckHallAvailability,
                 "Returns the hourly-slot availability of one approved Wesal hall on one specific date. Requires hallId and an ISO date (yyyy-MM-dd). Read-only public data.",
-                BuildAvailabilitySchema())
+                BuildAvailabilitySchema()),
+            [WesalToolNames.CreateBooking] = new(
+                WesalToolNames.CreateBooking,
+                "Validates and prepares a booking request preview for a public Wesal hall. This tool does not submit or confirm a booking; the user must review and submit the request through the hall's booking form.",
+                BuildCreateBookingSchema())
         };
 
     private static readonly HashSet<string> SensitiveArgumentKeys = new(
@@ -111,6 +115,7 @@ public sealed class WesalToolGateway : IWesalToolGateway
                 WesalToolNames.SearchHalls => await ExecuteSearchAsync(arguments, cancellationToken),
                 WesalToolNames.GetHallDetails => await ExecuteDetailsAsync(arguments, cancellationToken),
                 WesalToolNames.CheckHallAvailability => await ExecuteAvailabilityAsync(arguments, cancellationToken),
+                WesalToolNames.CreateBooking => await ExecuteCreateBookingAsync(arguments, cancellationToken),
                 _ => WesalToolResult.Fail("The requested tool is not a supported Wesal tool.")
             };
         }
@@ -255,6 +260,85 @@ public sealed class WesalToolGateway : IWesalToolGateway
         }
 
         key = null;
+        return false;
+    }
+
+    private async Task<WesalToolResult> ExecuteCreateBookingAsync(JsonObject args, CancellationToken cancellationToken)
+    {
+        var allowed = new[] { "hallId", "date", "startTime", "endTime", "customerName" };
+        if (!EnsureOnlyKnownArguments(args, allowed, WesalToolNames.CreateBooking, out var knownError))
+            return knownError;
+
+        if (!TryGetRequiredGuid(args, "hallId", out var hallId))
+            return WesalToolResult.Fail("The 'hallId' parameter must be a valid hall identifier.");
+
+        if (!TryGetRequiredDate(args, "date", out var date))
+            return WesalToolResult.Fail("The 'date' parameter must be an ISO date in yyyy-MM-dd format.");
+
+        if (!TryGetRequiredTimeOnly(args, "startTime", out var startTime))
+            return WesalToolResult.Fail("The 'startTime' parameter must be in HH:mm format.");
+
+        if (!TryGetRequiredTimeOnly(args, "endTime", out var endTime))
+            return WesalToolResult.Fail("The 'endTime' parameter must be in HH:mm format.");
+
+        if (!TryGetRequiredString(args, "customerName", MaxNameLength, out var customerName))
+            return WesalToolResult.Fail("The 'customerName' parameter must be text with at most 120 characters.");
+
+        // Use the hall service to verify the hall exists and get owner info
+        var hall = await _detailsService.GetHallDetailsAsync(hallId, cancellationToken);
+        if (hall is null)
+        {
+            return WesalToolResult.Fail("The requested hall was not found or is not publicly available.");
+        }
+
+        // Return a validated preview only. Booking persistence requires a separately
+        // authorized, user-confirmed workflow and is not enabled through this tool.
+        var payload = new JsonObject
+        {
+            ["hallId"] = hallId.ToString(),
+            ["date"] = date.ToString("yyyy-MM-dd"),
+            ["startTime"] = startTime.ToString("HH:mm"),
+            ["endTime"] = endTime.ToString("HH:mm"),
+            ["customerName"] = customerName
+        };
+
+        return WesalToolResult.Ok(payload);
+    }
+
+    private static bool TryGetRequiredTimeOnly(JsonObject args, string key, out TimeOnly value)
+    {
+        value = default;
+        if (!args.TryGetPropertyValue(key, out var node) || node is null)
+            return false;
+
+        if (node is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var raw))
+        {
+            if (TimeOnly.TryParse(raw, CultureInfo.InvariantCulture, out var parsedTime))
+            {
+                value = parsedTime;
+                return true;
+            }
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetRequiredString(JsonObject args, string key, int maxLength, out string? value)
+    {
+        value = null;
+        if (!args.TryGetPropertyValue(key, out var node) || node is null)
+            return false;
+
+        if (node is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var raw))
+        {
+            var trimmed = raw?.Trim() ?? string.Empty;
+            if (trimmed.Length > maxLength)
+                return false;
+            value = trimmed.Length == 0 ? null : trimmed;
+            return true;
+        }
+
         return false;
     }
 
@@ -439,7 +523,28 @@ public sealed class WesalToolGateway : IWesalToolGateway
         ["required"] = new JsonArray("hallId")
     };
 
-    private static JsonObject BuildAvailabilitySchema() => new()
+private static JsonObject BuildAvailabilitySchema() => new()
+        {
+            ["type"] = "object",
+            ["properties"] = new JsonObject
+            {
+                ["hallId"] = new JsonObject
+                {
+                    ["type"] = "string",
+                    ["format"] = "uuid",
+                    ["description"] = "The hall identifier obtained from search_halls or the details page."
+                },
+                ["date"] = new JsonObject
+                {
+                    ["type"] = "string",
+                    ["format"] = "date",
+                    ["description"] = "The date to check, ISO yyyy-MM-dd."
+                }
+            },
+            ["required"] = new JsonArray("hallId", "date")
+        };
+
+    private static JsonObject BuildCreateBookingSchema() => new()
     {
         ["type"] = "object",
         ["properties"] = new JsonObject
@@ -454,9 +559,24 @@ public sealed class WesalToolGateway : IWesalToolGateway
             {
                 ["type"] = "string",
                 ["format"] = "date",
-                ["description"] = "The date to check, ISO yyyy-MM-dd."
+                ["description"] = "The booking date, ISO yyyy-MM-dd format."
+            },
+            ["startTime"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["description"] = "The start time in HH:mm format (24-hour)."
+            },
+            ["endTime"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["description"] = "The end time in HH:mm format (24-hour)."
+            },
+            ["customerName"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["description"] = "The name of the customer making the booking."
             }
         },
-        ["required"] = new JsonArray("hallId", "date")
+        ["required"] = new JsonArray("hallId", "date", "startTime", "endTime", "customerName")
     };
 }

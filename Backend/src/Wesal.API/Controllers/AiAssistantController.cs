@@ -200,16 +200,16 @@ public class AiAssistantController : ControllerBase
             AiResponseMemory.FocusedHall(response),
             cancellationToken,
             response.Intent?.Intent == AiIntentType.SearchHalls && response.Halls.Count > 0
-                ? AiConversationStateResolver.WithCollectionResults(context.State, AiResponseMemory.ShownHalls(response))
+                ? AiConversationStateResolver.WithCollectionResults(context.State, AiResponseMemory.ShownHalls(response), response.SemanticPlan)
                 : AiReferenceResolver.TryGetOrdinal(message) is { } ordinal
                     && OrdinalHallIds(context) is { Count: > 0 } ordinalIds
                     && ordinalIds.Count > (ordinal < 0 ? ordinalIds.Count - 1 : ordinal)
                     && AiResponseMemory.FocusedHall(response) is { } ordinalHall
                 ? AiConversationStateResolver.AdvanceSelection(context.State, ordinalHall,
-                    ordinal < 0 ? ordinalIds.Count - 1 : ordinal)
+                    ordinal < 0 ? ordinalIds.Count - 1 : ordinal, response.SemanticPlan)
                 : AiConversationStateResolver.IsNextResult(message) && AiResponseMemory.FocusedHall(response) is { } nextHall
                 ? AiConversationStateResolver.AdvanceSelection(context.State, nextHall,
-                    (context.State?.SelectedResultIndex ?? -1) + 1)
+                    (context.State?.SelectedResultIndex ?? -1) + 1, response.SemanticPlan)
                 : AiConversationStateResolver.Advance(context.State, message, response, conversationHall));
 
         return Ok(response);

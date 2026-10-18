@@ -229,10 +229,10 @@ public sealed class ConversationService : IConversationService
         var isAdmin = _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
 
         // Empty for a seeker or an owner, which is what keeps their query on the two-party
-        // rule that has always applied to them.
-        var adminUserIds = isAdmin
-            ? await _conversationRepository.GetAdminUserIdsAsync(cancellationToken)
-            : [];
+        // rule that has always applied to them. Display names still need the real Admin ids
+        // so an owner sees "إدارة وصال" rather than whichever Admin happens to be on the thread.
+        var knownAdminIds = await _conversationRepository.GetAdminUserIdsAsync(cancellationToken);
+        var adminUserIds = isAdmin ? knownAdminIds : [];
 
         var conversations = await _conversationRepository.GetParticipantConversationsAsync(
             userId, isAdmin, adminUserIds, cancellationToken);
@@ -321,7 +321,10 @@ public sealed class ConversationService : IConversationService
                     HallId = conversation.HallId,
                     HallName = conversation.Hall?.Name ?? string.Empty,
                     OtherParticipantId = otherParticipantId,
-                    OtherParticipantName = nameLookup.GetValueOrDefault(otherParticipantId) ?? string.Empty,
+                    OtherParticipantName = PublicParticipantName(
+                        otherParticipantId,
+                        nameLookup.GetValueOrDefault(otherParticipantId),
+                        knownAdminIds),
                     LastMessagePreview = latest?.Content ?? string.Empty,
                     LastMessageHasAttachment = latest?.HasAttachment ?? false,
                     LastMessageAt = latest?.CreatedAt,
@@ -369,8 +372,12 @@ public sealed class ConversationService : IConversationService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        var knownAdminIds = await _conversationRepository.GetAdminUserIdsAsync(cancellationToken);
         var senderNames = (await _conversationRepository.GetUserDisplayNamesAsync(senderIds, cancellationToken))
-            .ToDictionary(info => info.UserId, info => info.FullName, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(
+                info => info.UserId,
+                info => PublicParticipantName(info.UserId, info.FullName, knownAdminIds),
+                StringComparer.OrdinalIgnoreCase);
 
         return new MessageThreadResponse
         {
@@ -382,7 +389,10 @@ public sealed class ConversationService : IConversationService
                 {
                     Id = message.Id,
                     SenderUserId = message.SenderUserId,
-                    SenderName = senderNames.GetValueOrDefault(message.SenderUserId) ?? string.Empty,
+                    SenderName = PublicParticipantName(
+                        message.SenderUserId,
+                        senderNames.GetValueOrDefault(message.SenderUserId),
+                        knownAdminIds),
                     Content = message.Content ?? string.Empty,
                     SentAt = message.CreatedAt,
                     HasAttachment = message.HasAttachment,
@@ -811,8 +821,30 @@ public sealed class ConversationService : IConversationService
 
     private async Task<string> ResolveSenderNameAsync(string senderUserId, CancellationToken cancellationToken)
     {
+        var knownAdminIds = await _conversationRepository.GetAdminUserIdsAsync(cancellationToken);
+        if (ConversationAccess.IsAdminSide(senderUserId, knownAdminIds))
+        {
+            return PlatformSenders.AdminDisplayName;
+        }
+
         var users = await _conversationRepository.GetUserDisplayNamesAsync([senderUserId], cancellationToken);
         return users.FirstOrDefault(info => info.UserId == senderUserId)?.FullName ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Hall owners talk to the platform, not to a named Admin account.
+    /// </summary>
+    private static string PublicParticipantName(
+        string userId,
+        string? fullName,
+        IReadOnlyCollection<string> adminUserIds)
+    {
+        if (ConversationAccess.IsAdminSide(userId, adminUserIds))
+        {
+            return PlatformSenders.AdminDisplayName;
+        }
+
+        return fullName ?? string.Empty;
     }
 
     private async Task NotifyMessageSentAsync(

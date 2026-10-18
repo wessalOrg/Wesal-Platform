@@ -1,23 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, type MouseEvent, type ReactNode } from "react";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import AudioControlToggle from "@/components/halls/notifications/AudioControlToggle";
-import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useDismissibleOverlay } from "@/hooks/useDismissibleOverlay";
 import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { useT } from "@/i18n";
 import {
-  getAccountMessagesPath,
   getAccountProfilePath,
-  isAccountMessagesActive,
   isAccountProfileActive,
 } from "@/lib/account-profile-path";
-import { useUnreadCount } from "@/hooks/useUnreadCount";
-import UnreadBadge from "@/components/ui/UnreadBadge";
 
 type AuthAccountMenuProps = {
   stacked?: boolean;
@@ -50,14 +45,10 @@ export default function AuthAccountMenu({
 }: AuthAccountMenuProps) {
   const t = useT();
   const pathname = usePathname();
-  const router = useRouter();
   const { open, setOpen, close, toggle, rootRef, panelId: menuId } =
     useDismissibleOverlay();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const identity = useUserIdentity();
-  const inbox = useOptionalMessagesInbox();
-  const { count: unreadCount, ready: unreadReady } = useUnreadCount();
-  const messagesUnread = unreadReady ? unreadCount : 0;
   const showAudio = identity.isHallOwner;
   const avatarUrl = useProfileAvatarUrl([identity.profile?.id]);
 
@@ -67,29 +58,14 @@ export default function AuthAccountMenu({
   );
   const hello = t("nav.hello");
   const profileLabel = t("nav.profile");
-  const messagesLabel = t("nav.messages");
   const logoutLabel = t("nav.logout");
   const menuLabel = t("nav.accountMenu");
   const profileHref = getAccountProfilePath(identity.role);
   const profileActive = isAccountProfileActive(pathname, identity.role);
-  const messagesHref = getAccountMessagesPath(identity.role);
-  const messagesActive =
-    Boolean(inbox?.isOpen) || isAccountMessagesActive(pathname, identity.role);
 
   const go = () => {
     close();
     onNavigate?.();
-  };
-
-  const openMessages = (event: MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    go();
-    if (inbox?.canUseMessaging) {
-      inbox.openInbox();
-      return;
-    }
-    router.push(messagesHref);
   };
 
   const menu = (
@@ -128,18 +104,6 @@ export default function AuthAccountMenu({
           onClick={go}
         >
           <ProfileIcon />
-        </MenuLink>
-        <MenuLink
-          href={messagesHref}
-          label={messagesLabel}
-          description={t("nav.messagesHint")}
-          active={messagesActive}
-          badgeCount={messagesUnread}
-          badgeLabel={t("messages.unreadCount", { count: messagesUnread })}
-          testId="navbar-account-messages"
-          onClick={openMessages}
-        >
-          <MessageIcon />
         </MenuLink>
         {showAudio ? <AudioControlToggle variant="menu" /> : null}
       </div>
@@ -215,9 +179,6 @@ function MenuLink({
   label,
   description,
   active,
-  badgeCount = 0,
-  badgeLabel,
-  testId,
   onClick,
   children,
 }: {
@@ -225,9 +186,6 @@ function MenuLink({
   label: string;
   description: string;
   active: boolean;
-  badgeCount?: number;
-  badgeLabel?: string;
-  testId?: string;
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
   children: ReactNode;
 }) {
@@ -235,7 +193,6 @@ function MenuLink({
     <Link
       href={href}
       role="menuitem"
-      data-testid={testId}
       onClick={onClick}
       className={`wesal-account-menu-item ${active ? "wesal-account-menu-item--active" : ""}`}
     >
@@ -243,14 +200,7 @@ function MenuLink({
         {children}
       </span>
       <span className="wesal-account-menu-copy">
-        <span className="inline-flex min-w-0 items-center gap-2">
-          <span className="wesal-account-menu-title min-w-0 truncate">{label}</span>
-          <UnreadBadge
-            count={badgeCount}
-            label={badgeLabel}
-            data-testid="account-menu-messages-unread"
-          />
-        </span>
+        <span className="wesal-account-menu-title min-w-0 truncate">{label}</span>
         <span className="wesal-account-menu-desc">{description}</span>
       </span>
     </Link>
@@ -271,24 +221,6 @@ function ProfileIcon() {
     >
       <circle cx="12" cy="8" r="3.1" />
       <path d="M5.6 19c1.6-2.9 3.9-4.2 6.4-4.2s4.8 1.3 6.4 4.2" />
-    </svg>
-  );
-}
-
-function MessageIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-      aria-hidden="true"
-    >
-      <path d="M5 7h14a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19 17H9.2L5 20v-2.5V8.5A1.5 1.5 0 0 1 5 7Z" />
-      <path d="M8.5 11h7M8.5 14h4.5" />
     </svg>
   );
 }

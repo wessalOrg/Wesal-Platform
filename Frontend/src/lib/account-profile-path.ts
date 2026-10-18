@@ -20,6 +20,9 @@ export const HALL_OWNER_HALLS_PATH = "/owner/halls";
 /** Hall Owner messages. */
 export const HALL_OWNER_MESSAGES_PATH = "/owner/messages";
 
+/** Hall Owner notifications feed (all account alerts). */
+export const HALL_OWNER_NOTIFICATIONS_PATH = "/owner/notifications";
+
 /** Standalone Hall Owner bookings calendar (Edit 25). Distinct from /owner/bookings, which aliases booking requests. */
 export const HALL_OWNER_CALENDAR_PATH = "/owner/calendar";
 

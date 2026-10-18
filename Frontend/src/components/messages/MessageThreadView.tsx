@@ -22,6 +22,8 @@ type MessageThreadViewProps = {
   title: string;
   subtitle?: string | null;
   badge?: string | null;
+  /** Shown instead of the sender's own name on incoming messages (e.g. "Wesal admin"). */
+  peerDisplayName?: string | null;
   currentUserId: string | null;
   onRetryLoad: () => void;
   onRetrySend: (messageId: string) => void;
@@ -50,6 +52,7 @@ export default function MessageThreadView({
   title,
   subtitle,
   badge,
+  peerDisplayName,
   currentUserId,
   onRetryLoad,
   onRetrySend,
@@ -198,7 +201,11 @@ export default function MessageThreadView({
             ? messages.filter((message) => message?.id).map((message) => (
                 <ThreadMessageItem
                   key={message.id}
-                  message={message}
+                  message={
+                    peerDisplayName && !isSameUserId(message.senderUserId, currentUserId)
+                      ? { ...message, senderName: peerDisplayName }
+                      : message
+                  }
                   own={isSameUserId(message.senderUserId, currentUserId)}
                   tone={owner ? "owner" : "default"}
                   retrying={isRetrying(message)}

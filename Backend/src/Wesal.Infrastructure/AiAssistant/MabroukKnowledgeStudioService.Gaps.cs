@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Wesal.Application.Ai;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 
@@ -69,7 +70,10 @@ public sealed partial class MabroukKnowledgeStudioService
         var samples = ReadGapSamples(cluster.SampleQuestionsJson);
         var aliases = samples.Prepend(cluster.CanonicalQuestion)
             .Where(text => text.Length >= 2)
-            .Distinct(StringComparer.Ordinal)
+            // The database uniqueness key is the normalized alias, not the raw
+            // spelling. Gap samples often differ only by punctuation, which
+            // AiText.Normalize removes; dedupe before inserting the draft.
+            .DistinctBy(AiText.Normalize, StringComparer.Ordinal)
             .Take(30)
             .Select(text => new AiKnowledgeAliasInput(cluster.Language, text))
             .ToList();

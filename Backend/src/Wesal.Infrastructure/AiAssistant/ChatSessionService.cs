@@ -119,12 +119,14 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
         if (session is null || !OwnsSession(session, userId) || session.ExpiresAt <= DateTimeOffset.UtcNow)
             return new AiConversationContext([] , null);
 
+        var state = Deserialize<AiConversationState>(session.ConversationStateJson);
         return new AiConversationContext(
             Deserialize<List<AiConversationTurn>>(session.TurnsJson) ?? [],
             Deserialize<AiAssistantIntentDto>(session.LastIntentJson),
             Deserialize<List<AiHallRef>>(session.LastHallsJson) ?? [],
             Deserialize<AiHallRef>(session.LastHallJson),
-            Deserialize<AiConversationState>(session.ConversationStateJson));
+            state,
+            state?.LastSemanticPlan);
     }
 
     public Task EndSessionsForUserAsync(string userId, CancellationToken cancellationToken = default)
@@ -180,7 +182,9 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
                     ActiveHallName = Limit(conversationState.ActiveHallName, 160),
                     Region = Limit(conversationState.Region, 80),
                     ShownHallIds = conversationState.ShownHallIds?.Take(MaxRememberedHalls).ToArray(),
-                    RequestedFacts = conversationState.RequestedFacts?.Take(8).Select(value => Limit(value, 40) ?? string.Empty).ToArray()
+                    SeenHallIds = conversationState.SeenHallIds?.Distinct().Take(MaxRememberedHalls).ToArray(),
+                    RequestedFacts = conversationState.RequestedFacts?.Take(8).Select(value => Limit(value, 40) ?? string.Empty).ToArray(),
+                    LastSemanticPlan = BoundSemanticPlan(conversationState.LastSemanticPlan)
                 };
                 var stateJson = Serialize(bounded);
                 session.ConversationStateJson = stateJson.Length <= MaxConversationStateCharacters ? stateJson : "{}";
@@ -224,6 +228,59 @@ public sealed class ChatSessionService : IChatSessionService, IDisposable
 
     private static string? Limit(string? value, int length)
         => string.IsNullOrWhiteSpace(value) ? null : value[..Math.Min(value.Length, length)];
+
+    private static AiSemanticPlan? BoundSemanticPlan(AiSemanticPlan? plan)
+    {
+        if (plan is null)
+            return null;
+
+        static decimal? BoundedPrice(decimal? value)
+            => value is > 0 and <= 1_000_000 ? value : null;
+
+        static int? BoundedIndex(int? value)
+            => value is >= 0 and < MaxRememberedHalls ? value : null;
+
+        var dateRange = plan.DateRange is { } range
+            && range.End >= range.Start
+            && range.End.DayNumber - range.Start.DayNumber <= 30
+                ? range
+                : null;
+        var month = plan.Month is { Year: >= 2000 and <= 2200, Month: >= 1 and <= 12 } validMonth
+            ? validMonth
+            : null;
+
+        return plan with
+        {
+            HallReference = plan.HallReference with { Name = Limit(plan.HallReference.Name, 120) },
+            SelectedResultReference = plan.SelectedResultReference is { } selected
+                && BoundedIndex(selected.Index) is not null
+                    ? selected
+                    : null,
+            SelectedResultReferences = plan.SelectedResultReferences?
+                .Where(reference => BoundedIndex(reference.Index) is not null)
+                .Distinct()
+                .Take(MaxRememberedHalls)
+                .ToArray(),
+            RequestedFacts = plan.RequestedFacts.Distinct().Take(8).ToArray(),
+            Region = Limit(plan.Region, 80),
+            Area = Limit(plan.Area, 80),
+            DateRange = dateRange,
+            Month = month,
+            Capacity = plan.Capacity is > 0 and < 10_000 ? plan.Capacity : null,
+            PriceBudget = new AiPriceBudget(
+                BoundedPrice(plan.PriceBudget.MinimumPrice),
+                BoundedPrice(plan.PriceBudget.MaximumPrice),
+                BoundedPrice(plan.PriceBudget.AroundPrice)),
+            NavigationIntent = plan.NavigationIntent == "halls" ? "halls" : null,
+            CompoundGoals = plan.CompoundGoals.Distinct().Take(8).ToArray(),
+            ClarificationRequirement = plan.ClarificationRequirement is { } clarification
+                ? new AiClarificationRequirement(
+                    Limit(clarification.Field, 40) ?? string.Empty,
+                    Limit(clarification.Question, 180) ?? string.Empty)
+                : null,
+            Language = plan.Language == "en" ? "en" : "ar"
+        };
+    }
 
     private static T? Deserialize<T>(string? value)
     {

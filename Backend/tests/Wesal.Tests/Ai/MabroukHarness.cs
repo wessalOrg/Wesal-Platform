@@ -43,7 +43,7 @@ internal sealed class MabroukHarness
         Gemini.Available = geminiAvailable;
 
         Details.Add(Hall(NakheelId, "قاعة النخيل", "غزة", "حي الرمال", 400, 7000m, ["تكييف", "موقف سيارات"]));
-        Details.Add(Hall(OrchidId, "قاعة الأوركيد", "غزة", "النصر", 250, 5000m, []));
+        Details.Add(Hall(OrchidId, "قاعة الأوركيد", "غزة", "النصر", 250, 5000m, [], "+970599000222"));
 
         Search.Items =
         [
@@ -80,7 +80,8 @@ internal sealed class MabroukHarness
             new AiAssistantPolicyGate(payment, knowledge),
             new RecordingLogger<AiAssistantService>(RouteLogs),
             gapRecorder,
-            gapDetector);
+            gapDetector,
+            toolGateway: gateway);
     }
 
     private sealed class RecordingLogger<T>(List<string> messages) : ILogger<T>
@@ -115,7 +116,7 @@ internal sealed class MabroukHarness
             new AiRequestContext(page, entity));
     }
 
-    public static HallDetailsDto Hall(Guid id, string name, string region, string address, int capacity, decimal? price, IReadOnlyList<string> features)
+    public static HallDetailsDto Hall(Guid id, string name, string region, string address, int capacity, decimal? price, IReadOnlyList<string> features, string? contactPhone = null)
         => new()
         {
             HallId = id,
@@ -126,6 +127,7 @@ internal sealed class MabroukHarness
             Capacity = capacity,
             Price = price,
             ShowPrice = price is not null,
+            ContactPhone = contactPhone,
             Features = features,
             Status = HallStatus.Approved,
             Photos = [new HallImageDto { Id = Guid.NewGuid(), Url = "/uploads/a.png", DisplayOrder = 1 }]
@@ -177,6 +179,21 @@ internal sealed class MabroukHarness
             if (request.MinimumCapacity is { } minimumCapacity)
             {
                 query = query.Where(h => h.Capacity >= minimumCapacity);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Area))
+            {
+                query = query.Where(h => h.Address.Contains(request.Area!, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (request.MaximumPrice is { } maximumPrice)
+            {
+                query = query.Where(h => h.Price.HasValue && h.Price.Value <= maximumPrice);
+            }
+
+            if (request.SortByPrice)
+            {
+                query = query.Where(h => h.Price.HasValue).OrderBy(h => h.Price);
             }
 
             var list = query.ToList();

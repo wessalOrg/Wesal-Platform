@@ -1,5 +1,6 @@
 import { isHallRegion } from "@/constants/hallRegions";
 import { isValidRegisterPhone } from "@/lib/register-validation";
+import { isYouTubeVideoUrl } from "@/lib/youtube-embed";
 import type {
   HallRegistrationFieldErrors,
   HallRegistrationFormValues,
@@ -18,9 +19,6 @@ function isOptionalNonNegativeNumber(raw: string): boolean {
   const value = Number(trimmed);
   return Number.isFinite(value) && value >= 0;
 }
-
-const YOUTUBE_URL_PATTERN =
-  /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)[A-Za-z0-9_-]{6,30}(?:\?[^\s#]*)?(?:#[^\s]*)?$/i;
 
 /** Client-side required checks only — backend remains authoritative. */
 export function validateHallRegistrationForm(
@@ -64,7 +62,7 @@ export function validateHallRegistrationForm(
   }
 
   const youtube = values.youtubeVideoUrl.trim();
-  if (youtube && !YOUTUBE_URL_PATTERN.test(youtube)) {
+  if (youtube && !isYouTubeVideoUrl(youtube)) {
     errors.youtubeVideoUrl = "owner.management.addHall.errors.youtubeUrlInvalid";
   }
 

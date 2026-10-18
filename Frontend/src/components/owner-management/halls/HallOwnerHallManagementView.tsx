@@ -7,6 +7,7 @@ import ManagementAccessBlockedState from "@/components/halls/ManagementAccessBlo
 import PaymentStatusBadge from "@/components/halls/PaymentStatusBadge";
 import OwnerSubscriptionStatus from "@/components/halls/subscription/OwnerSubscriptionStatus";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
+import HallRejectionReasonNotice from "@/components/owner-management/halls/HallRejectionReasonNotice";
 import HallManagementForm from "@/components/owner-management/halls/HallManagementForm";
 import HallManagementSectionNav from "@/components/owner-management/halls/HallManagementSectionNav";
 import { useHallOwnerHallManagement } from "@/hooks/useHallOwnerHallManagement";
@@ -232,6 +233,8 @@ export default function HallOwnerHallManagementView({
           <HallManagementSectionNav hallId={hallId} />
         </div>
       </header>
+
+      <HallRejectionReasonNotice hallId={hallId} rejected={details.status === "Rejected"} />
 
       <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
         <HallManagementForm

@@ -74,6 +74,25 @@ public sealed class MabroukKnowledgeStudioShould : IDisposable
     }
 
     [Fact]
+    public async Task ExactMabroukAnswerWinsOverBroadPlatformKnowledge()
+    {
+        const string question = "كم يساوي اثنان زائد اثنان؟";
+        var howTo = new HowToService(Mock.Of<ISubscriptionPaymentService>(), knowledgeService: _knowledge);
+        var draft = await _studio.CreateKnowledgeAsync(new AiKnowledgeArticleInput(
+            "mabrouk-e2e-math-answer", question, "mabrouk", "اثنان زائد اثنان يساوي أربعة.", null,
+            "Admin verified source", 50, AiKnowledgeVerificationStatus.Verified, null, null, null, null,
+            [new AiKnowledgeAliasInput("ar", question)], "Verified answer for the Learning Loop regression."), "admin-1");
+        await _studio.PublishKnowledgeAsync(draft.Id, "Publish the verified Mabrouk answer.", "admin-1");
+
+        var matches = await _knowledge.SearchAsync(question, "ar", 10);
+        Assert.Contains(matches, article => article.StableKey == "mabrouk-e2e-math-answer");
+        var answer = await howTo.AskHowToAsync(question, "ar", allowModel: false);
+
+        Assert.Contains("اثنان زائد اثنان يساوي أربعة", answer.Answer, StringComparison.Ordinal);
+        Assert.DoesNotContain("يمكنني مساعدتك في كيفية استخدام وصال", answer.Answer, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task KeepMabroukAndWesalTeamFactsDistinct()
     {
         var howTo = new HowToService(Mock.Of<ISubscriptionPaymentService>(), knowledgeService: _knowledge);
@@ -229,6 +248,28 @@ public sealed class MabroukKnowledgeStudioShould : IDisposable
         var response = await howTo.AskHowToAsync(question, "ar", allowModel: false);
         Assert.Equal(expectedAnswer, response.Answer);
         Assert.Empty(await _studio.ListGapsAsync());
+
+    }
+
+    [Fact]
+    public async Task CreateGapDraftWithAliasesDistinctAfterNormalization()
+    {
+        var recorder = new AiKnowledgeGapRecorder(_repository, _clock);
+        Guid? gapId = null;
+        foreach (var question in new[] { "مين راعي الذواق؟", "مين راعي الذواق", "مين راعي الذواق!" })
+        {
+            gapId = await recorder.RecordAsync(new AiKnowledgeGapCandidate(
+                question, "ar", AiKnowledgeGapReason.NoTrustedKnowledge, "test", null));
+        }
+
+        var draft = await _studio.CreateArticleFromGapAsync(gapId!.Value, "admin-1");
+
+        Assert.NotNull(draft);
+        Assert.Equal("Draft", draft.PublicationStatus);
+        Assert.Equal(1, draft.Aliases.Select(alias => AiText.Normalize(alias.Text)).Distinct(StringComparer.Ordinal).Count());
+        Assert.Single(await _db.AiKnowledgeArticles.ToListAsync());
+        Assert.Single(await _db.AiKnowledgeRevisions.ToListAsync());
+        Assert.Single(await _db.AiKnowledgeAliases.ToListAsync());
     }
 
     [Fact]
