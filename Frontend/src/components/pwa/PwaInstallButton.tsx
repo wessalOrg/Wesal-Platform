@@ -8,8 +8,8 @@ import IosInstallInstructions from "@/components/pwa/IosInstallInstructions";
 function DownloadIcon() {
   return (
     <svg
-      width="16"
-      height="16"
+      width="22"
+      height="22"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"
@@ -46,49 +46,35 @@ export default function PwaInstallButton({
   const [showIosHelp, setShowIosHelp] = useState(false);
 
   if (isInstalled) return null;
+  if (variant !== "compact" && !canPrompt && !isIos) return null;
 
-  if (canPrompt) {
-    return (
+  const label = t("pwa.installApp");
+  const buttonClass =
+    variant === "compact"
+      ? `inline-flex h-10 w-10 shrink-0 items-center justify-center bg-transparent text-[var(--wesal-maroon)] transition hover:text-[var(--wesal-maroon-dark)] ${className}`.trim()
+      : `btn-primary inline-flex w-full items-center justify-center gap-1.5 ${className}`.trim();
+
+  return (
+    <>
       <button
         type="button"
-        onClick={() => void promptInstall()}
-        aria-label={t("pwa.installApp")}
-        title={t("pwa.installApp")}
-        className={
-          variant === "compact"
-            ? `inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[var(--wesal-maroon)] bg-white px-3 text-xs font-bold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-maroon)] hover:text-white ${className}`.trim()
-            : `btn-primary w-full ${className}`.trim()
-        }
+        onClick={() => {
+          if (canPrompt) {
+            void promptInstall();
+            return;
+          }
+          if (isIos) setShowIosHelp(true);
+        }}
+        aria-label={label}
+        title={label}
+        className={buttonClass}
       >
         <DownloadIcon />
-        <span>{t("pwa.installApp")}</span>
+        {variant === "full" ? <span>{label}</span> : null}
       </button>
-    );
-  }
-
-  if (isIos) {
-    return (
-      <>
-        <button
-          type="button"
-          onClick={() => setShowIosHelp(true)}
-          aria-label={t("pwa.installApp")}
-          title={t("pwa.installApp")}
-          className={
-            variant === "compact"
-              ? `inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[var(--wesal-maroon)] bg-white px-3 text-xs font-bold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-maroon)] hover:text-white ${className}`.trim()
-              : `btn-primary w-full ${className}`.trim()
-          }
-        >
-          <DownloadIcon />
-          <span>{t("pwa.installApp")}</span>
-        </button>
-        {showIosHelp ? (
-          <IosInstallInstructions onClose={() => setShowIosHelp(false)} />
-        ) : null}
-      </>
-    );
-  }
-
-  return null;
+      {showIosHelp ? (
+        <IosInstallInstructions onClose={() => setShowIosHelp(false)} />
+      ) : null}
+    </>
+  );
 }

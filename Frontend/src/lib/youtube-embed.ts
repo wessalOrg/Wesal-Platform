@@ -24,7 +24,40 @@ export function toYouTubeVideoId(value: string | null | undefined): string | nul
   const live = normalized.match(/^https?:\/\/(www\.)?youtube\.com\/live\/([a-zA-Z0-9_-]{11})(\?.*)?$/i);
   if (!id && live) id = live[2];
 
+  if (!id) id = videoIdFromQuery(normalized);
+
   return id;
+}
+
+/** True when the value is a YouTube link that contains a video id. */
+export function isYouTubeVideoUrl(value: string | null | undefined): boolean {
+  return toYouTubeVideoId(value) !== null;
+}
+
+/**
+ * Canonical watch link the hall API already accepts.
+ * Extra share params such as a playlist (`&list=`) are dropped.
+ */
+export function toStoredYouTubeUrl(value: string): string {
+  const id = toYouTubeVideoId(value);
+  return id ? `https://www.youtube.com/watch?v=${id}` : value.trim();
+}
+
+function videoIdFromQuery(normalized: string): string | null {
+  try {
+    const url = new URL(normalized);
+    const host = url.hostname.replace(/^www\./i, "").toLowerCase();
+    const youtubeHost =
+      host === "youtube.com" ||
+      host === "m.youtube.com" ||
+      host === "music.youtube.com" ||
+      host === "youtu.be";
+    if (!youtubeHost) return null;
+    const fromQuery = url.searchParams.get("v");
+    return fromQuery && /^[a-zA-Z0-9_-]{11}$/.test(fromQuery) ? fromQuery : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

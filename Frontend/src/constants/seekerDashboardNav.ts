@@ -5,6 +5,7 @@ import type { WesalRole } from "@/types/session";
 export const SEEKER_DASHBOARD_PATH = REGULAR_PROFILE_PATH;
 export const SEEKER_ACCOUNT_PATH = `${REGULAR_PROFILE_PATH}/account`;
 export const SEEKER_BOOKINGS_PATH = `${REGULAR_PROFILE_PATH}/bookings`;
+export const SEEKER_FAVORITES_PATH = `${REGULAR_PROFILE_PATH}/favorites`;
 
 export function seekerBookingContactPath(bookingId: string): string {
   const id = bookingId.trim();
@@ -47,7 +48,7 @@ export function conversationMessagesPath(
 
 /**
  * Hall seeker dashboard sidebar (Epic 6 portal shell).
- * Profile + settings are one account page; favorites removed.
+ * Profile and settings share one account page. Favorites lists halls saved on this device.
  */
 export const SEEKER_DASHBOARD_NAV = [
   {
@@ -60,6 +61,12 @@ export const SEEKER_DASHBOARD_NAV = [
     id: "bookings",
     href: SEEKER_BOOKINGS_PATH,
     labelKey: "seeker.nav.bookings",
+    match: "prefix" as const,
+  },
+  {
+    id: "favorites",
+    href: SEEKER_FAVORITES_PATH,
+    labelKey: "seeker.nav.favorites",
     match: "prefix" as const,
   },
   {

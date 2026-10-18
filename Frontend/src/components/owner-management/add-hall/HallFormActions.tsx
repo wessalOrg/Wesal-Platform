@@ -35,8 +35,8 @@ export default function HallFormActions({
   const disabled = isSubmitting || submitDisabled;
 
   return (
-    <div className="owner-add-hall-actions seeker-settings-card min-w-0 space-y-4">
-      <div className="min-h-[0] space-y-3" aria-live="polite">
+    <div className="owner-add-hall-actions min-w-0 space-y-4">
+      <div className="min-h-[0] space-y-3 text-center" aria-live="polite">
         {isSuccess ? (
           <p
             role="status"
@@ -58,13 +58,13 @@ export default function HallFormActions({
         ) : null}
       </div>
 
-      <div className="seeker-settings-actions">
+      <div className="flex justify-center">
         <button
           type="submit"
           disabled={disabled}
           aria-busy={isSubmitting || undefined}
           data-testid={submitTestId}
-          className="btn-primary inline-flex min-h-12 w-full items-center justify-center px-6 sm:w-auto sm:min-w-[12rem]"
+          className="btn-primary inline-flex min-h-12 items-center justify-center px-8"
         >
           {isSubmitting
             ? (savingLabel ?? t("owner.management.addHall.actions.saving"))

@@ -8,7 +8,6 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import AskMabroukAboutHallButton from "@/components/assistant/AskMabroukAboutHallButton";
 import HallGallery from "@/components/halls/HallGallery";
 import HallCommentList from "@/components/halls/HallCommentList";
-import HallAmenitiesGrid from "@/components/halls/HallAmenitiesGrid";
 import HallAddReviewCard from "@/components/halls/HallAddReviewCard";
 import HallLockedBadge from "@/components/halls/HallLockedBadge";
 import HallUnavailableDialog from "@/components/halls/HallUnavailableDialog";
@@ -20,6 +19,7 @@ import { useT } from "@/i18n";
 import { buildHallDetailsPath } from "@/lib/booking-intent";
 import { localizeHallDetails, localizePriceLabel } from "@/lib/localize-hall-display";
 import { fetchHallComments, mapCommentToReview } from "@/services/comments";
+import { nextRatingSummary } from "@/services/ratings";
 import { fetchHallById } from "@/services/halls";
 import type { HallDetails } from "@/types/hall";
 
@@ -60,6 +60,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   const [warning, setWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [bookingBlockedOpen, setBookingBlockedOpen] = useState(false);
+  const [viewerRating, setViewerRating] = useState<number | null>(null);
   const { canBook, isGuest, isOwnHall } = useHallPermissions(hall);
 
   if (loadedId !== hallId) {
@@ -224,8 +225,6 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
   }
 
   const viewHall = localizeHallDetails(hall, lang);
-  const detailedAddress = viewHall.detailedAddress?.trim() ?? "";
-  const featureLabels = ownerFeatureLabels(viewHall.features, viewHall.otherFeatures);
   const capacityLabel = viewHall.capacityMax
     ? t("common.peopleRange", { min: viewHall.capacity, max: viewHall.capacityMax })
     : t("common.peopleCount", { count: viewHall.capacity });
@@ -358,28 +357,6 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             ) : null}
           </div>
 
-          {detailedAddress ? (
-            <section className="mt-7" data-testid="hall-main-info">
-              <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">
-                {t("halls.details.tabs.address")}
-              </h2>
-              <p className="mt-2.5 text-[15px] font-medium leading-8 text-[#5c534e]">
-                {detailedAddress}
-              </p>
-            </section>
-          ) : null}
-
-          {featureLabels.length > 0 ? (
-            <section className="mt-7" data-testid="hall-popup-features">
-              <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">
-                {t("halls.details.tabs.features")}
-              </h2>
-              <div className="mt-4">
-                <HallAmenitiesGrid amenities={featureLabels} embedded />
-              </div>
-            </section>
-          ) : null}
-
           <section className="mt-7">
             <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">
               {t("halls.details.reviews")}
@@ -399,7 +376,9 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             ) : null}
 
             <HallCommentList
+              hallId={viewHall.id}
               comments={viewHall.reviews}
+              viewerRating={viewerRating}
               onCommentUpdated={(review) => {
                 setHall((current) =>
                   current
@@ -427,16 +406,23 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
             <HallAddReviewCard
               hallId={viewHall.id}
               isHallOwner={isOwnHall}
-              onRated={({ averageRating, totalRatings }) => {
-                setHall((current) =>
-                  current
-                    ? {
-                        ...current,
-                        rating: averageRating,
-                        reviewCount: totalRatings,
-                      }
-                    : current,
-                );
+              onRated={(result) => {
+                setViewerRating(result.value);
+                setHall((current) => {
+                  if (!current) return current;
+                  const next = nextRatingSummary(
+                    {
+                      averageRating: current.rating ?? 0,
+                      totalRatings: current.reviewCount ?? 0,
+                    },
+                    result,
+                  );
+                  return {
+                    ...current,
+                    rating: next.averageRating,
+                    reviewCount: next.totalRatings,
+                  };
+                });
               }}
               onCommentSubmitted={(review) => {
                 setHall((current) =>
@@ -673,21 +659,4 @@ function GuestsIcon() {
       <path d="M15 14.5c2 .2 3.8 1.6 4.4 4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
-}
-
-function ownerFeatureLabels(
-  features: string[] | undefined,
-  otherFeatures: string | null | undefined,
-): string[] {
-  const seen = new Set<string>();
-  const labels: string[] = [];
-  for (const label of features ?? []) {
-    const trimmed = label.trim();
-    if (!trimmed || seen.has(trimmed)) continue;
-    seen.add(trimmed);
-    labels.push(trimmed);
-  }
-  const extra = otherFeatures?.trim();
-  if (extra && !seen.has(extra)) labels.push(extra);
-  return labels;
 }

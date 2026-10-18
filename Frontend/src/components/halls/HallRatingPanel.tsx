@@ -15,7 +15,12 @@ type HallRatingPanelProps = {
   hallId: string;
   isHallOwner: boolean;
   embedded?: boolean;
-  onRated?: (result: { averageRating: number; totalRatings: number }) => void;
+  onRated?: (result: {
+    averageRating: number;
+    totalRatings: number;
+    value: number;
+    created: boolean;
+  }) => void;
 };
 
 export default function HallRatingPanel({
@@ -74,6 +79,8 @@ export default function HallRatingPanel({
       onRated?.({
         averageRating: result.averageRating,
         totalRatings: result.totalRatings,
+        value: result.value,
+        created: result.created,
       });
     } catch (err) {
       setError(await handleProtectedError(err, ratingErrorMessage));
@@ -150,6 +157,8 @@ export default function HallRatingPanel({
                         onRated?.({
                           averageRating: result.averageRating,
                           totalRatings: result.totalRatings,
+                          value: result.value,
+                          created: result.created,
                         });
                       } catch (err) {
                         setError(await handleProtectedError(err, ratingErrorMessage));

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
+using Wesal.Application.Common.Models;
 using Wesal.Infrastructure.AiAssistant;
 
 namespace Wesal.Tests.Infrastructure;
@@ -70,6 +71,56 @@ public class HowToServiceGeminiShould
         Assert.Contains("120", result.Answer);
     }
 
+    [Fact]
+    public async Task NamedPersonWithoutVerifiedSource_IsNotSentToGemini()
+    {
+        var gemini = new FakeGeminiService { Available = true, Result = "مهند زقوت من مطوري وصال" };
+        var service = new HowToService(
+            CreatePaymentService(),
+            geminiService: gemini,
+            knowledgeService: new WesalKnowledgeService());
+
+        var result = await service.AskHowToAsync("مين مهند زقوت؟", "ar", CancellationToken.None);
+
+        Assert.Equal("person-unverified", result.Category);
+        Assert.Contains("ما عندي مصدر موثوق", result.Answer);
+        Assert.False(gemini.Called);
+    }
+
+    [Fact]
+    public async Task NamedPersonWithVerifiedSource_ReturnsOnlyTheSourceArticle()
+    {
+        const string sourceAnswer = "مهند زقوت مطور برمجيات، وفق المقالة المعتمدة.";
+        var knowledge = new FakeKnowledgeService(
+        [
+            new WesalKnowledgeArticle(
+                "مهند زقوت", "team", "product-owner-confirmed", new DateOnly(2026, 10, 18),
+                WesalKnowledgeStatus.Verified, sourceAnswer)
+        ]);
+        var gemini = new FakeGeminiService { Available = true, Result = "Invented biography" };
+        var service = new HowToService(CreatePaymentService(), geminiService: gemini, knowledgeService: knowledge);
+
+        var result = await service.AskHowToAsync("مين مهند زقوت؟", "ar", CancellationToken.None);
+
+        Assert.Equal("team", result.Category);
+        Assert.Equal(sourceAnswer, result.Answer);
+        Assert.False(gemini.Called);
+    }
+
+    [Fact]
+    public async Task NamedPersonWithoutVerifiedSource_IsHandledBeforeOrchestration()
+    {
+        var service = new HowToService(
+            CreatePaymentService(),
+            knowledgeService: new WesalKnowledgeService());
+
+        var result = await service.TryAnswerKnownQuestionAsync("مين مهند زقوت؟", "ar");
+
+        Assert.NotNull(result);
+        Assert.Equal("person-unverified", result!.Category);
+        Assert.Contains("ما عندي مصدر موثوق", result.Answer);
+    }
+
     private sealed class FakeGeminiService : IGeminiService
     {
         public bool Available { get; set; }
@@ -87,5 +138,15 @@ public class HowToServiceGeminiShould
         public Task<T?> GenerateStructuredAsync<T>(string prompt, string systemInstruction, System.Text.Json.Nodes.JsonNode responseSchema, CancellationToken cancellationToken = default)
             where T : class
             => Task.FromResult<T?>(null);
+    }
+
+    private sealed class FakeKnowledgeService(IReadOnlyList<WesalKnowledgeArticle> articles) : IWesalKnowledgeService
+    {
+        public Task<IReadOnlyList<WesalKnowledgeArticle>> SearchAsync(
+            string question,
+            string? language,
+            int maxResults = 3,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(articles);
     }
 }

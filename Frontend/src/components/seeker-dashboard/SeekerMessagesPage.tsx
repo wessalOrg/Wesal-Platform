@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import ConversationList from "@/components/messages/ConversationList";
-import MessagesBackButton from "@/components/messages/MessagesBackButton";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
 import OwnerConfirmPaymentBar from "@/components/messages/OwnerConfirmPaymentBar";
@@ -149,7 +148,6 @@ export default function SeekerMessagesPage() {
     <div className="seeker-messages" data-testid="seeker-messages-page">
       {isHallOwner ? null : (
         <header className="seeker-settings-header">
-          <MessagesBackButton fallbackHref={hallId ? `/halls/${encodeURIComponent(hallId)}` : "/halls"} />
           <h1 className="seeker-settings-title">{t("seeker.nav.messages")}</h1>
           <p className="seeker-settings-lead">{t("seeker.messages.subtitle")}</p>
         </header>
