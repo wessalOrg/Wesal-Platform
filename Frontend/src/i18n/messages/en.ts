@@ -1439,10 +1439,12 @@ const en: MessageCatalog = {
   "owner.notifications.depositAmount": "Deposit amount",
   "owner.notifications.depositPlaceholder": "e.g. 500",
   "owner.notifications.depositDue": "Awaiting a deposit of {amount}.",
+  "owner.notifications.depositConfirmedTitle": "Deposit payment confirmed",
+  "owner.notifications.depositConfirmedBody": "You confirmed the deposit payment for {name}.",
   "owner.notifications.confirmPayment": "Confirm payment",
   "owner.notifications.confirmingPayment": "Confirming payment…",
   "owner.notifications.confirmPaymentHint":
-    "Review the deposit receipt in this chat, then confirm payment for {date} {when} ({amount}).",
+    "Review the deposit receipt for the amount you set for the booker ({amount}), then confirm payment for {date} {when}.",
   "owner.notifications.confirmAccept": "Confirm approval",
   "owner.notifications.acceptSuccess": "The request was accepted.",
   "owner.notifications.hall": "Hall",

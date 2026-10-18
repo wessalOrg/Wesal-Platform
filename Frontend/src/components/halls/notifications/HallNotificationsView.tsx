@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import HallLockedState from "@/components/halls/HallLockedState";
 import AcceptConfirmModal from "@/components/halls/notifications/AcceptConfirmModal";
+import DepositConfirmedModal from "@/components/halls/notifications/DepositConfirmedModal";
 import HallNotificationEmptyState from "@/components/halls/notifications/HallNotificationEmptyState";
 import HallNotificationErrorState from "@/components/halls/notifications/HallNotificationErrorState";
 import HallNotificationList from "@/components/halls/notifications/HallNotificationList";
@@ -54,6 +55,7 @@ export default function HallNotificationsView({
   const [rejectTarget, setRejectTarget] = useState<HallBookingNotification | null>(null);
   const [acceptTarget, setAcceptTarget] = useState<HallBookingNotification | null>(null);
   const [acceptToast, setAcceptToast] = useState(false);
+  const [confirmedName, setConfirmedName] = useState<string | null>(null);
   const [rejectToast, setRejectToast] = useState(false);
   const [rejectedChat, setRejectedChat] = useState<HallBookingNotification | null>(null);
   const seekerChat = useOwnerSeekerChat();
@@ -189,7 +191,10 @@ export default function HallNotificationsView({
           }}
           messagingSeeker={seekerChat.opening}
           onConfirmPayment={(item) => {
-            void confirmPayment.publish(item.hallId || hallId, item.id);
+            const name = item.requesterName.trim() || t("common.user");
+            void confirmPayment.publish(item.hallId || hallId, item.id).then((result) => {
+              if (result) setConfirmedName(name);
+            });
           }}
         />
       ) : null}
@@ -227,6 +232,11 @@ export default function HallNotificationsView({
           }
         />
       ) : null}
+
+      <DepositConfirmedModal
+        requesterName={confirmedName}
+        onClose={() => setConfirmedName(null)}
+      />
 
       <AcceptConfirmModal
         open={Boolean(acceptTarget)}

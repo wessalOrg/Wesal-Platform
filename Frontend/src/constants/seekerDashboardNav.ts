@@ -14,6 +14,18 @@ export function seekerBookingContactPath(bookingId: string): string {
     : SEEKER_BOOKINGS_PATH;
 }
 
+/** Bookings page plus the floating thread used to send the deposit receipt. */
+export function seekerAcceptedDepositPath(bookingId: string, conversationId: string): string {
+  const params = new URLSearchParams();
+  const booking = bookingId.trim();
+  const conversation = conversationId.trim();
+  if (booking) params.set("booking_id", booking);
+  if (conversation) params.set("conversation_id", conversation);
+  params.set("intent", "contact");
+  params.set("attach", "1");
+  return `${SEEKER_BOOKINGS_PATH}?${params.toString()}`;
+}
+
 /**
  * Deep link that opens one specific conversation. This mirrors the route
  * `useStartHallConversation` already pushes, so a notification and a hall card land on the

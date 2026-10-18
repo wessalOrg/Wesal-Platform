@@ -16,6 +16,7 @@ import MessageThreadView from "@/components/messages/MessageThreadView";
 import OwnerConfirmPaymentBar from "@/components/messages/OwnerConfirmPaymentBar";
 import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAdminChat } from "@/hooks/useAdminChat";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
@@ -78,6 +79,8 @@ function storePanelSize(size: PanelSize): void {
 
 export default function MessagesInboxPanel() {
   const t = useT();
+  const { count: unreadCount, ready: unreadReady } = useUnreadCount();
+  const unread = unreadReady ? unreadCount : 0;
   const lang = useUiLang();
   const promptAttach = useSearchParams().get("attach") === "1";
   const { isHallOwner, isAdmin } = useAccountAccess();
@@ -359,6 +362,15 @@ export default function MessagesInboxPanel() {
             <h2 id="messages-inbox-title" className="text-base font-bold text-[var(--wesal-maroon)]">
               {t("messages.inboxTitle")}
             </h2>
+            {unread > 0 ? (
+              <span
+                className="inline-flex h-[1.15rem] min-w-[1.15rem] shrink-0 items-center justify-center rounded-full bg-[#c62828] px-1 text-[0.62rem] font-extrabold leading-none text-white"
+                aria-label={t("messages.unreadCount", { count: unread })}
+                data-testid="messages-inbox-unread"
+              >
+                {unread > 9 ? "9+" : unread}
+              </span>
+            ) : null}
             <button
               type="button"
               className={`${iconBtnClass} wesal-messages-inbox-resize`}
@@ -440,7 +452,7 @@ export default function MessagesInboxPanel() {
                   threadStatus !== "error" &&
                   threadStatus !== "idle"
                 }
-                onBack={() => selectConversation(null)}
+                onBack={showThread ? () => selectConversation(null) : undefined}
                 conversationId={selectedId}
                 variant="widget"
                 notice={

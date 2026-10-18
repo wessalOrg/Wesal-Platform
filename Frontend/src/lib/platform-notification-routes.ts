@@ -5,7 +5,7 @@ import {
 } from "@/lib/account-profile-path";
 import {
   SEEKER_BOOKINGS_PATH,
-  conversationMessagePath,
+  seekerAcceptedDepositPath,
   seekerBookingContactPath,
 } from "@/constants/seekerDashboardNav";
 import {
@@ -36,7 +36,14 @@ export function resolveNotificationActionUrl(
     typeof explicit === "string" &&
     (explicit === SEEKER_BOOKINGS_PATH ||
       explicit.startsWith(`${SEEKER_BOOKINGS_PATH}?`));
-  if (explicit && !staleOwnerBookingHref) return explicit;
+  // Older acceptance notices pointed at the full messages page. Recompute so the
+  // click lands on حجوزاتي and the floating thread can open from that page.
+  const staleAcceptedMessagesHref =
+    type === "booking_accepted" &&
+    audience !== "owner" &&
+    typeof explicit === "string" &&
+    explicit.startsWith("/messages");
+  if (explicit && !staleOwnerBookingHref && !staleAcceptedMessagesHref) return explicit;
 
   switch (type) {
     case "welcome":
@@ -49,10 +56,9 @@ export function resolveNotificationActionUrl(
       }
       return SEEKER_BOOKINGS_PATH;
     case "booking_accepted":
-      // An acceptance asks the seeker to send a deposit receipt, which is done in the
-      // conversation with the owner, so the thread is the destination whenever we know it.
-      // The bookings page stays the fallback for a notice with no conversation reference.
-      if (conversationId) return conversationMessagePath(conversationId, true);
+      // Stay on the seeker's bookings, and carry the thread id so that page can open
+      // the floating chat for the deposit receipt.
+      if (conversationId) return seekerAcceptedDepositPath(bookingId, conversationId);
       return bookingId ? seekerBookingContactPath(bookingId) : SEEKER_BOOKINGS_PATH;
     case "booking_rejected":
       return bookingId ? seekerBookingContactPath(bookingId) : SEEKER_BOOKINGS_PATH;

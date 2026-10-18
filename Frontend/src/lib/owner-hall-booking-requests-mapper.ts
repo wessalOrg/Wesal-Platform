@@ -36,10 +36,17 @@ export type OwnerHallBookingRequestDto = {
   timeRange?: string | null;
   requesterUserId?: string | null;
   depositAmount?: unknown;
+  depositPaymentConfirmedAt?: unknown;
   status?: string | number | null;
   createdAt?: string | null;
   requestedAt?: string | null;
 };
+
+function depositWasConfirmed(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  return Boolean(trimmed) && trimmed !== "0001-01-01T00:00:00+00:00";
+}
 
 function readId(dto: OwnerHallBookingRequestDto): string | null {
   const value = String(
@@ -129,7 +136,9 @@ export function mapOwnerHallBookingRequestDto(
     periods,
     slotStarts,
     timeRange: timeRange || undefined,
-    status: parseBookingStatus(dto.status),
+    status: depositWasConfirmed(dto.depositPaymentConfirmedAt)
+      ? "Confirmed"
+      : parseBookingStatus(dto.status),
     depositAmount: parseDepositAmount(dto.depositAmount),
     createdAt: dto.createdAt ?? dto.requestedAt ?? null,
   };

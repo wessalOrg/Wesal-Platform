@@ -1431,10 +1431,12 @@ const ar: MessageCatalog = {
   "owner.notifications.depositAmount": "مبلغ العربون",
   "owner.notifications.depositPlaceholder": "مثال: 500",
   "owner.notifications.depositDue": "بانتظار دفع عربون قدره {amount}.",
+  "owner.notifications.depositConfirmedTitle": "تم تأكيد دفع العربون",
+  "owner.notifications.depositConfirmedBody": "تم تأكيدك لدفع عربون الحاجز {name}.",
   "owner.notifications.confirmPayment": "تأكيد الدفع",
   "owner.notifications.confirmingPayment": "جاري تأكيد الدفع",
   "owner.notifications.confirmPaymentHint":
-    "راجع إيصال العربون في المحادثة ثم أكّد الدفع لـ {date} {when} ({amount}).",
+    "راجع إيصال العربون بالمبلغ الذي حددته للحاجز ({amount}) ثم أكّد الدفع لـ {date} {when}.",
   "owner.notifications.confirmAccept": "تأكيد الموافقة",
   "owner.notifications.acceptSuccess": "تم قبول الطلب بنجاح.",
   "owner.notifications.hall": "القاعة",

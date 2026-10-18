@@ -4,7 +4,10 @@
  */
 import assert from "node:assert/strict";
 import { adminHallSubmissionPath } from "../src/lib/account-profile-path";
-import { seekerBookingContactPath } from "../src/constants/seekerDashboardNav";
+import {
+  seekerAcceptedDepositPath,
+  seekerBookingContactPath,
+} from "../src/constants/seekerDashboardNav";
 import { resolveNotificationActionUrl } from "../src/lib/platform-notification-routes";
 import {
   ownerAdminMessagesPath,
@@ -25,6 +28,22 @@ assert.equal(
 assert.equal(
   resolveNotificationActionUrl("booking_accepted", { booking_id: "b-1" }),
   seekerBookingContactPath("b-1"),
+);
+assert.equal(
+  resolveNotificationActionUrl("booking_accepted", {
+    booking_id: "b-1",
+    conversation_id: "c-1",
+  }),
+  seekerAcceptedDepositPath("b-1", "c-1"),
+);
+assert.equal(
+  resolveNotificationActionUrl(
+    "booking_accepted",
+    { conversation_id: "c-1" },
+    "/messages/c-1?attach=1",
+    "seeker",
+  ),
+  seekerAcceptedDepositPath("", "c-1"),
 );
 assert.equal(
   resolveNotificationActionUrl("booking_rejected", { booking_id: "b-2" }),

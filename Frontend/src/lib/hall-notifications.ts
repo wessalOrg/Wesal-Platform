@@ -140,8 +140,13 @@ export function mapHallBookingNotification(
     asText(data.fullName) ||
     asText(data.name);
 
-  const status = data.status == null ? null : parseOwnerBookingRequestStatus(data.status);
-  const isPublished = parsePublishedFlag(data) || status === "FullyBooked";
+  const depositPaymentConfirmedAt = confirmedAtFromDto(data.depositPaymentConfirmedAt);
+  const parsedStatus = data.status == null ? null : parseOwnerBookingRequestStatus(data.status);
+  // The server keeps Status = Accepted after the owner confirms the deposit and only
+  // stamps DepositPaymentConfirmedAt. Without this, a refresh puts the request back
+  // under "awaiting deposit" and the confirm button stays.
+  const status = depositPaymentConfirmedAt ? "FullyBooked" : parsedStatus;
+  const isPublished = Boolean(depositPaymentConfirmedAt) || parsePublishedFlag(data) || status === "FullyBooked";
   const canPublish = !isPublished && parseCanPublishFlag(data);
 
   return {
@@ -156,7 +161,7 @@ export function mapHallBookingNotification(
     status,
     rejectionReason: asText(data.rejectionReason || data.reason) || undefined,
     depositAmount: parseDepositAmount(data.depositAmount),
-    depositPaymentConfirmedAt: confirmedAtFromDto(data.depositPaymentConfirmedAt),
+    depositPaymentConfirmedAt,
     canPublish,
     isPublished,
     canDelete: parseCanDeleteFlag(data),
