@@ -116,15 +116,16 @@ jobs:
       - name: Build
         run: |
           set -uo pipefail
-          if npm run build 2>&1 | tee /tmp/wesal-next-build.log; then
+          if npm run build > /tmp/wesal-next-build.log 2>&1; then
+            cat /tmp/wesal-next-build.log
             exit 0
           fi
+          cat /tmp/wesal-next-build.log
           echo "::error::Frontend next build failed"
-          grep -E 'error TS[0-9]+|Failed to compile|Type error|Module not found|Error:|Failed to type check' /tmp/wesal-next-build.log | head -50 | while IFS= read -r line; do
+          grep -E 'Error|Failed|Type error|Module not found|ELIFECYCLE|useSearchParams' /tmp/wesal-next-build.log | head -40 | while IFS= read -r line; do
             echo "::error::$line"
           done
           exit 1
-
 
   secret-scan:
     name: Changed-source secret scan
