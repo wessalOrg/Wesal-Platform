@@ -24,6 +24,13 @@ function mapRealtime(data: unknown): IncomingRealtimeMessage | null {
 }
 
 const handlersByConversation = new Map<string, Set<MessageHandler>>();
+const inboxHandlers = new Set<MessageHandler>();
+
+function dispatchMessage(payload: IncomingRealtimeMessage) {
+  handlersByConversation.get(payload.conversationId)?.forEach((handler) => handler(payload));
+  inboxHandlers.forEach((handler) => handler(payload));
+}
+
 let connection: HubConnection | null = null;
 let startPromise: Promise<HubConnection | null> | null = null;
 let boundConnection: HubConnection | null = null;
@@ -35,7 +42,7 @@ function bindHubEvents(hub: HubConnection) {
   hub.on("MessageReceived", (raw: unknown) => {
     const payload = mapRealtime(raw);
     if (!payload) return;
-    handlersByConversation.get(payload.conversationId)?.forEach((handler) => handler(payload));
+    dispatchMessage(payload);
   });
   hub.onreconnected(() => {
     for (const id of handlersByConversation.keys()) {
@@ -78,6 +85,19 @@ async function ensureHub(): Promise<HubConnection | null> {
   });
 
   return startPromise;
+}
+
+/** Live messages for the signed-in user, including threads that are not open. */
+export function subscribeIncomingMessages(onMessage: MessageHandler): () => void {
+  if (usesMockRealtime()) {
+    return subscribeMockMessages(onMessage);
+  }
+
+  inboxHandlers.add(onMessage);
+  void ensureHub().catch(() => undefined);
+  return () => {
+    inboxHandlers.delete(onMessage);
+  };
 }
 
 export function subscribeConversationMessages(

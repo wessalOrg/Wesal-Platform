@@ -92,6 +92,8 @@ export default function MessageThreadView({
 
   const widget = variant === "widget";
   const owner = appearance === "owner";
+  const inboxLabel = t("messages.title");
+  const showEyebrow = !owner && title.trim() !== inboxLabel;
 
   return (
     <section
@@ -131,9 +133,9 @@ export default function MessageThreadView({
           </span>
         ) : null}
         <div className="min-w-0 flex-1">
-          {owner ? null : (
-            <p className="text-[0.68rem] font-semibold text-[var(--wesal-gold)]">{t("messages.title")}</p>
-          )}
+          {showEyebrow ? (
+            <p className="text-[0.68rem] font-semibold text-[var(--wesal-gold)]">{inboxLabel}</p>
+          ) : null}
           <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
             <h2 className="truncate text-base font-bold text-[var(--wesal-text)]">{title}</h2>
             {badge ? (

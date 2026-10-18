@@ -57,6 +57,27 @@ export function usePublishBooking(options?: UsePublishBookingOptions) {
           err instanceof PublishBookingError
             ? err
             : new PublishBookingError("errors.owner.publish.generic");
+        // A second click after the server already confirmed the deposit is not a new
+        // failure: close the request the same way a successful confirm does.
+        if (mapped.resolvedStatus === "FullyBooked") {
+          const result: PublishBookingResult = {
+            bookingId: id,
+            hallId: hallId.trim(),
+            date: "",
+            periods: [],
+            status: "FullyBooked",
+            alreadyPublished: true,
+          };
+          onPublishedRef.current?.(result);
+          emitBookingPublished({
+            bookingId: result.bookingId,
+            hallId: result.hallId,
+            date: result.date,
+            periods: result.periods,
+          });
+          notifyPublicHallsChanged();
+          return result;
+        }
         setErrorById((current) => ({
           ...current,
           [id]: mapped.backendMessage || mapped.message,
