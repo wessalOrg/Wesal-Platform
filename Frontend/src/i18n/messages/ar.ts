@@ -1767,7 +1767,7 @@ const ar: MessageCatalog = {
   "owner.hourly.settingsHint": "الأيام والساعات المتاحة تظهر دائماً. هذا الخيار يخفي فقط الأيام أو الساعات المحجوزة عن المستخدمين.",
   "owner.hourly.showBooked": "عرض الأيام/الساعات المحجوزة للمستخدمين",
   "owner.hourly.showBookedHint": "الساعات المتاحة تظهر دائماً. أطفئ الخيار لإخفاء الساعات المحجوزة عن الباحثين.",
-  "owner.hourly.blockHint": "اضغط يوماً في التقويم لإغلاقه بالكامل أو إعادة فتحه.",
+  "owner.hourly.blockHint": "اختر اليوم من التقويم، ثم اضغط «مغلق / غير متاح» لإغلاقه أو «إعادة فتح اليوم» لفتحه.",
   "owner.calendar.title": "تقويم الحجوزات",
   "owner.calendar.pageSubtitle": "تابع الأيام والساعات المحجوزة لقاعاتك بكل سهولة.",
   "owner.calendar.hint": "اختر يوماً لمعرفة ما إذا كانت فيه ساعات محجوزة.",
@@ -2057,6 +2057,8 @@ const ar: MessageCatalog = {
   "halls.details.otherFeatures": "مميزات إضافية",
   "halls.details.youtube": "فيديو يوتيوب",
   "halls.details.youtubeWatch": "شاهد فيديو القاعة",
+  "halls.details.youtubeLead": "لمشاهدة فيديو للقاعة",
+  "halls.details.youtubeHere": "اضغط هنا",
   "auth.register.heroTitle": "ما يليق بك في مكان واحد",
   "auth.register.heroSub":
     "سواء كنت تبحث عن قاعتك المثالية أو تدير قاعتك، وصال يجعل كل شيء أقرب وأسهل.",

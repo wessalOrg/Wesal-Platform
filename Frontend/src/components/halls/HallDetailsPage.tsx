@@ -13,7 +13,6 @@ import HallDetailsHeader from "@/components/halls/HallDetailsHeader";
 import HallDetailsOverview from "@/components/halls/HallDetailsOverview";
 import HallHourlyBookingSection from "@/components/halls/hourly/HallHourlyBookingSection";
 import type { HourlySummarySelection } from "@/hooks/useHourlyBooking";
-import HallYouTubeEmbed from "@/components/halls/HallYouTubeEmbed";
 import HallReviewsSection from "@/components/halls/HallReviewsSection";
 import HallUnavailableOverlay from "@/components/halls/HallUnavailableOverlay";
 import { useUiLang } from "@/components/layout/LanguageProvider";
@@ -28,6 +27,7 @@ import { buildHallDetailsPath, hasBookingIntent, hasContactIntent } from "@/lib/
 import { saveBookingHallContext } from "@/lib/auth-storage";
 import { resetBodyScrollLock } from "@/lib/body-scroll-lock";
 import { localizeHallDetail, localizeReviews } from "@/lib/localize-hall-display";
+import { toStoredYouTubeUrl, toYouTubeVideoId } from "@/lib/youtube-embed";
 import {
   fetchHallComments,
   mapCommentToReview,
@@ -211,6 +211,9 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
 
   const viewHall = localizeHallDetail(hall, lang);
   const featureLabels = uniqueFeatureLabels(viewHall.features, viewHall.amenities);
+  const youtubeHref = toYouTubeVideoId(viewHall.youtubeVideoUrl)
+    ? toStoredYouTubeUrl(viewHall.youtubeVideoUrl ?? "")
+    : "";
   const notes = hallNotes(viewHall.otherFeatures, t("halls.details.summaryPriceNote"));
   const detailedAddress = viewHall.detailedAddress?.trim() || viewHall.location;
   const sections = [
@@ -300,6 +303,20 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           </div>
         ) : null}
 
+        {youtubeHref ? (
+          <p className="text-sm leading-8 text-[var(--wesal-text)]" data-testid="hall-youtube-link">
+            {t("halls.details.youtubeLead")}{" "}
+            <a
+              href={youtubeHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[var(--wesal-maroon)] underline underline-offset-4"
+            >
+              {t("halls.details.youtubeHere")}
+            </a>
+          </p>
+        ) : null}
+
         {notes.length > 0 || !isOwnHall ? (
           <div className="grid items-start gap-6 lg:grid-cols-2">
             {notes.length > 0 ? (
@@ -328,8 +345,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           </div>
         ) : null}
       </section>
-
-      <HallYouTubeEmbed url={viewHall.youtubeVideoUrl} />
 
       <div className="hall-details-body min-w-0 space-y-5 lg:space-y-6">
         <div

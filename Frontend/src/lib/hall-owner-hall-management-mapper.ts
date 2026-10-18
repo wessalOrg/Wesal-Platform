@@ -7,6 +7,7 @@ import {
 import { hallAccessFromUnknown } from "@/lib/hall-access";
 import { apiUploadPath } from "@/lib/hall-media-url";
 import { mapBackendHallStatus } from "@/lib/hall-owner-halls-mapper";
+import { readYouTubeVideoUrl } from "@/lib/youtube-embed";
 import type {
   ExistingHallPhoto,
   HallEditFormValues,
@@ -173,7 +174,7 @@ export function mapOwnerHallDetailsDto(
         ? null
         : Number(dto.price),
     showPrice: Boolean(dto.showPrice),
-    youtubeVideoUrl: String(dto.youtubeVideoUrl ?? "").trim(),
+    youtubeVideoUrl: readYouTubeVideoUrl(dto) ?? "",
     features: readStringList(dto.features),
     otherFeatures: String(dto.otherFeatures ?? "").trim(),
     paymentStatus: toHallPaymentStatus(dto.paymentStatus) ?? "Unpaid",

@@ -24,6 +24,7 @@ import {
 } from "@/lib/hall-media-url";
 import { mapDeleteHallResult } from "@/lib/owner-delete-hall";
 import { isSystemLockedApiError } from "@/lib/system-locked-error";
+import { readYouTubeVideoUrl } from "@/lib/youtube-embed";
 import {
   REGION_API_PARAMS,
   type DeleteHallResult,
@@ -456,7 +457,7 @@ function mapApiHallDetail(hall: ApiFeaturedHall, index: number): HallDetail {
     amenities: hall.amenities ?? hall.tags ?? fallback?.amenities ?? [],
     features: hall.features?.filter(Boolean) ?? [],
     otherFeatures: hall.otherFeatures ?? fallback?.otherFeatures ?? null,
-    youtubeVideoUrl: hall.youtubeVideoUrl ?? fallback?.youtubeVideoUrl ?? null,
+    youtubeVideoUrl: readYouTubeVideoUrl(hall) ?? fallback?.youtubeVideoUrl ?? null,
     gallery: resolveGalleryImages(hall, mainImageUrl, index),
     mainImageUrl,
     slotPrices: mapSlotPrices(hall),

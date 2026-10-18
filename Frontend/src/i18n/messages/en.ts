@@ -1821,7 +1821,7 @@ const en: MessageCatalog = {
   "owner.hourly.settingsHint": "Available days and hours always stay visible. This toggle only hides booked days or hours from users.",
   "owner.hourly.showBooked": "Show booked days/hours to users",
   "owner.hourly.showBookedHint": "Available hours are always shown. Turn this off to hide booked hours from seekers.",
-  "owner.hourly.blockHint": "Tap a day on the calendar to close or reopen it.",
+  "owner.hourly.blockHint": "Choose a day on the calendar, then use Closed / unavailable or Reopen day.",
   "owner.calendar.title": "Bookings calendar",
   "owner.calendar.pageSubtitle": "Follow the booked days and hours for your halls.",
   "owner.calendar.hint": "Select a day to see whether it has booked hours.",
@@ -2113,6 +2113,8 @@ const en: MessageCatalog = {
   "halls.details.otherFeatures": "Additional features",
   "halls.details.youtube": "YouTube video",
   "halls.details.youtubeWatch": "Watch the hall video",
+  "halls.details.youtubeLead": "To watch the hall video",
+  "halls.details.youtubeHere": "click here",
   "auth.register.heroTitle": "What suits you in one place",
   "auth.register.heroSub":
     "Whether you're looking for your ideal hall or managing yours, Wesal makes everything closer and easier.",
