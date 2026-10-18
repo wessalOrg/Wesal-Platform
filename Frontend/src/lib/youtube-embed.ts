@@ -29,6 +29,17 @@ export function toYouTubeVideoId(value: string | null | undefined): string | nul
   return id;
 }
 
+/**
+ * ASP.NET camelCase turns `YouTubeVideoUrl` into `youTubeVideoUrl`.
+ * Accept every casing the API has sent.
+ */
+export function readYouTubeVideoUrl(source: object | null | undefined): string | null {
+  if (!source) return null;
+  const record = source as Record<string, unknown>;
+  const raw = record.youtubeVideoUrl ?? record.youTubeVideoUrl ?? record.YouTubeVideoUrl;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
+
 /** True when the value is a YouTube link that contains a video id. */
 export function isYouTubeVideoUrl(value: string | null | undefined): boolean {
   return toYouTubeVideoId(value) !== null;

@@ -2109,6 +2109,8 @@ const en: MessageCatalog = {
   "halls.details.otherFeatures": "Additional features",
   "halls.details.youtube": "YouTube video",
   "halls.details.youtubeWatch": "Watch the hall video",
+  "halls.details.youtubeLead": "To watch the hall video",
+  "halls.details.youtubeHere": "click here",
   "auth.register.heroTitle": "What suits you in one place",
   "auth.register.heroSub":
     "Whether you're looking for your ideal hall or managing yours, Wesal makes everything closer and easier.",

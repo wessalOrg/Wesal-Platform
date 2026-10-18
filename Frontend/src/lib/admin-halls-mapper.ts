@@ -1,6 +1,7 @@
 import { parseDateIso, utcDaysRemaining, utcTodayIso } from "@/lib/booking-date";
 import { mapBackendHallStatus } from "@/lib/hall-owner-halls-mapper";
 import { resolveMediaUrl } from "@/lib/hall-media-url";
+import { readYouTubeVideoUrl } from "@/lib/youtube-embed";
 import type {
   AdminHallApprovalResult,
   AdminHallDetail,
@@ -133,7 +134,7 @@ export function mapAdminHallDetail(payload: unknown): AdminHallDetail | null {
     ownerEmail: asText(dto.ownerEmail ?? dto.OwnerEmail) || null,
     mainImageUrl: mainImageUrl || photoUrls[0] || null,
     photoUrls,
-    youtubeVideoUrl: asText(dto.youtubeVideoUrl ?? dto.YouTubeVideoUrl) || null,
+    youtubeVideoUrl: readYouTubeVideoUrl(dto),
     features,
     otherFeatures: asText(dto.otherFeatures ?? dto.OtherFeatures) || null,
     adminLocked: asBool(dto.adminLocked ?? dto.AdminLocked ?? dto.isLocked ?? dto.IsLocked),
