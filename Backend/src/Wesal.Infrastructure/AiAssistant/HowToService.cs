@@ -24,6 +24,23 @@ public sealed partial class HowToService : IHowToService
         "email", "بريد", "tel", "رقم", "تواصل مع وصال"
     ];
 
+    private static readonly Regex ArabicPersonQuestion = new(
+        @"^(?:مين(?: هو| هي)?|من هو|من هي)\s+(.+)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex EnglishPersonQuestion = new(
+        @"^(?:who is|who was|who are|who's)\s+(.+)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    private static readonly HashSet<string> NonPersonQuestionTerms = new(StringComparer.Ordinal)
+    {
+        "wesal", "وصال", "mabrook", "مبروك", "platform", "منصه", "team", "فريق", "الفريق",
+        "developer", "developers", "developed", "مطور", "مطوري", "مطورين", "المطورين",
+        "creator", "صانع", "صنع", "عمل", "طور", "تقني", "technical", "primary",
+        "hall", "halls", "قاعة", "قاعه", "قاعات", "صاله", "صالات", "owner", "مالك", "صاحب",
+        "best", "better", "افضل", "احسن", "عندكم", "where", "وين", "available", "موجود"
+    };
+
     private readonly ISubscriptionPaymentService _subscriptionPaymentService;
     private readonly IAiLanguageDetector _languageDetector;
     private readonly ISubscriptionPaymentIntentDetector _paymentIntentDetector;
@@ -121,6 +138,11 @@ public sealed partial class HowToService : IHowToService
             return new HowToResponse(creatorAnswer, "creator", effectiveLanguage, DateTime.UtcNow);
         }
 
+        if (IsNamedPersonQuestion(question))
+        {
+            return await AnswerNamedPersonQuestionAsync(question, effectiveLanguage, cancellationToken);
+        }
+
         // Official knowledge first (platform/faq/policies): the Knowledge Base is
         // the authoritative source for static Wesal facts (about, team, contact,
         // support hours, FAQ/price, privacy). It is checked before Gemini so the
@@ -193,6 +215,13 @@ public sealed partial class HowToService : IHowToService
         AiConversationContext? context = null)
     {
         var normalized = Normalize(question);
+        if (IsNamedPersonQuestion(question))
+        {
+            var effectiveLanguage = _languageDetector.Detect(question)
+                ?? (string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language);
+            return await AnswerNamedPersonQuestionAsync(question, effectiveLanguage, cancellationToken);
+        }
+
         var hallQuestion = AiHallQuestionClassifier.Classify(question);
         var platformOverview = AiHallQuestionClassifier.MentionsPlatform(question)
             && !ContainsAny(normalized, "قاعه", "قاعات", "hall", "halls");
@@ -254,6 +283,76 @@ public sealed partial class HowToService : IHowToService
     private static bool IsTeamQuestion(string normalized)
         => ContainsAny(normalized, "مين مطور", "من مطور", "مين طور وصال", "من طور وصال", "مين عمل وصال", "مين عمل منصة وصال",
             "who developed wesal", "who built wesal", "who are the developers", "wesal technical team");
+
+    private bool IsNamedPersonQuestion(string question)
+    {
+        var normalized = Normalize(question);
+        if (IsCreatorQuestion(question) || IsTeamQuestion(normalized))
+        {
+            return false;
+        }
+
+        var match = ArabicPersonQuestion.Match(normalized);
+        if (!match.Success)
+        {
+            match = EnglishPersonQuestion.Match(normalized);
+        }
+
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        var candidate = Normalize(match.Groups[1].Value);
+        var nameTokens = candidate.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (nameTokens.Length == 0)
+        {
+            return false;
+        }
+
+        return !nameTokens.Any(NonPersonQuestionTerms.Contains);
+    }
+
+    private async Task<HowToResponse> AnswerNamedPersonQuestionAsync(
+        string question,
+        string language,
+        CancellationToken cancellationToken)
+    {
+        if (_knowledgeService is not null)
+        {
+            var articles = await _knowledgeService.SearchAsync(question, language, maxResults: 10, cancellationToken);
+            var normalizedName = $" {Normalize(ExtractPersonName(question))} ";
+            var source = articles.FirstOrDefault(article =>
+                article.Status == WesalKnowledgeStatus.Verified
+                && $" {Normalize($"{article.Title} {article.Content}")} "
+                    .Contains(normalizedName, StringComparison.Ordinal));
+            if (source is not null)
+            {
+                return new HowToResponse(
+                    ComposeAnswer(source, language),
+                    source.Category,
+                    language,
+                    DateTime.UtcNow);
+            }
+        }
+
+        var answer = language == "en"
+            ? "I don't have a reliable source about that person, so I can't provide details."
+            : "ما عندي مصدر موثوق عن الشخص بهذا الاسم، فما بقدر أحكي معلومات عنه.";
+        return new HowToResponse(answer, "person-unverified", language, DateTime.UtcNow);
+    }
+
+    private static string ExtractPersonName(string question)
+    {
+        var normalized = Normalize(question);
+        var match = ArabicPersonQuestion.Match(normalized);
+        if (!match.Success)
+        {
+            match = EnglishPersonQuestion.Match(normalized);
+        }
+
+        return match.Success ? Normalize(match.Groups[1].Value) : string.Empty;
+    }
 
     private static bool LooksLikeLiveHallSearch(string normalized)
         => ContainsAny(normalized, "قاعة", "قاعات", "hall", "halls")

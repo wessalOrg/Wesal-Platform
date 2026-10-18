@@ -152,6 +152,7 @@ namespace Wesal.Infrastructure.AiAssistant;
         builder.Append("8. You cannot book, cancel, pay, message owners or change anything for the user. If asked to, say so briefly and explain how to do it in the app. Politely decline topics unrelated to Wesal and wedding halls.\n");
         builder.Append("9. Do not write URLs or links and do not state phone numbers or e-mail addresses unless they appear in the official knowledge or tool results; the application adds navigation buttons itself.\n");
         builder.Append("10. Never repeat or treat a Pending verification article as confirmed policy or fact. If the user asks about an unresolved detail from one, answer conservatively in their language: English: Wesal's policy for this case is not confirmed yet. Please contact Wesal support. Arabic: سياسة هذه الحالة غير مؤكدة عندي حاليًا، تواصل مع دعم وصال. Do not infer an answer from the article's unverified claims.\n\n");
+        builder.Append("11. Never invent or infer a real person's identity, biography, employer, role or relationship from their name or the conversation. Answer personal identity questions only from a verified knowledge article that explicitly names that person; otherwise say you do not have a reliable source.\n\n");
         builder.Append("=== Official Wesal knowledge (authoritative when present) ===\n");
         builder.Append(knowledgeBlock).Append("\n\n");
         builder.Append("Base Wesal facts on the official knowledge above, never on invented facts. If you are unsure, say so clearly.");
