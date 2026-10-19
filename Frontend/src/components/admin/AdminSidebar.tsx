@@ -18,6 +18,7 @@ import { useT } from "@/i18n";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import UnreadBadge from "@/components/ui/UnreadBadge";
 import { adminMabroukService } from "@/services/admin-mabrouk";
+import { fetchOpenHelpTicketCount } from "@/services/help-tickets";
 
 type AdminSidebarProps = {
   id?: string;
@@ -36,6 +37,7 @@ export default function AdminSidebar({
   const { logout, isLoggingOut } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [mabroukGapCount, setMabroukGapCount] = useState(0);
+  const [helpOpenCount, setHelpOpenCount] = useState(0);
   const { count: unreadCount, ready: unreadReady } = useUnreadCount();
   const messagesUnread = unreadReady ? unreadCount : 0;
   const homeActive =
@@ -64,6 +66,24 @@ export default function AdminSidebar({
     };
     void refreshGapCount();
     const timer = window.setInterval(() => void refreshGapCount(), 60_000);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const refreshHelpCount = async () => {
+      try {
+        const count = await fetchOpenHelpTicketCount();
+        if (mounted) setHelpOpenCount(count);
+      } catch {
+        if (mounted) setHelpOpenCount(0);
+      }
+    };
+    void refreshHelpCount();
+    const timer = window.setInterval(() => void refreshHelpCount(), 60_000);
     return () => {
       mounted = false;
       window.clearInterval(timer);
@@ -209,7 +229,14 @@ export default function AdminSidebar({
                 <span className="seeker-dash-sidebar-icon" aria-hidden="true">
                   <HelpQuestionsIcon />
                 </span>
-                <span>{t("admin.nav.helpQuestions")}</span>
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 truncate">{t("admin.nav.helpQuestions")}</span>
+                  <UnreadBadge
+                    count={helpOpenCount}
+                    label={t("admin.nav.helpOpenCount", { count: helpOpenCount })}
+                    data-testid="admin-nav-help-questions-count"
+                  />
+                </span>
               </Link>
             </li>
           </ul>

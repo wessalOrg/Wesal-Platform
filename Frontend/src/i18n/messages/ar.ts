@@ -1098,6 +1098,7 @@ const ar: MessageCatalog = {
   "admin.nav.subscriptions": "الاشتراكات",
   "admin.nav.messages": "الرسائل",
   "admin.nav.helpQuestions": "أسئلة مركز المساعدة",
+  "admin.nav.helpOpenCount": "{count} سؤال بانتظار الرد",
   "admin.nav.browseHalls": "العودة للرئيسية",
   "admin.nav.logout": "تسجيل الخروج",
   "admin.messages.title": "الرسائل",
