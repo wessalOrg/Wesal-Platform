@@ -12,8 +12,10 @@ internal sealed class GeminiSdkTestServer : IAsyncDisposable
 {
     private static readonly object ListenerStartLock = new();
     private readonly HttpListener _listener;
+    private readonly object _listenerLifecycleLock = new();
     private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
     private readonly Task _worker;
+    private bool _listenerClosed;
 
     public string BaseUrl { get; }
 
@@ -64,16 +66,53 @@ internal sealed class GeminiSdkTestServer : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (_listener.IsListening)
-            _listener.Stop();
+        StopListener();
         await _worker;
+    }
+
+    private bool IsListenerListening
+    {
+        get
+        {
+            lock (_listenerLifecycleLock)
+                return !_listenerClosed && _listener.IsListening;
+        }
+    }
+
+    private bool IsListenerClosed
+    {
+        get
+        {
+            lock (_listenerLifecycleLock)
+                return _listenerClosed;
+        }
+    }
+
+    private void StopListener()
+    {
+        lock (_listenerLifecycleLock)
+        {
+            if (_listenerClosed)
+                return;
+
+            _listenerClosed = true;
+            try
+            {
+                if (_listener.IsListening)
+                    _listener.Stop();
+            }
+            finally
+            {
+                _listener.Close();
+            }
+        }
     }
 
     private async Task RunAsync()
     {
         try
         {
-            while (_listener.IsListening)
+            while (IsListenerListening)
             {
                 HttpListenerContext context;
                 try
@@ -90,15 +129,20 @@ internal sealed class GeminiSdkTestServer : IAsyncDisposable
                 {
                     break;
                 }
+                catch (ObjectDisposedException) when (IsListenerClosed)
+                {
+                    // On Linux, stopping a listener with a pending GetContextAsync can
+                    // complete that wait with ObjectDisposedException instead of
+                    // HttpListenerException. Disposal is the normal shutdown path.
+                    break;
+                }
 
                 await RespondAsync(context);
             }
         }
         finally
         {
-            if (_listener.IsListening)
-                _listener.Stop();
-            _listener.Close();
+            StopListener();
         }
     }
 

@@ -107,7 +107,7 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
             UserId = userId,
             Role = role,
             IsPubliclyAvailable = true,
-            DisplayName = photographer.HasStudio ? photographer.StudioName : null,
+            DisplayName = PublicProfiles.ResolveDisplayName(photographer.HasStudio ? photographer.StudioName : null),
             StudioName = photographer.HasStudio ? photographer.StudioName : null,
             StudioLocation = photographer.HasStudio ? photographer.StudioLocation : null,
             DetailedStudioLocation = photographer.HasStudio ? photographer.DetailedStudioLocation : null,

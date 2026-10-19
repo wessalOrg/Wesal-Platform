@@ -198,7 +198,7 @@ public sealed class PublishingServiceShould : IDisposable
         var coordinator = await CreateUserAsync(ApplicationRoles.EventCoordinator);
         var photographer = await CreateUserAsync(ApplicationRoles.Photographer);
         var repository = new LifecycleOffersRepository();
-        var reminder = Offer(coordinator.Id, Now.AddHours(20), reminderEligible: true);
+        var reminder = Offer(coordinator.Id, Now.AddHours(24), reminderEligible: true);
         var shortLived = Offer(coordinator.Id, Now.AddHours(10), reminderEligible: false);
         var edited = Offer(coordinator.Id, Now.AddHours(10), reminderEligible: true, edited: true);
         var stopped = Offer(coordinator.Id, Now.AddHours(10), reminderEligible: true, stopped: true);
@@ -219,6 +219,96 @@ public sealed class PublishingServiceShould : IDisposable
         Assert.Null(shortLived.ReminderSentAt);
         Assert.Null(edited.ReminderSentAt);
         Assert.Null(stopped.ReminderSentAt);
+    }
+
+    [Fact]
+    public async Task SendTheOfferReminderOnlyInsideTheDueWindowSoItIsNeverLateOrEarly()
+    {
+        var coordinator = await CreateUserAsync(ApplicationRoles.EventCoordinator);
+        var repository = new LifecycleOffersRepository();
+        var onTime = Offer(coordinator.Id, Now.AddHours(24), reminderEligible: true); // due exactly now
+        var early = Offer(coordinator.Id, Now.AddHours(25), reminderEligible: true);  // due in one hour
+        var late = Offer(coordinator.Id, Now.AddHours(23), reminderEligible: true);   // due an hour ago
+        repository.Rows.AddRange([onTime, early, late]);
+        var lifecycle = new OfferLifecycleService(repository, new EmptyHallOfferRepository(), _unit,
+            _notificationService, new UserNotificationWriter(_db), _dispatcher, _users, _clock);
+
+        await lifecycle.ProcessAsync();
+        await lifecycle.ProcessAsync();
+
+        Assert.Equal(1, _db.UserNotifications.Count(notification => notification.Kind == NotificationKind.ProfessionalOfferReminder24Hours));
+        Assert.NotNull(onTime.ReminderSentAt);
+        Assert.Null(early.ReminderSentAt);
+        Assert.Null(late.ReminderSentAt);
+    }
+
+    [Fact]
+    public async Task SkipTheOfferReminderWhenItWasStoppedOrEditedBeforeTheDueMoment()
+    {
+        var coordinator = await CreateUserAsync(ApplicationRoles.EventCoordinator);
+        var repository = new LifecycleOffersRepository();
+        var edited = Offer(coordinator.Id, Now.AddHours(24), reminderEligible: true, edited: true);
+        var stopped = Offer(coordinator.Id, Now.AddHours(24), reminderEligible: true, stopped: true);
+        var shortLived = Offer(coordinator.Id, Now.AddHours(24), reminderEligible: false);
+        repository.Rows.AddRange([edited, stopped, shortLived]);
+        var lifecycle = new OfferLifecycleService(repository, new EmptyHallOfferRepository(), _unit,
+            _notificationService, new UserNotificationWriter(_db), _dispatcher, _users, _clock);
+
+        await lifecycle.ProcessAsync();
+
+        Assert.Empty(_db.UserNotifications);
+        Assert.Null(edited.ReminderSentAt);
+        Assert.Null(stopped.ReminderSentAt);
+        Assert.Null(shortLived.ReminderSentAt);
+    }
+
+    [Fact]
+    public async Task SendExactlyOneOfferReminderAcrossOverlappingWorkerCycles()
+    {
+        var coordinator = await CreateUserAsync(ApplicationRoles.EventCoordinator);
+        var repository = new LifecycleOffersRepository();
+        var offer = Offer(coordinator.Id, Now.AddHours(24), reminderEligible: true);
+        repository.Rows.Add(offer);
+        var first = new OfferLifecycleService(repository, new EmptyHallOfferRepository(), _unit,
+            _notificationService, new UserNotificationWriter(_db), _dispatcher, _users, _clock);
+        var second = new OfferLifecycleService(repository, new EmptyHallOfferRepository(), _unit,
+            _notificationService, new UserNotificationWriter(_db), _dispatcher, _users, _clock);
+
+        await first.ProcessAsync();
+        await second.ProcessAsync();
+
+        Assert.Equal(1, _db.UserNotifications.Count(notification => notification.Kind == NotificationKind.ProfessionalOfferReminder24Hours));
+        Assert.Single(_dispatcher.Dispatches);
+        Assert.NotNull(offer.ReminderSentAt);
+    }
+
+    [Fact]
+    public async Task RequireAccountApprovalToStopAnOfferButStillAllowOwnersUnderRestriction()
+    {
+        var pending = await CreateUserAsync(ApplicationRoles.Photographer, AccountApprovalStatus.Pending);
+        var pendingOffer = new ProfessionalOffer
+        {
+            OwnerUserId = pending.Id, Content = "Pending offer", OldPrice = 100, OfferPrice = 70,
+            StartsAt = Now.AddMinutes(-1), EndsAt = Now.AddDays(2), CreatedAt = Now.AddMinutes(-1)
+        };
+        _db.ProfessionalOffers.Add(pendingOffer);
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => CreateOfferService().StopAsync(pendingOffer.Id));
+        Assert.Null((await _db.ProfessionalOffers.FindAsync(pendingOffer.Id))!.StoppedAt);
+
+        var approved = await CreateUserAsync(ApplicationRoles.Photographer);
+        var approvedOffer = new ProfessionalOffer
+        {
+            OwnerUserId = approved.Id, Content = "Approved offer", OldPrice = 100, OfferPrice = 70,
+            StartsAt = Now.AddMinutes(-1), EndsAt = Now.AddDays(2), CreatedAt = Now.AddMinutes(-1)
+        };
+        _db.ProfessionalOffers.Add(approvedOffer);
+        await _db.SaveChangesAsync();
+        _restrictions.Restricted.Add(approved.Id);
+
+        await CreateOfferService().StopAsync(approvedOffer.Id); // requirement 16.2 blocks create/edit, not stopping
+        Assert.NotNull((await _db.ProfessionalOffers.FindAsync(approvedOffer.Id))!.StoppedAt);
     }
 
     [Fact]
@@ -355,13 +445,13 @@ public sealed class PublishingServiceShould : IDisposable
         public Task<IReadOnlyList<ProfessionalOffer>> ListVisibleByOwnerAsync(string ownerId, DateTimeOffset now, int skip, int take, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<int> CountVisibleByOwnerAsync(string ownerId, DateTimeOffset now, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<IReadOnlyList<ProfessionalOffer>> GetReminderCandidatesAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ProfessionalOffer>>(Rows.Where(row => row.ReminderEligible && !row.HasBeenEdited && row.StoppedAt is null && row.ReminderSentAt is null && row.ExpiredProcessedAt is null && row.EndsAt > now && row.EndsAt <= now.AddHours(24)).ToArray());
+            => Task.FromResult<IReadOnlyList<ProfessionalOffer>>(Rows.Where(row => OfferReminderSchedule.IsDue(row, now)).ToArray());
         public Task<IReadOnlyList<ProfessionalOffer>> GetExpiryCandidatesAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ProfessionalOffer>>(Rows.Where(row => row.EndsAt <= now && row.ExpiredProcessedAt is null && row.StoppedAt is null).ToArray());
         public Task<bool> TryClaimReminderAsync(Guid id, DateTimeOffset now, CancellationToken cancellationToken = default)
         {
             var row = Rows.Single(item => item.Id == id);
-            if (!_claimedReminders.Add(id) || row.HasBeenEdited || row.StoppedAt is not null || row.ReminderSentAt is not null) return Task.FromResult(false);
+            if (!_claimedReminders.Add(id) || !OfferReminderSchedule.IsDue(row, now)) return Task.FromResult(false);
             row.ReminderSentAt = now; return Task.FromResult(true);
         }
         public Task<bool> TryClaimExpiryAsync(Guid id, DateTimeOffset now, CancellationToken cancellationToken = default)

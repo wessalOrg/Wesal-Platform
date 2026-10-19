@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Infrastructure.Identity;
@@ -58,10 +59,14 @@ public sealed class ProfessionalOfferRepository(ApplicationDbContext context) : 
             .Where(offer => offer.OwnerUserId == ownerId);
 
     public async Task<IReadOnlyList<ProfessionalOffer>> GetReminderCandidatesAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
-        => await context.ProfessionalOffers.AsNoTracking().Where(offer => offer.ReminderEligible && !offer.HasBeenEdited
+    {
+        var latestDue = now.Add(OfferReminderSchedule.LeadTime);
+        var windowStart = now.Add(OfferReminderSchedule.LeadTime - OfferReminderSchedule.GraceWindow);
+        return await context.ProfessionalOffers.AsNoTracking().Where(offer => offer.ReminderEligible && !offer.HasBeenEdited
             && offer.ReminderSentAt == null && offer.StoppedAt == null && offer.ExpiredProcessedAt == null
-            && offer.EndsAt > now && offer.EndsAt <= now.AddHours(24))
+            && offer.EndsAt > windowStart && offer.EndsAt <= latestDue)
             .OrderBy(offer => offer.EndsAt).Take(500).ToListAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyList<ProfessionalOffer>> GetExpiryCandidatesAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
         => await context.ProfessionalOffers.AsNoTracking().Where(offer => offer.EndsAt <= now
@@ -69,10 +74,14 @@ public sealed class ProfessionalOfferRepository(ApplicationDbContext context) : 
             .OrderBy(offer => offer.EndsAt).Take(500).ToListAsync(cancellationToken);
 
     public async Task<bool> TryClaimReminderAsync(Guid id, DateTimeOffset now, CancellationToken cancellationToken = default)
-        => await context.ProfessionalOffers.Where(offer => offer.Id == id && offer.ReminderEligible && !offer.HasBeenEdited
+    {
+        var latestDue = now.Add(OfferReminderSchedule.LeadTime);
+        var windowStart = now.Add(OfferReminderSchedule.LeadTime - OfferReminderSchedule.GraceWindow);
+        return await context.ProfessionalOffers.Where(offer => offer.Id == id && offer.ReminderEligible && !offer.HasBeenEdited
             && offer.ReminderSentAt == null && offer.StoppedAt == null && offer.ExpiredProcessedAt == null
-            && offer.EndsAt > now && offer.EndsAt <= now.AddHours(24))
+            && offer.EndsAt > windowStart && offer.EndsAt <= latestDue)
             .ExecuteUpdateAsync(setters => setters.SetProperty(offer => offer.ReminderSentAt, now), cancellationToken) == 1;
+    }
 
     public async Task<bool> TryClaimExpiryAsync(Guid id, DateTimeOffset now, CancellationToken cancellationToken = default)
         => await context.ProfessionalOffers.Where(offer => offer.Id == id && offer.EndsAt <= now
