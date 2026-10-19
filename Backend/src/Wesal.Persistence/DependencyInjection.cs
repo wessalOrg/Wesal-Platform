@@ -59,6 +59,9 @@ public static class DependencyInjection
         services.AddScoped<ICoordinatorRepository, CoordinatorRepository>();
         services.AddScoped<IPhotographerRepository, PhotographerRepository>();
         services.AddScoped<IUserNotificationWriter, UserNotificationWriter>();
+        services.AddScoped<IUserNotificationRepository, UserNotificationRepository>();
+        services.AddScoped<IUserPublishingRestrictionRepository, UserPublishingRestrictionRepository>();
+        services.AddScoped<IAdminModerationRepository, AdminModerationRepository>();
         services.AddScoped<IPostRepository, PostRepository>();
         services.AddScoped<IPostInteractionRepository, PostInteractionRepository>();
         services.AddScoped<IProfessionalOfferRepository, ProfessionalOfferRepository>();

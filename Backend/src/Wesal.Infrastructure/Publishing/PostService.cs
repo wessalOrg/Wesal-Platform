@@ -145,8 +145,8 @@ public sealed class PostService : IPostService
         if (!_currentUser.Roles.Any(role => role is ApplicationRoles.EventCoordinator or ApplicationRoles.Photographer))
             throw new ForbiddenException("Only coordinators and photographers can publish posts.");
         await _approval.EnsureCanPublishAsync(cancellationToken);
-        if (await _restrictions.IsRestrictedAsync(_currentUser.UserId, cancellationToken))
-            throw new ForbiddenException("Your content publishing is currently restricted.");
+        if (await _restrictions.GetRestrictedUntilAsync(_currentUser.UserId, cancellationToken) is { } restrictedUntil)
+            throw new ForbiddenException($"Your content publishing is restricted until {restrictedUntil:O}.");
         return await _users.FindByIdAsync(_currentUser.UserId) ?? throw new ForbiddenException("The publishing account could not be found.");
     }
 

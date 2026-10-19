@@ -47,6 +47,8 @@ public class ProfileResponse
     /// show "awaiting review" without mirroring the numeric enum.
     /// </summary>
     public string ApprovalStatus { get; init; } = nameof(AccountApprovalStatus.Approved);
+
+    public DateTimeOffset? RestrictedUntil { get; init; }
 }
 
 public class UpdateProfileRequest

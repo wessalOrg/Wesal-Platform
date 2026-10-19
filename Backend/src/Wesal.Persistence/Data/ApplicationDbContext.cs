@@ -72,6 +72,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<PostShare> PostShares => Set<PostShare>();
+    public DbSet<UserPublishingRestriction> UserPublishingRestrictions => Set<UserPublishingRestriction>();
     public DbSet<PostImage> PostImages => Set<PostImage>();
     public DbSet<PostComment> PostComments => Set<PostComment>();
     public DbSet<PostFavorite> PostFavorites => Set<PostFavorite>();
@@ -567,6 +568,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(notification => notification.ReadAt).HasColumnType("timestamp with time zone");
 
             entity.HasIndex(notification => new { notification.RecipientUserId, notification.CreatedAt });
+        });
+
+        builder.Entity<UserPublishingRestriction>(entity =>
+        {
+            entity.ToTable("UserPublishingRestrictions");
+            entity.Property(row => row.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(row => row.CreatedByAdminId).IsRequired().HasMaxLength(450);
+            entity.Property(row => row.Reason).HasMaxLength(1000);
+            entity.Property(row => row.StartsAt).HasColumnType("timestamp with time zone");
+            entity.Property(row => row.EndsAt).HasColumnType("timestamp with time zone");
+            entity.Property(row => row.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(row => row.LiftedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(row => new { row.UserId, row.EndsAt });
+            entity.HasIndex(row => row.EndsAt).HasFilter("\"LiftedAt\" IS NULL");
+            entity.HasIndex(row => row.UserId).IsUnique().HasFilter("\"LiftedAt\" IS NULL");
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(row => row.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<Post>(entity =>

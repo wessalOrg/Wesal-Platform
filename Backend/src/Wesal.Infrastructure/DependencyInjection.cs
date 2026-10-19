@@ -223,6 +223,9 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
         });
 
         services.AddScoped<Wesal.Application.Common.Interfaces.IUserContentPublishingRestrictionService, Wesal.Infrastructure.Identity.UserContentPublishingRestrictionService>();
+        services.AddScoped<INotificationInboxService, NotificationInboxService>();
+        services.AddScoped<IAdminModerationService, AdminModerationService>();
+        services.AddHostedService<PublishingRestrictionBackgroundService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IPostService, Wesal.Infrastructure.Publishing.PostService>();
         services.AddOptions<Wesal.Infrastructure.Publishing.PostSharingOptions>()
             .Bind(configuration.GetSection(Wesal.Infrastructure.Publishing.PostSharingOptions.SectionName))

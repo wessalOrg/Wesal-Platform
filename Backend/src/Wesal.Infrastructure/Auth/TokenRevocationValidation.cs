@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Infrastructure.Identity;
 
 namespace Wesal.Infrastructure.Auth;
 
@@ -21,6 +22,7 @@ public static class TokenRevocationValidation
     public static async Task OnTokenValidatedAsync(TokenValidatedContext context)
     {
         var jti = context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Jti);
+        var userId = context.Principal?.FindFirstValue(ApplicationClaimTypes.UserId);
 
         if (string.IsNullOrWhiteSpace(jti))
         {
@@ -28,10 +30,22 @@ public static class TokenRevocationValidation
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            context.Fail("The authentication token does not carry a user identifier.");
+            return;
+        }
+
         try
         {
             var tokenRevocationRepository = context.HttpContext.RequestServices
                 .GetRequiredService<ITokenRevocationRepository>();
+
+            if (!await tokenRevocationRepository.UserExistsAsync(userId, context.HttpContext.RequestAborted))
+            {
+                context.Fail("The account for this authentication token no longer exists.");
+                return;
+            }
 
             if (await tokenRevocationRepository.IsRevokedAsync(jti, context.HttpContext.RequestAborted))
             {

@@ -217,8 +217,8 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
             ?? throw new NotFoundException("User", _currentUser.UserId);
         if (user.ApprovalStatus != AccountApprovalStatus.Approved)
             throw new ForbiddenException("Your account must be approved before you can edit your public profile.");
-        if (await _restrictions.IsRestrictedAsync(user.Id, cancellationToken))
-            throw new ForbiddenException("Your account is restricted from editing content.");
+        if (await _restrictions.GetRestrictedUntilAsync(user.Id, cancellationToken) is { } restrictedUntil)
+            throw new ForbiddenException($"Your account is restricted from editing content until {restrictedUntil:O}.");
         return user;
     }
 

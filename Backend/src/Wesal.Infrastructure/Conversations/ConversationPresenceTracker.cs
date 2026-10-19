@@ -30,4 +30,6 @@ public sealed class ConversationPresenceTracker : IConversationPresenceTracker
             if (connections.IsEmpty) _connections.TryRemove(userId, out _);
         }
     }
+
+    public void DisconnectUser(string userId) => _connections.TryRemove(userId, out _);
 }
