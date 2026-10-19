@@ -77,6 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const local = readLocalSession();
     if (local) {
       applySession(local, ++sessionEpochRef.current);
+    } else if (getAccessToken()) {
+      // Expired/invalid token with no usable session: drop it so the UI is Guest.
+      clearAuthSession();
     }
 
     const epoch = ++sessionEpochRef.current;

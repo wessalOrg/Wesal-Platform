@@ -7,13 +7,14 @@ import Navbar from "@/components/layout/Navbar";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { useHelpCenterTickets } from "@/hooks/useHelpCenterTickets";
+import { classifyHelpSubmitError } from "@/services/help-tickets";
 import { getCurrentUserId } from "@/lib/current-user";
 import { HELP_CENTER_MAX_LENGTH } from "@/types/help-center";
 import { useT } from "@/i18n";
 
 export default function HelpCenterPage() {
   const t = useT();
-  const { status } = useAuth();
+  const { status, logout } = useAuth();
   const identity = useUserIdentity();
   const { submitQuestion, tickets, markRead } = useHelpCenterTickets();
   const [message, setMessage] = useState("");
@@ -89,8 +90,16 @@ export default function HelpCenterPage() {
       });
       setMessage("");
       setSuccess(true);
-    } catch {
-      setErrorKey("help.errors.submitFailed");
+    } catch (error) {
+      console.error("Help Center submit failed", error);
+      if (classifyHelpSubmitError(error) === "auth") {
+        // The token was rejected (expired/revoked) while the UI still looked signed in.
+        // Drop the dead session so the login prompt shows and the user can re-authenticate.
+        setErrorKey("help.errors.sessionExpired");
+        await logout({ redirect: false });
+      } else {
+        setErrorKey(helpSubmitErrorKey(error));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -164,7 +173,7 @@ export default function HelpCenterPage() {
                 {length}/{HELP_CENTER_MAX_LENGTH}
               </div>
 
-              {errorKey && !isGuest ? (
+              {errorKey && (!isGuest || errorKey === "help.errors.sessionExpired") ? (
                 <p className="rounded-xl bg-[#fdecea] px-3 py-2 text-sm text-[#b42318]" role="alert">
                   {t(errorKey)}
                 </p>
@@ -238,6 +247,17 @@ export default function HelpCenterPage() {
       <Footer />
     </>
   );
+}
+
+function helpSubmitErrorKey(error: unknown): string {
+  switch (classifyHelpSubmitError(error)) {
+    case "network":
+      return "help.errors.network";
+    case "server":
+      return "help.errors.server";
+    default:
+      return "help.errors.submitFailed";
+  }
 }
 
 function SendIcon() {
