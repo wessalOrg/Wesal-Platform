@@ -69,17 +69,16 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 
         RuleFor(request => request.AccountType)
             .Must(type => type == ApplicationRoles.RegisteredUser || type == ApplicationRoles.HallOwner || AccountTypes.IsValid(type))
-            .WithMessage($"Account type must be either '{ApplicationRoles.RegisteredUser}' or '{ApplicationRoles.HallOwner}' or '{AccountTypes.RegularUser}'.");
+            .WithMessage($"Account type must be one of: {AccountTypes.RegularUser}, {AccountTypes.HallOwner}, {AccountTypes.EventCoordinator}, {AccountTypes.Photographer}, {ApplicationRoles.RegisteredUser}, or {ApplicationRoles.HallOwner}.");
     }
 
     private static bool IsValidAccountType(string? accountType)
     {
         if (string.IsNullOrWhiteSpace(accountType))
             return false;
-        // Accept both ApplicationRoles and AccountTypes spellings
-        return accountType.Equals(ApplicationRoles.RegisteredUser, StringComparison.OrdinalIgnoreCase)
-            || accountType.Equals(ApplicationRoles.HallOwner, StringComparison.OrdinalIgnoreCase)
-            || accountType.Equals(AccountTypes.RegularUser, StringComparison.OrdinalIgnoreCase)
-            || accountType.Equals(AccountTypes.HallOwner, StringComparison.OrdinalIgnoreCase);
+        // Accept every registrable account type (case-insensitive), plus the legacy
+        // RegisteredUser role-name spelling kept for backward compatibility.
+        return AccountTypes.IsValid(accountType)
+            || accountType.Equals(ApplicationRoles.RegisteredUser, StringComparison.OrdinalIgnoreCase);
     }
 }

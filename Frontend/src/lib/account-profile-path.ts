@@ -20,6 +20,9 @@ export const HALL_OWNER_HALLS_PATH = "/owner/halls";
 /** Hall Owner messages. */
 export const HALL_OWNER_MESSAGES_PATH = "/owner/messages";
 
+/** Hall Owner notifications feed (all account alerts). */
+export const HALL_OWNER_NOTIFICATIONS_PATH = "/owner/notifications";
+
 /** Standalone Hall Owner bookings calendar (Edit 25). Distinct from /owner/bookings, which aliases booking requests. */
 export const HALL_OWNER_CALENDAR_PATH = "/owner/calendar";
 
@@ -31,6 +34,9 @@ export const HALL_OWNER_ADD_HALL_PATH = "/owner/halls/add";
 
 /** Admin panel workspace (hall submissions). */
 export const ADMIN_MANAGEMENT_PATH = "/admin";
+
+/** Private Mabrouk Knowledge Studio workspace. */
+export const ADMIN_MABROUK_PATH = "/admin/mabrouk";
 
 /** Admin rejected-halls queue (Edit 26). Kept off `/admin/halls` so it does not share the pending-submissions active state. */
 export const ADMIN_REJECTED_HALLS_PATH = "/admin/rejected-halls";

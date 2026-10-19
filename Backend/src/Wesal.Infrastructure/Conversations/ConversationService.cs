@@ -6,6 +6,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Documents;
 
 namespace Wesal.Infrastructure.Conversations;
@@ -20,6 +21,14 @@ public sealed class ConversationService : IConversationService
     private readonly ICurrentUserService _currentUser;
     private readonly IConversationNotifier _notifier;
     private readonly IDocumentStorage _documentStorage;
+    private readonly IMessageAttachmentStore _messageAttachmentStore;
+    private readonly IPostRepository? _postRepository;
+    private readonly IProfessionalOfferRepository? _offerRepository;
+    private readonly IUserNotificationWriter? _notificationWriter;
+    private readonly INotificationService? _notificationService;
+    private readonly INotificationDispatcher? _notificationDispatcher;
+    private readonly IConversationPresenceTracker? _presence;
+    private readonly IUnitOfWork? _unitOfWork;
 
     public ConversationService(
         IConversationRepository conversationRepository,
@@ -29,7 +38,15 @@ public sealed class ConversationService : IConversationService
         IHallRepository hallRepository,
         ICurrentUserService currentUser,
         IConversationNotifier notifier,
-        IDocumentStorage documentStorage)
+        IDocumentStorage documentStorage,
+        IMessageAttachmentStore? messageAttachmentStore = null,
+        IPostRepository? postRepository = null,
+        IProfessionalOfferRepository? offerRepository = null,
+        IUserNotificationWriter? notificationWriter = null,
+        INotificationService? notificationService = null,
+        INotificationDispatcher? notificationDispatcher = null,
+        IConversationPresenceTracker? presence = null,
+        IUnitOfWork? unitOfWork = null)
     {
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
@@ -39,6 +56,98 @@ public sealed class ConversationService : IConversationService
         _currentUser = currentUser;
         _notifier = notifier;
         _documentStorage = documentStorage;
+        // Null only in legacy test/test-double constructions; production DI always
+        // supplies the registered store (Local no-op or durable Supabase).
+        _messageAttachmentStore = messageAttachmentStore ?? Documents.LocalMessageAttachmentStore.Instance;
+        _postRepository = postRepository;
+        _offerRepository = offerRepository;
+        _notificationWriter = notificationWriter;
+        _notificationService = notificationService;
+        _notificationDispatcher = notificationDispatcher;
+        _presence = presence;
+        _unitOfWork = unitOfWork;
+    }
+
+    public Task<ConversationResponse> StartProviderConversationAsync(string providerUserId, CancellationToken cancellationToken = default)
+        => GetOrCreateProviderConversationAsync(providerUserId, cancellationToken);
+
+    public async Task<ConversationResponse> StartFromPostAsync(Guid postId, CancellationToken cancellationToken = default)
+    {
+        var post = _postRepository is null ? null : await _postRepository.GetPublicAsync(postId, cancellationToken);
+        if (post is null) throw new NotFoundException("Post", postId);
+        var response = await GetOrCreateProviderConversationAsync(post.OwnerUserId, cancellationToken);
+        await _conversationRepository.SetPendingContextAsync(response.ConversationId, postId, null, cancellationToken);
+        return WithContext(response, postId, null);
+    }
+
+    public async Task<ConversationResponse> StartFromOfferAsync(Guid offerId, CancellationToken cancellationToken = default)
+    {
+        var offer = _offerRepository is null ? null : await _offerRepository.GetAccessibleAsync(offerId, null, DateTimeOffset.UtcNow, cancellationToken);
+        if (offer is null) throw new NotFoundException("Professional offer", offerId);
+        var response = await GetOrCreateProviderConversationAsync(offer.OwnerUserId, cancellationToken);
+        await _conversationRepository.SetPendingContextAsync(response.ConversationId, null, offerId, cancellationToken);
+        return WithContext(response, null, offerId);
+    }
+
+    private static ConversationResponse WithContext(ConversationResponse response, Guid? postId, Guid? offerId)
+        => new()
+        {
+            ConversationId = response.ConversationId, HallId = response.HallId, HallName = response.HallName,
+            InitiatorUserId = response.InitiatorUserId, OwnerUserId = response.OwnerUserId,
+            CreatedAt = response.CreatedAt, IsExisting = response.IsExisting, Kind = response.Kind,
+            ContextPostId = postId, ContextOfferId = offerId
+        };
+
+    public async Task<ConversationResponse> ContactAdminAccountAsync(CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        var userId = _currentUser.UserId!;
+        if (!_currentUser.Roles.Any(role => role is ApplicationRoles.EventCoordinator or ApplicationRoles.Photographer))
+            throw new ForbiddenException("Only coordinators and photographers can contact the administration through this endpoint.");
+        var existing = await _conversationRepository.GetAdminUserConversationAsync(userId, cancellationToken);
+        if (existing is not null) return MapToResponse(existing, string.Empty, isExisting: true);
+        var adminId = await _conversationRepository.GetAdminUserIdAsync(cancellationToken) ?? PlatformSenders.AdminFallback;
+        var conversation = new Conversation { SenderUserId = adminId, HallOwnerId = userId, Kind = ConversationKind.AdminAccount };
+        try
+        {
+            await _conversationRepository.AddAsync(conversation, cancellationToken);
+            return MapToResponse(conversation, string.Empty, isExisting: false);
+        }
+        catch (Exception ex) when (IsUniqueViolation(ex))
+        {
+            existing = await _conversationRepository.GetAdminUserConversationAsync(userId, cancellationToken);
+            if (existing is null) throw;
+            return MapToResponse(existing, string.Empty, isExisting: true);
+        }
+    }
+
+    private async Task<ConversationResponse> GetOrCreateProviderConversationAsync(string providerUserId, CancellationToken cancellationToken)
+    {
+        EnsureAuthenticated();
+        var customerId = _currentUser.UserId!;
+        if (string.Equals(customerId, providerUserId, StringComparison.OrdinalIgnoreCase))
+            throw new ValidationException("You cannot message yourself.");
+        if (!await _conversationRepository.IsApprovedProviderAsync(providerUserId, cancellationToken))
+            throw new NotFoundException("Professional profile", providerUserId);
+        var existing = await _conversationRepository.GetCustomerProviderConversationAsync(customerId, providerUserId, cancellationToken);
+        if (existing is not null) return MapToResponse(existing, string.Empty, isExisting: true);
+        var conversation = new Conversation
+        {
+            SenderUserId = customerId,
+            HallOwnerId = providerUserId,
+            Kind = ConversationKind.CustomerProvider
+        };
+        try
+        {
+            await _conversationRepository.AddAsync(conversation, cancellationToken);
+            return MapToResponse(conversation, string.Empty, isExisting: false);
+        }
+        catch (Exception ex) when (IsUniqueViolation(ex))
+        {
+            existing = await _conversationRepository.GetCustomerProviderConversationAsync(customerId, providerUserId, cancellationToken);
+            if (existing is null) throw;
+            return MapToResponse(existing, string.Empty, isExisting: true);
+        }
     }
 
     public async Task<ConversationResponse> CreateConversationAsync(
@@ -196,7 +305,8 @@ public sealed class ConversationService : IConversationService
         var userId = _currentUser.UserId!;
         var isParticipant = string.Equals(userId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
             || string.Equals(userId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase)
-            || _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+            || (conversation.Kind != ConversationKind.CustomerProvider
+                && _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase));
 
         if (!isParticipant)
         {
@@ -224,13 +334,16 @@ public sealed class ConversationService : IConversationService
         var isAdmin = _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
 
         // Empty for a seeker or an owner, which is what keeps their query on the two-party
-        // rule that has always applied to them.
-        var adminUserIds = isAdmin
-            ? await _conversationRepository.GetAdminUserIdsAsync(cancellationToken)
-            : [];
+        // rule that has always applied to them. Display names still need the real Admin ids
+        // so an owner sees "إدارة وصال" rather than whichever Admin happens to be on the thread.
+        var knownAdminIds = await _conversationRepository.GetAdminUserIdsAsync(cancellationToken);
+        var adminUserIds = isAdmin ? knownAdminIds : [];
 
         var conversations = await _conversationRepository.GetParticipantConversationsAsync(
             userId, isAdmin, adminUserIds, cancellationToken);
+
+        if (!isAdmin)
+            conversations = conversations.Where(conversation => conversation.Kind != ConversationKind.AdminAccount).ToList();
 
         if (conversations.Count == 0)
         {
@@ -313,10 +426,14 @@ public sealed class ConversationService : IConversationService
                 return new ConversationSummaryResponse
                 {
                     ConversationId = conversation.Id,
+                    Kind = conversation.Kind,
                     HallId = conversation.HallId,
                     HallName = conversation.Hall?.Name ?? string.Empty,
                     OtherParticipantId = otherParticipantId,
-                    OtherParticipantName = nameLookup.GetValueOrDefault(otherParticipantId) ?? string.Empty,
+                    OtherParticipantName = PublicParticipantName(
+                        otherParticipantId,
+                        nameLookup.GetValueOrDefault(otherParticipantId),
+                        knownAdminIds),
                     LastMessagePreview = latest?.Content ?? string.Empty,
                     LastMessageHasAttachment = latest?.HasAttachment ?? false,
                     LastMessageAt = latest?.CreatedAt,
@@ -327,6 +444,51 @@ public sealed class ConversationService : IConversationService
                 };
             })
             .ToList();
+    }
+
+    public async Task<PagedResult<ConversationSummaryResponse>> GetMyProviderConversationsAsync(
+        int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var all = await GetMyConversationsAsync(cancellationToken);
+        var providerConversations = all.Where(row => row.Kind == ConversationKind.CustomerProvider).ToArray();
+        var normalizedPage = page <= 0 ? 1 : page;
+        var normalizedSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+        var items = providerConversations.Skip((normalizedPage - 1) * normalizedSize).Take(normalizedSize).ToArray();
+        return PagedResult<ConversationSummaryResponse>.Create(items, normalizedPage, normalizedSize, providerConversations.Length);
+    }
+
+    public async Task<UnreadCountResponse> GetProviderUnreadCountAsync(CancellationToken cancellationToken = default)
+    {
+        var rows = await GetMyConversationsAsync(cancellationToken);
+        return new UnreadCountResponse { UnreadCount = rows.Where(row => row.Kind == ConversationKind.CustomerProvider)
+            .Sum(row => Math.Max(0, row.UnreadMessageCount)) };
+    }
+
+    public async Task<ConversationResponse?> GetMyAdminAccountConversationAsync(CancellationToken cancellationToken = default)
+    {
+        var userId = GetAuthenticatedUserId();
+        var conversation = await _conversationRepository.GetAdminUserConversationAsync(userId, cancellationToken);
+        return conversation is null ? null : MapToResponse(conversation, string.Empty, isExisting: true);
+    }
+
+    public async Task<UnreadCountResponse> GetAdminAccountUnreadCountAsync(CancellationToken cancellationToken = default)
+    {
+        var conversation = await _conversationRepository.GetAdminUserConversationAsync(GetAuthenticatedUserId(), cancellationToken);
+        if (conversation is null) return new UnreadCountResponse { UnreadCount = 0 };
+        var counts = await _conversationRepository.GetUnreadMessageCountsAsync(
+            GetAuthenticatedUserId(), [conversation.Id], cancellationToken);
+        return new UnreadCountResponse { UnreadCount = Math.Max(0, counts.GetValueOrDefault(conversation.Id)) };
+    }
+
+    public async Task<PagedResult<MessageDto>> GetConversationMessagesPageAsync(
+        Guid conversationId, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var thread = await GetConversationThreadAsync(conversationId, cancellationToken);
+        var normalizedPage = page <= 0 ? 1 : page;
+        var normalizedSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+        var ordered = thread.Messages.OrderBy(message => message.SentAt).ThenBy(message => message.Id).ToArray();
+        return PagedResult<MessageDto>.Create(ordered.Skip((normalizedPage - 1) * normalizedSize)
+            .Take(normalizedSize).ToArray(), normalizedPage, normalizedSize, ordered.Length);
     }
 
     public async Task<MessageThreadResponse> GetConversationThreadAsync(
@@ -348,7 +510,8 @@ public sealed class ConversationService : IConversationService
 
         var isParticipant = string.Equals(userId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
             || string.Equals(userId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase)
-            || _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+            || (conversation.Kind != ConversationKind.CustomerProvider
+                && _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase));
 
         if (!isParticipant)
         {
@@ -364,8 +527,29 @@ public sealed class ConversationService : IConversationService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        var knownAdminIds = await _conversationRepository.GetAdminUserIdsAsync(cancellationToken);
         var senderNames = (await _conversationRepository.GetUserDisplayNamesAsync(senderIds, cancellationToken))
-            .ToDictionary(info => info.UserId, info => info.FullName, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(
+                info => info.UserId,
+                info => PublicParticipantName(info.UserId, info.FullName, knownAdminIds),
+                StringComparer.OrdinalIgnoreCase);
+
+        var contextAvailability = new Dictionary<Guid, bool?>();
+        foreach (var contextualMessage in messages.Where(row => row.ContextPostId.HasValue || row.ContextOfferId.HasValue))
+        {
+            if (contextualMessage.ContextPostId is Guid contextPostId)
+            {
+                var post = _postRepository is null ? null : await _postRepository.GetPublicAsync(contextPostId, cancellationToken);
+                contextAvailability[contextualMessage.Id] = post is not null
+                    && string.Equals(post.OwnerUserId, contextualMessage.ContextOwnerUserId, StringComparison.OrdinalIgnoreCase);
+            }
+            else if (contextualMessage.ContextOfferId is Guid contextOfferId)
+            {
+                var offer = _offerRepository is null ? null : await _offerRepository.GetAccessibleAsync(contextOfferId, null, DateTimeOffset.UtcNow, cancellationToken);
+                contextAvailability[contextualMessage.Id] = offer is not null
+                    && string.Equals(offer.OwnerUserId, contextualMessage.ContextOwnerUserId, StringComparison.OrdinalIgnoreCase);
+            }
+        }
 
         return new MessageThreadResponse
         {
@@ -377,7 +561,10 @@ public sealed class ConversationService : IConversationService
                 {
                     Id = message.Id,
                     SenderUserId = message.SenderUserId,
-                    SenderName = senderNames.GetValueOrDefault(message.SenderUserId) ?? string.Empty,
+                    SenderName = PublicParticipantName(
+                        message.SenderUserId,
+                        senderNames.GetValueOrDefault(message.SenderUserId),
+                        knownAdminIds),
                     Content = message.Content ?? string.Empty,
                     SentAt = message.CreatedAt,
                     HasAttachment = message.HasAttachment,
@@ -385,7 +572,14 @@ public sealed class ConversationService : IConversationService
                         ? $"/api/v1/conversations/{conversationId}/messages/{message.Id}/attachment"
                         : null,
                     AttachmentContentType = message.AttachmentContentType,
-                    AttachmentFileName = message.AttachmentFileName
+                    AttachmentFileName = message.AttachmentFileName,
+                    ContextPostId = message.ContextPostId,
+                    ContextOfferId = message.ContextOfferId,
+                    ContextTitle = message.ContextTitle,
+                    ContextText = message.ContextText,
+                    ContextImageUrl = message.ContextImageUrl,
+                    ContextOwnerUserId = message.ContextOwnerUserId,
+                    ContextItemAvailable = contextAvailability.GetValueOrDefault(message.Id)
                 })
                 .ToList()
         };
@@ -409,9 +603,9 @@ public sealed class ConversationService : IConversationService
             throw new ValidationException("A message body is required.");
         }
 
-        ValidateMessageContent(request.Content);
+        var sanitizedContent = SanitizeMessageText(request.Content);
+        ValidateMessageContent(sanitizedContent);
         ValidateClientRequestId(request.ClientRequestId);
-
         var conversation = await _conversationRepository.GetByIdWithHallAsync(conversationId, cancellationToken);
 
         if (conversation is null || conversation.Hall?.IsDeleted == true)
@@ -419,11 +613,17 @@ public sealed class ConversationService : IConversationService
             throw new NotFoundException(nameof(Conversation), conversationId);
         }
 
+        var effectivePostId = request.ContextPostId ?? conversation.PendingContextPostId;
+        var effectiveOfferId = request.ContextOfferId ?? conversation.PendingContextOfferId;
+        if (effectivePostId.HasValue && effectiveOfferId.HasValue)
+            throw new ValidationException("A message can reference either a post or an offer, not both.");
+
         var senderUserId = _currentUser.UserId!;
 
         var isParticipant = string.Equals(senderUserId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
             || string.Equals(senderUserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase)
-            || _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+            || (conversation.Kind != ConversationKind.CustomerProvider
+                && _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase));
 
         if (!isParticipant)
         {
@@ -442,6 +642,13 @@ public sealed class ConversationService : IConversationService
 
         EnsureOwnerMessagingAccess(conversation);
 
+        var contextRequest = new SendMessageRequest
+        {
+            Content = request.Content, ClientRequestId = request.ClientRequestId,
+            ContextPostId = effectivePostId, ContextOfferId = effectiveOfferId
+        };
+        var context = await BuildMessageContextAsync(conversation, contextRequest, cancellationToken);
+
         if (!string.IsNullOrWhiteSpace(request.ClientRequestId))
         {
             var existing = await _messageRepository.GetByClientRequestIdAsync(
@@ -458,17 +665,36 @@ public sealed class ConversationService : IConversationService
         {
             ConversationId = conversationId,
             SenderUserId = senderUserId,
-            Content = request.Content.Trim(),
+            Content = sanitizedContent,
             ClientRequestId = string.IsNullOrWhiteSpace(request.ClientRequestId)
                 ? null
-                : request.ClientRequestId
+                : request.ClientRequestId,
+            ContextPostId = effectivePostId,
+            ContextOfferId = effectiveOfferId,
+            ContextTitle = context.Title,
+            ContextText = context.Text,
+            ContextImageUrl = context.ImageUrl,
+            ContextOwnerUserId = context.OwnerId
         };
 
+        var notificationPlan = await BuildMessageNotificationAsync(conversation, message, cancellationToken);
         await _messageRepository.AddAsync(message, cancellationToken);
+        var shouldDispatchMessageNotification = false;
 
         try
         {
-            await _messageRepository.SaveChangesAsync(cancellationToken);
+            async Task PersistAsync()
+            {
+                if (notificationPlan.Notification is not null && _notificationWriter is not null)
+                    shouldDispatchMessageNotification = await _notificationWriter.AddOrGroupMessageAsync(notificationPlan.Notification, cancellationToken);
+                if (notificationPlan.MarkReadForRecipient)
+                    await _conversationRepository.UpsertReadStateAsync(conversationId, notificationPlan.RecipientId!, DateTimeOffset.UtcNow, cancellationToken);
+                if (effectivePostId.HasValue || effectiveOfferId.HasValue)
+                    await _conversationRepository.ClearPendingContextAsync(conversationId, cancellationToken);
+                await _messageRepository.SaveChangesAsync(cancellationToken);
+            }
+            if (_unitOfWork is null) await PersistAsync();
+            else await _unitOfWork.ExecuteInTransactionAsync(PersistAsync, cancellationToken);
         }
         catch (Exception ex) when (IsUniqueViolation(ex) && !string.IsNullOrWhiteSpace(request.ClientRequestId))
         {
@@ -487,9 +713,99 @@ public sealed class ConversationService : IConversationService
         var resolvedSenderName = await ResolveSenderNameAsync(senderUserId, cancellationToken);
 
         await NotifyMessageSentAsync(conversationId, message, resolvedSenderName, cancellationToken);
+        if (shouldDispatchMessageNotification && notificationPlan.Kind is { } notificationKind && _notificationDispatcher is not null)
+        {
+            try
+            {
+                await _notificationDispatcher.DispatchAsync(notificationKind, notificationPlan.RecipientId!, notificationPlan.Values,
+                    conversationId.ToString(), cancellationToken);
+            }
+            catch (Exception) { }
+        }
 
         return MapToSendMessageResponse(message, conversationId, resolvedSenderName);
     }
+
+    private async Task<MessageNotificationPlan> BuildMessageNotificationAsync(
+        Conversation conversation, Message message, CancellationToken cancellationToken)
+    {
+        if (conversation.Kind is not (ConversationKind.CustomerProvider or ConversationKind.AdminAccount)
+            || _notificationWriter is null || _notificationService is null)
+            return MessageNotificationPlan.None;
+        var senderId = message.SenderUserId;
+        var isAdminSender = _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+        string recipientId;
+        NotificationKind kind;
+        if (conversation.Kind == ConversationKind.AdminAccount)
+        {
+            if (!isAdminSender) return MessageNotificationPlan.None;
+            recipientId = conversation.HallOwnerId;
+            kind = await _conversationRepository.IsPhotographerAsync(recipientId, cancellationToken)
+                ? NotificationKind.AdminMessageForPhotographer : NotificationKind.AdminMessageForCoordinator;
+        }
+        else
+        {
+            recipientId = string.Equals(senderId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
+                ? conversation.HallOwnerId : conversation.SenderUserId;
+            kind = NotificationKind.NewMessage;
+        }
+        if (string.Equals(recipientId, senderId, StringComparison.OrdinalIgnoreCase)) return MessageNotificationPlan.None;
+        if (_presence?.IsReading(recipientId, conversation.Id) == true)
+            return new MessageNotificationPlan(null, null, recipientId, null, true);
+
+        var senderInfo = (await _conversationRepository.GetUserDisplayNamesAsync([senderId], cancellationToken)).FirstOrDefault();
+        var admins = await _conversationRepository.GetAdminUserIdsAsync(cancellationToken);
+        var senderName = PublicParticipantName(senderId, senderInfo?.FullName, admins);
+        const int previewLength = MessageLimits.NotificationPreviewLength;
+        var preview = message.Content is null ? string.Empty : message.Content[..Math.Min(message.Content.Length, previewLength)];
+        var values = new Dictionary<string, string?>
+        {
+            [NotificationTokens.SenderName] = senderName,
+            [NotificationTokens.MessagePreview] = preview
+        };
+        var content = await _notificationService.BuildAsync(kind, recipientId, values, conversation.Id.ToString(), cancellationToken);
+        return new MessageNotificationPlan(new UserNotification
+        {
+            Id = Guid.NewGuid(), RecipientUserId = recipientId, Kind = kind,
+            Language = SupportedLanguages.ToCode(content.Language), Title = content.Title, Body = content.Body,
+            ActionLabel = content.ActionLabel, ActionTarget = content.ActionTarget, TargetId = content.TargetId,
+            CreatedAt = message.CreatedAt, ConversationId = conversation.Id, GroupSenderUserId = senderId,
+            SenderName = senderName, SenderAvatarUrl = senderInfo?.ProfilePictureUrl, MessagePreview = preview, MessageCount = 1
+        }, kind, recipientId, values, false);
+    }
+
+    private sealed record MessageNotificationPlan(UserNotification? Notification, NotificationKind? Kind,
+        string? RecipientId, IReadOnlyDictionary<string, string?>? Values, bool MarkReadForRecipient)
+    {
+        public static MessageNotificationPlan None { get; } = new(null, null, null, null, false);
+    }
+
+    private async Task<(string? Title, string? Text, string? ImageUrl, string? OwnerId)> BuildMessageContextAsync(
+        Conversation conversation, SendMessageRequest request, CancellationToken cancellationToken)
+    {
+        if (!request.ContextPostId.HasValue && !request.ContextOfferId.HasValue) return (null, null, null, null);
+        if (conversation.Kind != ConversationKind.CustomerProvider)
+            throw new ValidationException("Only customer-provider messages can include a post or offer context.");
+        if (request.ContextPostId is Guid postId)
+        {
+            var post = _postRepository is null ? null : await _postRepository.GetPublicAsync(postId, cancellationToken);
+            if (post is null || !string.Equals(post.OwnerUserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase))
+                throw new NotFoundException("Post", postId);
+            var image = post.Images.OrderBy(row => row.Order).FirstOrDefault();
+            return ("Post", post.Content is null ? null : post.Content[..Math.Min(post.Content.Length, 500)],
+                image is null ? null : $"/api/v1/posts/{postId:D}/images/{image.Id:D}", post.OwnerUserId);
+        }
+        var offerId = request.ContextOfferId!.Value;
+        var offer = _offerRepository is null ? null : await _offerRepository.GetAccessibleAsync(offerId, null, DateTimeOffset.UtcNow, cancellationToken);
+        if (offer is null || !string.Equals(offer.OwnerUserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase))
+            throw new NotFoundException("Professional offer", offerId);
+        var offerImage = offer.Images.OrderBy(row => row.Order).FirstOrDefault();
+        return ("Offer", offer.Content is null ? null : offer.Content[..Math.Min(offer.Content.Length, 500)],
+            offerImage is null ? null : $"/api/v1/offers/{offerId:D}/images/{offerImage.Id:D}", offer.OwnerUserId);
+    }
+
+    private static string SanitizeMessageText(string content)
+        => new(content.Trim().Where(character => !char.IsControl(character) || character is '\n' or '\r' or '\t').ToArray());
 
     /// <summary>
     /// Posts a message carrying an image attachment (WESAL-TASK-4, Edit 4). This is the
@@ -515,7 +831,7 @@ public sealed class ConversationService : IConversationService
         {
             caption = null;
         }
-        else if (caption.Length > 1000)
+        else if (caption.Length > MessageLimits.MaximumContentLength)
         {
             throw new ValidationException("Message content must not exceed 1000 characters.");
         }
@@ -533,6 +849,9 @@ public sealed class ConversationService : IConversationService
         {
             throw new NotFoundException(nameof(Conversation), conversationId);
         }
+
+        if (conversation.Kind == ConversationKind.CustomerProvider)
+            throw new ValidationException("Attachments are not supported in professional conversations.");
 
         var senderUserId = _currentUser.UserId!;
 
@@ -588,6 +907,25 @@ public sealed class ConversationService : IConversationService
         var fullPath = Path.Combine(directory, fileName);
         await File.WriteAllBytesAsync(fullPath, attachment.Content, cancellationToken);
 
+        // The local copy is the hot read path; when a durable store is configured the
+        // same bytes are mirrored there so a redeploy/restart cannot orphan the row.
+        // A rejected durable write fails the whole send: recording a row whose bytes
+        // cannot survive is exactly the data loss this store exists to prevent.
+        if (_messageAttachmentStore.IsDurable)
+        {
+            try
+            {
+                await _messageAttachmentStore.StoreAsync(relativeUrl, attachment.Content, cancellationToken);
+            }
+            catch
+            {
+                // Whatever failed, try to remove both copies before surfacing the error so
+                // a rejected send never orphans bytes on either side.
+                await TryDeleteStoredAttachmentAsync(fullPath, relativeUrl, CancellationToken.None);
+                throw;
+            }
+        }
+
         var message = new Message
         {
             ConversationId = conversationId,
@@ -608,9 +946,9 @@ public sealed class ConversationService : IConversationService
         catch (Exception ex) when (IsUniqueViolation(ex) && normalizedRequestId is not null)
         {
             // Lost the race against a concurrent send with the same ClientRequestId: the
-            // other request persisted the file and the row, so drop our orphaned copy and
+            // other request persisted the file and the row, so drop our orphaned copies and
             // return the row that actually won instead of surfacing a unique-constraint error.
-            TryDeleteAttachmentFile(fullPath);
+            await TryDeleteStoredAttachmentAsync(fullPath, relativeUrl, CancellationToken.None);
 
             var duplicate = await _messageRepository.GetByClientRequestIdAsync(
                 senderUserId, normalizedRequestId, cancellationToken);
@@ -626,7 +964,7 @@ public sealed class ConversationService : IConversationService
         catch
         {
             // Any other failure: best-effort cleanup so a rejected insert never orphans a file.
-            TryDeleteAttachmentFile(fullPath);
+            await TryDeleteStoredAttachmentAsync(fullPath, relativeUrl, CancellationToken.None);
             throw;
         }
 
@@ -678,18 +1016,42 @@ public sealed class ConversationService : IConversationService
 
         var fullPath = DocumentPath.ResolveFullPath(_documentStorage.Root, message.AttachmentUrl!);
 
-        if (fullPath is null || !File.Exists(fullPath))
+        var fileName = message.AttachmentFileName
+            ?? DocumentPath.FileNameFromUrl(message.AttachmentUrl!)
+            ?? "attachment";
+
+        // The local copy serves as the hot path (messages written before the durable
+        // store existed, and the current container's own uploads). When it is gone — a
+        // redeploy/restart wiped the ephemeral filesystem — fall back to the durable
+        // store so the row keeps resolving to real bytes. Both branches produce the same
+        // StoredDocument; the controller serves buffered bytes or a path identically.
+        if (fullPath is not null && File.Exists(fullPath))
         {
-            throw new NotFoundException("MessageAttachment", messageId);
+            return new StoredDocument
+            {
+                RelativeUrl = message.AttachmentUrl!,
+                FullPath = fullPath,
+                ContentType = message.AttachmentContentType ?? "application/octet-stream",
+                FileName = fileName
+            };
         }
 
-        return new StoredDocument
+        if (_messageAttachmentStore.IsDurable)
         {
-            RelativeUrl = message.AttachmentUrl!,
-            FullPath = fullPath,
-            ContentType = message.AttachmentContentType ?? "application/octet-stream",
-            FileName = message.AttachmentFileName ?? Path.GetFileName(fullPath)
-        };
+            var stored = await _messageAttachmentStore.TryReadAsync(message.AttachmentUrl!, cancellationToken);
+            if (stored?.Bytes is { Length: > 0 })
+            {
+                return new StoredDocument
+                {
+                    RelativeUrl = message.AttachmentUrl!,
+                    Content = stored.Bytes,
+                    ContentType = message.AttachmentContentType ?? "application/octet-stream",
+                    FileName = fileName
+                };
+            }
+        }
+
+        throw new NotFoundException("MessageAttachment", messageId);
     }
 
     /// <summary>
@@ -731,11 +1093,30 @@ public sealed class ConversationService : IConversationService
         }
     }
 
+    /// <summary>
+    /// Best-effort removal of both attachment copies (local file and, when configured,
+    /// the durable object) so a failed send never orphans bytes on either side.
+    /// </summary>
+    private async Task TryDeleteStoredAttachmentAsync(string? fullPath, string relativeUrl, CancellationToken cancellationToken)
+    {
+        if (fullPath is not null)
+        {
+            TryDeleteAttachmentFile(fullPath);
+        }
+
+        if (_messageAttachmentStore.IsDurable)
+        {
+            // The store's DeleteAsync is itself best-effort (missing object is not an error).
+            await _messageAttachmentStore.DeleteAsync(relativeUrl, cancellationToken);
+        }
+    }
+
     private void EnsureParticipant(Conversation conversation, string senderUserId)
     {
         var isParticipant = string.Equals(senderUserId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
             || string.Equals(senderUserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase)
-            || _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+            || (conversation.Kind != ConversationKind.CustomerProvider
+                && _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase));
 
         if (!isParticipant)
         {
@@ -745,8 +1126,30 @@ public sealed class ConversationService : IConversationService
 
     private async Task<string> ResolveSenderNameAsync(string senderUserId, CancellationToken cancellationToken)
     {
+        var knownAdminIds = await _conversationRepository.GetAdminUserIdsAsync(cancellationToken);
+        if (ConversationAccess.IsAdminSide(senderUserId, knownAdminIds))
+        {
+            return PlatformSenders.AdminDisplayName;
+        }
+
         var users = await _conversationRepository.GetUserDisplayNamesAsync([senderUserId], cancellationToken);
         return users.FirstOrDefault(info => info.UserId == senderUserId)?.FullName ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Hall owners talk to the platform, not to a named Admin account.
+    /// </summary>
+    private static string PublicParticipantName(
+        string userId,
+        string? fullName,
+        IReadOnlyCollection<string> adminUserIds)
+    {
+        if (ConversationAccess.IsAdminSide(userId, adminUserIds))
+        {
+            return PlatformSenders.AdminDisplayName;
+        }
+
+        return fullName ?? string.Empty;
     }
 
     private async Task NotifyMessageSentAsync(
@@ -770,12 +1173,15 @@ public sealed class ConversationService : IConversationService
                     ? $"/api/v1/conversations/{conversationId}/messages/{message.Id}/attachment"
                     : null,
                 AttachmentContentType = message.AttachmentContentType,
-                AttachmentFileName = message.AttachmentFileName
+                AttachmentFileName = message.AttachmentFileName,
+                ContextPostId = message.ContextPostId,
+                ContextOfferId = message.ContextOfferId,
+                ContextTitle = message.ContextTitle,
+                ContextText = message.ContextText,
+                ContextImageUrl = message.ContextImageUrl,
+                ContextOwnerUserId = message.ContextOwnerUserId,
+                ContextItemAvailable = message.ContextPostId.HasValue || message.ContextOfferId.HasValue
             }, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (Exception)
         {
@@ -790,7 +1196,7 @@ public sealed class ConversationService : IConversationService
             throw new ValidationException("Message content is required.");
         }
 
-        if (content.Trim().Length > 1000)
+        if (content.Trim().Length > MessageLimits.MaximumContentLength)
         {
             throw new ValidationException("Message content must not exceed 1000 characters.");
         }
@@ -844,7 +1250,14 @@ public sealed class ConversationService : IConversationService
                 ? $"/api/v1/conversations/{conversationId}/messages/{message.Id}/attachment"
                 : null,
             AttachmentContentType = message.AttachmentContentType,
-            AttachmentFileName = message.AttachmentFileName
+            AttachmentFileName = message.AttachmentFileName,
+            ContextPostId = message.ContextPostId,
+            ContextOfferId = message.ContextOfferId,
+            ContextTitle = message.ContextTitle,
+            ContextText = message.ContextText,
+            ContextImageUrl = message.ContextImageUrl,
+            ContextOwnerUserId = message.ContextOwnerUserId,
+            ContextItemAvailable = message.ContextPostId.HasValue || message.ContextOfferId.HasValue
         };
     }
 
@@ -911,7 +1324,10 @@ public sealed class ConversationService : IConversationService
             InitiatorUserId = conversation.SenderUserId,
             OwnerUserId = conversation.HallOwnerId,
             CreatedAt = conversation.CreatedAt,
-            IsExisting = isExisting
+            IsExisting = isExisting,
+            Kind = conversation.Kind,
+            ContextPostId = conversation.PendingContextPostId,
+            ContextOfferId = conversation.PendingContextOfferId
         };
     }
 
@@ -923,7 +1339,10 @@ public sealed class ConversationService : IConversationService
 
         try
         {
-            await _conversationRepository.UpsertReadStateAsync(conversation.Id, userId, DateTimeOffset.UtcNow, cancellationToken);
+            var now = DateTimeOffset.UtcNow;
+            if (_notificationWriter is not null)
+                await _notificationWriter.MarkConversationReadAsync(userId, conversation.Id, now, cancellationToken);
+            await _conversationRepository.UpsertReadStateAsync(conversation.Id, userId, now, cancellationToken);
         }
         catch (Exception ex) when (IsMissingTable(ex))
         {
@@ -986,7 +1405,8 @@ public sealed class ConversationService : IConversationService
 
         var isParticipant = string.Equals(userId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase)
             || string.Equals(userId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase)
-            || _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+            || (conversation.Kind != ConversationKind.CustomerProvider
+                && _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase));
 
         if (!isParticipant)
         {
@@ -1001,6 +1421,9 @@ public sealed class ConversationService : IConversationService
         cancellationToken.ThrowIfCancellationRequested();
 
         var userId = GetAuthenticatedUserId();
+
+        if (_currentUser.Roles.Any(role => role is ApplicationRoles.EventCoordinator or ApplicationRoles.Photographer))
+            return await GetProviderUnreadCountAsync(cancellationToken);
 
         try
         {

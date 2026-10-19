@@ -19,6 +19,8 @@ type HallNotificationListProps = {
   onAccept?: (notification: HallBookingNotification) => void;
   onReject?: (notification: HallBookingNotification) => void;
   onConfirmPayment?: (notification: HallBookingNotification) => void;
+  onMessageSeeker?: (notification: HallBookingNotification) => void;
+  messagingSeeker?: boolean;
 };
 
 export default function HallNotificationList({
@@ -35,6 +37,8 @@ export default function HallNotificationList({
   onAccept,
   onReject,
   onConfirmPayment,
+  onMessageSeeker,
+  messagingSeeker = false,
 }: HallNotificationListProps) {
   const t = useT();
   const groups = groupOwnerNotifications(items);
@@ -88,6 +92,8 @@ export default function HallNotificationList({
                     onAccept={onAccept}
                     onReject={onReject}
                     onConfirmPayment={onConfirmPayment}
+                    onMessageSeeker={onMessageSeeker}
+                    messagingSeeker={messagingSeeker}
                   />
                 </li>
               ))}

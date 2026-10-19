@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 import {
   conversationAvatarInitials,
   conversationHallLabel,
   conversationListPreview,
-  conversationPreviewTitle,
 } from "@/lib/conversation-display";
-import { isOwnerAdminConversation } from "@/lib/owner-admin-conversation";
+import { isOwnerAdminConversation, ownerConversationTitle } from "@/lib/owner-admin-conversation";
 import type { ConversationSummary, InboxStatus } from "@/types/messages";
 
 type InboxFilter = "all" | "users" | "admin";
@@ -37,11 +36,13 @@ export default function OwnerInboxList({
   const t = useT();
   const lang = useUiLang();
   const [filter, setFilter] = useState<InboxFilter>(focusAdmin ? "admin" : "all");
+  const [previousFocusAdmin, setPreviousFocusAdmin] = useState(focusAdmin);
   const [query, setQuery] = useState("");
 
-  useEffect(() => {
+  if (focusAdmin !== previousFocusAdmin) {
+    setPreviousFocusAdmin(focusAdmin);
     if (focusAdmin) setFilter("admin");
-  }, [focusAdmin]);
+  }
 
   const rows = useMemo(
     () => conversations.filter((item) => item?.conversationId),
@@ -54,7 +55,7 @@ export default function OwnerInboxList({
   const visible = (filter === "users" ? userRows : filter === "admin" ? adminRows : rows).filter(
     (item) => {
       if (!needle) return true;
-      const title = conversationPreviewTitle(item, lang).toLowerCase();
+      const title = ownerConversationTitle(item, lang, rows).toLowerCase();
       const hall = conversationHallLabel(item, lang).toLowerCase();
       const preview = conversationListPreview(
         item.lastMessagePreview,
@@ -129,7 +130,7 @@ export default function OwnerInboxList({
       ) : (
         <ul className="owner-chat-rows" data-testid="inbox-conversation-list">
           {visible.map((conversation) => {
-            const title = conversationPreviewTitle(conversation, lang);
+            const title = ownerConversationTitle(conversation, lang, rows);
             const preview = conversationListPreview(
               conversation.lastMessagePreview,
               Boolean(conversation.lastMessageHasAttachment),

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import BookingRequestRow from "@/components/bookings/BookingRequestRow";
 import CancelBookingDialog from "@/components/bookings/CancelBookingDialog";
+import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useBookingOwnerChat } from "@/hooks/useBookingOwnerChat";
 import { useBookingViewport } from "@/hooks/useBookingViewport";
 import { useUserBookings } from "@/hooks/useUserBookings";
@@ -20,10 +21,13 @@ export default function UserBookingsList({ compact = false }: UserBookingsListPr
   const viewport = useBookingViewport();
   const searchParams = useSearchParams();
   const focusBookingId = searchParams.get("booking_id")?.trim() || null;
+  const conversationId = searchParams.get("conversation_id")?.trim() || null;
   const contactIntent = searchParams.get("intent") === "contact";
   const bookingsState = useUserBookings();
+  const inbox = useOptionalMessagesInbox();
   const { openForBooking } = useBookingOwnerChat();
   const openedContactRef = useRef<string | null>(null);
+  const openedConversationRef = useRef<string | null>(null);
   const [pendingCancel, setPendingCancel] = useState<UserBooking | null>(null);
 
   useEffect(() => {
@@ -35,13 +39,22 @@ export default function UserBookingsList({ compact = false }: UserBookingsListPr
   }, [focusBookingId, bookingsState.bookings]);
 
   useEffect(() => {
+    if (!contactIntent || !conversationId) return;
+    if (!inbox?.canUseMessaging) return;
+    if (openedConversationRef.current === conversationId) return;
+    openedConversationRef.current = conversationId;
+    inbox.openInbox(conversationId);
+  }, [contactIntent, conversationId, inbox]);
+
+  useEffect(() => {
+    if (conversationId) return;
     if (!contactIntent || !focusBookingId) return;
     if (openedContactRef.current === focusBookingId) return;
     const booking = bookingsState.bookings.find((item) => item.bookingId === focusBookingId);
     if (!booking || booking.status !== "Accepted") return;
     openedContactRef.current = focusBookingId;
     void openForBooking(booking);
-  }, [bookingsState.bookings, contactIntent, focusBookingId, openForBooking]);
+  }, [bookingsState.bookings, contactIntent, conversationId, focusBookingId, openForBooking]);
 
   if (bookingsState.status === "loading") {
     return (

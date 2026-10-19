@@ -7,8 +7,16 @@ export function parseBookingStatus(value: string | number | null | undefined): B
   if (value === 3 || value === "3") return "Cancelled";
   const normalized = String(value ?? "").trim().toLowerCase();
   if (normalized === "rejected") return "Rejected";
-  if (normalized === "accepted" || normalized === "approved" || normalized === "confirmed") {
+  if (normalized === "accepted" || normalized === "approved") {
     return "Accepted";
+  }
+  if (
+    normalized === "confirmed" ||
+    normalized === "fullybooked" ||
+    normalized === "fully_booked" ||
+    normalized === "published"
+  ) {
+    return "Confirmed";
   }
   if (normalized === "cancelled" || normalized === "canceled") return "Cancelled";
   return "Pending";
@@ -19,6 +27,7 @@ export function canCancelBooking(status: BookingStatus | string): boolean {
 }
 
 export function bookingStatusMessageKey(status: BookingStatus): string {
+  if (status === "Confirmed") return "bookings.status.confirmed";
   if (status === "Accepted") return "bookings.status.accepted";
   if (status === "Rejected") return "bookings.status.rejected";
   if (status === "Cancelled") return "bookings.status.cancelled";

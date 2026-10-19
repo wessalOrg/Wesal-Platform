@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Persistence.Data;
@@ -61,6 +62,28 @@ public class HallSearchRepositoryShould
 
         Assert.Single(result);
         Assert.Equal("Gaza Hall", result[0].Name);
+    }
+
+    [Fact]
+    public async Task SearchApprovedHallsAsync_FiltersMinimumCapacityBeforePagingAndCountsAccurately()
+    {
+        await using var context = CreateContext();
+        var small = CreateHall("A small hall");
+        small.Capacity = 120;
+        var large = CreateHall("B large hall");
+        large.Capacity = 450;
+        var largest = CreateHall("C largest hall");
+        largest.Capacity = 600;
+        context.Halls.AddRange(small, large, largest);
+        await context.SaveChangesAsync();
+        var repository = new HallRepository(context);
+        var request = new HallSearchRequest { MinimumCapacity = 300 };
+
+        var count = await repository.SearchApprovedHallsCountAsync(request);
+        var page = await repository.SearchApprovedHallsAsync(request, 0, 1);
+
+        Assert.Equal(2, count);
+        Assert.Equal("B large hall", Assert.Single(page).Name);
     }
 
     [Fact]

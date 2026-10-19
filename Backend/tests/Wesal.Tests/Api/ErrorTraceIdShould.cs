@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Middleware;
@@ -19,6 +20,13 @@ public sealed class ErrorTraceIdShould
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
+        // CreateBuilder defaults to the Production environment, which loads the API's
+        // copied appsettings.Production.json whose placeholder AllowedHosts rejects the
+        // TestServer's localhost requests with 400 before the middleware under test runs.
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["AllowedHosts"] = "*"
+        });
         builder.Services.AddLogging();
         builder.Services.AddControllers();
         var app = builder.Build();

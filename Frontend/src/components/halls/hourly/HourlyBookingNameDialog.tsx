@@ -4,8 +4,10 @@ import { useT } from "@/i18n";
 
 type HourlyBookingNameDialogProps = {
   open: boolean;
+  /** Account name — read-only, taken from the signed-in profile. */
   name: string;
-  onNameChange: (value: string) => void;
+  phone: string;
+  onPhoneChange: (value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -17,7 +19,8 @@ type HourlyBookingNameDialogProps = {
 export default function HourlyBookingNameDialog({
   open,
   name,
-  onNameChange,
+  phone,
+  onPhoneChange,
   onClose,
   onSubmit,
   submitting,
@@ -48,20 +51,41 @@ export default function HourlyBookingNameDialog({
         </h3>
         <p className="mt-1 text-sm text-[var(--wesal-muted)]">
           {dateLabel}
-          {slotLabel ? ` · ${slotLabel}` : ""}
+          {slotLabel ? (
+            <>
+              {" · "}
+              <span dir="ltr" className="inline-block whitespace-nowrap tabular-nums">
+                {slotLabel}
+              </span>
+            </>
+          ) : null}
         </p>
-        <label className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]" htmlFor="hourly-full-name">
-          {t("halls.hourly.fullName")}
+        <p className="mt-4 text-sm font-semibold text-[var(--wesal-text)]">
+          {t("halls.hourly.bookingAs")}
+        </p>
+        <p
+          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink)]/50 px-3 py-2.5 text-sm text-[var(--wesal-text)]"
+          data-testid="hourly-account-name"
+        >
+          {name || "—"}
+        </p>
+        <label className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]" htmlFor="hourly-phone">
+          {t("halls.hourly.phone")}
         </label>
         <input
-          id="hourly-full-name"
-          type="text"
-          value={name}
-          onChange={(event) => onNameChange(event.target.value)}
-          autoComplete="name"
-          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] px-3 py-2.5 text-sm outline-none focus:border-[var(--wesal-maroon)]"
+          id="hourly-phone"
+          type="tel"
+          inputMode="tel"
+          dir="ltr"
+          value={phone}
+          onChange={(event) => onPhoneChange(event.target.value)}
+          autoComplete="tel"
+          placeholder="05xxxxxxxx"
+          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] px-3 py-2.5 text-sm outline-none focus:border-[var(--wesal-maroon)] rtl:text-right"
           disabled={submitting}
+          data-testid="hourly-phone-input"
         />
+        <p className="mt-1.5 text-xs text-[var(--wesal-muted)]">{t("halls.hourly.phoneHint")}</p>
         {errorText ? (
           <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             {errorText}
@@ -75,7 +99,7 @@ export default function HourlyBookingNameDialog({
             type="button"
             className="btn-primary flex-1 disabled:opacity-60"
             onClick={onSubmit}
-            disabled={submitting || !name.trim()}
+            disabled={submitting || !name.trim() || !phone.trim()}
             data-testid="hourly-name-submit"
           >
             {submitting ? t("halls.booking.submitting") : t("halls.booking.submit")}

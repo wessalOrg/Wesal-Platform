@@ -3,6 +3,7 @@ using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Common;
 using Wesal.Domain.Entities;
+using Wesal.Domain.Enums;
 
 namespace Wesal.Infrastructure.Conversations;
 
@@ -54,9 +55,12 @@ public sealed class ConversationNotifier : IConversationNotifier
     {
         var conversation = await _conversationRepository.GetByIdWithHallAsync(message.ConversationId, cancellationToken);
 
-        // Fail closed. If the thread or its hall cannot be resolved, nobody has been
-        // authorised to receive this and a broadcast would be a guess.
-        if (conversation is null || conversation.Hall is null || conversation.Hall.IsDeleted)
+        // Fail closed. If the thread cannot be resolved, nobody has been authorised to
+        // receive this and a broadcast would be a guess. A deleted hall fails closed the
+        // same way; a hall-LESS thread (an Admin request conversation, Tasks 5/6) does not:
+        // its parties are recorded on the row itself, so recipients resolve below exactly as
+        // they do for an owner/Admin thread.
+        if (conversation is null || conversation.Hall?.IsDeleted == true)
         {
             return;
         }
@@ -68,6 +72,18 @@ public sealed class ConversationNotifier : IConversationNotifier
 
         foreach (var recipient in ResolveRecipients(conversation, adminUserIds))
         {
+            if (conversation.Kind is ConversationKind.CustomerProvider or ConversationKind.AdminAccount
+                && string.Equals(recipient, message.SenderUserId, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (conversation.Kind == ConversationKind.CustomerProvider)
+            {
+                var participantConversations = await _conversationRepository.GetParticipantConversationsAsync(recipient, false, [], cancellationToken);
+                var customerIds = participantConversations.Where(row => row.Kind == ConversationKind.CustomerProvider)
+                    .Select(row => row.Id).ToArray();
+                var unread = await _conversationRepository.GetUnreadMessageCountsAsync(recipient, customerIds, cancellationToken);
+                message.UnreadMessageCount = unread.GetValueOrDefault(conversation.Id);
+                message.TotalUnreadCount = unread.Values.Sum();
+            }
             await _hubContext.Clients
                 .User(recipient)
                 .SendAsync(ConversationHub.MessageReceived, message, cancellationToken);
@@ -99,6 +115,13 @@ public sealed class ConversationNotifier : IConversationNotifier
         Conversation conversation,
         IReadOnlyCollection<string> adminUserIds)
     {
+        if (conversation.Kind == ConversationKind.CustomerProvider)
+        {
+            yield return conversation.SenderUserId;
+            if (!string.Equals(conversation.HallOwnerId, conversation.SenderUserId, StringComparison.OrdinalIgnoreCase))
+                yield return conversation.HallOwnerId;
+            yield break;
+        }
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // The hall owner, always individually gated. isAdmin is false because this path cannot

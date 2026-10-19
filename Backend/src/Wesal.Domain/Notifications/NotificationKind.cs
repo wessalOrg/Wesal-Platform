@@ -55,7 +55,74 @@ public enum NotificationKind
     /// The owner's subscription cycle ended without a renewal, so the hall was
     /// automatically restricted.
     /// </summary>
-    SubscriptionExpiredForOwner = 14
+    SubscriptionExpiredForOwner = 14,
+
+    /// <summary>
+    /// An Event Coordinator's setup submission was received and is awaiting
+    /// administrative review (WESAL coordinator setup).
+    /// </summary>
+    CoordinatorSetupReceivedForCoordinator = 15,
+
+    /// <summary>
+    /// A Photographer's setup submission was received and is awaiting administrative
+    /// review (WESAL photographer setup).
+    /// </summary>
+    PhotographerSetupReceivedForPhotographer = 16,
+
+    /// <summary>
+    /// An Admin approved an Event Coordinator's account request
+    /// (WESAL admin coordinator requests, Task 5, requirement 15.1).
+    /// </summary>
+    CoordinatorApprovedForCoordinator = 17,
+
+    /// <summary>
+    /// An Admin rejected an Event Coordinator's account request; the reason is delivered
+    /// inside the notification and the click-through opens the Admin conversation
+    /// (WESAL admin coordinator requests, Task 5, requirements 5.5 and 15.1).
+    /// </summary>
+    CoordinatorRejectedForCoordinator = 18,
+
+    /// <summary>
+    /// An Admin approved a Photographer's account request
+    /// (WESAL admin photographer requests, Task 6, requirement 15.6).
+    /// </summary>
+    PhotographerApprovedForPhotographer = 19,
+
+    /// <summary>
+    /// An Admin asked a Photographer to edit their data or documents; the click-through
+    /// opens the Admin conversation that carries the notes
+    /// (WESAL admin photographer requests, Task 6, requirements 6.5 and 15.6).
+    /// </summary>
+    PhotographerNeedsChangesForPhotographer = 20,
+
+    /// <summary>
+    /// An Admin rejected a Photographer's account request; the reason is delivered inside
+    /// the notification and the click-through opens the Admin conversation
+    /// (WESAL admin photographer requests, Task 6, requirements 6.5 and 15.6).
+    /// </summary>
+    PhotographerRejectedForPhotographer = 21,
+
+    ProfessionalOfferPublishedForCoordinator = 22,
+    ProfessionalOfferPublishedForPhotographer = 23,
+    ProfessionalOfferEditsSaved = 24,
+    ProfessionalOfferReminder24Hours = 25,
+    ProfessionalOfferEndedForCoordinator = 26,
+    ProfessionalOfferEndedForPhotographer = 27,
+    ProfessionalOfferStopped = 28,
+    PostEditsSaved = 29,
+    PostCommentedForCoordinator = 30,
+    PostCommentedForPhotographer = 31,
+    PostCommentReplyForOwner = 32,
+    PostCommentReplyOnOwnerPost = 33,
+    NewMessage = 34,
+    AdminMessageForCoordinator = 35,
+    AdminMessageForPhotographer = 36,
+    CoordinatorPendingReview = 37,
+    PhotographerPendingReview = 38,
+    PostDeletedByAdminForCoordinator = 39,
+    PostDeletedByAdminForPhotographer = 40,
+    ProfessionalOfferDeletedByAdmin = 41,
+    PublishingRestricted = 42
 }
 
 /// <summary>
@@ -84,5 +151,7 @@ public enum NotificationActionTarget
     AdminHallRequests = 5,
 
     /// <summary>A specific conversation thread, identified by the notification's target id.</summary>
-    Conversation = 6
+    Conversation = 6,
+    Post = 7,
+    Offer = 8
 }

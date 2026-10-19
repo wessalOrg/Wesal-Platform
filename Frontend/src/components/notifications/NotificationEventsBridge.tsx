@@ -35,6 +35,7 @@ import {
   ownerHallNotificationsPath,
 } from "@/lib/hall-owner-query-keys";
 import { subscribeOwnerBookingRequestEvents } from "@/services/booking-notification-realtime";
+import { subscribePlatformNotificationRealtime } from "@/services/platform-notification-realtime";
 import { loadRememberedBookings } from "@/lib/user-bookings-store";
 
 function locale() {
@@ -73,6 +74,13 @@ export default function NotificationEventsBridge() {
     notifySeekerWelcome(account.userId);
   }, [account.authenticated, account.isAdmin, account.isHallOwner, account.ready, account.userId]);
 
+  // Live backend notifications (hall approved/rejected, subscription, booking decisions…).
+  // Re-subscribes whenever the signed-in account changes so a new token gets a new connection.
+  useEffect(() => {
+    if (!account.ready || !account.authenticated) return;
+    return subscribePlatformNotificationRealtime();
+  }, [account.authenticated, account.ready, account.sessionKey]);
+
   useEffect(() => {
     const onSubmitted = (event: Event) => {
       const detail = (event as CustomEvent<BookingSubmittedDetail>).detail;
@@ -96,7 +104,8 @@ export default function NotificationEventsBridge() {
       if (!detail?.bookingId) return;
       const hallName = lookupHallName(detail.hallId, detail.bookingId, detail.hallName);
       const date = formatBookingDateLabel(detail.date, locale());
-      const period = formatPeriods(detail.periods) || t("halls.period.generic");
+      const period =
+        detail.timeRange?.trim() || formatPeriods(detail.periods) || t("halls.period.generic");
       const amount =
         detail.depositAmount != null ? formatDepositAmount(detail.depositAmount) : "—";
       pushPlatformNotification({
@@ -109,6 +118,9 @@ export default function NotificationEventsBridge() {
         metadata: {
           hall_id: detail.hallId,
           booking_id: detail.bookingId,
+          // The exact seeker <-> owner thread the owner wrote the approval into. Carrying it
+          // here is what lets the click open that conversation rather than the bookings list.
+          conversation_id: detail.conversationId,
           hall_name: hallName,
           date: detail.date,
           period,
@@ -252,13 +264,14 @@ export default function NotificationEventsBridge() {
       const hallName = event.hallName?.trim() || t("common.hall");
       const userName = event.requesterName?.trim() || t("common.user");
       const date = event.date ? formatBookingDateLabel(event.date, locale()) : "";
+      const period = event.timeRange || event.period || t("halls.period.generic");
       pushPlatformNotification({
         type: "booking_submitted",
         audience: "owner",
         titleKey: "notify.ownerBookingRequest.title",
         bodyKey: "notify.ownerBookingRequest.body",
         actionLabelKey: "notify.ownerBookingRequest.action",
-        params: { hallName, userName, date },
+        params: { hallName, userName, date, period },
         action_url: event.hallId
           ? ownerHallNotificationsPath(event.hallId, event.id)
           : ownerBookingsPath(event.id),

@@ -11,7 +11,7 @@ import {
   conversationPeerRoleLabel,
   conversationPreviewTitle,
 } from "@/lib/conversation-display";
-import { isOwnerAdminConversation } from "@/lib/owner-admin-conversation";
+import { isOwnerAdminConversation, ownerConversationTitle } from "@/lib/owner-admin-conversation";
 import type { ConversationSummary } from "@/types/messages";
 
 type ConversationListItemProps = {
@@ -30,7 +30,9 @@ export default function ConversationListItem({
   const t = useT();
   const lang = useUiLang();
   const { isHallOwner, isAdmin } = useAccountAccess();
-  const title = conversationPreviewTitle(conversation, lang);
+  const title = isHallOwner
+    ? ownerConversationTitle(conversation, lang)
+    : conversationPreviewTitle(conversation, lang);
   const hall = conversationHallLabel(conversation, lang);
   const role = conversationPeerRoleLabel({
     viewerIsHallOwner: isHallOwner,
@@ -91,7 +93,7 @@ export default function ConversationListItem({
           </span>
           {unread ? (
             <span
-              className="mt-0.5 inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-maroon)] px-1 text-[0.65rem] font-bold text-white"
+              className="mt-0.5 inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#c62828] px-1 text-[0.65rem] font-bold text-white"
               aria-label={t("messages.unread")}
               data-testid="inbox-unread-badge"
             >

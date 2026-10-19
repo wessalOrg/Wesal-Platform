@@ -5,12 +5,35 @@ import type { WesalRole } from "@/types/session";
 export const SEEKER_DASHBOARD_PATH = REGULAR_PROFILE_PATH;
 export const SEEKER_ACCOUNT_PATH = `${REGULAR_PROFILE_PATH}/account`;
 export const SEEKER_BOOKINGS_PATH = `${REGULAR_PROFILE_PATH}/bookings`;
+export const SEEKER_FAVORITES_PATH = `${REGULAR_PROFILE_PATH}/favorites`;
 
 export function seekerBookingContactPath(bookingId: string): string {
   const id = bookingId.trim();
   return id
-    ? `${SEEKER_BOOKINGS_PATH}?booking_id=${encodeURIComponent(id)}&intent=contact`
+    ? `${SEEKER_BOOKINGS_PATH}?booking_id=${encodeURIComponent(id)}&intent=contact&attach=1`
     : SEEKER_BOOKINGS_PATH;
+}
+
+/** Bookings page plus the floating thread used to send the deposit receipt. */
+export function seekerAcceptedDepositPath(bookingId: string, conversationId: string): string {
+  const params = new URLSearchParams();
+  const booking = bookingId.trim();
+  const conversation = conversationId.trim();
+  if (booking) params.set("booking_id", booking);
+  if (conversation) params.set("conversation_id", conversation);
+  params.set("intent", "contact");
+  params.set("attach", "1");
+  return `${SEEKER_BOOKINGS_PATH}?${params.toString()}`;
+}
+
+/**
+ * Deep link that opens one specific conversation. This mirrors the route
+ * `useStartHallConversation` already pushes, so a notification and a hall card land on the
+ * same thread page rather than inventing a second way in.
+ */
+export function conversationMessagePath(conversationId: string, attach = false): string {
+  const href = `/messages/${encodeURIComponent(conversationId.trim())}`;
+  return attach ? `${href}?attach=1` : href;
 }
 export const SEEKER_NOTIFICATIONS_PATH = `${REGULAR_PROFILE_PATH}/notifications`;
 export const SEEKER_MESSAGES_PATH = `${REGULAR_PROFILE_PATH}/messages`;
@@ -18,13 +41,18 @@ export const SEEKER_MESSAGES_PATH = `${REGULAR_PROFILE_PATH}/messages`;
 /** Messages page URL for a hall thread (seeker or owner-as-booker). */
 export function conversationMessagesPath(
   role: WesalRole | null | undefined,
-  options: { conversationId?: string | null; hallId?: string | null } = {},
+  options: {
+    conversationId?: string | null;
+    hallId?: string | null;
+    attach?: boolean;
+  } = {},
 ): string {
   const params = new URLSearchParams();
   if (options.hallId?.trim()) params.set("hallId", options.hallId.trim());
   if (options.conversationId?.trim()) {
     params.set("conversation_id", options.conversationId.trim());
   }
+  if (options.attach) params.set("attach", "1");
   const base = isHallOwnerRole(role) ? HALL_OWNER_MESSAGES_PATH : SEEKER_MESSAGES_PATH;
   const query = params.toString();
   return query ? `${base}?${query}` : base;
@@ -32,7 +60,7 @@ export function conversationMessagesPath(
 
 /**
  * Hall seeker dashboard sidebar (Epic 6 portal shell).
- * Profile + settings are one account page; favorites removed.
+ * Profile and settings share one account page. Favorites lists halls saved on this device.
  */
 export const SEEKER_DASHBOARD_NAV = [
   {
@@ -45,6 +73,12 @@ export const SEEKER_DASHBOARD_NAV = [
     id: "bookings",
     href: SEEKER_BOOKINGS_PATH,
     labelKey: "seeker.nav.bookings",
+    match: "prefix" as const,
+  },
+  {
+    id: "favorites",
+    href: SEEKER_FAVORITES_PATH,
+    labelKey: "seeker.nav.favorites",
     match: "prefix" as const,
   },
   {

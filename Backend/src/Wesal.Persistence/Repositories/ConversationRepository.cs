@@ -20,6 +20,37 @@ public sealed class ConversationRepository : IConversationRepository
         _context = context;
     }
 
+    public Task<Conversation?> GetCustomerProviderConversationAsync(string customerId, string providerId, CancellationToken cancellationToken = default)
+        => _context.Conversations.AsNoTracking().FirstOrDefaultAsync(c => c.Kind == ConversationKind.CustomerProvider
+            && c.SenderUserId == customerId && c.HallOwnerId == providerId, cancellationToken);
+
+    public Task<bool> IsApprovedProviderAsync(string providerId, CancellationToken cancellationToken = default)
+        => _context.Users.AnyAsync(user => user.Id == providerId && user.ApprovalStatus == AccountApprovalStatus.Approved
+            && _context.UserRoles.Any(userRole => userRole.UserId == providerId
+                && _context.Roles.Any(role => role.Id == userRole.RoleId
+                    && (role.Name == ApplicationRoles.EventCoordinator || role.Name == ApplicationRoles.Photographer))), cancellationToken);
+
+    public Task<bool> IsPhotographerAsync(string userId, CancellationToken cancellationToken = default)
+        => _context.UserRoles.AnyAsync(userRole => userRole.UserId == userId
+            && _context.Roles.Any(role => role.Id == userRole.RoleId && role.Name == ApplicationRoles.Photographer), cancellationToken);
+
+    public async Task SetPendingContextAsync(Guid conversationId, Guid? postId, Guid? offerId, CancellationToken cancellationToken = default)
+    {
+        var conversation = await _context.Conversations.FirstOrDefaultAsync(row => row.Id == conversationId, cancellationToken);
+        if (conversation is null) return;
+        conversation.PendingContextPostId = postId;
+        conversation.PendingContextOfferId = offerId;
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task ClearPendingContextAsync(Guid conversationId, CancellationToken cancellationToken = default)
+    {
+        var conversation = await _context.Conversations.FirstOrDefaultAsync(row => row.Id == conversationId, cancellationToken);
+        if (conversation is null) return;
+        conversation.PendingContextPostId = null;
+        conversation.PendingContextOfferId = null;
+    }
+
     public async Task AddAsync(Conversation conversation, CancellationToken cancellationToken = default)
     {
         await _context.Conversations.AddAsync(conversation, cancellationToken);
@@ -122,6 +153,26 @@ public sealed class ConversationRepository : IConversationRepository
     {
         return await _context.Conversations
             .Where(c => c.HallId == hallId && c.HallOwnerId == ownerId)
+            .OrderBy(c => c.CreatedAt)
+            .ThenBy(c => c.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Resolves the single Admin↔user account-request thread for a coordinator or
+    /// photographer (WESAL admin coordinator/photographer requests, Tasks 5/6).
+    ///
+    /// Keyed on (HallId = null, HallOwnerId = user) — the hall-less thread's identity, the
+    /// exact mirror of <see cref="GetByHallForOwnerAsync"/> minus the hall — so repeated
+    /// Admin actions for the same account always land in the same conversation. Oldest wins
+    /// for the same reason those resolvers order: there is no unique constraint to stop two
+    /// concurrent reviews from inserting, and an unordered lookup would silently resolve to a
+    /// different thread per call if a duplicate ever existed.
+    /// </summary>
+    public async Task<Conversation?> GetAdminUserConversationAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Conversations
+            .Where(c => c.HallId == null && c.Kind != ConversationKind.CustomerProvider && c.HallOwnerId == userId)
             .OrderBy(c => c.CreatedAt)
             .ThenBy(c => c.Id)
             .FirstOrDefaultAsync(cancellationToken);
@@ -317,7 +368,7 @@ public sealed class ConversationRepository : IConversationRepository
         }
 
         return await query
-            .Where(c => !c.Hall.IsDeleted)
+            .Where(c => c.Hall == null || !c.Hall.IsDeleted)
             .Where(VisibleToUser(_context, userId))
             .OrderByDescending(c => c.CreatedAt)
             .ThenByDescending(c => c.Id)
@@ -346,7 +397,7 @@ public sealed class ConversationRepository : IConversationRepository
         return await _context.Users
             .AsNoTracking()
             .Where(user => userIds.Contains(user.Id))
-            .Select(user => new UserDisplayInfo { UserId = user.Id, FullName = user.FullName })
+            .Select(user => new UserDisplayInfo { UserId = user.Id, FullName = user.FullName, ProfilePictureUrl = user.ProfilePictureUrl })
             .ToListAsync(cancellationToken);
     }
 
@@ -375,7 +426,7 @@ public sealed class ConversationRepository : IConversationRepository
         // different rows.
         IQueryable<Conversation> query = _context.Conversations
             .AsNoTracking()
-            .Where(c => !c.Hall.IsDeleted);
+            .Where(c => c.Hall == null || !c.Hall.IsDeleted);
 
         IReadOnlyList<string> adminIds = [];
 
@@ -422,9 +473,13 @@ public sealed class ConversationRepository : IConversationRepository
         //
         // A non-Approved hall is not locked out of (its owner must keep reading review and
         // rejection messages, US-ADMIN-03), and a deleted hall never reaches here.
+        // A hall-less Admin request thread (Tasks 5/6) has no hall whose lock could withhold
+        // it, so the exclusion is guarded on Hall != null rather than letting the navigation
+        // read as NULL and, depending on the provider, either fault or silently drop the row.
         if (!isAdmin)
         {
-            query = query.Where(c => !(c.HallOwnerId == userId
+            query = query.Where(c => !(c.Hall != null
+                && c.HallOwnerId == userId
                 && c.Hall.Status == HallStatus.Approved
                 && (c.Hall.IsAdminLocked || c.Hall.SystemLocked)));
         }

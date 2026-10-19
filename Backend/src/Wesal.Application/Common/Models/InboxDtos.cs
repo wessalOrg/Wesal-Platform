@@ -3,8 +3,13 @@ namespace Wesal.Application.Common.Models;
 public sealed class ConversationSummaryResponse
 {
     public Guid ConversationId { get; init; }
+    public Wesal.Domain.Enums.ConversationKind Kind { get; init; }
 
-    public Guid HallId { get; init; }
+    /// <summary>
+    /// The hall this thread concerns, or null for a hall-less Admin request thread
+    /// (WESAL admin coordinator/photographer requests, Tasks 5/6).
+    /// </summary>
+    public Guid? HallId { get; init; }
 
     public string HallName { get; init; } = string.Empty;
 
@@ -54,6 +59,13 @@ public sealed class MessageDto
 
     /// <summary>True when this message carries an image attachment (WESAL-TASK-4, Edit 4).</summary>
     public bool HasAttachment { get; init; }
+    public Guid? ContextPostId { get; init; }
+    public Guid? ContextOfferId { get; init; }
+    public string? ContextTitle { get; init; }
+    public string? ContextText { get; init; }
+    public string? ContextImageUrl { get; init; }
+    public string? ContextOwnerUserId { get; init; }
+    public bool? ContextItemAvailable { get; init; }
 
     /// <summary>
     /// Authenticated endpoint that streams the attachment. Only participants of the
@@ -70,7 +82,11 @@ public sealed class MessageThreadResponse
 {
     public Guid ConversationId { get; init; }
 
-    public Guid HallId { get; init; }
+    /// <summary>
+    /// The hall this thread concerns, or null for a hall-less Admin request thread
+    /// (WESAL admin coordinator/photographer requests, Tasks 5/6).
+    /// </summary>
+    public Guid? HallId { get; init; }
 
     public string HallName { get; init; } = string.Empty;
 
@@ -82,6 +98,7 @@ public sealed class UserDisplayInfo
     public string UserId { get; init; } = string.Empty;
 
     public string FullName { get; init; } = string.Empty;
+    public string? ProfilePictureUrl { get; init; }
 }
 
 public sealed class MessageSentEvent
@@ -106,6 +123,15 @@ public sealed class MessageSentEvent
     public string? AttachmentContentType { get; init; }
 
     public string? AttachmentFileName { get; init; }
+    public Guid? ContextPostId { get; init; }
+    public Guid? ContextOfferId { get; init; }
+    public string? ContextTitle { get; init; }
+    public string? ContextText { get; init; }
+    public string? ContextImageUrl { get; init; }
+    public string? ContextOwnerUserId { get; init; }
+    public int UnreadMessageCount { get; set; }
+    public int TotalUnreadCount { get; set; }
+    public bool? ContextItemAvailable { get; init; }
 }
 
 public sealed class UnreadCountResponse

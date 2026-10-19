@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import HallLockedState from "@/components/halls/HallLockedState";
 import AcceptConfirmModal from "@/components/halls/notifications/AcceptConfirmModal";
+import DepositConfirmedModal from "@/components/halls/notifications/DepositConfirmedModal";
 import HallNotificationEmptyState from "@/components/halls/notifications/HallNotificationEmptyState";
 import HallNotificationErrorState from "@/components/halls/notifications/HallNotificationErrorState";
 import HallNotificationList from "@/components/halls/notifications/HallNotificationList";
@@ -15,6 +16,7 @@ import { useAcceptBookingRequest } from "@/hooks/useAcceptBookingRequest";
 import { usePublishBooking } from "@/hooks/usePublishBooking";
 import { useRejectBookingRequest } from "@/hooks/useRejectBookingRequest";
 import { useRememberHistoricalBookingAlerts } from "@/hooks/useBookingRequestAudio";
+import { useOwnerSeekerChat } from "@/hooks/useOwnerSeekerChat";
 import { useT } from "@/i18n";
 import { formatBookingDateLabel } from "@/lib/booking-date";
 import { bookingWhenLabels } from "@/lib/booking-when-label";
@@ -53,7 +55,10 @@ export default function HallNotificationsView({
   const [rejectTarget, setRejectTarget] = useState<HallBookingNotification | null>(null);
   const [acceptTarget, setAcceptTarget] = useState<HallBookingNotification | null>(null);
   const [acceptToast, setAcceptToast] = useState(false);
+  const [confirmedName, setConfirmedName] = useState<string | null>(null);
   const [rejectToast, setRejectToast] = useState(false);
+  const [rejectedChat, setRejectedChat] = useState<HallBookingNotification | null>(null);
+  const seekerChat = useOwnerSeekerChat();
   const highlightedId = requestId?.trim() || null;
   const accept = useAcceptBookingRequest({
     onAccepted: notifications.applyAccepted,
@@ -66,8 +71,10 @@ export default function HallNotificationsView({
   const reject = useRejectBookingRequest({
     onRejected: (result) => {
       notifications.applyRejected(result);
+      const target = rejectTarget;
       setRejectTarget(null);
       setRejectToast(true);
+      if (target) setRejectedChat(target);
     },
     onStatusSync: (bookingId, status) => {
       notifications.applyStatus(bookingId, status);
@@ -179,8 +186,15 @@ export default function HallNotificationsView({
           hallName={hallName}
           onAccept={setAcceptTarget}
           onReject={setRejectTarget}
+          onMessageSeeker={(item) => {
+            void seekerChat.openWithSeeker(item.hallId || hallId, item.requesterUserId);
+          }}
+          messagingSeeker={seekerChat.opening}
           onConfirmPayment={(item) => {
-            void confirmPayment.publish(item.hallId || hallId, item.id);
+            const name = item.requesterName.trim() || t("common.user");
+            void confirmPayment.publish(item.hallId || hallId, item.id).then((result) => {
+              if (result) setConfirmedName(name);
+            });
           }}
         />
       ) : null}
@@ -218,6 +232,11 @@ export default function HallNotificationsView({
           }
         />
       ) : null}
+
+      <DepositConfirmedModal
+        requesterName={confirmedName}
+        onClose={() => setConfirmedName(null)}
+      />
 
       <AcceptConfirmModal
         open={Boolean(acceptTarget)}
@@ -267,6 +286,50 @@ export default function HallNotificationsView({
         message={t("owner.notifications.rejectSuccess")}
         onClose={() => setRejectToast(false)}
       />
+      {rejectedChat ? (
+        <div
+          className="fixed inset-0 z-[130] flex items-end justify-center sm:items-center sm:p-4"
+          data-testid="owner-reject-chat-followup"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-[rgba(40,25,20,0.4)]"
+            aria-label={t("common.close")}
+            onClick={() => setRejectedChat(null)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative z-10 w-full max-w-sm rounded-t-2xl bg-white p-5 text-center shadow-[0_24px_60px_rgba(60,35,30,0.18)] sm:rounded-2xl"
+          >
+            <p className="text-sm leading-7 text-[var(--wesal-text)]">
+              {t("owner.notifications.rejectSuccess")}
+            </p>
+            <button
+              type="button"
+              className="btn-primary mt-4 min-h-11 w-full"
+              disabled={seekerChat.opening}
+              onClick={() => {
+                void seekerChat.openWithSeeker(
+                  rejectedChat.hallId || hallId,
+                  rejectedChat.requesterUserId,
+                );
+              }}
+            >
+              {seekerChat.opening
+                ? t("owner.notifications.chatWithSeekerOpening")
+                : t("owner.notifications.chatWithSeeker")}
+            </button>
+            <button
+              type="button"
+              className="btn-outline mt-2 min-h-11 w-full"
+              onClick={() => setRejectedChat(null)}
+            >
+              {t("common.close")}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

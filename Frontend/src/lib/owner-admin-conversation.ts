@@ -1,14 +1,13 @@
-import { classifyAdminMessageCategory } from "@/lib/admin-message-category";
-import { isPaymentReceiptNotice } from "@/lib/chat-image-message";
+import { t } from "@/i18n";
+import { conversationPreviewTitle } from "@/lib/conversation-display";
+import type { UiLang } from "@/lib/language";
 import { conversationTimeValue } from "@/lib/conversation-mapper";
-import { isSubscriptionExpiryWarningContent } from "@/lib/subscription-expiry-warning-message";
 import type { ConversationSummary } from "@/types/messages";
 
 const ADMIN_NAME =
-  /^(الإدارة|ادارة|إدارة المنصة|Admin|Administrator|Wesal Admin|مشرف)\b/i;
+  /^(الإدارة|ادارة|إدارة المنصة|إدارة وصال|Admin|Administrator|Wesal Admin|مشرف)(\b|$)/i;
 
-const ADMIN_PREVIEW =
-  /تم اعتماد قاعتك|تم تأكيد دفع اشتراك|يجب دفع الاشتراك|إثبات الدفع|تم رفض صالة|تم رفض القاعة/;
+const PLATFORM_PARTICIPANT_ID = /^(system|admin)$/i;
 
 function hallKey(item: ConversationSummary): string {
   return (item.hallId ?? "").trim().toLowerCase();
@@ -18,36 +17,32 @@ function participantKey(item: ConversationSummary): string {
   return (item.otherParticipantId ?? "").trim().toLowerCase();
 }
 
-function isSameAdminAcrossHalls(
-  item: ConversationSummary,
-  allItems: ConversationSummary[],
-): boolean {
-  const id = participantKey(item);
-  if (!id) return false;
-  const halls = new Set(
-    allItems
-      .filter((row) => participantKey(row) === id)
-      .map(hallKey)
-      .filter(Boolean),
-  );
-  return halls.size > 1;
-}
-
-/** True when this inbox row is the owner ↔ Admin thread, not a seeker chat. */
+/**
+ * True when this inbox row is the owner ↔ Admin thread, not a seeker chat.
+ * A booker's deposit receipt, or the same seeker writing about more than one hall,
+ * must keep that seeker's own name.
+ */
 export function isOwnerAdminConversation(
   item: ConversationSummary,
-  allItems: ConversationSummary[] = [],
+  _allItems: ConversationSummary[] = [],
 ): boolean {
-  const preview = item.lastMessagePreview ?? "";
-  if (isPaymentReceiptNotice(preview)) return true;
-  if (isSubscriptionExpiryWarningContent(preview)) return true;
-  if (classifyAdminMessageCategory(preview, item.otherParticipantId) === "payment_notice") {
-    return true;
-  }
-  if (ADMIN_PREVIEW.test(preview)) return true;
-  if (ADMIN_NAME.test((item.otherParticipantName ?? "").trim())) return true;
-  if (participantKey(item) === "system") return true;
-  return isSameAdminAcrossHalls(item, allItems);
+  if (PLATFORM_PARTICIPANT_ID.test(participantKey(item))) return true;
+  // Only the counterparty's own name. A booking receipt or a seeker message must not
+  // be relabeled "إدارة وصال" because the latest preview happens to mention the platform.
+  return ADMIN_NAME.test((item.otherParticipantName ?? "").trim());
+}
+
+/**
+ * Title shown to a hall owner for a conversation. Messages from the platform admins
+ * always appear under the administration's name, never under the individual admin's.
+ */
+export function ownerConversationTitle(
+  item: ConversationSummary,
+  lang: UiLang,
+  allItems: ConversationSummary[] = [],
+): string {
+  if (isOwnerAdminConversation(item, allItems)) return t("owner.messages.admin");
+  return conversationPreviewTitle(item, lang);
 }
 
 function oldestInPool(pool: ConversationSummary[]): ConversationSummary | null {

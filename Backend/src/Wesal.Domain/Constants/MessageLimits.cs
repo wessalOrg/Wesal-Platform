@@ -7,6 +7,8 @@ namespace Wesal.Domain.Constants;
 /// </summary>
 public static class MessageLimits
 {
+    public const int MaximumContentLength = 1000;
+    public const int NotificationPreviewLength = 160;
     /// <summary>
     /// The longest idempotency key a sender may supply, in characters. Matches the width of
     /// the <c>ClientRequestId</c> column.

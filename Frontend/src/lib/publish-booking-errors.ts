@@ -94,7 +94,12 @@ export function toPublishBookingError(err: unknown): PublishBookingError {
     });
   }
 
-  if (blob.includes("already published") || blob.includes("already booked") || blob.includes("منشور")) {
+  if (
+    blob.includes("already published") ||
+    blob.includes("already booked") ||
+    blob.includes("منشور") ||
+    blob.includes("deposit for this booking was already confirmed")
+  ) {
     return new PublishBookingError(backendMessage || "errors.owner.publish.conflict", status ?? 409, {
       kind: "conflict",
       resolvedStatus: "FullyBooked",

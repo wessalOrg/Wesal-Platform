@@ -1,4 +1,4 @@
-using Wesal.Application.Common.Interfaces;
+﻿using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
@@ -195,7 +195,7 @@ public class AuthorizationHallActionsShould
             => Task.CompletedTask;
     }
 
-    // Guest attempts → 401
+    // Guest attempts â†’ 401
     [Fact]
     public async Task Booking_Guest_ThrowsUnauthorized()
     {
@@ -222,7 +222,7 @@ public class AuthorizationHallActionsShould
     {
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
-        var service = new CommentService(new FakeCommentRepository(), hallRepo, new FakeCurrentUserService(null, false));
+        var service = new CommentService(new FakeCommentRepository(), hallRepo, new FakeCurrentUserService(null, false), new PassThroughApprovalGuard());
         await Assert.ThrowsAsync<UnauthorizedException>(() => service.CreateCommentAsync(new CreateCommentRequest { HallId = hall.Id, Content = "Nice" }));
     }
 
@@ -231,7 +231,7 @@ public class AuthorizationHallActionsShould
     {
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
-        var service = new RatingService(new FakeRatingRepository(), hallRepo, new FakeCurrentUserService(null, false));
+        var service = new RatingService(new FakeRatingRepository(), hallRepo, new FakeCurrentUserService(null, false), new PassThroughApprovalGuard());
         await Assert.ThrowsAsync<UnauthorizedException>(() => service.CreateRatingAsync(new CreateRatingRequest { HallId = hall.Id, Value = 5 }));
     }
 
@@ -261,7 +261,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
         var commentRepo = new FakeCommentRepository();
-        var service = new CommentService(commentRepo, hallRepo, new FakeCurrentUserService("user-1", true, ApplicationRoles.RegisteredUser));
+        var service = new CommentService(commentRepo, hallRepo, new FakeCurrentUserService("user-1", true, ApplicationRoles.RegisteredUser), new PassThroughApprovalGuard());
         var result = await service.CreateCommentAsync(new CreateCommentRequest { HallId = hall.Id, Content = "Great hall!" });
         Assert.Equal(hall.Id, result.HallId);
         Assert.Single(commentRepo.Comments);
@@ -273,7 +273,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
         var ratingRepo = new FakeRatingRepository();
-        var service = new RatingService(ratingRepo, hallRepo, new FakeCurrentUserService("user-1", true, ApplicationRoles.RegisteredUser));
+        var service = new RatingService(ratingRepo, hallRepo, new FakeCurrentUserService("user-1", true, ApplicationRoles.RegisteredUser), new PassThroughApprovalGuard());
         var result = await service.CreateRatingAsync(new CreateRatingRequest { HallId = hall.Id, Value = 4 });
         Assert.Equal(4, result.Value);
     }
@@ -357,7 +357,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
         var commentRepo = new FakeCommentRepository();
-        var service = new CommentService(commentRepo, hallRepo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
+        var service = new CommentService(commentRepo, hallRepo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner), new PassThroughApprovalGuard());
         await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateCommentAsync(new CreateCommentRequest { HallId = hall.Id, Content = "Nice" }));
         Assert.Empty(commentRepo.Comments);
     }
@@ -368,7 +368,7 @@ public class AuthorizationHallActionsShould
         var hall = CreateHall(Guid.NewGuid(), "owner-1");
         var hallRepo = new FakeHallRepository(); hallRepo.Halls.Add(hall);
         var ratingRepo = new FakeRatingRepository();
-        var service = new RatingService(ratingRepo, hallRepo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner));
+        var service = new RatingService(ratingRepo, hallRepo, new FakeCurrentUserService("owner-1", true, ApplicationRoles.HallOwner), new PassThroughApprovalGuard());
         await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateRatingAsync(new CreateRatingRequest { HallId = hall.Id, Value = 5 }));
         Assert.Empty(ratingRepo.Ratings);
     }

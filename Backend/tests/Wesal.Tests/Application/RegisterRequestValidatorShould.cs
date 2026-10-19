@@ -58,6 +58,31 @@ public class RegisterRequestValidatorShould
     }
 
     [Fact]
+    public async Task Valid_EventCoordinator_Passes()
+    {
+        var request = CreateValidRequest(accountType: AccountTypes.EventCoordinator);
+        var result = await _validator.ValidateAsync(request);
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task Valid_Photographer_Passes()
+    {
+        var request = CreateValidRequest(accountType: AccountTypes.Photographer);
+        var result = await _validator.ValidateAsync(request);
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [InlineData("eventcoordinator")]
+    [InlineData("photographer")]
+    public async Task Validate_NewAccountTypeSpellings_CaseInsensitive_Pass(string accountType)
+    {
+        var result = await _validator.ValidateAsync(CreateRequest(accountType: accountType));
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
     public async Task Validate_ValidRegularUserRequest_Passes()
     {
         var result = await _validator.ValidateAsync(CreateRequest(accountType: AccountTypes.RegularUser));

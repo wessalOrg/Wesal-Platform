@@ -13,6 +13,7 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Admin;
 using Wesal.Infrastructure.Conversations;
+using Wesal.Infrastructure.Documents;
 using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.OwnerDashboard;
@@ -108,7 +109,7 @@ public class OwnerEditAdminVisibilityShould : IDisposable
             new ConversationRepository(_context), new MessageRepository(_context),
             new FakeCurrentUser("admin-1", true, ApplicationRoles.Admin),
             new FakeDateTime(new DateTimeOffset(2026, 8, 15, 10, 0, 0, TimeSpan.Zero)),
-        new FakeNotifier(), _userManager, new FakeDocumentStorage(),
+        new FakeNotifier(), _userManager, new LocalIdentityDocumentStore(new FakeDocumentStorage()),
         new FakeNotificationService(), new RecordingNotificationDispatcher(),
         NullLogger<AdminHallReviewService>.Instance);
 

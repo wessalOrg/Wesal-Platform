@@ -4,6 +4,7 @@ import {
   HALL_OWNER_HALLS_PATH,
   HALL_OWNER_MANAGEMENT_PATH,
   HALL_OWNER_MESSAGES_PATH,
+  HALL_OWNER_NOTIFICATIONS_PATH,
   HALL_OWNER_PROFILE_PATH,
 } from "@/lib/account-profile-path";
 
@@ -12,6 +13,7 @@ export const OWNER_ACCOUNT_PATH = HALL_OWNER_PROFILE_PATH;
 export const OWNER_HALLS_PATH = HALL_OWNER_HALLS_PATH;
 export const OWNER_CALENDAR_PATH = HALL_OWNER_CALENDAR_PATH;
 export const OWNER_MESSAGES_PATH = HALL_OWNER_MESSAGES_PATH;
+export const OWNER_NOTIFICATIONS_PATH = HALL_OWNER_NOTIFICATIONS_PATH;
 
 /**
  * Primary Hall Owner dashboard sidebar links (seeker-style shell).
@@ -40,6 +42,12 @@ export const HALL_OWNER_DASHBOARD_NAV = [
     id: "messages",
     href: OWNER_MESSAGES_PATH,
     labelKey: "owner.nav.messages",
+    match: "prefix" as const,
+  },
+  {
+    id: "notifications",
+    href: OWNER_NOTIFICATIONS_PATH,
+    labelKey: "owner.nav.notifications",
     match: "prefix" as const,
   },
   {

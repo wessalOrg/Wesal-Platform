@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Wesal.Domain.Entities;
+using Wesal.Domain.Enums;
 using Wesal.Infrastructure.Identity;
 
 namespace Wesal.Persistence.Data;
@@ -37,6 +38,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<AISession> AISessions => Set<AISession>();
 
+    public DbSet<AiConversationSession> AiConversationSessions => Set<AiConversationSession>();
+
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
 
     public DbSet<Booking> Bookings => Set<Booking>();
@@ -49,6 +52,34 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<BookingSlot> BookingSlots => Set<BookingSlot>();
 
     public DbSet<ConversationReadState> ConversationReadStates => Set<ConversationReadState>();
+
+    public DbSet<AiKnowledgeArticle> AiKnowledgeArticles => Set<AiKnowledgeArticle>();
+
+    public DbSet<AiKnowledgeAlias> AiKnowledgeAliases => Set<AiKnowledgeAlias>();
+
+    public DbSet<AiKnowledgeRevision> AiKnowledgeRevisions => Set<AiKnowledgeRevision>();
+
+    public DbSet<AiKnowledgeGapCluster> AiKnowledgeGapClusters => Set<AiKnowledgeGapCluster>();
+
+    /// <summary>Event Coordinator setup submissions (WESAL coordinator setup).</summary>
+    public DbSet<CoordinatorProfile> CoordinatorProfiles => Set<CoordinatorProfile>();
+
+    /// <summary>Photographer setup submissions (WESAL photographer setup).</summary>
+    public DbSet<PhotographerProfile> PhotographerProfiles => Set<PhotographerProfile>();
+
+    /// <summary>Durably persisted notifications (minimum reusable support, WESAL coordinator setup).</summary>
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+
+    public DbSet<Post> Posts => Set<Post>();
+    public DbSet<PostShare> PostShares => Set<PostShare>();
+    public DbSet<UserPublishingRestriction> UserPublishingRestrictions => Set<UserPublishingRestriction>();
+    public DbSet<PostImage> PostImages => Set<PostImage>();
+    public DbSet<PostComment> PostComments => Set<PostComment>();
+    public DbSet<PostFavorite> PostFavorites => Set<PostFavorite>();
+    public DbSet<ProfessionalOffer> ProfessionalOffers => Set<ProfessionalOffer>();
+    public DbSet<ProfessionalOfferImage> ProfessionalOfferImages => Set<ProfessionalOfferImage>();
+    public DbSet<HallOffer> HallOffers => Set<HallOffer>();
+    public DbSet<ContentViewEvent> ContentViewEvents => Set<ContentViewEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -70,8 +101,106 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(user => user.FullName).HasMaxLength(150);
             entity.Property(user => user.IdentityDocumentUrl).HasMaxLength(500);
             entity.Property(user => user.ProfilePictureUrl).HasMaxLength(500);
+            entity.Property(user => user.ProfilePictureContentType).HasMaxLength(100);
+            entity.Property(user => user.ProfilePictureStorageKey).HasMaxLength(500);
+            entity.Property(user => user.ContentPublishingRestrictedUntil).HasColumnType("timestamp with time zone");
             entity.Property(user => user.IdentityDocumentUploadedAt).HasColumnType("timestamp with time zone");
             entity.HasIndex(user => user.PhoneNumber).IsUnique().HasFilter("\"PhoneNumber\" IS NOT NULL");
+
+            // WESAL coordinator/photographer registration: setup-completion and
+            // account-approval state. Schema defaults match the entity defaults
+            // (complete + approved) so any row inserted without these columns
+            // (raw SQL, a future seeder) agrees with the model.
+            entity.Property(user => user.IsSetupComplete).HasDefaultValue(true);
+            entity.Property(user => user.ApprovalStatus).HasDefaultValue(AccountApprovalStatus.Approved);
+        });
+
+        builder.Entity<AiKnowledgeArticle>(entity =>
+        {
+            entity.ToTable("AiKnowledgeArticles");
+            entity.HasKey(article => article.Id);
+            entity.Property(article => article.Key).IsRequired().HasMaxLength(120);
+            entity.Property(article => article.Title).IsRequired().HasMaxLength(200);
+            entity.Property(article => article.Category).IsRequired().HasMaxLength(80);
+            entity.Property(article => article.AnswerAr).IsRequired().HasMaxLength(12000);
+            entity.Property(article => article.AnswerEn).HasMaxLength(12000);
+            entity.Property(article => article.Source).IsRequired().HasMaxLength(500);
+            entity.Property(article => article.PublicationStatus).HasConversion<string>().HasMaxLength(24);
+            entity.Property(article => article.VerificationStatus).HasConversion<string>().HasMaxLength(32);
+            entity.Property(article => article.EffectiveFrom).HasColumnType("date");
+            entity.Property(article => article.EffectiveUntil).HasColumnType("date");
+            entity.Property(article => article.ReviewAt).HasColumnType("date");
+            entity.Property(article => article.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(article => article.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(article => article.PublishedAt).HasColumnType("timestamp with time zone");
+            entity.Property(article => article.CreatedByUserId).HasMaxLength(450);
+            entity.Property(article => article.UpdatedByUserId).HasMaxLength(450);
+            entity.Property(article => article.OverridesBuiltInKey).HasMaxLength(160);
+            entity.Property(article => article.DraftSnapshotJson).HasColumnType("text");
+            entity.Property(article => article.NormalizedSearchText).HasColumnType("text");
+            entity.HasIndex(article => article.Key).IsUnique();
+            entity.HasIndex(article => new { article.PublicationStatus, article.EffectiveFrom, article.EffectiveUntil });
+            entity.HasIndex(article => article.OverridesBuiltInKey);
+        });
+
+        builder.Entity<AiKnowledgeAlias>(entity =>
+        {
+            entity.ToTable("AiKnowledgeAliases");
+            entity.HasKey(alias => alias.Id);
+            entity.Property(alias => alias.Language).IsRequired().HasMaxLength(5);
+            entity.Property(alias => alias.Text).IsRequired().HasMaxLength(200);
+            entity.Property(alias => alias.NormalizedText).IsRequired().HasMaxLength(240);
+            entity.Property(alias => alias.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(alias => new { alias.ArticleId, alias.NormalizedText }).IsUnique();
+            entity.HasIndex(alias => alias.NormalizedText);
+            entity.HasOne(alias => alias.Article)
+                .WithMany(article => article.Aliases)
+                .HasForeignKey(alias => alias.ArticleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<AiKnowledgeRevision>(entity =>
+        {
+            entity.ToTable("AiKnowledgeRevisions");
+            entity.HasKey(revision => revision.Id);
+            entity.Property(revision => revision.Action).IsRequired().HasMaxLength(32);
+            entity.Property(revision => revision.SnapshotJson).IsRequired().HasColumnType("text");
+            entity.Property(revision => revision.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(revision => revision.CreatedByUserId).HasMaxLength(450);
+            entity.Property(revision => revision.ChangeNote).IsRequired().HasMaxLength(500);
+            entity.HasIndex(revision => new { revision.ArticleId, revision.Version }).IsUnique();
+            entity.HasOne(revision => revision.Article)
+                .WithMany(article => article.Revisions)
+                .HasForeignKey(revision => revision.ArticleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<AiKnowledgeGapCluster>(entity =>
+        {
+            entity.ToTable("AiKnowledgeGapClusters");
+            entity.HasKey(cluster => cluster.Id);
+            entity.Property(cluster => cluster.CanonicalQuestion).IsRequired().HasMaxLength(500);
+            entity.Property(cluster => cluster.NormalizedKey).IsRequired().HasMaxLength(500);
+            entity.Property(cluster => cluster.Language).IsRequired().HasMaxLength(5);
+            entity.Property(cluster => cluster.Status).HasConversion<string>().HasMaxLength(16);
+            entity.Property(cluster => cluster.Reason).HasConversion<string>().HasMaxLength(32);
+            entity.Property(cluster => cluster.SampleQuestionsJson).IsRequired().HasColumnType("text");
+            entity.Property(cluster => cluster.FirstSeenAt).HasColumnType("timestamp with time zone");
+            entity.Property(cluster => cluster.LastSeenAt).HasColumnType("timestamp with time zone");
+            entity.Property(cluster => cluster.ResolvedAt).HasColumnType("timestamp with time zone");
+            entity.Property(cluster => cluster.IgnoredAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(cluster => new { cluster.Status, cluster.LastSeenAt });
+            entity.HasIndex(cluster => cluster.NormalizedKey)
+                .IsUnique()
+                .HasFilter("\"Status\" IN ('New', 'Reviewed')");
+            entity.HasOne(cluster => cluster.LinkedArticle)
+                .WithMany()
+                .HasForeignKey(cluster => cluster.LinkedArticleId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<AiKnowledgeGapCluster>()
+                .WithMany()
+                .HasForeignKey(cluster => cluster.MergedIntoClusterId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         builder.Entity<Hall>(entity =>
@@ -211,9 +340,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.Property(conversation => conversation.SenderUserId).IsRequired().HasMaxLength(450);
             entity.Property(conversation => conversation.HallOwnerId).IsRequired().HasMaxLength(450);
+            entity.Property(conversation => conversation.Kind).HasDefaultValue(ConversationKind.HallBooking);
+            entity.HasIndex(conversation => new { conversation.SenderUserId, conversation.HallOwnerId })
+                .IsUnique().HasFilter("\"Kind\" = 2");
 
             entity.HasIndex(conversation => conversation.HallId);
 
+            // HallId is Guid?: a hall-less Admin request thread (Tasks 5/6) is a real
+            // conversation with no venue behind it, so the FK must be optional. Nothing else
+            // is configured here — conventions already infer the nullable relationship from
+            // the property, and the cascade still applies to the rows that do name a hall.
             entity.HasOne(conversation => conversation.Hall)
                 .WithMany()
                 .HasForeignKey(conversation => conversation.HallId)
@@ -222,7 +358,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
         builder.Entity<Message>(entity =>
         {
-            entity.ToTable("Messages");
+            entity.ToTable("Messages", table => table.HasCheckConstraint("CK_Messages_OneContext", "\"ContextPostId\" IS NULL OR \"ContextOfferId\" IS NULL"));
 
             entity.Property(message => message.SenderUserId).IsRequired().HasMaxLength(450);
             entity.Property(message => message.Content).HasMaxLength(1000);
@@ -234,6 +370,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(message => message.AttachmentUrl).HasMaxLength(500);
             entity.Property(message => message.AttachmentContentType).HasMaxLength(100);
             entity.Property(message => message.AttachmentFileName).HasMaxLength(256);
+            entity.Property(message => message.ContextTitle).HasMaxLength(200);
+            entity.Property(message => message.ContextText).HasMaxLength(500);
+            entity.Property(message => message.ContextImageUrl).HasMaxLength(1000);
+            entity.Property(message => message.ContextOwnerUserId).HasMaxLength(450);
 
             entity.HasIndex(message => new { message.ConversationId, message.CreatedAt });
             entity.HasIndex(message => new { message.SenderUserId, message.ClientRequestId }).IsUnique();
@@ -265,6 +405,26 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(session => session.CreatedAt).HasColumnType("timestamp with time zone");
 
             entity.Property(session => session.LastAccessedAt).HasColumnType("timestamp with time zone");
+        });
+
+        builder.Entity<AiConversationSession>(entity =>
+        {
+            entity.ToTable("AiConversationSessions");
+            entity.HasKey(session => session.SessionId);
+            entity.Property(session => session.SessionId).ValueGeneratedNever();
+            entity.Property(session => session.UserId).HasMaxLength(450);
+            entity.Property(session => session.Language).IsRequired().HasMaxLength(8);
+            entity.Property(session => session.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(session => session.LastActivityAt).HasColumnType("timestamp with time zone");
+            entity.Property(session => session.ExpiresAt).HasColumnType("timestamp with time zone");
+            entity.Property(session => session.TurnsJson).IsRequired().HasMaxLength(20_000);
+            entity.Property(session => session.LastIntentJson).HasMaxLength(8_000);
+            entity.Property(session => session.LastHallsJson).HasMaxLength(4_000);
+            entity.Property(session => session.LastHallJson).HasMaxLength(1_000);
+            entity.Property(session => session.ConversationStateJson).HasMaxLength(8_000);
+            entity.Property(session => session.Revision).IsConcurrencyToken();
+            entity.HasIndex(session => session.ExpiresAt);
+            entity.HasIndex(session => session.UserId);
         });
 
         builder.Entity<RevokedToken>(entity =>
@@ -343,6 +503,220 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
                 .WithMany()
                 .HasForeignKey(state => state.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<CoordinatorProfile>(entity =>
+        {
+            entity.ToTable("CoordinatorProfiles", table =>
+            {
+                table.HasCheckConstraint("CK_CoordinatorProfiles_BusinessType", "\"BusinessType\" IN (1, 2)");
+            });
+
+            entity.Property(profile => profile.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(profile => profile.ShopName).HasMaxLength(200);
+            entity.Property(profile => profile.ShopLocation).HasMaxLength(500);
+            entity.Property(profile => profile.ShopPhotoUrl).HasMaxLength(500);
+            entity.Property(profile => profile.OnlineStoreName).HasMaxLength(200);
+            entity.Property(profile => profile.WorkPhoto1Url).HasMaxLength(500);
+            entity.Property(profile => profile.WorkPhoto2Url).HasMaxLength(500);
+            entity.Property(profile => profile.PhoneNumber).IsRequired().HasMaxLength(30);
+            entity.Property(profile => profile.IdentityDocumentUrl).IsRequired().HasMaxLength(500);
+            entity.Property(profile => profile.SubmittedAt).HasColumnType("timestamp with time zone");
+
+            // One setup submission per account: the unique index is the authoritative
+            // duplicate guard behind the service's friendly conflict check.
+            entity.HasIndex(profile => profile.UserId).IsUnique();
+        });
+
+        builder.Entity<PhotographerProfile>(entity =>
+        {
+            entity.ToTable("PhotographerProfiles");
+
+            entity.Property(profile => profile.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(profile => profile.HasStudio).IsRequired();
+            entity.Property(profile => profile.StudioName).HasMaxLength(200);
+            entity.Property(profile => profile.StudioLocation).HasMaxLength(500);
+            entity.Property(profile => profile.DetailedStudioLocation).HasMaxLength(500);
+            // Administrator-only legal name (no-studio branch): a protected column that
+            // is never part of any client-facing projection.
+            entity.Property(profile => profile.FullName).HasMaxLength(150);
+            entity.Property(profile => profile.PhoneNumber).IsRequired().HasMaxLength(30);
+            entity.Property(profile => profile.IdentityDocumentUrl).IsRequired().HasMaxLength(500);
+            entity.Property(profile => profile.SubmittedAt).HasColumnType("timestamp with time zone");
+
+            // One setup submission per account: the unique index is the authoritative
+            // duplicate guard behind the service's friendly conflict check.
+            entity.HasIndex(profile => profile.UserId).IsUnique();
+        });
+
+        builder.Entity<UserNotification>(entity =>
+        {
+            entity.ToTable("UserNotifications");
+
+            entity.Property(notification => notification.RecipientUserId).IsRequired().HasMaxLength(450);
+            entity.Property(notification => notification.Language).IsRequired().HasMaxLength(5);
+            entity.Property(notification => notification.Title).IsRequired().HasMaxLength(200);
+            entity.Property(notification => notification.Body).IsRequired().HasMaxLength(2000);
+            entity.Property(notification => notification.ActionLabel).HasMaxLength(100);
+            entity.Property(notification => notification.TargetId).HasMaxLength(100);
+            entity.Property(notification => notification.GroupSenderUserId).HasMaxLength(450);
+            entity.Property(notification => notification.SenderName).HasMaxLength(200);
+            entity.Property(notification => notification.SenderAvatarUrl).HasMaxLength(1000);
+            entity.Property(notification => notification.MessagePreview).HasMaxLength(160);
+            entity.Property(notification => notification.ConversationId);
+            entity.HasIndex(notification => new { notification.RecipientUserId, notification.ConversationId, notification.GroupSenderUserId, notification.ReadAt });
+            entity.Property(notification => notification.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(notification => notification.ReadAt).HasColumnType("timestamp with time zone");
+
+            entity.HasIndex(notification => new { notification.RecipientUserId, notification.CreatedAt });
+        });
+
+        builder.Entity<UserPublishingRestriction>(entity =>
+        {
+            entity.ToTable("UserPublishingRestrictions");
+            entity.Property(row => row.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(row => row.CreatedByAdminId).IsRequired().HasMaxLength(450);
+            entity.Property(row => row.Reason).HasMaxLength(1000);
+            entity.Property(row => row.StartsAt).HasColumnType("timestamp with time zone");
+            entity.Property(row => row.EndsAt).HasColumnType("timestamp with time zone");
+            entity.Property(row => row.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(row => row.LiftedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(row => new { row.UserId, row.EndsAt });
+            entity.HasIndex(row => row.EndsAt).HasFilter("\"LiftedAt\" IS NULL");
+            entity.HasIndex(row => row.UserId).IsUnique().HasFilter("\"LiftedAt\" IS NULL");
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(row => row.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Post>(entity =>
+        {
+            entity.ToTable("Posts", table =>
+            {
+                table.HasCheckConstraint("CK_Posts_Price", "\"Price\" IS NULL OR \"Price\" >= 0");
+                table.HasCheckConstraint("CK_Posts_SaveCount", "\"SaveCount\" >= 0");
+                  table.HasCheckConstraint("CK_Posts_ShareCount", "\"ShareCount\" >= 0");
+            });
+            entity.Property(post => post.OwnerUserId).IsRequired().HasMaxLength(450);
+            entity.Property(post => post.Content).HasMaxLength(2000);
+            entity.Property(post => post.Price).HasColumnType("numeric(12,2)");
+            entity.Property(post => post.SaveCount).HasDefaultValue(0);
+              entity.Property(post => post.ShareCount).HasDefaultValue(0);
+            entity.Property(post => post.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(post => post.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(post => new { post.OwnerUserId, post.CreatedAt });
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(post => post.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+          builder.Entity<PostShare>(entity =>
+          {
+              entity.ToTable("PostShares");
+              entity.Property(share => share.UserId).IsRequired().HasMaxLength(450);
+              entity.Property(share => share.UtcDate).HasColumnType("date");
+              entity.Property(share => share.CreatedAt).HasColumnType("timestamp with time zone");
+              entity.HasIndex(share => new { share.UserId, share.PostId, share.UtcDate }).IsUnique();
+              entity.HasOne<Post>().WithMany().HasForeignKey(share => share.PostId).OnDelete(DeleteBehavior.Cascade);
+          });
+
+        builder.Entity<PostImage>(entity =>
+        {
+            entity.ToTable("PostImages");
+            entity.Property(image => image.StorageKey).IsRequired().HasMaxLength(500);
+            entity.Property(image => image.ContentType).IsRequired().HasMaxLength(100);
+            entity.HasIndex(image => new { image.PostId, image.Order }).IsUnique();
+            entity.HasOne(image => image.Post).WithMany(post => post.Images).HasForeignKey(image => image.PostId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<PostComment>(entity =>
+        {
+            entity.ToTable("PostComments", table => table.HasCheckConstraint("CK_PostComments_TopLevelReply", "(\"ParentCommentId\" IS NULL AND \"ReplyToCommentId\" IS NULL) OR (\"ParentCommentId\" IS NOT NULL AND \"ReplyToCommentId\" IS NOT NULL)"));
+            entity.Property(comment => comment.AuthorUserId).IsRequired().HasMaxLength(450);
+            entity.Property(comment => comment.Text).IsRequired().HasMaxLength(1000);
+            entity.Property(comment => comment.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(comment => comment.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(comment => new { comment.PostId, comment.CreatedAt });
+            entity.HasIndex(comment => comment.ParentCommentId);
+            entity.HasOne<Post>().WithMany().HasForeignKey(comment => comment.PostId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(comment => comment.AuthorUserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(comment => comment.ParentComment).WithMany().HasForeignKey(comment => comment.ParentCommentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<PostFavorite>(entity =>
+        {
+            entity.ToTable("PostFavorites");
+            entity.Property(favorite => favorite.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(favorite => favorite.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(favorite => new { favorite.UserId, favorite.PostId }).IsUnique();
+            entity.HasIndex(favorite => new { favorite.UserId, favorite.CreatedAt });
+            entity.HasOne<Post>().WithMany().HasForeignKey(favorite => favorite.PostId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(favorite => favorite.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ProfessionalOffer>(entity =>
+        {
+            entity.ToTable("ProfessionalOffers", table =>
+            {
+                table.HasCheckConstraint("CK_ProfessionalOffers_Prices", "\"OldPrice\" > 0 AND \"OfferPrice\" > 0 AND \"OfferPrice\" < \"OldPrice\" AND (\"PriceBox\" IS NULL OR \"PriceBox\" >= 0)");
+                table.HasCheckConstraint("CK_ProfessionalOffers_Window", "\"EndsAt\" > \"StartsAt\"");
+            });
+            entity.Property(offer => offer.OwnerUserId).IsRequired().HasMaxLength(450);
+            entity.Property(offer => offer.Content).HasMaxLength(2000);
+            entity.Property(offer => offer.OldPrice).HasColumnType("numeric(12,2)");
+            entity.Property(offer => offer.OfferPrice).HasColumnType("numeric(12,2)");
+            entity.Property(offer => offer.PriceBox).HasColumnType("numeric(12,2)");
+            entity.Property(offer => offer.StartsAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.EndsAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.StoppedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.ReminderSentAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.ExpiredProcessedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(offer => new { offer.OwnerUserId, offer.CreatedAt });
+            entity.HasIndex(offer => new { offer.StoppedAt, offer.StartsAt, offer.EndsAt });
+            entity.HasIndex(offer => new { offer.EndsAt, offer.ReminderSentAt, offer.ExpiredProcessedAt });
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(offer => offer.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ProfessionalOfferImage>(entity =>
+        {
+            entity.ToTable("ProfessionalOfferImages");
+            entity.Property(image => image.StorageKey).IsRequired().HasMaxLength(500);
+            entity.Property(image => image.ContentType).IsRequired().HasMaxLength(100);
+            entity.HasIndex(image => new { image.OfferId, image.Order }).IsUnique();
+            entity.HasOne(image => image.Offer).WithMany(offer => offer.Images).HasForeignKey(image => image.OfferId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<HallOffer>(entity =>
+        {
+            entity.ToTable("HallOffers", table =>
+            {
+                table.HasCheckConstraint("CK_HallOffers_Prices", "\"OldBookingPrice\" > 0 AND \"OfferPrice\" > 0 AND \"OfferPrice\" < \"OldBookingPrice\"");
+                table.HasCheckConstraint("CK_HallOffers_Window", "\"EndsAt\" > \"StartsAt\"");
+            });
+            entity.Property(offer => offer.OldBookingPrice).HasColumnType("numeric(12,2)");
+            entity.Property(offer => offer.OfferPrice).HasColumnType("numeric(12,2)");
+            entity.Property(offer => offer.StartsAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.EndsAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.StoppedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.ExpiredProcessedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(offer => new { offer.HallId, offer.StartsAt, offer.EndsAt });
+            entity.HasOne(offer => offer.Hall).WithMany().HasForeignKey(offer => offer.HallId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ContentViewEvent>(entity =>
+        {
+            entity.ToTable("ContentViewEvents", table => table.HasCheckConstraint(
+                "CK_ContentViewEvents_OneTarget", "(\"PostId\" IS NOT NULL AND \"ProfileUserId\" IS NULL) OR (\"PostId\" IS NULL AND \"ProfileUserId\" IS NOT NULL)"));
+            entity.HasKey(view => view.Id);
+            entity.Property(view => view.OwnerUserId).IsRequired().HasMaxLength(450);
+            entity.Property(view => view.ProfileUserId).HasMaxLength(450);
+            entity.Property(view => view.ViewedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(view => new { view.OwnerUserId, view.ViewedAt });
+            entity.HasIndex(view => view.PostId);
+            entity.HasIndex(view => view.ProfileUserId);
+            entity.HasOne<Post>().WithMany().HasForeignKey(view => view.PostId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(view => view.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(view => view.ProfileUserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

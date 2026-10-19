@@ -16,7 +16,9 @@ import {
 } from "@/services/conversations";
 
 /**
- * Starts or reuses POST /halls/{hallId}/conversations, then opens the inbox/thread.
+ * Starts or reuses POST /halls/{hallId}/conversations, then opens that thread
+ * in the navbar messages panel. Falls back to the messages page only when the
+ * panel is unavailable.
  */
 export function useStartHallConversation() {
   const router = useRouter();
@@ -31,7 +33,12 @@ export function useStartHallConversation() {
   const start = useCallback(
     async (
       hallId: string,
-      options?: { onOpened?: () => void; loginHref?: string; draft?: string },
+      options?: {
+        onOpened?: () => void;
+        loginHref?: string;
+        draft?: string;
+        attach?: boolean;
+      },
     ) => {
       if (!hallId || inFlight.current || starting) return null;
       inFlight.current = true;
@@ -40,19 +47,16 @@ export function useStartHallConversation() {
       setBlocked(false);
       try {
         const thread = await createHallConversation(hallId);
-        if (inbox?.canUseMessaging) {
-          if (options?.draft?.trim()) {
-            inbox.openInbox(thread.conversationId, options.draft);
-            inbox.closeInbox();
-          } else {
-            inbox.selectConversation(thread.conversationId);
-          }
-        }
         options?.onOpened?.();
+        if (inbox?.canUseMessaging) {
+          inbox.openInbox(thread.conversationId, options?.draft);
+          return thread;
+        }
         router.push(
           conversationMessagesPath(session.role, {
             conversationId: thread.conversationId,
             hallId: thread.hallId || hallId,
+            attach: options?.attach,
           }),
         );
         return thread;

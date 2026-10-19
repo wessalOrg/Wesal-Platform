@@ -13,14 +13,41 @@ public static class DocumentPath
     /// <summary>URL segment used for conversation message attachments.</summary>
     private const string ConversationsSegment = "conversations";
 
+    /// <summary>URL segment used for event-coordinator setup documents.</summary>
+    private const string CoordinatorsSegment = "coordinators";
+
+    /// <summary>URL segment used for photographer setup documents.</summary>
+    private const string PhotographersSegment = "photographers";
+    private const string PublicContentSegment = "public-content";
+
     public static string OwnerIdentityRelativeUrl(string ownerId, string fileName)
         => $"/documents/{OwnersSegment}/{ownerId}/{fileName}";
+
+    /// <summary>
+    /// Relative URL of an event coordinator's setup document (shop photo, work photo, or
+    /// personal ID document). Lives in the same private document area as owner identity
+    /// documents — never the public media root.
+    /// </summary>
+    public static string CoordinatorDocumentRelativeUrl(string coordinatorUserId, string fileName)
+        => $"/documents/{CoordinatorsSegment}/{coordinatorUserId}/{fileName}";
+
+    /// <summary>
+    /// Relative URL of a photographer's setup document (personal ID document). Lives in
+    /// the same private document area as owner identity documents — never the public
+    /// media root.
+    /// </summary>
+    public static string PhotographerDocumentRelativeUrl(string photographerUserId, string fileName)
+        => $"/documents/{PhotographersSegment}/{photographerUserId}/{fileName}";
 
     /// <summary>
     /// Relative URL of a conversation message's image attachment (WESAL-TASK-4, Edit 4).
     /// </summary>
     public static string MessageAttachmentRelativeUrl(Guid conversationId, string fileName)
         => $"/documents/{ConversationsSegment}/{conversationId}/attachments/{fileName}";
+
+    /// <summary>Storage-only path for post and offer media. Public access is mediated by item endpoints.</summary>
+    public static string PublicContentRelativeUrl(string ownerId, string fileName)
+        => $"/documents/{PublicContentSegment}/{ownerId}/{fileName}";
 
     /// <summary>
     /// Resolves a persisted relative URL to a full path under the given storage root.
@@ -56,5 +83,172 @@ public static class DocumentPath
 
         var name = relativeUrl.Split('/').LastOrDefault();
         return string.IsNullOrWhiteSpace(name) ? null : name;
+    }
+
+    /// <summary>
+    /// Maps a persisted relative URL to the content type the document was uploaded as.
+    /// Upload validation restricts identity documents to these five extensions, so an
+    /// unknown extension still falls back to the common case rather than letting an
+    /// unchecked value reach the response's Content-Type header.
+    /// </summary>
+    public static string ContentTypeFromUrl(string relativeUrl)
+    {
+        var extension = Path.GetExtension(FileNameFromUrl(relativeUrl) ?? string.Empty).ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => "image/jpeg"
+        };
+    }
+
+    /// <summary>
+    /// Object key for a persisted identity-document URL inside the private documents
+    /// bucket (<c>owners/{ownerId}/{fileName}</c>). Returns <c>null</c> unless the URL is
+    /// exactly an owner-identity document path, so a stored value can never address a
+    /// different bucket prefix and <c>..</c> can never escape into another key.
+    /// </summary>
+    public static string? OwnerIdentityObjectKey(string relativeUrl)
+    {
+        if (string.IsNullOrWhiteSpace(relativeUrl) || !relativeUrl.StartsWith("/documents/owners/", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        // documents / owners / {ownerId} / {fileName}
+        var segments = relativeUrl.Trim('/').Split('/');
+        if (segments.Length != 4)
+        {
+            return null;
+        }
+
+        foreach (var segment in segments)
+        {
+            if (segment.Length == 0 || segment is "." or "..")
+            {
+                return null;
+            }
+        }
+
+        return string.Join('/', segments[1..]);
+    }
+
+    /// <summary>
+    /// Object key for a persisted coordinator-document URL inside the private documents
+    /// bucket (<c>coordinators/{userId}/{fileName}</c>). Returns <c>null</c> unless the
+    /// URL is exactly a coordinator document path, so a stored value can never address a
+    /// different bucket prefix and <c>..</c> can never escape into another key.
+    /// </summary>
+    public static string? CoordinatorDocumentObjectKey(string relativeUrl)
+    {
+        if (string.IsNullOrWhiteSpace(relativeUrl) || !relativeUrl.StartsWith("/documents/coordinators/", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        // documents / coordinators / {userId} / {fileName}
+        var segments = relativeUrl.Trim('/').Split('/');
+        if (segments.Length != 4)
+        {
+            return null;
+        }
+
+        foreach (var segment in segments)
+        {
+            if (segment.Length == 0 || segment is "." or "..")
+            {
+                return null;
+            }
+        }
+
+        return string.Join('/', segments[1..]);
+    }
+
+    /// <summary>
+    /// Object key for a persisted photographer-document URL inside the private documents
+    /// bucket (<c>photographers/{userId}/{fileName}</c>). Returns <c>null</c> unless the
+    /// URL is exactly a photographer document path, so a stored value can never address a
+    /// different bucket prefix and <c>..</c> can never escape into another key.
+    /// </summary>
+    public static string? PhotographerDocumentObjectKey(string relativeUrl)
+    {
+        if (string.IsNullOrWhiteSpace(relativeUrl) || !relativeUrl.StartsWith("/documents/photographers/", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        // documents / photographers / {userId} / {fileName}
+        var segments = relativeUrl.Trim('/').Split('/');
+        if (segments.Length != 4)
+        {
+            return null;
+        }
+
+        foreach (var segment in segments)
+        {
+            if (segment.Length == 0 || segment is "." or "..")
+            {
+                return null;
+            }
+        }
+
+        return string.Join('/', segments[1..]);
+    }
+
+    /// <summary>
+    /// Resolves a persisted protected-document URL (owner identity, coordinator
+    /// document, or photographer document) to its private-bucket object key. Returns
+    /// <c>null</c> unless the URL is exactly one of the three known protected shapes.
+    /// </summary>
+    public static string? ProtectedDocumentObjectKey(string relativeUrl)
+        => OwnerIdentityObjectKey(relativeUrl)
+           ?? CoordinatorDocumentObjectKey(relativeUrl)
+           ?? PhotographerDocumentObjectKey(relativeUrl);
+
+    /// <summary>Object key for public content bytes stored privately and exposed only by approved-item endpoints.</summary>
+    public static string? PublicContentObjectKey(string relativeUrl)
+    {
+        if (string.IsNullOrWhiteSpace(relativeUrl) || !relativeUrl.StartsWith($"/documents/{PublicContentSegment}/", StringComparison.Ordinal))
+            return null;
+        var segments = relativeUrl.Trim('/').Split('/');
+        if (segments.Length != 4 || segments.Any(segment => segment.Length == 0 || segment is "." or ".."))
+            return null;
+        return string.Join('/', segments[1..]);
+    }
+
+    public static string? StoredDocumentObjectKey(string relativeUrl)
+        => ProtectedDocumentObjectKey(relativeUrl) ?? PublicContentObjectKey(relativeUrl);
+
+    /// <summary>
+    /// Object key for a persisted message-attachment URL inside the private
+    /// conversation-attachments bucket (<c>conversations/{conversationId}/attachments/{fileName}</c>).
+    /// Returns <c>null</c> unless the URL is exactly a conversation attachment path, so a
+    /// stored value can never address a different bucket prefix and <c>..</c> can never
+    /// escape into another key.
+    /// </summary>
+    public static string? ConversationAttachmentObjectKey(string relativeUrl)
+    {
+        if (string.IsNullOrWhiteSpace(relativeUrl) || !relativeUrl.StartsWith("/documents/conversations/", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        // documents / conversations / {conversationId} / attachments / {fileName}
+        var segments = relativeUrl.Trim('/').Split('/');
+        if (segments.Length != 5 || !string.Equals(segments[3], "attachments", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        foreach (var segment in segments)
+        {
+            if (segment.Length == 0 || segment is "." or "..")
+            {
+                return null;
+            }
+        }
+
+        return string.Join('/', segments[1..]);
     }
 }

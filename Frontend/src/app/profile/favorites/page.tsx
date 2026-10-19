@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { SEEKER_DASHBOARD_PATH } from "@/constants/seekerDashboardNav";
+import SeekerFavoritesPage from "@/components/seeker-dashboard/SeekerFavoritesPage.lazy";
 import { translate } from "@/i18n";
 
 export const metadata: Metadata = {
@@ -8,7 +7,6 @@ export const metadata: Metadata = {
   description: translate("meta.seekerFavoritesDescription", "ar"),
 };
 
-/** Favorites removed from seeker dashboard. */
 export default function SeekerFavoritesRoutePage() {
-  redirect(SEEKER_DASHBOARD_PATH);
+  return <SeekerFavoritesPage />;
 }

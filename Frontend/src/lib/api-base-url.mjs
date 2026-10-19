@@ -15,7 +15,7 @@
 export const DEV_API_BASE_URL = "http://localhost:5298/api/v1";
 
 /** Canonical public Wesal API (Render). Public configuration, not a secret. */
-export const PROD_API_BASE_URL = "https://wesal-platform.onrender.com/api/v1";
+export const PROD_API_BASE_URL = "https://wesal-platform-p0iv.onrender.com/api/v1";
 
 /** True for loopback / unspecified hosts that must never be a production API. */
 function isLocalHostname(hostname) {

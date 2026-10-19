@@ -1,5 +1,7 @@
 namespace Wesal.Application.Common.Models;
 
+using Wesal.Domain.Enums;
+
 public sealed class CreateConversationRequest
 {
     public Guid HallId { get; init; }
@@ -10,6 +12,8 @@ public sealed class SendMessageRequest
     public string Content { get; init; } = string.Empty;
 
     public string? ClientRequestId { get; init; }
+    public Guid? ContextPostId { get; init; }
+    public Guid? ContextOfferId { get; init; }
 }
 
 public sealed class SendMessageResponse
@@ -36,13 +40,24 @@ public sealed class SendMessageResponse
     public string? AttachmentContentType { get; init; }
 
     public string? AttachmentFileName { get; init; }
+    public Guid? ContextPostId { get; init; }
+    public Guid? ContextOfferId { get; init; }
+    public string? ContextTitle { get; init; }
+    public string? ContextText { get; init; }
+    public string? ContextImageUrl { get; init; }
+    public string? ContextOwnerUserId { get; init; }
+    public bool? ContextItemAvailable { get; init; }
 }
 
 public sealed class ConversationResponse
 {
     public Guid ConversationId { get; init; }
 
-    public Guid HallId { get; init; }
+    /// <summary>
+    /// The hall this thread concerns, or null for a hall-less Admin request thread
+    /// (WESAL admin coordinator/photographer requests, Tasks 5/6).
+    /// </summary>
+    public Guid? HallId { get; init; }
 
     public string HallName { get; init; } = string.Empty;
 
@@ -53,4 +68,7 @@ public sealed class ConversationResponse
     public DateTimeOffset CreatedAt { get; init; }
 
     public bool IsExisting { get; init; }
+    public ConversationKind Kind { get; init; }
+    public Guid? ContextPostId { get; init; }
+    public Guid? ContextOfferId { get; init; }
 }

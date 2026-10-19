@@ -3,8 +3,8 @@ title: Hall ratings
 category: user-guide
 language: ar,en
 source: official-project-team-and-repository
-lastUpdated: 2026-09-16
-status: needs-verification
+lastUpdated: 2026-10-09
+status: product-confirmation-required
 keywords: rate|rating|stars|تقييم|قيم|نجوم
 ---
 

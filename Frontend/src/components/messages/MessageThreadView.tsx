@@ -22,6 +22,8 @@ type MessageThreadViewProps = {
   title: string;
   subtitle?: string | null;
   badge?: string | null;
+  /** Shown instead of the sender's own name on incoming messages (e.g. "Wesal admin"). */
+  peerDisplayName?: string | null;
   currentUserId: string | null;
   onRetryLoad: () => void;
   onRetrySend: (messageId: string) => void;
@@ -41,6 +43,7 @@ type MessageThreadViewProps = {
   attachmentBusy?: boolean;
   onPickAttachment?: (file: File) => void;
   onClearAttachment?: () => void;
+  promptAttach?: boolean;
 };
 
 export default function MessageThreadView({
@@ -50,6 +53,7 @@ export default function MessageThreadView({
   title,
   subtitle,
   badge,
+  peerDisplayName,
   currentUserId,
   onRetryLoad,
   onRetrySend,
@@ -69,6 +73,7 @@ export default function MessageThreadView({
   attachmentBusy,
   onPickAttachment,
   onClearAttachment,
+  promptAttach = false,
 }: MessageThreadViewProps) {
   const t = useT();
   const lang = useUiLang();
@@ -87,6 +92,8 @@ export default function MessageThreadView({
 
   const widget = variant === "widget";
   const owner = appearance === "owner";
+  const inboxLabel = t("messages.title");
+  const showEyebrow = !owner && title.trim() !== inboxLabel;
 
   return (
     <section
@@ -126,9 +133,9 @@ export default function MessageThreadView({
           </span>
         ) : null}
         <div className="min-w-0 flex-1">
-          {owner ? null : (
-            <p className="text-[0.68rem] font-semibold text-[var(--wesal-gold)]">{t("messages.title")}</p>
-          )}
+          {showEyebrow ? (
+            <p className="text-[0.68rem] font-semibold text-[var(--wesal-gold)]">{inboxLabel}</p>
+          ) : null}
           <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
             <h2 className="truncate text-base font-bold text-[var(--wesal-text)]">{title}</h2>
             {badge ? (
@@ -198,7 +205,11 @@ export default function MessageThreadView({
             ? messages.filter((message) => message?.id).map((message) => (
                 <ThreadMessageItem
                   key={message.id}
-                  message={message}
+                  message={
+                    peerDisplayName && !isSameUserId(message.senderUserId, currentUserId)
+                      ? { ...message, senderName: peerDisplayName }
+                      : message
+                  }
                   own={isSameUserId(message.senderUserId, currentUserId)}
                   tone={owner ? "owner" : "default"}
                   retrying={isRetrying(message)}
@@ -240,6 +251,7 @@ export default function MessageThreadView({
         attachmentBusy={attachmentBusy}
         onPickAttachment={onPickAttachment}
         onClearAttachment={onClearAttachment}
+        promptAttach={promptAttach}
       />
     </section>
   );

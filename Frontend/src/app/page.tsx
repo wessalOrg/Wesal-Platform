@@ -1,18 +1,18 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/home/HeroSection";
+import HomeCategoriesSection from "@/components/home/HomeCategoriesSection";
 import FeaturedHallsSection from "@/components/home/FeaturedHallsSection";
 import dynamic from "next/dynamic";
 
+const OccasionServicesSection = dynamic(
+  () => import("@/components/home/OccasionServicesSection"),
+);
 const HowItWorksSection = dynamic(
   () => import("@/components/home/HowItWorksSection"),
 );
-const OwnerCtaSection = dynamic(
-  () => import("@/components/home/OwnerCtaSection"),
-);
-const BenefitsSection = dynamic(
-  () => import("@/components/home/BenefitsSection"),
-);
+const StorySection = dynamic(() => import("@/components/home/StorySection"));
+const ConsultSection = dynamic(() => import("@/components/home/ConsultSection"));
 
 export default function Home() {
   return (
@@ -20,10 +20,12 @@ export default function Home() {
       <Navbar />
       <main>
         <HeroSection />
+        <HomeCategoriesSection />
         <FeaturedHallsSection />
+        <OccasionServicesSection />
         <HowItWorksSection />
-        <OwnerCtaSection />
-        <BenefitsSection />
+        <StorySection />
+        <ConsultSection />
       </main>
       <Footer />
     </>

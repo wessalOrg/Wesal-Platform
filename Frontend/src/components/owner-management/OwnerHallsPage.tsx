@@ -3,6 +3,7 @@
 import Link from "next/link";
 import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
+import HallRejectionReasonNotice from "@/components/owner-management/halls/HallRejectionReasonNotice";
 import HallLockedBadge from "@/components/halls/HallLockedBadge";
 import OwnerHallAdminLockedNotice from "@/components/halls/OwnerHallAdminLockedNotice";
 import PaymentStatusBadge from "@/components/halls/PaymentStatusBadge";
@@ -29,9 +30,6 @@ export default function OwnerHallsPage() {
   const expiryWarnings = halls.filter((item) => item.expiryWarning);
   const paymentDueHalls = halls.filter(
     (item) => item.status === "Approved" && item.paymentStatus !== "Paid",
-  );
-  const paidHalls = halls.filter(
-    (item) => item.status === "Approved" && item.paymentStatus === "Paid",
   );
 
   return (
@@ -71,28 +69,6 @@ export default function OwnerHallsPage() {
               hallName={localizeHallName(hall.id, hall.name, lang)}
               paymentStatus={hall.paymentStatus}
             />
-          ))}
-        </section>
-      ) : null}
-
-      {paidHalls.length > 0 ? (
-        <section
-          className="space-y-3"
-          aria-label={t("owner.subscription.activeSection")}
-          data-testid="owner-halls-active-subscriptions"
-        >
-          {paidHalls.map((hall) => (
-            <aside
-              key={hall.id}
-              className="rounded-2xl border border-[rgba(5,150,105,0.28)] bg-[rgba(5,150,105,0.06)] p-4 sm:p-5"
-            >
-              <p className="text-sm font-semibold text-[var(--wesal-text)]">
-                {localizeHallName(hall.id, hall.name, lang)}
-              </p>
-              <div className="mt-3">
-                <OwnerPaidSubscriptionDays hallId={hall.id} />
-              </div>
-            </aside>
           ))}
         </section>
       ) : null}
@@ -173,9 +149,13 @@ export default function OwnerHallsPage() {
                     <HallApprovalStatusBadge status={hall.status} />
                     <PaymentStatusBadge status={hall.paymentStatus} />
                   </div>
-                  {hall.status === "Approved" && hall.paymentStatus === "Paid" ? (
-                    <div className="mt-3">
-                      <OwnerPaidSubscriptionDays hallId={hall.id} />
+                  {hall.status === "Approved" &&
+                  (hall.paymentStatus === "Paid" || hall.systemLocked) ? (
+                    <div className="mt-2">
+                      <OwnerPaidSubscriptionDays
+                        hallId={hall.id}
+                        ended={hall.systemLocked}
+                      />
                     </div>
                   ) : null}
                 </div>
@@ -217,6 +197,11 @@ export default function OwnerHallsPage() {
                   )}
                 </div>
               </div>
+              {hall.status === "Rejected" && !adminLocked ? (
+                <div className="mt-3">
+                  <HallRejectionReasonNotice hallId={hall.id} rejected />
+                </div>
+              ) : null}
               {adminLocked ? (
                 <div className="mt-3">
                   <OwnerHallAdminLockedNotice />

@@ -6,6 +6,7 @@ using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Exceptions;
+using Wesal.Infrastructure.Documents;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Profile;
 using Wesal.Persistence.Data;
@@ -51,7 +52,7 @@ public class OwnerIdentityServiceShould : IDisposable
     }
 
     private OwnerIdentityService CreateService(ICurrentUserService currentUser)
-        => new(_userManager, currentUser, new FakeDocumentStorage());
+        => new(_userManager, currentUser, new LocalIdentityDocumentStore(new FakeDocumentStorage()));
 
     private static OwnerDocumentUpload ValidImage(string fileName = "id.jpg") => new()
     {
@@ -82,6 +83,7 @@ public class OwnerIdentityServiceShould : IDisposable
         Assert.Equal(reloaded.IdentityDocumentUrl, stored.RelativeUrl);
         Assert.Equal("image/jpeg", stored.ContentType);
         Assert.True(File.Exists(stored.FullPath));
+        Assert.Equal(new byte[] { 0xFF, 0xD8, 0xFF, 0x00, 0x00, 0x00 }, stored.Content);
     }
 
     [Fact]

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useT } from "@/i18n";
 
-const HERO_IMAGE_SRC = "/hero/hall-slide-b.webp";
+const HERO_IMAGE_SRC = "/hero/hall-ballroom.jpg";
 
 export default function HeroPhoto({ showAlt = false }: { showAlt?: boolean }) {
   const t = useT();
@@ -16,7 +16,7 @@ export default function HeroPhoto({ showAlt = false }: { showAlt?: boolean }) {
           alt={showAlt ? t("home.hero.imageAlt") : ""}
           fill
           priority
-          quality={75}
+          unoptimized
           sizes="(min-width: 768px) 90rem, 100vw"
           className="hero-photo"
         />

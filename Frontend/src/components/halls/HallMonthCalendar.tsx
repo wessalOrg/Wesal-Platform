@@ -203,28 +203,31 @@ export default function HallMonthCalendar({
         className={
           ownerLegend
             ? "flex flex-col items-center gap-3"
-            : "flex flex-wrap items-center justify-between gap-3"
+            : "flex flex-col gap-3"
         }
       >
-        <div className={`flex items-center gap-2 ${ownerLegend ? "justify-center" : ""}`}>
+        <div
+          className={`flex items-center gap-2 ${ownerLegend ? "justify-center" : "w-full justify-between"}`}
+          dir={ownerLegend ? undefined : "ltr"}
+        >
           <button
             type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wesal-border)] text-lg text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
             onClick={() => shiftMonth(-1)}
             aria-label={t("halls.booking.prevMonth")}
           >
-            ‹
+            <MonthChevron direction="prev" />
           </button>
-          <p className="min-w-0 flex-1 text-center text-sm font-bold text-[var(--wesal-text)] sm:min-w-[9rem] sm:flex-none">
+          <p className="min-w-0 text-center text-sm font-bold text-[var(--wesal-text)]">
             {monthLabel(cursor.year, cursor.month, locale)}
           </p>
           <button
             type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wesal-border)] text-lg text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
             onClick={() => shiftMonth(1)}
             aria-label={t("halls.booking.nextMonth")}
           >
-            ›
+            <MonthChevron direction="next" />
           </button>
         </div>
 
@@ -307,7 +310,8 @@ export default function HallMonthCalendar({
               disabled={!selectable}
               onClick={() => selectIso(cell.iso!, cell.day)}
               className={[
-                "hall-cal-day relative inline-flex min-h-11 items-center justify-center overflow-hidden text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)] sm:min-h-11",
+                "hall-cal-day relative inline-flex items-center justify-center overflow-hidden text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]",
+                ownerLegend ? "min-h-11 w-full sm:min-h-11" : "mx-auto h-11 w-11 rounded-full",
                 selected
                   ? "hall-cal-day--selected rounded-full bg-[var(--wesal-maroon)] text-white shadow-[0_6px_14px_rgba(193,123,127,0.35)]"
                   : ownerBooked
@@ -317,7 +321,7 @@ export default function HallMonthCalendar({
                         ? "rounded-full bg-[#e8e1dc] text-[#6d625c] hover:bg-[#ddd4ce]"
                         : `${allowClosedSelect ? "" : "cursor-not-allowed "}rounded-full bg-[#fdecea] text-[#b42318]`
                     : isPartial
-                      ? "hall-cal-day--partial rounded-xl"
+                      ? "hall-cal-day--partial rounded-full"
                       : cell.status === "available"
                         ? ownerLegend
                           ? "rounded-full border border-[#d7ebe0] bg-white text-[var(--wesal-text)] hover:bg-[#f4fbf7]"
@@ -353,5 +357,20 @@ export default function HallMonthCalendar({
         })}
       </div>
     </div>
+  );
+}
+
+function MonthChevron({ direction }: { direction: "prev" | "next" }) {
+  return (
+    <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
+      <path
+        d={direction === "prev" ? "M12.5 4.5 7 10l5.5 5.5" : "M7.5 4.5 13 10l-5.5 5.5"}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

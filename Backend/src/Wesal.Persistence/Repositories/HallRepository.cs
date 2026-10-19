@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Common;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
@@ -72,7 +73,7 @@ public class HallRepository : IHallRepository
         int skip,
         int take,
         CancellationToken cancellationToken = default)
-        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, detailedAddress, date, startTime)
+        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, detailedAddress, date, startTime, null)
             .OrderByDescending(hall => hall.CreatedAt)
             .ThenBy(hall => hall.Name)
             .Skip(skip)
@@ -87,7 +88,43 @@ public class HallRepository : IHallRepository
         DateOnly? date,
         TimeOnly? startTime,
         CancellationToken cancellationToken = default)
-        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, detailedAddress, date, startTime)
+        => await ApplySearchFilters(ApprovedHallsQuery(), name, region, area, detailedAddress, date, startTime, null)
+            .CountAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Hall>> SearchApprovedHallsAsync(
+        HallSearchRequest request,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var query = ApplyPriceFilters(
+            ApplySearchFilters(ApprovedHallsQuery(), request.Name, request.Region, request.Area,
+                request.DetailedAddress, request.Date, request.StartTime, request.MinimumCapacity),
+            request);
+        var ordered = request.SortPreference switch
+        {
+            AiPriceSortPreference.HighestPrice => query.OrderByDescending(hall => hall.Price)
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            AiPriceSortPreference.ClosestToTarget when request.AroundPrice is { } target => query
+                .OrderBy(hall => Math.Abs(hall.Price!.Value - target))
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            AiPriceSortPreference.LowestPrice => query.OrderBy(hall => hall.Price)
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            _ when request.SortByPrice => query.OrderBy(hall => hall.Price)
+                .ThenByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name),
+            _ => query.OrderByDescending(hall => hall.CreatedAt).ThenBy(hall => hall.Name)
+        };
+
+        return await ordered.Skip(skip).Take(take).ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> SearchApprovedHallsCountAsync(
+        HallSearchRequest request,
+        CancellationToken cancellationToken = default)
+        => await ApplyPriceFilters(
+                ApplySearchFilters(ApprovedHallsQuery(), request.Name, request.Region, request.Area,
+                    request.DetailedAddress, request.Date, request.StartTime, request.MinimumCapacity),
+                request)
             .CountAsync(cancellationToken);
 
     public async Task<IReadOnlyList<HallImage>> GetHallImagesAsync(
@@ -136,6 +173,28 @@ public class HallRepository : IHallRepository
                 && !hall.SystemLocked
                 && hall.PaymentStatus == HallPaymentStatus.Paid);
 
+    private static IQueryable<Hall> ApplyPriceFilters(IQueryable<Hall> query, HallSearchRequest request)
+    {
+        if (request.MaximumPrice is { } maximumPrice)
+        {
+            query = query.Where(hall => hall.ShowPrice && hall.Price.HasValue && hall.Price.Value <= maximumPrice);
+        }
+
+        if (request.MinimumPrice is { } minimumPrice)
+        {
+            query = query.Where(hall => hall.ShowPrice && hall.Price.HasValue && hall.Price.Value >= minimumPrice);
+        }
+
+        if (request.SortByPrice || request.AroundPrice.HasValue
+            || request.SortPreference != AiPriceSortPreference.Relevance)
+        {
+            // A hidden or missing price cannot be ranked honestly as the cheapest.
+            query = query.Where(hall => hall.ShowPrice && hall.Price.HasValue);
+        }
+
+        return query;
+    }
+
     private IQueryable<Hall> ApplySearchFilters(
         IQueryable<Hall> query,
         string? name,
@@ -143,7 +202,8 @@ public class HallRepository : IHallRepository
         string? area,
         string? detailedAddress,
         DateOnly? date,
-        TimeOnly? startTime)
+        TimeOnly? startTime,
+        int? minimumCapacity)
     {
         if (!string.IsNullOrWhiteSpace(name))
         {
@@ -153,6 +213,11 @@ public class HallRepository : IHallRepository
         if (region.HasValue)
         {
             query = query.Where(hall => hall.Region == region.Value);
+        }
+
+        if (minimumCapacity.HasValue)
+        {
+            query = query.Where(hall => hall.Capacity >= minimumCapacity.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(area))

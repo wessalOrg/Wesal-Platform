@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import DepositConfirmedModal from "@/components/halls/notifications/DepositConfirmedModal";
 import { useHallNotifications } from "@/hooks/useHallNotifications";
 import { usePublishBooking } from "@/hooks/usePublishBooking";
 import { useT } from "@/i18n";
@@ -28,6 +29,7 @@ export default function OwnerConfirmPaymentBar({
     onPublished: notifications.applyPublished,
     onStatusSync: notifications.applyStatus,
   });
+  const [confirmedName, setConfirmedName] = useState<string | null>(null);
 
   const pending = useMemo(
     () =>
@@ -38,9 +40,12 @@ export default function OwnerConfirmPaymentBar({
     [notifications.items, peerId],
   );
 
-  if (!scopedHallId || !peerId || pending.length === 0) return null;
+  if (!scopedHallId || !peerId) return null;
 
   return (
+    <>
+    <DepositConfirmedModal requesterName={confirmedName} onClose={() => setConfirmedName(null)} />
+    {pending.length === 0 ? null : (
     <div className="space-y-2 rounded-xl border border-[rgba(196,160,92,0.4)] bg-white px-3 py-3" data-testid="owner-confirm-payment-bar">
       {pending.map((item) => {
         const when = bookingWhenLabels(item, t, locale).join(" · ");
@@ -63,7 +68,10 @@ export default function OwnerConfirmPaymentBar({
               aria-busy={busy || undefined}
               data-testid={`thread-confirm-payment-${item.id}`}
               onClick={() => {
-                void confirm.publish(item.hallId || scopedHallId, item.id);
+                const name = item.requesterName.trim() || t("common.user");
+                void confirm.publish(item.hallId || scopedHallId, item.id).then((result) => {
+                  if (result) setConfirmedName(name);
+                });
               }}
             >
               {busy
@@ -82,5 +90,7 @@ export default function OwnerConfirmPaymentBar({
         </p>
       ) : null}
     </div>
+    )}
+    </>
   );
 }

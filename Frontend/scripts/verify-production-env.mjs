@@ -2,7 +2,7 @@
  * Production environment gate for the Vercel build (runs as `prebuild`).
  *
  * - NEXT_PUBLIC_API_BASE_URL is OPTIONAL on production deploys: when it is
- *   missing, the canonical Wesal API (https://wesal-platform.onrender.com/api/v1)
+ *   missing, the canonical Wesal API (https://wesal-platform-p0iv.onrender.com/api/v1)
  *   is used, so deployments do not depend on dashboard-only configuration.
  * - An explicitly provided value must be a valid absolute https URL (not
  *   localhost) on a production deploy, otherwise the build fails.

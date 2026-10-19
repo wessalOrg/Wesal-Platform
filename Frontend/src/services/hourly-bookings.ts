@@ -231,6 +231,20 @@ function mapHourlySubmitError(err: unknown): ApiError {
   return new ApiError("errors.hourly.generic", err.status);
 }
 
+const NAME_ON_BOOKING_MAX = 100;
+
+/**
+ * The hourly-booking API has no phone field; the owner sees `nameOnBooking`, so the
+ * booker's phone is appended to it (e.g. "Sara - 0599123456"), within the 100-char limit.
+ */
+function nameWithPhone(name: string, phone?: string): string {
+  const number = phone?.trim();
+  if (!number) return name.slice(0, NAME_ON_BOOKING_MAX);
+  const suffix = ` - ${number}`;
+  const room = Math.max(NAME_ON_BOOKING_MAX - suffix.length, 0);
+  return `${name.slice(0, room).trim()}${suffix}`;
+}
+
 export async function submitHourlyBooking(input: HourlyBookingInput): Promise<HourlyBookingResult> {
   const name = input.customerName.trim();
   if (!name) {
@@ -240,14 +254,16 @@ export async function submitHourlyBooking(input: HourlyBookingInput): Promise<Ho
 
   if (hourlyUsesLiveApi(input.hallId)) {
     try {
+      const starts = (input.slotTimes?.length ? input.slotTimes : [input.slotTime]).filter(Boolean);
       const { data } = await api.post<unknown>(
         `/halls/${input.hallId}/hourly-bookings`,
         {
           hallId: input.hallId,
           date: input.date,
-          slotStarts: [toSlotStartPayload(input.slotTime)],
-          nameOnBooking: name,
+          slotStarts: starts.map(toSlotStartPayload),
+          nameOnBooking: nameWithPhone(name, input.phoneNumber),
           requesterName,
+          contactPhone: input.contactPhone?.trim() || undefined,
         },
         { timeout: 10000 },
       );
@@ -265,17 +281,18 @@ export async function submitHourlyBooking(input: HourlyBookingInput): Promise<Ho
     }
   }
 
+  const starts = (input.slotTimes?.length ? input.slotTimes : [input.slotTime]).filter(Boolean);
   if (isDayBlocked(input.hallId, input.date)) {
     throw new ApiError("errors.hourly.dayBlocked", 409);
   }
-  const taken = listHourlyBookings(input.hallId, input.date).some(
-    (item) => item.slotTime === input.slotTime,
+  const taken = listHourlyBookings(input.hallId, input.date).some((item) =>
+    starts.includes(item.slotTime),
   );
   if (taken) {
     throw new ApiError("errors.hourly.slotBooked", 409);
   }
 
-  return addHourlyBooking({ ...input, customerName: name, requesterName });
+  return addHourlyBooking({ ...input, slotTime: starts[0] ?? input.slotTime, customerName: name, requesterName });
 }
 
 export async function blockHallDay(input: BlockDayInput): Promise<void> {

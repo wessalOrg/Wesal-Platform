@@ -37,6 +37,7 @@ import {
 } from "@/lib/wesal-routes";
 import type { AiPinnedHall } from "@/types/ai-assistant";
 import type { AiNavigateAction } from "@/types/ai-chat";
+import { OPEN_ASSISTANT_EVENT } from "@/lib/assistant-events";
 import "@/components/assistant/ai-assistant.css";
 
 const AiAssistantPanel = dynamic(() => import("@/components/assistant/AiAssistantPanel"), {
@@ -263,6 +264,14 @@ function AssistantRuntime({
     () => ({ controls, chat, launcher, focusToken, followAction }),
     [controls, chat, launcher, focusToken, followAction],
   );
+
+  useEffect(() => {
+    const onOpen = () => {
+      if (!isOpen) openAssistant();
+    };
+    window.addEventListener(OPEN_ASSISTANT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_ASSISTANT_EVENT, onOpen);
+  }, [isOpen, openAssistant]);
 
   const handleClose = useCallback(() => {
     closeAssistant();

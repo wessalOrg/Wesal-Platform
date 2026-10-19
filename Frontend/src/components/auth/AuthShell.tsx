@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AuthMinimalHeader from "@/components/auth/AuthMinimalHeader";
 import { consumeAuthNavigation } from "@/lib/auth-nav";
+import { wakeRemoteApi } from "@/services/auth";
 
 type AuthShellProps = {
   children: ReactNode;
@@ -25,6 +26,10 @@ export default function AuthShell({ children, testId = "auth-shell" }: AuthShell
     router.prefetch("/login");
     router.prefetch("/register");
   }, [router]);
+
+  useEffect(() => {
+    wakeRemoteApi();
+  }, []);
 
   return (
     <div

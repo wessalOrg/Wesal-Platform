@@ -15,15 +15,18 @@ public sealed class CommentService : ICommentService
     private readonly ICommentRepository _commentRepository;
     private readonly IHallRepository _hallRepository;
     private readonly ICurrentUserService _currentUser;
+    private readonly IAccountApprovalGuard _approvalGuard;
 
     public CommentService(
         ICommentRepository commentRepository,
         IHallRepository hallRepository,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IAccountApprovalGuard approvalGuard)
     {
         _commentRepository = commentRepository;
         _hallRepository = hallRepository;
         _currentUser = currentUser;
+        _approvalGuard = approvalGuard;
     }
 
     public async Task<CommentResponse> CreateCommentAsync(
@@ -35,6 +38,11 @@ public sealed class CommentService : ICommentService
         EnsureAuthenticated();
         EnsureNotHallOwner();
         EnsureRegisteredUser();
+
+        // WESAL approval enforcement: an unapproved Event Coordinator or Photographer
+        // (reachable for example through an additional RegisteredUser role) must not
+        // create content, while ordinary users pass through untouched.
+        await _approvalGuard.EnsureCanPublishAsync(cancellationToken);
 
         var hall = await _hallRepository.GetHallByIdAsync(request.HallId, cancellationToken);
 
@@ -116,6 +124,10 @@ public sealed class CommentService : ICommentService
         {
             throw new ValidationException("Comment content is required.");
         }
+
+        // WESAL approval enforcement: editing content follows the same approval rule
+        // as creating it.
+        await _approvalGuard.EnsureCanPublishAsync(cancellationToken);
 
         var comment = await _commentRepository.GetByIdAsync(commentId, cancellationToken);
 

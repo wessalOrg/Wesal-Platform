@@ -9,16 +9,19 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
 import OwnerConfirmPaymentBar from "@/components/messages/OwnerConfirmPaymentBar";
 import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAdminChat } from "@/hooks/useAdminChat";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useT } from "@/i18n";
+import { isOwnerAdminConversation, ownerConversationTitle } from "@/lib/owner-admin-conversation";
 import { floatingPanelBounds } from "@/lib/floating-panel-bounds";
 import {
   conversationHallLabel,
@@ -76,7 +79,10 @@ function storePanelSize(size: PanelSize): void {
 
 export default function MessagesInboxPanel() {
   const t = useT();
+  const { count: unreadCount, ready: unreadReady } = useUnreadCount();
+  const unread = unreadReady ? unreadCount : 0;
   const lang = useUiLang();
+  const promptAttach = useSearchParams().get("attach") === "1";
   const { isHallOwner, isAdmin } = useAccountAccess();
   const {
     isOpen,
@@ -303,7 +309,9 @@ export default function MessagesInboxPanel() {
   if (!isOpen) return null;
 
   const threadTitle = selected
-    ? conversationPreviewTitle(selected, lang)
+    ? isHallOwner
+      ? ownerConversationTitle(selected, lang, conversations)
+      : conversationPreviewTitle(selected, lang)
     : thread
       ? conversationHallLabel(thread, lang)
       : t("messages.title");
@@ -350,10 +358,19 @@ export default function MessagesInboxPanel() {
         }}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--wesal-maroon)]/15 px-3 py-2.5">
-          <h2 id="messages-inbox-title" className="text-base font-bold text-[var(--wesal-maroon)]">
-            {t("messages.inboxTitle")}
-          </h2>
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <h2 id="messages-inbox-title" className="text-base font-bold text-[var(--wesal-maroon)]">
+              {t("messages.inboxTitle")}
+            </h2>
+            {unread > 0 ? (
+              <span
+                className="inline-flex h-[1.15rem] min-w-[1.15rem] shrink-0 items-center justify-center rounded-full bg-[#c62828] px-1 text-[0.62rem] font-extrabold leading-none text-white"
+                aria-label={t("messages.unreadCount", { count: unread })}
+                data-testid="messages-inbox-unread"
+              >
+                {unread > 9 ? "9+" : unread}
+              </span>
+            ) : null}
             <button
               type="button"
               className={`${iconBtnClass} wesal-messages-inbox-resize`}
@@ -365,16 +382,16 @@ export default function MessagesInboxPanel() {
             >
               {isWide ? <CollapseIcon /> : <ExpandIcon />}
             </button>
-            <button
-              type="button"
-              className={iconBtnClass}
-              aria-label={t("messages.closeInbox")}
-              data-testid="messages-inbox-close"
-              onClick={closeInbox}
-            >
-              ✕
-            </button>
           </div>
+          <button
+            type="button"
+            className={iconBtnClass}
+            aria-label={t("messages.closeInbox")}
+            data-testid="messages-inbox-close"
+            onClick={closeInbox}
+          >
+            ✕
+          </button>
         </div>
 
         {!canUseMessaging ? (
@@ -416,6 +433,11 @@ export default function MessagesInboxPanel() {
                 title={threadTitle}
                 subtitle={threadSubtitle}
                 badge={showThread ? threadBadge : null}
+                peerDisplayName={
+                  isHallOwner && selected && isOwnerAdminConversation(selected, conversations)
+                    ? t("owner.messages.admin")
+                    : null
+                }
                 currentUserId={currentUserId}
                 onRetryLoad={retryThread}
                 onRetrySend={retrySend}
@@ -430,7 +452,7 @@ export default function MessagesInboxPanel() {
                   threadStatus !== "error" &&
                   threadStatus !== "idle"
                 }
-                onBack={() => selectConversation(null)}
+                onBack={showThread ? () => selectConversation(null) : undefined}
                 conversationId={selectedId}
                 variant="widget"
                 notice={
@@ -453,6 +475,7 @@ export default function MessagesInboxPanel() {
                 attachmentBusy={adminChat.attachmentBusy}
                 onPickAttachment={adminChat.pickAttachment}
                 onClearAttachment={adminChat.clearAttachment}
+                promptAttach={promptAttach}
               />
               </ProtectedHallMessageThread>
             </div>

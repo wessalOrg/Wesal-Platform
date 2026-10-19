@@ -19,7 +19,7 @@ public class SendMessageRequestValidator : AbstractValidator<SendMessageRequest>
         RuleFor(request => request.Content)
             .NotEmpty()
             .WithMessage("Message content is required.")
-            .MaximumLength(1000)
+            .MaximumLength(MessageLimits.MaximumContentLength)
             .WithMessage("Message content must not exceed 1000 characters.");
 
         // WESAL-TASK-10 (Edit 10): the bound now comes from MessageLimits, which the send

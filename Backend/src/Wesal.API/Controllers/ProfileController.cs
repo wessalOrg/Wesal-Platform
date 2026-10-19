@@ -14,10 +14,14 @@ namespace Wesal.API.Controllers;
 public class ProfileController : ControllerBase
 {
     private readonly IProfileService _profileService;
+    private readonly IProfessionalProfileService _professionalProfileService;
+    private readonly IStatisticsService _statistics;
 
-    public ProfileController(IProfileService profileService)
+    public ProfileController(IProfileService profileService, IProfessionalProfileService professionalProfileService, IStatisticsService statistics)
     {
         _profileService = profileService;
+        _professionalProfileService = professionalProfileService;
+        _statistics = statistics;
     }
 
     [HttpGet]
@@ -48,5 +52,61 @@ public class ProfileController : ControllerBase
     {
         var response = await _profileService.ChangePasswordAsync(request, cancellationToken);
         return Ok(response);
+    }
+
+    [HttpGet("{userId}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PublicProfessionalProfileResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PublicProfessionalProfileResponse>> GetPublicProfile(string userId, CancellationToken cancellationToken)
+    {
+        var profile = await _professionalProfileService.GetPublicProfileAsync(userId, cancellationToken);
+        if (profile.IsPubliclyAvailable)
+            await _statistics.RecordProfileViewAsync(userId, cancellationToken);
+        return Ok(profile);
+    }
+
+    [HttpPut("bio")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> UpdatePublicBio([FromBody] UpdatePublicBioRequest request, CancellationToken cancellationToken)
+    {
+        await _professionalProfileService.UpdateBioAsync(request, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("picture")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(Infrastructure.UploadLimits.SingleFileRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = Infrastructure.UploadLimits.SingleFileRequestBytes)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<string>> UploadProfilePicture(IFormFile file, CancellationToken cancellationToken)
+    {
+        Infrastructure.UploadedFileGuard.EnsureAttachmentImage(file);
+        using var buffer = new MemoryStream();
+        await file.CopyToAsync(buffer, cancellationToken);
+        var url = await _professionalProfileService.UploadProfilePictureAsync(new OwnerDocumentUpload
+        {
+            FileName = file.FileName,
+            ContentType = file.ContentType,
+            Content = buffer.ToArray()
+        }, cancellationToken);
+        return Ok(url);
+    }
+
+    [HttpGet("{userId}/picture")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetProfilePicture(string userId, CancellationToken cancellationToken)
+    {
+        var image = await _professionalProfileService.GetProfilePictureAsync(userId, cancellationToken);
+        Response.Headers.CacheControl = "no-store";
+        return File(image.Content ?? [], image.ContentType);
     }
 }

@@ -6,6 +6,7 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Comments;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -260,7 +261,7 @@ public class CommentServiceShould
     {
         var effectiveUserId = authenticated && userId is null ? "test-user-1" : userId;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? [], userName);
-        return new CommentService(commentRepository, hallRepository, currentUser);
+        return new CommentService(commentRepository, hallRepository, currentUser, new PassThroughApprovalGuard());
     }
 
     private sealed class FakeCommentRepository : ICommentRepository

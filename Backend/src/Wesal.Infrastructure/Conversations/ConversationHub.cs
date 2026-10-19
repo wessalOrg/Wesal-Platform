@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Wesal.Application.Common.Interfaces;
 
 namespace Wesal.Infrastructure.Conversations;
 
@@ -9,10 +10,15 @@ public class ConversationHub : Hub
     public const string MessageReceived = "MessageReceived";
 
     private readonly ConversationThreadGuard _guard;
+    private readonly IConversationPresenceTracker _presence;
+    private readonly IConversationService? _conversationService;
 
-    public ConversationHub(ConversationThreadGuard guard)
+    public ConversationHub(ConversationThreadGuard guard, IConversationPresenceTracker? presence = null,
+        IConversationService? conversationService = null)
     {
         _guard = guard;
+        _presence = presence ?? new ConversationPresenceTracker();
+        _conversationService = conversationService;
     }
 
     /// <summary>
@@ -50,10 +56,41 @@ public class ConversationHub : Hub
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, conversationId.ToString(), cancellationToken);
+        if (Context.UserIdentifier is { } userId) _presence.Open(userId, Context.ConnectionId, conversationId);
     }
 
     public async Task LeaveConversation(Guid conversationId, CancellationToken cancellationToken = default)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, conversationId.ToString(), cancellationToken);
+        _presence.Close(Context.ConnectionId, conversationId);
+    }
+
+    public async Task SetConversationOpen(Guid conversationId, bool isOpen, CancellationToken cancellationToken = default)
+    {
+        await _guard.RequireAccessibleThreadAsync(conversationId, cancellationToken);
+        if (Context.UserIdentifier is not { } userId) throw new HubException("Authentication is required.");
+        if (isOpen) _presence.Open(userId, Context.ConnectionId, conversationId);
+        else _presence.Close(Context.ConnectionId, conversationId);
+    }
+
+    public async Task MarkConversationRead(Guid conversationId, CancellationToken cancellationToken = default)
+    {
+        await _guard.RequireAccessibleThreadAsync(conversationId, cancellationToken);
+        if (_conversationService is null || Context.UserIdentifier is not { } userId)
+            throw new HubException("The conversation read service is unavailable.");
+        await _conversationService.MarkAsReadAsync(conversationId, cancellationToken);
+        var total = await _conversationService.GetProviderUnreadCountAsync(cancellationToken);
+        await Clients.User(userId).SendAsync("UnreadCountsUpdated", new
+        {
+            ConversationId = conversationId,
+            UnreadMessageCount = 0,
+            TotalUnreadCount = total.UnreadCount
+        }, cancellationToken);
+    }
+
+    public override Task OnDisconnectedAsync(Exception? exception)
+    {
+        _presence.Disconnect(Context.ConnectionId);
+        return base.OnDisconnectedAsync(exception);
     }
 }

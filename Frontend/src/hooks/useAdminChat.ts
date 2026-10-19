@@ -39,8 +39,11 @@ function readWindowFocus(pathname: string): {
 }
 
 /**
- * Owner ↔ Admin thread: deep-link by hallId and send a payment screenshot
- * via POST /conversations/{id}/messages/attachment.
+ * Thread focus + attachment state for a messaging surface.
+ *
+ * Deep-links an owner ↔ Admin thread by hallId, and exposes the image attachment control for
+ * whichever thread is selected — the owner ↔ Admin payment screenshot and the seeker ↔ owner
+ * booking deposit receipt both go through POST /conversations/{id}/messages/attachment.
  */
 export function useAdminChat({
   conversations,
@@ -113,8 +116,16 @@ export function useAdminChat({
     selectedId,
   ]);
 
-  const canAttach =
-    isHallOwner && Boolean(selectedId) && Boolean(sendAttachment);
+  // WESAL: image attachments are a per-participant capability, not an owner-only one. The
+  // backend endpoint is role-agnostic and `ConversationAccess` authorizes it by thread
+  // participation, so a SEEKER must be able to attach the booking deposit receipt in the
+  // seeker <-> owner thread. Gating this on `isHallOwner` was the entire reason the paperclip
+  // never rendered for a seeker.
+  //
+  // The owner-only hall-management gate is NOT bypassed by dropping that check: it is enforced
+  // on the send path itself (`sendAttachment` in MessagesInboxProvider refuses when
+  // `canAccessMessaging` is false) and again server-side by `EnsureOwnerMessagingAccess`.
+  const canAttach = Boolean(selectedId) && Boolean(sendAttachment);
 
   const missingConversation =
     isHallOwner &&

@@ -5,11 +5,36 @@ namespace Wesal.Application.Common.Interfaces.Persistence;
 
 public interface IConversationRepository
 {
+    Task<bool> IsApprovedProviderAsync(string providerId, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+    Task<bool> IsPhotographerAsync(string userId, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+    Task SetPendingContextAsync(Guid conversationId, Guid? postId, Guid? offerId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+    Task ClearPendingContextAsync(Guid conversationId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+    Task<Conversation?> GetCustomerProviderConversationAsync(string customerId, string providerId, CancellationToken cancellationToken = default)
+        => Task.FromResult<Conversation?>(null);
     Task AddAsync(Conversation conversation, CancellationToken cancellationToken = default);
 
     Task<Conversation?> GetByHallAndUserAsync(Guid hallId, string userId, CancellationToken cancellationToken = default);
 
     Task<Conversation?> GetByHallForOwnerAsync(Guid hallId, string ownerId, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<Conversation?>(null);
+    }
+
+    /// <summary>
+    /// Resolves the single Admin↔user account-request thread for a coordinator or
+    /// photographer (WESAL admin coordinator/photographer requests, Tasks 5/6).
+    ///
+    /// These threads carry no hall: their identity is (HallId = null, HallOwnerId = the
+    /// requesting user), which is exactly the pair this method keys on, so every Admin action
+    /// for the same account lands in the same thread. Same deterministic ordering as the hall
+    /// thread resolvers: oldest wins, so resolution is stable across calls and repeated
+    /// reviews never fork a second conversation.
+    /// </summary>
+    Task<Conversation?> GetAdminUserConversationAsync(string userId, CancellationToken cancellationToken = default)
     {
         return Task.FromResult<Conversation?>(null);
     }

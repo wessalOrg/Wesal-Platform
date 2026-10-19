@@ -13,15 +13,18 @@ public sealed class RatingService : IRatingService
     private readonly IRatingRepository _ratingRepository;
     private readonly IHallRepository _hallRepository;
     private readonly ICurrentUserService _currentUser;
+    private readonly IAccountApprovalGuard _approvalGuard;
 
     public RatingService(
         IRatingRepository ratingRepository,
         IHallRepository hallRepository,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IAccountApprovalGuard approvalGuard)
     {
         _ratingRepository = ratingRepository;
         _hallRepository = hallRepository;
         _currentUser = currentUser;
+        _approvalGuard = approvalGuard;
     }
 
     public async Task<RatingResponse> CreateRatingAsync(
@@ -33,6 +36,10 @@ public sealed class RatingService : IRatingService
         EnsureAuthenticated();
         EnsureNotHallOwner();
         EnsureRegisteredUser();
+
+        // WESAL approval enforcement: an unapproved Event Coordinator or Photographer
+        // must not create content, while ordinary users pass through untouched.
+        await _approvalGuard.EnsureCanPublishAsync(cancellationToken);
 
         var hall = await _hallRepository.GetHallByIdAsync(request.HallId, cancellationToken);
 
@@ -79,6 +86,10 @@ public sealed class RatingService : IRatingService
         EnsureAuthenticated();
         EnsureNotHallOwner();
         EnsureRegisteredUser();
+
+        // WESAL approval enforcement: editing content follows the same approval rule
+        // as creating it.
+        await _approvalGuard.EnsureCanPublishAsync(cancellationToken);
 
         var hall = await _hallRepository.GetHallByIdAsync(request.HallId, cancellationToken);
 

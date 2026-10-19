@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Wesal.Persistence.Services;
 
 namespace Wesal.Persistence;
 
@@ -54,6 +56,16 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<ICoordinatorRepository, CoordinatorRepository>();
+        services.AddScoped<IPhotographerRepository, PhotographerRepository>();
+        services.AddScoped<IUserNotificationWriter, UserNotificationWriter>();
+        services.AddScoped<IUserNotificationRepository, UserNotificationRepository>();
+        services.AddScoped<IUserPublishingRestrictionRepository, UserPublishingRestrictionRepository>();
+        services.AddScoped<IAdminModerationRepository, AdminModerationRepository>();
+        services.AddScoped<IPostRepository, PostRepository>();
+        services.AddScoped<IPostInteractionRepository, PostInteractionRepository>();
+        services.AddScoped<IProfessionalOfferRepository, ProfessionalOfferRepository>();
+        services.AddScoped<IHallOfferRepository, HallOfferRepository>();
         services.AddScoped<IHallRepository, HallRepository>();
         services.AddScoped<IRatingRepository, RatingRepository>();
         services.AddScoped<ICommentRepository, CommentRepository>();
@@ -61,9 +73,14 @@ public static class DependencyInjection
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IAISessionRepository, AISessionRepository>();
+        services.AddScoped<IAiConversationSessionStore, AiConversationSessionStore>();
+        services.AddHostedService<AiConversationSessionCleanupService>();
         services.AddScoped<ITokenRevocationRepository, TokenRevocationRepository>();
         services.AddScoped<IOwnerDashboardRepository, OwnerDashboardRepository>();
         services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
+        services.AddScoped<IAiKnowledgeStudioRepository, AiKnowledgeStudioRepository>();
+        services.AddScoped<IDiscoverService, DiscoverService>();
+        services.AddScoped<IStatisticsService, StatisticsService>();
 
         return services;
     }

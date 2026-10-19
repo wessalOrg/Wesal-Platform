@@ -5,6 +5,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Bookings;
 using Wesal.Tests.TestDoubles;
 
@@ -182,6 +183,53 @@ public class BookingAcceptanceServiceShould
         Assert.Equal(RequesterId, conversation.SenderUserId);
         Assert.Equal(HallOwnerId, conversation.HallOwnerId);
         Assert.Equal(conversation.Id, message.ConversationId);
+    }
+
+    [Fact]
+    public async Task AcceptBooking_NotificationTargetsTheRequesterConversation()
+    {
+        var scenario = Scenario();
+
+        await scenario.Service.AcceptBookingAsync(scenario.Hall.Id, scenario.Booking.Id, Approval());
+
+        // The client routes on ActionTarget == Conversation, so the dispatched TargetId must be
+        // the id of the seeker <-> owner thread the notice was written to. Asserting the exact
+        // value (not merely "non-empty") is what pins the click-through to this conversation
+        // rather than to whatever thread happens to exist later.
+        var conversation = Assert.Single(scenario.Conversations.Conversations);
+        var dispatch = scenario.Notifications.Single();
+
+        Assert.Equal(NotificationKind.BookingAcceptedForRequester, dispatch.Kind);
+        Assert.Equal(RequesterId, dispatch.RecipientUserId);
+        Assert.Equal(conversation.Id.ToString(), dispatch.TargetId);
+        Assert.Equal(conversation.Id, scenario.Messages.Messages.Single().ConversationId);
+
+        // The deposit the notification quotes is the same amount the booking now holds, so the
+        // seeker is told to pay the figure the owner actually recorded. Keys are the catalog's
+        // token strings, not bare names.
+        Assert.Equal(
+            Deposit.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture),
+            dispatch.Values[NotificationTokens.Amount]);
+    }
+
+    [Fact]
+    public async Task AcceptBooking_NotificationTargetsTheReusedConversation_WhenOneAlreadyExists()
+    {
+        var scenario = Scenario();
+        var existing = new Conversation
+        {
+            HallId = scenario.Hall.Id,
+            SenderUserId = RequesterId,
+            HallOwnerId = HallOwnerId
+        };
+        scenario.Conversations.Conversations.Add(existing);
+
+        await scenario.Service.AcceptBookingAsync(scenario.Hall.Id, scenario.Booking.Id, Approval());
+
+        // No duplicate conversation may appear, and the notification must point at the thread
+        // that was reused - not at a second one.
+        Assert.Single(scenario.Conversations.Conversations);
+        Assert.Equal(existing.Id.ToString(), scenario.Notifications.Single().TargetId);
     }
 
     [Fact]
@@ -423,6 +471,7 @@ public class BookingAcceptanceServiceShould
             Conversations = new RecordingConversationRepository(),
             Messages = new RecordingMessageRepository(),
             CurrentUser = CurrentUser(userId, roles ?? [ApplicationRoles.HallOwner]),
+            Notifications = new RecordingNotificationDispatcher(),
             Service = null!
         };
 
@@ -437,7 +486,7 @@ public class BookingAcceptanceServiceShould
                 unitOfWork,
                 context.CurrentUser,
                 new FakeNotificationService(),
-                new RecordingNotificationDispatcher());
+                context.Notifications);
 
         return context;
     }
@@ -487,6 +536,8 @@ public class BookingAcceptanceServiceShould
         public required FakeCurrentUserService CurrentUser { get; init; }
 
         public required BookingAcceptanceService Service { get; set; }
+
+        public required RecordingNotificationDispatcher Notifications { get; init; }
 
         /// <summary>Stands in for a message store that rejects the write, as a full disk would.</summary>
         public bool FailMessageWrites

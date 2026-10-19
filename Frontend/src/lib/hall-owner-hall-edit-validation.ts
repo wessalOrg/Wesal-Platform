@@ -1,5 +1,6 @@
 import { isHallRegion } from "@/constants/hallRegions";
 import { isValidRegisterPhone } from "@/lib/register-validation";
+import { isYouTubeVideoUrl } from "@/lib/youtube-embed";
 import type {
   HallEditFieldErrors,
   HallEditFormValues,
@@ -19,9 +20,6 @@ function isOptionalPositivePrice(raw: string): boolean {
   const value = Number(trimmed);
   return Number.isFinite(value) && value > 0;
 }
-
-const YOUTUBE_URL_PATTERN =
-  /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)[A-Za-z0-9_-]{6,30}(?:\?[^\s#]*)?(?:#[^\s]*)?$/i;
 
 /** Client-side checks for edit form — backend remains authoritative. */
 export function validateHallEditForm(
@@ -54,10 +52,6 @@ export function validateHallEditForm(
     errors.detailedAddress = "owner.management.addHall.errors.detailedAddressTooLong";
   }
 
-  if (!values.description.trim()) {
-    errors.description = "owner.management.addHall.errors.descriptionRequired";
-  }
-
   if (!values.guestCapacity.trim()) {
     errors.guestCapacity = "owner.management.addHall.errors.capacityRequired";
   } else if (!isPositiveInt(values.guestCapacity)) {
@@ -69,7 +63,7 @@ export function validateHallEditForm(
   }
 
   const youtube = values.youtubeVideoUrl.trim();
-  if (youtube && !YOUTUBE_URL_PATTERN.test(youtube)) {
+  if (youtube && !isYouTubeVideoUrl(youtube)) {
     errors.youtubeVideoUrl = "owner.management.addHall.errors.youtubeUrlInvalid";
   }
 

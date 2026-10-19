@@ -5,6 +5,7 @@ import { useT } from "@/i18n";
 
 type HallAmenitiesGridProps = {
   amenities: string[];
+  embedded?: boolean;
 };
 
 function amenityIcon(label: string): ReactNode {
@@ -20,20 +21,15 @@ function amenityIcon(label: string): ReactNode {
   return <CheckIcon />;
 }
 
-export default function HallAmenitiesGrid({ amenities }: HallAmenitiesGridProps) {
+export default function HallAmenitiesGrid({
+  amenities,
+  embedded = false,
+}: HallAmenitiesGridProps) {
   const t = useT();
 
   if (!amenities.length) return null;
 
-  return (
-    <section
-      aria-labelledby="hall-amenities-heading"
-      className="hall-section-card hall-amenities-card"
-      data-testid="hall-amenities"
-    >
-      <h2 id="hall-amenities-heading" className="hall-section-title">
-        {t("halls.details.amenitiesTitle")}
-      </h2>
+  const list = (
       <ul className="hall-amenities-grid">
         {amenities.map((amenity, index) => (
           <li
@@ -48,6 +44,26 @@ export default function HallAmenitiesGrid({ amenities }: HallAmenitiesGridProps)
           </li>
         ))}
       </ul>
+  );
+
+  if (embedded) {
+    return (
+      <div data-testid="hall-amenities">
+        {list}
+      </div>
+    );
+  }
+
+  return (
+    <section
+      aria-labelledby="hall-amenities-heading"
+      className="hall-section-card hall-amenities-card"
+      data-testid="hall-amenities"
+    >
+      <h2 id="hall-amenities-heading" className="hall-section-title">
+        {t("halls.details.amenitiesTitle")}
+      </h2>
+      {list}
     </section>
   );
 }

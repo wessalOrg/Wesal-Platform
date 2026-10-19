@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
@@ -12,6 +13,7 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useAdminChat } from "@/hooks/useAdminChat";
 import { useT } from "@/i18n";
+import { isOwnerAdminConversation, ownerConversationTitle } from "@/lib/owner-admin-conversation";
 import {
   conversationHallLabel,
   conversationPeerRoleLabel,
@@ -26,6 +28,7 @@ type MessagesInboxProps = {
 export default function MessagesInbox({ initialConversationId }: MessagesInboxProps) {
   const t = useT();
   const lang = useUiLang();
+  const promptAttach = useSearchParams().get("attach") === "1";
   const { ready, authenticated, isHallOwner, isAdmin } = useAccountAccess();
   const {
     selectedId,
@@ -63,7 +66,9 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
   const selected = conversations.find((item) => item.conversationId === selectedId) ?? null;
   const showThread = Boolean(selectedId);
   const threadTitle = selected
-    ? conversationPreviewTitle(selected, lang)
+    ? isHallOwner
+      ? ownerConversationTitle(selected, lang, conversations)
+      : conversationPreviewTitle(selected, lang)
     : thread
       ? conversationHallLabel(thread, lang)
       : t("messages.title");
@@ -145,6 +150,11 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
                 title={threadTitle}
                 subtitle={threadSubtitle}
                 badge={threadBadge}
+                peerDisplayName={
+                  isHallOwner && selected && isOwnerAdminConversation(selected, conversations)
+                    ? t("owner.messages.admin")
+                    : null
+                }
                 currentUserId={currentUserId}
                 onRetryLoad={retryThread}
                 onRetrySend={retrySend}
@@ -182,6 +192,7 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
                 attachmentBusy={adminChat.attachmentBusy}
                 onPickAttachment={adminChat.pickAttachment}
                 onClearAttachment={adminChat.clearAttachment}
+                promptAttach={promptAttach}
               />
             </ProtectedHallMessageThread>
           ) : (

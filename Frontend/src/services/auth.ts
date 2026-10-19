@@ -1,5 +1,13 @@
 import api from "@/lib/api";
 
+/** Render free-tier cold start often exceeds the default 8s axios timeout. */
+const AUTH_REQUEST_TIMEOUT_MS = 60_000;
+
+/** Best-effort ping so login/register is less likely to hit a sleeping host. */
+export function wakeRemoteApi(): void {
+  void api.get("/halls/featured", { timeout: AUTH_REQUEST_TIMEOUT_MS }).catch(() => undefined);
+}
+
 export type RegisterPayload = {
   fullName: string;
   email: string;
@@ -18,7 +26,9 @@ export type RegisterResult = {
 };
 
 export async function registerAccount(payload: RegisterPayload): Promise<RegisterResult> {
-  const { data } = await api.post<RegisterResult>("/auth/register", payload);
+  const { data } = await api.post<RegisterResult>("/auth/register", payload, {
+    timeout: AUTH_REQUEST_TIMEOUT_MS,
+  });
   return data;
 }
 
@@ -63,7 +73,9 @@ function mapLoginResult(data: LoginResultDto): LoginResult {
 }
 
 export async function loginAccount(payload: LoginPayload): Promise<LoginResult> {
-  const { data } = await api.post<LoginResultDto>("/auth/login", payload);
+  const { data } = await api.post<LoginResultDto>("/auth/login", payload, {
+    timeout: AUTH_REQUEST_TIMEOUT_MS,
+  });
   return mapLoginResult(data);
 }
 
@@ -73,7 +85,11 @@ export type ForgotPasswordResult = {
 
 /** Requests a password reset link for the given email (US-LOGIN-06). */
 export async function forgotPassword(email: string): Promise<ForgotPasswordResult> {
-  const { data } = await api.post<ForgotPasswordResult>("/auth/forgot-password", { email });
+  const { data } = await api.post<ForgotPasswordResult>(
+    "/auth/forgot-password",
+    { email },
+    { timeout: AUTH_REQUEST_TIMEOUT_MS },
+  );
   return data;
 }
 
@@ -90,7 +106,9 @@ export type ResetPasswordResult = {
 
 /** Validates the reset token and sets a new password (US-LOGIN-06). */
 export async function resetPassword(payload: ResetPasswordPayload): Promise<ResetPasswordResult> {
-  const { data } = await api.post<ResetPasswordResult>("/auth/reset-password", payload);
+  const { data } = await api.post<ResetPasswordResult>("/auth/reset-password", payload, {
+    timeout: AUTH_REQUEST_TIMEOUT_MS,
+  });
   return data;
 }
 

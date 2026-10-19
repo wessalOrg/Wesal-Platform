@@ -14,12 +14,16 @@ const CONTACT_BAR_CLASS =
 const CONTACT_PAGE_CLASS =
   "btn-primary min-h-11 h-full w-full gap-2 whitespace-nowrap";
 
+const CONTACT_COMPACT_CLASS =
+  "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_28%,white)] bg-[color-mix(in_srgb,var(--wesal-pink)_70%,white)] px-3.5 text-xs font-bold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink)]";
+
 type HallContactButtonProps = {
   hallId: string;
   isOwnHall?: boolean;
   isAvailable?: boolean;
   onOpened?: () => void;
-  variant?: "bar" | "bubble";
+  variant?: "bar" | "bubble" | "compact";
+  label?: string;
 };
 
 export default function HallContactButton({
@@ -28,6 +32,7 @@ export default function HallContactButton({
   isAvailable = true,
   onOpened,
   variant = "bar",
+  label,
 }: HallContactButtonProps) {
   const t = useT();
   const { authReady, isGuest, canContactOwner } = useHallPermissions({ isOwner: isOwnHall });
@@ -35,13 +40,19 @@ export default function HallContactButton({
   const [unavailableOpen, setUnavailableOpen] = useState(false);
   const loginHref = buildContactLoginRedirectPath(hallId);
   const bubble = variant === "bubble";
-  const label = starting ? t("halls.contact.opening") : t("halls.contact.cta");
-  const wrapClass = bubble ? "relative min-w-0 h-full w-full" : "min-w-0 flex-1";
+  const compact = variant === "compact";
+  const faceLabel = starting ? t("halls.contact.opening") : (label ?? t("halls.contact.cta"));
+  const faceClass = compact ? CONTACT_COMPACT_CLASS : CONTACT_BAR_CLASS;
+  const wrapClass = compact
+    ? "inline-flex max-w-full"
+    : bubble
+      ? "relative min-w-0 h-full w-full"
+      : "min-w-0 flex-1";
 
   if (!authReady) {
     return (
       <div className={wrapClass}>
-        <ContactFace variant={variant} className={bubble ? undefined : CONTACT_BAR_CLASS} disabled>
+        <ContactFace variant={variant} className={bubble ? undefined : faceClass} disabled>
           …
         </ContactFace>
       </div>
@@ -57,12 +68,12 @@ export default function HallContactButton({
       <div className={wrapClass}>
         <ContactFace
           variant={variant}
-          className={bubble ? undefined : `${CONTACT_BAR_CLASS} !opacity-50`}
+          className={bubble ? undefined : `${faceClass} !opacity-50`}
           ariaDisabled
           testId
           onClick={() => setUnavailableOpen(true)}
         >
-          {t("halls.contact.cta")}
+          {label ?? t("halls.contact.cta")}
         </ContactFace>
         <HallUnavailableDialog
           open={unavailableOpen}
@@ -81,16 +92,16 @@ export default function HallContactButton({
         <ContactFace
           variant={variant}
           href={loginHref}
-          className={bubble ? undefined : CONTACT_BAR_CLASS}
+          className={bubble ? undefined : faceClass}
           ariaLabel={t("halls.contact.aria")}
           testId
         >
-          {t("halls.contact.cta")}
+          {faceLabel}
         </ContactFace>
       ) : (
         <ContactFace
           variant={variant}
-          className={bubble ? undefined : CONTACT_BAR_CLASS}
+          className={bubble ? undefined : faceClass}
           ariaLabel={t("halls.contact.aria")}
           testId
           disabled={starting}
@@ -99,7 +110,7 @@ export default function HallContactButton({
             void start(hallId, { onOpened, loginHref });
           }}
         >
-          {label}
+          {faceLabel}
         </ContactFace>
       )}
       {error ? (
@@ -130,7 +141,7 @@ function ContactFace({
   testId,
   onClick,
 }: {
-  variant: "bar" | "bubble";
+  variant: "bar" | "bubble" | "compact";
   className?: string;
   children: ReactNode;
   href?: string;

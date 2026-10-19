@@ -1,3 +1,5 @@
+using Wesal.Domain.Enums;
+
 namespace Wesal.Application.Common.Models;
 
 public class ProfileResponse
@@ -31,6 +33,22 @@ public class ProfileResponse
     /// completion state (US-OWNER-30).
     /// </summary>
     public bool IsIdentityDocumentUploaded { get; init; }
+
+    /// <summary>
+    /// False while an Event Coordinator or Photographer still owes their role-specific
+    /// setup submission; true for completed accounts (including every pre-existing
+    /// regular user and hall owner). The client uses this to decide whether to route
+    /// the user into the setup step after login.
+    /// </summary>
+    public bool IsSetupComplete { get; init; } = true;
+
+    /// <summary>
+    /// The account-level approval state. Exposed as its string name so the client can
+    /// show "awaiting review" without mirroring the numeric enum.
+    /// </summary>
+    public string ApprovalStatus { get; init; } = nameof(AccountApprovalStatus.Approved);
+
+    public DateTimeOffset? RestrictedUntil { get; init; }
 }
 
 public class UpdateProfileRequest
@@ -51,4 +69,48 @@ public class ChangePasswordRequest
 public class ChangePasswordResponse
 {
     public string Message { get; init; } = string.Empty;
+}
+
+public sealed class PublicProfessionalProfileResponse
+{
+    public string UserId { get; init; } = string.Empty;
+    public string? Role { get; init; }
+    public string? ApprovalStatus { get; init; }
+    public bool IsPubliclyAvailable { get; init; }
+    public string? DisplayName { get; init; }
+    public string? ShopName { get; init; }
+    public string? OnlineStoreName { get; init; }
+    public string? PhoneNumber { get; init; }
+    public string? ShopLocation { get; init; }
+    public string? StudioName { get; init; }
+    public string? StudioLocation { get; init; }
+    public string? DetailedStudioLocation { get; init; }
+    public string? Bio { get; init; }
+    public string? ProfilePictureUrl { get; init; }
+    // Latest publicly visible posts and active offers, with dedicated paged endpoints for full lists.
+    public IReadOnlyList<PublicProfileContentDto> Posts { get; init; } = [];
+    public IReadOnlyList<PublicProfileContentDto> Offers { get; init; } = [];
+}
+
+public sealed class PublicProfileContentDto
+{
+    public Guid Id { get; init; }
+    public int SaveCount { get; init; }
+    public int ShareCount { get; init; }
+    public string? OwnerUserId { get; init; }
+    public string? Content { get; init; }
+    public decimal? Price { get; init; }
+    public decimal? OldPrice { get; init; }
+    public decimal? OfferPrice { get; init; }
+    public DateTimeOffset? StartsAt { get; init; }
+    public DateTimeOffset? EndsAt { get; init; }
+    public DateTimeOffset? StoppedAt { get; init; }
+    public DateTimeOffset? CreatedAt { get; init; }
+    public DateTimeOffset? UpdatedAt { get; init; }
+    public IReadOnlyList<PublicProfileImageDto> Images { get; init; } = [];
+}
+
+public sealed class UpdatePublicBioRequest
+{
+    public string? Bio { get; init; }
 }

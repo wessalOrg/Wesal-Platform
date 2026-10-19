@@ -19,6 +19,22 @@ jobs:
   backend:
     name: Backend restore, build, and test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      WESAL_TEST_PG: Host=localhost;Port=5432;Username=postgres;Database=postgres
     defaults:
       run:
         working-directory: Backend
@@ -94,5 +110,42 @@ jobs:
       - name: Production env gate
         run: node scripts/verify-production-env.mjs
 
+      - name: Typecheck
+        run: npx tsc --noEmit --pretty false --incremental false
+
       - name: Build
-        run: npm run build
+        run: |
+          set -uo pipefail
+          if npm run build > /tmp/wesal-next-build.log 2>&1; then
+            cat /tmp/wesal-next-build.log
+            exit 0
+          fi
+          cat /tmp/wesal-next-build.log
+          echo "::error::Frontend next build failed"
+          grep -E 'Error|Failed|Type error|Module not found|ELIFECYCLE|useSearchParams' /tmp/wesal-next-build.log | head -40 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+          exit 1
+
+  secret-scan:
+    name: Changed-source secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan the candidate diff with Gitleaks
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          base_sha="$PR_BASE_SHA"
+          if [[ -z "$base_sha" ]]; then base_sha="$PUSH_BEFORE_SHA"; fi
+          if [[ -z "$base_sha" || "$base_sha" =~ ^0+$ ]]; then
+            base_sha="$(git rev-parse HEAD^)"
+          fi
+          git diff --no-ext-diff --unified=0 "$base_sha" HEAD |
+            docker run --rm -i ghcr.io/gitleaks/gitleaks:v8.30.1 --redact stdin

@@ -11,16 +11,26 @@ public sealed class ProfileService : IProfileService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICurrentUserService _currentUser;
+    private readonly IUserContentPublishingRestrictionService? _restrictions;
 
     public ProfileService(UserManager<ApplicationUser> userManager, ICurrentUserService currentUser)
+        : this(userManager, currentUser, null)
+    {
+    }
+
+    public ProfileService(UserManager<ApplicationUser> userManager, ICurrentUserService currentUser,
+        IUserContentPublishingRestrictionService? restrictions)
     {
         _userManager = userManager;
         _currentUser = currentUser;
+        _restrictions = restrictions;
     }
 
     public async Task<ProfileResponse> GetProfileAsync(CancellationToken cancellationToken = default)
     {
         var user = await GetCurrentUserAsync(cancellationToken);
+        var restrictedUntil = _restrictions is null ? user.ContentPublishingRestrictedUntil
+            : await _restrictions.GetRestrictedUntilAsync(user.Id, cancellationToken);
         return new ProfileResponse
         {
             Id = user.Id,
@@ -29,7 +39,10 @@ public sealed class ProfileService : IProfileService
             PhoneNumber = user.PhoneNumber ?? string.Empty,
             ConcurrencyStamp = user.ConcurrencyStamp ?? string.Empty,
             ProfilePictureUrl = user.ProfilePictureUrl,
-            IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(user.IdentityDocumentUrl)
+            IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(user.IdentityDocumentUrl),
+            IsSetupComplete = user.IsSetupComplete,
+            ApprovalStatus = user.ApprovalStatus.ToString(),
+            RestrictedUntil = restrictedUntil
         };
     }
 
@@ -136,7 +149,9 @@ public sealed class ProfileService : IProfileService
             PhoneNumber = updated.PhoneNumber ?? string.Empty,
             ConcurrencyStamp = updated.ConcurrencyStamp ?? string.Empty,
             ProfilePictureUrl = updated.ProfilePictureUrl,
-            IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(updated.IdentityDocumentUrl)
+            IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(updated.IdentityDocumentUrl),
+            IsSetupComplete = updated.IsSetupComplete,
+            ApprovalStatus = updated.ApprovalStatus.ToString()
         };
     }
 

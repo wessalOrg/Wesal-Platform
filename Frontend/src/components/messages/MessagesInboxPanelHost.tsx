@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import IncomingMessageAlert from "@/hooks/useIncomingMessageAlert";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 
 const MessagesInboxPanel = dynamic(() => import("./MessagesInboxPanel"), {
@@ -10,6 +11,10 @@ const MessagesInboxPanel = dynamic(() => import("./MessagesInboxPanel"), {
 /** Mount the floating inbox panel only while open (code-split). */
 export default function MessagesInboxPanelHost() {
   const { isOpen } = useMessagesInbox();
-  if (!isOpen) return null;
-  return <MessagesInboxPanel />;
+  return (
+    <>
+      <IncomingMessageAlert />
+      {isOpen ? <MessagesInboxPanel /> : null}
+    </>
+  );
 }

@@ -33,6 +33,25 @@ public class SwaggerDocumentShould
     private const string ContactAdminPath = "/api/v{version}/halls/{hallId}/conversations/contact-admin";
     private const string AdminOwnerConversationPath = "/api/v{version}/admin/halls/{hallId}/conversation";
     private const string MyBookingsPath = "/api/v{version}/bookings";
+    private const string CoordinatorSetupPath = "/api/v{version}/coordinator/setup";
+    private const string AdminCoordinatorIdentityPath = "/api/v{version}/admin/coordinators/{userId}/identity-document";
+    private const string PhotographerSetupPath = "/api/v{version}/photographer/setup";
+    private const string AdminPhotographerIdentityPath = "/api/v{version}/admin/photographers/{userId}/identity-document";
+    private const string AdminCoordinatorListPath = "/api/v{version}/admin/coordinators";
+    private const string AdminCoordinatorDetailPath = "/api/v{version}/admin/coordinators/{userId}";
+    private const string AdminCoordinatorRejectPath = "/api/v{version}/admin/coordinators/{userId}/reject";
+    private const string AdminCoordinatorConversationPath = "/api/v{version}/admin/coordinators/{userId}/conversation";
+    private const string AdminPhotographerListPath = "/api/v{version}/admin/photographers";
+    private const string AdminPhotographerDetailPath = "/api/v{version}/admin/photographers/{userId}";
+    private const string AdminPhotographerRejectPath = "/api/v{version}/admin/photographers/{userId}/reject";
+    private const string AdminPhotographerRequestChangesPath = "/api/v{version}/admin/photographers/{userId}/request-changes";
+    private const string AdminPhotographerConversationPath = "/api/v{version}/admin/photographers/{userId}/conversation";
+    private const string CoordinatorResubmitPath = "/api/v{version}/coordinator/setup/resubmit";
+    private const string PhotographerResubmitPath = "/api/v{version}/photographer/setup/resubmit";
+    private const string PublicProfilePath = "/api/v{version}/profile/{userId}";
+    private const string PublicProfilePicturePath = "/api/v{version}/profile/{userId}/picture";
+    private const string ProfilePictureUploadPath = "/api/v{version}/profile/picture";
+    private const string ProfileBioPath = "/api/v{version}/profile/bio";
 
     /// <summary>
     /// Total operations' paths. Guards against the document silently losing endpoints, and
@@ -41,10 +60,20 @@ public class SwaggerDocumentShould
     /// WESAL-TASK-11's general-purpose owner "Contact Admin" action; 63 adds
     /// WESAL-TASK-10 Edit 15's Admin "Message" thread-resolve endpoint; 64 adds
     /// Edit 25's owner bookings-calendar endpoint; 65 adds Edit 22's comment
-    /// edit/delete path; 66 adds Edit 26's rejected-halls queue endpoint; 67 adds
-    /// the seeker-facing GET /bookings "My bookings" endpoint.
+    /// edit/delete path; 66 adds Edit 26's rejected-halls queue endpoint; 90 adds the
+    /// 24 Mabrouk Knowledge Studio admin operations; 92 adds the coordinator setup
+    /// submission and admin coordinator identity-document endpoints; 94 adds the
+    /// photographer setup submission and admin photographer identity-document endpoints;
+    /// 107 adds Task 5's seven coordinator-review operations (list, detail, shop-photo,
+    /// work-photos, approve, reject, conversation) and Task 6's six photographer-review
+    /// operations (list, detail, approve, reject, request-changes, conversation); 113
+    /// adds Tasks 7/8 resubmission and public-profile operations; 127 adds Task 9/10 post
+    /// and offer endpoints, including hall-owner offer management; 132 adds the five
+    /// distinct Task 11/12 post-comment and favorite paths; 155 adds Tasks 17-19 Discover,
+    /// Search, and owner-statistics routes; 156 adds the seeker-facing GET /bookings
+    /// "My bookings" endpoint.
     /// </summary>
-    private const int ExpectedPathCount = 67;
+    private const int ExpectedPathCount = 156;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -57,6 +86,16 @@ public class SwaggerDocumentShould
     }
 
     [Fact]
+    public void StatisticsOperation_ExplainsViewCountSemantics()
+    {
+        var document = BuildDocument();
+        var operation = document.Paths["/api/v{version}/statistics/me"].Operations[Microsoft.OpenApi.Models.OperationType.Get];
+
+        Assert.Contains("Repeated requests count separately", operation.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not unique-viewer counts", operation.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void EveryUploadEndpoint_IsPresentInTheDocument()
     {
         // Proves the document is not silently truncated: the endpoints that used to break
@@ -66,6 +105,108 @@ public class SwaggerDocumentShould
         Assert.Contains(AttachmentPath, document.Paths.Keys);
         Assert.Contains(CreateHallPath, document.Paths.Keys);
         Assert.Contains(IdentityDocumentPath, document.Paths.Keys);
+        Assert.Contains(CoordinatorSetupPath, document.Paths.Keys);
+        Assert.Contains(AdminCoordinatorIdentityPath, document.Paths.Keys);
+        Assert.Contains(PhotographerSetupPath, document.Paths.Keys);
+        Assert.Contains(AdminPhotographerIdentityPath, document.Paths.Keys);
+        Assert.Contains(CoordinatorResubmitPath, document.Paths.Keys);
+        Assert.Contains(PhotographerResubmitPath, document.Paths.Keys);
+        Assert.Contains(PublicProfilePath, document.Paths.Keys);
+        Assert.Contains(PublicProfilePicturePath, document.Paths.Keys);
+        Assert.Contains(ProfilePictureUploadPath, document.Paths.Keys);
+        Assert.Contains(ProfileBioPath, document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/share-link", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/shares", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/professionals/{providerUserId}/conversations", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/conversation", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/{offerId}/conversation", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/conversations/contact-admin-account", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/conversations/admin-account", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/conversations/admin-account/unread-count", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/professional/conversations", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/professional/conversations/unread-count", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/professional/conversations/{conversationId}/messages", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/notifications", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/notifications/unread-count", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/notifications/{notificationId}/read", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/notifications/read-all", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/posts/{postId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/offers/{offerId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/publishing-restrictions", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/publishing-restriction", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}", document.Paths.Keys);
+    }
+
+    [Fact]
+    public void PostsAndOffers_ArePresentInTheDocument()
+    {
+        var document = BuildDocument();
+        Assert.Contains("/api/v{version}/posts", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/profile/{userId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/images/{imageId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/{offerId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/{offerId}/stop", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/mine", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/profile/{userId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/{offerId}/images/{imageId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/owner/halls/{hallId}/offers", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/owner/halls/{hallId}/offers/{offerId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/owner/halls/{hallId}/offers/{offerId}/stop", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/halls/{hallId}/offers/active", document.Paths.Keys);
+    }
+
+    [Fact]
+    public void PostCommentsAndFavorites_ArePresentInTheDocument()
+    {
+        var document = BuildDocument();
+        Assert.Contains("/api/v{version}/posts/{postId}/comments", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/comments/{commentId}/replies", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/comments/{commentId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/favorites", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/favorites", document.Paths.Keys);
+    }
+
+    [Fact]
+    public void AdminReviewEndpoints_ArePresentInTheDocument()
+    {
+        // WESAL Tasks 5 and 6: every coordinator/photographer review operation must be a
+        // published path, so the admin UI can be generated against the spec instead of
+        // guessing routes for decisions, document reads, or the contact thread.
+        var document = BuildDocument();
+
+        string[] newPaths =
+        [
+            AdminCoordinatorListPath,
+            AdminCoordinatorDetailPath,
+            "/api/v{version}/admin/coordinators/{userId}/shop-photo",
+            "/api/v{version}/admin/coordinators/{userId}/work-photos/{index}",
+            "/api/v{version}/admin/coordinators/{userId}/approve",
+            AdminCoordinatorRejectPath,
+            AdminCoordinatorConversationPath,
+            AdminPhotographerListPath,
+            AdminPhotographerDetailPath,
+            "/api/v{version}/admin/photographers/{userId}/approve",
+            AdminPhotographerRejectPath,
+            AdminPhotographerRequestChangesPath,
+            AdminPhotographerConversationPath
+        ];
+
+        Assert.All(newPaths, path => Assert.Contains(path, document.Paths.Keys));
+    }
+
+    [Fact]
+    public void PhotographerSetup_IsDocumentedAsMultipartFormData()
+    {
+        // The setup submission is a multipart upload (text branch fields plus the
+        // personal ID document), so a generated client must be able to call it.
+        var schema = FormSchemaFor(PhotographerSetupPath);
+
+        Assert.Equal("string", schema.Properties["IdentityDocument"].Type);
+        Assert.Equal("binary", schema.Properties["IdentityDocument"].Format);
+        Assert.Contains("HasStudio", schema.Properties.Keys);
+        Assert.Contains("PhoneNumber", schema.Properties.Keys);
     }
 
     [Fact]
