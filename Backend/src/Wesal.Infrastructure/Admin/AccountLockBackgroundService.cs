@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Application.Common.Interfaces;
 
 namespace Wesal.Infrastructure.Admin;
 
@@ -25,8 +25,8 @@ public sealed class AccountLockBackgroundService : BackgroundService
             try
             {
                 using var scope = _scopeFactory.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<IAccountLockRepository>()
-                    .LiftExpiredAsync(_clock.GetUtcNow(), stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<IAccountLockExpiryService>()
+                    .ProcessExpiredAsync(cancellationToken: stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception exception) { _logger.LogError(exception, "Account lock expiry processing failed."); }

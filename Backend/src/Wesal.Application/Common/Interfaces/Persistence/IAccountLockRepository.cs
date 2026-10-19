@@ -10,5 +10,5 @@ public interface IAccountLockRepository
     Task<UserPublishingRestriction?> GetCurrentAsync(string userId, DateTimeOffset now, CancellationToken cancellationToken = default);
     Task<UserPublishingRestriction?> GetActiveForUpdateAsync(string userId, DateTimeOffset now, CancellationToken cancellationToken = default);
     Task AddAsync(UserPublishingRestriction restriction, CancellationToken cancellationToken = default);
-    Task<int> LiftExpiredAsync(DateTimeOffset now, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UserPublishingRestriction>> GetExpiredForUpdateAsync(DateTimeOffset now, string? userId = null, CancellationToken cancellationToken = default);
 }

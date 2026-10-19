@@ -224,6 +224,7 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
         });
 
         services.AddScoped<Wesal.Application.Common.Interfaces.IAccountLockService, Wesal.Infrastructure.Identity.AccountLockService>();
+        services.AddScoped<Wesal.Application.Common.Interfaces.IAccountLockExpiryService, Wesal.Infrastructure.Admin.AccountLockExpiryService>();
         services.AddScoped<INotificationInboxService, NotificationInboxService>();
         services.AddScoped<IAdminModerationService, AdminModerationService>();
         services.AddHostedService<AccountLockBackgroundService>();

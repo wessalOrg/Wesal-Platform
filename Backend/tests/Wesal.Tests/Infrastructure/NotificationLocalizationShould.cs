@@ -271,6 +271,8 @@ public sealed class NotificationLocalizationShould : IDisposable
         Assert.Equal(40, (int)NotificationKind.PostDeletedByAdminForPhotographer);
         Assert.Equal(41, (int)NotificationKind.ProfessionalOfferDeletedByAdmin);
         Assert.Equal(42, (int)NotificationKind.PublishingRestricted);
+        Assert.Equal(43, (int)NotificationKind.AccountLocked);
+        Assert.Equal(44, (int)NotificationKind.AccountUnlocked);
 
         var coordinatorDelete = NotificationCatalog.Render(NotificationKind.PostDeletedByAdminForCoordinator,
             Language.Arabic, new Dictionary<string, string?> { [NotificationTokens.Reason] = "مخالفة" });
@@ -295,6 +297,11 @@ public sealed class NotificationLocalizationShould : IDisposable
         Assert.Equal("تم تقييد نشر المحتوى", restriction.Title);
         Assert.Equal("تم تقييد نشر محتواك لمدة ساعتين", restriction.Body);
         Assert.Equal(NotificationActionTarget.None, restriction.ActionTarget);
+
+        var unlocked = NotificationCatalog.Render(NotificationKind.AccountUnlocked, Language.Arabic);
+        Assert.Equal("تم فك القفل عن حسابك", unlocked.Title);
+        Assert.Equal("تم فك القفل عن حسابك. يمكنك الآن النشر وتعديل بياناتك، وسيظهر حسابك ومنشوراتك للمستخدمين مجددًا.", unlocked.Body);
+        Assert.Equal(NotificationActionTarget.None, unlocked.ActionTarget);
     }
 
     [Fact]

@@ -445,6 +445,11 @@ public static class NotificationCatalog
                 "تم قفل حسابك مؤقتًا", "Your account has been temporarily locked",
                 "تم قفل حسابك لمدة " + NotificationTokens.Period + ". خلال هذه الفترة لا يمكنك النشر أو تعديل بياناتك، ولن يظهر حسابك ومنشوراتك للمستخدمين.",
                 "Your account is locked for " + NotificationTokens.Period + ". During this period you cannot publish or edit your data, and your account and posts will not appear to users.",
+                null, null, NotificationActionTarget.None),
+            [NotificationKind.AccountUnlocked] = new NotificationTemplate(
+                "تم فك القفل عن حسابك", "Your account has been unlocked",
+                "تم فك القفل عن حسابك. يمكنك الآن النشر وتعديل بياناتك، وسيظهر حسابك ومنشوراتك للمستخدمين مجددًا.",
+                "Your account has been unlocked. You can now publish and edit your data, and your account and posts will appear to users again.",
                 null, null, NotificationActionTarget.None)
         };
 

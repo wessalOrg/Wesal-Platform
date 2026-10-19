@@ -17,6 +17,7 @@ public sealed class AdminModerationService : IAdminModerationService
 {
     private readonly IAdminModerationRepository _moderation;
     private readonly IAccountLockRepository _restrictions;
+    private readonly IAccountLockExpiryService _lockExpiry;
     private readonly IUserNotificationWriter _notificationWriter;
     private readonly INotificationService _notificationService;
     private readonly INotificationDispatcher _dispatcher;
@@ -28,11 +29,12 @@ public sealed class AdminModerationService : IAdminModerationService
     private readonly ILogger<AdminModerationService> _logger;
 
     public AdminModerationService(IAdminModerationRepository moderation, IAccountLockRepository restrictions,
+        IAccountLockExpiryService lockExpiry,
         IUserNotificationWriter notificationWriter, INotificationService notificationService, INotificationDispatcher dispatcher,
         IUnitOfWork unitOfWork, UserManager<ApplicationUser> users, ICurrentUserService currentUser,
         IIdentityDocumentStore files, TimeProvider clock, ILogger<AdminModerationService> logger)
     {
-        _moderation = moderation; _restrictions = restrictions; _notificationWriter = notificationWriter;
+        _moderation = moderation; _restrictions = restrictions; _lockExpiry = lockExpiry; _notificationWriter = notificationWriter;
         _notificationService = notificationService; _dispatcher = dispatcher; _unitOfWork = unitOfWork;
         _users = users; _currentUser = currentUser; _files = files; _clock = clock; _logger = logger;
     }
@@ -89,6 +91,7 @@ public sealed class AdminModerationService : IAdminModerationService
             throw new ValidationException($"Lock reason cannot exceed {ModerationLimits.RestrictionReasonMaximumLength} characters.");
         var user = await _users.FindByIdAsync(userId) ?? throw new NotFoundException("User", userId);
         await RequireProfessionalUserAsync(user);
+        await _lockExpiry.ProcessExpiredAsync(userId, cancellationToken);
         var now = _clock.GetUtcNow();
         var endsAt = now.AddHours(request.DurationHours);
         var period = FormatArabicPeriod(request.DurationHours);
@@ -99,7 +102,6 @@ public sealed class AdminModerationService : IAdminModerationService
             await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
                 await _restrictions.AcquireUserLockAsync(userId, cancellationToken);
-                await _restrictions.LiftExpiredAsync(now, cancellationToken);
                 if (await _restrictions.GetActiveAsync(userId, now, cancellationToken) is not null)
                     throw new ConflictException("This account already has an active lock.");
                 await _restrictions.AddAsync(new UserPublishingRestriction
@@ -123,19 +125,23 @@ public sealed class AdminModerationService : IAdminModerationService
     {
         var user = await _users.FindByIdAsync(userId) ?? throw new NotFoundException("User", userId);
         await RequireProfessionalUserAsync(user);
+        await _lockExpiry.ProcessExpiredAsync(userId, cancellationToken);
         var now = _clock.GetUtcNow();
         var adminId = _currentUser.UserId ?? string.Empty;
+        var unlockedContent = await _notificationService.BuildAsync(NotificationKind.AccountUnlocked, userId,
+            cancellationToken: cancellationToken);
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             await _restrictions.AcquireUserLockAsync(userId, cancellationToken);
-            await _restrictions.LiftExpiredAsync(now, cancellationToken);
             var active = await _restrictions.GetActiveForUpdateAsync(userId, now, cancellationToken);
             if (active is null)
                 throw new NotFoundException("Active account lock", userId);
             active.LiftedAt = now;
             active.LiftedByAdminId = adminId;
+            await AddNotificationAsync(userId, NotificationKind.AccountUnlocked, unlockedContent, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
+        await _dispatcher.DispatchAsync(NotificationKind.AccountUnlocked, userId, cancellationToken: cancellationToken);
         return new AccountLockStatusResponse { IsLocked = false };
     }
 

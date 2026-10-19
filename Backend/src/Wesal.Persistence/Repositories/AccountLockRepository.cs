@@ -36,16 +36,20 @@ public sealed class AccountLockRepository(ApplicationDbContext context) : IAccou
     public async Task AddAsync(UserPublishingRestriction restriction, CancellationToken cancellationToken = default)
         => await context.AccountLocks.AddAsync(restriction, cancellationToken);
 
-    public async Task<int> LiftExpiredAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<UserPublishingRestriction>> GetExpiredForUpdateAsync(DateTimeOffset now, string? userId = null,
+        CancellationToken cancellationToken = default)
     {
         var query = context.AccountLocks.Where(row => row.LiftedAt == null && row.EndsAt <= now);
-        if (context.Database.ProviderName?.Contains("InMemory", StringComparison.Ordinal) == true)
+        if (context.Database.ProviderName?.Contains("Npgsql", StringComparison.Ordinal) == true)
         {
-            var rows = await query.ToListAsync(cancellationToken);
-            rows.ForEach(row => row.LiftedAt = now);
-            await context.SaveChangesAsync(cancellationToken);
-            return rows.Count;
+            if (string.IsNullOrWhiteSpace(userId))
+                return await context.AccountLocks.FromSqlInterpolated($"SELECT * FROM \"wesal\".\"UserPublishingRestrictions\" WHERE \"LiftedAt\" IS NULL AND \"EndsAt\" <= {now} ORDER BY \"EndsAt\", \"Id\" FOR UPDATE SKIP LOCKED")
+                    .ToListAsync(cancellationToken);
+            return await context.AccountLocks.FromSqlInterpolated($"SELECT * FROM \"wesal\".\"UserPublishingRestrictions\" WHERE \"LiftedAt\" IS NULL AND \"EndsAt\" <= {now} AND \"UserId\" = {userId} ORDER BY \"EndsAt\", \"Id\" FOR UPDATE SKIP LOCKED")
+                .ToListAsync(cancellationToken);
         }
-        return await query.ExecuteUpdateAsync(update => update.SetProperty(row => row.LiftedAt, now), cancellationToken);
+        if (!string.IsNullOrWhiteSpace(userId)) query = query.Where(row => row.UserId == userId);
+        return await query.OrderBy(row => row.EndsAt).ThenBy(row => row.Id).ToListAsync(cancellationToken);
     }
+
 }
