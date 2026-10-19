@@ -8,9 +8,10 @@ namespace Wesal.Tests.Infrastructure;
 /// Loopback HTTP endpoint for exercising the official Google SDK without calling
 /// Google or requiring a credential. The SDK's configured BaseUrl points here.
 /// </summary>
-internal sealed class GeminiSdkTestServer
+internal sealed class GeminiSdkTestServer : IAsyncDisposable
 {
-    private readonly HttpListener _listener = new();
+    private static readonly object ListenerStartLock = new();
+    private readonly HttpListener _listener;
     private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
     private readonly Task _worker;
 
@@ -19,12 +20,39 @@ internal sealed class GeminiSdkTestServer
     public GeminiSdkTestServer(Func<HttpRequestMessage, HttpResponseMessage> responder)
     {
         _responder = responder;
-        var port = GetEphemeralPort();
-        var root = $"http://127.0.0.1:{port}/";
-        BaseUrl = $"{root}v1beta";
-        _listener.Prefixes.Add(root);
-        _listener.Start();
+        (_listener, BaseUrl) = StartListener();
         _worker = RunAsync();
+    }
+
+    private static (HttpListener Listener, string BaseUrl) StartListener()
+    {
+        // Reserve the ephemeral port and register the HttpListener prefix under one
+        // process-wide lock. Without this, parallel tests can both select the same port
+        // during the gap between releasing TcpListener and starting HttpListener.
+        lock (ListenerStartLock)
+        {
+            HttpListenerException? lastError = null;
+            for (var attempt = 0; attempt < 8; attempt++)
+            {
+                var port = GetEphemeralPort();
+                var root = $"http://127.0.0.1:{port}/";
+                var listener = new HttpListener();
+                listener.Prefixes.Add(root);
+                try
+                {
+                    listener.Start();
+                    return (listener, $"{root}v1beta");
+                }
+                catch (HttpListenerException exception)
+                {
+                    lastError = exception;
+                    listener.Close();
+                }
+            }
+
+            throw new HttpListenerException(lastError?.ErrorCode ?? 0,
+                $"Could not start the Gemini test endpoint after several ephemeral-port attempts. {lastError?.Message}");
+        }
     }
 
     private static int GetEphemeralPort()
@@ -32,6 +60,13 @@ internal sealed class GeminiSdkTestServer
         using var socket = new TcpListener(IPAddress.Loopback, 0);
         socket.Start();
         return ((IPEndPoint)socket.LocalEndpoint).Port;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_listener.IsListening)
+            _listener.Stop();
+        await _worker;
     }
 
     private async Task RunAsync()

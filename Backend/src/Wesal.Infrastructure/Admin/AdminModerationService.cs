@@ -140,8 +140,6 @@ public sealed class AdminModerationService : IAdminModerationService
             throw new ValidationException("An administrator cannot delete their own account.");
         var user = await _users.FindByIdAsync(userId) ?? throw new NotFoundException("User", userId);
         await RequireProfessionalUserAsync(user);
-        if (await _moderation.HasHallOrBookingHistoryAsync(userId, cancellationToken))
-            throw new ConflictException("This account has hall or booking history that must be retained.");
         AccountCleanupSnapshot snapshot;
         try
         {

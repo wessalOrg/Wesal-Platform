@@ -10,6 +10,5 @@ public interface IAdminModerationRepository
     Task<ProfessionalOffer?> GetOfferForModerationAsync(Guid id, CancellationToken cancellationToken = default);
     void RemovePost(Post post);
     void RemoveOffer(ProfessionalOffer offer);
-    Task<bool> HasHallOrBookingHistoryAsync(string userId, CancellationToken cancellationToken = default);
     Task<AccountCleanupSnapshot> DeleteProfessionalAccountDataAsync(string userId, CancellationToken cancellationToken = default);
 }

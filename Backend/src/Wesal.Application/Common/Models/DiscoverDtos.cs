@@ -24,6 +24,7 @@ public sealed class PostStatisticsItemDto
     public string? Content { get; init; }
     public int SaveCount { get; init; }
     public int ShareCount { get; init; }
+    /// <summary>Total successful public post-detail requests; repeated requests count separately.</summary>
     public int ViewCount { get; init; }
 }
 
@@ -32,9 +33,11 @@ public sealed class OwnerStatisticsDto
     public int PageNumber { get; init; }
     public int PageSize { get; init; }
     public int TotalPosts { get; init; }
+    /// <summary>Total successful public profile-detail requests; repeated requests count separately.</summary>
     public int ProfileViewCount { get; init; }
     public int TotalSaveCount { get; init; }
     public int TotalShareCount { get; init; }
+    /// <summary>Total successful public post-detail requests across the owner's posts; not unique viewers.</summary>
     public int TotalPostViewCount { get; init; }
     public IReadOnlyList<PostStatisticsItemDto> Posts { get; init; } = [];
 }

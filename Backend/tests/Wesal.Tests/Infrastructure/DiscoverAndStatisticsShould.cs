@@ -153,6 +153,22 @@ public sealed class DiscoverAndStatisticsShould
     }
 
     [Fact]
+    public async Task DoesNotCountPostOrProfileRequestsForNonPublicAccountsOrMissingPosts()
+    {
+        await using var test = await Harness.CreateAsync();
+        var pending = test.AddProfessional(ApplicationRoles.EventCoordinator, "pending", "Pending Shop", AccountApprovalStatus.Pending);
+        var post = test.AddPost(pending, "Pending content");
+        await test.Db.SaveChangesAsync();
+        var service = new StatisticsService(test.Db, test.CurrentUser, new FixedClock(Now));
+
+        await service.RecordPostViewAsync(post.Id);
+        await service.RecordPostViewAsync(Guid.NewGuid());
+        await service.RecordProfileViewAsync(pending.Id);
+
+        Assert.Empty(await test.Db.ContentViewEvents.ToListAsync());
+    }
+
+    [Fact]
     public async Task RecordsViewsAtPostAndPublicProfileDetailBoundariesOnly()
     {
         var postId = Guid.NewGuid();
