@@ -10,4 +10,5 @@ public interface IPostRepository
     Task<Post?> GetPublicAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Post>> ListPublicByOwnerAsync(string ownerId, int skip, int take, CancellationToken cancellationToken = default);
     Task<int> CountPublicByOwnerAsync(string ownerId, CancellationToken cancellationToken = default);
+    Task<bool> RegisterShareAsync(Guid postId, string userId, DateTimeOffset now, CancellationToken cancellationToken = default);
 }

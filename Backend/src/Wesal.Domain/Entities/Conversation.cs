@@ -1,4 +1,5 @@
 using Wesal.Domain.Common;
+using Wesal.Domain.Enums;
 
 namespace Wesal.Domain.Entities;
 
@@ -24,6 +25,11 @@ public class Conversation : BaseAuditableEntity
     public string SenderUserId { get; set; } = string.Empty;
 
     public string HallOwnerId { get; set; } = string.Empty;
+
+    public ConversationKind Kind { get; set; } = ConversationKind.HallBooking;
+
+    public Guid? PendingContextPostId { get; set; }
+    public Guid? PendingContextOfferId { get; set; }
 
     public ICollection<Message> Messages { get; set; } = [];
 }

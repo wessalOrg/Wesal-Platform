@@ -55,7 +55,8 @@ public sealed class ConversationThreadGuard
             throw new NotFoundException(nameof(Conversation), conversationId);
         }
 
-        var isAdmin = _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
+        var isAdmin = conversation.Kind != Domain.Enums.ConversationKind.CustomerProvider
+            && _currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase);
 
         if (!ConversationAccess.IsParticipant(conversation, _currentUser.UserId, isAdmin))
         {

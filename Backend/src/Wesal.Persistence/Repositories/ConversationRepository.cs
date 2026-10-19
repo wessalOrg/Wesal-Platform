@@ -20,6 +20,37 @@ public sealed class ConversationRepository : IConversationRepository
         _context = context;
     }
 
+    public Task<Conversation?> GetCustomerProviderConversationAsync(string customerId, string providerId, CancellationToken cancellationToken = default)
+        => _context.Conversations.AsNoTracking().FirstOrDefaultAsync(c => c.Kind == ConversationKind.CustomerProvider
+            && c.SenderUserId == customerId && c.HallOwnerId == providerId, cancellationToken);
+
+    public Task<bool> IsApprovedProviderAsync(string providerId, CancellationToken cancellationToken = default)
+        => _context.Users.AnyAsync(user => user.Id == providerId && user.ApprovalStatus == AccountApprovalStatus.Approved
+            && _context.UserRoles.Any(userRole => userRole.UserId == providerId
+                && _context.Roles.Any(role => role.Id == userRole.RoleId
+                    && (role.Name == ApplicationRoles.EventCoordinator || role.Name == ApplicationRoles.Photographer))), cancellationToken);
+
+    public Task<bool> IsPhotographerAsync(string userId, CancellationToken cancellationToken = default)
+        => _context.UserRoles.AnyAsync(userRole => userRole.UserId == userId
+            && _context.Roles.Any(role => role.Id == userRole.RoleId && role.Name == ApplicationRoles.Photographer), cancellationToken);
+
+    public async Task SetPendingContextAsync(Guid conversationId, Guid? postId, Guid? offerId, CancellationToken cancellationToken = default)
+    {
+        var conversation = await _context.Conversations.FirstOrDefaultAsync(row => row.Id == conversationId, cancellationToken);
+        if (conversation is null) return;
+        conversation.PendingContextPostId = postId;
+        conversation.PendingContextOfferId = offerId;
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task ClearPendingContextAsync(Guid conversationId, CancellationToken cancellationToken = default)
+    {
+        var conversation = await _context.Conversations.FirstOrDefaultAsync(row => row.Id == conversationId, cancellationToken);
+        if (conversation is null) return;
+        conversation.PendingContextPostId = null;
+        conversation.PendingContextOfferId = null;
+    }
+
     public async Task AddAsync(Conversation conversation, CancellationToken cancellationToken = default)
     {
         await _context.Conversations.AddAsync(conversation, cancellationToken);
@@ -141,7 +172,7 @@ public sealed class ConversationRepository : IConversationRepository
     public async Task<Conversation?> GetAdminUserConversationAsync(string userId, CancellationToken cancellationToken = default)
     {
         return await _context.Conversations
-            .Where(c => c.HallId == null && c.HallOwnerId == userId)
+            .Where(c => c.HallId == null && c.Kind != ConversationKind.CustomerProvider && c.HallOwnerId == userId)
             .OrderBy(c => c.CreatedAt)
             .ThenBy(c => c.Id)
             .FirstOrDefaultAsync(cancellationToken);
@@ -366,7 +397,7 @@ public sealed class ConversationRepository : IConversationRepository
         return await _context.Users
             .AsNoTracking()
             .Where(user => userIds.Contains(user.Id))
-            .Select(user => new UserDisplayInfo { UserId = user.Id, FullName = user.FullName })
+            .Select(user => new UserDisplayInfo { UserId = user.Id, FullName = user.FullName, ProfilePictureUrl = user.ProfilePictureUrl })
             .ToListAsync(cancellationToken);
     }
 

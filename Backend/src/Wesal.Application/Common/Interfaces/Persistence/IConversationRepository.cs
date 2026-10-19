@@ -5,6 +5,16 @@ namespace Wesal.Application.Common.Interfaces.Persistence;
 
 public interface IConversationRepository
 {
+    Task<bool> IsApprovedProviderAsync(string providerId, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+    Task<bool> IsPhotographerAsync(string userId, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+    Task SetPendingContextAsync(Guid conversationId, Guid? postId, Guid? offerId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+    Task ClearPendingContextAsync(Guid conversationId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+    Task<Conversation?> GetCustomerProviderConversationAsync(string customerId, string providerId, CancellationToken cancellationToken = default)
+        => Task.FromResult<Conversation?>(null);
     Task AddAsync(Conversation conversation, CancellationToken cancellationToken = default);
 
     Task<Conversation?> GetByHallAndUserAsync(Guid hallId, string userId, CancellationToken cancellationToken = default);

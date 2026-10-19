@@ -10,7 +10,7 @@ namespace Wesal.API.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/posts")]
-public sealed class PostsController(IPostService posts) : ControllerBase
+public sealed class PostsController(IPostService posts, IPostSharingService sharing) : ControllerBase
 {
     private const long UploadBytes = 53_000_000;
 
@@ -78,6 +78,20 @@ public sealed class PostsController(IPostService posts) : ControllerBase
     {
         var image = await posts.GetImageAsync(postId, imageId, cancellationToken);
         return File(image.Content ?? [], image.ContentType);
+    }
+
+    [HttpGet("{postId:guid}/share-link")]
+    [AllowAnonymous]
+    public async Task<ActionResult<object>> GetShareLink(Guid postId, CancellationToken cancellationToken)
+        => Ok(new { shareLink = await sharing.GetShareLinkAsync(postId, cancellationToken) });
+
+    [HttpPost("{postId:guid}/shares")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RegisterShare(Guid postId, CancellationToken cancellationToken)
+    {
+        await sharing.RegisterShareAsync(postId, cancellationToken);
+        return NoContent();
     }
 }
 

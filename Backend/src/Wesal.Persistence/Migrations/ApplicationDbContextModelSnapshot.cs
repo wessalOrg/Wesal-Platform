@@ -649,6 +649,17 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("character varying(450)");
 
+                    b.Property<int>("Kind")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<Guid?>("PendingContextOfferId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PendingContextPostId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("SenderUserId")
                         .IsRequired()
                         .HasMaxLength(450)
@@ -663,6 +674,10 @@ namespace Wesal.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("HallId");
+
+                    b.HasIndex("SenderUserId", "HallOwnerId")
+                        .IsUnique()
+                        .HasFilter("\"Kind\" = 2");
 
                     b.ToTable("Conversations", "wesal");
                 });
@@ -1096,6 +1111,28 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<string>("ContextImageUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("ContextOfferId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContextOwnerUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<Guid?>("ContextPostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContextText")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ContextTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<Guid>("ConversationId")
                         .HasColumnType("uuid");
 
@@ -1123,7 +1160,10 @@ namespace Wesal.Persistence.Migrations
                     b.HasIndex("SenderUserId", "ClientRequestId")
                         .IsUnique();
 
-                    b.ToTable("Messages", "wesal");
+                    b.ToTable("Messages", "wesal", t =>
+                        {
+                            t.HasCheckConstraint("CK_Messages_OneContext", "\"ContextPostId\" IS NULL OR \"ContextOfferId\" IS NULL");
+                        });
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.PhotographerProfile", b =>
@@ -1209,6 +1249,11 @@ namespace Wesal.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<int>("ShareCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1224,6 +1269,8 @@ namespace Wesal.Persistence.Migrations
                             t.HasCheckConstraint("CK_Posts_Price", "\"Price\" IS NULL OR \"Price\" >= 0");
 
                             t.HasCheckConstraint("CK_Posts_SaveCount", "\"SaveCount\" >= 0");
+
+                            t.HasCheckConstraint("CK_Posts_ShareCount", "\"ShareCount\" >= 0");
                         });
                 });
 
@@ -1335,6 +1382,36 @@ namespace Wesal.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("PostImages", "wesal");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.PostShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateOnly>("UtcDate")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("UserId", "PostId", "UtcDate")
+                        .IsUnique();
+
+                    b.ToTable("PostShares", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.ProfessionalOffer", b =>
@@ -1527,8 +1604,15 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<Guid?>("ConversationId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GroupSenderUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
 
                     b.Property<int>("Kind")
                         .HasColumnType("integer");
@@ -1538,6 +1622,13 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(5)
                         .HasColumnType("character varying(5)");
 
+                    b.Property<int>("MessageCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("MessagePreview")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
                     b.Property<DateTimeOffset?>("ReadAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1545,6 +1636,14 @@ namespace Wesal.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("character varying(450)");
+
+                    b.Property<string>("SenderAvatarUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("SenderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("TargetId")
                         .HasMaxLength(100)
@@ -1558,6 +1657,8 @@ namespace Wesal.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("RecipientUserId", "CreatedAt");
+
+                    b.HasIndex("RecipientUserId", "ConversationId", "GroupSenderUserId", "ReadAt");
 
                     b.ToTable("UserNotifications", "wesal");
                 });
@@ -1965,6 +2066,15 @@ namespace Wesal.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.PostShare", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Post", null)
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.ProfessionalOffer", b =>

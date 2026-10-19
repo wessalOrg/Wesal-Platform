@@ -42,6 +42,8 @@ public sealed record NotificationContent(
 /// </summary>
 public static class NotificationTokens
 {
+    public const string SenderName = "{SenderName}";
+    public const string MessagePreview = "{MessagePreview}";
     public const string CommenterName = "{CommenterName}";
     public const string RequesterName = "{RequesterName}";
     public const string CancellerName = "{CancellerName}";
@@ -399,7 +401,21 @@ public static class NotificationCatalog
 
             [NotificationKind.PostCommentReplyOnOwnerPost] = new NotificationTemplate(
                 "رد جديد على منشورك", "New reply on your post", NotificationTokens.CommenterName + " رد على تعليق في منشورك", NotificationTokens.CommenterName + " replied to a comment on your post",
-                "عرض المنشور", "View post", NotificationActionTarget.Post)
+                "عرض المنشور", "View post", NotificationActionTarget.Post),
+
+            [NotificationKind.NewMessage] = new NotificationTemplate(
+                "رسالة جديدة من " + NotificationTokens.SenderName, "New message from " + NotificationTokens.SenderName,
+                NotificationTokens.MessagePreview, NotificationTokens.MessagePreview, "فتح المحادثة", "Open conversation", NotificationActionTarget.Conversation),
+
+            [NotificationKind.AdminMessageForCoordinator] = new NotificationTemplate(
+                "لديك رسالة من إدارة وصال", "You have a message from Wesal administration",
+                "يمكنك فتح المحادثة ومتابعة أي ملاحظات تتعلق بطلبك.", "Open the conversation and follow up on any notes related to your request.",
+                "فتح المحادثة", "Open conversation", NotificationActionTarget.Conversation),
+
+            [NotificationKind.AdminMessageForPhotographer] = new NotificationTemplate(
+                "لديك رسالة من إدارة وصال", "You have a message from Wesal administration",
+                "يمكنك فتح المحادثة ومتابعة أي ملاحظات تتعلق بطلبك.", "Open the conversation and follow up on any notes related to your request.",
+                "فتح المحادثة", "Open conversation", NotificationActionTarget.Conversation)
         };
 
     public static NotificationTemplate Get(NotificationKind kind)

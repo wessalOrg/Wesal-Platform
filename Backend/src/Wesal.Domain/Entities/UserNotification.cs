@@ -41,4 +41,11 @@ public class UserNotification
 
     /// <summary>Set when the notification has been surfaced as read; null while unread.</summary>
     public DateTimeOffset? ReadAt { get; set; }
+
+    public Guid? ConversationId { get; set; }
+    public string? GroupSenderUserId { get; set; }
+    public string? SenderName { get; set; }
+    public string? SenderAvatarUrl { get; set; }
+    public string? MessagePreview { get; set; }
+    public int MessageCount { get; set; } = 1;
 }

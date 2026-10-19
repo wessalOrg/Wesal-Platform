@@ -163,7 +163,7 @@ public sealed class PostService : IPostService
 
     private static PublicProfileContentDto ToProfileDto(Post post) => new()
     {
-        Id = post.Id, OwnerUserId = post.OwnerUserId, Content = post.Content, Price = post.Price, SaveCount = post.SaveCount,
+        Id = post.Id, OwnerUserId = post.OwnerUserId, Content = post.Content, Price = post.Price, SaveCount = post.SaveCount, ShareCount = post.ShareCount,
         CreatedAt = post.CreatedAt, UpdatedAt = post.UpdatedAt,
         Images = post.Images.OrderBy(image => image.Order).Select(image => PublishingContentHelper.ToImage(post.Id, image.Id, image.Order, "posts")).ToArray()
     };

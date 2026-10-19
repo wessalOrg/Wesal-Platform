@@ -113,7 +113,10 @@ public enum NotificationKind
     PostCommentedForCoordinator = 30,
     PostCommentedForPhotographer = 31,
     PostCommentReplyForOwner = 32,
-    PostCommentReplyOnOwnerPost = 33
+    PostCommentReplyOnOwnerPost = 33,
+    NewMessage = 34,
+    AdminMessageForCoordinator = 35,
+    AdminMessageForPhotographer = 36
 }
 
 /// <summary>
