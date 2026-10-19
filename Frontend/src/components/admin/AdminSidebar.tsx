@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import WesalLogo from "@/components/brand/WesalLogo";
 import {
+  ADMIN_HELP_QUESTIONS_PATH,
   ADMIN_MANAGEMENT_PATH,
   ADMIN_MABROUK_PATH,
   ADMIN_MESSAGES_PATH,
@@ -46,6 +47,9 @@ export default function AdminSidebar({
     pathname === ADMIN_SUBSCRIPTIONS_PATH || pathname.startsWith(`${ADMIN_SUBSCRIPTIONS_PATH}/`);
   const messagesActive =
     pathname === ADMIN_MESSAGES_PATH || pathname.startsWith(`${ADMIN_MESSAGES_PATH}/`);
+  const helpQuestionsActive =
+    pathname === ADMIN_HELP_QUESTIONS_PATH ||
+    pathname.startsWith(`${ADMIN_HELP_QUESTIONS_PATH}/`);
   const mabroukActive = pathname === ADMIN_MABROUK_PATH || pathname.startsWith(`${ADMIN_MABROUK_PATH}/`);
 
   useEffect(() => {
@@ -190,6 +194,24 @@ export default function AdminSidebar({
                 </span>
               </Link>
             </li>
+            <li>
+              <Link
+                href={ADMIN_HELP_QUESTIONS_PATH}
+                prefetch
+                className={`seeker-dash-sidebar-link${
+                  helpQuestionsActive ? " seeker-dash-sidebar-link--active" : ""
+                }`}
+                aria-current={helpQuestionsActive ? "page" : undefined}
+                data-testid="admin-nav-help-questions"
+                onClick={onNavigate}
+                onMouseEnter={() => router.prefetch(ADMIN_HELP_QUESTIONS_PATH)}
+              >
+                <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+                  <HelpQuestionsIcon />
+                </span>
+                <span>{t("admin.nav.helpQuestions")}</span>
+              </Link>
+            </li>
           </ul>
         </nav>
 
@@ -287,6 +309,21 @@ function MabroukIcon() {
       <path d="M12 3.5a3.5 3.5 0 0 0-6.7 1.4A3.8 3.8 0 0 0 3 8.2a3.8 3.8 0 0 0 1.3 2.9A3.6 3.6 0 0 0 6 17.5V20h5v-3H9.5v-3H12v-3H9V8h3V3.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M12 3.5a3.5 3.5 0 0 1 6.7 1.4A3.8 3.8 0 0 1 21 8.2a3.8 3.8 0 0 1-1.3 2.9 3.6 3.6 0 0 1-1.7 6.4V20h-5v-3h1.5v-3H12v-3h3V8h-3V3.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M10 6.5h4M10 10h4M10 13.5h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function HelpQuestionsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M9.6 9.3a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.2 1-1.2 1.9"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="16.6" r="1" fill="currentColor" />
     </svg>
   );
 }

@@ -1097,6 +1097,7 @@ const ar: MessageCatalog = {
   "admin.nav.rejectedHalls": "القاعات المرفوضة",
   "admin.nav.subscriptions": "الاشتراكات",
   "admin.nav.messages": "الرسائل",
+  "admin.nav.helpQuestions": "أسئلة مركز المساعدة",
   "admin.nav.browseHalls": "العودة للرئيسية",
   "admin.nav.logout": "تسجيل الخروج",
   "admin.messages.title": "الرسائل",
