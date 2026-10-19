@@ -254,8 +254,12 @@ public sealed class CommentService : ICommentService
 
     private void EnsureRegisteredUser()
     {
-        if (!_currentUser.Roles.Contains(ApplicationRoles.RegisteredUser, StringComparer.OrdinalIgnoreCase)
-            && !_currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase))
+        if (_currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new ForbiddenException("Administrators cannot comment on halls.");
+        }
+
+        if (!_currentUser.Roles.Contains(ApplicationRoles.RegisteredUser, StringComparer.OrdinalIgnoreCase))
         {
             throw new ForbiddenException("Only registered users can comment on halls.");
         }
