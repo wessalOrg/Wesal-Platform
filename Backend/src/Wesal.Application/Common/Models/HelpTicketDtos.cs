@@ -22,6 +22,12 @@ public sealed class HelpTicketDto
 
     /// <summary>True when a reply is waiting to be read by the ticket owner.</summary>
     public bool UserUnread { get; init; }
+
+    /// <summary>
+    /// True while no Admin has opened the owner's conversation since this question arrived, so
+    /// the Admin queue can group questions per owner and badge the ones still unread.
+    /// </summary>
+    public bool AdminUnread { get; init; }
 }
 
 /// <summary>

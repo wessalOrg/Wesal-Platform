@@ -143,14 +143,33 @@ public sealed class HelpTicketsService : IHelpTicketsService
         var ticket = await _tickets.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException("Help ticket not found.");
 
+        var now = _clock.GetUtcNow();
         ticket.Reply = reply;
         ticket.Status = HelpTicketStatus.Replied;
-        ticket.RepliedAt = _clock.GetUtcNow();
+        ticket.RepliedAt = now;
         ticket.RepliedByUserId = _currentUser.UserId;
         ticket.UserUnread = true;
+        // Answering is proof the Admin has seen the conversation, so it counts as read too.
+        ticket.ReadByAdminAt ??= now;
 
         await _tickets.SaveChangesAsync(cancellationToken);
         return Map(ticket);
+    }
+
+    public async Task MarkConversationReadAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var ownerId = (userId ?? string.Empty).Trim();
+        if (ownerId.Length == 0)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["userId"] = ["User id is required."]
+            });
+        }
+
+        await _tickets.MarkConversationReadAsync(ownerId, _clock.GetUtcNow(), cancellationToken);
     }
 
     private static HelpTicketDto Map(HelpTicket ticket) => new()
@@ -163,7 +182,8 @@ public sealed class HelpTicketsService : IHelpTicketsService
         Status = ticket.Status == HelpTicketStatus.Replied ? "replied" : "open",
         Reply = ticket.Reply,
         RepliedAt = ticket.RepliedAt,
-        UserUnread = ticket.UserUnread
+        UserUnread = ticket.UserUnread,
+        AdminUnread = ticket.ReadByAdminAt is null
     };
 
     private string RequireUserId()

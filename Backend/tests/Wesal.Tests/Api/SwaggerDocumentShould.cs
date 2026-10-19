@@ -58,6 +58,7 @@ public class SwaggerDocumentShould
     private const string HelpTicketReadPath = "/api/v{version}/help/tickets/{id}/read";
     private const string AdminHelpTicketsPath = "/api/v{version}/admin/help/tickets";
     private const string AdminHelpTicketReplyPath = "/api/v{version}/admin/help/tickets/{id}/reply";
+    private const string AdminHelpConversationReadPath = "/api/v{version}/admin/help/tickets/conversations/{userId}/read";
 
     /// <summary>
     /// Total operations' paths. Guards against the document silently losing endpoints, and
@@ -79,9 +80,10 @@ public class SwaggerDocumentShould
     /// Search, and owner-statistics routes; 156 adds the seeker-facing GET /bookings
     /// "My bookings" endpoint; 158 adds the seeker's saved-halls list and per-hall save/remove
     /// "أضف للمفضلة" endpoints; 162 adds the durable Help Center ticket list, filing, read
-    /// receipt, and the Admin queue/reply endpoints.
+    /// receipt, and the Admin queue/reply endpoints; 166 adds the account-lock administration
+    /// operations; 167 adds the Admin per-conversation read receipt used by the grouped queue.
     /// </summary>
-    private const int ExpectedPathCount = 166;
+    private const int ExpectedPathCount = 167;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -366,6 +368,7 @@ public class SwaggerDocumentShould
         Assert.Contains(HelpTicketReadPath, document.Paths.Keys);
         Assert.Contains(AdminHelpTicketsPath, document.Paths.Keys);
         Assert.Contains(AdminHelpTicketReplyPath, document.Paths.Keys);
+        Assert.Contains(AdminHelpConversationReadPath, document.Paths.Keys);
     }
 
     [Fact]

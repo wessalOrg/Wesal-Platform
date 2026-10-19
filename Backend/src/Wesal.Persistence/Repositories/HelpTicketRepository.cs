@@ -47,6 +47,25 @@ public sealed class HelpTicketRepository(ApplicationDbContext db) : IHelpTicketR
         return PagedResult<HelpTicket>.Create(items, page, pageSize, totalCount);
     }
 
+    public async Task MarkConversationReadAsync(
+        string userId,
+        DateTimeOffset readAt,
+        CancellationToken cancellationToken = default)
+    {
+        var unread = await db.HelpTickets
+            .Where(ticket => ticket.UserId == userId && ticket.ReadByAdminAt == null)
+            .ToListAsync(cancellationToken);
+
+        if (unread.Count == 0) return;
+
+        foreach (var ticket in unread)
+        {
+            ticket.ReadByAdminAt = readAt;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
         => db.SaveChangesAsync(cancellationToken);
 }

@@ -17,5 +17,11 @@ public interface IHelpTicketRepository
     /// <summary>Every ticket for the Admin queue, newest first.</summary>
     Task<PagedResult<HelpTicket>> ListAllAsync(int page, int pageSize, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Clears the Admin "unread" marker for every ticket the given owner has filed. Used when an
+    /// Admin opens a conversation so the shared badge drops the moment it is looked at.
+    /// </summary>
+    Task MarkConversationReadAsync(string userId, DateTimeOffset readAt, CancellationToken cancellationToken = default);
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

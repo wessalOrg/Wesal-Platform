@@ -100,6 +100,7 @@ public class HelpTicketsServiceShould : IDisposable
         Assert.Equal("How do I cancel a booking?", created.Question);
         Assert.Equal("open", created.Status);
         Assert.False(created.UserUnread);
+        Assert.True(created.AdminUnread);
         Assert.Null(created.Reply);
 
         var persisted = Assert.Single(_context.HelpTickets);
@@ -194,6 +195,7 @@ public class HelpTicketsServiceShould : IDisposable
         Assert.Equal("replied", replied.Status);
         Assert.Equal("Here you go", replied.Reply);
         Assert.True(replied.UserUnread);
+        Assert.False(replied.AdminUnread);
         Assert.NotNull(replied.RepliedAt);
 
         var persisted = _context.HelpTickets.Single(ticket => ticket.Id == created.Id);
@@ -245,6 +247,56 @@ public class HelpTicketsServiceShould : IDisposable
         Assert.Equal(2, page.Items.Count);
         Assert.Equal([third.Id, second.Id], page.Items.Select(ticket => ticket.Id));
         Assert.DoesNotContain(page.Items, ticket => ticket.Id == first.Id);
+    }
+
+    [Fact]
+    public async Task MarkConversationRead_ClearsAdminUnreadForEveryTicketOfThatOwner()
+    {
+        var user = await CreateUserAsync("seeker@example.com", "+970599500020");
+        var admin = await CreateUserAsync("admin@example.com", "+970599500021", ApplicationRoles.Admin);
+        var ownerService = CreateService(new FakeCurrentUser(user.Id, true));
+
+        var first = await ownerService.CreateAsync(new CreateHelpTicketRequestDto { Question = "First" });
+        var second = await ownerService.CreateAsync(new CreateHelpTicketRequestDto { Question = "Second" });
+        var adminService = CreateService(new FakeCurrentUser(admin.Id, true, ApplicationRoles.Admin));
+
+        Assert.True(first.AdminUnread);
+        Assert.True(second.AdminUnread);
+
+        await adminService.MarkConversationReadAsync(user.Id);
+
+        var page = await adminService.ListAllAsync(page: 1, pageSize: 10);
+        var conversation = page.Items.Where(ticket => ticket.UserId == user.Id).ToList();
+        Assert.Equal(2, conversation.Count);
+        Assert.All(conversation, ticket => Assert.False(ticket.AdminUnread));
+    }
+
+    [Fact]
+    public async Task MarkConversationRead_LeavesAnotherOwnersConversationUnread()
+    {
+        var owner = await CreateUserAsync("owner@example.com", "+970599500022");
+        var other = await CreateUserAsync("other@example.com", "+970599500023");
+        var admin = await CreateUserAsync("admin@example.com", "+970599500024", ApplicationRoles.Admin);
+        await CreateService(new FakeCurrentUser(owner.Id, true))
+            .CreateAsync(new CreateHelpTicketRequestDto { Question = "Mine" });
+        var otherTicket = await CreateService(new FakeCurrentUser(other.Id, true))
+            .CreateAsync(new CreateHelpTicketRequestDto { Question = "Theirs" });
+        var adminService = CreateService(new FakeCurrentUser(admin.Id, true, ApplicationRoles.Admin));
+
+        await adminService.MarkConversationReadAsync(owner.Id);
+
+        var page = await adminService.ListAllAsync(page: 1, pageSize: 10);
+        var stillUnread = Assert.Single(page.Items, ticket => ticket.Id == otherTicket.Id);
+        Assert.True(stillUnread.AdminUnread);
+    }
+
+    [Fact]
+    public async Task MarkConversationRead_BlankUser_ThrowsValidation()
+    {
+        var admin = await CreateUserAsync("admin@example.com", "+970599500025", ApplicationRoles.Admin);
+        var service = CreateService(new FakeCurrentUser(admin.Id, true, ApplicationRoles.Admin));
+
+        await Assert.ThrowsAsync<ValidationException>(() => service.MarkConversationReadAsync("   "));
     }
 
     [Fact]

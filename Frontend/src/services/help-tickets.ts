@@ -67,6 +67,7 @@ type ApiHelpTicket = {
   reply?: string | null;
   repliedAt?: string | null;
   userUnread?: boolean;
+  adminUnread?: boolean;
 };
 
 type ApiPagedHelpTickets = {
@@ -95,6 +96,7 @@ function mapHelpTicket(item: ApiHelpTicket): HelpTicket | null {
     reply: typeof item.reply === "string" && item.reply.trim() ? item.reply.trim() : null,
     repliedAt: item.repliedAt?.trim() || null,
     userUnread: Boolean(item.userUnread),
+    adminUnread: Boolean(item.adminUnread),
   };
 }
 
@@ -121,8 +123,8 @@ export async function fetchAllHelpTickets(pageSize = 100): Promise<HelpTicket[]>
     .filter((ticket): ticket is HelpTicket => Boolean(ticket));
 }
 
-/** Tickets still awaiting a reply, for the Admin sidebar badge. */
-export async function fetchOpenHelpTicketCount(): Promise<number> {
+/** Conversations (distinct askers) with at least one question no Admin has opened yet. */
+export async function fetchUnreadHelpConversationCount(): Promise<number> {
   const { data } = await withTransientRetry(() =>
     api.get<ApiPagedHelpTickets>("/admin/help/tickets", {
       params: { page: 1, pageSize: 100 },
@@ -130,7 +132,12 @@ export async function fetchOpenHelpTicketCount(): Promise<number> {
     }),
   );
   const items = Array.isArray(data?.items) ? data.items : [];
-  return items.filter((ticket) => normalizeStatus(ticket.status) === "open").length;
+  const unreadUsers = new Set<string>();
+  for (const ticket of items) {
+    const userId = String(ticket.userId ?? "").trim();
+    if (userId && ticket.adminUnread) unreadUsers.add(userId);
+  }
+  return unreadUsers.size;
 }
 
 export async function submitHelpTicket(input: {
@@ -152,6 +159,17 @@ export async function submitHelpTicket(input: {
 /** Clears the owner's "unread reply" flag. */
 export async function markHelpTicketReadOnServer(id: string): Promise<void> {
   await withTransientRetry(() => api.post(`/help/tickets/${id}/read`, undefined, { timeout: READ_TIMEOUT_MS }));
+}
+
+/** Marks the asker's whole conversation read for every Admin (shared read state). */
+export async function markHelpConversationReadOnServer(userId: string): Promise<void> {
+  await withTransientRetry(() =>
+    api.post(
+      `/admin/help/tickets/conversations/${encodeURIComponent(userId)}/read`,
+      undefined,
+      { timeout: READ_TIMEOUT_MS },
+    ),
+  );
 }
 
 /** Admin answer; also flips the ticket to "replied" server-side. */
