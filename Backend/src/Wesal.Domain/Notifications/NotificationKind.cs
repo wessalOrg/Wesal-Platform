@@ -122,7 +122,9 @@ public enum NotificationKind
     PostDeletedByAdminForCoordinator = 39,
     PostDeletedByAdminForPhotographer = 40,
     ProfessionalOfferDeletedByAdmin = 41,
-    PublishingRestricted = 42
+    PublishingRestricted = 42,
+    AccountLocked = 43,
+    AccountUnlocked = 44
 }
 
 /// <summary>

@@ -234,10 +234,11 @@ public sealed class ProfessionalProfileServiceShould : IDisposable
         public IReadOnlyList<string> Roles => [];
     }
 
-    private sealed class RestrictionState : IUserContentPublishingRestrictionService
+    private sealed class RestrictionState : IAccountLockService
     {
         public bool IsRestricted { get; set; }
-        public Task<bool> IsRestrictedAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(IsRestricted);
+        public Task<DateTimeOffset?> GetLockedUntilAsync(string userId, CancellationToken cancellationToken = default)
+            => Task.FromResult<DateTimeOffset?>(IsRestricted ? DateTimeOffset.UtcNow.AddHours(1) : null);
     }
 
     private sealed class MemoryDocumentStore : IIdentityDocumentStore

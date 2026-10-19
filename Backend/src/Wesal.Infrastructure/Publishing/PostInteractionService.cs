@@ -19,13 +19,15 @@ public sealed class PostInteractionService(
     INotificationService notificationService,
     IUserNotificationWriter notificationWriter,
     INotificationDispatcher dispatcher,
-    IDateTime clock) : IPostInteractionService
+    IDateTime clock,
+    IAccountLockService? accountLocks = null) : IPostInteractionService
 {
     private static readonly Regex Markup = new("<[^>]*>", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public async Task<PostCommentDto> CreateCommentAsync(Guid postId, CreatePostCommentRequest request, CancellationToken cancellationToken = default)
     {
         var actorId = RequireUser();
+        if (accountLocks is not null) await accountLocks.EnsureUnlockedAsync(actorId, cancellationToken);
         var text = Sanitize(request.Text);
         var post = await posts.GetPublicPostAsync(postId, cancellationToken) ?? throw new NotFoundException("Post", postId);
         var comment = new PostComment { Id = Guid.NewGuid(), PostId = postId, AuthorUserId = actorId, Text = text, CreatedAt = clock.Now };
@@ -49,6 +51,7 @@ public sealed class PostInteractionService(
     public async Task<PostCommentDto> ReplyAsync(Guid postId, Guid commentId, CreatePostCommentRequest request, CancellationToken cancellationToken = default)
     {
         var actorId = RequireUser();
+        if (accountLocks is not null) await accountLocks.EnsureUnlockedAsync(actorId, cancellationToken);
         var text = Sanitize(request.Text);
         var repliedTo = await posts.GetCommentAsync(commentId, tracking: false, cancellationToken)
             ?? throw new NotFoundException("Comment", commentId);

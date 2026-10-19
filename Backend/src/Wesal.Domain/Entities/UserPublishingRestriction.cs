@@ -11,4 +11,5 @@ public sealed class UserPublishingRestriction : BaseEntity
     public string CreatedByAdminId { get; set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? LiftedAt { get; set; }
+    public string? LiftedByAdminId { get; set; }
 }

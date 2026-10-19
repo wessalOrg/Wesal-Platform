@@ -5,16 +5,17 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
+using Wesal.Persistence.Queries;
 
 namespace Wesal.Persistence.Repositories;
 
 /// <summary>One shared SQL visibility predicate for profiles and the future Discover Offers feed.</summary>
 public static class ProfessionalOfferVisibility
 {
-    public static IQueryable<ProfessionalOffer> VisibleAt(this IQueryable<ProfessionalOffer> query, IQueryable<ApplicationUser> users, DateTimeOffset now)
+    public static IQueryable<ProfessionalOffer> VisibleAt(this IQueryable<ProfessionalOffer> query, ApplicationDbContext db, DateTimeOffset now)
         => query.Where(offer => offer.StoppedAt == null && offer.StartsAt <= now && now < offer.EndsAt
             && offer.ExpiredProcessedAt == null
-            && users.Any(user => user.Id == offer.OwnerUserId && user.ApprovalStatus == AccountApprovalStatus.Approved));
+            && db.Users.VisibleToPublic(db, now).Any(user => user.Id == offer.OwnerUserId));
 }
 
 public sealed class ProfessionalOfferRepository(ApplicationDbContext context) : IProfessionalOfferRepository
@@ -34,7 +35,7 @@ public sealed class ProfessionalOfferRepository(ApplicationDbContext context) : 
     private IQueryable<ProfessionalOffer> AccessibleOffers(string? ownerId, DateTimeOffset now)
     {
         var own = context.ProfessionalOffers.AsNoTracking().Where(offer => ownerId != null && offer.OwnerUserId == ownerId);
-        var visible = context.ProfessionalOffers.AsNoTracking().VisibleAt(context.Users, now);
+        var visible = context.ProfessionalOffers.AsNoTracking().VisibleAt(context, now);
         return own.Concat(visible);
     }
 
@@ -55,7 +56,7 @@ public sealed class ProfessionalOfferRepository(ApplicationDbContext context) : 
         => VisibleForOwner(ownerId, now).CountAsync(cancellationToken);
 
     private IQueryable<ProfessionalOffer> VisibleForOwner(string ownerId, DateTimeOffset now)
-        => context.ProfessionalOffers.AsNoTracking().VisibleAt(context.Users, now)
+        => context.ProfessionalOffers.AsNoTracking().VisibleAt(context, now)
             .Where(offer => offer.OwnerUserId == ownerId);
 
     public async Task<IReadOnlyList<ProfessionalOffer>> GetReminderCandidatesAsync(DateTimeOffset now, CancellationToken cancellationToken = default)

@@ -80,10 +80,10 @@ public class SwaggerDocumentShould
     /// Search, and owner-statistics routes; 156 adds the seeker-facing GET /bookings
     /// "My bookings" endpoint; 158 adds the seeker's saved-halls list and per-hall save/remove
     /// "أضف للمفضلة" endpoints; 162 adds the durable Help Center ticket list, filing, read
-    /// receipt, and the Admin queue/reply endpoints; 163 adds the Admin per-conversation read
-    /// receipt used by the grouped queue.
+    /// receipt, and the Admin queue/reply endpoints; 166 adds the account-lock administration
+    /// operations; 167 adds the Admin per-conversation read receipt used by the grouped queue.
     /// </summary>
-    private const int ExpectedPathCount = 163;
+    private const int ExpectedPathCount = 167;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -142,9 +142,14 @@ public class SwaggerDocumentShould
         Assert.Contains("/api/v{version}/notifications/read-all", document.Paths.Keys);
         Assert.Contains("/api/v{version}/admin/moderation/posts/{postId}", document.Paths.Keys);
         Assert.Contains("/api/v{version}/admin/moderation/offers/{offerId}", document.Paths.Keys);
-        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/publishing-restrictions", document.Paths.Keys);
-        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/publishing-restriction", document.Paths.Keys);
-        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/lock", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/locked/photographers", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/locked/coordinators", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/posts", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/offers", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/posts/{postId}/images/{imageId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/offers/{offerId}/images/{imageId}", document.Paths.Keys);
+        Assert.DoesNotContain("/api/v{version}/admin/moderation/users/{userId}", document.Paths.Keys);
     }
 
     [Fact]

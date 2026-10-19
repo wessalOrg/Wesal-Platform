@@ -6,6 +6,7 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
+using Wesal.Persistence.Queries;
 
 namespace Wesal.Persistence.Services;
 
@@ -27,6 +28,7 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
     {
         var selected = ParseFilter(filter, allowOffers: false);
         var window = PageWindow(page, pageSize);
+        var now = clock.GetUtcNow();
         var term = query?.Trim();
         if (string.IsNullOrWhiteSpace(term))
             return PagedResult<DiscoverItemDto>.Create([], window.Page, window.Size, 0);
@@ -47,7 +49,7 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
         if (selected is Filter.All or Filter.EventCoordinators)
         {
             var coordinatorProfiles = from profile in db.CoordinatorProfiles.AsNoTracking()
-                join user in ApprovedRoleUsers(ApplicationRoles.EventCoordinator) on profile.UserId equals user.Id
+                join user in ApprovedRoleUsers(ApplicationRoles.EventCoordinator, now) on profile.UserId equals user.Id
                 let name = profile.BusinessType == CoordinatorBusinessType.Shop ? profile.ShopName : profile.OnlineStoreName
                 where name != null && name.ToLower().Contains(pattern)
                 select new DiscoverItemDto
@@ -61,7 +63,7 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
         if (selected is Filter.All or Filter.Photographers)
         {
             var photographerProfiles = from profile in db.PhotographerProfiles.AsNoTracking()
-                join user in ApprovedRoleUsers(ApplicationRoles.Photographer) on profile.UserId equals user.Id
+                join user in ApprovedRoleUsers(ApplicationRoles.Photographer, now) on profile.UserId equals user.Id
                 let name = profile.HasStudio ? profile.StudioName : PublicProfiles.DisplayNameFallback
                 where name != null && name.ToLower().Contains(pattern)
                 select new DiscoverItemDto
@@ -89,8 +91,8 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
 
         if (filter is Filter.All)
         {
-            var coordinatorIds = ApprovedRoleUsers(ApplicationRoles.EventCoordinator).Select(user => user.Id);
-            var photographerIds = ApprovedRoleUsers(ApplicationRoles.Photographer).Select(user => user.Id);
+            var coordinatorIds = ApprovedRoleUsers(ApplicationRoles.EventCoordinator, now).Select(user => user.Id);
+            var photographerIds = ApprovedRoleUsers(ApplicationRoles.Photographer, now).Select(user => user.Id);
             var publicOwners = coordinatorIds.Concat(photographerIds);
             var posts = from post in db.Posts.AsNoTracking()
                 where publicOwners.Contains(post.OwnerUserId)
@@ -107,7 +109,7 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
         if (filter is Filter.EventCoordinators)
         {
             var profiles = from profile in db.CoordinatorProfiles.AsNoTracking()
-                join user in ApprovedRoleUsers(ApplicationRoles.EventCoordinator) on profile.UserId equals user.Id
+                join user in ApprovedRoleUsers(ApplicationRoles.EventCoordinator, now) on profile.UserId equals user.Id
                 select new DiscoverItemDto
                 {
                     ContentType = "EventCoordinator", Id = profile.Id, OwnerUserId = profile.UserId,
@@ -120,7 +122,7 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
         if (filter is Filter.Photographers)
         {
             var profiles = from profile in db.PhotographerProfiles.AsNoTracking()
-                join user in ApprovedRoleUsers(ApplicationRoles.Photographer) on profile.UserId equals user.Id
+                join user in ApprovedRoleUsers(ApplicationRoles.Photographer, now) on profile.UserId equals user.Id
                 select new DiscoverItemDto
                 {
                     ContentType = "Photographer", Id = profile.Id, OwnerUserId = profile.UserId,
@@ -133,8 +135,8 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
 
         if (filter is Filter.Offers)
         {
-            var approvedCoordinatorIds = ApprovedRoleUsers(ApplicationRoles.EventCoordinator).Select(user => user.Id);
-            var approvedPhotographerIds = ApprovedRoleUsers(ApplicationRoles.Photographer).Select(user => user.Id);
+            var approvedCoordinatorIds = ApprovedRoleUsers(ApplicationRoles.EventCoordinator, now).Select(user => user.Id);
+            var approvedPhotographerIds = ApprovedRoleUsers(ApplicationRoles.Photographer, now).Select(user => user.Id);
             var professionalOffers = from offer in db.ProfessionalOffers.AsNoTracking()
                 where offer.StoppedAt == null && offer.ExpiredProcessedAt == null
                     && offer.StartsAt <= now && now < offer.EndsAt
@@ -167,11 +169,11 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
         return result;
     }
 
-    private IQueryable<ApplicationUser> ApprovedRoleUsers(string role)
+    private IQueryable<ApplicationUser> ApprovedRoleUsers(string role, DateTimeOffset now)
     {
         var roleIds = db.Roles.Where(row => row.NormalizedName == role.ToUpperInvariant()).Select(row => row.Id);
         var userIds = db.UserRoles.Where(row => roleIds.Contains(row.RoleId)).Select(row => row.UserId);
-        return db.Users.AsNoTracking().Where(user => user.ApprovalStatus == AccountApprovalStatus.Approved && userIds.Contains(user.Id));
+        return db.Users.AsNoTracking().VisibleToPublic(db, now).Where(user => userIds.Contains(user.Id));
     }
 
     private IQueryable<Wesal.Domain.Entities.Hall> PublicHalls()

@@ -18,7 +18,7 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
     private readonly ICurrentUserService _currentUser;
     private readonly ICoordinatorRepository _coordinators;
     private readonly IPhotographerRepository _photographers;
-    private readonly IUserContentPublishingRestrictionService _restrictions;
+    private readonly IAccountLockService _restrictions;
     private readonly IIdentityDocumentStore _documents;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPostService _posts;
@@ -29,7 +29,7 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
         ICurrentUserService currentUser,
         ICoordinatorRepository coordinators,
         IPhotographerRepository photographers,
-        IUserContentPublishingRestrictionService restrictions,
+        IAccountLockService restrictions,
         IIdentityDocumentStore documents,
         IUnitOfWork unitOfWork,
         IPostService posts,
@@ -58,7 +58,8 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
         if (role is null)
             throw new NotFoundException("Profile", userId);
 
-        if (user.ApprovalStatus != AccountApprovalStatus.Approved)
+        var isLocked = await _restrictions.IsLockedAsync(user.Id, cancellationToken);
+        if (user.ApprovalStatus != AccountApprovalStatus.Approved || isLocked)
         {
             if (_currentUser.IsAuthenticated && string.Equals(_currentUser.UserId, userId, StringComparison.Ordinal))
             {
@@ -192,7 +193,9 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
     {
         cancellationToken.ThrowIfCancellationRequested();
         var user = await _userManager.FindByIdAsync(userId);
-        if (user is null || user.ApprovalStatus != AccountApprovalStatus.Approved || string.IsNullOrWhiteSpace(user.ProfilePictureStorageKey))
+        if (user is null || user.ApprovalStatus != AccountApprovalStatus.Approved
+            || await _restrictions.IsLockedAsync(userId, cancellationToken)
+            || string.IsNullOrWhiteSpace(user.ProfilePictureStorageKey))
             throw new NotFoundException("Profile picture", userId);
         var roles = await _userManager.GetRolesAsync(user);
         if (!roles.Contains(ApplicationRoles.EventCoordinator) && !roles.Contains(ApplicationRoles.Photographer))
@@ -217,8 +220,7 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
             ?? throw new NotFoundException("User", _currentUser.UserId);
         if (user.ApprovalStatus != AccountApprovalStatus.Approved)
             throw new ForbiddenException("Your account must be approved before you can edit your public profile.");
-        if (await _restrictions.GetRestrictedUntilAsync(user.Id, cancellationToken) is { } restrictedUntil)
-            throw new ForbiddenException($"Your account is restricted from editing content until {restrictedUntil:O}.");
+        await _restrictions.EnsureUnlockedAsync(user.Id, cancellationToken);
         return user;
     }
 

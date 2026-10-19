@@ -414,6 +414,41 @@ public sealed class PostInteractionServiceShould
         Assert.Single(test.Context.PostFavorites);
     }
 
+    [Fact]
+    public async Task LockedOwnersContentAndFavoritesDisappearAndReturnAfterManualUnlock()
+    {
+        await using var test = await TestHarness.CreateAsync();
+        var owner = await test.CreateUserAsync("owner", ApplicationRoles.EventCoordinator);
+        var saver = await test.CreateUserAsync("saver", ApplicationRoles.RegisteredUser);
+        var post = await test.CreatePostAsync(owner);
+        test.CurrentUser.UserId = saver.Id;
+        await test.Service.AddFavoriteAsync(post.Id);
+
+        var now = DateTimeOffset.UtcNow;
+        var accountLock = new UserPublishingRestriction
+        {
+            Id = Guid.NewGuid(), UserId = owner.Id, StartsAt = now.AddMinutes(-1), EndsAt = now.AddHours(1),
+            CreatedByAdminId = "admin", CreatedAt = now.AddMinutes(-1)
+        };
+        test.Context.AccountLocks.Add(accountLock);
+        await test.Context.SaveChangesAsync();
+        var sharing = new PostSharingService(new PostRepository(test.Context), test.CurrentUser,
+            new UnitOfWork(test.Context), Options.Create(new PostSharingOptions()), TimeProvider.System,
+            NullLogger<PostSharingService>.Instance);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sharing.GetShareLinkAsync(post.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => sharing.RegisterShareAsync(post.Id));
+        Assert.Empty((await test.Service.ListFavoritesAsync(1, 10)).Items);
+        Assert.Single(test.Context.PostFavorites);
+
+        accountLock.LiftedAt = DateTimeOffset.UtcNow;
+        accountLock.LiftedByAdminId = "admin";
+        await test.Context.SaveChangesAsync();
+        Assert.Single((await test.Service.ListFavoritesAsync(1, 10)).Items);
+        Assert.StartsWith("/posts/", await sharing.GetShareLinkAsync(post.Id));
+        Assert.Single(test.Context.PostFavorites);
+    }
+
     private sealed class TestHarness : IAsyncDisposable
     {
         private readonly ServiceProvider _provider;

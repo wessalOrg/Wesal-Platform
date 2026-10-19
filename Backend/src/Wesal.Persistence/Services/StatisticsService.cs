@@ -5,6 +5,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
+using Wesal.Persistence.Queries;
 
 namespace Wesal.Persistence.Services;
 
@@ -21,7 +22,7 @@ public sealed class StatisticsService(ApplicationDbContext db, ICurrentUserServi
     public async Task RecordPostViewAsync(Guid postId, CancellationToken cancellationToken = default)
     {
         var post = await (from row in db.Posts.AsNoTracking()
-            join owner in ApprovedProfessionals() on row.OwnerUserId equals owner.Id
+            join owner in ApprovedProfessionals(clock.GetUtcNow()) on row.OwnerUserId equals owner.Id
             where row.Id == postId
             select new { row.Id, row.OwnerUserId }).SingleOrDefaultAsync(cancellationToken);
         if (post is null) return;
@@ -34,7 +35,7 @@ public sealed class StatisticsService(ApplicationDbContext db, ICurrentUserServi
 
     public async Task RecordProfileViewAsync(string profileUserId, CancellationToken cancellationToken = default)
     {
-        var ownerId = await ApprovedProfessionals().Where(user => user.Id == profileUserId)
+        var ownerId = await ApprovedProfessionals(clock.GetUtcNow()).Where(user => user.Id == profileUserId)
             .Select(user => user.Id).SingleOrDefaultAsync(cancellationToken);
         if (ownerId is null) return; // A non-public self-profile response is not a public view.
         db.ContentViewEvents.Add(new Domain.Entities.ContentViewEvent
@@ -52,7 +53,7 @@ public sealed class StatisticsService(ApplicationDbContext db, ICurrentUserServi
             throw new ValidationException($"Page must be between 1 and 1000 and page size must be between 1 and {MaxPageSize}.");
 
         var userId = currentUser.UserId;
-        var isProfessional = await ApprovedProfessionals().AnyAsync(user => user.Id == userId, cancellationToken)
+        var isProfessional = await ApprovedProfessionals(clock.GetUtcNow()).AnyAsync(user => user.Id == userId, cancellationToken)
             || await ProfessionalUsers().AnyAsync(user => user.Id == userId, cancellationToken);
         if (!isProfessional) throw new ForbiddenException("Statistics are available only to professional account owners.");
 
@@ -87,6 +88,6 @@ public sealed class StatisticsService(ApplicationDbContext db, ICurrentUserServi
         return db.Users.AsNoTracking().Where(user => ids.Contains(user.Id));
     }
 
-    private IQueryable<ApplicationUser> ApprovedProfessionals()
-        => ProfessionalUsers().Where(user => user.ApprovalStatus == Domain.Enums.AccountApprovalStatus.Approved);
+    private IQueryable<ApplicationUser> ApprovedProfessionals(DateTimeOffset now)
+        => ProfessionalUsers().VisibleToPublic(db, now);
 }

@@ -50,6 +50,7 @@ public sealed class PhotographerSetupService : IPhotographerSetupService
     private readonly INotificationService _notificationService;
     private readonly INotificationDispatcher _notificationDispatcher;
     private readonly ILogger<PhotographerSetupService> _logger;
+    private readonly IAccountLockService? _accountLocks;
 
     public PhotographerSetupService(
         ICurrentUserService currentUser,
@@ -61,7 +62,8 @@ public sealed class PhotographerSetupService : IPhotographerSetupService
         IUnitOfWork unitOfWork,
         INotificationService notificationService,
         INotificationDispatcher notificationDispatcher,
-        ILogger<PhotographerSetupService> logger)
+        ILogger<PhotographerSetupService> logger,
+        IAccountLockService? accountLocks = null)
     {
         _currentUser = currentUser;
         _userManager = userManager;
@@ -73,6 +75,7 @@ public sealed class PhotographerSetupService : IPhotographerSetupService
         _notificationService = notificationService;
         _notificationDispatcher = notificationDispatcher;
         _logger = logger;
+        _accountLocks = accountLocks;
     }
 
     public async Task<PhotographerSetupResult> SubmitSetupAsync(
@@ -82,6 +85,7 @@ public sealed class PhotographerSetupService : IPhotographerSetupService
         cancellationToken.ThrowIfCancellationRequested();
 
         var user = await ResolvePhotographerUserAsync(cancellationToken);
+        if (_accountLocks is not null) await _accountLocks.EnsureUnlockedAsync(user.Id, cancellationToken);
 
         EnsureNotAlreadySubmitted(user);
 
@@ -309,6 +313,7 @@ public sealed class PhotographerSetupService : IPhotographerSetupService
         cancellationToken.ThrowIfCancellationRequested();
 
         var user = await ResolvePhotographerUserAsync(cancellationToken);
+        if (_accountLocks is not null) await _accountLocks.EnsureUnlockedAsync(user.Id, cancellationToken);
 
         // Allowed only when Rejected or NeedsChanges
         if (user.ApprovalStatus != AccountApprovalStatus.Rejected &&

@@ -12,7 +12,7 @@ using Wesal.Persistence.Data;
 namespace Wesal.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261019190240_AddHelpTicketAdminRead")]
+    [Migration("20261019192622_AddHelpTicketAdminRead")]
     partial class AddHelpTicketAdminRead
     {
         /// <inheritdoc />
@@ -1803,6 +1803,10 @@ namespace Wesal.Persistence.Migrations
                     b.Property<DateTimeOffset?>("LiftedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("LiftedByAdminId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
                     b.Property<string>("Reason")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
@@ -1825,6 +1829,9 @@ namespace Wesal.Persistence.Migrations
                         .HasFilter("\"LiftedAt\" IS NULL");
 
                     b.HasIndex("UserId", "EndsAt");
+
+                    b.HasIndex("UserId", "StartsAt", "EndsAt")
+                        .HasFilter("\"LiftedAt\" IS NULL");
 
                     b.ToTable("UserPublishingRestrictions", "wesal");
                 });
