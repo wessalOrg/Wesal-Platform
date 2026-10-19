@@ -3,6 +3,7 @@
 import Link from "next/link";
 import WesalBrandLockup from "@/components/brand/WesalBrandLockup";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import ThemeToggle from "@/components/layout/ThemeToggle";
 import { useT } from "@/i18n";
 
 export default function AuthMinimalHeader() {
@@ -13,6 +14,7 @@ export default function AuthMinimalHeader() {
       <div className="relative mx-auto flex h-14 w-full max-w-[92rem] items-center px-4 sm:h-16 sm:px-6 lg:px-6 xl:px-10">
         <div className="absolute left-4 flex min-w-0 flex-row items-center gap-2 sm:left-6 sm:gap-3 lg:left-6 xl:left-10">
           <WesalBrandLockup logoClassName="h-8 w-auto sm:h-9" />
+          <ThemeToggle />
           <LanguageSwitcher />
         </div>
 

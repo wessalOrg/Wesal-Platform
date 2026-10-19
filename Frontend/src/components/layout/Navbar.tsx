@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import WesalBrandLockup from "@/components/brand/WesalBrandLockup";
 import AuthAccountMenu from "@/components/layout/AuthAccountMenu";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import ThemeToggle from "@/components/layout/ThemeToggle";
 import NavbarMessagesButton from "@/components/layout/NavbarMessagesButton";
 import NavbarNotificationsButton from "@/components/layout/NavbarNotificationsButton";
 import PwaInstallButton from "@/components/pwa/PwaInstallButton";
@@ -145,6 +146,7 @@ export default function Navbar({
           <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:gap-3">
             <PwaInstallButton />
             <div className="hidden shrink-0 items-center gap-1.5 sm:gap-2 lg:flex">
+              <ThemeToggle />
               <LanguageSwitcher />
               {authenticated ? <NavbarNotificationsButton /> : null}
               {authenticated ? <NavbarMessagesButton /> : null}
@@ -165,6 +167,7 @@ export default function Navbar({
               </div>
             )}
 
+            <ThemeToggle className="lg:hidden" />
             <button
               type="button"
               className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)] lg:hidden"
@@ -201,6 +204,7 @@ export default function Navbar({
               </Link>
             ))}
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               <LanguageSwitcher compact />
               {authenticated ? <NavbarNotificationsButton /> : null}
               {authenticated ? <NavbarMessagesButton onNavigate={() => setOpen(false)} /> : null}

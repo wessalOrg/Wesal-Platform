@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import ThemeToggle from "@/components/layout/ThemeToggle";
 import MobileSidebarTrigger from "@/components/owner-management/MobileSidebarTrigger";
 import { useOptionalUserProfileStore } from "@/components/profile/UserProfileProvider";
 import SeekerNotificationsPopover from "@/components/seeker-dashboard/SeekerNotificationsPopover";
@@ -134,6 +135,7 @@ export default function SeekerDashboardShell({
           </div>
 
           <div className="seeker-dash-topbar-end">
+            <ThemeToggle className="seeker-dash-lang" />
             <LanguageSwitcher iconOnly className="seeker-dash-lang" />
             <SeekerNotificationsPopover />
             <Link
