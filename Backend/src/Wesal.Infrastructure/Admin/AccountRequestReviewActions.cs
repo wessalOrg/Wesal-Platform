@@ -166,7 +166,8 @@ public sealed class AccountRequestReviewActions
         {
             HallId = null,
             SenderUserId = ResolveAdminUserId(),
-            HallOwnerId = userId
+            HallOwnerId = userId,
+            Kind = ConversationKind.AdminAccount
         };
 
         await _conversationRepository.AddAsync(conversation, cancellationToken);

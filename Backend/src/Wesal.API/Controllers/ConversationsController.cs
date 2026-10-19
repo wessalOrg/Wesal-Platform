@@ -18,6 +18,66 @@ public class ConversationsController : ControllerBase
         _conversationService = conversationService;
     }
 
+    [HttpPost("api/v{version:apiVersion}/professionals/{providerUserId}/conversations")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ConversationResponse>> StartProviderConversation(string providerUserId, CancellationToken cancellationToken)
+        => Ok(await _conversationService.StartProviderConversationAsync(providerUserId, cancellationToken));
+
+    [HttpPost("api/v{version:apiVersion}/posts/{postId:guid}/conversation")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ConversationResponse>> StartFromPost(Guid postId, CancellationToken cancellationToken)
+        => Ok(await _conversationService.StartFromPostAsync(postId, cancellationToken));
+
+    [HttpPost("api/v{version:apiVersion}/offers/{offerId:guid}/conversation")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ConversationResponse>> StartFromOffer(Guid offerId, CancellationToken cancellationToken)
+        => Ok(await _conversationService.StartFromOfferAsync(offerId, cancellationToken));
+
+    [HttpPost("api/v{version:apiVersion}/conversations/contact-admin-account")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ConversationResponse>> ContactAdminAccount(CancellationToken cancellationToken)
+        => Ok(await _conversationService.ContactAdminAccountAsync(cancellationToken));
+
+    [HttpGet("api/v{version:apiVersion}/conversations/admin-account")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ConversationResponse>> GetMyAdminAccountConversation(CancellationToken cancellationToken)
+    {
+        var conversation = await _conversationService.GetMyAdminAccountConversationAsync(cancellationToken);
+        return conversation is null ? NotFound() : Ok(conversation);
+    }
+
+    [HttpGet("api/v{version:apiVersion}/professional/conversations")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(PagedResult<ConversationSummaryResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<ConversationSummaryResponse>>> GetProfessionalConversations(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
+        => Ok(await _conversationService.GetMyProviderConversationsAsync(page, pageSize, cancellationToken));
+
+    [HttpGet("api/v{version:apiVersion}/professional/conversations/{conversationId:guid}/messages")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(PagedResult<MessageDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<MessageDto>>> GetProfessionalConversationMessages(
+        Guid conversationId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
+        => Ok(await _conversationService.GetConversationMessagesPageAsync(conversationId, page, pageSize, cancellationToken));
+
+    [HttpGet("api/v{version:apiVersion}/professional/conversations/unread-count")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(UnreadCountResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<UnreadCountResponse>> GetProfessionalUnreadCount(CancellationToken cancellationToken)
+        => Ok(await _conversationService.GetProviderUnreadCountAsync(cancellationToken));
+
+    [HttpGet("api/v{version:apiVersion}/conversations/admin-account/unread-count")]
+    [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
+    [ProducesResponseType(typeof(UnreadCountResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<UnreadCountResponse>> GetAdminAccountUnreadCount(CancellationToken cancellationToken)
+        => Ok(await _conversationService.GetAdminAccountUnreadCountAsync(cancellationToken));
+
     [HttpPost("api/v{version:apiVersion}/halls/{hallId:guid}/conversations")]
     [Authorize(Policy = ApplicationPolicies.RequireAuthenticatedUser)]
     [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status201Created)]

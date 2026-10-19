@@ -32,6 +32,13 @@ public class Message : BaseAuditableEntity
     /// <summary>Original display file name of the attachment.</summary>
     public string? AttachmentFileName { get; set; }
 
+    public Guid? ContextPostId { get; set; }
+    public Guid? ContextOfferId { get; set; }
+    public string? ContextTitle { get; set; }
+    public string? ContextText { get; set; }
+    public string? ContextImageUrl { get; set; }
+    public string? ContextOwnerUserId { get; set; }
+
     /// <summary>True when this message carries an image attachment.</summary>
     public bool HasAttachment => !string.IsNullOrWhiteSpace(AttachmentUrl);
 }

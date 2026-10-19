@@ -84,6 +84,7 @@ public static class DependencyInjection
         // WESAL-TASK-10 (Edit 10 follow-up): the SignalR hub's access rules. Registered here so
         // the hub cannot be constructed without them.
         services.AddScoped<ConversationThreadGuard>();
+        services.AddSingleton<Wesal.Infrastructure.Conversations.IConversationPresenceTracker, Wesal.Infrastructure.Conversations.ConversationPresenceTracker>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<INotificationNotifier, NotificationNotifier>();
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
@@ -223,6 +224,13 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
 
         services.AddScoped<Wesal.Application.Common.Interfaces.IUserContentPublishingRestrictionService, Wesal.Infrastructure.Identity.UserContentPublishingRestrictionService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IPostService, Wesal.Infrastructure.Publishing.PostService>();
+        services.AddOptions<Wesal.Infrastructure.Publishing.PostSharingOptions>()
+            .Bind(configuration.GetSection(Wesal.Infrastructure.Publishing.PostSharingOptions.SectionName))
+            .Validate(options => string.IsNullOrWhiteSpace(options.PublicWebBaseUrl)
+                || Uri.TryCreate(options.PublicWebBaseUrl, UriKind.Absolute, out var uri)
+                    && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps),
+                "PostSharing:PublicWebBaseUrl must be an absolute HTTP or HTTPS URL when configured.");
+        services.AddScoped<Wesal.Application.Common.Interfaces.IPostSharingService, Wesal.Infrastructure.Publishing.PostSharingService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IPostInteractionService, Wesal.Infrastructure.Publishing.PostInteractionService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IProfessionalOfferService, Wesal.Infrastructure.Publishing.ProfessionalOfferService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IHallOfferService, Wesal.Infrastructure.Publishing.HallOfferService>();

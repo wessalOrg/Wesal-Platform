@@ -18,6 +18,15 @@ public sealed class MessageAttachmentUpload
 
 public interface IConversationService
 {
+    Task<ConversationResponse> StartProviderConversationAsync(string providerUserId, CancellationToken cancellationToken = default);
+    Task<ConversationResponse> StartFromPostAsync(Guid postId, CancellationToken cancellationToken = default);
+    Task<ConversationResponse> StartFromOfferAsync(Guid offerId, CancellationToken cancellationToken = default);
+    Task<ConversationResponse> ContactAdminAccountAsync(CancellationToken cancellationToken = default);
+    Task<ConversationResponse?> GetMyAdminAccountConversationAsync(CancellationToken cancellationToken = default);
+    Task<UnreadCountResponse> GetAdminAccountUnreadCountAsync(CancellationToken cancellationToken = default);
+    Task<PagedResult<MessageDto>> GetConversationMessagesPageAsync(Guid conversationId, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<PagedResult<ConversationSummaryResponse>> GetMyProviderConversationsAsync(int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<UnreadCountResponse> GetProviderUnreadCountAsync(CancellationToken cancellationToken = default);
     Task<ConversationResponse> CreateConversationAsync(Guid hallId, CancellationToken cancellationToken = default);
 
     /// <summary>
