@@ -236,6 +236,8 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
                 "PostSharing:PublicWebBaseUrl must be an absolute HTTP or HTTPS URL when configured.");
         services.AddScoped<Wesal.Application.Common.Interfaces.IPostSharingService, Wesal.Infrastructure.Publishing.PostSharingService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IPostInteractionService, Wesal.Infrastructure.Publishing.PostInteractionService>();
+        services.AddScoped<Wesal.Application.Common.Interfaces.IHallFavoritesService, Wesal.Infrastructure.Favorites.HallFavoritesService>();
+        services.AddScoped<Wesal.Application.Common.Interfaces.IHelpTicketsService, Wesal.Infrastructure.Help.HelpTicketsService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IProfessionalOfferService, Wesal.Infrastructure.Publishing.ProfessionalOfferService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IHallOfferService, Wesal.Infrastructure.Publishing.HallOfferService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IOfferLifecycleService, Wesal.Infrastructure.Publishing.OfferLifecycleService>();

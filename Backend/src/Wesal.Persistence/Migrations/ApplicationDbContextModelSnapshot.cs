@@ -968,6 +968,35 @@ namespace Wesal.Persistence.Migrations
                     b.ToTable("HallDayAvailabilities", "wesal");
                 });
 
+            modelBuilder.Entity("Wesal.Domain.Entities.HallFavorite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("HallId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HallId");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.HasIndex("UserId", "HallId")
+                        .IsUnique();
+
+                    b.ToTable("HallFavorites", "wesal");
+                });
+
             modelBuilder.Entity("Wesal.Domain.Entities.HallFeature", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1118,6 +1147,56 @@ namespace Wesal.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("HallSlotAvailabilities", "wesal");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.HelpTicket", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("RepliedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RepliedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("Reply")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("UserUnread")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("HelpTickets", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.Message", b =>
@@ -2056,6 +2135,21 @@ namespace Wesal.Persistence.Migrations
                     b.Navigation("Hall");
                 });
 
+            modelBuilder.Entity("Wesal.Domain.Entities.HallFavorite", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Hall", null)
+                        .WithMany()
+                        .HasForeignKey("HallId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Wesal.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Wesal.Domain.Entities.HallFeature", b =>
                 {
                     b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
@@ -2098,6 +2192,15 @@ namespace Wesal.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Hall");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.HelpTicket", b =>
+                {
+                    b.HasOne("Wesal.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.Message", b =>

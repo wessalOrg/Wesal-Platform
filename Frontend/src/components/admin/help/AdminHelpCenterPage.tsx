@@ -25,7 +25,7 @@ function formatRelative(iso: string, lang: "ar" | "en"): string {
 export default function AdminHelpCenterPage() {
   const t = useT();
   const lang = useUiLang();
-  const { tickets, ready, reply } = useHelpCenterTickets();
+  const { tickets, ready, reply } = useHelpCenterTickets("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replyError, setReplyError] = useState<string | null>(null);
@@ -43,7 +43,7 @@ export default function AdminHelpCenterPage() {
     setReplySuccess(false);
   }, []);
 
-  const onReply = (event: FormEvent) => {
+  const onReply = async (event: FormEvent) => {
     event.preventDefault();
     if (!selected) return;
     const trimmed = replyText.trim();
@@ -55,7 +55,7 @@ export default function AdminHelpCenterPage() {
     setReplyError(null);
     setReplySuccess(false);
     try {
-      const updated = reply(selected.id, trimmed);
+      const updated = await reply(selected.id, trimmed);
       if (!updated) {
         setReplyError(t("admin.help.errors.replyFailed"));
         return;
@@ -158,7 +158,7 @@ export default function AdminHelpCenterPage() {
                     </article>
                   ) : null}
 
-                  <form className="space-y-3" onSubmit={onReply}>
+                  <form className="space-y-3" onSubmit={(event) => void onReply(event)}>
                     <h3 className="text-sm font-bold text-[var(--wesal-maroon)]">
                       {t("admin.help.replyTitle")}
                     </h3>

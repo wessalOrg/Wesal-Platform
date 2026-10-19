@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -15,7 +15,7 @@ export default function HelpCenterPage() {
   const t = useT();
   const { status } = useAuth();
   const identity = useUserIdentity();
-  const { submitQuestion } = useHelpCenterTickets();
+  const { submitQuestion, tickets, markRead } = useHelpCenterTickets();
   const [message, setMessage] = useState("");
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -24,6 +24,21 @@ export default function HelpCenterPage() {
   const authReady = status === "ready" && identity.ready;
   const isGuest = authReady && !identity.authenticated;
   const canSubmit = authReady && identity.authenticated && !submitting;
+
+  const currentUserId = getCurrentUserId();
+  const myTickets = useMemo(
+    () => tickets.filter((ticket) => ticket.userId === currentUserId),
+    [tickets, currentUserId],
+  );
+
+  useEffect(() => {
+    if (!authReady || !identity.authenticated) return;
+    for (const ticket of myTickets) {
+      if (ticket.userUnread) {
+        void markRead(ticket.id).catch(() => {});
+      }
+    }
+  }, [authReady, identity.authenticated, myTickets, markRead]);
 
   const length = message.length;
   const trimmed = message.trim();
@@ -37,7 +52,7 @@ export default function HelpCenterPage() {
     [],
   );
 
-  const onSubmit = (event: FormEvent) => {
+  const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setErrorKey(null);
     setSuccess(false);
@@ -67,7 +82,7 @@ export default function HelpCenterPage() {
 
     setSubmitting(true);
     try {
-      submitQuestion({
+      await submitQuestion({
         userId,
         userName: identity.displayName || t("common.user"),
         question: trimmed,
@@ -123,7 +138,11 @@ export default function HelpCenterPage() {
               ) : null}
             </div>
 
-            <form className="flex min-w-0 flex-col gap-4" onSubmit={onSubmit} noValidate>
+            <form
+              className="flex min-w-0 flex-col gap-4"
+              onSubmit={(event) => void onSubmit(event)}
+              noValidate
+            >
               <label className="block">
                 <span className="sr-only">{t("help.messageLabel")}</span>
                 <textarea
@@ -175,6 +194,45 @@ export default function HelpCenterPage() {
               </div>
             </form>
           </div>
+
+          {myTickets.length > 0 ? (
+            <section className="mt-8 border-t border-[var(--wesal-border)] pt-6" data-testid="help-center-my-questions">
+              <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">
+                {t("help.myQuestions")}
+              </h2>
+              <ul className="mt-3 space-y-3">
+                {myTickets.map((ticket) => (
+                  <li
+                    key={ticket.id}
+                    className="rounded-2xl border border-[var(--wesal-border)] bg-[#faf7f4] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-7 text-[var(--wesal-text)]">
+                        {ticket.question}
+                      </p>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[0.7rem] font-bold ${
+                          ticket.status === "replied"
+                            ? "bg-[#e8f5e9] text-[#1b5e20]"
+                            : "bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]"
+                        }`}
+                      >
+                        {ticket.status === "replied" ? t("help.status.replied") : t("help.status.open")}
+                      </span>
+                    </div>
+                    {ticket.reply ? (
+                      <div className="mt-3 rounded-xl border border-[#c8e6c9] bg-[#e8f5e9] px-3 py-3">
+                        <p className="text-xs font-bold text-[#1b5e20]">{t("help.wesalTeam")}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[#1b5e20]">
+                          {ticket.reply}
+                        </p>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </section>
       </main>
       <Footer />

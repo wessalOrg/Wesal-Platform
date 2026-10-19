@@ -1,5 +1,6 @@
 import { t } from "@/i18n";
 import { resolveNotificationActionUrl } from "@/lib/platform-notification-routes";
+import { platformNotificationDedupeKey } from "@/lib/platform-notification-mapper";
 import type {
   NotificationAudience,
   PlatformNotification,
@@ -149,6 +150,34 @@ export function listPlatformNotifications(
   const items = readRaw().map(hydratePlatformNotification);
   if (!audience) return items;
   return items.filter((item) => item.audience === audience);
+}
+
+/** True when `id` is a server GUID (a durable inbox row) rather than a client-pushed id. */
+export function isServerNotificationId(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+/**
+ * Reconciles the durable server inbox with what is already in the local feed.
+ *
+ * The server is authoritative for the events it persists (booking/hall/subscription
+ * notices), so its rows win. Client-only entries — the welcome notice, and anything the
+ * client derives from its own realtime feeds and the server does not persist — have no
+ * server counterpart and are kept, so switching devices does not silently lose them.
+ */
+export function replacePlatformNotifications(serverItems: PlatformNotification[]): void {
+  const local = readRaw();
+  const serverKeys = new Set(serverItems.map(platformNotificationDedupeKey));
+  const keepLocal = local.filter(
+    (item) =>
+      item.id.startsWith("notify-") &&
+      !serverKeys.has(platformNotificationDedupeKey(item)),
+  );
+  const merged = [...serverItems, ...keepLocal].sort(
+    (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
+  );
+  writeAll(merged);
+  notifyChanged();
 }
 
 function isRecentDuplicate(
