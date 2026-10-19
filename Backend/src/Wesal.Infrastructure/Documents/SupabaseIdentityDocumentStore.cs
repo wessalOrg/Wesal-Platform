@@ -8,8 +8,7 @@ using Wesal.Domain.Exceptions;
 namespace Wesal.Infrastructure.Documents;
 
 /// <summary>
-/// Supabase Storage-backed store for protected identity/setup documents (owner identity
-/// documents and event-coordinator setup documents).
+/// Supabase Storage-backed private store for identity/setup documents and public content.
 ///
 /// Reads and writes go straight to a PRIVATE bucket with the server-side secret key;
 /// the caller only ever receives bytes. No public URL is produced, no signed URL is
@@ -20,8 +19,9 @@ namespace Wesal.Infrastructure.Documents;
 /// The object key is derived exclusively from the persisted relative URL and rejected
 /// unless it is exactly <c>owners/{ownerId}/{fileName}</c>,
 /// <c>coordinators/{userId}/{fileName}</c>, or <c>photographers/{userId}/{fileName}</c>,
-/// so a corrupted record can neither traverse out of the bucket prefix nor address
-/// another document set.
+/// Public content has a distinct <c>public-content/{userId}/{fileName}</c> prefix and is
+/// read only through item endpoints that enforce visibility; identity-document paths
+/// remain protected and are never accepted by those public routes.
 /// </summary>
 public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
 {
@@ -76,7 +76,7 @@ public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
 
     public async Task<StoredDocumentContent?> ReadAsync(string relativeUrl, CancellationToken cancellationToken = default)
     {
-        var key = DocumentPath.ProtectedDocumentObjectKey(relativeUrl);
+        var key = DocumentPath.StoredDocumentObjectKey(relativeUrl);
         if (key is null)
         {
             return null;
@@ -105,7 +105,7 @@ public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
 
     public async Task DeleteAsync(string relativeUrl, CancellationToken cancellationToken = default)
     {
-        var key = DocumentPath.ProtectedDocumentObjectKey(relativeUrl);
+        var key = DocumentPath.StoredDocumentObjectKey(relativeUrl);
         if (key is null)
         {
             return;
@@ -151,7 +151,7 @@ public sealed class SupabaseIdentityDocumentStore : IIdentityDocumentStore
     }
 
     private string RequireKey(string relativeUrl)
-        => DocumentPath.ProtectedDocumentObjectKey(relativeUrl)
+        => DocumentPath.StoredDocumentObjectKey(relativeUrl)
            ?? throw new ValidationException("The identity document path is not valid.");
 
     /// <summary>

@@ -21,6 +21,8 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
     private readonly IUserContentPublishingRestrictionService _restrictions;
     private readonly IIdentityDocumentStore _documents;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPostService _posts;
+    private readonly IProfessionalOfferService _offers;
 
     public ProfessionalProfileService(
         UserManager<ApplicationUser> userManager,
@@ -29,7 +31,9 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
         IPhotographerRepository photographers,
         IUserContentPublishingRestrictionService restrictions,
         IIdentityDocumentStore documents,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IPostService posts,
+        IProfessionalOfferService offers)
     {
         _userManager = userManager;
         _currentUser = currentUser;
@@ -38,6 +42,8 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
         _restrictions = restrictions;
         _documents = documents;
         _unitOfWork = unitOfWork;
+        _posts = posts;
+        _offers = offers;
     }
 
     public async Task<PublicProfessionalProfileResponse> GetPublicProfileAsync(string userId, CancellationToken cancellationToken = default)
@@ -73,6 +79,8 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
             var profile = await _coordinators.GetByUserIdAsync(userId, cancellationToken)
                 ?? throw new NotFoundException("Profile", userId);
             var displayName = profile.BusinessType == CoordinatorBusinessType.Shop ? profile.ShopName : profile.OnlineStoreName;
+            var posts = await _posts.ListProfileAsync(userId, 1, 6, cancellationToken);
+            var offers = await _offers.ListProfileAsync(userId, 1, 6, cancellationToken);
             return new PublicProfessionalProfileResponse
             {
                 UserId = userId,
@@ -85,13 +93,15 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
                 ShopLocation = profile.BusinessType == CoordinatorBusinessType.Shop ? profile.ShopLocation : null,
                 Bio = profile.Bio,
                 ProfilePictureUrl = user.ProfilePictureUrl,
-                Posts = [],
-                Offers = []
+                Posts = posts.Items,
+                Offers = offers.Items
             };
         }
 
         var photographer = await _photographers.GetByUserIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException("Profile", userId);
+        var photographerPosts = await _posts.ListProfileAsync(userId, 1, 6, cancellationToken);
+        var photographerOffers = await _offers.ListProfileAsync(userId, 1, 6, cancellationToken);
         return new PublicProfessionalProfileResponse
         {
             UserId = userId,
@@ -104,8 +114,8 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
             PhoneNumber = photographer.HasStudio ? photographer.PhoneNumber : null,
             Bio = photographer.Bio,
             ProfilePictureUrl = user.ProfilePictureUrl,
-            Posts = [],
-            Offers = []
+            Posts = photographerPosts.Items,
+            Offers = photographerOffers.Items
         };
     }
 

@@ -85,7 +85,7 @@ public sealed class PublicProfessionalProfileResponse
     public string? DetailedStudioLocation { get; init; }
     public string? Bio { get; init; }
     public string? ProfilePictureUrl { get; init; }
-    // Posts and Offers are wired as empty integration sections until Tasks 9 and 10 add their entities.
+    // Latest publicly visible posts and active offers, with dedicated paged endpoints for full lists.
     public IReadOnlyList<PublicProfileContentDto> Posts { get; init; } = [];
     public IReadOnlyList<PublicProfileContentDto> Offers { get; init; } = [];
 }
@@ -93,6 +93,17 @@ public sealed class PublicProfessionalProfileResponse
 public sealed class PublicProfileContentDto
 {
     public Guid Id { get; init; }
+    public string? OwnerUserId { get; init; }
+    public string? Content { get; init; }
+    public decimal? Price { get; init; }
+    public decimal? OldPrice { get; init; }
+    public decimal? OfferPrice { get; init; }
+    public DateTimeOffset? StartsAt { get; init; }
+    public DateTimeOffset? EndsAt { get; init; }
+    public DateTimeOffset? StoppedAt { get; init; }
+    public DateTimeOffset? CreatedAt { get; init; }
+    public DateTimeOffset? UpdatedAt { get; init; }
+    public IReadOnlyList<PublicProfileImageDto> Images { get; init; } = [];
 }
 
 public sealed class UpdatePublicBioRequest

@@ -18,6 +18,7 @@ public static class DocumentPath
 
     /// <summary>URL segment used for photographer setup documents.</summary>
     private const string PhotographersSegment = "photographers";
+    private const string PublicContentSegment = "public-content";
 
     public static string OwnerIdentityRelativeUrl(string ownerId, string fileName)
         => $"/documents/{OwnersSegment}/{ownerId}/{fileName}";
@@ -43,6 +44,10 @@ public static class DocumentPath
     /// </summary>
     public static string MessageAttachmentRelativeUrl(Guid conversationId, string fileName)
         => $"/documents/{ConversationsSegment}/{conversationId}/attachments/{fileName}";
+
+    /// <summary>Storage-only path for post and offer media. Public access is mediated by item endpoints.</summary>
+    public static string PublicContentRelativeUrl(string ownerId, string fileName)
+        => $"/documents/{PublicContentSegment}/{ownerId}/{fileName}";
 
     /// <summary>
     /// Resolves a persisted relative URL to a full path under the given storage root.
@@ -200,6 +205,20 @@ public static class DocumentPath
         => OwnerIdentityObjectKey(relativeUrl)
            ?? CoordinatorDocumentObjectKey(relativeUrl)
            ?? PhotographerDocumentObjectKey(relativeUrl);
+
+    /// <summary>Object key for public content bytes stored privately and exposed only by approved-item endpoints.</summary>
+    public static string? PublicContentObjectKey(string relativeUrl)
+    {
+        if (string.IsNullOrWhiteSpace(relativeUrl) || !relativeUrl.StartsWith($"/documents/{PublicContentSegment}/", StringComparison.Ordinal))
+            return null;
+        var segments = relativeUrl.Trim('/').Split('/');
+        if (segments.Length != 4 || segments.Any(segment => segment.Length == 0 || segment is "." or ".."))
+            return null;
+        return string.Join('/', segments[1..]);
+    }
+
+    public static string? StoredDocumentObjectKey(string relativeUrl)
+        => ProtectedDocumentObjectKey(relativeUrl) ?? PublicContentObjectKey(relativeUrl);
 
     /// <summary>
     /// Object key for a persisted message-attachment URL inside the private
