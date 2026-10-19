@@ -71,6 +71,7 @@ type ApiHelpTicket = {
 
 type ApiPagedHelpTickets = {
   items?: ApiHelpTicket[] | null;
+  totalCount?: number;
 };
 
 type ApiCreatedHelpTicket = ApiHelpTicket;
@@ -118,6 +119,18 @@ export async function fetchAllHelpTickets(pageSize = 100): Promise<HelpTicket[]>
   return (Array.isArray(data?.items) ? data.items : [])
     .map(mapHelpTicket)
     .filter((ticket): ticket is HelpTicket => Boolean(ticket));
+}
+
+/** Tickets still awaiting a reply, for the Admin sidebar badge. */
+export async function fetchOpenHelpTicketCount(): Promise<number> {
+  const { data } = await withTransientRetry(() =>
+    api.get<ApiPagedHelpTickets>("/admin/help/tickets", {
+      params: { page: 1, pageSize: 100 },
+      timeout: READ_TIMEOUT_MS,
+    }),
+  );
+  const items = Array.isArray(data?.items) ? data.items : [];
+  return items.filter((ticket) => normalizeStatus(ticket.status) === "open").length;
 }
 
 export async function submitHelpTicket(input: {
