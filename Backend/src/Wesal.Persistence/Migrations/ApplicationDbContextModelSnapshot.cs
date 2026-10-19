@@ -693,6 +693,9 @@ namespace Wesal.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Bio")
+                        .HasColumnType("text");
+
                     b.Property<int>("BusinessType")
                         .HasColumnType("integer");
 
@@ -1078,6 +1081,9 @@ namespace Wesal.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Bio")
+                        .HasColumnType("text");
+
                     b.Property<string>("DetailedStudioLocation")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -1288,6 +1294,9 @@ namespace Wesal.Persistence.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("ContentPublishingRestrictedUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -1337,6 +1346,14 @@ namespace Wesal.Persistence.Migrations
 
                     b.Property<int>("PreferredLanguage")
                         .HasColumnType("integer");
+
+                    b.Property<string>("ProfilePictureContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ProfilePictureStorageKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("ProfilePictureUrl")
                         .HasMaxLength(500)

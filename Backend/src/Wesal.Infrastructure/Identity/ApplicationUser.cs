@@ -24,6 +24,10 @@ public class ApplicationUser : IdentityUser
     /// </summary>
     public string? ProfilePictureUrl { get; set; }
 
+    public string? ProfilePictureContentType { get; set; }
+
+    public string? ProfilePictureStorageKey { get; set; }
+
     /// <summary>
     /// True once the account has submitted whatever role-specific setup data its role
     /// requires (WESAL coordinator/photographer registration). Regular users and hall
@@ -41,4 +45,7 @@ public class ApplicationUser : IdentityUser
     /// <see cref="AccountApprovalStatus.Pending"/> and are never auto-approved.
     /// </summary>
     public AccountApprovalStatus ApprovalStatus { get; set; } = AccountApprovalStatus.Approved;
+
+    /// <summary>Admin content restriction expiry. A null or elapsed value means the account is unrestricted.</summary>
+    public DateTimeOffset? ContentPublishingRestrictedUntil { get; set; }
 }

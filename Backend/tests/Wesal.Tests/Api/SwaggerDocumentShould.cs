@@ -45,6 +45,12 @@ public class SwaggerDocumentShould
     private const string AdminPhotographerRejectPath = "/api/v{version}/admin/photographers/{userId}/reject";
     private const string AdminPhotographerRequestChangesPath = "/api/v{version}/admin/photographers/{userId}/request-changes";
     private const string AdminPhotographerConversationPath = "/api/v{version}/admin/photographers/{userId}/conversation";
+    private const string CoordinatorResubmitPath = "/api/v{version}/coordinator/setup/resubmit";
+    private const string PhotographerResubmitPath = "/api/v{version}/photographer/setup/resubmit";
+    private const string PublicProfilePath = "/api/v{version}/profile/{userId}";
+    private const string PublicProfilePicturePath = "/api/v{version}/profile/{userId}/picture";
+    private const string ProfilePictureUploadPath = "/api/v{version}/profile/picture";
+    private const string ProfileBioPath = "/api/v{version}/profile/bio";
 
     /// <summary>
     /// Total operations' paths. Guards against the document silently losing endpoints, and
@@ -59,9 +65,10 @@ public class SwaggerDocumentShould
     /// photographer setup submission and admin photographer identity-document endpoints;
     /// 107 adds Task 5's seven coordinator-review operations (list, detail, shop-photo,
     /// work-photos, approve, reject, conversation) and Task 6's six photographer-review
-    /// operations (list, detail, approve, reject, request-changes, conversation).
+    /// operations (list, detail, approve, reject, request-changes, conversation); 113
+    /// adds Tasks 7/8 resubmission and public-profile operations.
     /// </summary>
-    private const int ExpectedPathCount = 107;
+    private const int ExpectedPathCount = 113;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -87,6 +94,12 @@ public class SwaggerDocumentShould
         Assert.Contains(AdminCoordinatorIdentityPath, document.Paths.Keys);
         Assert.Contains(PhotographerSetupPath, document.Paths.Keys);
         Assert.Contains(AdminPhotographerIdentityPath, document.Paths.Keys);
+        Assert.Contains(CoordinatorResubmitPath, document.Paths.Keys);
+        Assert.Contains(PhotographerResubmitPath, document.Paths.Keys);
+        Assert.Contains(PublicProfilePath, document.Paths.Keys);
+        Assert.Contains(PublicProfilePicturePath, document.Paths.Keys);
+        Assert.Contains(ProfilePictureUploadPath, document.Paths.Keys);
+        Assert.Contains(ProfileBioPath, document.Paths.Keys);
     }
 
     [Fact]
