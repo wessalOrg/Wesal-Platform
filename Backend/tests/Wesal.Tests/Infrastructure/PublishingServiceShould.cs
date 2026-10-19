@@ -161,11 +161,11 @@ public sealed class PublishingServiceShould : IDisposable
         });
         Assert.Equal(NotificationKind.ProfessionalOfferEditsSaved, _dispatcher.Dispatches.Last().Kind);
         _restrictions.Restricted.Add(owner.Id);
-        await offers.StopAsync(id); // stopping remains available to an owner under a publishing restriction
-        Assert.Equal(NotificationKind.ProfessionalOfferStopped, _dispatcher.Dispatches.Last().Kind);
-        Assert.NotNull((await offers.ListOwnAsync(1, 10)).Items.Single().StoppedAt);
+        await Assert.ThrowsAsync<ForbiddenException>(() => offers.StopAsync(id));
+        Assert.Null((await offers.ListOwnAsync(1, 10)).Items.Single().StoppedAt);
         _restrictions.Restricted.Remove(owner.Id);
-        await Assert.ThrowsAsync<ConflictException>(() => offers.StopAsync(id));
+        await offers.StopAsync(id);
+        Assert.NotNull((await offers.ListOwnAsync(1, 10)).Items.Single().StoppedAt);
         await Assert.ThrowsAsync<ConflictException>(() => offers.UpdateAsync(id, new UpdateProfessionalOfferRequest
         {
             Content = "again", OldPrice = 100, OfferPrice = 50, StartsAt = Now, EndsAt = Now.AddDays(1)
@@ -307,8 +307,8 @@ public sealed class PublishingServiceShould : IDisposable
         await _db.SaveChangesAsync();
         _restrictions.Restricted.Add(approved.Id);
 
-        await CreateOfferService().StopAsync(approvedOffer.Id); // requirement 16.2 blocks create/edit, not stopping
-        Assert.NotNull((await _db.ProfessionalOffers.FindAsync(approvedOffer.Id))!.StoppedAt);
+        await Assert.ThrowsAsync<ForbiddenException>(() => CreateOfferService().StopAsync(approvedOffer.Id));
+        Assert.Null((await _db.ProfessionalOffers.FindAsync(approvedOffer.Id))!.StoppedAt);
     }
 
     [Fact]
@@ -395,11 +395,11 @@ public sealed class PublishingServiceShould : IDisposable
         public void Set(ApplicationUser user, params string[] roles) { UserId = user.Id; Roles = roles; }
     }
 
-    private sealed class FakeRestrictions : IUserContentPublishingRestrictionService
+    private sealed class FakeRestrictions : IAccountLockService
     {
         public HashSet<string> Restricted { get; } = [];
-        public Task<bool> IsRestrictedAsync(string userId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Restricted.Contains(userId));
+        public Task<DateTimeOffset?> GetLockedUntilAsync(string userId, CancellationToken cancellationToken = default)
+            => Task.FromResult<DateTimeOffset?>(Restricted.Contains(userId) ? DateTimeOffset.UtcNow.AddHours(1) : null);
     }
 
     private sealed class MemoryContentStore : IIdentityDocumentStore

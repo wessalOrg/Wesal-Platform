@@ -18,7 +18,7 @@ public sealed class PostService : IPostService
 {
     private readonly ICurrentUserService _currentUser;
     private readonly IAccountApprovalGuard _approval;
-    private readonly IUserContentPublishingRestrictionService _restrictions;
+    private readonly IAccountLockService _restrictions;
     private readonly UserManager<ApplicationUser> _users;
     private readonly IPostRepository _posts;
     private readonly IIdentityDocumentStore _files;
@@ -31,7 +31,7 @@ public sealed class PostService : IPostService
     private readonly TimeProvider _clock;
 
     public PostService(ICurrentUserService currentUser, IAccountApprovalGuard approval,
-        IUserContentPublishingRestrictionService restrictions, UserManager<ApplicationUser> users,
+        IAccountLockService restrictions, UserManager<ApplicationUser> users,
         IPostRepository posts, IIdentityDocumentStore files, IUnitOfWork unitOfWork,
         INotificationService notifications, IUserNotificationWriter notificationWriter,
         INotificationDispatcher dispatcher, IValidator<CreatePostRequest> createValidator,
@@ -145,8 +145,7 @@ public sealed class PostService : IPostService
         if (!_currentUser.Roles.Any(role => role is ApplicationRoles.EventCoordinator or ApplicationRoles.Photographer))
             throw new ForbiddenException("Only coordinators and photographers can publish posts.");
         await _approval.EnsureCanPublishAsync(cancellationToken);
-        if (await _restrictions.GetRestrictedUntilAsync(_currentUser.UserId, cancellationToken) is { } restrictedUntil)
-            throw new ForbiddenException($"Your content publishing is restricted until {restrictedUntil:O}.");
+        await _restrictions.EnsureUnlockedAsync(_currentUser.UserId, cancellationToken);
         return await _users.FindByIdAsync(_currentUser.UserId) ?? throw new ForbiddenException("The publishing account could not be found.");
     }
 

@@ -271,23 +271,25 @@ public sealed class NotificationLocalizationShould : IDisposable
         Assert.Equal(40, (int)NotificationKind.PostDeletedByAdminForPhotographer);
         Assert.Equal(41, (int)NotificationKind.ProfessionalOfferDeletedByAdmin);
         Assert.Equal(42, (int)NotificationKind.PublishingRestricted);
+        Assert.Equal(43, (int)NotificationKind.AccountLocked);
+        Assert.Equal(44, (int)NotificationKind.AccountUnlocked);
 
         var coordinatorDelete = NotificationCatalog.Render(NotificationKind.PostDeletedByAdminForCoordinator,
             Language.Arabic, new Dictionary<string, string?> { [NotificationTokens.Reason] = "مخالفة" });
         Assert.Equal("تم حذف المنشور بواسطة الإدارة", coordinatorDelete.Title);
-        Assert.Equal("السبب: مخالفة", coordinatorDelete.Body);
+        Assert.Equal("تم حذف المنشور الخاص بك للأسباب التالية: مخالفة", coordinatorDelete.Body);
         Assert.Equal(NotificationActionTarget.None, coordinatorDelete.ActionTarget);
 
         var photographerDelete = NotificationCatalog.Render(NotificationKind.PostDeletedByAdminForPhotographer,
             Language.Arabic, new Dictionary<string, string?> { [NotificationTokens.Reason] = "مخالفة" });
-        Assert.Equal("تمت إزالة أحد منشوراتك", photographerDelete.Title);
-        Assert.Equal("تمت إزالة أحد منشوراتك، مع توضيح السبب إن وجد: مخالفة", photographerDelete.Body);
+        Assert.Equal("تم حذف المنشور بواسطة الإدارة", photographerDelete.Title);
+        Assert.Equal("تم حذف المنشور الخاص بك للأسباب التالية: مخالفة", photographerDelete.Body);
         Assert.Equal(NotificationActionTarget.None, photographerDelete.ActionTarget);
 
         var offerDelete = NotificationCatalog.Render(NotificationKind.ProfessionalOfferDeletedByAdmin,
             Language.Arabic, new Dictionary<string, string?> { [NotificationTokens.Reason] = "مخالفة" });
         Assert.Equal("تم حذف العرض بواسطة الإدارة", offerDelete.Title);
-        Assert.Equal("السبب: مخالفة", offerDelete.Body);
+        Assert.Equal("تم حذف العرض الخاص بك للأسباب التالية: مخالفة", offerDelete.Body);
         Assert.Equal(NotificationActionTarget.None, offerDelete.ActionTarget);
 
         var restriction = NotificationCatalog.Render(NotificationKind.PublishingRestricted, Language.Arabic,
@@ -295,6 +297,11 @@ public sealed class NotificationLocalizationShould : IDisposable
         Assert.Equal("تم تقييد نشر المحتوى", restriction.Title);
         Assert.Equal("تم تقييد نشر محتواك لمدة ساعتين", restriction.Body);
         Assert.Equal(NotificationActionTarget.None, restriction.ActionTarget);
+
+        var unlocked = NotificationCatalog.Render(NotificationKind.AccountUnlocked, Language.Arabic);
+        Assert.Equal("تم فك القفل عن حسابك", unlocked.Title);
+        Assert.Equal("تم فك القفل عن حسابك. يمكنك الآن النشر وتعديل بياناتك، وسيظهر حسابك ومنشوراتك للمستخدمين مجددًا.", unlocked.Body);
+        Assert.Equal(NotificationActionTarget.None, unlocked.ActionTarget);
     }
 
     [Fact]

@@ -427,18 +427,30 @@ public static class NotificationCatalog
                 "Your request is still awaiting administration approval. You will be able to use the photographer features after approval.", null, null, NotificationActionTarget.None),
             [NotificationKind.PostDeletedByAdminForCoordinator] = new NotificationTemplate(
                 "تم حذف المنشور بواسطة الإدارة", "A post was deleted by the administration",
-                "السبب: " + NotificationTokens.Reason, "Reason: " + NotificationTokens.Reason, null, null, NotificationActionTarget.None),
+                "تم حذف المنشور الخاص بك للأسباب التالية: " + NotificationTokens.Reason,
+                "Your post was deleted for the following reasons: " + NotificationTokens.Reason, null, null, NotificationActionTarget.None),
             [NotificationKind.PostDeletedByAdminForPhotographer] = new NotificationTemplate(
-                "تمت إزالة أحد منشوراتك", "One of your posts was removed",
-                "تمت إزالة أحد منشوراتك، مع توضيح السبب إن وجد: " + NotificationTokens.Reason,
-                "One of your posts was removed. Reason, if provided: " + NotificationTokens.Reason, null, null, NotificationActionTarget.None),
+                "تم حذف المنشور بواسطة الإدارة", "A post was deleted by the administration",
+                "تم حذف المنشور الخاص بك للأسباب التالية: " + NotificationTokens.Reason,
+                "Your post was deleted for the following reasons: " + NotificationTokens.Reason, null, null, NotificationActionTarget.None),
             [NotificationKind.ProfessionalOfferDeletedByAdmin] = new NotificationTemplate(
                 "تم حذف العرض بواسطة الإدارة", "An offer was deleted by the administration",
-                "السبب: " + NotificationTokens.Reason, "Reason: " + NotificationTokens.Reason, null, null, NotificationActionTarget.None),
+                "تم حذف العرض الخاص بك للأسباب التالية: " + NotificationTokens.Reason,
+                "Your offer was deleted for the following reasons: " + NotificationTokens.Reason, null, null, NotificationActionTarget.None),
             [NotificationKind.PublishingRestricted] = new NotificationTemplate(
                 "تم تقييد نشر المحتوى", "Content publishing was restricted",
                 "تم تقييد نشر محتواك لمدة " + NotificationTokens.Period,
-                "Your content publishing has been restricted for " + NotificationTokens.Period, null, null, NotificationActionTarget.None)
+                "Your content publishing has been restricted for " + NotificationTokens.Period, null, null, NotificationActionTarget.None),
+            [NotificationKind.AccountLocked] = new NotificationTemplate(
+                "تم قفل حسابك مؤقتًا", "Your account has been temporarily locked",
+                "تم قفل حسابك لمدة " + NotificationTokens.Period + ". خلال هذه الفترة لا يمكنك النشر أو تعديل بياناتك، ولن يظهر حسابك ومنشوراتك للمستخدمين.",
+                "Your account is locked for " + NotificationTokens.Period + ". During this period you cannot publish or edit your data, and your account and posts will not appear to users.",
+                null, null, NotificationActionTarget.None),
+            [NotificationKind.AccountUnlocked] = new NotificationTemplate(
+                "تم فك القفل عن حسابك", "Your account has been unlocked",
+                "تم فك القفل عن حسابك. يمكنك الآن النشر وتعديل بياناتك، وسيظهر حسابك ومنشوراتك للمستخدمين مجددًا.",
+                "Your account has been unlocked. You can now publish and edit your data, and your account and posts will appear to users again.",
+                null, null, NotificationActionTarget.None)
         };
 
     public static NotificationTemplate Get(NotificationKind kind)

@@ -3,11 +3,21 @@ using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Persistence.Data;
+using Wesal.Persistence.Queries;
 
 namespace Wesal.Persistence.Repositories;
 
-public sealed class PostRepository(ApplicationDbContext context) : IPostRepository
+public sealed class PostRepository : IPostRepository
 {
+    private readonly ApplicationDbContext context;
+    private readonly TimeProvider clock;
+
+    public PostRepository(ApplicationDbContext context, TimeProvider? clock = null)
+    {
+        this.context = context;
+        this.clock = clock ?? TimeProvider.System;
+    }
+
     public async Task AddAsync(Post post, CancellationToken cancellationToken = default)
         => await context.Posts.AddAsync(post, cancellationToken);
 
@@ -18,7 +28,7 @@ public sealed class PostRepository(ApplicationDbContext context) : IPostReposito
 
     public Task<Post?> GetPublicAsync(Guid id, CancellationToken cancellationToken = default)
         => context.Posts.AsNoTracking().Include(post => post.Images)
-            .Where(post => context.Users.Any(user => user.Id == post.OwnerUserId && user.ApprovalStatus == AccountApprovalStatus.Approved))
+            .Where(post => context.Users.VisibleToPublic(context, clock.GetUtcNow()).Any(user => user.Id == post.OwnerUserId))
             .FirstOrDefaultAsync(post => post.Id == id, cancellationToken);
 
     public async Task<IReadOnlyList<Post>> ListPublicByOwnerAsync(string ownerId, int skip, int take, CancellationToken cancellationToken = default)
@@ -59,5 +69,5 @@ public sealed class PostRepository(ApplicationDbContext context) : IPostReposito
 
     private IQueryable<Post> PublicPosts(string ownerId)
         => context.Posts.AsNoTracking().Where(post => post.OwnerUserId == ownerId
-            && context.Users.Any(user => user.Id == ownerId && user.ApprovalStatus == AccountApprovalStatus.Approved));
+            && context.Users.VisibleToPublic(context, clock.GetUtcNow()).Any(user => user.Id == ownerId));
 }

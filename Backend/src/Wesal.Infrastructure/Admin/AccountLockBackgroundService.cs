@@ -1,18 +1,18 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Application.Common.Interfaces;
 
 namespace Wesal.Infrastructure.Admin;
 
-public sealed class PublishingRestrictionBackgroundService : BackgroundService
+public sealed class AccountLockBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<PublishingRestrictionBackgroundService> _logger;
+    private readonly ILogger<AccountLockBackgroundService> _logger;
     private readonly TimeProvider _clock;
 
-    public PublishingRestrictionBackgroundService(IServiceScopeFactory scopeFactory,
-        ILogger<PublishingRestrictionBackgroundService> logger, TimeProvider clock)
+    public AccountLockBackgroundService(IServiceScopeFactory scopeFactory,
+        ILogger<AccountLockBackgroundService> logger, TimeProvider clock)
     {
         _scopeFactory = scopeFactory; _logger = logger; _clock = clock;
     }
@@ -25,11 +25,11 @@ public sealed class PublishingRestrictionBackgroundService : BackgroundService
             try
             {
                 using var scope = _scopeFactory.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<IUserPublishingRestrictionRepository>()
-                    .LiftExpiredAsync(_clock.GetUtcNow(), stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<IAccountLockExpiryService>()
+                    .ProcessExpiredAsync(cancellationToken: stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
-            catch (Exception exception) { _logger.LogError(exception, "Publishing restriction expiry processing failed."); }
+            catch (Exception exception) { _logger.LogError(exception, "Account lock expiry processing failed."); }
 
             try
             {

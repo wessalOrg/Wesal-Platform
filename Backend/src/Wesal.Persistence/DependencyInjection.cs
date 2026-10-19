@@ -60,7 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IPhotographerRepository, PhotographerRepository>();
         services.AddScoped<IUserNotificationWriter, UserNotificationWriter>();
         services.AddScoped<IUserNotificationRepository, UserNotificationRepository>();
-        services.AddScoped<IUserPublishingRestrictionRepository, UserPublishingRestrictionRepository>();
+        services.AddScoped<IAccountLockRepository, AccountLockRepository>();
         services.AddScoped<IAdminModerationRepository, AdminModerationRepository>();
         services.AddScoped<IPostRepository, PostRepository>();
         services.AddScoped<IPostInteractionRepository, PostInteractionRepository>();
