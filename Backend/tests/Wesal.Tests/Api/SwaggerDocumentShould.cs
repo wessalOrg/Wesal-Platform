@@ -70,7 +70,7 @@ public class SwaggerDocumentShould
     /// and offer endpoints, including hall-owner offer management; 132 adds the five
     /// distinct Task 11/12 post-comment and favorite paths.
     /// </summary>
-    private const int ExpectedPathCount = 143;
+    private const int ExpectedPathCount = 152;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -113,6 +113,15 @@ public class SwaggerDocumentShould
         Assert.Contains("/api/v{version}/professional/conversations", document.Paths.Keys);
         Assert.Contains("/api/v{version}/professional/conversations/unread-count", document.Paths.Keys);
         Assert.Contains("/api/v{version}/professional/conversations/{conversationId}/messages", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/notifications", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/notifications/unread-count", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/notifications/{notificationId}/read", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/notifications/read-all", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/posts/{postId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/offers/{offerId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/publishing-restrictions", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/publishing-restriction", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}", document.Paths.Keys);
     }
 
     [Fact]

@@ -234,6 +234,7 @@ public sealed class NotificationLocalizationShould : IDisposable
             [NotificationTokens.EndTime] = "22:00",
             [NotificationTokens.Amount] = "500",
             [NotificationTokens.Reason] = "Fully booked",
+            [NotificationTokens.Period] = "24 hours",
             [NotificationTokens.TimeRange] = "18:00 - 22:00",
             [NotificationTokens.DaysRemaining] = "3",
             [NotificationTokens.SenderName] = "Ahmed",
@@ -428,6 +429,7 @@ public sealed class NotificationLocalizationShould : IDisposable
             NotificationTokens.EndTime,
             NotificationTokens.Amount,
             NotificationTokens.Reason,
+            NotificationTokens.Period,
             NotificationTokens.TimeRange,
             NotificationTokens.DaysRemaining,
             NotificationTokens.CommenterName

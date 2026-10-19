@@ -25,17 +25,25 @@ public sealed class TokenRevocationValidationShould
     private sealed class FakeRevocationRepository : ITokenRevocationRepository
     {
         private readonly Func<string, Task<bool>> _isRevoked;
+        private readonly Func<string, Task<bool>> _userExists;
 
-        public FakeRevocationRepository(Func<string, Task<bool>> isRevoked) => _isRevoked = isRevoked;
+        public FakeRevocationRepository(Func<string, Task<bool>> isRevoked, Func<string, Task<bool>>? userExists = null)
+        {
+            _isRevoked = isRevoked;
+            _userExists = userExists ?? (_ => Task.FromResult(true));
+        }
 
         public Task<bool> IsRevokedAsync(string jti, CancellationToken cancellationToken = default)
             => _isRevoked(jti);
+
+        public Task<bool> UserExistsAsync(string userId, CancellationToken cancellationToken = default)
+            => _userExists(userId);
 
         public Task<bool> RevokeAsync(string jti, string userId, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
     }
 
-    private static (WebApplication App, HttpClient Client) BuildApp(Func<string, Task<bool>> isRevoked)
+    private static (WebApplication App, HttpClient Client) BuildApp(Func<string, Task<bool>> isRevoked, Func<string, Task<bool>>? userExists = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -46,7 +54,7 @@ public sealed class TokenRevocationValidationShould
         {
             ["AllowedHosts"] = "*"
         });
-        builder.Services.AddScoped<ITokenRevocationRepository>(_ => new FakeRevocationRepository(isRevoked));
+        builder.Services.AddScoped<ITokenRevocationRepository>(_ => new FakeRevocationRepository(isRevoked, userExists));
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
