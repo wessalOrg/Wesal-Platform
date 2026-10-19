@@ -301,4 +301,124 @@ public sealed class PhotographerSetupService : IPhotographerSetupService
 
     private static string? TrimOrNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    public async Task<PhotographerSetupResult> ResubmitSetupAsync(
+        PhotographerSetupSubmission submission,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var user = await ResolvePhotographerUserAsync(cancellationToken);
+
+        // Allowed only when Rejected or NeedsChanges
+        if (user.ApprovalStatus != AccountApprovalStatus.Rejected &&
+            user.ApprovalStatus != AccountApprovalStatus.NeedsChanges)
+        {
+            throw new ConflictException("Photographer resubmission is only allowed when the account is rejected or needs changes.");
+        }
+
+        ValidateForm(submission.Form);
+        var identityDocument = ValidateAttachments(submission);
+
+        var savedDocuments = new List<string>();
+        string identityDocumentUrl;
+
+        try
+        {
+            identityDocumentUrl = await SaveDocumentAsync(user.Id, identityDocument!, cancellationToken);
+            savedDocuments.Add(identityDocumentUrl);
+
+            var hasStudio = submission.Form.HasStudio!.Value;
+
+            var profile = await _photographerRepository.GetByUserIdAsync(user.Id, cancellationToken);
+            if (profile is null)
+            {
+                throw new NotFoundException("PhotographerProfile", user.Id);
+            }
+
+            profile.HasStudio = hasStudio;
+            profile.StudioName = hasStudio ? TrimOrNull(submission.Form.StudioName) : null;
+            profile.StudioLocation = hasStudio ? TrimOrNull(submission.Form.StudioLocation) : null;
+            profile.DetailedStudioLocation = hasStudio ? TrimOrNull(submission.Form.DetailedStudioLocation) : null;
+            profile.FullName = hasStudio ? null : TrimOrNull(submission.Form.FullName);
+            profile.PhoneNumber = submission.Form.PhoneNumber!.Trim();
+            profile.IdentityDocumentUrl = identityDocumentUrl;
+            profile.SubmittedAt = DateTimeOffset.UtcNow;
+
+            var submittedAt = profile.SubmittedAt;
+
+            await _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                var content = await _notificationService.BuildAsync(
+                    NotificationKind.PhotographerSetupReceivedForPhotographer,
+                    user.Id,
+                    values: null,
+                    targetId: null,
+                    cancellationToken);
+
+                await _notificationWriter.AddAsync(new UserNotification
+                {
+                    Id = Guid.NewGuid(),
+                    RecipientUserId = user.Id,
+                    Kind = content.Kind,
+                    Language = SupportedLanguages.ToCode(content.Language),
+                    Title = content.Title,
+                    Body = content.Body,
+                    ActionLabel = content.ActionLabel,
+                    ActionTarget = content.ActionTarget,
+                    TargetId = content.TargetId,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    ReadAt = null
+                }, cancellationToken);
+
+                await _photographerRepository.UpdateAsync(profile, cancellationToken);
+
+                user.IsSetupComplete = true;
+                user.ApprovalStatus = AccountApprovalStatus.Pending;
+
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    var errors = updateResult.Errors
+                        .GroupBy(e => e.Code)
+                        .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray());
+                    throw new ValidationException(errors.Count > 0
+                        ? errors
+                        : new Dictionary<string, string[]> { ["Setup"] = new[] { "The setup could not be saved; please try again." } });
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }, cancellationToken);
+
+            try
+            {
+                await _notificationDispatcher.DispatchAsync(
+                    NotificationKind.PhotographerSetupReceivedForPhotographer,
+                    user.Id,
+                    values: null,
+                    targetId: null,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Realtime dispatch of the photographer resubmit notification failed for user {UserId} after commit",
+                    user.Id);
+            }
+
+            return new PhotographerSetupResult
+            {
+                IsSetupComplete = true,
+                ApprovalStatus = AccountApprovalStatus.Pending,
+                HasStudio = profile.HasStudio,
+                SubmittedAt = submittedAt
+            };
+        }
+        catch
+        {
+            await TryDeleteDocumentsAsync(savedDocuments, cancellationToken);
+            throw;
+        }
+    }
 }

@@ -68,3 +68,34 @@ public class ChangePasswordResponse
 {
     public string Message { get; init; } = string.Empty;
 }
+
+public sealed class PublicProfessionalProfileResponse
+{
+    public string UserId { get; init; } = string.Empty;
+    public string? Role { get; init; }
+    public string? ApprovalStatus { get; init; }
+    public bool IsPubliclyAvailable { get; init; }
+    public string? DisplayName { get; init; }
+    public string? ShopName { get; init; }
+    public string? OnlineStoreName { get; init; }
+    public string? PhoneNumber { get; init; }
+    public string? ShopLocation { get; init; }
+    public string? StudioName { get; init; }
+    public string? StudioLocation { get; init; }
+    public string? DetailedStudioLocation { get; init; }
+    public string? Bio { get; init; }
+    public string? ProfilePictureUrl { get; init; }
+    // Posts and Offers are wired as empty integration sections until Tasks 9 and 10 add their entities.
+    public IReadOnlyList<PublicProfileContentDto> Posts { get; init; } = [];
+    public IReadOnlyList<PublicProfileContentDto> Offers { get; init; } = [];
+}
+
+public sealed class PublicProfileContentDto
+{
+    public Guid Id { get; init; }
+}
+
+public sealed class UpdatePublicBioRequest
+{
+    public string? Bio { get; init; }
+}

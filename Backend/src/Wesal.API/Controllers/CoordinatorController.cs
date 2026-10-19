@@ -71,7 +71,7 @@ public class CoordinatorController : ControllerBase
                 // oversized files here instead of buffering them first.
                 Infrastructure.UploadedFileGuard.ThrowIfTooLarge(
                     workPhoto, "WorkPhotos", "Photo size must not exceed 5MB.");
-                workPhotoUploads.Add(await BufferFileAsync(workPhoto, cancellationToken));
+                workPhotoUploads.Add((await BufferFileAsync(workPhoto, cancellationToken))!);
             }
         }
 
@@ -122,5 +122,65 @@ public class CoordinatorController : ControllerBase
             ContentType = file.ContentType,
             Content = ms.ToArray()
         };
+    }
+
+    /// <summary>
+    /// Resubmits the coordinator setup after rejection. Only allowed when current approval status is Rejected.
+    /// Re-runs the same validators and attachment rules; updates the existing profile and resets status to Pending.
+    /// </summary>
+    [HttpPut("setup/resubmit")]
+    [HttpPost("setup/resubmit")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(Infrastructure.UploadLimits.CoordinatorFormRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = Infrastructure.UploadLimits.CoordinatorFormRequestBytes)]
+    [ProducesResponseType(typeof(CoordinatorSetupResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CoordinatorSetupResult>> ResubmitSetup(
+        [FromForm] CoordinatorBusinessType? BusinessType,
+        [FromForm] string? ShopName,
+        [FromForm] string? ShopLocation,
+        [FromForm] string? OnlineStoreName,
+        [FromForm] string? PhoneNumber,
+        IFormFile? ShopPhoto,
+        IFormFile[]? WorkPhotos,
+        IFormFile? IdentityDocument,
+        CancellationToken cancellationToken)
+    {
+        var shopPhotoUpload = await BufferFileAsync(ShopPhoto, cancellationToken);
+
+        var workPhotoUploads = new List<OwnerDocumentUpload>();
+        if (WorkPhotos is not null)
+        {
+            foreach (var workPhoto in WorkPhotos)
+            {
+                Infrastructure.UploadedFileGuard.ThrowIfTooLarge(
+                    workPhoto, "WorkPhotos", "Photo size must not exceed 5MB.");
+                workPhotoUploads.Add((await BufferFileAsync(workPhoto, cancellationToken))!);
+            }
+        }
+
+        var identityDocumentUpload = await BufferFileAsync(IdentityDocument, cancellationToken);
+
+        var submission = new CoordinatorSetupSubmission
+        {
+            Form = new CoordinatorSetupRequest
+            {
+                BusinessType = BusinessType,
+                ShopName = ShopName,
+                ShopLocation = ShopLocation,
+                OnlineStoreName = OnlineStoreName,
+                PhoneNumber = PhoneNumber
+            },
+            ShopPhoto = shopPhotoUpload,
+            WorkPhotos = workPhotoUploads,
+            IdentityDocument = identityDocumentUpload
+        };
+
+        var result = await _coordinatorSetupService.ResubmitSetupAsync(submission, cancellationToken);
+        return Ok(result);
     }
 }

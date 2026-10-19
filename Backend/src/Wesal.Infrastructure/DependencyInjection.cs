@@ -90,6 +90,7 @@ public static class DependencyInjection
         services.AddScoped<ILoginService, LoginService>();
         services.AddScoped<ILogoutService, LogoutService>();
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IProfessionalProfileService, ProfessionalProfileService>();
         services.AddScoped<IOwnerIdentityService, OwnerIdentityService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.ICoordinatorSetupService, Wesal.Infrastructure.Coordinators.CoordinatorSetupService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.ICoordinatorAdminService, Wesal.Infrastructure.Coordinators.CoordinatorAdminService>();
@@ -220,6 +221,7 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
                 policy.RequireAuthenticatedUser());
         });
 
+        services.AddScoped<Wesal.Application.Common.Interfaces.IUserContentPublishingRestrictionService, Wesal.Infrastructure.Identity.UserContentPublishingRestrictionService>();
         return services;
     }
 }

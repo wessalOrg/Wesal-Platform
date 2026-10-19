@@ -76,4 +76,14 @@ public sealed class PhotographerRepository : IPhotographerRepository
                    SubmittedAt = profile.SubmittedAt
                };
     }
+
+    public Task UpdateAsync(PhotographerProfile profile, CancellationToken cancellationToken = default)
+    {
+        var tracked = _context.PhotographerProfiles.Local.FirstOrDefault(item => item.UserId == profile.UserId);
+        if (tracked is not null)
+            _context.Entry(tracked).CurrentValues.SetValues(profile);
+        else
+            _context.PhotographerProfiles.Update(profile);
+        return Task.CompletedTask;
+    }
 }

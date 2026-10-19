@@ -30,4 +30,5 @@ public interface ICoordinatorRepository
 
     /// <summary>The total rows <see cref="GetRequestsAsync"/> would return, for paging.</summary>
     Task<int> CountRequestsAsync(AccountApprovalStatus? status, CancellationToken cancellationToken = default);
+    Task UpdateAsync(CoordinatorProfile profile, CancellationToken cancellationToken = default);
 }

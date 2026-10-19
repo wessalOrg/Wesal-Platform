@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Wesal.Application.Common.Interfaces;
@@ -8,6 +9,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Admin;
 using Wesal.Infrastructure.Coordinators;
 using Wesal.Infrastructure.Identity;
@@ -33,7 +35,8 @@ public class CoordinatorAdminServiceShould : IDisposable
     public CoordinatorAdminServiceShould()
     {
         var services = new ServiceCollection();
-        services.AddDbContext<ApplicationDbContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+        services.AddDbContext<ApplicationDbContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
         services.AddIdentityCore<ApplicationUser>().AddRoles<ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>();
         services.AddLogging();
         _provider = services.BuildServiceProvider();
@@ -70,9 +73,10 @@ public class CoordinatorAdminServiceShould : IDisposable
 
     private async Task<ApplicationUser> CreateCoordinatorWithProfileAsync(
         string email,
-        string? identityDocumentUrl = "documents/coordinators/{0}/id.pdf")
+        string? identityDocumentUrl = "documents/coordinators/{0}/id.pdf",
+        AccountApprovalStatus approvalStatus = AccountApprovalStatus.Pending)
     {
-        var user = new ApplicationUser { FullName = "Coordinator", Email = email, UserName = email };
+        var user = new ApplicationUser { FullName = "Coordinator", Email = email, UserName = email, ApprovalStatus = approvalStatus };
         var result = await _userManager.CreateAsync(user, "Password123!");
         if (!result.Succeeded)
         {
@@ -163,6 +167,34 @@ public class CoordinatorAdminServiceShould : IDisposable
         Assert.DoesNotContain("http", document.RelativeUrl, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("supabase", document.RelativeUrl, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("http", document.FullPath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RejectWithoutReasonFailsValidation()
+    {
+        var user = await CreateCoordinatorWithProfileAsync("reject-empty@example.com");
+
+        await Assert.ThrowsAsync<ValidationException>(() => CreateService().RejectCoordinatorRequestAsync(user.Id, new AdminRejectAccountRequestDto { Reason = "  " }));
+
+        Assert.Equal(AccountApprovalStatus.Pending, (await _userManager.FindByIdAsync(user.Id))!.ApprovalStatus);
+        Assert.Empty(_context.UserNotifications);
+    }
+
+    [Fact]
+    public async Task RejectionPersistsExactNotificationAndAdminConversationTarget()
+    {
+        var user = await CreateCoordinatorWithProfileAsync("reject@example.com");
+        const string reason = "Missing shop photo";
+
+        await CreateService().RejectCoordinatorRequestAsync(user.Id, new AdminRejectAccountRequestDto { Reason = reason });
+
+        var notification = await _context.UserNotifications.SingleAsync(n => n.RecipientUserId == user.Id);
+        Assert.Equal("تعذر قبول طلبك", notification.Title);
+        Assert.Equal($"تم رفض طلبك للسبب الاتي : \"{reason}\"", notification.Body);
+        Assert.Equal(NotificationActionTarget.Conversation, notification.ActionTarget);
+        var conversation = await _context.Conversations.SingleAsync(c => c.HallOwnerId == user.Id && c.HallId == null);
+        Assert.Equal(conversation.Id.ToString(), notification.TargetId);
+        Assert.Equal(AccountApprovalStatus.Rejected, (await _userManager.FindByIdAsync(user.Id))!.ApprovalStatus);
     }
 
     public void Dispose()

@@ -79,4 +79,14 @@ public sealed class CoordinatorRepository : ICoordinatorRepository
                    SubmittedAt = profile.SubmittedAt
                };
     }
+
+    public Task UpdateAsync(CoordinatorProfile profile, CancellationToken cancellationToken = default)
+    {
+        var tracked = _context.CoordinatorProfiles.Local.FirstOrDefault(item => item.UserId == profile.UserId);
+        if (tracked is not null)
+            _context.Entry(tracked).CurrentValues.SetValues(profile);
+        else
+            _context.CoordinatorProfiles.Update(profile);
+        return Task.CompletedTask;
+    }
 }

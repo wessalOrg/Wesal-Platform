@@ -104,4 +104,49 @@ public class PhotographerController : ControllerBase
             Content = ms.ToArray()
         };
     }
+
+    /// <summary>
+    /// Resubmits the photographer setup after rejection or needs changes. Only allowed when current approval status is Rejected or NeedsChanges.
+    /// Re-runs the same validators and attachment rules; updates the existing profile and resets status to Pending.
+    /// </summary>
+    [HttpPut("setup/resubmit")]
+    [HttpPost("setup/resubmit")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(Infrastructure.UploadLimits.PhotographerFormRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = Infrastructure.UploadLimits.PhotographerFormRequestBytes)]
+    [ProducesResponseType(typeof(PhotographerSetupResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<PhotographerSetupResult>> ResubmitSetup(
+        [FromForm] bool? HasStudio,
+        [FromForm] string? StudioName,
+        [FromForm] string? StudioLocation,
+        [FromForm] string? DetailedStudioLocation,
+        [FromForm] string? FullName,
+        [FromForm] string? PhoneNumber,
+        IFormFile? IdentityDocument,
+        CancellationToken cancellationToken)
+    {
+        var identityDocumentUpload = await BufferFileAsync(IdentityDocument, cancellationToken);
+
+        var submission = new PhotographerSetupSubmission
+        {
+            Form = new PhotographerSetupRequest
+            {
+                HasStudio = HasStudio,
+                StudioName = StudioName,
+                StudioLocation = StudioLocation,
+                DetailedStudioLocation = DetailedStudioLocation,
+                FullName = FullName,
+                PhoneNumber = PhoneNumber
+            },
+            IdentityDocument = identityDocumentUpload
+        };
+
+        var result = await _photographerSetupService.ResubmitSetupAsync(submission, cancellationToken);
+        return Ok(result);
+    }
 }

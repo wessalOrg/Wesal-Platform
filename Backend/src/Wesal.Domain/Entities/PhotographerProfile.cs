@@ -61,4 +61,7 @@ public class PhotographerProfile
     public string IdentityDocumentUrl { get; set; } = string.Empty;
 
     public DateTimeOffset SubmittedAt { get; set; }
+
+    /// <summary>Short public bio for the photographer (max length enforced by the profile service).</summary>
+    public string? Bio { get; set; }
 }

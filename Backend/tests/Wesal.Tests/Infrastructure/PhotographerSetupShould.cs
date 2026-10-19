@@ -186,6 +186,8 @@ public class PhotographerSetupShould : IDisposable
         var notification = await _context.UserNotifications.AsNoTracking().SingleAsync();
         Assert.Equal(user.Id, notification.RecipientUserId);
         Assert.Equal(NotificationKind.PhotographerSetupReceivedForPhotographer, notification.Kind);
+        Assert.Equal("تم استلام طلب التسجيل", notification.Title);
+        Assert.Equal("تم إرسال طلبك بنجاح. ستقوم إدارة وصال بمراجعته، ويمكنك تصفح القاعات وحجزها ومراسلة الإدارة خلال فترة الانتظار.", notification.Body);
         Assert.False(string.IsNullOrWhiteSpace(notification.Title));
         Assert.False(string.IsNullOrWhiteSpace(notification.Body));
         Assert.Null(notification.ReadAt);
@@ -220,6 +222,57 @@ public class PhotographerSetupShould : IDisposable
         Assert.Equal(AccountApprovalStatus.Pending, persisted.ApprovalStatus);
 
         Assert.True(_dispatcher.Has(NotificationKind.PhotographerSetupReceivedForPhotographer, user.Id));
+    }
+
+    [Theory]
+    [InlineData(AccountApprovalStatus.Rejected)]
+    [InlineData(AccountApprovalStatus.NeedsChanges)]
+    public async Task Photographer_CanResubmitAfterRejectionOrNeedsChanges(AccountApprovalStatus status)
+    {
+        var user = await CreatePhotographerAsync($"resubmit-{status}@example.com");
+        var service = CreateService(user);
+        await service.SubmitSetupAsync(CompleteStudioSubmission());
+        user = (await _userManager.FindByIdAsync(user.Id))!;
+        user.ApprovalStatus = status;
+        await _userManager.UpdateAsync(user);
+
+        var result = await service.ResubmitSetupAsync(NoStudioSubmission(Png("new-id.png")));
+
+        var profile = await _context.PhotographerProfiles.AsNoTracking().SingleAsync(p => p.UserId == user.Id);
+        var persisted = await _userManager.FindByIdAsync(user.Id);
+        Assert.Equal(AccountApprovalStatus.Pending, result.ApprovalStatus);
+        Assert.Equal(AccountApprovalStatus.Pending, persisted!.ApprovalStatus);
+        Assert.False(profile.HasStudio);
+        Assert.Equal("Ahmad Khalil", profile.FullName);
+        Assert.Equal(2, await _context.UserNotifications.CountAsync(n => n.RecipientUserId == user.Id));
+        Assert.Equal(2, _dispatcher.Dispatches.Count(d => d.RecipientUserId == user.Id));
+    }
+
+    [Fact]
+    public async Task PhotographerResubmission_RevalidatesNoStudioBranchFields()
+    {
+        var user = await CreatePhotographerAsync("resubmit-invalid@example.com");
+        var service = CreateService(user);
+        await service.SubmitSetupAsync(CompleteStudioSubmission());
+        user = (await _userManager.FindByIdAsync(user.Id))!;
+        user.ApprovalStatus = AccountApprovalStatus.NeedsChanges;
+        await _userManager.UpdateAsync(user);
+        var filesBefore = _documentStore.Files.Count;
+        var invalid = new PhotographerSetupSubmission
+        {
+            Form = new PhotographerSetupRequest
+            {
+                HasStudio = false,
+                FullName = " ",
+                PhoneNumber = "+970599111111"
+            },
+            IdentityDocument = Png("new-id.png")
+        };
+
+        await Assert.ThrowsAsync<ValidationException>(() => service.ResubmitSetupAsync(invalid));
+
+        Assert.Equal(filesBefore, _documentStore.Files.Count);
+        Assert.Equal(AccountApprovalStatus.NeedsChanges, (await _userManager.FindByIdAsync(user.Id))!.ApprovalStatus);
     }
 
     [Theory]

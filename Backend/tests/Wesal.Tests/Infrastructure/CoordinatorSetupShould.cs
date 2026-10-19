@@ -196,6 +196,8 @@ public class CoordinatorSetupShould : IDisposable
         var notification = await _context.UserNotifications.AsNoTracking().SingleAsync();
         Assert.Equal(user.Id, notification.RecipientUserId);
         Assert.Equal(NotificationKind.CoordinatorSetupReceivedForCoordinator, notification.Kind);
+        Assert.Equal("تم استلام طلبك", notification.Title);
+        Assert.Equal("وصل طلب التسجيل بنجاح، وسيتم مراجعته من الإدارة.", notification.Body);
         Assert.False(string.IsNullOrWhiteSpace(notification.Title));
         Assert.False(string.IsNullOrWhiteSpace(notification.Body));
         Assert.Null(notification.ReadAt);
@@ -235,6 +237,70 @@ public class CoordinatorSetupShould : IDisposable
 
         var profile = await _context.CoordinatorProfiles.AsNoTracking().SingleAsync(p => p.UserId == user.Id);
         Assert.EndsWith(".pdf", profile.IdentityDocumentUrl);
+    }
+
+    [Fact]
+    public async Task RejectedCoordinator_CanResubmitValidatedData_AndReturnsToPending()
+    {
+        var user = await CreateCoordinatorAsync("resubmit@example.com");
+        var service = CreateService(user);
+        await service.SubmitSetupAsync(CompleteShopSubmission());
+        user = (await _userManager.FindByIdAsync(user.Id))!;
+        user.ApprovalStatus = AccountApprovalStatus.Rejected;
+        await _userManager.UpdateAsync(user);
+
+        var result = await service.ResubmitSetupAsync(CompleteFreelanceSubmission());
+
+        var updated = await _context.CoordinatorProfiles.AsNoTracking().SingleAsync(p => p.UserId == user.Id);
+        var persisted = await _userManager.FindByIdAsync(user.Id);
+        Assert.Equal(AccountApprovalStatus.Pending, result.ApprovalStatus);
+        Assert.Equal(AccountApprovalStatus.Pending, persisted!.ApprovalStatus);
+        Assert.Equal(CoordinatorBusinessType.Freelance, updated.BusinessType);
+        Assert.Equal("Gift Studio Online", updated.OnlineStoreName);
+        Assert.Null(updated.ShopPhotoUrl);
+        Assert.Equal(2, await _context.UserNotifications.CountAsync(n => n.RecipientUserId == user.Id));
+        Assert.Equal(2, _dispatcher.Dispatches.Count(d => d.RecipientUserId == user.Id));
+    }
+
+    [Fact]
+    public async Task CoordinatorResubmission_IsRejectedUnlessCurrentUserOwnsRejectedRequest()
+    {
+        var owner = await CreateCoordinatorAsync("resubmit-owner@example.com");
+        var other = await CreateCoordinatorAsync("resubmit-other@example.com", isSetupComplete: true, approvalStatus: AccountApprovalStatus.Rejected);
+        await CreateService(owner).SubmitSetupAsync(CompleteShopSubmission());
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => CreateService(other).ResubmitSetupAsync(CompleteShopSubmission()));
+
+        Assert.Equal(owner.Id, (await _context.CoordinatorProfiles.AsNoTracking().SingleAsync()).UserId);
+        Assert.Equal(AccountApprovalStatus.Pending, (await _userManager.FindByIdAsync(owner.Id))!.ApprovalStatus);
+    }
+
+    [Fact]
+    public async Task CoordinatorResubmission_RevalidatesFreelanceAttachmentCount()
+    {
+        var user = await CreateCoordinatorAsync("resubmit-invalid@example.com");
+        var service = CreateService(user);
+        await service.SubmitSetupAsync(CompleteShopSubmission());
+        user = (await _userManager.FindByIdAsync(user.Id))!;
+        user.ApprovalStatus = AccountApprovalStatus.Rejected;
+        await _userManager.UpdateAsync(user);
+        var filesBefore = _documentStore.Files.Count;
+        var invalid = new CoordinatorSetupSubmission
+        {
+            Form = new CoordinatorSetupRequest
+            {
+                BusinessType = CoordinatorBusinessType.Freelance,
+                OnlineStoreName = "Online gifts",
+                PhoneNumber = "+970599111111"
+            },
+            WorkPhotos = [Png("only-one.png")],
+            IdentityDocument = Pdf()
+        };
+
+        await Assert.ThrowsAsync<ValidationException>(() => service.ResubmitSetupAsync(invalid));
+
+        Assert.Equal(filesBefore, _documentStore.Files.Count);
+        Assert.Equal(AccountApprovalStatus.Rejected, (await _userManager.FindByIdAsync(user.Id))!.ApprovalStatus);
     }
 
     // --- Branch-conditional attachment rules -------------------------------------------
