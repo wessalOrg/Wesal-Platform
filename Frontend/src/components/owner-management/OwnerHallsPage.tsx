@@ -235,18 +235,23 @@ export default function OwnerHallsPage() {
             </ul>
           )}
 
-          <section className="flex flex-col items-start justify-between gap-4 rounded-[24px] border border-[var(--wesal-border)] bg-white px-5 py-5 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="text-lg font-bold text-[var(--wesal-text)]">
-                {t("owner.hallsPage.addBannerTitle")}
-              </h2>
-              <p className="mt-1 text-sm text-[var(--wesal-muted)]">
-                {t("owner.hallsPage.addBannerBody")}
-              </p>
+          <section className="flex flex-col gap-4 rounded-[28px] bg-[#f8eeea] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="flex min-w-0 items-center gap-4">
+              <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-[var(--wesal-maroon)]">
+                <HallPlusIcon />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-base font-extrabold text-[var(--wesal-text)] sm:text-lg">
+                  {t("owner.hallsPage.addBannerTitle")}
+                </h2>
+                <p className="mt-1 text-sm leading-7 text-[var(--wesal-muted)]">
+                  {t("owner.hallsPage.addBannerBody")}
+                </p>
+              </div>
             </div>
             <button
               type="button"
-              className="btn-primary min-h-11 rounded-full"
+              className="btn-primary min-h-12 shrink-0 rounded-full px-5"
               disabled={isInitiating}
               onClick={beginAddHall}
             >
@@ -541,6 +546,21 @@ function HeartIcon() {
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function HallPlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
+      <path
+        d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5.2v-5.2H10.2V21H5a1 1 0 0 1-1-1v-9.5Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M17.2 4.2h3.2V7.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M18.8 3.2v3.2M17.2 4.8h3.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }

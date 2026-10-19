@@ -1274,7 +1274,7 @@ const ar: MessageCatalog = {
   "owner.hallsPage.addNew": "إضافة قاعة جديدة",
   "owner.hallsPage.addBannerTitle": "هل تمتلك قاعة إضافية أو مساحة خارجية؟",
   "owner.hallsPage.addBannerBody":
-    "أضف قاعتك وتابع حالتها التشغيلية من نفس الحساب.",
+    "أضف قاعاتك وصالاتك الأخرى بسهولة تحت نفس الحساب الإداري، لتوسيع نطاق حجوزاتك وزيادة إيراداتك التشغيلية عبر وصال.",
   "owner.hallsPage.addBannerCta": "إضافة قاعة جديدة الآن",
   "owner.hallsPage.search": "ابحث بالاسم أو الموقع",
   "owner.hallsPage.filter.all": "الكل",
