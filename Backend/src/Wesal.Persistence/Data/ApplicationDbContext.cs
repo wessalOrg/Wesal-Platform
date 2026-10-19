@@ -79,6 +79,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<ProfessionalOffer> ProfessionalOffers => Set<ProfessionalOffer>();
     public DbSet<ProfessionalOfferImage> ProfessionalOfferImages => Set<ProfessionalOfferImage>();
     public DbSet<HallOffer> HallOffers => Set<HallOffer>();
+    public DbSet<ContentViewEvent> ContentViewEvents => Set<ContentViewEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -700,6 +701,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(offer => offer.UpdatedAt).HasColumnType("timestamp with time zone");
             entity.HasIndex(offer => new { offer.HallId, offer.StartsAt, offer.EndsAt });
             entity.HasOne(offer => offer.Hall).WithMany().HasForeignKey(offer => offer.HallId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ContentViewEvent>(entity =>
+        {
+            entity.ToTable("ContentViewEvents", table => table.HasCheckConstraint(
+                "CK_ContentViewEvents_OneTarget", "(\"PostId\" IS NOT NULL AND \"ProfileUserId\" IS NULL) OR (\"PostId\" IS NULL AND \"ProfileUserId\" IS NOT NULL)"));
+            entity.HasKey(view => view.Id);
+            entity.Property(view => view.OwnerUserId).IsRequired().HasMaxLength(450);
+            entity.Property(view => view.ProfileUserId).HasMaxLength(450);
+            entity.Property(view => view.ViewedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(view => new { view.OwnerUserId, view.ViewedAt });
+            entity.HasIndex(view => view.PostId);
+            entity.HasIndex(view => view.ProfileUserId);
+            entity.HasOne<Post>().WithMany().HasForeignKey(view => view.PostId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(view => view.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(view => view.ProfileUserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

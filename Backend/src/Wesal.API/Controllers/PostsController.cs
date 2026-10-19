@@ -10,7 +10,7 @@ namespace Wesal.API.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/posts")]
-public sealed class PostsController(IPostService posts, IPostSharingService sharing) : ControllerBase
+public sealed class PostsController(IPostService posts, IPostSharingService sharing, IStatisticsService statistics) : ControllerBase
 {
     private const long UploadBytes = 53_000_000;
 
@@ -60,7 +60,11 @@ public sealed class PostsController(IPostService posts, IPostSharingService shar
     [ProducesResponseType(typeof(PublicProfileContentDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PublicProfileContentDto>> GetById(Guid postId, CancellationToken cancellationToken)
-        => Ok(await posts.GetPublicAsync(postId, cancellationToken));
+    {
+        var post = await posts.GetPublicAsync(postId, cancellationToken);
+        await statistics.RecordPostViewAsync(postId, cancellationToken);
+        return Ok(post);
+    }
 
     [HttpGet("profile/{userId}")]
     [AllowAnonymous]

@@ -68,9 +68,10 @@ public class SwaggerDocumentShould
     /// operations (list, detail, approve, reject, request-changes, conversation); 113
     /// adds Tasks 7/8 resubmission and public-profile operations; 127 adds Task 9/10 post
     /// and offer endpoints, including hall-owner offer management; 132 adds the five
-    /// distinct Task 11/12 post-comment and favorite paths.
+    /// distinct Task 11/12 post-comment and favorite paths; 155 adds Tasks 17-19 Discover,
+    /// Search, and owner-statistics routes.
     /// </summary>
-    private const int ExpectedPathCount = 152;
+    private const int ExpectedPathCount = 155;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()

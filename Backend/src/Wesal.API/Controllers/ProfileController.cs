@@ -15,11 +15,13 @@ public class ProfileController : ControllerBase
 {
     private readonly IProfileService _profileService;
     private readonly IProfessionalProfileService _professionalProfileService;
+    private readonly IStatisticsService _statistics;
 
-    public ProfileController(IProfileService profileService, IProfessionalProfileService professionalProfileService)
+    public ProfileController(IProfileService profileService, IProfessionalProfileService professionalProfileService, IStatisticsService statistics)
     {
         _profileService = profileService;
         _professionalProfileService = professionalProfileService;
+        _statistics = statistics;
     }
 
     [HttpGet]
@@ -57,7 +59,12 @@ public class ProfileController : ControllerBase
     [ProducesResponseType(typeof(PublicProfessionalProfileResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PublicProfessionalProfileResponse>> GetPublicProfile(string userId, CancellationToken cancellationToken)
-        => Ok(await _professionalProfileService.GetPublicProfileAsync(userId, cancellationToken));
+    {
+        var profile = await _professionalProfileService.GetPublicProfileAsync(userId, cancellationToken);
+        if (profile.IsPubliclyAvailable)
+            await _statistics.RecordProfileViewAsync(userId, cancellationToken);
+        return Ok(profile);
+    }
 
     [HttpPut("bio")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
