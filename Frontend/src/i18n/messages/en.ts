@@ -1104,6 +1104,7 @@ const en: MessageCatalog = {
   "admin.nav.subscriptions": "Subscriptions",
   "admin.nav.messages": "Messages",
   "admin.nav.helpQuestions": "Help Center questions",
+  "admin.nav.helpOpenCount": "{count} awaiting reply",
   "admin.nav.browseHalls": "Back to home",
   "admin.nav.logout": "Log out",
   "admin.messages.title": "Messages",
