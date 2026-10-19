@@ -140,6 +140,7 @@ public sealed class ProfessionalOfferService : IProfessionalOfferService
     public async Task StopAsync(Guid offerId, CancellationToken cancellationToken = default)
     {
         var owner = await RequireProfessionalOwnerAsync(cancellationToken);
+        await _approval.EnsureCanPublishAsync(cancellationToken);
         var offer = await _offers.GetForUpdateAsync(offerId, cancellationToken) ?? throw new NotFoundException("Offer", offerId);
         if (offer.OwnerUserId != owner.Id) throw new ForbiddenException("You can stop only your own offers.");
         var now = _clock.GetUtcNow();

@@ -346,8 +346,8 @@ public static class NotificationCatalog
             [NotificationKind.ProfessionalOfferReminder24Hours] = new NotificationTemplate(
                 ArabicTitle: "بقي 24 ساعة على انتهاء العرض",
                 EnglishTitle: "24 hours remain until the offer ends",
-                ArabicBody: "يمكنك مراجعة العرض أو إيقافه قبل موعد انتهائه.",
-                EnglishBody: "You can review the offer or stop it before it ends.",
+                  ArabicBody: "سينتهي هذا العرض بعد 24 ساعة. يمكنك مراجعته أو إيقافه قبل موعد انتهائه.",
+                  EnglishBody: "This offer will end in 24 hours. You can review it or stop it before it ends.",
                 ArabicActionLabel: "عرض العرض",
                 EnglishActionLabel: "View offer",
                 ActionTarget: NotificationActionTarget.Offer),

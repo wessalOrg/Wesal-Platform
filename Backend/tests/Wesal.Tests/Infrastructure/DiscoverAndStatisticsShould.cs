@@ -169,6 +169,26 @@ public sealed class DiscoverAndStatisticsShould
     }
 
     [Fact]
+    public async Task PresentPhotographersWithoutAStudioUnderTheSharedLabelWithoutLeakingTheLegalName()
+    {
+        await using var test = await Harness.CreateAsync();
+        var noStudio = test.AddPhotographer("no-studio", "Admin Only Legal Name", null, hasStudio: false);
+        await test.Db.SaveChangesAsync();
+        var service = test.Discover();
+
+        var card = Assert.Single((await service.GetFeedAsync("Photographers", 1, 20)).Items);
+        Assert.Equal(PublicProfiles.DisplayNameFallback, card.DisplayName);
+        Assert.Equal(noStudio.Id, card.OwnerUserId);
+        Assert.DoesNotContain("Admin Only Legal Name", JsonSerializer.Serialize(card));
+
+        var photographerSearch = await service.SearchAsync("Photographers", PublicProfiles.DisplayNameFallback, 1, 20);
+        Assert.Equal(PublicProfiles.DisplayNameFallback, Assert.Single(photographerSearch.Items).DisplayName);
+        var allSearch = await service.SearchAsync("All", PublicProfiles.DisplayNameFallback, 1, 20);
+        Assert.Equal(PublicProfiles.DisplayNameFallback, Assert.Single(allSearch.Items).DisplayName);
+        Assert.Empty((await service.SearchAsync("All", "Admin Only Legal Name", 1, 20)).Items);
+    }
+
+    [Fact]
     public async Task RecordsViewsAtPostAndPublicProfileDetailBoundariesOnly()
     {
         var postId = Guid.NewGuid();

@@ -70,6 +70,29 @@ public sealed class PostInteractionServiceShould
     }
 
     [Fact]
+    public async Task FetchingTheShareLinkDoesNotCountAndRegisteringFromThePlatformLinkCountsOnce()
+    {
+        await using var test = await TestHarness.CreateAsync();
+        var owner = await test.CreateUserAsync("owner", ApplicationRoles.EventCoordinator);
+        var viewer = await test.CreateUserAsync("viewer", ApplicationRoles.RegisteredUser);
+        var post = await test.CreatePostAsync(owner);
+        var service = new PostSharingService(new PostRepository(test.Context), test.CurrentUser,
+            new UnitOfWork(test.Context), Options.Create(new PostSharingOptions { PublicWebBaseUrl = "https://wesal.example" }),
+            TimeProvider.System, NullLogger<PostSharingService>.Instance);
+
+        await service.GetShareLinkAsync(post.Id);
+        await service.GetShareLinkAsync(post.Id);
+        await test.Context.Entry(post).ReloadAsync();
+        Assert.Equal(0, post.ShareCount);
+
+        test.CurrentUser.UserId = viewer.Id;
+        await service.RegisterShareAsync(post.Id);
+        await test.Context.Entry(post).ReloadAsync();
+        Assert.Equal(1, post.ShareCount);
+        Assert.Empty(test.Context.UserNotifications);
+    }
+
+    [Fact]
     public async Task CreateCommentOnVisiblePost_WithoutRequiringCommenterApproval_AndNotifyCoordinator()
     {
         await using var test = await TestHarness.CreateAsync();
@@ -208,6 +231,34 @@ public sealed class PostInteractionServiceShould
         await test.Service.CreateCommentAsync(post.Id, new CreatePostCommentRequest { Text = "Owner comment" });
         Assert.Equal(beforeOwnerAction, test.Dispatcher.Dispatches.Count);
         Assert.Equal(2, test.Context.UserNotifications.Count());
+    }
+
+    [Fact]
+    public async Task NotifyOnlyThePhotographerOwnerForRepliesAndNeverTheCommentAuthor()
+    {
+        await using var test = await TestHarness.CreateAsync();
+        var owner = await test.CreateUserAsync("photographer-owner", ApplicationRoles.Photographer);
+        var author = await test.CreateUserAsync("third-party-author", ApplicationRoles.RegisteredUser);
+        var replier = await test.CreateUserAsync("replier", ApplicationRoles.RegisteredUser);
+        var post = await test.CreatePostAsync(owner);
+
+        test.CurrentUser.UserId = author.Id;
+        var comment = await test.Service.CreateCommentAsync(post.Id, new CreatePostCommentRequest { Text = "Author comment" });
+        test.CurrentUser.UserId = replier.Id;
+        await test.Service.ReplyAsync(post.Id, comment.Id, new CreatePostCommentRequest { Text = "Reply to the author" });
+
+        Assert.Equal(NotificationKind.PostCommentReplyOnOwnerPost, test.Context.UserNotifications.Last().Kind);
+        Assert.DoesNotContain(test.Context.UserNotifications, row => row.RecipientUserId == author.Id);
+        Assert.All(test.Context.UserNotifications, row => Assert.Equal(owner.Id, row.RecipientUserId));
+
+        test.CurrentUser.UserId = owner.Id;
+        var ownerComment = await test.Service.CreateCommentAsync(post.Id, new CreatePostCommentRequest { Text = "Owner comment" });
+        test.CurrentUser.UserId = replier.Id;
+        await test.Service.ReplyAsync(post.Id, ownerComment.Id, new CreatePostCommentRequest { Text = "Reply to the owner" });
+
+        Assert.Equal(NotificationKind.PostCommentReplyForOwner, test.Context.UserNotifications.Last().Kind);
+        Assert.All(test.Context.UserNotifications, row => Assert.Equal(owner.Id, row.RecipientUserId));
+        Assert.Equal(3, test.Context.UserNotifications.Count()); // comment + reply-on-post + reply-to-owner
     }
 
     [Fact]
