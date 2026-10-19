@@ -38,4 +38,16 @@ public sealed class AdminHelpTicketsController(IHelpTicketsService tickets) : Co
         [FromBody] ReplyHelpTicketRequestDto request,
         CancellationToken cancellationToken)
         => Ok(await tickets.ReplyAsync(id, request, cancellationToken));
+
+    [HttpPost("conversations/{userId}/read")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> MarkConversationRead(
+        [FromRoute] string userId,
+        CancellationToken cancellationToken)
+    {
+        await tickets.MarkConversationReadAsync(userId, cancellationToken);
+        return NoContent();
+    }
 }

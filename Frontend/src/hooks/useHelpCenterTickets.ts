@@ -7,6 +7,7 @@ import {
   getHelpTicketsServerSnapshot,
   getHelpTicketsSnapshot,
   hydrateHelpTicketsFromServer,
+  markHelpConversationRead,
   markHelpTicketRead,
   replyToHelpTicket,
   subscribeHelpCenter,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/help-center-storage";
 import {
   helpTicketsUseMock,
+  markHelpConversationReadOnServer,
   markHelpTicketReadOnServer,
   replyHelpTicket,
   submitHelpTicket,
@@ -70,7 +72,16 @@ export function useHelpCenterTickets(scope: "mine" | "all" = "mine") {
     markHelpTicketRead(id);
   }, []);
 
+  const markConversationRead = useCallback(async (userId: string) => {
+    if (helpTicketsUseMock()) {
+      markHelpConversationRead(userId);
+      return;
+    }
+    await markHelpConversationReadOnServer(userId);
+    markHelpConversationRead(userId);
+  }, []);
+
   const getById = useCallback((id: string) => getHelpTicket(id), []);
 
-  return { tickets, ready, submitQuestion, reply, getById, markRead };
+  return { tickets, ready, submitQuestion, reply, getById, markRead, markConversationRead };
 }

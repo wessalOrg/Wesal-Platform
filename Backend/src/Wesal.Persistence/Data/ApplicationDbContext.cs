@@ -673,6 +673,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(ticket => ticket.RepliedByUserId).HasMaxLength(450);
             entity.Property(ticket => ticket.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(ticket => ticket.RepliedAt).HasColumnType("timestamp with time zone");
+            entity.Property(ticket => ticket.ReadByAdminAt).HasColumnType("timestamp with time zone");
             entity.HasIndex(ticket => new { ticket.UserId, ticket.CreatedAt });
             entity.HasIndex(ticket => ticket.CreatedAt);
             entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(ticket => ticket.UserId).OnDelete(DeleteBehavior.Cascade);
