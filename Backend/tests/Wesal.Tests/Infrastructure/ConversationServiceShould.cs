@@ -14,6 +14,60 @@ namespace Wesal.Tests.Infrastructure;
 
 public class ConversationServiceShould
 {
+    [Fact]
+    public async Task StartProviderConversation_RequiresApprovedProviderAndIsIdempotent()
+    {
+        var repository = new FakeConversationRepository { ProviderApproved = true };
+        var service = CreateService(repository, new FakeHallRepository(), authenticated: true, userId: "customer-1");
+
+        var first = await service.StartProviderConversationAsync("provider-1");
+        var second = await service.StartProviderConversationAsync("provider-1");
+
+        Assert.Equal(first.ConversationId, second.ConversationId);
+        var conversation = Assert.Single(repository.Conversations);
+        Assert.Equal(ConversationKind.CustomerProvider, conversation.Kind);
+        Assert.Equal("customer-1", conversation.SenderUserId);
+        Assert.Equal("provider-1", conversation.HallOwnerId);
+        await Assert.ThrowsAsync<ValidationException>(() => service.StartProviderConversationAsync("customer-1"));
+    }
+
+    [Fact]
+    public async Task StartProviderConversation_HidesUnapprovedProvider()
+    {
+        var service = CreateService(new FakeConversationRepository { ProviderApproved = false }, new FakeHallRepository(),
+            authenticated: true, userId: "customer-1");
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.StartProviderConversationAsync("pending-provider"));
+    }
+
+    [Fact]
+    public async Task StartingFromPost_CarriesPublicSnapshotOnTheFirstMessageAndSurvivesPostRemoval()
+    {
+        var conversationRepository = new FakeConversationRepository { ProviderApproved = true };
+        var post = new Post
+        {
+            Id = Guid.NewGuid(), OwnerUserId = "provider-1", Content = "Bouquet package",
+            Images = [new PostImage { Id = Guid.NewGuid(), PostId = Guid.NewGuid(), Order = 0, StorageKey = "public.png", ContentType = "image/png" }]
+        };
+        var postRepository = new FakePostRepository(post);
+        var service = CreateService(conversationRepository, new FakeHallRepository(), authenticated: true,
+            userId: "customer-1", postRepository: postRepository);
+
+        var conversation = await service.StartFromPostAsync(post.Id);
+        var sent = await service.SendMessageAsync(conversation.ConversationId, new SendMessageRequest { Content = "Is this available?" });
+
+        Assert.Equal(post.Id, sent.ContextPostId);
+        Assert.Equal("Bouquet package", sent.ContextText);
+        Assert.Equal("provider-1", sent.ContextOwnerUserId);
+        Assert.StartsWith($"/api/v1/posts/{post.Id:D}/images/", sent.ContextImageUrl);
+
+        postRepository.Post = null;
+        var thread = await service.GetConversationThreadAsync(conversation.ConversationId);
+        var card = Assert.Single(thread.Messages).ContextItemAvailable;
+        Assert.False(card);
+        Assert.Equal("Bouquet package", thread.Messages[0].ContextText);
+    }
+
     /// <summary>
     /// WESAL-TASK-10, Edit 14. The inbox list is the one conversation surface that never ran
     /// the hall-messaging gate, so a locked owner was refused the thread, its messages, its
@@ -883,16 +937,41 @@ public class ConversationServiceShould
         FakeHallRepository hallRepository,
         bool authenticated,
         string? userId = null,
-        IReadOnlyList<string>? roles = null)
+        IReadOnlyList<string>? roles = null,
+        IPostRepository? postRepository = null)
     {
         var effectiveUserId = authenticated && userId is null ? "test-user-1" : userId;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? []);
-        return new ConversationService(conversationRepository, new FakeMessageRepository(), new FakeBookingRejectionService(), new NoOpBookingAcceptanceService(), hallRepository, currentUser, new FakeConversationNotifier(), new FakeDocumentStorage());
+        return new ConversationService(conversationRepository, new FakeMessageRepository(), new FakeBookingRejectionService(), new NoOpBookingAcceptanceService(), hallRepository, currentUser, new FakeConversationNotifier(), new FakeDocumentStorage(), postRepository: postRepository);
     }
 
     private sealed class FakeConversationRepository : IConversationRepository
     {
         public List<Conversation> Conversations { get; } = [];
+        public bool ProviderApproved { get; set; } = true;
+
+        public Task<bool> IsApprovedProviderAsync(string providerId, CancellationToken cancellationToken = default)
+            => Task.FromResult(ProviderApproved);
+
+        public Task<Conversation?> GetCustomerProviderConversationAsync(string customerId, string providerId, CancellationToken cancellationToken = default)
+            => Task.FromResult(Conversations.FirstOrDefault(c => c.Kind == ConversationKind.CustomerProvider
+                && c.SenderUserId == customerId && c.HallOwnerId == providerId));
+
+        public Task SetPendingContextAsync(Guid conversationId, Guid? postId, Guid? offerId, CancellationToken cancellationToken = default)
+        {
+            var conversation = Conversations.Single(row => row.Id == conversationId);
+            conversation.PendingContextPostId = postId;
+            conversation.PendingContextOfferId = offerId;
+            return Task.CompletedTask;
+        }
+
+        public Task ClearPendingContextAsync(Guid conversationId, CancellationToken cancellationToken = default)
+        {
+            var conversation = Conversations.Single(row => row.Id == conversationId);
+            conversation.PendingContextPostId = null;
+            conversation.PendingContextOfferId = null;
+            return Task.CompletedTask;
+        }
 
         public Task AddAsync(Conversation conversation, CancellationToken cancellationToken = default)
         {
@@ -956,8 +1035,12 @@ public class ConversationServiceShould
 
     private sealed class FakeMessageRepository : IMessageRepository
     {
+        private readonly List<Message> _messages = [];
         public Task AddAsync(Message message, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
+        {
+            _messages.Add(message);
+            return Task.CompletedTask;
+        }
 
         public Task SaveChangesAsync(CancellationToken cancellationToken = default)
             => Task.CompletedTask;
@@ -969,10 +1052,23 @@ public class ConversationServiceShould
             => Task.FromResult<Message?>(null);
 
         public Task<IReadOnlyList<Message>> GetByConversationAsync(Guid conversationId, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<Message>>([]);
+            => Task.FromResult<IReadOnlyList<Message>>(_messages.Where(message => message.ConversationId == conversationId).OrderBy(message => message.CreatedAt).ThenBy(message => message.Id).ToArray());
 
         public Task<IReadOnlyList<Message>> GetByConversationIdsAsync(IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Message>>([]);
+    }
+
+    private sealed class FakePostRepository(Post? post) : IPostRepository
+    {
+        public Post? Post { get; set; } = post;
+        public Task<Post?> GetPublicAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult(Post?.Id == id ? Post : null);
+        public Task AddAsync(Post value, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public void AddImage(PostImage image) { }
+        public Task<Post?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult<Post?>(null);
+        public Task<IReadOnlyList<Post>> ListPublicByOwnerAsync(string ownerId, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Post>>([]);
+        public Task<int> CountPublicByOwnerAsync(string ownerId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<bool> RegisterShareAsync(Guid postId, string userId, DateTimeOffset now, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 
     private sealed class FakeBookingRejectionService : IBookingRejectionService

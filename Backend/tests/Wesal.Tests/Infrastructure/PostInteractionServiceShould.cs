@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -21,6 +23,52 @@ namespace Wesal.Tests.Infrastructure;
 
 public sealed class PostInteractionServiceShould
 {
+    [Fact]
+    public async Task RegisterShare_IsIdempotentForAUserWithinTwentyFourHours_AndCountsUsersAndNewDays()
+    {
+        await using var test = await TestHarness.CreateAsync();
+        var owner = await test.CreateUserAsync("owner", ApplicationRoles.EventCoordinator);
+        var firstUser = await test.CreateUserAsync("first", ApplicationRoles.RegisteredUser);
+        var secondUser = await test.CreateUserAsync("second", ApplicationRoles.RegisteredUser);
+        var post = await test.CreatePostAsync(owner);
+        var time = new MutableTimeProvider(new DateTimeOffset(2026, 10, 19, 12, 0, 0, TimeSpan.Zero));
+        var service = new PostSharingService(new PostRepository(test.Context), test.CurrentUser,
+            new UnitOfWork(test.Context), Options.Create(new PostSharingOptions { PublicWebBaseUrl = "https://wesal.example/" }),
+            time, NullLogger<PostSharingService>.Instance);
+
+        Assert.Equal($"https://wesal.example/posts/{post.Id:D}", await service.GetShareLinkAsync(post.Id));
+        test.CurrentUser.UserId = firstUser.Id;
+        await service.RegisterShareAsync(post.Id);
+        await service.RegisterShareAsync(post.Id);
+        await test.Context.Entry(post).ReloadAsync();
+        Assert.Equal(1, post.ShareCount);
+        Assert.Empty(test.Context.UserNotifications);
+
+        test.CurrentUser.UserId = secondUser.Id;
+        await service.RegisterShareAsync(post.Id);
+        time.Advance(TimeSpan.FromHours(25));
+        test.CurrentUser.UserId = firstUser.Id;
+        await service.RegisterShareAsync(post.Id);
+        await test.Context.Entry(post).ReloadAsync();
+        Assert.Equal(3, post.ShareCount);
+    }
+
+    [Fact]
+    public async Task ShareLink_UsesRelativeFallback_AndHidesPostsOfUnapprovedOwners()
+    {
+        await using var test = await TestHarness.CreateAsync();
+        var owner = await test.CreateUserAsync("owner", ApplicationRoles.EventCoordinator);
+        var pending = await test.CreateUserAsync("pending", ApplicationRoles.EventCoordinator, AccountApprovalStatus.Pending);
+        var post = await test.CreatePostAsync(owner);
+        var hiddenPost = await test.CreatePostAsync(pending);
+        var service = new PostSharingService(new PostRepository(test.Context), test.CurrentUser,
+            new UnitOfWork(test.Context), Options.Create(new PostSharingOptions()), TimeProvider.System,
+            NullLogger<PostSharingService>.Instance);
+
+        Assert.Equal($"/posts/{post.Id:D}", await service.GetShareLinkAsync(post.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetShareLinkAsync(hiddenPost.Id));
+    }
+
     [Fact]
     public async Task CreateCommentOnVisiblePost_WithoutRequiringCommenterApproval_AndNotifyCoordinator()
     {
@@ -391,6 +439,13 @@ public sealed class PostInteractionServiceShould
     }
 
     private sealed class TestClock : IDateTime { public DateTimeOffset Now { get; set; } = new(2026, 10, 19, 12, 0, 0, TimeSpan.Zero); }
+
+    private sealed class MutableTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        private DateTimeOffset _now = now;
+        public override DateTimeOffset GetUtcNow() => _now;
+        public void Advance(TimeSpan elapsed) => _now = _now.Add(elapsed);
+    }
 
     private sealed class FailingNotificationWriter : Wesal.Application.Common.Interfaces.Persistence.IUserNotificationWriter
     {

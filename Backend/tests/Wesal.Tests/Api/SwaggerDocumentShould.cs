@@ -70,7 +70,7 @@ public class SwaggerDocumentShould
     /// and offer endpoints, including hall-owner offer management; 132 adds the five
     /// distinct Task 11/12 post-comment and favorite paths.
     /// </summary>
-    private const int ExpectedPathCount = 132;
+    private const int ExpectedPathCount = 143;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -102,6 +102,17 @@ public class SwaggerDocumentShould
         Assert.Contains(PublicProfilePicturePath, document.Paths.Keys);
         Assert.Contains(ProfilePictureUploadPath, document.Paths.Keys);
         Assert.Contains(ProfileBioPath, document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/share-link", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/shares", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/professionals/{providerUserId}/conversations", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/conversation", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/{offerId}/conversation", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/conversations/contact-admin-account", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/conversations/admin-account", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/conversations/admin-account/unread-count", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/professional/conversations", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/professional/conversations/unread-count", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/professional/conversations/{conversationId}/messages", document.Paths.Keys);
     }
 
     [Fact]
