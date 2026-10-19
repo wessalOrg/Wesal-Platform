@@ -25,8 +25,6 @@ import type { HallOwnerHallDetails } from "@/types/hall-owner-hall-management";
 type HallLane = "available" | "review" | "unavailable";
 type HallFilter = "all" | HallLane;
 
-const MABROUK_SRC = "/assistant/wesal-ai-groom-full.png?v=2";
-
 function hallLane(hall: HallOwnerHall): HallLane {
   if (hall.adminLocked || hall.systemLocked || hall.status === "Rejected") {
     return "unavailable";
@@ -109,37 +107,53 @@ export default function OwnerHallsPage() {
 
   return (
     <div className="space-y-5" data-testid="owner-halls-page">
-      <section className="relative overflow-hidden rounded-[28px] border border-[var(--wesal-border)] bg-[linear-gradient(180deg,var(--wesal-pink-soft),var(--wesal-white))] px-5 py-6 sm:px-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-3xl font-extrabold text-[var(--wesal-maroon-dark)] sm:text-4xl">
-              {t("owner.hallsPage.title")}
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-7 text-[var(--wesal-muted)]">
-              {t("owner.hallsPage.subtitle")}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link href="/halls" className="btn-outline min-h-11 rounded-full px-5" prefetch>
-                {t("owner.hallsPage.explore")}
-              </Link>
-              <button
-                type="button"
-                className="btn-primary min-h-11 rounded-full px-5"
-                disabled={isInitiating}
-                aria-busy={isInitiating || undefined}
-                onClick={beginAddHall}
-              >
-                {isInitiating
-                  ? t("owner.management.addHall.starting")
-                  : `+ ${t("owner.hallsPage.addNew")}`}
-              </button>
-            </div>
+      <section className="relative overflow-hidden rounded-[28px] border border-[var(--wesal-border)] bg-[linear-gradient(145deg,#fffaf7_0%,#f8efe9_48%,#f3e4dc_100%)] px-5 pb-16 pt-7 sm:px-8 sm:pb-20 sm:pt-8">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute -top-16 end-[-2rem] h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(196,160,92,0.34),transparent_68%)]" />
+          <div className="absolute top-6 start-1/3 h-36 w-56 rounded-full bg-[radial-gradient(circle,rgba(193,123,127,0.18),transparent_70%)]" />
+          <svg
+            className="absolute inset-x-0 bottom-0 h-24 w-full sm:h-28"
+            viewBox="0 0 1440 140"
+            preserveAspectRatio="none"
+          >
+            <path
+              fill="rgba(193,123,127,0.28)"
+              d="M0 78C180 118 340 28 540 52C760 78 900 18 1100 46C1260 66 1360 40 1440 58V140H0Z"
+            />
+            <path
+              fill="rgba(196,160,92,0.36)"
+              d="M0 104C220 62 420 124 680 96C940 68 1120 118 1440 86V140H0Z"
+            />
+            <path
+              fill="rgba(255,250,247,0.55)"
+              d="M0 118C260 92 520 132 780 112C1040 92 1240 128 1440 108V140H0Z"
+            />
+          </svg>
+        </div>
+        <div className="relative max-w-2xl">
+          <h1 className="text-3xl font-extrabold text-[var(--wesal-maroon-dark)] sm:text-4xl">
+            {t("owner.hallsPage.title")}
+          </h1>
+          <span className="mt-3 block h-1 w-16 rounded-full bg-[linear-gradient(90deg,var(--wesal-gold-soft),var(--wesal-maroon),var(--wesal-gold))]" />
+          <p className="mt-3 max-w-xl text-sm leading-7 text-[var(--wesal-text)]">
+            {t("owner.hallsPage.subtitle")}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/halls" className="btn-outline min-h-11 rounded-full bg-white/80 px-5" prefetch>
+              {t("owner.hallsPage.explore")}
+            </Link>
+            <button
+              type="button"
+              className="btn-primary min-h-11 rounded-full px-5"
+              disabled={isInitiating}
+              aria-busy={isInitiating || undefined}
+              onClick={beginAddHall}
+            >
+              {isInitiating
+                ? t("owner.management.addHall.starting")
+                : `+ ${t("owner.hallsPage.addNew")}`}
+            </button>
           </div>
-          <img
-            src={MABROUK_SRC}
-            alt=""
-            className="mx-auto h-36 w-auto object-contain sm:h-44"
-          />
         </div>
       </section>
 
