@@ -71,6 +71,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
 
     public DbSet<Post> Posts => Set<Post>();
+    public DbSet<PostShare> PostShares => Set<PostShare>();
     public DbSet<PostImage> PostImages => Set<PostImage>();
     public DbSet<PostComment> PostComments => Set<PostComment>();
     public DbSet<PostFavorite> PostFavorites => Set<PostFavorite>();
@@ -337,6 +338,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.Property(conversation => conversation.SenderUserId).IsRequired().HasMaxLength(450);
             entity.Property(conversation => conversation.HallOwnerId).IsRequired().HasMaxLength(450);
+            entity.Property(conversation => conversation.Kind).HasDefaultValue(ConversationKind.HallBooking);
+            entity.HasIndex(conversation => new { conversation.SenderUserId, conversation.HallOwnerId })
+                .IsUnique().HasFilter("\"Kind\" = 2");
 
             entity.HasIndex(conversation => conversation.HallId);
 
@@ -352,7 +356,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
         builder.Entity<Message>(entity =>
         {
-            entity.ToTable("Messages");
+            entity.ToTable("Messages", table => table.HasCheckConstraint("CK_Messages_OneContext", "\"ContextPostId\" IS NULL OR \"ContextOfferId\" IS NULL"));
 
             entity.Property(message => message.SenderUserId).IsRequired().HasMaxLength(450);
             entity.Property(message => message.Content).HasMaxLength(1000);
@@ -364,6 +368,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(message => message.AttachmentUrl).HasMaxLength(500);
             entity.Property(message => message.AttachmentContentType).HasMaxLength(100);
             entity.Property(message => message.AttachmentFileName).HasMaxLength(256);
+            entity.Property(message => message.ContextTitle).HasMaxLength(200);
+            entity.Property(message => message.ContextText).HasMaxLength(500);
+            entity.Property(message => message.ContextImageUrl).HasMaxLength(1000);
+            entity.Property(message => message.ContextOwnerUserId).HasMaxLength(450);
 
             entity.HasIndex(message => new { message.ConversationId, message.CreatedAt });
             entity.HasIndex(message => new { message.SenderUserId, message.ClientRequestId }).IsUnique();
@@ -549,6 +557,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(notification => notification.Body).IsRequired().HasMaxLength(2000);
             entity.Property(notification => notification.ActionLabel).HasMaxLength(100);
             entity.Property(notification => notification.TargetId).HasMaxLength(100);
+            entity.Property(notification => notification.GroupSenderUserId).HasMaxLength(450);
+            entity.Property(notification => notification.SenderName).HasMaxLength(200);
+            entity.Property(notification => notification.SenderAvatarUrl).HasMaxLength(1000);
+            entity.Property(notification => notification.MessagePreview).HasMaxLength(160);
+            entity.Property(notification => notification.ConversationId);
+            entity.HasIndex(notification => new { notification.RecipientUserId, notification.ConversationId, notification.GroupSenderUserId, notification.ReadAt });
             entity.Property(notification => notification.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(notification => notification.ReadAt).HasColumnType("timestamp with time zone");
 
@@ -561,16 +575,28 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             {
                 table.HasCheckConstraint("CK_Posts_Price", "\"Price\" IS NULL OR \"Price\" >= 0");
                 table.HasCheckConstraint("CK_Posts_SaveCount", "\"SaveCount\" >= 0");
+                  table.HasCheckConstraint("CK_Posts_ShareCount", "\"ShareCount\" >= 0");
             });
             entity.Property(post => post.OwnerUserId).IsRequired().HasMaxLength(450);
             entity.Property(post => post.Content).HasMaxLength(2000);
             entity.Property(post => post.Price).HasColumnType("numeric(12,2)");
             entity.Property(post => post.SaveCount).HasDefaultValue(0);
+              entity.Property(post => post.ShareCount).HasDefaultValue(0);
             entity.Property(post => post.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(post => post.UpdatedAt).HasColumnType("timestamp with time zone");
             entity.HasIndex(post => new { post.OwnerUserId, post.CreatedAt });
             entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(post => post.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
+
+          builder.Entity<PostShare>(entity =>
+          {
+              entity.ToTable("PostShares");
+              entity.Property(share => share.UserId).IsRequired().HasMaxLength(450);
+              entity.Property(share => share.UtcDate).HasColumnType("date");
+              entity.Property(share => share.CreatedAt).HasColumnType("timestamp with time zone");
+              entity.HasIndex(share => new { share.UserId, share.PostId, share.UtcDate }).IsUnique();
+              entity.HasOne<Post>().WithMany().HasForeignKey(share => share.PostId).OnDelete(DeleteBehavior.Cascade);
+          });
 
         builder.Entity<PostImage>(entity =>
         {
