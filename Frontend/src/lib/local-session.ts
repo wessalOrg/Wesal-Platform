@@ -9,6 +9,7 @@ type JwtClaims = {
   email?: unknown;
   role?: unknown;
   Role?: unknown;
+  exp?: unknown;
 };
 
 function asString(value: unknown): string | null {
@@ -26,6 +27,17 @@ function decodeJwtPayload(token: string): JwtClaims | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * JWT `exp` is seconds since epoch. An expired token is a dead session: keeping it around
+ * leaves the UI "authenticated" with credentials the API rejects (401), so every protected
+ * action fails until the user signs in again.
+ */
+function isExpiredToken(claims: JwtClaims | null): boolean {
+  const exp = (claims as Record<string, unknown> | null)?.exp;
+  if (typeof exp !== "number" || !Number.isFinite(exp)) return false;
+  return Date.now() >= exp * 1000;
 }
 
 function roleFromClaims(claims: JwtClaims | null): WesalRole | null {
@@ -48,6 +60,10 @@ export function readLocalSession(): SessionState | null {
   if (!token) return null;
 
   const claims = decodeJwtPayload(token);
+  if (isExpiredToken(claims)) {
+    return null;
+  }
+
   const role =
     roleFromAccountSignals(
       roleFromClaims(claims) ?? stored?.user.role,

@@ -1,7 +1,43 @@
 import api from "@/lib/api";
+import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { HelpTicket, HelpTicketStatus } from "@/types/help-center";
+
+const READ_TIMEOUT_MS = 15000;
+const WRITE_TIMEOUT_MS = 30000;
+
+/**
+ * Retries only when the request never got an HTTP response (timeout / network / cold start),
+ * so a slow server boot does not surface as a hard failure. HTTP errors (401/4xx/5xx) are
+ * thrown on the first try because retrying a POST could duplicate a ticket.
+ */
+async function withTransientRetry<T>(operation: () => Promise<T>, attempts = 2): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      const retryable = error instanceof ApiError && error.status === undefined;
+      if (!retryable || attempt === attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
+  }
+  throw lastError;
+}
+
+export type HelpSubmitErrorKind = "auth" | "network" | "server" | "unknown";
+
+/** Why a Help Center write failed, so the UI can guide the user instead of a blind retry. */
+export function classifyHelpSubmitError(error: unknown): HelpSubmitErrorKind {
+  if (error instanceof ApiError) {
+    if (error.status === 401 || error.status === 403) return "auth";
+    if (error.status === undefined) return "network";
+    if (error.status >= 500 || error.status === 404) return "server";
+  }
+  return "unknown";
+}
 
 /**
  * The durable Help Center ("مركز المساعدة") backed by `/help/tickets`. Owners act only on
@@ -63,7 +99,9 @@ function mapHelpTicket(item: ApiHelpTicket): HelpTicket | null {
 
 /** The signed-in user's tickets, newest first. */
 export async function fetchMyHelpTickets(): Promise<HelpTicket[]> {
-  const { data } = await api.get<ApiHelpTicket[]>("/help/tickets", { timeout: 8000 });
+  const { data } = await withTransientRetry(() =>
+    api.get<ApiHelpTicket[]>("/help/tickets", { timeout: READ_TIMEOUT_MS }),
+  );
   return (Array.isArray(data) ? data : [])
     .map(mapHelpTicket)
     .filter((ticket): ticket is HelpTicket => Boolean(ticket));
@@ -71,10 +109,12 @@ export async function fetchMyHelpTickets(): Promise<HelpTicket[]> {
 
 /** Every ticket, for the Admin queue. */
 export async function fetchAllHelpTickets(pageSize = 100): Promise<HelpTicket[]> {
-  const { data } = await api.get<ApiPagedHelpTickets>("/admin/help/tickets", {
-    params: { page: 1, pageSize },
-    timeout: 8000,
-  });
+  const { data } = await withTransientRetry(() =>
+    api.get<ApiPagedHelpTickets>("/admin/help/tickets", {
+      params: { page: 1, pageSize },
+      timeout: READ_TIMEOUT_MS,
+    }),
+  );
   return (Array.isArray(data?.items) ? data.items : [])
     .map(mapHelpTicket)
     .filter((ticket): ticket is HelpTicket => Boolean(ticket));
@@ -84,10 +124,12 @@ export async function submitHelpTicket(input: {
   userName: string;
   question: string;
 }): Promise<HelpTicket> {
-  const { data } = await api.post<ApiCreatedHelpTicket>(
-    "/help/tickets",
-    { userName: input.userName, question: input.question },
-    { timeout: 10000 },
+  const { data } = await withTransientRetry(() =>
+    api.post<ApiCreatedHelpTicket>(
+      "/help/tickets",
+      { userName: input.userName, question: input.question },
+      { timeout: WRITE_TIMEOUT_MS },
+    ),
   );
   const ticket = mapHelpTicket(data ?? {});
   if (!ticket) throw new Error("Invalid help ticket response.");
@@ -96,15 +138,17 @@ export async function submitHelpTicket(input: {
 
 /** Clears the owner's "unread reply" flag. */
 export async function markHelpTicketReadOnServer(id: string): Promise<void> {
-  await api.post(`/help/tickets/${id}/read`, undefined, { timeout: 8000 });
+  await withTransientRetry(() => api.post(`/help/tickets/${id}/read`, undefined, { timeout: READ_TIMEOUT_MS }));
 }
 
 /** Admin answer; also flips the ticket to "replied" server-side. */
 export async function replyHelpTicket(id: string, reply: string): Promise<HelpTicket> {
-  const { data } = await api.post<ApiHelpTicket>(
-    `/admin/help/tickets/${id}/reply`,
-    { reply },
-    { timeout: 10000 },
+  const { data } = await withTransientRetry(() =>
+    api.post<ApiHelpTicket>(
+      `/admin/help/tickets/${id}/reply`,
+      { reply },
+      { timeout: WRITE_TIMEOUT_MS },
+    ),
   );
   const ticket = mapHelpTicket(data ?? {});
   if (!ticket) throw new Error("Invalid help ticket response.");
