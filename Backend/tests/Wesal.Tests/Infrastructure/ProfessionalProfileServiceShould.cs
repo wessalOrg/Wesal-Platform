@@ -41,7 +41,40 @@ public sealed class ProfessionalProfileServiceShould : IDisposable
 
     private ProfessionalProfileService CreateService(ApplicationUser? current = null, bool authenticated = true)
         => new(_users, new CurrentUser(current?.Id, authenticated), new CoordinatorRepository(_context),
-            new PhotographerRepository(_context), _restriction, _documents, new UnitOfWork(_context));
+            new PhotographerRepository(_context), _restriction, _documents, new UnitOfWork(_context),
+            new EmptyPostService(), new EmptyOfferService());
+
+    private ProfessionalProfileService CreateServiceWithContent(ApplicationUser owner,
+        IReadOnlyList<PublicProfileContentDto> posts, IReadOnlyList<PublicProfileContentDto> offers)
+        => new(_users, new CurrentUser(owner.Id, false), new CoordinatorRepository(_context),
+            new PhotographerRepository(_context), _restriction, _documents, new UnitOfWork(_context),
+            new EmptyPostService(posts), new EmptyOfferService(offers));
+
+    private sealed class EmptyPostService : IPostService
+    {
+        private readonly IReadOnlyList<PublicProfileContentDto> _items;
+        public EmptyPostService(IReadOnlyList<PublicProfileContentDto>? items = null) => _items = items ?? [];
+        public Task<Guid> CreateAsync(CreatePostRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task UpdateAsync(Guid postId, UpdatePostRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<PagedResult<PublicProfileContentDto>> ListProfileAsync(string userId, int page, int pageSize, CancellationToken cancellationToken = default)
+            => Task.FromResult(PagedResult<PublicProfileContentDto>.Create(_items, page, pageSize, _items.Count));
+        public Task<PublicProfileContentDto> GetPublicAsync(Guid postId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<StoredDocument> GetImageAsync(Guid postId, Guid imageId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+    }
+
+    private sealed class EmptyOfferService : IProfessionalOfferService
+    {
+        private readonly IReadOnlyList<PublicProfileContentDto> _items;
+        public EmptyOfferService(IReadOnlyList<PublicProfileContentDto>? items = null) => _items = items ?? [];
+        public Task<Guid> CreateAsync(CreateProfessionalOfferRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task UpdateAsync(Guid offerId, UpdateProfessionalOfferRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task StopAsync(Guid offerId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<PublicProfileContentDto> GetAsync(Guid offerId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<PagedResult<PublicProfileContentDto>> ListOwnAsync(int page, int pageSize, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<PagedResult<PublicProfileContentDto>> ListProfileAsync(string userId, int page, int pageSize, CancellationToken cancellationToken = default)
+            => Task.FromResult(PagedResult<PublicProfileContentDto>.Create(_items, page, pageSize, _items.Count));
+        public Task<StoredDocument> GetImageAsync(Guid offerId, Guid imageId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+    }
 
     private async Task<ApplicationUser> CreatePhotographerAsync(AccountApprovalStatus status, bool hasStudio = false)
     {
@@ -89,6 +122,19 @@ public sealed class ProfessionalProfileServiceShould : IDisposable
         Assert.DoesNotContain("Admin Only Name", json);
         Assert.DoesNotContain("identity-document", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("private/id.pdf", json);
+    }
+
+    [Fact]
+    public async Task PopulateThePublicProfilePostsAndOffersSections()
+    {
+        var coordinator = await CreateCoordinatorAsync();
+        var post = new PublicProfileContentDto { Id = Guid.NewGuid(), Content = "Public post" };
+        var offer = new PublicProfileContentDto { Id = Guid.NewGuid(), Content = "Active offer", OfferPrice = 50 };
+
+        var profile = await CreateServiceWithContent(coordinator, [post], [offer]).GetPublicProfileAsync(coordinator.Id);
+
+        Assert.Equal(post.Id, Assert.Single(profile.Posts).Id);
+        Assert.Equal(offer.Id, Assert.Single(profile.Offers).Id);
     }
 
     [Fact]

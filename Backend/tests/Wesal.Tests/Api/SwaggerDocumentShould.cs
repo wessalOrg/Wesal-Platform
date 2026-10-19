@@ -66,9 +66,10 @@ public class SwaggerDocumentShould
     /// 107 adds Task 5's seven coordinator-review operations (list, detail, shop-photo,
     /// work-photos, approve, reject, conversation) and Task 6's six photographer-review
     /// operations (list, detail, approve, reject, request-changes, conversation); 113
-    /// adds Tasks 7/8 resubmission and public-profile operations.
+    /// adds Tasks 7/8 resubmission and public-profile operations; 127 adds Task 9/10 post
+    /// and offer endpoints, including hall-owner offer management.
     /// </summary>
-    private const int ExpectedPathCount = 113;
+    private const int ExpectedPathCount = 127;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -100,6 +101,26 @@ public class SwaggerDocumentShould
         Assert.Contains(PublicProfilePicturePath, document.Paths.Keys);
         Assert.Contains(ProfilePictureUploadPath, document.Paths.Keys);
         Assert.Contains(ProfileBioPath, document.Paths.Keys);
+    }
+
+    [Fact]
+    public void PostsAndOffers_ArePresentInTheDocument()
+    {
+        var document = BuildDocument();
+        Assert.Contains("/api/v{version}/posts", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/profile/{userId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/images/{imageId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/{offerId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/{offerId}/stop", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/mine", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/profile/{userId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/offers/{offerId}/images/{imageId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/owner/halls/{hallId}/offers", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/owner/halls/{hallId}/offers/{offerId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/owner/halls/{hallId}/offers/{offerId}/stop", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/halls/{hallId}/offers/active", document.Paths.Keys);
     }
 
     [Fact]
