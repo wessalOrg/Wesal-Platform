@@ -29,6 +29,34 @@ public sealed class PostRepository(ApplicationDbContext context) : IPostReposito
     public Task<int> CountPublicByOwnerAsync(string ownerId, CancellationToken cancellationToken = default)
         => PublicPosts(ownerId).CountAsync(cancellationToken);
 
+    public async Task<bool> RegisterShareAsync(Guid postId, string userId, DateTimeOffset now, CancellationToken cancellationToken = default)
+    {
+        if (context.Database.ProviderName?.Contains("Npgsql", StringComparison.Ordinal) == true)
+        {
+            var lockKey = $"post-share:{userId}:{postId:N}";
+            await context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtext({lockKey}))", cancellationToken);
+        }
+        var day = DateOnly.FromDateTime(now.UtcDateTime);
+        var cutoff = now.AddHours(-24);
+        var exists = await context.PostShares.AnyAsync(share => share.PostId == postId && share.UserId == userId
+            && (share.UtcDate == day || share.CreatedAt > cutoff), cancellationToken);
+        if (exists) return false;
+        context.PostShares.Add(new PostShare { PostId = postId, UserId = userId, UtcDate = day, CreatedAt = now });
+        await context.SaveChangesAsync(cancellationToken);
+        var publicPosts = context.Posts.Where(post => post.Id == postId);
+        if (context.Database.IsRelational())
+        {
+            await publicPosts.ExecuteUpdateAsync(update => update.SetProperty(post => post.ShareCount, post => post.ShareCount + 1), cancellationToken);
+        }
+        else
+        {
+            var post = await publicPosts.FirstAsync(cancellationToken);
+            post.ShareCount++;
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        return true;
+    }
+
     private IQueryable<Post> PublicPosts(string ownerId)
         => context.Posts.AsNoTracking().Where(post => post.OwnerUserId == ownerId
             && context.Users.Any(user => user.Id == ownerId && user.ApprovalStatus == AccountApprovalStatus.Approved));
