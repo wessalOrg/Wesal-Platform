@@ -62,11 +62,12 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
         {
             var photographerProfiles = from profile in db.PhotographerProfiles.AsNoTracking()
                 join user in ApprovedRoleUsers(ApplicationRoles.Photographer) on profile.UserId equals user.Id
-                where profile.HasStudio && profile.StudioName != null && profile.StudioName.ToLower().Contains(pattern)
+                let name = profile.HasStudio ? profile.StudioName : PublicProfiles.DisplayNameFallback
+                where name != null && name.ToLower().Contains(pattern)
                 select new DiscoverItemDto
                 {
                     ContentType = "Photographer", Id = profile.Id, OwnerUserId = profile.UserId,
-                    DisplayName = profile.StudioName, ImageUrl = user.ProfilePictureUrl,
+                    DisplayName = name, ImageUrl = user.ProfilePictureUrl,
                     Location = profile.StudioLocation, CreatedAt = profile.SubmittedAt
                 };
             results.Add(photographerProfiles);
@@ -123,7 +124,7 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
                 select new DiscoverItemDto
                 {
                     ContentType = "Photographer", Id = profile.Id, OwnerUserId = profile.UserId,
-                    DisplayName = profile.HasStudio ? profile.StudioName : null,
+                    DisplayName = profile.HasStudio ? profile.StudioName : PublicProfiles.DisplayNameFallback,
                     ImageUrl = user.ProfilePictureUrl, Location = profile.HasStudio ? profile.StudioLocation : null,
                     CreatedAt = profile.SubmittedAt
                 };

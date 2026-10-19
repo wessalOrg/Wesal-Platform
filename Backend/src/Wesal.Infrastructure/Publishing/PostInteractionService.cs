@@ -217,15 +217,15 @@ public sealed class PostInteractionService(
 
     private async Task<string> PublicNameAsync(PostAuthorPublicData? author)
     {
-        if (author is null) return "مستخدم";
+        if (author is null) return PublicProfiles.DisplayNameFallback;
         if (!string.IsNullOrWhiteSpace(author.CoordinatorBusinessName)) return author.CoordinatorBusinessName;
         if (!string.IsNullOrWhiteSpace(author.PhotographerStudioName)) return author.PhotographerStudioName;
         var user = await users.FindByIdAsync(author.UserId);
-        if (user is null) return "مستخدم";
+        if (user is null) return PublicProfiles.DisplayNameFallback;
         var roles = await users.GetRolesAsync(user);
         return roles.Contains(ApplicationRoles.Photographer) || roles.Contains(ApplicationRoles.EventCoordinator)
-            ? "مستخدم"
-            : author.FullName ?? "مستخدم";
+            ? PublicProfiles.DisplayNameFallback
+            : author.FullName ?? PublicProfiles.DisplayNameFallback;
     }
 
     private string RequireUser()

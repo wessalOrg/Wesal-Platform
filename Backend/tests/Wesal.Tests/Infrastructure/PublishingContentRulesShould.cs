@@ -60,7 +60,7 @@ public sealed class PublishingContentRulesShould
 
         var reminder = NotificationCatalog.Render(NotificationKind.ProfessionalOfferReminder24Hours, Language.Arabic, targetId: "offer-id");
         Assert.Equal("بقي 24 ساعة على انتهاء العرض", reminder.Title);
-        Assert.Equal("يمكنك مراجعة العرض أو إيقافه قبل موعد انتهائه.", reminder.Body);
+        Assert.Equal("سينتهي هذا العرض بعد 24 ساعة. يمكنك مراجعته أو إيقافه قبل موعد انتهائه.", reminder.Body);
 
         var ended = NotificationCatalog.Render(NotificationKind.ProfessionalOfferEndedForPhotographer, Language.Arabic, targetId: "offer-id");
         Assert.Equal("انتهى عرضك", ended.Title);
