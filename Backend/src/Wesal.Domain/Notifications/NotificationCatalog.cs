@@ -310,7 +310,79 @@ public static class NotificationCatalog
                 EnglishBody: "Your request was rejected for the following reason: \"" + NotificationTokens.Reason + "\"",
                 ArabicActionLabel: "فتح المحادثة مع الإدارة",
                 EnglishActionLabel: "Open the conversation with administration",
-                ActionTarget: NotificationActionTarget.Conversation)
+                ActionTarget: NotificationActionTarget.Conversation),
+
+            [NotificationKind.ProfessionalOfferPublishedForCoordinator] = new NotificationTemplate(
+                ArabicTitle: "تم نشر العرض بنجاح",
+                EnglishTitle: "Your offer was published successfully",
+                ArabicBody: "أصبح عرضك متاحًا للمستخدمين.",
+                EnglishBody: "Your offer is now available to users.",
+                ArabicActionLabel: "عرض العرض",
+                EnglishActionLabel: "View offer",
+                ActionTarget: NotificationActionTarget.Offer),
+
+            [NotificationKind.ProfessionalOfferPublishedForPhotographer] = new NotificationTemplate(
+                ArabicTitle: "تم نشر عرضك بنجاح",
+                EnglishTitle: "Your offer was published successfully",
+                ArabicBody: "عرض تصوير المناسبات أصبح متاحًا للمستخدمين.",
+                EnglishBody: "The event photography offer is now available to users.",
+                ArabicActionLabel: "عرض العرض",
+                EnglishActionLabel: "View offer",
+                ActionTarget: NotificationActionTarget.Offer),
+
+            [NotificationKind.ProfessionalOfferEditsSaved] = new NotificationTemplate(
+                ArabicTitle: "تم حفظ التعديلات على العرض",
+                EnglishTitle: "Offer edits were saved",
+                ArabicBody: "تم تحديث العرض ونشر النسخة المعدلة للجمهور.",
+                EnglishBody: "The offer was updated and the edited version was published.",
+                ArabicActionLabel: "عرض العرض",
+                EnglishActionLabel: "View offer",
+                ActionTarget: NotificationActionTarget.Offer),
+
+            [NotificationKind.ProfessionalOfferReminder24Hours] = new NotificationTemplate(
+                ArabicTitle: "بقي 24 ساعة على انتهاء العرض",
+                EnglishTitle: "24 hours remain until the offer ends",
+                ArabicBody: "يمكنك مراجعة العرض أو إيقافه قبل موعد انتهائه.",
+                EnglishBody: "You can review the offer or stop it before it ends.",
+                ArabicActionLabel: "عرض العرض",
+                EnglishActionLabel: "View offer",
+                ActionTarget: NotificationActionTarget.Offer),
+
+            [NotificationKind.ProfessionalOfferEndedForCoordinator] = new NotificationTemplate(
+                ArabicTitle: "انتهى العرض وأصبح غير ظاهر للجمهور",
+                EnglishTitle: "Your offer ended and is no longer public",
+                ArabicBody: "لم يعد العرض ظاهرًا ضمن العروض الفعالة للمستخدمين.",
+                EnglishBody: "The offer is no longer shown among active offers.",
+                ArabicActionLabel: "عرض العرض",
+                EnglishActionLabel: "View offer",
+                ActionTarget: NotificationActionTarget.Offer),
+
+            [NotificationKind.ProfessionalOfferEndedForPhotographer] = new NotificationTemplate(
+                ArabicTitle: "انتهى عرضك",
+                EnglishTitle: "Your offer has ended",
+                ArabicBody: "لم يعد العرض ظاهرًا ضمن العروض الفعالة للمستخدمين.",
+                EnglishBody: "The offer is no longer shown among active offers.",
+                ArabicActionLabel: "عرض العرض",
+                EnglishActionLabel: "View offer",
+                ActionTarget: NotificationActionTarget.Offer),
+
+            [NotificationKind.ProfessionalOfferStopped] = new NotificationTemplate(
+                ArabicTitle: "تم إيقاف العرض يدويًا",
+                EnglishTitle: "The offer was stopped manually",
+                ArabicBody: "أصبح العرض غير ظاهر للمستخدمين.",
+                EnglishBody: "The offer is no longer visible to users.",
+                ArabicActionLabel: "عرض العرض",
+                EnglishActionLabel: "View offer",
+                ActionTarget: NotificationActionTarget.Offer),
+
+            [NotificationKind.PostEditsSaved] = new NotificationTemplate(
+                ArabicTitle: "تم حفظ تعديلات المنشور",
+                EnglishTitle: "Post edits were saved",
+                ArabicBody: "تم تحديث المنشور ونشر النسخة المعدلة للجمهور.",
+                EnglishBody: "The post was updated and the edited version was published to the public.",
+                ArabicActionLabel: "عرض المنشور",
+                EnglishActionLabel: "View post",
+                ActionTarget: NotificationActionTarget.Post)
         };
 
     public static NotificationTemplate Get(NotificationKind kind)
