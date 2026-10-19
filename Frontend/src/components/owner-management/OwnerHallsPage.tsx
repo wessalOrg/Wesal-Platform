@@ -235,28 +235,32 @@ export default function OwnerHallsPage() {
             </ul>
           )}
 
-          <section className="flex flex-col gap-4 rounded-[28px] bg-[#f8eeea] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <div className="flex min-w-0 items-center gap-4">
-              <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-[var(--wesal-maroon)]">
-                <HallPlusIcon />
-              </span>
-              <div className="min-w-0">
-                <h2 className="text-base font-extrabold text-[var(--wesal-text)] sm:text-lg">
-                  {t("owner.hallsPage.addBannerTitle")}
-                </h2>
-                <p className="mt-1 text-sm leading-7 text-[var(--wesal-muted)]">
-                  {t("owner.hallsPage.addBannerBody")}
-                </p>
-              </div>
-            </div>
+          <section className="relative overflow-hidden rounded-[28px] border border-[#f0e2da] bg-[linear-gradient(135deg,#fffaf7_0%,#f7ebe4_48%,#f3ddd4_100%)] px-5 py-7 sm:px-8">
+            <div
+              className="pointer-events-none absolute -top-12 start-6 h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(196,160,92,0.32),transparent_68%)]"
+              aria-hidden="true"
+            />
+            <div
+              className="pointer-events-none absolute -bottom-10 end-8 h-32 w-44 rounded-full bg-[radial-gradient(circle,rgba(193,123,127,0.18),transparent_70%)]"
+              aria-hidden="true"
+            />
             <button
               type="button"
-              className="btn-primary min-h-12 shrink-0 rounded-full px-5"
+              className="absolute start-4 top-1/2 inline-flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-2xl bg-white text-[var(--wesal-maroon)] shadow-[0_8px_20px_rgba(168,98,103,0.12)] sm:start-6"
               disabled={isInitiating}
+              aria-label={t("owner.hallsPage.addBannerCta")}
               onClick={beginAddHall}
             >
-              {`+ ${t("owner.hallsPage.addBannerCta")}`}
+              <HallPlusIcon />
             </button>
+            <div className="relative mx-auto max-w-2xl px-16 text-center sm:px-20">
+              <h2 className="text-base font-extrabold text-[var(--wesal-text)] sm:text-lg">
+                {t("owner.hallsPage.addBannerTitle")}
+              </h2>
+              <p className="mt-1 text-sm leading-7 text-[var(--wesal-muted)]">
+                {t("owner.hallsPage.addBannerBody")}
+              </p>
+            </div>
           </section>
         </>
       ) : null}
@@ -552,15 +556,16 @@ function HeartIcon() {
 
 function HallPlusIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 48 48" className="h-8 w-8" fill="none" aria-hidden="true">
       <path
-        d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5.2v-5.2H10.2V21H5a1 1 0 0 1-1-1v-9.5Z"
+        d="M8 22 24 10l16 12v14a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V22Z"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="2.2"
         strokeLinejoin="round"
       />
-      <path d="M17.2 4.2h3.2V7.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M18.8 3.2v3.2M17.2 4.8h3.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M20 38V28h8v10" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+      <circle cx="36" cy="14" r="8" fill="currentColor" />
+      <path d="M36 10.5v7M32.5 14h7" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
