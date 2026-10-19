@@ -8,7 +8,12 @@ using Wesal.Persistence.Data;
 
 namespace Wesal.Persistence.Services;
 
-/// <summary>Counts accepted detail-view requests as events; it does not infer unique people.</summary>
+/// <summary>
+/// Counts accepted post-detail and public-profile detail requests as view events. Each
+/// qualifying request is counted, including repeated requests from the same person; these
+/// counters are total requests, not unique people. Feed, search, and image requests are not
+/// counted as views.
+/// </summary>
 public sealed class StatisticsService(ApplicationDbContext db, ICurrentUserService currentUser, TimeProvider clock) : IStatisticsService
 {
     private const int MaxPageSize = 50;

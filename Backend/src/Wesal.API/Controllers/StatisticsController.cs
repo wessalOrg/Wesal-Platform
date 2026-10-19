@@ -14,6 +14,9 @@ namespace Wesal.API.Controllers;
 public sealed class StatisticsController(IStatisticsService statistics) : ControllerBase
 {
     /// <summary>Returns only the authenticated coordinator or photographer's engagement statistics.</summary>
+    /// <remarks>View counts are total successful public detail requests, not unique viewers. Repeated requests count separately.</remarks>
+    [EndpointSummary("Get professional account statistics")]
+    [EndpointDescription("Post and profile views count each successful public detail request. Repeated requests count separately; these are not unique-viewer counts.")]
     [HttpGet("me")]
     [ProducesResponseType(typeof(OwnerStatisticsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

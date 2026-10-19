@@ -84,6 +84,16 @@ public class SwaggerDocumentShould
     }
 
     [Fact]
+    public void StatisticsOperation_ExplainsViewCountSemantics()
+    {
+        var document = BuildDocument();
+        var operation = document.Paths["/api/v{version}/statistics/me"].Operations[Microsoft.OpenApi.Models.OperationType.Get];
+
+        Assert.Contains("Repeated requests count separately", operation.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not unique-viewer counts", operation.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void EveryUploadEndpoint_IsPresentInTheDocument()
     {
         // Proves the document is not silently truncated: the endpoints that used to break
