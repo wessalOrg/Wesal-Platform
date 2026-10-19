@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Wesal.Application.Common.Interfaces;
@@ -7,6 +8,7 @@ using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Admin;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Photographers;
@@ -32,7 +34,8 @@ public class PhotographerAdminServiceShould : IDisposable
     public PhotographerAdminServiceShould()
     {
         var services = new ServiceCollection();
-        services.AddDbContext<ApplicationDbContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+        services.AddDbContext<ApplicationDbContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
         services.AddIdentityCore<ApplicationUser>().AddRoles<ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>();
         services.AddLogging();
         _provider = services.BuildServiceProvider();
@@ -69,9 +72,10 @@ public class PhotographerAdminServiceShould : IDisposable
 
     private async Task<ApplicationUser> CreatePhotographerWithProfileAsync(
         string email,
-        string? identityDocumentUrl = "documents/photographers/{0}/id.pdf")
+        string? identityDocumentUrl = "documents/photographers/{0}/id.pdf",
+        AccountApprovalStatus approvalStatus = AccountApprovalStatus.Pending)
     {
-        var user = new ApplicationUser { FullName = "Photographer", Email = email, UserName = email };
+        var user = new ApplicationUser { FullName = "Photographer", Email = email, UserName = email, ApprovalStatus = approvalStatus };
         var result = await _userManager.CreateAsync(user, "Password123!");
         if (!result.Succeeded)
         {
@@ -191,6 +195,50 @@ public class PhotographerAdminServiceShould : IDisposable
 
         var json = System.Text.Json.JsonSerializer.Serialize(document);
         Assert.DoesNotContain("Ahmad Khalil", json);
+    }
+
+    [Fact]
+    public async Task RejectWithoutReasonFailsValidation()
+    {
+        var user = await CreatePhotographerWithProfileAsync("reject-empty@example.com");
+
+        await Assert.ThrowsAsync<ValidationException>(() => CreateService().RejectPhotographerRequestAsync(user.Id, new AdminRejectAccountRequestDto { Reason = " " }));
+
+        Assert.Equal(AccountApprovalStatus.Pending, (await _userManager.FindByIdAsync(user.Id))!.ApprovalStatus);
+        Assert.Empty(_context.UserNotifications);
+    }
+
+    [Fact]
+    public async Task RejectionPersistsExactNotificationAndAdminConversationTarget()
+    {
+        var user = await CreatePhotographerWithProfileAsync("reject@example.com");
+        const string reason = "ID photo is unreadable";
+
+        await CreateService().RejectPhotographerRequestAsync(user.Id, new AdminRejectAccountRequestDto { Reason = reason });
+
+        var notification = await _context.UserNotifications.SingleAsync(n => n.RecipientUserId == user.Id);
+        Assert.Equal("تم رفض طلبك", notification.Title);
+        Assert.Equal($"تم رفض طلبك للسبب الاتي : \"{reason}\"", notification.Body);
+        Assert.Equal(NotificationActionTarget.Conversation, notification.ActionTarget);
+        var conversation = await _context.Conversations.SingleAsync(c => c.HallOwnerId == user.Id && c.HallId == null);
+        Assert.Equal(conversation.Id.ToString(), notification.TargetId);
+        Assert.Equal(AccountApprovalStatus.Rejected, (await _userManager.FindByIdAsync(user.Id))!.ApprovalStatus);
+    }
+
+    [Fact]
+    public async Task RequestChangesCreatesExactNotificationAndConversationTarget()
+    {
+        var user = await CreatePhotographerWithProfileAsync("changes@example.com");
+
+        await CreateService().RequestPhotographerChangesAsync(user.Id, new AdminRequestChangesDto { Notes = "Please replace the ID image." });
+
+        var notification = await _context.UserNotifications.SingleAsync(n => n.RecipientUserId == user.Id);
+        Assert.Equal("طلبك يحتاج إلى تعديل", notification.Title);
+        Assert.Equal("توجد ملاحظات من الإدارة على بياناتك أو مستنداتك. افتح المحادثة لمعرفة التفاصيل، ثم عدّل المطلوب وأعد تقديم الطلب.", notification.Body);
+        Assert.Equal(NotificationActionTarget.Conversation, notification.ActionTarget);
+        var conversation = await _context.Conversations.SingleAsync(c => c.HallOwnerId == user.Id && c.HallId == null);
+        Assert.Equal(conversation.Id.ToString(), notification.TargetId);
+        Assert.Equal(AccountApprovalStatus.NeedsChanges, (await _userManager.FindByIdAsync(user.Id))!.ApprovalStatus);
     }
 
     public void Dispose()

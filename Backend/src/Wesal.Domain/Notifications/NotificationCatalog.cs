@@ -231,9 +231,9 @@ public static class NotificationCatalog
 
             // 14. An Event Coordinator's setup submission was received and awaits review.
             [NotificationKind.CoordinatorSetupReceivedForCoordinator] = new NotificationTemplate(
-                ArabicTitle: "تم استلام طلب التسجيل",
+                ArabicTitle: "تم استلام طلبك",
                 EnglishTitle: "Registration request received",
-                ArabicBody: "تم استلام بيانات تسجيلك كمنسق مناسبات بنجاح. طلبك الآن قيد المراجعة من قبل الإدارة، وستصلك النتيجة في أقرب وقت.",
+                ArabicBody: "وصل طلب التسجيل بنجاح، وسيتم مراجعته من الإدارة.",
                 EnglishBody: "Your Event Coordinator setup data has been received successfully. Your request is now under administrative review and you will be notified of the outcome soon.",
                 ArabicActionLabel: null,
                 EnglishActionLabel: null,

@@ -30,4 +30,5 @@ public interface IPhotographerRepository
 
     /// <summary>The total rows <see cref="GetRequestsAsync"/> would return, for paging.</summary>
     Task<int> CountRequestsAsync(AccountApprovalStatus? status, CancellationToken cancellationToken = default);
+    Task UpdateAsync(PhotographerProfile profile, CancellationToken cancellationToken = default);
 }
