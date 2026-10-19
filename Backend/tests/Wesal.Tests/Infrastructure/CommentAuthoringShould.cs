@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +12,7 @@ using Wesal.Infrastructure.Comments;
 using Wesal.Infrastructure.Identity;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -92,7 +93,8 @@ public class CommentAuthoringShould : IDisposable
 
     private CommentService CreateService(string? userId, bool authenticated)
         => new(new CommentRepository(_context), new HallRepository(_context),
-            new FakeCurrentUser(userId, authenticated, ApplicationRoles.RegisteredUser));
+            new FakeCurrentUser(userId, authenticated, ApplicationRoles.RegisteredUser),
+            new PassThroughApprovalGuard());
 
     [Fact]
     public async Task CreateComment_ReturnsActualProfileNameAndPicture()

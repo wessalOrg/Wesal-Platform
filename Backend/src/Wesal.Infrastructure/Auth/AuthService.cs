@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
+using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Identity;
 
@@ -52,6 +53,12 @@ public sealed class AuthService : IAuthService
         var normalizedAccountType = AccountTypes.IsValid(request.AccountType) ? AccountTypes.Normalize(request.AccountType) : request.AccountType!;
         var role = AccountTypes.IsValid(request.AccountType) ? AccountTypes.ToRole(request.AccountType) : request.AccountType!;
 
+        // Event Coordinators and Photographers are NOT fully registered at account
+        // creation: their registration completes only after the role-specific setup
+        // submission, and they must never be auto-approved. Regular users and hall
+        // owners keep their original behaviour (complete and approved immediately).
+        var requiresRoleSetup = AccountTypes.RequiresRoleSetup(request.AccountType);
+
         // Ensure password confirmation (defense in depth)
         if (request.Password != request.ConfirmPassword)
             throw new ValidationException(new Dictionary<string, string[]> { ["ConfirmPassword"] = new[] { "Password and confirm password do not match." } });
@@ -60,7 +67,11 @@ public sealed class AuthService : IAuthService
         {
             FullName = request.FullName.Trim(),
             Email = request.Email.Trim(),
-            UserName = request.Email.Trim()
+            UserName = request.Email.Trim(),
+            IsSetupComplete = !requiresRoleSetup,
+            ApprovalStatus = requiresRoleSetup
+                ? AccountApprovalStatus.Pending
+                : AccountApprovalStatus.Approved
         };
 
         var createResult = await _userManager.CreateAsync(user, request.Password);
@@ -100,7 +111,9 @@ public sealed class AuthService : IAuthService
             Email = user.Email!,
             AccountType = normalizedAccountType,
             Role = role,
-            Token = token
+            Token = token,
+            IsSetupComplete = user.IsSetupComplete,
+            ApprovalStatus = user.ApprovalStatus
         };
     }
 

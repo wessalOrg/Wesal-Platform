@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -90,6 +91,12 @@ public static class DependencyInjection
         services.AddScoped<ILogoutService, LogoutService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IOwnerIdentityService, OwnerIdentityService>();
+        services.AddScoped<Wesal.Application.Common.Interfaces.ICoordinatorSetupService, Wesal.Infrastructure.Coordinators.CoordinatorSetupService>();
+        services.AddScoped<Wesal.Application.Common.Interfaces.ICoordinatorAdminService, Wesal.Infrastructure.Coordinators.CoordinatorAdminService>();
+        services.AddScoped<Wesal.Application.Common.Interfaces.IPhotographerSetupService, Wesal.Infrastructure.Photographers.PhotographerSetupService>();
+        services.AddScoped<Wesal.Application.Common.Interfaces.IPhotographerAdminService, Wesal.Infrastructure.Photographers.PhotographerAdminService>();
+        services.AddScoped<Wesal.Application.Common.Interfaces.IAccountApprovalGuard, Wesal.Infrastructure.Authorization.AccountApprovalGuard>();
+        services.AddScoped<IAuthorizationHandler, Wesal.Infrastructure.Authorization.ApprovedAccountAuthorizationHandler>();
         services.AddScoped<IOwnerSidebarService, OwnerSidebarService>();
         services.AddScoped<IHallCreationService, HallCreationService>();
         services.AddOptions<HallMediaOptions>().Bind(configuration.GetSection(HallMediaOptions.SectionName));
@@ -192,6 +199,18 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
 
             options.AddPolicy(ApplicationPolicies.RequireRegisteredUser, policy =>
                 policy.RequireRole(ApplicationRoles.RegisteredUser, ApplicationRoles.HallOwner, ApplicationRoles.Admin));
+
+            options.AddPolicy(ApplicationPolicies.RequireEventCoordinator, policy =>
+                policy.RequireRole(ApplicationRoles.EventCoordinator));
+
+            options.AddPolicy(ApplicationPolicies.RequirePhotographer, policy =>
+                policy.RequireRole(ApplicationRoles.Photographer));
+
+            // WESAL approval enforcement: the reusable publishing gate. Passes for
+            // every account except an unapproved Event Coordinator or Photographer.
+            // Intended for user-generated-content creation/editing endpoints.
+            options.AddPolicy(ApplicationPolicies.RequireApprovedAccount, policy =>
+                policy.AddRequirements(new Wesal.Infrastructure.Authorization.ApprovedAccountRequirement()));
 
             options.AddPolicy(ApplicationPolicies.RequireAuthenticatedUser, policy =>
                 policy.RequireAuthenticatedUser());

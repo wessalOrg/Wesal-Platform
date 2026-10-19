@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Wesal.Application.Common.Interfaces.Persistence;
@@ -38,6 +39,13 @@ public sealed class TokenRevocationValidationShould
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
+        // CreateBuilder defaults to the Production environment, which loads the API's
+        // copied appsettings.Production.json whose placeholder AllowedHosts rejects the
+        // TestServer's localhost requests with 400 before authentication ever runs.
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["AllowedHosts"] = "*"
+        });
         builder.Services.AddScoped<ITokenRevocationRepository>(_ => new FakeRevocationRepository(isRevoked));
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

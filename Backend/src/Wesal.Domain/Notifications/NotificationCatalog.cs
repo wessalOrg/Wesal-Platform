@@ -227,7 +227,29 @@ public static class NotificationCatalog
                 EnglishBody: "Your subscription for \"" + NotificationTokens.HallName + "\" has ended without a confirmed renewal. Access to this hall has been automatically restricted. Please renew your subscription to reactivate the hall.",
                 ArabicActionLabel: "قاعاتي",
                 EnglishActionLabel: "My halls",
-                ActionTarget: NotificationActionTarget.MyHalls)
+                ActionTarget: NotificationActionTarget.MyHalls),
+
+            // 14. An Event Coordinator's setup submission was received and awaits review.
+            [NotificationKind.CoordinatorSetupReceivedForCoordinator] = new NotificationTemplate(
+                ArabicTitle: "تم استلام طلب التسجيل",
+                EnglishTitle: "Registration request received",
+                ArabicBody: "تم استلام بيانات تسجيلك كمنسق مناسبات بنجاح. طلبك الآن قيد المراجعة من قبل الإدارة، وستصلك النتيجة في أقرب وقت.",
+                EnglishBody: "Your Event Coordinator setup data has been received successfully. Your request is now under administrative review and you will be notified of the outcome soon.",
+                ArabicActionLabel: null,
+                EnglishActionLabel: null,
+                ActionTarget: NotificationActionTarget.None),
+
+            // 15. A Photographer's setup submission was received and awaits review. The
+            // body states what the waiting period already allows (browsing, booking, and
+            // messaging the administration), matching the enforced Task 4 permissions.
+            [NotificationKind.PhotographerSetupReceivedForPhotographer] = new NotificationTemplate(
+                ArabicTitle: "تم استلام طلب التسجيل",
+                EnglishTitle: "Registration request received",
+                ArabicBody: "تم إرسال طلبك بنجاح. ستقوم إدارة وصال بمراجعته، ويمكنك تصفح القاعات وحجزها ومراسلة الإدارة خلال فترة الانتظار.",
+                EnglishBody: "Your request was sent successfully. Wesal administration will review it, and during the waiting period you can browse and book halls and message the administration.",
+                ArabicActionLabel: null,
+                EnglishActionLabel: null,
+                ActionTarget: NotificationActionTarget.None)
         };
 
     public static NotificationTemplate Get(NotificationKind kind)

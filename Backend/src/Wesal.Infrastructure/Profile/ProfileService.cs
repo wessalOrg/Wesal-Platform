@@ -29,7 +29,9 @@ public sealed class ProfileService : IProfileService
             PhoneNumber = user.PhoneNumber ?? string.Empty,
             ConcurrencyStamp = user.ConcurrencyStamp ?? string.Empty,
             ProfilePictureUrl = user.ProfilePictureUrl,
-            IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(user.IdentityDocumentUrl)
+            IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(user.IdentityDocumentUrl),
+            IsSetupComplete = user.IsSetupComplete,
+            ApprovalStatus = user.ApprovalStatus.ToString()
         };
     }
 
@@ -136,7 +138,9 @@ public sealed class ProfileService : IProfileService
             PhoneNumber = updated.PhoneNumber ?? string.Empty,
             ConcurrencyStamp = updated.ConcurrencyStamp ?? string.Empty,
             ProfilePictureUrl = updated.ProfilePictureUrl,
-            IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(updated.IdentityDocumentUrl)
+            IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(updated.IdentityDocumentUrl),
+            IsSetupComplete = updated.IsSetupComplete,
+            ApprovalStatus = updated.ApprovalStatus.ToString()
         };
     }
 

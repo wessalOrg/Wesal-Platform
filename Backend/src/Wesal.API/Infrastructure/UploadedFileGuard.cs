@@ -22,6 +22,19 @@ public static class UploadLimits
 
     /// <summary>Envelope for single-file forms (identity document, message attachment).</summary>
     public const long SingleFileRequestBytes = 6L * 1024 * 1024;
+
+    /// <summary>
+    /// Total multipart envelope for the coordinator setup form: the freelance branch
+    /// carries the most files (2 work photos + 1 ID document) at 5 MB each (15 MB)
+    /// plus multipart framing overhead.
+    /// </summary>
+    public const long CoordinatorFormRequestBytes = 20L * 1024 * 1024;
+
+    /// <summary>
+    /// Total multipart envelope for the photographer setup form: one 5 MB ID document
+    /// plus the short text fields and multipart framing overhead.
+    /// </summary>
+    public const long PhotographerFormRequestBytes = 7L * 1024 * 1024;
 }
 
 /// <summary>

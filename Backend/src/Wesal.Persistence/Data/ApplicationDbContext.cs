@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Wesal.Domain.Entities;
+using Wesal.Domain.Enums;
 using Wesal.Infrastructure.Identity;
 
 namespace Wesal.Persistence.Data;
@@ -60,6 +61,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<AiKnowledgeGapCluster> AiKnowledgeGapClusters => Set<AiKnowledgeGapCluster>();
 
+    /// <summary>Event Coordinator setup submissions (WESAL coordinator setup).</summary>
+    public DbSet<CoordinatorProfile> CoordinatorProfiles => Set<CoordinatorProfile>();
+
+    /// <summary>Photographer setup submissions (WESAL photographer setup).</summary>
+    public DbSet<PhotographerProfile> PhotographerProfiles => Set<PhotographerProfile>();
+
+    /// <summary>Durably persisted notifications (minimum reusable support, WESAL coordinator setup).</summary>
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -82,6 +92,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(user => user.ProfilePictureUrl).HasMaxLength(500);
             entity.Property(user => user.IdentityDocumentUploadedAt).HasColumnType("timestamp with time zone");
             entity.HasIndex(user => user.PhoneNumber).IsUnique().HasFilter("\"PhoneNumber\" IS NOT NULL");
+
+            // WESAL coordinator/photographer registration: setup-completion and
+            // account-approval state. Schema defaults match the entity defaults
+            // (complete + approved) so any row inserted without these columns
+            // (raw SQL, a future seeder) agrees with the model.
+            entity.Property(user => user.IsSetupComplete).HasDefaultValue(true);
+            entity.Property(user => user.ApprovalStatus).HasDefaultValue(AccountApprovalStatus.Approved);
         });
 
         builder.Entity<AiKnowledgeArticle>(entity =>
@@ -461,6 +478,66 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
                 .WithMany()
                 .HasForeignKey(state => state.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<CoordinatorProfile>(entity =>
+        {
+            entity.ToTable("CoordinatorProfiles", table =>
+            {
+                table.HasCheckConstraint("CK_CoordinatorProfiles_BusinessType", "\"BusinessType\" IN (1, 2)");
+            });
+
+            entity.Property(profile => profile.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(profile => profile.ShopName).HasMaxLength(200);
+            entity.Property(profile => profile.ShopLocation).HasMaxLength(500);
+            entity.Property(profile => profile.ShopPhotoUrl).HasMaxLength(500);
+            entity.Property(profile => profile.OnlineStoreName).HasMaxLength(200);
+            entity.Property(profile => profile.WorkPhoto1Url).HasMaxLength(500);
+            entity.Property(profile => profile.WorkPhoto2Url).HasMaxLength(500);
+            entity.Property(profile => profile.PhoneNumber).IsRequired().HasMaxLength(30);
+            entity.Property(profile => profile.IdentityDocumentUrl).IsRequired().HasMaxLength(500);
+            entity.Property(profile => profile.SubmittedAt).HasColumnType("timestamp with time zone");
+
+            // One setup submission per account: the unique index is the authoritative
+            // duplicate guard behind the service's friendly conflict check.
+            entity.HasIndex(profile => profile.UserId).IsUnique();
+        });
+
+        builder.Entity<PhotographerProfile>(entity =>
+        {
+            entity.ToTable("PhotographerProfiles");
+
+            entity.Property(profile => profile.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(profile => profile.HasStudio).IsRequired();
+            entity.Property(profile => profile.StudioName).HasMaxLength(200);
+            entity.Property(profile => profile.StudioLocation).HasMaxLength(500);
+            entity.Property(profile => profile.DetailedStudioLocation).HasMaxLength(500);
+            // Administrator-only legal name (no-studio branch): a protected column that
+            // is never part of any client-facing projection.
+            entity.Property(profile => profile.FullName).HasMaxLength(150);
+            entity.Property(profile => profile.PhoneNumber).IsRequired().HasMaxLength(30);
+            entity.Property(profile => profile.IdentityDocumentUrl).IsRequired().HasMaxLength(500);
+            entity.Property(profile => profile.SubmittedAt).HasColumnType("timestamp with time zone");
+
+            // One setup submission per account: the unique index is the authoritative
+            // duplicate guard behind the service's friendly conflict check.
+            entity.HasIndex(profile => profile.UserId).IsUnique();
+        });
+
+        builder.Entity<UserNotification>(entity =>
+        {
+            entity.ToTable("UserNotifications");
+
+            entity.Property(notification => notification.RecipientUserId).IsRequired().HasMaxLength(450);
+            entity.Property(notification => notification.Language).IsRequired().HasMaxLength(5);
+            entity.Property(notification => notification.Title).IsRequired().HasMaxLength(200);
+            entity.Property(notification => notification.Body).IsRequired().HasMaxLength(2000);
+            entity.Property(notification => notification.ActionLabel).HasMaxLength(100);
+            entity.Property(notification => notification.TargetId).HasMaxLength(100);
+            entity.Property(notification => notification.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(notification => notification.ReadAt).HasColumnType("timestamp with time zone");
+
+            entity.HasIndex(notification => new { notification.RecipientUserId, notification.CreatedAt });
         });
     }
 }

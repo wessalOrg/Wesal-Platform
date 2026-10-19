@@ -33,6 +33,11 @@ public sealed class RateLimitingShould
         builder.WebHost.UseTestServer();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
+            // CreateBuilder defaults to the Production environment, which loads the
+            // API's copied appsettings.Production.json whose placeholder AllowedHosts
+            // rejects the TestServer's localhost requests with 400 before any route
+            // runs. These tests are hermetic wiring guards: pin AllowedHosts to *.
+            ["AllowedHosts"] = "*",
             ["RateLimiting:Enabled"] = enabled.ToString(),
             ["RateLimiting:PermitLimit"] = permitLimit.ToString(),
             ["RateLimiting:WindowSeconds"] = "60"
@@ -92,6 +97,7 @@ public sealed class RateLimitingShould
         builder.WebHost.UseTestServer();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
+            ["AllowedHosts"] = "*",
             ["RateLimiting:Enabled"] = "false",
             ["RateLimiting:Assistant:Enabled"] = "true",
             ["RateLimiting:Assistant:TokenLimit"] = "1",
@@ -124,6 +130,7 @@ public sealed class RateLimitingShould
         builder.WebHost.UseTestServer();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
+            ["AllowedHosts"] = "*",
             ["RateLimiting:Enabled"] = "false",
             ["RateLimiting:Assistant:Enabled"] = "true",
             ["RateLimiting:Assistant:TokenLimit"] = "10",

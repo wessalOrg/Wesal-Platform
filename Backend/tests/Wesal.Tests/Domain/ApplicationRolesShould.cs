@@ -11,7 +11,9 @@ public class ApplicationRolesShould
         Assert.Contains(ApplicationRoles.RegisteredUser, ApplicationRoles.All);
         Assert.Contains(ApplicationRoles.HallOwner, ApplicationRoles.All);
         Assert.Contains(ApplicationRoles.Admin, ApplicationRoles.All);
-        Assert.Equal(4, ApplicationRoles.All.Length);
+        Assert.Contains(ApplicationRoles.EventCoordinator, ApplicationRoles.All);
+        Assert.Contains(ApplicationRoles.Photographer, ApplicationRoles.All);
+        Assert.Equal(6, ApplicationRoles.All.Length);
     }
 
     [Theory]
@@ -19,6 +21,10 @@ public class ApplicationRolesShould
     [InlineData("RegisteredUser", true)]
     [InlineData("HallOwner", true)]
     [InlineData("Admin", true)]
+    [InlineData("EventCoordinator", true)]
+    [InlineData("Photographer", true)]
+    [InlineData("eventcoordinator", true)]
+    [InlineData("PHOTOGRAPHER", true)]
     [InlineData("guest", true)]
     [InlineData("SuperAdmin", false)]
     [InlineData("", false)]

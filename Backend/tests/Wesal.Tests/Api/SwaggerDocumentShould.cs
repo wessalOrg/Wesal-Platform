@@ -32,6 +32,10 @@ public class SwaggerDocumentShould
     private const string ConfirmBookingPaymentPath = "/api/v{version}/halls/{hallId}/bookings/{bookingId}/payment/confirmed";
     private const string ContactAdminPath = "/api/v{version}/halls/{hallId}/conversations/contact-admin";
     private const string AdminOwnerConversationPath = "/api/v{version}/admin/halls/{hallId}/conversation";
+    private const string CoordinatorSetupPath = "/api/v{version}/coordinator/setup";
+    private const string AdminCoordinatorIdentityPath = "/api/v{version}/admin/coordinators/{userId}/identity-document";
+    private const string PhotographerSetupPath = "/api/v{version}/photographer/setup";
+    private const string AdminPhotographerIdentityPath = "/api/v{version}/admin/photographers/{userId}/identity-document";
 
     /// <summary>
     /// Total operations' paths. Guards against the document silently losing endpoints, and
@@ -41,9 +45,11 @@ public class SwaggerDocumentShould
     /// WESAL-TASK-10 Edit 15's Admin "Message" thread-resolve endpoint; 64 adds
     /// Edit 25's owner bookings-calendar endpoint; 65 adds Edit 22's comment
     /// edit/delete path; 66 adds Edit 26's rejected-halls queue endpoint; 90 adds the
-    /// 24 Mabrouk Knowledge Studio admin operations.
+    /// 24 Mabrouk Knowledge Studio admin operations; 92 adds the coordinator setup
+    /// submission and admin coordinator identity-document endpoints; 94 adds the
+    /// photographer setup submission and admin photographer identity-document endpoints.
     /// </summary>
-    private const int ExpectedPathCount = 90;
+    private const int ExpectedPathCount = 94;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -65,6 +71,23 @@ public class SwaggerDocumentShould
         Assert.Contains(AttachmentPath, document.Paths.Keys);
         Assert.Contains(CreateHallPath, document.Paths.Keys);
         Assert.Contains(IdentityDocumentPath, document.Paths.Keys);
+        Assert.Contains(CoordinatorSetupPath, document.Paths.Keys);
+        Assert.Contains(AdminCoordinatorIdentityPath, document.Paths.Keys);
+        Assert.Contains(PhotographerSetupPath, document.Paths.Keys);
+        Assert.Contains(AdminPhotographerIdentityPath, document.Paths.Keys);
+    }
+
+    [Fact]
+    public void PhotographerSetup_IsDocumentedAsMultipartFormData()
+    {
+        // The setup submission is a multipart upload (text branch fields plus the
+        // personal ID document), so a generated client must be able to call it.
+        var schema = FormSchemaFor(PhotographerSetupPath);
+
+        Assert.Equal("string", schema.Properties["IdentityDocument"].Type);
+        Assert.Equal("binary", schema.Properties["IdentityDocument"].Format);
+        Assert.Contains("HasStudio", schema.Properties.Keys);
+        Assert.Contains("PhoneNumber", schema.Properties.Keys);
     }
 
     [Fact]

@@ -55,7 +55,19 @@ public enum NotificationKind
     /// The owner's subscription cycle ended without a renewal, so the hall was
     /// automatically restricted.
     /// </summary>
-    SubscriptionExpiredForOwner = 14
+    SubscriptionExpiredForOwner = 14,
+
+    /// <summary>
+    /// An Event Coordinator's setup submission was received and is awaiting
+    /// administrative review (WESAL coordinator setup).
+    /// </summary>
+    CoordinatorSetupReceivedForCoordinator = 15,
+
+    /// <summary>
+    /// A Photographer's setup submission was received and is awaiting administrative
+    /// review (WESAL photographer setup).
+    /// </summary>
+    PhotographerSetupReceivedForPhotographer = 16
 }
 
 /// <summary>

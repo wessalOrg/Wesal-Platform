@@ -6,6 +6,7 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Ratings;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -319,7 +320,7 @@ public class RatingServiceShould
     {
         var effectiveUserId = authenticated && userId is null ? "test-user-1" : userId;
         var currentUser = new FakeCurrentUserService(effectiveUserId, authenticated, roles ?? []);
-        return new RatingService(ratingRepository, hallRepository, currentUser);
+        return new RatingService(ratingRepository, hallRepository, currentUser, new PassThroughApprovalGuard());
     }
 
     private sealed class FakeRatingRepository : IRatingRepository

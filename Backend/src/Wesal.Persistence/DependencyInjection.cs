@@ -56,6 +56,9 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<ICoordinatorRepository, CoordinatorRepository>();
+        services.AddScoped<IPhotographerRepository, PhotographerRepository>();
+        services.AddScoped<IUserNotificationWriter, UserNotificationWriter>();
         services.AddScoped<IHallRepository, HallRepository>();
         services.AddScoped<IRatingRepository, RatingRepository>();
         services.AddScoped<ICommentRepository, CommentRepository>();

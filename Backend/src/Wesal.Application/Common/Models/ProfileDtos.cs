@@ -1,3 +1,5 @@
+using Wesal.Domain.Enums;
+
 namespace Wesal.Application.Common.Models;
 
 public class ProfileResponse
@@ -31,6 +33,20 @@ public class ProfileResponse
     /// completion state (US-OWNER-30).
     /// </summary>
     public bool IsIdentityDocumentUploaded { get; init; }
+
+    /// <summary>
+    /// False while an Event Coordinator or Photographer still owes their role-specific
+    /// setup submission; true for completed accounts (including every pre-existing
+    /// regular user and hall owner). The client uses this to decide whether to route
+    /// the user into the setup step after login.
+    /// </summary>
+    public bool IsSetupComplete { get; init; } = true;
+
+    /// <summary>
+    /// The account-level approval state. Exposed as its string name so the client can
+    /// show "awaiting review" without mirroring the numeric enum.
+    /// </summary>
+    public string ApprovalStatus { get; init; } = nameof(AccountApprovalStatus.Approved);
 }
 
 public class UpdateProfileRequest
