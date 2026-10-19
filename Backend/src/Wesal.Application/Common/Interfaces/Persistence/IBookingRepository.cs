@@ -9,6 +9,17 @@ public interface IBookingRepository
 
     Task<Booking?> GetByIdWithHallAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Every booking submitted by the given requester across all halls, newest day first,
+    /// with the hall and its hourly slots loaded so the seeker's "My bookings" view renders
+    /// without extra lookups. Read-only and scoped to the requester id supplied by the
+    /// authenticated session, so a caller can never read another user's bookings.
+    /// </summary>
+    Task<IReadOnlyList<Booking>> GetByRequesterAsync(
+        string requesterUserId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
+
     Task<IReadOnlyList<Booking>> GetPendingRejectionNotificationsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -32,6 +32,7 @@ public class SwaggerDocumentShould
     private const string ConfirmBookingPaymentPath = "/api/v{version}/halls/{hallId}/bookings/{bookingId}/payment/confirmed";
     private const string ContactAdminPath = "/api/v{version}/halls/{hallId}/conversations/contact-admin";
     private const string AdminOwnerConversationPath = "/api/v{version}/admin/halls/{hallId}/conversation";
+    private const string MyBookingsPath = "/api/v{version}/bookings";
 
     /// <summary>
     /// Total operations' paths. Guards against the document silently losing endpoints, and
@@ -40,9 +41,10 @@ public class SwaggerDocumentShould
     /// WESAL-TASK-11's general-purpose owner "Contact Admin" action; 63 adds
     /// WESAL-TASK-10 Edit 15's Admin "Message" thread-resolve endpoint; 64 adds
     /// Edit 25's owner bookings-calendar endpoint; 65 adds Edit 22's comment
-    /// edit/delete path; 66 adds Edit 26's rejected-halls queue endpoint.
+    /// edit/delete path; 66 adds Edit 26's rejected-halls queue endpoint; 67 adds
+    /// the seeker-facing GET /bookings "My bookings" endpoint.
     /// </summary>
-    private const int ExpectedPathCount = 66;
+    private const int ExpectedPathCount = 67;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -97,6 +99,37 @@ public class SwaggerDocumentShould
         var document = BuildDocument();
 
         Assert.Contains(AdminOwnerConversationPath, document.Paths.Keys);
+    }
+
+    [Fact]
+    public void MyBookingsEndpoint_IsDocumented()
+    {
+        // The seeker's "My bookings" list reads its own history from the server rather than
+        // only from sessionStorage, so the endpoint has to be in the published API surface
+        // for the Frontend team to wire against.
+        var document = BuildDocument();
+
+        Assert.Contains(MyBookingsPath, document.Paths.Keys);
+    }
+
+    /// <summary>
+    /// The endpoint is a GET scoped to the authenticated session, so it takes no request
+    /// payload at all. Asserted because a "My bookings" button wired against a spec that
+    /// invented a requester-id parameter would let a client try to read another user's
+    /// bookings.
+    /// </summary>
+    [Fact]
+    public void MyBookingsEndpoint_TakesNoRequestBody()
+    {
+        var document = BuildDocument();
+
+        var operation = document.Paths[MyBookingsPath].Operations[OperationType.Get];
+
+        Assert.True(operation.RequestBody == null || operation.RequestBody.Content.Count == 0);
+        var names = operation.Parameters?.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("requesterUserId", names);
+        Assert.DoesNotContain("userId", names);
     }
 
     /// <summary>
