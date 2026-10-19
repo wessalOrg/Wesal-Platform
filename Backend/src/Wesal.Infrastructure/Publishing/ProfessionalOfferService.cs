@@ -18,7 +18,7 @@ public sealed class ProfessionalOfferService : IProfessionalOfferService
 {
     private readonly ICurrentUserService _currentUser;
     private readonly IAccountApprovalGuard _approval;
-    private readonly IUserContentPublishingRestrictionService _restrictions;
+    private readonly IAccountLockService _restrictions;
     private readonly UserManager<ApplicationUser> _users;
     private readonly IProfessionalOfferRepository _offers;
     private readonly IIdentityDocumentStore _files;
@@ -31,7 +31,7 @@ public sealed class ProfessionalOfferService : IProfessionalOfferService
     private readonly TimeProvider _clock;
 
     public ProfessionalOfferService(ICurrentUserService currentUser, IAccountApprovalGuard approval,
-        IUserContentPublishingRestrictionService restrictions, UserManager<ApplicationUser> users,
+        IAccountLockService restrictions, UserManager<ApplicationUser> users,
         IProfessionalOfferRepository offers, IIdentityDocumentStore files, IUnitOfWork unitOfWork,
         INotificationService notifications, IUserNotificationWriter notificationWriter,
         INotificationDispatcher dispatcher, IValidator<CreateProfessionalOfferRequest> createValidator,
@@ -141,6 +141,7 @@ public sealed class ProfessionalOfferService : IProfessionalOfferService
     {
         var owner = await RequireProfessionalOwnerAsync(cancellationToken);
         await _approval.EnsureCanPublishAsync(cancellationToken);
+        await _restrictions.EnsureUnlockedAsync(owner.Id, cancellationToken);
         var offer = await _offers.GetForUpdateAsync(offerId, cancellationToken) ?? throw new NotFoundException("Offer", offerId);
         if (offer.OwnerUserId != owner.Id) throw new ForbiddenException("You can stop only your own offers.");
         var now = _clock.GetUtcNow();
@@ -196,8 +197,7 @@ public sealed class ProfessionalOfferService : IProfessionalOfferService
     {
         var user = await RequireProfessionalOwnerAsync(cancellationToken);
         await _approval.EnsureCanPublishAsync(cancellationToken);
-        if (await _restrictions.GetRestrictedUntilAsync(user.Id, cancellationToken) is { } restrictedUntil)
-            throw new ForbiddenException($"Your content publishing is restricted until {restrictedUntil:O}.");
+        await _restrictions.EnsureUnlockedAsync(user.Id, cancellationToken);
         return user;
     }
 

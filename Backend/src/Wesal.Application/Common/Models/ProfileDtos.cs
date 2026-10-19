@@ -48,7 +48,8 @@ public class ProfileResponse
     /// </summary>
     public string ApprovalStatus { get; init; } = nameof(AccountApprovalStatus.Approved);
 
-    public DateTimeOffset? RestrictedUntil { get; init; }
+    public bool IsLocked { get; init; }
+    public DateTimeOffset? LockedUntil { get; init; }
 }
 
 public class UpdateProfileRequest

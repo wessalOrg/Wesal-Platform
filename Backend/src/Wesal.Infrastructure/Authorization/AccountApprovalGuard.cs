@@ -27,13 +27,16 @@ public sealed class AccountApprovalGuard : IAccountApprovalGuard
 
     private readonly ICurrentUserService _currentUser;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IAccountLockService? _accountLocks;
 
     public AccountApprovalGuard(
         ICurrentUserService currentUser,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        IAccountLockService? accountLocks = null)
     {
         _currentUser = currentUser;
         _userManager = userManager;
+        _accountLocks = accountLocks;
     }
 
     public async Task EnsureCanPublishAsync(CancellationToken cancellationToken = default)
@@ -53,6 +56,8 @@ public sealed class AccountApprovalGuard : IAccountApprovalGuard
         {
             throw new ForbiddenException(PublishingBlockedMessage);
         }
+        if (_accountLocks is not null)
+            await _accountLocks.EnsureUnlockedAsync(user.Id, cancellationToken);
     }
 
     public async Task EnsureUserCanPublishAsync(string userId, CancellationToken cancellationToken = default)
@@ -77,6 +82,8 @@ public sealed class AccountApprovalGuard : IAccountApprovalGuard
         {
             throw new ForbiddenException(PublishingBlockedMessage);
         }
+        if (_accountLocks is not null)
+            await _accountLocks.EnsureUnlockedAsync(user.Id, cancellationToken);
     }
 
     private async Task<bool> IsApprovalRestrictedUserAsync(ApplicationUser user, CancellationToken cancellationToken)

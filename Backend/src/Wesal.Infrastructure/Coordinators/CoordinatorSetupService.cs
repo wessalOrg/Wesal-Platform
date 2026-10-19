@@ -48,6 +48,7 @@ public sealed class CoordinatorSetupService : ICoordinatorSetupService
     private readonly INotificationService _notificationService;
     private readonly INotificationDispatcher _notificationDispatcher;
     private readonly ILogger<CoordinatorSetupService> _logger;
+    private readonly IAccountLockService? _accountLocks;
 
     public CoordinatorSetupService(
         ICurrentUserService currentUser,
@@ -59,7 +60,8 @@ public sealed class CoordinatorSetupService : ICoordinatorSetupService
         IUnitOfWork unitOfWork,
         INotificationService notificationService,
         INotificationDispatcher notificationDispatcher,
-        ILogger<CoordinatorSetupService> logger)
+        ILogger<CoordinatorSetupService> logger,
+        IAccountLockService? accountLocks = null)
     {
         _currentUser = currentUser;
         _userManager = userManager;
@@ -71,6 +73,7 @@ public sealed class CoordinatorSetupService : ICoordinatorSetupService
         _notificationService = notificationService;
         _notificationDispatcher = notificationDispatcher;
         _logger = logger;
+        _accountLocks = accountLocks;
     }
 
     public async Task<CoordinatorSetupResult> SubmitSetupAsync(
@@ -80,6 +83,7 @@ public sealed class CoordinatorSetupService : ICoordinatorSetupService
         cancellationToken.ThrowIfCancellationRequested();
 
         var user = await ResolveCoordinatorUserAsync(cancellationToken);
+        if (_accountLocks is not null) await _accountLocks.EnsureUnlockedAsync(user.Id, cancellationToken);
 
         EnsureNotAlreadySubmitted(user);
 
@@ -379,6 +383,7 @@ public sealed class CoordinatorSetupService : ICoordinatorSetupService
         cancellationToken.ThrowIfCancellationRequested();
 
         var user = await ResolveCoordinatorUserAsync(cancellationToken);
+        if (_accountLocks is not null) await _accountLocks.EnsureUnlockedAsync(user.Id, cancellationToken);
 
         // Only allow resubmit from Rejected status (per Task 7)
         if (user.ApprovalStatus != AccountApprovalStatus.Rejected)

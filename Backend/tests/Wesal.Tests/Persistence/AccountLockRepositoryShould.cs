@@ -5,7 +5,7 @@ using Wesal.Persistence.Repositories;
 
 namespace Wesal.Tests.Persistence;
 
-public sealed class UserPublishingRestrictionRepositoryShould
+public sealed class AccountLockRepositoryShould
 {
     [Fact]
     public async Task RequestTimeCheckHonorsStartAndEndBoundariesEvenBeforeTheExpiryJobRuns()
@@ -13,14 +13,14 @@ public sealed class UserPublishingRestrictionRepositoryShould
         var now = DateTimeOffset.Parse("2026-10-19T12:00:00Z");
         var database = Guid.NewGuid().ToString();
         await using var context = CreateContext(database);
-        context.UserPublishingRestrictions.Add(new UserPublishingRestriction
+        context.AccountLocks.Add(new UserPublishingRestriction
         {
             Id = Guid.NewGuid(), UserId = "user-1", StartsAt = now.AddHours(-1), EndsAt = now.AddMinutes(1),
             CreatedByAdminId = "admin-1", CreatedAt = now.AddHours(-1)
         });
         await context.SaveChangesAsync();
 
-        var repository = new UserPublishingRestrictionRepository(context);
+        var repository = new AccountLockRepository(context);
         Assert.Equal(now.AddMinutes(1), await repository.GetActiveEndsAtAsync("user-1", now));
         Assert.Null(await repository.GetActiveEndsAtAsync("user-1", now.AddMinutes(1)));
     }
@@ -40,14 +40,14 @@ public sealed class UserPublishingRestrictionRepositoryShould
             Id = Guid.NewGuid(), UserId = "future-user", StartsAt = now, EndsAt = now.AddHours(1),
             CreatedByAdminId = "admin-1", CreatedAt = now
         };
-        context.UserPublishingRestrictions.AddRange(expired, future);
+        context.AccountLocks.AddRange(expired, future);
         await context.SaveChangesAsync();
-        var repository = new UserPublishingRestrictionRepository(context);
+        var repository = new AccountLockRepository(context);
 
         Assert.Equal(1, await repository.LiftExpiredAsync(now));
         Assert.Equal(0, await repository.LiftExpiredAsync(now));
-        Assert.Equal(now, (await context.UserPublishingRestrictions.SingleAsync(row => row.Id == expired.Id)).LiftedAt);
-        Assert.Null((await context.UserPublishingRestrictions.SingleAsync(row => row.Id == future.Id)).LiftedAt);
+        Assert.Equal(now, (await context.AccountLocks.SingleAsync(row => row.Id == expired.Id)).LiftedAt);
+        Assert.Null((await context.AccountLocks.SingleAsync(row => row.Id == future.Id)).LiftedAt);
     }
 
     private static ApplicationDbContext CreateContext(string databaseName)

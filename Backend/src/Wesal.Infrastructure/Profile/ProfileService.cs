@@ -11,7 +11,7 @@ public sealed class ProfileService : IProfileService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICurrentUserService _currentUser;
-    private readonly IUserContentPublishingRestrictionService? _restrictions;
+    private readonly IAccountLockService? _restrictions;
 
     public ProfileService(UserManager<ApplicationUser> userManager, ICurrentUserService currentUser)
         : this(userManager, currentUser, null)
@@ -19,7 +19,7 @@ public sealed class ProfileService : IProfileService
     }
 
     public ProfileService(UserManager<ApplicationUser> userManager, ICurrentUserService currentUser,
-        IUserContentPublishingRestrictionService? restrictions)
+        IAccountLockService? restrictions)
     {
         _userManager = userManager;
         _currentUser = currentUser;
@@ -29,8 +29,8 @@ public sealed class ProfileService : IProfileService
     public async Task<ProfileResponse> GetProfileAsync(CancellationToken cancellationToken = default)
     {
         var user = await GetCurrentUserAsync(cancellationToken);
-        var restrictedUntil = _restrictions is null ? user.ContentPublishingRestrictedUntil
-            : await _restrictions.GetRestrictedUntilAsync(user.Id, cancellationToken);
+        var lockedUntil = _restrictions is null ? null
+            : await _restrictions.GetLockedUntilAsync(user.Id, cancellationToken);
         return new ProfileResponse
         {
             Id = user.Id,
@@ -42,13 +42,15 @@ public sealed class ProfileService : IProfileService
             IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(user.IdentityDocumentUrl),
             IsSetupComplete = user.IsSetupComplete,
             ApprovalStatus = user.ApprovalStatus.ToString(),
-            RestrictedUntil = restrictedUntil
+            IsLocked = lockedUntil.HasValue,
+            LockedUntil = lockedUntil
         };
     }
 
     public async Task<ProfileResponse> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default)
     {
         var user = await GetCurrentUserAsync(cancellationToken);
+        await EnsureProfessionalOwnerUnlockedAsync(user, cancellationToken);
 
         // Concurrency check - if client provided stamp, verify it matches current
         if (request.ConcurrencyStamp is not null && request.ConcurrencyStamp != user.ConcurrencyStamp)
@@ -141,6 +143,8 @@ public sealed class ProfileService : IProfileService
         if (updated is null)
             throw new NotFoundException("User", user.Id);
 
+        var updatedLockedUntil = _restrictions is null ? null
+            : await _restrictions.GetLockedUntilAsync(updated.Id, cancellationToken);
         return new ProfileResponse
         {
             Id = updated.Id,
@@ -151,7 +155,9 @@ public sealed class ProfileService : IProfileService
             ProfilePictureUrl = updated.ProfilePictureUrl,
             IsIdentityDocumentUploaded = !string.IsNullOrWhiteSpace(updated.IdentityDocumentUrl),
             IsSetupComplete = updated.IsSetupComplete,
-            ApprovalStatus = updated.ApprovalStatus.ToString()
+            ApprovalStatus = updated.ApprovalStatus.ToString(),
+            IsLocked = updatedLockedUntil.HasValue,
+            LockedUntil = updatedLockedUntil
         };
     }
 
@@ -222,5 +228,14 @@ public sealed class ProfileService : IProfileService
             throw new NotFoundException("User", _currentUser.UserId);
 
         return user;
+    }
+
+    private async Task EnsureProfessionalOwnerUnlockedAsync(ApplicationUser user, CancellationToken cancellationToken)
+    {
+        if (_restrictions is null) return;
+        var roles = await _userManager.GetRolesAsync(user);
+        if (roles.Contains(Wesal.Domain.Constants.ApplicationRoles.EventCoordinator)
+            || roles.Contains(Wesal.Domain.Constants.ApplicationRoles.Photographer))
+            await _restrictions.EnsureUnlockedAsync(user.Id, cancellationToken);
     }
 }

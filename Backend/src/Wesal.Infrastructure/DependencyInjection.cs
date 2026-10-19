@@ -223,10 +223,10 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
                 policy.RequireAuthenticatedUser());
         });
 
-        services.AddScoped<Wesal.Application.Common.Interfaces.IUserContentPublishingRestrictionService, Wesal.Infrastructure.Identity.UserContentPublishingRestrictionService>();
+        services.AddScoped<Wesal.Application.Common.Interfaces.IAccountLockService, Wesal.Infrastructure.Identity.AccountLockService>();
         services.AddScoped<INotificationInboxService, NotificationInboxService>();
         services.AddScoped<IAdminModerationService, AdminModerationService>();
-        services.AddHostedService<PublishingRestrictionBackgroundService>();
+        services.AddHostedService<AccountLockBackgroundService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IPostService, Wesal.Infrastructure.Publishing.PostService>();
         services.AddOptions<Wesal.Infrastructure.Publishing.PostSharingOptions>()
             .Bind(configuration.GetSection(Wesal.Infrastructure.Publishing.PostSharingOptions.SectionName))
