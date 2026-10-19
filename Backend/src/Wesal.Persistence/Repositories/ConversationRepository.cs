@@ -8,16 +8,19 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Persistence.Data;
+using Wesal.Persistence.Queries;
 
 namespace Wesal.Persistence.Repositories;
 
 public sealed class ConversationRepository : IConversationRepository
 {
     private readonly ApplicationDbContext _context;
+    private readonly TimeProvider _clock;
 
-    public ConversationRepository(ApplicationDbContext context)
+    public ConversationRepository(ApplicationDbContext context, TimeProvider? clock = null)
     {
         _context = context;
+        _clock = clock ?? TimeProvider.System;
     }
 
     public Task<Conversation?> GetCustomerProviderConversationAsync(string customerId, string providerId, CancellationToken cancellationToken = default)
@@ -25,7 +28,7 @@ public sealed class ConversationRepository : IConversationRepository
             && c.SenderUserId == customerId && c.HallOwnerId == providerId, cancellationToken);
 
     public Task<bool> IsApprovedProviderAsync(string providerId, CancellationToken cancellationToken = default)
-        => _context.Users.AnyAsync(user => user.Id == providerId && user.ApprovalStatus == AccountApprovalStatus.Approved
+        => _context.Users.VisibleToPublic(_context, _clock.GetUtcNow()).AnyAsync(user => user.Id == providerId
             && _context.UserRoles.Any(userRole => userRole.UserId == providerId
                 && _context.Roles.Any(role => role.Id == userRole.RoleId
                     && (role.Name == ApplicationRoles.EventCoordinator || role.Name == ApplicationRoles.Photographer))), cancellationToken);

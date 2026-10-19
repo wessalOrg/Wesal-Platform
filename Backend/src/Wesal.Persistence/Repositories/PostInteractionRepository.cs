@@ -4,14 +4,24 @@ using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Persistence.Data;
+using Wesal.Persistence.Queries;
 
 namespace Wesal.Persistence.Repositories;
 
-public sealed class PostInteractionRepository(ApplicationDbContext db) : IPostInteractionRepository
+public sealed class PostInteractionRepository : IPostInteractionRepository
 {
+    private readonly ApplicationDbContext db;
+    private readonly TimeProvider clock;
+
+    public PostInteractionRepository(ApplicationDbContext db, TimeProvider? clock = null)
+    {
+        this.db = db;
+        this.clock = clock ?? TimeProvider.System;
+    }
+
     public Task<Post?> GetPublicPostAsync(Guid postId, CancellationToken cancellationToken = default)
         => db.Posts.AsNoTracking().FirstOrDefaultAsync(post => post.Id == postId
-            && db.Users.Any(owner => owner.Id == post.OwnerUserId && owner.ApprovalStatus == AccountApprovalStatus.Approved), cancellationToken);
+            && db.Users.VisibleToPublic(db, clock.GetUtcNow()).Any(owner => owner.Id == post.OwnerUserId), cancellationToken);
 
     public Task<PostComment?> GetCommentAsync(Guid commentId, bool tracking, CancellationToken cancellationToken = default)
     {
@@ -105,5 +115,5 @@ public sealed class PostInteractionRepository(ApplicationDbContext db) : IPostIn
     private IQueryable<PostFavorite> VisibleFavorites(string userId)
         => db.PostFavorites.AsNoTracking().Where(favorite => favorite.UserId == userId
             && db.Posts.Any(post => post.Id == favorite.PostId
-                && db.Users.Any(owner => owner.Id == post.OwnerUserId && owner.ApprovalStatus == AccountApprovalStatus.Approved)));
+                && db.Users.VisibleToPublic(db, clock.GetUtcNow()).Any(owner => owner.Id == post.OwnerUserId)));
 }
