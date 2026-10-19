@@ -100,7 +100,16 @@ public enum NotificationKind
     /// the notification and the click-through opens the Admin conversation
     /// (WESAL admin photographer requests, Task 6, requirements 6.5 and 15.6).
     /// </summary>
-    PhotographerRejectedForPhotographer = 21
+    PhotographerRejectedForPhotographer = 21,
+
+    ProfessionalOfferPublishedForCoordinator = 22,
+    ProfessionalOfferPublishedForPhotographer = 23,
+    ProfessionalOfferEditsSaved = 24,
+    ProfessionalOfferReminder24Hours = 25,
+    ProfessionalOfferEndedForCoordinator = 26,
+    ProfessionalOfferEndedForPhotographer = 27,
+    ProfessionalOfferStopped = 28,
+    PostEditsSaved = 29
 }
 
 /// <summary>
@@ -129,5 +138,7 @@ public enum NotificationActionTarget
     AdminHallRequests = 5,
 
     /// <summary>A specific conversation thread, identified by the notification's target id.</summary>
-    Conversation = 6
+    Conversation = 6,
+    Post = 7,
+    Offer = 8
 }
