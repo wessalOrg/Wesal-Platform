@@ -234,6 +234,7 @@ public sealed class NotificationLocalizationShould : IDisposable
             [NotificationTokens.EndTime] = "22:00",
             [NotificationTokens.Amount] = "500",
             [NotificationTokens.Reason] = "Fully booked",
+            [NotificationTokens.Period] = "24 hours",
             [NotificationTokens.TimeRange] = "18:00 - 22:00",
             [NotificationTokens.DaysRemaining] = "3",
             [NotificationTokens.SenderName] = "Ahmed",
@@ -258,6 +259,42 @@ public sealed class NotificationLocalizationShould : IDisposable
         }
 
         await Task.CompletedTask;
+    }
+
+    [Fact]
+    public void Task15And16Kinds_KeepStableNumbersAndSpecifiedArabicWording()
+    {
+        Assert.Equal(36, (int)NotificationKind.AdminMessageForPhotographer);
+        Assert.Equal(37, (int)NotificationKind.CoordinatorPendingReview);
+        Assert.Equal(38, (int)NotificationKind.PhotographerPendingReview);
+        Assert.Equal(39, (int)NotificationKind.PostDeletedByAdminForCoordinator);
+        Assert.Equal(40, (int)NotificationKind.PostDeletedByAdminForPhotographer);
+        Assert.Equal(41, (int)NotificationKind.ProfessionalOfferDeletedByAdmin);
+        Assert.Equal(42, (int)NotificationKind.PublishingRestricted);
+
+        var coordinatorDelete = NotificationCatalog.Render(NotificationKind.PostDeletedByAdminForCoordinator,
+            Language.Arabic, new Dictionary<string, string?> { [NotificationTokens.Reason] = "مخالفة" });
+        Assert.Equal("تم حذف المنشور بواسطة الإدارة", coordinatorDelete.Title);
+        Assert.Equal("السبب: مخالفة", coordinatorDelete.Body);
+        Assert.Equal(NotificationActionTarget.None, coordinatorDelete.ActionTarget);
+
+        var photographerDelete = NotificationCatalog.Render(NotificationKind.PostDeletedByAdminForPhotographer,
+            Language.Arabic, new Dictionary<string, string?> { [NotificationTokens.Reason] = "مخالفة" });
+        Assert.Equal("تمت إزالة أحد منشوراتك", photographerDelete.Title);
+        Assert.Equal("تمت إزالة أحد منشوراتك، مع توضيح السبب إن وجد: مخالفة", photographerDelete.Body);
+        Assert.Equal(NotificationActionTarget.None, photographerDelete.ActionTarget);
+
+        var offerDelete = NotificationCatalog.Render(NotificationKind.ProfessionalOfferDeletedByAdmin,
+            Language.Arabic, new Dictionary<string, string?> { [NotificationTokens.Reason] = "مخالفة" });
+        Assert.Equal("تم حذف العرض بواسطة الإدارة", offerDelete.Title);
+        Assert.Equal("السبب: مخالفة", offerDelete.Body);
+        Assert.Equal(NotificationActionTarget.None, offerDelete.ActionTarget);
+
+        var restriction = NotificationCatalog.Render(NotificationKind.PublishingRestricted, Language.Arabic,
+            new Dictionary<string, string?> { [NotificationTokens.Period] = "ساعتين" });
+        Assert.Equal("تم تقييد نشر المحتوى", restriction.Title);
+        Assert.Equal("تم تقييد نشر محتواك لمدة ساعتين", restriction.Body);
+        Assert.Equal(NotificationActionTarget.None, restriction.ActionTarget);
     }
 
     [Fact]
@@ -428,6 +465,7 @@ public sealed class NotificationLocalizationShould : IDisposable
             NotificationTokens.EndTime,
             NotificationTokens.Amount,
             NotificationTokens.Reason,
+            NotificationTokens.Period,
             NotificationTokens.TimeRange,
             NotificationTokens.DaysRemaining,
             NotificationTokens.CommenterName

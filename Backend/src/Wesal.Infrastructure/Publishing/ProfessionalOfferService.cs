@@ -195,8 +195,8 @@ public sealed class ProfessionalOfferService : IProfessionalOfferService
     {
         var user = await RequireProfessionalOwnerAsync(cancellationToken);
         await _approval.EnsureCanPublishAsync(cancellationToken);
-        if (await _restrictions.IsRestrictedAsync(user.Id, cancellationToken))
-            throw new ForbiddenException("Your content publishing is currently restricted.");
+        if (await _restrictions.GetRestrictedUntilAsync(user.Id, cancellationToken) is { } restrictedUntil)
+            throw new ForbiddenException($"Your content publishing is restricted until {restrictedUntil:O}.");
         return user;
     }
 

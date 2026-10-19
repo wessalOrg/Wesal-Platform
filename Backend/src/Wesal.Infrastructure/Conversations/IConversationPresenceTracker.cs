@@ -6,4 +6,5 @@ public interface IConversationPresenceTracker
     void Open(string userId, string connectionId, Guid conversationId);
     void Close(string connectionId, Guid conversationId);
     void Disconnect(string connectionId);
+    void DisconnectUser(string userId);
 }

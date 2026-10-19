@@ -54,6 +54,9 @@ public sealed class TokenRevocationRepository : ITokenRevocationRepository
         return isRevoked;
     }
 
+    public Task<bool> UserExistsAsync(string userId, CancellationToken cancellationToken = default)
+        => _context.Users.AsNoTracking().AnyAsync(user => user.Id == userId, cancellationToken);
+
     public async Task<bool> RevokeAsync(string jti, string userId, CancellationToken cancellationToken = default)
     {
         if (await IsRevokedAsync(jti, cancellationToken))
