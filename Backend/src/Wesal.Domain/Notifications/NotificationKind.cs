@@ -116,7 +116,13 @@ public enum NotificationKind
     PostCommentReplyOnOwnerPost = 33,
     NewMessage = 34,
     AdminMessageForCoordinator = 35,
-    AdminMessageForPhotographer = 36
+    AdminMessageForPhotographer = 36,
+    CoordinatorPendingReview = 37,
+    PhotographerPendingReview = 38,
+    PostDeletedByAdminForCoordinator = 39,
+    PostDeletedByAdminForPhotographer = 40,
+    ProfessionalOfferDeletedByAdmin = 41,
+    PublishingRestricted = 42
 }
 
 /// <summary>

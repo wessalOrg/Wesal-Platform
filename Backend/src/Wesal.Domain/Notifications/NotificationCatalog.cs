@@ -53,6 +53,7 @@ public static class NotificationTokens
     public const string EndTime = "{EndTime}";
     public const string Amount = "{Amount}";
     public const string Reason = "{Reason}";
+    public const string Period = "{Period}";
 
     /// <summary>
     /// A whole hourly range such as "09:00 - 12:00", for the notices that describe one
@@ -415,7 +416,29 @@ public static class NotificationCatalog
             [NotificationKind.AdminMessageForPhotographer] = new NotificationTemplate(
                 "لديك رسالة من إدارة وصال", "You have a message from Wesal administration",
                 "يمكنك فتح المحادثة ومتابعة أي ملاحظات تتعلق بطلبك.", "Open the conversation and follow up on any notes related to your request.",
-                "فتح المحادثة", "Open conversation", NotificationActionTarget.Conversation)
+                "فتح المحادثة", "Open conversation", NotificationActionTarget.Conversation),
+            [NotificationKind.CoordinatorPendingReview] = new NotificationTemplate(
+                "طلبك قيد المراجعة", "Your request is under review",
+                "طلب حسابك ما زال قيد المراجعة. يمكنك تصفح القاعات ومراسلة الإدارة.",
+                "Your account request is still under review. You can browse halls and message the administration.", null, null, NotificationActionTarget.None),
+            [NotificationKind.PhotographerPendingReview] = new NotificationTemplate(
+                "حسابك قيد المراجعة", "Your account is under review",
+                "طلبك ما زال بانتظار موافقة الإدارة. ستتمكن من استخدام ميزات المصور بعد الموافقة.",
+                "Your request is still awaiting administration approval. You will be able to use the photographer features after approval.", null, null, NotificationActionTarget.None),
+            [NotificationKind.PostDeletedByAdminForCoordinator] = new NotificationTemplate(
+                "تم حذف المنشور بواسطة الإدارة", "A post was deleted by the administration",
+                "السبب: " + NotificationTokens.Reason, "Reason: " + NotificationTokens.Reason, null, null, NotificationActionTarget.None),
+            [NotificationKind.PostDeletedByAdminForPhotographer] = new NotificationTemplate(
+                "تمت إزالة أحد منشوراتك", "One of your posts was removed",
+                "تمت إزالة أحد منشوراتك، مع توضيح السبب إن وجد: " + NotificationTokens.Reason,
+                "One of your posts was removed. Reason, if provided: " + NotificationTokens.Reason, null, null, NotificationActionTarget.None),
+            [NotificationKind.ProfessionalOfferDeletedByAdmin] = new NotificationTemplate(
+                "تم حذف العرض بواسطة الإدارة", "An offer was deleted by the administration",
+                "السبب: " + NotificationTokens.Reason, "Reason: " + NotificationTokens.Reason, null, null, NotificationActionTarget.None),
+            [NotificationKind.PublishingRestricted] = new NotificationTemplate(
+                "تم تقييد نشر المحتوى", "Content publishing was restricted",
+                "تم تقييد نشر محتواك لمدة " + NotificationTokens.Period,
+                "Your content publishing has been restricted for " + NotificationTokens.Period, null, null, NotificationActionTarget.None)
         };
 
     public static NotificationTemplate Get(NotificationKind kind)
