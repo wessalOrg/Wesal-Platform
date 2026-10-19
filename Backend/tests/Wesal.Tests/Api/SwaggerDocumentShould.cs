@@ -81,7 +81,7 @@ public class SwaggerDocumentShould
     /// "أضف للمفضلة" endpoints; 162 adds the durable Help Center ticket list, filing, read
     /// receipt, and the Admin queue/reply endpoints.
     /// </summary>
-    private const int ExpectedPathCount = 162;
+    private const int ExpectedPathCount = 166;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -140,9 +140,14 @@ public class SwaggerDocumentShould
         Assert.Contains("/api/v{version}/notifications/read-all", document.Paths.Keys);
         Assert.Contains("/api/v{version}/admin/moderation/posts/{postId}", document.Paths.Keys);
         Assert.Contains("/api/v{version}/admin/moderation/offers/{offerId}", document.Paths.Keys);
-        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/publishing-restrictions", document.Paths.Keys);
-        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/publishing-restriction", document.Paths.Keys);
-        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/lock", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/locked/photographers", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/locked/coordinators", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/posts", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/offers", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/posts/{postId}/images/{imageId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/offers/{offerId}/images/{imageId}", document.Paths.Keys);
+        Assert.DoesNotContain("/api/v{version}/admin/moderation/users/{userId}", document.Paths.Keys);
     }
 
     [Fact]

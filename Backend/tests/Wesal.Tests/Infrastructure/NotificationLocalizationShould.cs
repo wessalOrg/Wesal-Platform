@@ -275,19 +275,19 @@ public sealed class NotificationLocalizationShould : IDisposable
         var coordinatorDelete = NotificationCatalog.Render(NotificationKind.PostDeletedByAdminForCoordinator,
             Language.Arabic, new Dictionary<string, string?> { [NotificationTokens.Reason] = "مخالفة" });
         Assert.Equal("تم حذف المنشور بواسطة الإدارة", coordinatorDelete.Title);
-        Assert.Equal("السبب: مخالفة", coordinatorDelete.Body);
+        Assert.Equal("تم حذف المنشور الخاص بك للأسباب التالية: مخالفة", coordinatorDelete.Body);
         Assert.Equal(NotificationActionTarget.None, coordinatorDelete.ActionTarget);
 
         var photographerDelete = NotificationCatalog.Render(NotificationKind.PostDeletedByAdminForPhotographer,
             Language.Arabic, new Dictionary<string, string?> { [NotificationTokens.Reason] = "مخالفة" });
-        Assert.Equal("تمت إزالة أحد منشوراتك", photographerDelete.Title);
-        Assert.Equal("تمت إزالة أحد منشوراتك، مع توضيح السبب إن وجد: مخالفة", photographerDelete.Body);
+        Assert.Equal("تم حذف المنشور بواسطة الإدارة", photographerDelete.Title);
+        Assert.Equal("تم حذف المنشور الخاص بك للأسباب التالية: مخالفة", photographerDelete.Body);
         Assert.Equal(NotificationActionTarget.None, photographerDelete.ActionTarget);
 
         var offerDelete = NotificationCatalog.Render(NotificationKind.ProfessionalOfferDeletedByAdmin,
             Language.Arabic, new Dictionary<string, string?> { [NotificationTokens.Reason] = "مخالفة" });
         Assert.Equal("تم حذف العرض بواسطة الإدارة", offerDelete.Title);
-        Assert.Equal("السبب: مخالفة", offerDelete.Body);
+        Assert.Equal("تم حذف العرض الخاص بك للأسباب التالية: مخالفة", offerDelete.Body);
         Assert.Equal(NotificationActionTarget.None, offerDelete.ActionTarget);
 
         var restriction = NotificationCatalog.Render(NotificationKind.PublishingRestricted, Language.Arabic,

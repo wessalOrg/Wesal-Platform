@@ -12,16 +12,11 @@ public sealed class DeleteContentRequestValidator : AbstractValidator<DeleteCont
     }
 }
 
-public sealed class CreatePublishingRestrictionRequestValidator : AbstractValidator<CreatePublishingRestrictionRequest>
+public sealed class CreateAccountLockRequestValidator : AbstractValidator<CreateAccountLockRequest>
 {
-    public CreatePublishingRestrictionRequestValidator()
+    public CreateAccountLockRequestValidator()
     {
         RuleFor(request => request.DurationHours).InclusiveBetween(ModerationLimits.MinimumRestrictionHours, ModerationLimits.MaximumRestrictionHours);
         RuleFor(request => request.Reason).MaximumLength(ModerationLimits.RestrictionReasonMaximumLength);
     }
-}
-
-public sealed class DeleteAccountRequestValidator : AbstractValidator<DeleteAccountRequest>
-{
-    public DeleteAccountRequestValidator() => RuleFor(request => request.Confirm).Equal(true);
 }
