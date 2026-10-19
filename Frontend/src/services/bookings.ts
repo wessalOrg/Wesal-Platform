@@ -12,8 +12,10 @@ import {
   loadRememberedBookings,
   patchRememberedBooking,
   rememberBookingsFromResult,
+  replaceRememberedBookings,
 } from "@/lib/user-bookings-store";
 import { parseBookingStatus } from "@/lib/booking-status";
+import { normalizeTimeOnly } from "@/lib/hourly-slots";
 import { toCancelBookingError } from "@/lib/booking-cancel-errors";
 import { emitBookingCancelled, emitBookingSubmitted } from "@/lib/booking-events";
 import { getStoredAuth } from "@/lib/auth-storage";
@@ -133,7 +135,62 @@ export async function fetchMyBookings(): Promise<UserBooking[]> {
     return merged;
   }
 
-  return loadRememberedBookings();
+  try {
+    const { data } = await api.get<ApiUserBooking[]>("/bookings", { timeout: 10000 });
+    const mapped = (Array.isArray(data) ? data : [])
+      .map(mapUserBooking)
+      .filter((item): item is UserBooking => Boolean(item));
+    replaceRememberedBookings(mapped);
+    return mapped;
+  } catch {
+    // Keep the seeker's list usable offline / on a transient failure: fall back to the
+    // bookings already remembered from their own creates and cancels this session.
+    return loadRememberedBookings();
+  }
+}
+
+type ApiUserBooking = {
+  bookingId?: string;
+  hallId?: string;
+  hallName?: string;
+  date?: string;
+  slotStarts?: Array<string | null> | null;
+  timeRange?: string | null;
+  status?: string | number | null;
+  depositAmount?: number | null;
+  depositPaymentConfirmedAt?: string | null;
+  rejectionReason?: string | null;
+  requestedAt?: string | null;
+};
+
+function mapUserBooking(item: ApiUserBooking): UserBooking | null {
+  const bookingId = String(item.bookingId ?? "").trim();
+  const hallId = String(item.hallId ?? "").trim();
+  if (!bookingId || !hallId) return null;
+
+  const slotStarts = (item.slotStarts ?? [])
+    .map((start) => (typeof start === "string" ? normalizeTimeOnly(start) || start.trim() : ""))
+    .filter(Boolean);
+  const timeRange = typeof item.timeRange === "string" ? item.timeRange.trim() : "";
+  const depositAmount =
+    typeof item.depositAmount === "number" && Number.isFinite(item.depositAmount)
+      ? item.depositAmount
+      : null;
+
+  return {
+    bookingId,
+    hallId,
+    hallName: String(item.hallName ?? "").trim(),
+    date: String(item.date ?? ""),
+    slotStart: slotStarts[0],
+    timeRange: timeRange || undefined,
+    status: parseBookingStatus(item.status ?? "Pending"),
+    depositAmount,
+    rejectionReason:
+      typeof item.rejectionReason === "string" && item.rejectionReason.trim()
+        ? item.rejectionReason.trim()
+        : undefined,
+  };
 }
 
 type ApiCancelResult = {

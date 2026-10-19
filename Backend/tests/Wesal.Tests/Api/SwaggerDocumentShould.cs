@@ -32,6 +32,7 @@ public class SwaggerDocumentShould
     private const string ConfirmBookingPaymentPath = "/api/v{version}/halls/{hallId}/bookings/{bookingId}/payment/confirmed";
     private const string ContactAdminPath = "/api/v{version}/halls/{hallId}/conversations/contact-admin";
     private const string AdminOwnerConversationPath = "/api/v{version}/admin/halls/{hallId}/conversation";
+    private const string MyBookingsPath = "/api/v{version}/bookings";
     private const string CoordinatorSetupPath = "/api/v{version}/coordinator/setup";
     private const string AdminCoordinatorIdentityPath = "/api/v{version}/admin/coordinators/{userId}/identity-document";
     private const string PhotographerSetupPath = "/api/v{version}/photographer/setup";
@@ -69,9 +70,10 @@ public class SwaggerDocumentShould
     /// adds Tasks 7/8 resubmission and public-profile operations; 127 adds Task 9/10 post
     /// and offer endpoints, including hall-owner offer management; 132 adds the five
     /// distinct Task 11/12 post-comment and favorite paths; 155 adds Tasks 17-19 Discover,
-    /// Search, and owner-statistics routes.
+    /// Search, and owner-statistics routes; 156 adds the seeker-facing GET /bookings
+    /// "My bookings" endpoint.
     /// </summary>
-    private const int ExpectedPathCount = 155;
+    private const int ExpectedPathCount = 156;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -238,6 +240,37 @@ public class SwaggerDocumentShould
         var document = BuildDocument();
 
         Assert.Contains(AdminOwnerConversationPath, document.Paths.Keys);
+    }
+
+    [Fact]
+    public void MyBookingsEndpoint_IsDocumented()
+    {
+        // The seeker's "My bookings" list reads its own history from the server rather than
+        // only from sessionStorage, so the endpoint has to be in the published API surface
+        // for the Frontend team to wire against.
+        var document = BuildDocument();
+
+        Assert.Contains(MyBookingsPath, document.Paths.Keys);
+    }
+
+    /// <summary>
+    /// The endpoint is a GET scoped to the authenticated session, so it takes no request
+    /// payload at all. Asserted because a "My bookings" button wired against a spec that
+    /// invented a requester-id parameter would let a client try to read another user's
+    /// bookings.
+    /// </summary>
+    [Fact]
+    public void MyBookingsEndpoint_TakesNoRequestBody()
+    {
+        var document = BuildDocument();
+
+        var operation = document.Paths[MyBookingsPath].Operations[OperationType.Get];
+
+        Assert.True(operation.RequestBody == null || operation.RequestBody.Content.Count == 0);
+        var names = operation.Parameters?.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("requesterUserId", names);
+        Assert.DoesNotContain("userId", names);
     }
 
     /// <summary>

@@ -29,6 +29,25 @@ public sealed class BookingRepository : IBookingRepository
             .FirstOrDefaultAsync(booking => booking.Id == bookingId, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Booking>> GetByRequesterAsync(
+        string requesterUserId,
+        CancellationToken cancellationToken = default)
+    {
+        // Scoped strictly to the requester id supplied by the authenticated session, so a
+        // seeker can only ever read their own bookings. The hall and its slots are loaded
+        // eagerly because the caller renders each booking's hall name and hourly range.
+        // Every status is returned (Pending, Accepted, Rejected, Cancelled) so the seeker
+        // keeps a full history; ordering is newest day first, then most recently created.
+        return await _context.Bookings
+            .AsNoTracking()
+            .Include(booking => booking.Hall)
+            .Include(booking => booking.Slots)
+            .Where(booking => booking.RequesterUserId == requesterUserId)
+            .OrderByDescending(booking => booking.Date)
+            .ThenByDescending(booking => booking.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Booking>> GetPendingRejectionNotificationsAsync(
         CancellationToken cancellationToken = default)
     {
