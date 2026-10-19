@@ -64,6 +64,8 @@ public static class DependencyInjection
         services.AddScoped<IAdminModerationRepository, AdminModerationRepository>();
         services.AddScoped<IPostRepository, PostRepository>();
         services.AddScoped<IPostInteractionRepository, PostInteractionRepository>();
+        services.AddScoped<IHallFavoriteRepository, HallFavoriteRepository>();
+        services.AddScoped<IHelpTicketRepository, HelpTicketRepository>();
         services.AddScoped<IProfessionalOfferRepository, ProfessionalOfferRepository>();
         services.AddScoped<IHallOfferRepository, HallOfferRepository>();
         services.AddScoped<IHallRepository, HallRepository>();

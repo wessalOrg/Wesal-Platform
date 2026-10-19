@@ -4,6 +4,16 @@ import {
   type HelpCenterStore,
   type HelpTicket,
 } from "@/types/help-center";
+import {
+  fetchAllHelpTickets,
+  fetchMyHelpTickets,
+  hasHelpTicketsSession,
+} from "@/services/help-tickets";
+
+const HYDRATION_TTL_MS = 30_000;
+let hydratedScope = "";
+let hydratedAt = 0;
+let hydrationInflight: Promise<void> | null = null;
 
 function emptyStore(): HelpCenterStore {
   return { version: 1, tickets: [] };
@@ -56,6 +66,48 @@ function writeHelpCenterStore(store: HelpCenterStore) {
   } catch {
     /* private mode / quota */
   }
+}
+
+/** Replaces the cached tickets with a server snapshot (server is authoritative in live mode). */
+export function replaceHelpTickets(tickets: HelpTicket[]) {
+  writeHelpCenterStore({ version: 1, tickets });
+}
+
+/** Inserts or updates one ticket in the cache, e.g. after filing or answering it. */
+export function upsertHelpTicket(ticket: HelpTicket) {
+  const store = readHelpCenterStore();
+  const index = store.tickets.findIndex((item) => item.id === ticket.id);
+  const tickets = [...store.tickets];
+  if (index >= 0) tickets[index] = ticket;
+  else tickets.unshift(ticket);
+  writeHelpCenterStore({ version: 1, tickets });
+}
+
+/**
+ * Pulls tickets from the server so the Help Center survives a new device/browser. `mine`
+ * loads the signed-in user's tickets; `all` loads the Admin queue. Demo/stub sessions and
+ * offline failures keep the local cache. Throttled to avoid a fetch burst.
+ */
+export async function hydrateHelpTicketsFromServer(scope: "mine" | "all" = "mine"): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (!hasHelpTicketsSession()) return;
+  if (hydrationInflight) return hydrationInflight;
+  if (hydratedScope === scope && Date.now() - hydratedAt < HYDRATION_TTL_MS) return;
+
+  hydrationInflight = (async () => {
+    try {
+      const tickets = scope === "all" ? await fetchAllHelpTickets() : await fetchMyHelpTickets();
+      replaceHelpTickets(tickets);
+    } catch {
+      // Offline / transient failure: keep the cached tickets.
+    } finally {
+      hydratedScope = scope;
+      hydratedAt = Date.now();
+      hydrationInflight = null;
+    }
+  })();
+
+  return hydrationInflight;
 }
 
 export function listHelpTickets(): HelpTicket[] {

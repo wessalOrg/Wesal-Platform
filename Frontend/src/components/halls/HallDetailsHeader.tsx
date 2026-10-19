@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useT } from "@/i18n";
-import { isHallSaved, subscribeSavedHalls, toggleSavedHall } from "@/lib/saved-halls";
+import {
+  hydrateSavedHallsFromServer,
+  isHallSaved,
+  subscribeSavedHalls,
+  toggleSavedHall,
+} from "@/lib/saved-halls";
 import type { HallDetail } from "@/types/hall";
 
 type HallDetailsSection = {
@@ -30,6 +35,10 @@ export default function HallDetailsHeader({
   const [copied, setCopied] = useState(false);
   const [shareBump, setShareBump] = useState(0);
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
+
+  useEffect(() => {
+    void hydrateSavedHallsFromServer();
+  }, []);
 
   const rating =
     hall.rating != null && Number.isFinite(hall.rating) ? hall.rating.toFixed(1) : null;

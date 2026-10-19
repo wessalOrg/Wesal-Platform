@@ -52,6 +52,12 @@ public class SwaggerDocumentShould
     private const string PublicProfilePicturePath = "/api/v{version}/profile/{userId}/picture";
     private const string ProfilePictureUploadPath = "/api/v{version}/profile/picture";
     private const string ProfileBioPath = "/api/v{version}/profile/bio";
+    private const string HallFavoritesPath = "/api/v{version}/favorites/halls";
+    private const string HallFavoritePath = "/api/v{version}/favorites/halls/{hallId}";
+    private const string HelpTicketsPath = "/api/v{version}/help/tickets";
+    private const string HelpTicketReadPath = "/api/v{version}/help/tickets/{id}/read";
+    private const string AdminHelpTicketsPath = "/api/v{version}/admin/help/tickets";
+    private const string AdminHelpTicketReplyPath = "/api/v{version}/admin/help/tickets/{id}/reply";
 
     /// <summary>
     /// Total operations' paths. Guards against the document silently losing endpoints, and
@@ -71,9 +77,11 @@ public class SwaggerDocumentShould
     /// and offer endpoints, including hall-owner offer management; 132 adds the five
     /// distinct Task 11/12 post-comment and favorite paths; 155 adds Tasks 17-19 Discover,
     /// Search, and owner-statistics routes; 156 adds the seeker-facing GET /bookings
-    /// "My bookings" endpoint.
+    /// "My bookings" endpoint; 158 adds the seeker's saved-halls list and per-hall save/remove
+    /// "أضف للمفضلة" endpoints; 162 adds the durable Help Center ticket list, filing, read
+    /// receipt, and the Admin queue/reply endpoints.
     /// </summary>
-    private const int ExpectedPathCount = 156;
+    private const int ExpectedPathCount = 162;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -287,6 +295,88 @@ public class SwaggerDocumentShould
         var operation = document.Paths[AdminOwnerConversationPath].Operations[OperationType.Get];
 
         Assert.True(operation.RequestBody == null || operation.RequestBody.Content.Count == 0);
+    }
+
+    [Fact]
+    public void HallFavoritesEndpoint_IsDocumented()
+    {
+        // The seeker's "أضف للمفضلة" toggle persists to the server rather than only to
+        // localStorage, so the list and per-hall save/remove paths have to be in the
+        // published API surface for the Frontend team to wire against.
+        var document = BuildDocument();
+
+        Assert.Contains(HallFavoritesPath, document.Paths.Keys);
+        Assert.Contains(HallFavoritePath, document.Paths.Keys);
+    }
+
+    /// <summary>
+    /// The list is a GET scoped to the authenticated session, so it takes no request payload
+    /// and no client-supplied owner id — the favorites are always the caller's own. Asserted
+    /// because a spec that invented a user-id parameter would invite a client to read
+    /// somebody else's favorites.
+    /// </summary>
+    [Fact]
+    public void HallFavoritesEndpoint_TakesNoRequestBodyOrOwnerParameter()
+    {
+        var document = BuildDocument();
+
+        var operation = document.Paths[HallFavoritesPath].Operations[OperationType.Get];
+
+        Assert.True(operation.RequestBody == null || operation.RequestBody.Content.Count == 0);
+        var names = operation.Parameters?.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("userId", names);
+        Assert.DoesNotContain("requesterUserId", names);
+    }
+
+    /// <summary>
+    /// The save/remove toggle is idempotent and carries the hall in the route, so no body is
+    /// expected. Asserted because a body-bearing spec would generate a client that posts a
+    /// payload nobody reads.
+    /// </summary>
+    [Fact]
+    public void HallFavoriteEndpoint_TakesNoRequestBody()
+    {
+        var document = BuildDocument();
+
+        var path = document.Paths[HallFavoritePath];
+        Assert.True(path.Operations.ContainsKey(OperationType.Put));
+        Assert.True(path.Operations.ContainsKey(OperationType.Delete));
+
+        foreach (var (_, operation) in path.Operations)
+        {
+            Assert.True(operation.RequestBody == null || operation.RequestBody.Content.Count == 0);
+        }
+    }
+
+    [Fact]
+    public void HelpCenterEndpoints_AreDocumented()
+    {
+        // The Help Center now persists tickets server-side instead of only to localStorage,
+        // so the owner-facing filing/list/read paths and the Admin queue/reply paths have to
+        // be in the published API surface for the Frontend team to wire against.
+        var document = BuildDocument();
+
+        Assert.Contains(HelpTicketsPath, document.Paths.Keys);
+        Assert.Contains(HelpTicketReadPath, document.Paths.Keys);
+        Assert.Contains(AdminHelpTicketsPath, document.Paths.Keys);
+        Assert.Contains(AdminHelpTicketReplyPath, document.Paths.Keys);
+    }
+
+    [Fact]
+    public void HelpTicketCreateRequest_ExposesOnlyQuestionAndUserName()
+    {
+        // The owner is resolved from the session, so the body must not carry a user/owner id
+        // that would let a client file a ticket as somebody else.
+        var document = BuildDocument();
+
+        var schema = document.Components.Schemas["CreateHelpTicketRequestDto"];
+        var names = schema.Properties.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains("question", names);
+        Assert.Contains("userName", names);
+        Assert.DoesNotContain("userId", names);
+        Assert.DoesNotContain("ownerId", names);
     }
 
     [Fact]

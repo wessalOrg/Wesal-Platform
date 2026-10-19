@@ -9,6 +9,7 @@ import { buildHallDetailsPath } from "@/lib/booking-intent";
 import { localizeHallName, localizeLocation, localizePriceLabel } from "@/lib/localize-hall-display";
 import {
   getServerSavedHallIds,
+  hydrateSavedHallsFromServer,
   readSavedHallIds,
   removeSavedHall,
   subscribeSavedHalls,
@@ -27,6 +28,10 @@ export default function SeekerFavoritesPage() {
   const [rows, setRows] = useState<FavoriteRow[]>([]);
   const [loading, setLoading] = useState(savedIds.length > 0);
   const idsKey = savedIds.join("\0");
+
+  useEffect(() => {
+    void hydrateSavedHallsFromServer();
+  }, []);
 
   useEffect(() => {
     const ids = idsKey ? idsKey.split("\0") : [];

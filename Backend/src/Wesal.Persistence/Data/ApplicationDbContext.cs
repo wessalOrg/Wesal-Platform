@@ -76,6 +76,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<PostImage> PostImages => Set<PostImage>();
     public DbSet<PostComment> PostComments => Set<PostComment>();
     public DbSet<PostFavorite> PostFavorites => Set<PostFavorite>();
+    public DbSet<HallFavorite> HallFavorites => Set<HallFavorite>();
+    public DbSet<HelpTicket> HelpTickets => Set<HelpTicket>();
     public DbSet<ProfessionalOffer> ProfessionalOffers => Set<ProfessionalOffer>();
     public DbSet<ProfessionalOfferImage> ProfessionalOfferImages => Set<ProfessionalOfferImage>();
     public DbSet<HallOffer> HallOffers => Set<HallOffer>();
@@ -648,6 +650,32 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasIndex(favorite => new { favorite.UserId, favorite.CreatedAt });
             entity.HasOne<Post>().WithMany().HasForeignKey(favorite => favorite.PostId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(favorite => favorite.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<HallFavorite>(entity =>
+        {
+            entity.ToTable("HallFavorites");
+            entity.Property(favorite => favorite.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(favorite => favorite.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(favorite => new { favorite.UserId, favorite.HallId }).IsUnique();
+            entity.HasIndex(favorite => new { favorite.UserId, favorite.CreatedAt });
+            entity.HasOne<Hall>().WithMany().HasForeignKey(favorite => favorite.HallId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(favorite => favorite.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<HelpTicket>(entity =>
+        {
+            entity.ToTable("HelpTickets");
+            entity.Property(ticket => ticket.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(ticket => ticket.UserName).IsRequired().HasMaxLength(200);
+            entity.Property(ticket => ticket.Question).IsRequired().HasMaxLength(1000);
+            entity.Property(ticket => ticket.Reply).HasMaxLength(2000);
+            entity.Property(ticket => ticket.RepliedByUserId).HasMaxLength(450);
+            entity.Property(ticket => ticket.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(ticket => ticket.RepliedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(ticket => new { ticket.UserId, ticket.CreatedAt });
+            entity.HasIndex(ticket => ticket.CreatedAt);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(ticket => ticket.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<ProfessionalOffer>(entity =>
