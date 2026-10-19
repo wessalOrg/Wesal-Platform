@@ -70,6 +70,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     /// <summary>Durably persisted notifications (minimum reusable support, WESAL coordinator setup).</summary>
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
 
+    public DbSet<Post> Posts => Set<Post>();
+    public DbSet<PostImage> PostImages => Set<PostImage>();
+    public DbSet<ProfessionalOffer> ProfessionalOffers => Set<ProfessionalOffer>();
+    public DbSet<ProfessionalOfferImage> ProfessionalOfferImages => Set<ProfessionalOfferImage>();
+    public DbSet<HallOffer> HallOffers => Set<HallOffer>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -545,6 +551,80 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(notification => notification.ReadAt).HasColumnType("timestamp with time zone");
 
             entity.HasIndex(notification => new { notification.RecipientUserId, notification.CreatedAt });
+        });
+
+        builder.Entity<Post>(entity =>
+        {
+            entity.ToTable("Posts", table => table.HasCheckConstraint("CK_Posts_Price", "\"Price\" IS NULL OR \"Price\" >= 0"));
+            entity.Property(post => post.OwnerUserId).IsRequired().HasMaxLength(450);
+            entity.Property(post => post.Content).HasMaxLength(2000);
+            entity.Property(post => post.Price).HasColumnType("numeric(12,2)");
+            entity.Property(post => post.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(post => post.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(post => new { post.OwnerUserId, post.CreatedAt });
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(post => post.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<PostImage>(entity =>
+        {
+            entity.ToTable("PostImages");
+            entity.Property(image => image.StorageKey).IsRequired().HasMaxLength(500);
+            entity.Property(image => image.ContentType).IsRequired().HasMaxLength(100);
+            entity.HasIndex(image => new { image.PostId, image.Order }).IsUnique();
+            entity.HasOne(image => image.Post).WithMany(post => post.Images).HasForeignKey(image => image.PostId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ProfessionalOffer>(entity =>
+        {
+            entity.ToTable("ProfessionalOffers", table =>
+            {
+                table.HasCheckConstraint("CK_ProfessionalOffers_Prices", "\"OldPrice\" > 0 AND \"OfferPrice\" > 0 AND \"OfferPrice\" < \"OldPrice\" AND (\"PriceBox\" IS NULL OR \"PriceBox\" >= 0)");
+                table.HasCheckConstraint("CK_ProfessionalOffers_Window", "\"EndsAt\" > \"StartsAt\"");
+            });
+            entity.Property(offer => offer.OwnerUserId).IsRequired().HasMaxLength(450);
+            entity.Property(offer => offer.Content).HasMaxLength(2000);
+            entity.Property(offer => offer.OldPrice).HasColumnType("numeric(12,2)");
+            entity.Property(offer => offer.OfferPrice).HasColumnType("numeric(12,2)");
+            entity.Property(offer => offer.PriceBox).HasColumnType("numeric(12,2)");
+            entity.Property(offer => offer.StartsAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.EndsAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.StoppedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.ReminderSentAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.ExpiredProcessedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(offer => new { offer.OwnerUserId, offer.CreatedAt });
+            entity.HasIndex(offer => new { offer.StoppedAt, offer.StartsAt, offer.EndsAt });
+            entity.HasIndex(offer => new { offer.EndsAt, offer.ReminderSentAt, offer.ExpiredProcessedAt });
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(offer => offer.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ProfessionalOfferImage>(entity =>
+        {
+            entity.ToTable("ProfessionalOfferImages");
+            entity.Property(image => image.StorageKey).IsRequired().HasMaxLength(500);
+            entity.Property(image => image.ContentType).IsRequired().HasMaxLength(100);
+            entity.HasIndex(image => new { image.OfferId, image.Order }).IsUnique();
+            entity.HasOne(image => image.Offer).WithMany(offer => offer.Images).HasForeignKey(image => image.OfferId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<HallOffer>(entity =>
+        {
+            entity.ToTable("HallOffers", table =>
+            {
+                table.HasCheckConstraint("CK_HallOffers_Prices", "\"OldBookingPrice\" > 0 AND \"OfferPrice\" > 0 AND \"OfferPrice\" < \"OldBookingPrice\"");
+                table.HasCheckConstraint("CK_HallOffers_Window", "\"EndsAt\" > \"StartsAt\"");
+            });
+            entity.Property(offer => offer.OldBookingPrice).HasColumnType("numeric(12,2)");
+            entity.Property(offer => offer.OfferPrice).HasColumnType("numeric(12,2)");
+            entity.Property(offer => offer.StartsAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.EndsAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.StoppedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.ExpiredProcessedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(offer => offer.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(offer => new { offer.HallId, offer.StartsAt, offer.EndsAt });
+            entity.HasOne(offer => offer.Hall).WithMany().HasForeignKey(offer => offer.HallId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

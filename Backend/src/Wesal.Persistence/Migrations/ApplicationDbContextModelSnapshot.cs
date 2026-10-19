@@ -981,6 +981,57 @@ namespace Wesal.Persistence.Migrations
                     b.ToTable("HallImages", "wesal");
                 });
 
+            modelBuilder.Entity("Wesal.Domain.Entities.HallOffer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ExpiredProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("HallId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("OfferPrice")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal>("OldBookingPrice")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("StoppedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HallId", "StartsAt", "EndsAt");
+
+                    b.ToTable("HallOffers", "wesal", t =>
+                        {
+                            t.HasCheckConstraint("CK_HallOffers_Prices", "\"OldBookingPrice\" > 0 AND \"OfferPrice\" > 0 AND \"OfferPrice\" < \"OldBookingPrice\"");
+
+                            t.HasCheckConstraint("CK_HallOffers_Window", "\"EndsAt\" > \"StartsAt\"");
+                        });
+                });
+
             modelBuilder.Entity("Wesal.Domain.Entities.HallSlotAvailability", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1127,6 +1178,179 @@ namespace Wesal.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("PhotographerProfiles", "wesal");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.Post", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OwnerUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<decimal?>("Price")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId", "CreatedAt");
+
+                    b.ToTable("Posts", "wesal", t =>
+                        {
+                            t.HasCheckConstraint("CK_Posts_Price", "\"Price\" IS NULL OR \"Price\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.PostImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId", "Order")
+                        .IsUnique();
+
+                    b.ToTable("PostImages", "wesal");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.ProfessionalOffer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ExpiredProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("HasBeenEdited")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("OfferPrice")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal>("OldPrice")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("OwnerUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<decimal?>("PriceBox")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<bool>("ReminderEligible")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("ReminderSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("StoppedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId", "CreatedAt");
+
+                    b.HasIndex("EndsAt", "ReminderSentAt", "ExpiredProcessedAt");
+
+                    b.HasIndex("StoppedAt", "StartsAt", "EndsAt");
+
+                    b.ToTable("ProfessionalOffers", "wesal", t =>
+                        {
+                            t.HasCheckConstraint("CK_ProfessionalOffers_Prices", "\"OldPrice\" > 0 AND \"OfferPrice\" > 0 AND \"OfferPrice\" < \"OldPrice\" AND (\"PriceBox\" IS NULL OR \"PriceBox\" >= 0)");
+
+                            t.HasCheckConstraint("CK_ProfessionalOffers_Window", "\"EndsAt\" > \"StartsAt\"");
+                        });
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.ProfessionalOfferImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OfferId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OfferId", "Order")
+                        .IsUnique();
+
+                    b.ToTable("ProfessionalOfferImages", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.Rating", b =>
@@ -1566,6 +1790,17 @@ namespace Wesal.Persistence.Migrations
                     b.Navigation("Hall");
                 });
 
+            modelBuilder.Entity("Wesal.Domain.Entities.HallOffer", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
+                        .WithMany()
+                        .HasForeignKey("HallId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hall");
+                });
+
             modelBuilder.Entity("Wesal.Domain.Entities.HallSlotAvailability", b =>
                 {
                     b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
@@ -1586,6 +1821,46 @@ namespace Wesal.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.Post", b =>
+                {
+                    b.HasOne("Wesal.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.PostImage", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Post", "Post")
+                        .WithMany("Images")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.ProfessionalOffer", b =>
+                {
+                    b.HasOne("Wesal.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.ProfessionalOfferImage", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.ProfessionalOffer", "Offer")
+                        .WithMany("Images")
+                        .HasForeignKey("OfferId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Offer");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.Rating", b =>
@@ -1631,6 +1906,16 @@ namespace Wesal.Persistence.Migrations
                     b.Navigation("Images");
 
                     b.Navigation("SlotAvailabilities");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.Post", b =>
+                {
+                    b.Navigation("Images");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.ProfessionalOffer", b =>
+                {
+                    b.Navigation("Images");
                 });
 #pragma warning restore 612, 618
         }
