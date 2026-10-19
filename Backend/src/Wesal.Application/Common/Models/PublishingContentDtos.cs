@@ -55,6 +55,7 @@ public sealed class PublicProfileImageDto
 public sealed class PostResponse
 {
     public Guid Id { get; init; }
+    public int SaveCount { get; init; }
     public string OwnerUserId { get; init; } = string.Empty;
     public string? Content { get; init; }
     public decimal? Price { get; init; }

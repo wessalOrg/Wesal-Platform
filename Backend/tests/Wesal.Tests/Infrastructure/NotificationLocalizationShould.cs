@@ -225,6 +225,7 @@ public sealed class NotificationLocalizationShould : IDisposable
 
         var tokens = new Dictionary<string, string?>
         {
+            [NotificationTokens.CommenterName] = "Ahmed",
             [NotificationTokens.RequesterName] = "Sara",
             [NotificationTokens.CancellerName] = "Sara",
             [NotificationTokens.HallName] = "Grand Hall",
@@ -426,7 +427,8 @@ public sealed class NotificationLocalizationShould : IDisposable
             NotificationTokens.Amount,
             NotificationTokens.Reason,
             NotificationTokens.TimeRange,
-            NotificationTokens.DaysRemaining
+            NotificationTokens.DaysRemaining,
+            NotificationTokens.CommenterName
         };
 
         foreach (var token in known)

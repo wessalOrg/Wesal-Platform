@@ -109,7 +109,11 @@ public enum NotificationKind
     ProfessionalOfferEndedForCoordinator = 26,
     ProfessionalOfferEndedForPhotographer = 27,
     ProfessionalOfferStopped = 28,
-    PostEditsSaved = 29
+    PostEditsSaved = 29,
+    PostCommentedForCoordinator = 30,
+    PostCommentedForPhotographer = 31,
+    PostCommentReplyForOwner = 32,
+    PostCommentReplyOnOwnerPost = 33
 }
 
 /// <summary>

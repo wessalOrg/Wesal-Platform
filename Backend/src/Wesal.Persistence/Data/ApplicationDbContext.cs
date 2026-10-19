@@ -72,6 +72,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<PostImage> PostImages => Set<PostImage>();
+    public DbSet<PostComment> PostComments => Set<PostComment>();
+    public DbSet<PostFavorite> PostFavorites => Set<PostFavorite>();
     public DbSet<ProfessionalOffer> ProfessionalOffers => Set<ProfessionalOffer>();
     public DbSet<ProfessionalOfferImage> ProfessionalOfferImages => Set<ProfessionalOfferImage>();
     public DbSet<HallOffer> HallOffers => Set<HallOffer>();
@@ -555,10 +557,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
         builder.Entity<Post>(entity =>
         {
-            entity.ToTable("Posts", table => table.HasCheckConstraint("CK_Posts_Price", "\"Price\" IS NULL OR \"Price\" >= 0"));
+            entity.ToTable("Posts", table =>
+            {
+                table.HasCheckConstraint("CK_Posts_Price", "\"Price\" IS NULL OR \"Price\" >= 0");
+                table.HasCheckConstraint("CK_Posts_SaveCount", "\"SaveCount\" >= 0");
+            });
             entity.Property(post => post.OwnerUserId).IsRequired().HasMaxLength(450);
             entity.Property(post => post.Content).HasMaxLength(2000);
             entity.Property(post => post.Price).HasColumnType("numeric(12,2)");
+            entity.Property(post => post.SaveCount).HasDefaultValue(0);
             entity.Property(post => post.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(post => post.UpdatedAt).HasColumnType("timestamp with time zone");
             entity.HasIndex(post => new { post.OwnerUserId, post.CreatedAt });
@@ -572,6 +579,31 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(image => image.ContentType).IsRequired().HasMaxLength(100);
             entity.HasIndex(image => new { image.PostId, image.Order }).IsUnique();
             entity.HasOne(image => image.Post).WithMany(post => post.Images).HasForeignKey(image => image.PostId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<PostComment>(entity =>
+        {
+            entity.ToTable("PostComments", table => table.HasCheckConstraint("CK_PostComments_TopLevelReply", "(\"ParentCommentId\" IS NULL AND \"ReplyToCommentId\" IS NULL) OR (\"ParentCommentId\" IS NOT NULL AND \"ReplyToCommentId\" IS NOT NULL)"));
+            entity.Property(comment => comment.AuthorUserId).IsRequired().HasMaxLength(450);
+            entity.Property(comment => comment.Text).IsRequired().HasMaxLength(1000);
+            entity.Property(comment => comment.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(comment => comment.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(comment => new { comment.PostId, comment.CreatedAt });
+            entity.HasIndex(comment => comment.ParentCommentId);
+            entity.HasOne<Post>().WithMany().HasForeignKey(comment => comment.PostId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(comment => comment.AuthorUserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(comment => comment.ParentComment).WithMany().HasForeignKey(comment => comment.ParentCommentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<PostFavorite>(entity =>
+        {
+            entity.ToTable("PostFavorites");
+            entity.Property(favorite => favorite.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(favorite => favorite.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(favorite => new { favorite.UserId, favorite.PostId }).IsUnique();
+            entity.HasIndex(favorite => new { favorite.UserId, favorite.CreatedAt });
+            entity.HasOne<Post>().WithMany().HasForeignKey(favorite => favorite.PostId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(favorite => favorite.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<ProfessionalOffer>(entity =>

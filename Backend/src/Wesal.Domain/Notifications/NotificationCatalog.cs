@@ -42,6 +42,7 @@ public sealed record NotificationContent(
 /// </summary>
 public static class NotificationTokens
 {
+    public const string CommenterName = "{CommenterName}";
     public const string RequesterName = "{RequesterName}";
     public const string CancellerName = "{CancellerName}";
     public const string HallName = "{HallName}";
@@ -382,7 +383,23 @@ public static class NotificationCatalog
                 EnglishBody: "The post was updated and the edited version was published to the public.",
                 ArabicActionLabel: "عرض المنشور",
                 EnglishActionLabel: "View post",
-                ActionTarget: NotificationActionTarget.Post)
+                ActionTarget: NotificationActionTarget.Post),
+
+            [NotificationKind.PostCommentedForCoordinator] = new NotificationTemplate(
+                "تعليق جديد", "New comment", NotificationTokens.CommenterName + " علّق على منشورك", NotificationTokens.CommenterName + " commented on your post",
+                "عرض المنشور", "View post", NotificationActionTarget.Post),
+
+            [NotificationKind.PostCommentedForPhotographer] = new NotificationTemplate(
+                "تعليق جديد", "New comment", NotificationTokens.CommenterName + " علّق على أحد أعمالك", NotificationTokens.CommenterName + " commented on one of your works",
+                "عرض المنشور", "View post", NotificationActionTarget.Post),
+
+            [NotificationKind.PostCommentReplyForOwner] = new NotificationTemplate(
+                "رد على تعليقك", "Reply to your comment", NotificationTokens.CommenterName + " رد على تعليقك", NotificationTokens.CommenterName + " replied to your comment",
+                "عرض المنشور", "View post", NotificationActionTarget.Post),
+
+            [NotificationKind.PostCommentReplyOnOwnerPost] = new NotificationTemplate(
+                "رد جديد على منشورك", "New reply on your post", NotificationTokens.CommenterName + " رد على تعليق في منشورك", NotificationTokens.CommenterName + " replied to a comment on your post",
+                "عرض المنشور", "View post", NotificationActionTarget.Post)
         };
 
     public static NotificationTemplate Get(NotificationKind kind)

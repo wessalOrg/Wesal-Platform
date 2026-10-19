@@ -67,9 +67,10 @@ public class SwaggerDocumentShould
     /// work-photos, approve, reject, conversation) and Task 6's six photographer-review
     /// operations (list, detail, approve, reject, request-changes, conversation); 113
     /// adds Tasks 7/8 resubmission and public-profile operations; 127 adds Task 9/10 post
-    /// and offer endpoints, including hall-owner offer management.
+    /// and offer endpoints, including hall-owner offer management; 132 adds the five
+    /// distinct Task 11/12 post-comment and favorite paths.
     /// </summary>
-    private const int ExpectedPathCount = 127;
+    private const int ExpectedPathCount = 132;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -121,6 +122,17 @@ public class SwaggerDocumentShould
         Assert.Contains("/api/v{version}/owner/halls/{hallId}/offers/{offerId}", document.Paths.Keys);
         Assert.Contains("/api/v{version}/owner/halls/{hallId}/offers/{offerId}/stop", document.Paths.Keys);
         Assert.Contains("/api/v{version}/halls/{hallId}/offers/active", document.Paths.Keys);
+    }
+
+    [Fact]
+    public void PostCommentsAndFavorites_ArePresentInTheDocument()
+    {
+        var document = BuildDocument();
+        Assert.Contains("/api/v{version}/posts/{postId}/comments", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/comments/{commentId}/replies", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/comments/{commentId}", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/posts/{postId}/favorites", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/favorites", document.Paths.Keys);
     }
 
     [Fact]
