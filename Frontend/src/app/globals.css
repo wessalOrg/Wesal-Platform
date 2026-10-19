@@ -5372,8 +5372,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .seeker-dash-notify,
-.seeker-dash-lang.lang-switch-trigger,
-.seeker-dash-lang.theme-toggle {
+.seeker-dash-lang.lang-switch-trigger {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -5398,8 +5397,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 @media (min-width: 640px) {
   .seeker-dash-notify,
-  .seeker-dash-lang.lang-switch-trigger,
-  .seeker-dash-lang.theme-toggle {
+  .seeker-dash-lang.lang-switch-trigger {
     height: 3.15rem;
     width: 3.15rem;
     min-height: 3.15rem;
@@ -5408,22 +5406,18 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .seeker-dash-lang.lang-switch-trigger:hover,
-.seeker-dash-lang.lang-switch-trigger:focus-visible,
-.seeker-dash-lang.theme-toggle:hover,
-.seeker-dash-lang.theme-toggle:focus-visible {
+.seeker-dash-lang.lang-switch-trigger:focus-visible {
   background: var(--seeker-pink);
   color: var(--seeker-maroon-dark);
   transform: translateY(-1px);
 }
 
-.seeker-dash-lang.lang-switch-trigger:focus-visible,
-.seeker-dash-lang.theme-toggle:focus-visible {
+.seeker-dash-lang.lang-switch-trigger:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, white);
   outline-offset: 2px;
 }
 
-.seeker-dash-lang .lang-switch-icon,
-.seeker-dash-lang .theme-toggle-icon {
+.seeker-dash-lang .lang-switch-icon {
   width: 1.35rem;
   height: 1.35rem;
 }
@@ -7985,162 +7979,5 @@ html[dir="rtl"] .seeker-notify-panel {
   .wesal-mabrouk-ask:hover {
     transform: none;
   }
-}
-
-/* Warm dark theme. Light stays the default; html[data-theme="dark"] swaps surfaces. */
-html[data-theme="dark"] {
-  color-scheme: dark;
-  --wesal-maroon: #e0a8ab;
-  --wesal-maroon-dark: #f0c4c6;
-  --wesal-maroon-soft: #c4898d;
-  --wesal-brand-ink: #e0a8ab;
-  --wesal-pink: #3a2c2a;
-  --wesal-pink-soft: #2a211f;
-  --wesal-cream: #171311;
-  --wesal-footer: #120e0d;
-  --wesal-text: #f6eee9;
-  --wesal-muted: #cbbab2;
-  --wesal-border: rgba(244, 220, 206, 0.16);
-  --wesal-white: #241c1a;
-  --wesal-ivory: #2c2320;
-  --wesal-gold: #e4c98a;
-  --wesal-gold-soft: #8d7344;
-  --wesal-nude: #d7a898;
-  --background: #171311;
-  --foreground: #f6eee9;
-}
-
-html[data-theme="dark"] body {
-  background:
-    radial-gradient(ellipse 70% 40% at 100% 0%, rgba(224, 168, 171, 0.14), transparent 55%),
-    radial-gradient(ellipse 50% 35% at 0% 100%, rgba(228, 201, 138, 0.08), transparent 55%),
-    linear-gradient(180deg, #211a18 0%, var(--wesal-cream) 55%, #120e0c 100%);
-  color: var(--foreground);
-}
-
-html[data-theme="dark"] .theme-toggle-moon {
-  display: none;
-}
-
-html[data-theme="dark"] .theme-toggle-sun {
-  display: block;
-}
-
-.theme-toggle-sun {
-  display: none;
-}
-
-html[data-theme="dark"] .btn-outline {
-  background: transparent;
-}
-
-html[data-theme="dark"] .wesal-navbar {
-  box-shadow:
-    0 10px 36px rgba(0, 0, 0, 0.35),
-    0 1px 0 rgba(255, 255, 255, 0.04) inset;
-}
-
-html[data-theme="dark"] .wesal-navbar-bg {
-  background:
-    radial-gradient(ellipse 80% 120% at 12% 0%, rgba(228, 201, 138, 0.08), transparent 55%),
-    radial-gradient(ellipse 70% 100% at 88% 100%, rgba(224, 168, 171, 0.1), transparent 50%),
-    linear-gradient(105deg, rgba(28, 22, 20, 0.96) 0%, rgba(23, 19, 17, 0.94) 42%, rgba(28, 22, 20, 0.96) 100%);
-}
-
-html[data-theme="dark"] .wesal-navbar--overlay .wesal-navbar-bg,
-html[data-theme="dark"] .wesal-navbar-mobile,
-html[data-theme="dark"] .wesal-navbar-mobile--overlay {
-  background: rgba(23, 19, 17, 0.94);
-}
-
-html[data-theme="dark"] .hero-ink-bg {
-  opacity: 0.16;
-  mix-blend-mode: soft-light;
-  filter: brightness(0.35) saturate(0.7);
-}
-
-html[data-theme="dark"] .hero-satin {
-  background-color: #1c1614;
-  background-image:
-    radial-gradient(ellipse 90% 80% at 40% 45%, rgba(224, 168, 171, 0.16) 0%, transparent 62%),
-    radial-gradient(ellipse 45% 40% at 15% 20%, rgba(228, 201, 138, 0.12), transparent 65%),
-    linear-gradient(150deg, #241c1a 0%, #1a1412 55%, #120e0c 100%);
-}
-
-html[data-theme="dark"] .how-section,
-html[data-theme="dark"] .occasion-story {
-  background: #1c1614;
-}
-
-html[data-theme="dark"] .wesal-footer {
-  background: #120e0d;
-}
-
-html[data-theme="dark"] .footer-marble-img {
-  opacity: 0.16;
-  filter: brightness(0.35) saturate(0.6);
-}
-
-html[data-theme="dark"] .footer-marble-wash {
-  background: linear-gradient(180deg, rgba(18, 14, 13, 0.2), rgba(18, 14, 13, 0.72));
-}
-
-html[data-theme="dark"] .story-stat-card,
-html[data-theme="dark"] .consult-form,
-html[data-theme="dark"] .consult-aside,
-html[data-theme="dark"] .consult-input,
-html[data-theme="dark"] .wesal-account-menu,
-html[data-theme="dark"] .wesal-navbar-mobile .wesal-account-menu,
-html[data-theme="dark"] .owner-mgmt-sidebar,
-html[data-theme="dark"] .hall-section-card,
-html[data-theme="dark"] .owner-chat-workspace.seeker-messages-workspace,
-html[data-theme="dark"] .owner-chat-workspace .seeker-messages-list,
-html[data-theme="dark"] .owner-chat-composer,
-html[data-theme="dark"] .owner-chat-bubble.is-own {
-  background: var(--wesal-white);
-}
-
-html[data-theme="dark"] .owner-chat-thread-body {
-  background: #1a1412;
-}
-
-html[data-theme="dark"] .seeker-app {
-  --seeker-maroon: #e0a8ab;
-  --seeker-maroon-dark: #f0c4c6;
-  --seeker-maroon-soft: #c4898d;
-  --seeker-pink: #3a2c2a;
-  --seeker-pink-soft: #2a211f;
-  --seeker-cream: #171311;
-  --seeker-gold: #e4c98a;
-  --seeker-gold-soft: #8d7344;
-  --seeker-text: #f6eee9;
-  --seeker-muted: #cbbab2;
-  --seeker-border: rgba(244, 220, 206, 0.16);
-  --seeker-white: #241c1a;
-  background:
-    radial-gradient(ellipse 90% 55% at 100% -10%, rgba(224, 168, 171, 0.16), transparent 62%),
-    radial-gradient(ellipse 55% 40% at 0% 100%, rgba(228, 201, 138, 0.08), transparent 70%),
-    linear-gradient(165deg, #1c1614 0%, #171311 48%, #120e0c 100%);
-}
-
-html[data-theme="dark"] .bg-white,
-html[data-theme="dark"] .bg-white\/40,
-html[data-theme="dark"] .bg-white\/50,
-html[data-theme="dark"] .bg-white\/60,
-html[data-theme="dark"] .bg-white\/70,
-html[data-theme="dark"] .bg-white\/75,
-html[data-theme="dark"] .bg-white\/80,
-html[data-theme="dark"] .bg-white\/90,
-html[data-theme="dark"] .bg-white\/95,
-html[data-theme="dark"] .bg-\[\#fff\],
-html[data-theme="dark"] .bg-\[\#ffffff\],
-html[data-theme="dark"] .bg-\[\#fcfbf9\],
-html[data-theme="dark"] .bg-\[\#fcf9f7\],
-html[data-theme="dark"] .bg-\[\#f8f3ee\],
-html[data-theme="dark"] .bg-\[\#f6f1ec\],
-html[data-theme="dark"] .bg-\[\#f6f0e8\],
-html[data-theme="dark"] .bg-\[\#f7f0ea\],
-html[data-theme="dark"] .bg-\[\#fffaf4\] {
-  background-color: var(--wesal-white);
 }
 

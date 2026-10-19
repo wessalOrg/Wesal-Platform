@@ -56,7 +56,6 @@ const ar: MessageCatalog = {
   "lang.currentEn": "English",
   "lang.shortEn": "EN",
   "lang.shortAr": "عربي",
-  "theme.toggle": "تبديل المظهر",
   "footer.quickLinks": "روابط سريعة",
   "footer.account": "الحساب",
   "footer.help": "المساعدة",

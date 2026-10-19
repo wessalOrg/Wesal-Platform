@@ -149,7 +149,7 @@ export default function HomeCategoriesSection() {
                       >
                         <path
                           d={`M0,${PANEL_H} C0,${PANEL_H - KAPPA * (PANEL_H - PLATEAU_Y)} ${CORNER_W * (1 - KAPPA)},${PLATEAU_Y} ${CORNER_W},${PLATEAU_Y} L300,${PLATEAU_Y} L300,${PANEL_H} Z`}
-                          fill="var(--wesal-white)"
+                          fill="#fff"
                         />
                       </svg>
 
@@ -174,7 +174,7 @@ export default function HomeCategoriesSection() {
                           height: FILLET,
                           top: PLATEAU_Y - FILLET,
                           [side]: BUBBLE_INSET - FILLET,
-                          background: `radial-gradient(circle at ${rtl ? "100%" : "0%"} 0%, transparent ${FILLET - 0.5}px, var(--wesal-white) ${FILLET}px)`,
+                          background: `radial-gradient(circle at ${rtl ? "100%" : "0%"} 0%, transparent ${FILLET - 0.5}px, #fff ${FILLET}px)`,
                         }}
                         aria-hidden="true"
                       />
@@ -185,7 +185,7 @@ export default function HomeCategoriesSection() {
                           height: FILLET,
                           top: PLATEAU_Y - FILLET,
                           [side]: BUBBLE_INSET + BUBBLE,
-                          background: `radial-gradient(circle at ${rtl ? "0%" : "100%"} 0%, transparent ${FILLET - 0.5}px, var(--wesal-white) ${FILLET}px)`,
+                          background: `radial-gradient(circle at ${rtl ? "0%" : "100%"} 0%, transparent ${FILLET - 0.5}px, #fff ${FILLET}px)`,
                         }}
                         aria-hidden="true"
                       />

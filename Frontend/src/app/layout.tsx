@@ -15,7 +15,6 @@ import { LanguageProvider } from "@/components/layout/LanguageProvider";
 import { translate } from "@/i18n";
 import { FAB_POSITION_BOOT_SCRIPT } from "@/lib/fab-position";
 import { LANGUAGE_BOOT_SCRIPT } from "@/lib/language";
-import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 /**
@@ -97,7 +96,6 @@ export default function RootLayout({
           <script dangerouslySetInnerHTML={{ __html: DEV_CURSOR_REF_GUARD }} />
         ) : null}
         <script dangerouslySetInnerHTML={{ __html: LANGUAGE_BOOT_SCRIPT }} />
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: FAB_POSITION_BOOT_SCRIPT }} />
         {/* Legacy iOS (< 15) needs the apple- prefixed tags; modern
             browsers use mobile-web-app-capable emitted via metadata. */}

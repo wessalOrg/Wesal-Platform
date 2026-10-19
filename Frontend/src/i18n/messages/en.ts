@@ -59,7 +59,6 @@ const en: MessageCatalog = {
   "lang.currentEn": "English",
   "lang.shortEn": "EN",
   "lang.shortAr": "AR",
-  "theme.toggle": "Toggle appearance",
   "footer.quickLinks": "Quick links",
   "footer.account": "Account",
   "footer.help": "Help",

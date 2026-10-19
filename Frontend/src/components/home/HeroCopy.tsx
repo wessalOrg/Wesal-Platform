@@ -59,7 +59,7 @@ export default function HeroCopy({ titleId, intro }: HeroCopyProps) {
         <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-maroon)]/70" />
       </div>
 
-      <p className="hero-copy-desc mt-5 text-sm leading-8 text-[var(--wesal-text)] sm:text-[0.95rem]">
+      <p className="hero-copy-desc mt-5 text-sm leading-8 text-black sm:text-[0.95rem]">
         {t("home.hero.description")}
       </p>
 
