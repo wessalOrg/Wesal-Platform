@@ -15,6 +15,21 @@ public interface IConversationRepository
     }
 
     /// <summary>
+    /// Resolves the single Admin↔user account-request thread for a coordinator or
+    /// photographer (WESAL admin coordinator/photographer requests, Tasks 5/6).
+    ///
+    /// These threads carry no hall: their identity is (HallId = null, HallOwnerId = the
+    /// requesting user), which is exactly the pair this method keys on, so every Admin action
+    /// for the same account lands in the same thread. Same deterministic ordering as the hall
+    /// thread resolvers: oldest wins, so resolution is stable across calls and repeated
+    /// reviews never fork a second conversation.
+    /// </summary>
+    Task<Conversation?> GetAdminUserConversationAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<Conversation?>(null);
+    }
+
+    /// <summary>
     /// Resolves the id of a user holding the Admin role, used to fill the Admin
     /// counterparty slot of an owner/Admin thread (WESAL-TASK-11, Edit 11).
     ///

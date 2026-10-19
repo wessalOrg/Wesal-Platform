@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
+using Wesal.Domain.Enums;
 using Wesal.Persistence.Data;
 
 namespace Wesal.Persistence.Repositories;
@@ -31,4 +33,47 @@ public sealed class PhotographerRepository : IPhotographerRepository
         => _context.PhotographerProfiles
             .AsNoTracking()
             .FirstOrDefaultAsync(profile => profile.UserId == userId, cancellationToken);
+
+    /// <summary>
+    /// WESAL Task 6, requirement 6.1. Same shape as the coordinator queue: inner join with
+    /// the account (the status filter lives there), newest submission first, UserId
+    /// tie-break so paging is stable.
+    /// </summary>
+    public async Task<IReadOnlyList<AdminPhotographerRequestDto>> GetRequestsAsync(
+        AccountApprovalStatus? status,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var query = QueryRequests(status);
+
+        return await query
+            .OrderByDescending(row => row.SubmittedAt)
+            .ThenBy(row => row.UserId)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountRequestsAsync(AccountApprovalStatus? status, CancellationToken cancellationToken = default)
+        => await QueryRequests(status).CountAsync(cancellationToken);
+
+    private IQueryable<AdminPhotographerRequestDto> QueryRequests(AccountApprovalStatus? status)
+    {
+        var requestedStatus = status;
+
+        return from profile in _context.PhotographerProfiles.AsNoTracking()
+               join user in _context.Users.AsNoTracking() on profile.UserId equals user.Id
+               where requestedStatus == null || user.ApprovalStatus == requestedStatus
+               select new AdminPhotographerRequestDto
+               {
+                   UserId = user.Id,
+                   FullName = user.FullName,
+                   Email = user.Email ?? string.Empty,
+                   ApprovalStatus = user.ApprovalStatus,
+                   HasStudio = profile.HasStudio,
+                   DisplayName = profile.StudioName,
+                   SubmittedAt = profile.SubmittedAt
+               };
+    }
 }

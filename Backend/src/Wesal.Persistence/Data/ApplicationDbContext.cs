@@ -329,6 +329,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.HasIndex(conversation => conversation.HallId);
 
+            // HallId is Guid?: a hall-less Admin request thread (Tasks 5/6) is a real
+            // conversation with no venue behind it, so the FK must be optional. Nothing else
+            // is configured here — conventions already infer the nullable relationship from
+            // the property, and the cascade still applies to the rows that do name a hall.
             entity.HasOne(conversation => conversation.Hall)
                 .WithMany()
                 .HasForeignKey(conversation => conversation.HallId)

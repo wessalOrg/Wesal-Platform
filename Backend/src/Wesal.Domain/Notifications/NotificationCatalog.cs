@@ -249,7 +249,68 @@ public static class NotificationCatalog
                 EnglishBody: "Your request was sent successfully. Wesal administration will review it, and during the waiting period you can browse and book halls and message the administration.",
                 ArabicActionLabel: null,
                 EnglishActionLabel: null,
-                ActionTarget: NotificationActionTarget.None)
+                ActionTarget: NotificationActionTarget.None),
+
+            // 17. An Admin approved an Event Coordinator's account request (Task 5, 15.1).
+            // Purely informational: approval itself opens nothing, so there is no action.
+            [NotificationKind.CoordinatorApprovedForCoordinator] = new NotificationTemplate(
+                ArabicTitle: "مبروك! تمت الموافقة على حسابك",
+                EnglishTitle: "Congratulations! Your account has been approved",
+                ArabicBody: "أصبح بإمكانك إنشاء منشوراتك وعروضك وإدارة ملفك التجاري.",
+                EnglishBody: "You can now create your posts and offers and manage your business profile.",
+                ArabicActionLabel: null,
+                EnglishActionLabel: null,
+                ActionTarget: NotificationActionTarget.None),
+
+            // 18. An Admin rejected an Event Coordinator's account request (Task 5, 5.5 +
+            // 15.1). The reason is part of the notification body per the requirement, and
+            // the action opens the Admin conversation where the same reason was posted as
+            // a message, so the coordinator can ask questions about it.
+            [NotificationKind.CoordinatorRejectedForCoordinator] = new NotificationTemplate(
+                ArabicTitle: "تعذر قبول طلبك",
+                EnglishTitle: "Your request could not be accepted",
+                ArabicBody: "تم رفض طلبك للسبب الاتي : \"" + NotificationTokens.Reason + "\"",
+                EnglishBody: "Your request was rejected for the following reason: \"" + NotificationTokens.Reason + "\"",
+                ArabicActionLabel: "فتح المحادثة مع الإدارة",
+                EnglishActionLabel: "Open the conversation with administration",
+                ActionTarget: NotificationActionTarget.Conversation),
+
+            // 19. An Admin approved a Photographer's account request (Task 6, 15.6).
+            [NotificationKind.PhotographerApprovedForPhotographer] = new NotificationTemplate(
+                ArabicTitle: "تمت الموافقة على حسابك!",
+                EnglishTitle: "Your account has been approved!",
+                ArabicBody: "أصبح ملفك المهني متاحًا وفق إعدادات النشر، ويمكنك الآن إضافة أعمالك ومنشوراتك وعروضك.",
+                EnglishBody: "Your professional profile is now available according to the publishing settings, and you can now add your works, posts and offers.",
+                ArabicActionLabel: null,
+                EnglishActionLabel: null,
+                ActionTarget: NotificationActionTarget.None),
+
+            // 20. An Admin asked a Photographer to edit their submission (Task 6, 6.5 +
+            // 15.6). The notification body points at the conversation rather than
+            // repeating the notes, because the requirement states the details live in the
+            // conversation; TargetId carries that thread's id.
+            [NotificationKind.PhotographerNeedsChangesForPhotographer] = new NotificationTemplate(
+                ArabicTitle: "طلبك يحتاج إلى تعديل",
+                EnglishTitle: "Your request needs editing",
+                ArabicBody: "توجد ملاحظات من الإدارة على بياناتك أو مستنداتك. افتح المحادثة لمعرفة التفاصيل، ثم عدّل المطلوب وأعد تقديم الطلب.",
+                EnglishBody: "There are notes from the administration on your data or documents. Open the conversation to see the details, then edit what is required and resubmit the request.",
+                ArabicActionLabel: "فتح المحادثة مع الإدارة",
+                EnglishActionLabel: "Open the conversation with administration",
+                ActionTarget: NotificationActionTarget.Conversation),
+
+            // 21. An Admin rejected a Photographer's account request (Task 6, 6.5 + 15.6).
+            // The requirement's body cell describes behavior ("shows the rejection reason
+            // written by the admin") rather than literal wording, so the body carries the
+            // reason the same way the coordinator rejection does, and the action opens the
+            // Admin conversation the reason was posted into.
+            [NotificationKind.PhotographerRejectedForPhotographer] = new NotificationTemplate(
+                ArabicTitle: "تم رفض طلبك",
+                EnglishTitle: "Your request was rejected",
+                ArabicBody: "تم رفض طلبك للسبب الاتي : \"" + NotificationTokens.Reason + "\"",
+                EnglishBody: "Your request was rejected for the following reason: \"" + NotificationTokens.Reason + "\"",
+                ArabicActionLabel: "فتح المحادثة مع الإدارة",
+                EnglishActionLabel: "Open the conversation with administration",
+                ActionTarget: NotificationActionTarget.Conversation)
         };
 
     public static NotificationTemplate Get(NotificationKind kind)

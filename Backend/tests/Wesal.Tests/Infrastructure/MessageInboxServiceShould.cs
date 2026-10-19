@@ -441,7 +441,7 @@ public class MessageInboxServiceShould
         public Task<Conversation?> GetByIdWithHallAsync(Guid conversationId, CancellationToken cancellationToken = default)
         {
             var conversation = Conversations.FirstOrDefault(c => c.Id == conversationId);
-            if (conversation is not null && Halls.TryGetValue(conversation.HallId, out var hall))
+            if (conversation is not null && conversation.HallId is Guid hallId && Halls.TryGetValue(hallId, out var hall))
             {
                 conversation.Hall = hall;
             }
@@ -453,10 +453,10 @@ public class MessageInboxServiceShould
         {
             var conversations = Conversations
                 .Where(c => (c.SenderUserId == userId || c.HallOwnerId == userId)
-                    && Halls.TryGetValue(c.HallId, out var hall) && !hall.IsDeleted)
+                    && c.HallId is Guid hallKey && Halls.TryGetValue(hallKey, out var hall) && !hall.IsDeleted)
                 .Select(c =>
                 {
-                    c.Hall = Halls[c.HallId];
+                    c.Hall = Halls[c.HallId!.Value];
                     return c;
                 })
                 .OrderByDescending(c => c.CreatedAt)

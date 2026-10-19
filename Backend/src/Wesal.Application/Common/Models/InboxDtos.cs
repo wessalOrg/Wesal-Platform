@@ -4,7 +4,11 @@ public sealed class ConversationSummaryResponse
 {
     public Guid ConversationId { get; init; }
 
-    public Guid HallId { get; init; }
+    /// <summary>
+    /// The hall this thread concerns, or null for a hall-less Admin request thread
+    /// (WESAL admin coordinator/photographer requests, Tasks 5/6).
+    /// </summary>
+    public Guid? HallId { get; init; }
 
     public string HallName { get; init; } = string.Empty;
 
@@ -70,7 +74,11 @@ public sealed class MessageThreadResponse
 {
     public Guid ConversationId { get; init; }
 
-    public Guid HallId { get; init; }
+    /// <summary>
+    /// The hall this thread concerns, or null for a hall-less Admin request thread
+    /// (WESAL admin coordinator/photographer requests, Tasks 5/6).
+    /// </summary>
+    public Guid? HallId { get; init; }
 
     public string HallName { get; init; } = string.Empty;
 

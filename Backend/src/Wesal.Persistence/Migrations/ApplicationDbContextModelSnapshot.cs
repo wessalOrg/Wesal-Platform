@@ -641,7 +641,7 @@ namespace Wesal.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("HallId")
+                    b.Property<Guid?>("HallId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("HallOwnerId")
@@ -1500,8 +1500,7 @@ namespace Wesal.Persistence.Migrations
                     b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
                         .WithMany()
                         .HasForeignKey("HallId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Hall");
                 });

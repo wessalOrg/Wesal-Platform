@@ -114,6 +114,10 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddScoped<IHallSubscriptionService, HallSubscriptionService>();
         services.AddScoped<IAdminHallService, AdminHallService>();
         services.AddScoped<IAdminHallReviewService, AdminHallReviewService>();
+        // WESAL Tasks 5/6: the shared mechanics of an Administrator decision on a
+        // coordinator or photographer account request (transition guard, thread
+        // resolution, durable notification, post-commit dispatch).
+        services.AddScoped<AccountRequestReviewActions>();
         services.AddScoped<IAdminSubscriptionService, AdminSubscriptionService>();
         services.AddScoped<ISubscriptionExpiryLockService, SubscriptionExpiryLockService>();
         services.Configure<SubscriptionExpiryLockOptions>(configuration.GetSection(SubscriptionExpiryLockOptions.SectionName));

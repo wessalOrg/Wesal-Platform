@@ -127,6 +127,26 @@ public sealed class ConversationRepository : IConversationRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Resolves the single Admin↔user account-request thread for a coordinator or
+    /// photographer (WESAL admin coordinator/photographer requests, Tasks 5/6).
+    ///
+    /// Keyed on (HallId = null, HallOwnerId = user) — the hall-less thread's identity, the
+    /// exact mirror of <see cref="GetByHallForOwnerAsync"/> minus the hall — so repeated
+    /// Admin actions for the same account always land in the same conversation. Oldest wins
+    /// for the same reason those resolvers order: there is no unique constraint to stop two
+    /// concurrent reviews from inserting, and an unordered lookup would silently resolve to a
+    /// different thread per call if a duplicate ever existed.
+    /// </summary>
+    public async Task<Conversation?> GetAdminUserConversationAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Conversations
+            .Where(c => c.HallId == null && c.HallOwnerId == userId)
+            .OrderBy(c => c.CreatedAt)
+            .ThenBy(c => c.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<Conversation?> GetByIdWithHallAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
         return await _context.Conversations
@@ -317,7 +337,7 @@ public sealed class ConversationRepository : IConversationRepository
         }
 
         return await query
-            .Where(c => !c.Hall.IsDeleted)
+            .Where(c => c.Hall == null || !c.Hall.IsDeleted)
             .Where(VisibleToUser(_context, userId))
             .OrderByDescending(c => c.CreatedAt)
             .ThenByDescending(c => c.Id)
@@ -375,7 +395,7 @@ public sealed class ConversationRepository : IConversationRepository
         // different rows.
         IQueryable<Conversation> query = _context.Conversations
             .AsNoTracking()
-            .Where(c => !c.Hall.IsDeleted);
+            .Where(c => c.Hall == null || !c.Hall.IsDeleted);
 
         IReadOnlyList<string> adminIds = [];
 
@@ -422,9 +442,13 @@ public sealed class ConversationRepository : IConversationRepository
         //
         // A non-Approved hall is not locked out of (its owner must keep reading review and
         // rejection messages, US-ADMIN-03), and a deleted hall never reaches here.
+        // A hall-less Admin request thread (Tasks 5/6) has no hall whose lock could withhold
+        // it, so the exclusion is guarded on Hall != null rather than letting the navigation
+        // read as NULL and, depending on the provider, either fault or silently drop the row.
         if (!isAdmin)
         {
-            query = query.Where(c => !(c.HallOwnerId == userId
+            query = query.Where(c => !(c.Hall != null
+                && c.HallOwnerId == userId
                 && c.Hall.Status == HallStatus.Approved
                 && (c.Hall.IsAdminLocked || c.Hall.SystemLocked)));
         }

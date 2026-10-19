@@ -36,6 +36,15 @@ public class SwaggerDocumentShould
     private const string AdminCoordinatorIdentityPath = "/api/v{version}/admin/coordinators/{userId}/identity-document";
     private const string PhotographerSetupPath = "/api/v{version}/photographer/setup";
     private const string AdminPhotographerIdentityPath = "/api/v{version}/admin/photographers/{userId}/identity-document";
+    private const string AdminCoordinatorListPath = "/api/v{version}/admin/coordinators";
+    private const string AdminCoordinatorDetailPath = "/api/v{version}/admin/coordinators/{userId}";
+    private const string AdminCoordinatorRejectPath = "/api/v{version}/admin/coordinators/{userId}/reject";
+    private const string AdminCoordinatorConversationPath = "/api/v{version}/admin/coordinators/{userId}/conversation";
+    private const string AdminPhotographerListPath = "/api/v{version}/admin/photographers";
+    private const string AdminPhotographerDetailPath = "/api/v{version}/admin/photographers/{userId}";
+    private const string AdminPhotographerRejectPath = "/api/v{version}/admin/photographers/{userId}/reject";
+    private const string AdminPhotographerRequestChangesPath = "/api/v{version}/admin/photographers/{userId}/request-changes";
+    private const string AdminPhotographerConversationPath = "/api/v{version}/admin/photographers/{userId}/conversation";
 
     /// <summary>
     /// Total operations' paths. Guards against the document silently losing endpoints, and
@@ -47,9 +56,12 @@ public class SwaggerDocumentShould
     /// edit/delete path; 66 adds Edit 26's rejected-halls queue endpoint; 90 adds the
     /// 24 Mabrouk Knowledge Studio admin operations; 92 adds the coordinator setup
     /// submission and admin coordinator identity-document endpoints; 94 adds the
-    /// photographer setup submission and admin photographer identity-document endpoints.
+    /// photographer setup submission and admin photographer identity-document endpoints;
+    /// 107 adds Task 5's seven coordinator-review operations (list, detail, shop-photo,
+    /// work-photos, approve, reject, conversation) and Task 6's six photographer-review
+    /// operations (list, detail, approve, reject, request-changes, conversation).
     /// </summary>
-    private const int ExpectedPathCount = 94;
+    private const int ExpectedPathCount = 107;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -75,6 +87,34 @@ public class SwaggerDocumentShould
         Assert.Contains(AdminCoordinatorIdentityPath, document.Paths.Keys);
         Assert.Contains(PhotographerSetupPath, document.Paths.Keys);
         Assert.Contains(AdminPhotographerIdentityPath, document.Paths.Keys);
+    }
+
+    [Fact]
+    public void AdminReviewEndpoints_ArePresentInTheDocument()
+    {
+        // WESAL Tasks 5 and 6: every coordinator/photographer review operation must be a
+        // published path, so the admin UI can be generated against the spec instead of
+        // guessing routes for decisions, document reads, or the contact thread.
+        var document = BuildDocument();
+
+        string[] newPaths =
+        [
+            AdminCoordinatorListPath,
+            AdminCoordinatorDetailPath,
+            "/api/v{version}/admin/coordinators/{userId}/shop-photo",
+            "/api/v{version}/admin/coordinators/{userId}/work-photos/{index}",
+            "/api/v{version}/admin/coordinators/{userId}/approve",
+            AdminCoordinatorRejectPath,
+            AdminCoordinatorConversationPath,
+            AdminPhotographerListPath,
+            AdminPhotographerDetailPath,
+            "/api/v{version}/admin/photographers/{userId}/approve",
+            AdminPhotographerRejectPath,
+            AdminPhotographerRequestChangesPath,
+            AdminPhotographerConversationPath
+        ];
+
+        Assert.All(newPaths, path => Assert.Contains(path, document.Paths.Keys));
     }
 
     [Fact]

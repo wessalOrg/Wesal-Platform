@@ -67,7 +67,40 @@ public enum NotificationKind
     /// A Photographer's setup submission was received and is awaiting administrative
     /// review (WESAL photographer setup).
     /// </summary>
-    PhotographerSetupReceivedForPhotographer = 16
+    PhotographerSetupReceivedForPhotographer = 16,
+
+    /// <summary>
+    /// An Admin approved an Event Coordinator's account request
+    /// (WESAL admin coordinator requests, Task 5, requirement 15.1).
+    /// </summary>
+    CoordinatorApprovedForCoordinator = 17,
+
+    /// <summary>
+    /// An Admin rejected an Event Coordinator's account request; the reason is delivered
+    /// inside the notification and the click-through opens the Admin conversation
+    /// (WESAL admin coordinator requests, Task 5, requirements 5.5 and 15.1).
+    /// </summary>
+    CoordinatorRejectedForCoordinator = 18,
+
+    /// <summary>
+    /// An Admin approved a Photographer's account request
+    /// (WESAL admin photographer requests, Task 6, requirement 15.6).
+    /// </summary>
+    PhotographerApprovedForPhotographer = 19,
+
+    /// <summary>
+    /// An Admin asked a Photographer to edit their data or documents; the click-through
+    /// opens the Admin conversation that carries the notes
+    /// (WESAL admin photographer requests, Task 6, requirements 6.5 and 15.6).
+    /// </summary>
+    PhotographerNeedsChangesForPhotographer = 20,
+
+    /// <summary>
+    /// An Admin rejected a Photographer's account request; the reason is delivered inside
+    /// the notification and the click-through opens the Admin conversation
+    /// (WESAL admin photographer requests, Task 6, requirements 6.5 and 15.6).
+    /// </summary>
+    PhotographerRejectedForPhotographer = 21
 }
 
 /// <summary>

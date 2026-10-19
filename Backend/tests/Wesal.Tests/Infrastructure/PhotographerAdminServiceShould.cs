@@ -1,15 +1,18 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
+using Wesal.Infrastructure.Admin;
 using Wesal.Infrastructure.Identity;
 using Wesal.Infrastructure.Photographers;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
+using Wesal.Tests.TestDoubles;
 
 namespace Wesal.Tests.Infrastructure;
 
@@ -41,7 +44,28 @@ public class PhotographerAdminServiceShould : IDisposable
     private PhotographerAdminService CreateService() => new(
         _userManager,
         new PhotographerRepository(_context),
-        _store);
+        _store,
+        new UnitOfWork(_context),
+        CreateReviewActions(_context));
+
+    private static AccountRequestReviewActions CreateReviewActions(ApplicationDbContext context)
+        => new(
+            new FakeCurrentUser(),
+            new ConversationRepository(context),
+            new MessageRepository(context),
+            new UserNotificationWriter(context),
+            new FakeNotificationService(),
+            new RecordingNotificationDispatcher(),
+            NullLogger<AccountRequestReviewActions>.Instance);
+
+    private sealed class FakeCurrentUser : ICurrentUserService
+    {
+        public string? UserId => null;
+        public string? UserName => null;
+        public string? Email => null;
+        public bool IsAuthenticated => false;
+        public IReadOnlyList<string> Roles => [];
+    }
 
     private async Task<ApplicationUser> CreatePhotographerWithProfileAsync(
         string email,

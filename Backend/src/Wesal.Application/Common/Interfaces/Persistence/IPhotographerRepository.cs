@@ -1,4 +1,6 @@
+using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
+using Wesal.Domain.Enums;
 
 namespace Wesal.Application.Common.Interfaces.Persistence;
 
@@ -13,4 +15,19 @@ public interface IPhotographerRepository
     Task AddAsync(PhotographerProfile profile, CancellationToken cancellationToken = default);
 
     Task<PhotographerProfile?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The administrator's request queue (WESAL Task 6, requirement 6.1): one row per
+    /// submitted setup, joined with its account so the status filter and the identity
+    /// columns come from the same read. Newest submission first with a deterministic
+    /// tie-break, already paged by the caller. A null status means "every status".
+    /// </summary>
+    Task<IReadOnlyList<AdminPhotographerRequestDto>> GetRequestsAsync(
+        AccountApprovalStatus? status,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>The total rows <see cref="GetRequestsAsync"/> would return, for paging.</summary>
+    Task<int> CountRequestsAsync(AccountApprovalStatus? status, CancellationToken cancellationToken = default);
 }

@@ -54,9 +54,12 @@ public sealed class ConversationNotifier : IConversationNotifier
     {
         var conversation = await _conversationRepository.GetByIdWithHallAsync(message.ConversationId, cancellationToken);
 
-        // Fail closed. If the thread or its hall cannot be resolved, nobody has been
-        // authorised to receive this and a broadcast would be a guess.
-        if (conversation is null || conversation.Hall is null || conversation.Hall.IsDeleted)
+        // Fail closed. If the thread cannot be resolved, nobody has been authorised to
+        // receive this and a broadcast would be a guess. A deleted hall fails closed the
+        // same way; a hall-LESS thread (an Admin request conversation, Tasks 5/6) does not:
+        // its parties are recorded on the row itself, so recipients resolve below exactly as
+        // they do for an owner/Admin thread.
+        if (conversation is null || conversation.Hall?.IsDeleted == true)
         {
             return;
         }

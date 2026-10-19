@@ -19,5 +19,14 @@ public enum AccountApprovalStatus
     Pending = 1,
 
     /// <summary>An administrator rejected the account's setup submission.</summary>
-    Rejected = 2
+    Rejected = 2,
+
+    /// <summary>
+    /// An administrator reviewed the submission and asked for edits to the data or
+    /// documents (WESAL photographer setup, Task 6). The account stays blocked from
+    /// publishing exactly like <see cref="Pending"/> until it is resubmitted and approved;
+    /// the value is appended after <see cref="Rejected"/> so no existing stored number
+    /// changes meaning.
+    /// </summary>
+    NeedsChanges = 3
 }
