@@ -223,6 +223,7 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
 
         services.AddScoped<Wesal.Application.Common.Interfaces.IUserContentPublishingRestrictionService, Wesal.Infrastructure.Identity.UserContentPublishingRestrictionService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IPostService, Wesal.Infrastructure.Publishing.PostService>();
+        services.AddScoped<Wesal.Application.Common.Interfaces.IPostInteractionService, Wesal.Infrastructure.Publishing.PostInteractionService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IProfessionalOfferService, Wesal.Infrastructure.Publishing.ProfessionalOfferService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IHallOfferService, Wesal.Infrastructure.Publishing.HallOfferService>();
         services.AddScoped<Wesal.Application.Common.Interfaces.IOfferLifecycleService, Wesal.Infrastructure.Publishing.OfferLifecycleService>();
