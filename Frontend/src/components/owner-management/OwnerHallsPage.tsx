@@ -306,19 +306,14 @@ function OwnerHallCard({
         <HallCardPhotos images={photos} emptyLabel={t("owner.hallsPage.title")} />
         <div className="flex min-w-0 flex-1 flex-col gap-3 p-3 sm:p-4">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 items-start gap-1.5">
-              <div className="min-w-0">
-                <h2 className="truncate text-base font-extrabold text-[var(--wesal-maroon-dark)]">{name}</h2>
-                {location ? (
-                  <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--wesal-muted)]">
-                    <PinIcon />
-                    <span className="truncate">{location}</span>
-                  </p>
-                ) : null}
-              </div>
-              <span className="mt-0.5 text-[var(--wesal-maroon-soft)]" aria-hidden="true">
-                <HeartIcon />
-              </span>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-extrabold text-[var(--wesal-maroon-dark)]">{name}</h2>
+              {location ? (
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--wesal-muted)]">
+                  <PinIcon />
+                  <span className="truncate">{location}</span>
+                </p>
+              ) : null}
             </div>
             <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${badgeClass}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
@@ -326,7 +321,7 @@ function OwnerHallCard({
             </span>
           </div>
 
-          <dl className="grid gap-2 sm:grid-cols-3">
+          <dl className="grid gap-1.5 sm:grid-cols-3">
             <SubscriptionStat hallId={showSubscription ? hall.id : null} ended={hall.systemLocked} />
             <StatTile
               icon={<PeopleIcon />}
@@ -338,7 +333,7 @@ function OwnerHallCard({
               }
             />
             <StatTile
-              icon={<CoinsIcon />}
+              icon={<ShekelIcon />}
               label={t("owner.hallsPage.priceFrom")}
               value={
                 details?.showPrice && details.price != null && details.price > 0
@@ -480,11 +475,11 @@ function StatTile({
   testId?: string;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl bg-[#fbf4f1] px-2.5 py-2">
+    <div className="flex items-center gap-1.5 rounded-lg bg-[#fbf4f1] px-2 py-1.5">
       <span className="text-[var(--wesal-maroon)]">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[10px] text-[var(--wesal-muted)]">{label}</p>
-        <p className={`truncate text-xs font-extrabold ${valueClass}`} data-testid={testId}>
+        <p className="text-[9px] leading-tight text-[var(--wesal-muted)]">{label}</p>
+        <p className={`truncate text-[11px] font-extrabold leading-tight ${valueClass}`} data-testid={testId}>
           {value}
         </p>
       </div>
@@ -526,19 +521,6 @@ function HallAction({
   );
 }
 
-function HeartIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-      <path
-        d="M12 19s-6.2-3.8-6.2-8.1A3.4 3.4 0 0 1 12 8.2a3.4 3.4 0 0 1 6.2 2.7C18.2 15.2 12 19 12 19Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function PinIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
@@ -550,7 +532,7 @@ function PinIcon() {
 
 function CalendarIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
       <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 3.5v3M16 3.5v3M4 9.5h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
@@ -559,20 +541,21 @@ function CalendarIcon() {
 
 function PeopleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
       <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.6" />
       <path d="M6.5 19c.8-2.8 2.8-4 5.5-4s4.7 1.2 5.5 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
 
-function CoinsIcon() {
+function ShekelIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" aria-hidden="true">
-      <ellipse cx="12" cy="7" rx="6" ry="2.5" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M6 7v5c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V7" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M6 12v5c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-5" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
+    <span
+      className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center font-['Segoe_UI','Arial',sans-serif] text-[13px] font-bold leading-none"
+      aria-hidden="true"
+    >
+      ₪
+    </span>
   );
 }
 
