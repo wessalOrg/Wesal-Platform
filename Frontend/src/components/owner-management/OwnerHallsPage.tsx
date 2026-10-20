@@ -236,16 +236,32 @@ export default function OwnerHallsPage() {
           )}
 
           <div className="flex justify-center">
-            <button
-              type="button"
-              className="btn-primary min-h-10 rounded-2xl px-5 text-xs shadow-[0_10px_24px_rgba(168,98,103,0.22)]"
-              disabled={isInitiating}
-              onClick={beginAddHall}
-            >
-              {isInitiating
-                ? t("owner.management.addHall.starting")
-                : `+ ${t("owner.hallsPage.addNew")}`}
-            </button>
+            <section className="flex w-full max-w-3xl flex-col gap-3 rounded-2xl border border-[#f0e0dc] bg-[#faf4f1] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f3e4df] text-[var(--wesal-maroon)]">
+                  <HallPlusIcon />
+                </span>
+                <span className="hidden h-10 w-px shrink-0 bg-[#e8d6d0] sm:block" aria-hidden="true" />
+                <div className="min-w-0">
+                  <h2 className="text-sm font-extrabold text-[var(--wesal-maroon-dark)]">
+                    {t("owner.hallsPage.addBannerTitle")}
+                  </h2>
+                  <p className="mt-0.5 text-xs leading-5 text-[var(--wesal-muted)]">
+                    {t("owner.hallsPage.addBannerBody")}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-primary min-h-10 shrink-0 rounded-xl px-4 text-xs"
+                disabled={isInitiating}
+                onClick={beginAddHall}
+              >
+                {isInitiating
+                  ? t("owner.management.addHall.starting")
+                  : `${t("owner.hallsPage.addBannerCta")} +`}
+              </button>
+            </section>
           </div>
         </>
       ) : null}
@@ -518,6 +534,22 @@ function HallAction({
       <span>{label}</span>
       {icon}
     </Link>
+  );
+}
+
+function HallPlusIcon() {
+  return (
+    <svg viewBox="0 0 48 48" className="h-6 w-6" fill="none" aria-hidden="true">
+      <path
+        d="M8 22 24 10l16 12v14a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V22Z"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <path d="M20 38V28h8v10" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+      <circle cx="36" cy="14" r="7.5" fill="currentColor" />
+      <path d="M36 10.8v6.4M32.8 14h6.4" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }
 

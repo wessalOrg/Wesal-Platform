@@ -1272,9 +1272,8 @@ const ar: MessageCatalog = {
     "إدارة قاعاتك ومعلوماتها وحالتها التشغيلية وتوافرها من مركز قيادة موحد.",
   "owner.hallsPage.explore": "استكشف الخيارات",
   "owner.hallsPage.addNew": "إضافة قاعة جديدة",
-  "owner.hallsPage.addBannerTitle": "هل تمتلك قاعة إضافية أو مساحة خارجية؟",
-  "owner.hallsPage.addBannerBody":
-    "أضف قاعاتك وصالاتك الأخرى بسهولة تحت نفس الحساب الإداري، لتوسيع نطاق حجوزاتك وزيادة إيراداتك التشغيلية عبر وصال.",
+  "owner.hallsPage.addBannerTitle": "هل تمتلك قاعة إضافية أو قاعة خارجية؟",
+  "owner.hallsPage.addBannerBody": "أضف قاعاتك وصالاتك الأخرى بسهولة عبر وصال.",
   "owner.hallsPage.addBannerCta": "إضافة قاعة جديدة الآن",
   "owner.hallsPage.search": "ابحث بالاسم أو الموقع",
   "owner.hallsPage.filter.all": "الكل",

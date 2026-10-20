@@ -1280,9 +1280,8 @@ const en: MessageCatalog = {
     "Manage your halls, their details, operating status, and availability from one place.",
   "owner.hallsPage.explore": "Explore options",
   "owner.hallsPage.addNew": "Add a new hall",
-  "owner.hallsPage.addBannerTitle": "Do you have another hall or outdoor space?",
-  "owner.hallsPage.addBannerBody":
-    "Add your other halls and spaces under the same account, and widen your bookings on Wesal.",
+  "owner.hallsPage.addBannerTitle": "Do you have another hall or outdoor hall?",
+  "owner.hallsPage.addBannerBody": "Add your other halls and spaces easily through Wesal.",
   "owner.hallsPage.addBannerCta": "Add a new hall now",
   "owner.hallsPage.search": "Search by name or location",
   "owner.hallsPage.filter.all": "All",
