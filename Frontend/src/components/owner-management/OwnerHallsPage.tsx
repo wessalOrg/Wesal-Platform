@@ -321,7 +321,7 @@ function OwnerHallCard({
             </span>
           </div>
 
-          <dl className="grid gap-1.5 sm:grid-cols-3">
+          <dl className="grid gap-1 sm:grid-cols-3 sm:gap-0 sm:overflow-hidden sm:rounded-lg sm:bg-[#fbf4f1] sm:[&>*]:rounded-none sm:[&>*]:bg-transparent sm:[&>*+*]:border-s sm:[&>*+*]:border-[var(--wesal-border)]">
             <SubscriptionStat hallId={showSubscription ? hall.id : null} ended={hall.systemLocked} />
             <StatTile
               icon={<PeopleIcon />}
@@ -475,7 +475,7 @@ function StatTile({
   testId?: string;
 }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-lg bg-[#fbf4f1] px-2 py-1.5">
+    <div className="flex items-center gap-1.5 rounded-lg bg-[#fbf4f1] px-2 py-1.5 sm:px-2.5 sm:py-1.5">
       <span className="text-[var(--wesal-maroon)]">{icon}</span>
       <div className="min-w-0">
         <p className="text-[9px] leading-tight text-[var(--wesal-muted)]">{label}</p>
