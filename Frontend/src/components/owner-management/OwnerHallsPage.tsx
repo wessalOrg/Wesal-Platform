@@ -236,31 +236,48 @@ export default function OwnerHallsPage() {
           )}
 
           <div className="flex justify-center">
-            <section className="flex w-full max-w-3xl flex-col gap-3 rounded-2xl border border-[#f0e0dc] bg-[#faf4f1] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f3e4df] text-[var(--wesal-maroon)]">
-                  <HallPlusIcon />
-                </span>
-                <span className="hidden h-10 w-px shrink-0 bg-[#e8d6d0] sm:block" aria-hidden="true" />
-                <div className="min-w-0">
-                  <h2 className="text-sm font-extrabold text-[var(--wesal-maroon-dark)]">
-                    {t("owner.hallsPage.addBannerTitle")}
-                  </h2>
-                  <p className="mt-0.5 text-xs leading-5 text-[var(--wesal-muted)]">
-                    {t("owner.hallsPage.addBannerBody")}
-                  </p>
+            <section className="relative w-full max-w-3xl overflow-hidden rounded-[22px] border border-[#efe2db] bg-[#fcf8f5] px-4 py-4 shadow-[0_10px_28px_rgba(90,55,45,0.08)] sm:px-5">
+              <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+                <div className="absolute -start-8 -top-10 h-28 w-36 rounded-full bg-[radial-gradient(circle,rgba(216,160,155,0.28),transparent_70%)]" />
+                <div className="absolute -bottom-12 -end-6 h-32 w-40 rounded-full bg-[radial-gradient(circle,rgba(232,190,170,0.3),transparent_72%)]" />
+                <LeafBranch className="absolute end-2 top-1/2 hidden h-16 w-12 -translate-y-1/2 text-[#8a6a5c]/40 sm:block" />
+              </div>
+              <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f4e6e1] text-[var(--wesal-maroon-dark)]">
+                    <HallHouseIcon />
+                    <span className="absolute -end-0.5 -top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--wesal-maroon)] text-[11px] font-bold text-white">
+                      +
+                    </span>
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-extrabold text-[var(--wesal-maroon-dark)]">
+                      {t("owner.hallsPage.addBannerTitle")}
+                    </h2>
+                    <p className="mt-0.5 text-xs leading-5 text-[var(--wesal-muted)]">
+                      {t("owner.hallsPage.addBannerBody")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 sm:shrink-0">
+                  <span className="hidden h-10 w-px bg-[#e4d2cb] sm:block" aria-hidden="true" />
+                  <button
+                    type="button"
+                    className="btn-primary min-h-10 rounded-full px-5 text-xs"
+                    disabled={isInitiating}
+                    onClick={beginAddHall}
+                  >
+                    {isInitiating ? (
+                      t("owner.management.addHall.starting")
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>{t("owner.hallsPage.addBannerCta")}</span>
+                        <span aria-hidden="true">+</span>
+                      </span>
+                    )}
+                  </button>
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn-primary min-h-10 shrink-0 rounded-xl px-4 text-xs"
-                disabled={isInitiating}
-                onClick={beginAddHall}
-              >
-                {isInitiating
-                  ? t("owner.management.addHall.starting")
-                  : `${t("owner.hallsPage.addBannerCta")} +`}
-              </button>
             </section>
           </div>
         </>
@@ -537,18 +554,38 @@ function HallAction({
   );
 }
 
-function HallPlusIcon() {
+function HallHouseIcon() {
   return (
-    <svg viewBox="0 0 48 48" className="h-6 w-6" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 48 48" className="h-7 w-7" fill="none" aria-hidden="true">
       <path
-        d="M8 22 24 10l16 12v14a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V22Z"
+        d="M8 22.5 24 9l16 13.5V39a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V22.5Z"
         stroke="currentColor"
         strokeWidth="2.2"
         strokeLinejoin="round"
       />
-      <path d="M20 38V28h8v10" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-      <circle cx="36" cy="14" r="7.5" fill="currentColor" />
-      <path d="M36 10.8v6.4M32.8 14h6.4" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+      <path d="M19 41V27h10v14" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M14 20.5 24 12l10 8.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LeafBranch({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 64" className={className} fill="none" aria-hidden="true">
+      <path d="M24 58C24 40 18 28 10 16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M12 20c4-1 8 2 9 6-4 1-8-2-9-6ZM16 30c4 0 8 3 8 7-4 0-8-3-8-7ZM20 40c3.5.5 6.5 3.5 6 7-3.5-.5-6.5-3.5-6-7Z"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <path d="M24 50c2-6 8-10 14-11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <path
+        d="M34 36c3 2 4 6 2 9-3-2-4-6-2-9ZM38 42c2.5 2 3 5.5 1 8-2.5-2-3-5.5-1-8Z"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
