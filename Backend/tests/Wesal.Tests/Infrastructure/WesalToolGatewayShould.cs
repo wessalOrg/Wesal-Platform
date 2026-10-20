@@ -81,44 +81,44 @@ public sealed class WesalToolGatewayShould
     }
 
     [Fact]
-    public void RejectInvocationWithUnknownToolName()
+    public async Task RejectInvocationWithUnknownToolName()
     {
         var invocation = new WesalToolInvocation("get_my_bookings", []);
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("not a supported", result.ErrorMessage);
     }
 
     [Fact]
-    public void RejectsUnimplementedWriteToolByName()
+    public async Task RejectsUnimplementedWriteToolByName()
     {
-        var result = _gateway.ExecuteAsync(new WesalToolInvocation("delete_hall", new JsonObject())).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(new WesalToolInvocation("delete_hall", new JsonObject()));
         Assert.False(result.Success);
         Assert.False(_gateway.IsKnownTool("delete_hall"));
     }
 
     [Fact]
-    public void RejectInvocationCarryingJwtToken()
+    public async Task RejectInvocationCarryingJwtToken()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.SearchHalls,
             new JsonObject { ["token"] = "fake-jwt" });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("authentication material", result.ErrorMessage);
     }
 
     [Fact]
-    public void RejectInvocationCarryingUserId()
+    public async Task RejectInvocationCarryingUserId()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.SearchHalls,
             new JsonObject { ["userId"] = "user-123" });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
     }
@@ -127,33 +127,33 @@ public sealed class WesalToolGatewayShould
     [InlineData("ownerId")]
     [InlineData("jwt")]
     [InlineData("authorization")]
-    public void RejectInvocationCarryingAnyIdentityOrCredentialField(string key)
+    public async Task RejectInvocationCarryingAnyIdentityOrCredentialField(string key)
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.SearchHalls,
             new JsonObject { [key] = "untrusted-value" });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("authentication material", result.ErrorMessage);
     }
 
     [Fact]
-    public void RejectInvocationCarryingClaims()
+    public async Task RejectInvocationCarryingClaims()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.GetHallDetails,
             new JsonObject { ["claims"] = "admin" });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("authentication material", result.ErrorMessage);
     }
 
     [Fact]
-    public void RejectUnknownArgumentKey()
+    public async Task RejectUnknownArgumentKey()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.GetHallDetails,
@@ -163,7 +163,7 @@ public sealed class WesalToolGatewayShould
                 ["extraField"] = "nope"
             });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("does not accept", result.ErrorMessage);
@@ -171,18 +171,18 @@ public sealed class WesalToolGatewayShould
     }
 
     [Fact]
-    public void SearchRejectsEmptyCriteriaSet()
+    public async Task SearchRejectsEmptyCriteriaSet()
     {
         var invocation = new WesalToolInvocation(WesalToolNames.SearchHalls, new JsonObject());
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("at least one search criterion", result.ErrorMessage);
     }
 
     [Fact]
-    public void SearchRejectsBadPageSize()
+    public async Task SearchRejectsBadPageSize()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.SearchHalls,
@@ -192,14 +192,14 @@ public sealed class WesalToolGatewayShould
                 ["pageSize"] = 50
             });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("pageSize", result.ErrorMessage);
     }
 
     [Fact]
-    public void SearchRejectsInvalidRegion()
+    public async Task SearchRejectsInvalidRegion()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.SearchHalls,
@@ -208,14 +208,14 @@ public sealed class WesalToolGatewayShould
                 ["region"] = "InvalidRegion"
             });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("region", result.ErrorMessage);
     }
 
     [Fact]
-    public void SearchRejectsInvalidDate()
+    public async Task SearchRejectsInvalidDate()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.SearchHalls,
@@ -224,14 +224,14 @@ public sealed class WesalToolGatewayShould
                 ["date"] = "not-a-date"
             });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("date", result.ErrorMessage);
     }
 
     [Fact]
-    public void SearchRejectsUnknownBookingPeriodArgument()
+    public async Task SearchRejectsUnknownBookingPeriodArgument()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.SearchHalls,
@@ -240,7 +240,7 @@ public sealed class WesalToolGatewayShould
                 ["bookingPeriod"] = "MidDay"
             });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("bookingPeriod", result.ErrorMessage);
@@ -300,26 +300,26 @@ public sealed class WesalToolGatewayShould
     }
 
     [Fact]
-    public void GetHallDetailsRejectsMissingHallId()
+    public async Task GetHallDetailsRejectsMissingHallId()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.GetHallDetails,
             new JsonObject());
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("hallId", result.ErrorMessage);
     }
 
     [Fact]
-    public void GetHallDetailsRejectsInvalidGuid()
+    public async Task GetHallDetailsRejectsInvalidGuid()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.GetHallDetails,
             new JsonObject { ["hallId"] = "not-a-guid" });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("hallId", result.ErrorMessage);
@@ -392,13 +392,13 @@ public sealed class WesalToolGatewayShould
     }
 
     [Fact]
-    public void CheckAvailabilityRejectsMissingDate()
+    public async Task CheckAvailabilityRejectsMissingDate()
     {
         var invocation = new WesalToolInvocation(
             WesalToolNames.CheckHallAvailability,
             new JsonObject { ["hallId"] = Guid.NewGuid().ToString() });
 
-        var result = _gateway.ExecuteAsync(invocation).GetAwaiter().GetResult();
+        var result = await _gateway.ExecuteAsync(invocation);
 
         Assert.False(result.Success);
         Assert.Contains("date", result.ErrorMessage);
