@@ -138,9 +138,8 @@ public sealed class MabroukStudioPgShould
 
             // A legacy row written before the Studio migration (no new columns).
             var legacyId = Guid.NewGuid();
-            await db.Database.ExecuteSqlRawAsync(
-                "INSERT INTO wesal.\"AiConversationSessions\" (\"SessionId\", \"Language\", \"CreatedAt\", \"LastActivityAt\", \"ExpiresAt\", \"Revision\", \"TurnsJson\", \"LastHallsJson\") " +
-                $"VALUES ('{legacyId}', 'ar', now(), now(), now() + interval '30 minutes', 0, '[]', '[]')");
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"INSERT INTO wesal.\"AiConversationSessions\" (\"SessionId\", \"Language\", \"CreatedAt\", \"LastActivityAt\", \"ExpiresAt\", \"Revision\", \"TurnsJson\", \"LastHallsJson\") VALUES ({legacyId}, 'ar', now(), now(), now() + interval '30 minutes', 0, '[]', '[]')");
 
             await MigrateLatestAsync(db);
 

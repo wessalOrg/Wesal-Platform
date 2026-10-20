@@ -266,7 +266,7 @@ public sealed class MabroukKnowledgeStudioShould : IDisposable
 
         Assert.NotNull(draft);
         Assert.Equal("Draft", draft.PublicationStatus);
-        Assert.Equal(1, draft.Aliases.Select(alias => AiText.Normalize(alias.Text)).Distinct(StringComparer.Ordinal).Count());
+        Assert.Single(draft.Aliases.Select(alias => AiText.Normalize(alias.Text)).Distinct(StringComparer.Ordinal));
         Assert.Single(await _db.AiKnowledgeArticles.ToListAsync());
         Assert.Single(await _db.AiKnowledgeRevisions.ToListAsync());
         Assert.Single(await _db.AiKnowledgeAliases.ToListAsync());

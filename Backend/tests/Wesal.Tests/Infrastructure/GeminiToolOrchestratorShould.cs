@@ -67,9 +67,9 @@ public sealed class GeminiToolOrchestratorShould
         Assert.Equal(2, _gateway.Invocations.Count);
         Assert.Equal(2, result.ToolCalls.Count);
         var nextTurn = _gemini.CapturedContentsPerCall[1];
-        var modelTurn = Assert.Single(nextTurn.Where(message => message.Role == "model"));
+        var modelTurn = Assert.Single(nextTurn, message => message.Role == "model");
         Assert.Equal(2, modelTurn.Parts.Count(part => part.FunctionCall is not null));
-        var toolTurn = Assert.Single(nextTurn.Where(message => message.Parts.Any(part => part.FunctionResponse is not null)));
+        var toolTurn = Assert.Single(nextTurn, message => message.Parts.Any(part => part.FunctionResponse is not null));
         Assert.Equal("user", toolTurn.Role);
         Assert.Equal(
             ["call-search", "call-details"],
