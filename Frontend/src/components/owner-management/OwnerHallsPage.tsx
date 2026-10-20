@@ -321,7 +321,7 @@ function OwnerHallCard({
             </span>
           </div>
 
-          <dl className="flex flex-wrap gap-2">
+          <dl className="flex flex-wrap gap-2.5">
             <SubscriptionStat hallId={showSubscription ? hall.id : null} ended={hall.systemLocked} />
             <StatTile
               icon={<PeopleIcon />}
@@ -475,11 +475,11 @@ function StatTile({
   testId?: string;
 }) {
   return (
-    <div className="inline-flex w-fit max-w-full items-center gap-1.5 rounded-lg bg-[#fbf4f1] px-2.5 py-1.5">
+    <div className="inline-flex w-fit max-w-full items-center gap-2 rounded-xl bg-[#fbf4f1] px-3 py-2">
       <span className="text-[var(--wesal-maroon)]">{icon}</span>
       <div className="min-w-0">
-        <p className="whitespace-nowrap text-[9px] leading-tight text-[var(--wesal-muted)]">{label}</p>
-        <p className={`whitespace-nowrap text-[11px] font-extrabold leading-tight ${valueClass}`} data-testid={testId}>
+        <p className="whitespace-nowrap text-[11px] leading-tight text-[var(--wesal-muted)]">{label}</p>
+        <p className={`whitespace-nowrap text-sm font-extrabold leading-tight ${valueClass}`} data-testid={testId}>
           {value}
         </p>
       </div>
@@ -532,7 +532,7 @@ function PinIcon() {
 
 function CalendarIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" aria-hidden="true">
       <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 3.5v3M16 3.5v3M4 9.5h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
@@ -541,7 +541,7 @@ function CalendarIcon() {
 
 function PeopleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" aria-hidden="true">
       <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.6" />
       <path d="M6.5 19c.8-2.8 2.8-4 5.5-4s4.7 1.2 5.5 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
@@ -551,7 +551,7 @@ function PeopleIcon() {
 function ShekelIcon() {
   return (
     <span
-      className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center font-['Segoe_UI','Arial',sans-serif] text-[13px] font-bold leading-none"
+      className="inline-flex h-4 w-4 shrink-0 items-center justify-center font-['Segoe_UI','Arial',sans-serif] text-[15px] font-bold leading-none"
       aria-hidden="true"
     >
       ₪
