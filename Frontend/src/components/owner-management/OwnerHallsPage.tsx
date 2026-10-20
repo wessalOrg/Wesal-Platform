@@ -246,11 +246,8 @@ export default function OwnerHallsPage() {
               </div>
               <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
                 <div className="flex min-w-0 items-center gap-3.5">
-                  <span className="relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(160deg,#fff,#f3e0da)] text-[var(--wesal-maroon-dark)] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_18px_rgba(168,98,103,0.14)] ring-1 ring-[#e8cfc7]">
-                    <HallHouseIcon />
-                    <span className="absolute -end-1 -top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[linear-gradient(145deg,var(--wesal-maroon),var(--wesal-maroon-dark))] text-xs font-bold text-white shadow-[0_4px_10px_rgba(168,98,103,0.35)] ring-2 ring-[#fcf8f5]">
-                      +
-                    </span>
+                  <span className="relative inline-flex h-14 w-14 shrink-0 items-center justify-center">
+                    <AddHallIcon />
                   </span>
                   <div className="min-w-0">
                     <h2 className="text-[0.95rem] font-extrabold leading-6 text-[var(--wesal-maroon-dark)] sm:text-base">
@@ -562,20 +559,29 @@ function HallAction({
   );
 }
 
-function HallHouseIcon() {
+function AddHallIcon() {
   return (
-    <svg viewBox="0 0 48 48" className="h-8 w-8" fill="none" aria-hidden="true">
-      <path
-        d="M8 22.5 24 9l16 13.5V38.5a2.5 2.5 0 0 1-2.5 2.5h-27A2.5 2.5 0 0 1 8 38.5V22.5Z"
-        fill="currentColor"
-        fillOpacity="0.08"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path d="M19.5 41V28.5h9V41" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M14 21 24 12.5 34 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M28 15.5V11h4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 64 64" className="h-14 w-14 drop-shadow-sm" aria-hidden="true">
+      <defs>
+        <radialGradient id="addHallGlow" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#f7e7e4" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="addHallRoof" x1="16" y1="16" x2="48" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#d49a9d" />
+          <stop offset="100%" stopColor="#c17b7f" />
+        </linearGradient>
+      </defs>
+      <circle cx="32" cy="32" r="30" fill="#f6e6e3" />
+      <circle cx="32" cy="32" r="30" fill="url(#addHallGlow)" />
+      <path d="M20 30h24v15.5c0 1.4-1.1 2.5-2.5 2.5h-19c-1.4 0-2.5-1.1-2.5-2.5V30Z" fill="#fdf7f5" />
+      <path d="M17 30.8 32 16.2 47 30.8c-1.2-.7-3.4-1.3-15-1.3s-13.8.6-15 1.3Z" fill="url(#addHallRoof)" />
+      <path d="M20 45.2h24" stroke="#c9898d" strokeWidth="3" strokeLinecap="round" />
+      <path d="M28.6 34.2h6.8a2.2 2.2 0 0 1 2.2 2.2V47h-11.2v-10.6a2.2 2.2 0 0 1 2.2-2.2Z" fill="#a86267" />
+      <path d="M22.2 34.4h5v5.6a1.7 1.7 0 0 1-1.7 1.7h-1.6a1.7 1.7 0 0 1-1.7-1.7v-5.6Z" fill="#b8757a" />
+      <path d="M36.8 34.4h5v5.6a1.7 1.7 0 0 1-1.7 1.7h-1.6a1.7 1.7 0 0 1-1.7-1.7v-5.6Z" fill="#b8757a" />
+      <circle cx="45.2" cy="18.8" r="8" fill="#8a3d48" />
+      <path d="M45.2 15.2v7.2M41.6 18.8h7.2" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" />
     </svg>
   );
 }
