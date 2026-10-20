@@ -189,7 +189,22 @@ export function mapOwnerHallDetailsDto(
     photos: mapPhotos(dto),
     adminLocked: access.adminLocked,
     systemLocked: access.systemLocked,
+    rating: readOptionalNumber(
+      record.rating ?? record.Rating ?? record.averageRating ?? record.AverageRating,
+    ),
+    reviewCount: readOptionalNumber(
+      record.reviewCount ?? record.ReviewCount ?? record.ratingsCount ?? record.RatingsCount,
+    ),
   };
+}
+
+function readOptionalNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 export function mapHallDetailsToEditForm(

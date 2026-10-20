@@ -27,7 +27,7 @@ export default function DestructiveActionButton({
   return (
     <button
       type="button"
-      className="btn-outline hall-destructive-btn min-h-11 w-full gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none"
+      className="btn-outline hall-destructive-btn inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none"
       data-testid="hall-delete-trigger"
       data-hall-id={hallId}
       data-state={busy ? "loading" : locked ? "disabled" : "default"}

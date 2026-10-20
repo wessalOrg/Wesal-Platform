@@ -7,8 +7,8 @@ import RejectActionButton from "@/components/halls/notifications/RejectActionBut
 import RejectionStatusBadge from "@/components/halls/notifications/RejectionStatusBadge";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
-import { formatBookingDateLabel } from "@/lib/booking-date";
 import { formatDepositAmount } from "@/lib/booking-deposits";
+import { parseDateIso } from "@/lib/booking-date";
 import { bookingWhenLabels } from "@/lib/booking-when-label";
 import {
   acceptFeedbackKind,
@@ -16,6 +16,7 @@ import {
 } from "@/lib/owner-acceptance-ui";
 import { canAcceptBookingRequest, canRejectBookingRequest } from "@/lib/owner-booking-status";
 import type { HallBookingNotification } from "@/types/hall-notifications";
+import type { ReactNode } from "react";
 
 type HallNotificationCardProps = {
   notification: HallBookingNotification;
@@ -59,17 +60,25 @@ export default function HallNotificationCard({
   const t = useT();
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
-  const requester = notification.requesterName.trim() || t("common.user");
-  const dateLabel = notification.date
-    ? formatBookingDateLabel(notification.date, locale)
-    : t("owner.notifications.valueMissing");
+  const phone = notification.requesterPhone?.trim() || "";
+  const requester =
+    displayRequesterName(notification.requesterName, phone) || t("common.user");
+  const dateLabel = formatNotificationDate(notification.date, locale)
+    || t("owner.notifications.valueMissing");
   const periodLabels = bookingWhenLabels(notification, t, locale);
-  const whenLabels =
-    periodLabels.length > 0 ? periodLabels : [t("owner.notifications.valueMissing")];
+  const whenLabel =
+    periodLabels.length > 0
+      ? periodLabels.join(lang === "ar" ? "، " : ", ")
+      : t("owner.notifications.valueMissing");
   const showAccept = Boolean(onAccept) && canAcceptBookingRequest(notification.status);
   const showReject = Boolean(onReject) && canRejectBookingRequest(notification.status);
   const showConfirm =
     Boolean(onConfirmPayment) && notification.status === "AcceptedPendingDeposit";
+  const showChat =
+    Boolean(onMessageSeeker) &&
+    (notification.status === "Rejected" ||
+      notification.status === "FullyBooked" ||
+      notification.status === "Cancelled");
   const errorId = `hall-notification-action-error-${notification.id}`;
   const feedback =
     acceptFeedbackKind(acceptErrorKey) ??
@@ -126,34 +135,26 @@ export default function HallNotificationCard({
         ) : null}
       </div>
 
-      <dl className="hall-notification-meta mt-3 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="min-w-0 overflow-hidden">
-          <dt className="text-[0.68rem] font-medium text-[var(--wesal-muted)]">
-            {t("owner.notifications.date")}
-          </dt>
-          <dd
-            className="mt-0.5 break-words text-sm leading-6 text-[var(--wesal-text)] [overflow-wrap:anywhere]"
-            title={dateLabel}
-          >
-            {dateLabel}
-          </dd>
-        </div>
-        <div className="min-w-0 overflow-hidden">
-          <dt className="text-[0.68rem] font-medium text-[var(--wesal-muted)]">
-            {t("owner.notifications.periods")}
-          </dt>
-          <dd className="mt-1 flex min-w-0 flex-wrap gap-1.5">
-            {whenLabels.map((label, index) => (
-              <span
-                key={`${notification.id}-${label}-${index}`}
-                className="max-w-full break-words rounded-full bg-[var(--wesal-pink-soft)] px-2.5 py-1 text-[0.72rem] font-semibold leading-5 text-[var(--wesal-text)] [overflow-wrap:anywhere]"
-                title={label}
-              >
-                {label}
-              </span>
-            ))}
-          </dd>
-        </div>
+      <dl className="hall-notification-meta mt-3 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+        <MetaTile
+          label={t("owner.notifications.date")}
+          value={dateLabel}
+          icon={<CalendarMetaIcon />}
+        />
+        <MetaTile
+          label={t("owner.notifications.periods")}
+          value={whenLabel}
+          icon={<ClockMetaIcon />}
+        />
+        {phone ? (
+          <MetaTile
+            className="sm:col-span-2"
+            label={t("owner.notifications.phone")}
+            value={phone}
+            icon={<PhoneMetaIcon />}
+            dir="ltr"
+          />
+        ) : null}
       </dl>
 
       {notification.status === "AcceptedPendingDeposit" ? (
@@ -176,14 +177,14 @@ export default function HallNotificationCard({
         </p>
       ) : null}
 
-      {notification.status === "Rejected" && onMessageSeeker ? (
+      {showChat ? (
         <button
           type="button"
           className="btn-outline mt-3 min-h-11 w-full"
           disabled={messagingSeeker}
           aria-busy={messagingSeeker || undefined}
           data-testid={`hall-notification-chat-seeker-${notification.id}`}
-          onClick={() => onMessageSeeker(notification)}
+          onClick={() => onMessageSeeker?.(notification)}
         >
           {messagingSeeker
             ? t("owner.notifications.chatWithSeekerOpening")
@@ -238,6 +239,90 @@ export default function HallNotificationCard({
       ) : null}
     </article>
   );
+}
+
+function MetaTile({
+  label,
+  value,
+  icon,
+  className = "",
+  dir,
+}: {
+  label: string;
+  value: string;
+  icon: ReactNode;
+  className?: string;
+  dir?: "ltr" | "rtl";
+}) {
+  return (
+    <div
+      className={`min-w-0 rounded-xl bg-[#f5f3f1] px-3 py-2.5 ${className}`}
+      data-testid="hall-notification-meta-tile"
+    >
+      <div className="flex items-center gap-1.5">
+        <span className="inline-flex shrink-0 text-[var(--wesal-maroon)]" aria-hidden="true">
+          {icon}
+        </span>
+        <dt className="text-[0.68rem] font-medium text-[var(--wesal-muted)]">{label}</dt>
+      </div>
+      <dd
+        className="mt-1.5 break-words text-sm font-bold leading-6 text-[var(--wesal-text)] [overflow-wrap:anywhere]"
+        title={value}
+        dir={dir}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function CalendarMetaIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3.5" y="5" width="17" height="15" rx="2.2" />
+      <path d="M8 3.5v3.5M16 3.5v3.5M3.5 10h17" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ClockMetaIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="8.25" />
+      <path d="M12 8.25v4.1l2.6 1.55" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PhoneMetaIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path
+        d="M8.2 4.8h2.1l1.1 3.2-1.4 1.1a12.4 12.4 0 0 0 4.9 4.9l1.1-1.4 3.2 1.1v2.1c0 .7-.5 1.3-1.2 1.4-6.9.9-12.7-4.9-11.8-11.8.1-.7.7-1.2 1.4-1.2Z"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function displayRequesterName(rawName: string, phone: string): string {
+  const name = rawName.trim();
+  if (!name) return "";
+  if (!phone) return name;
+  const suffix = ` - ${phone}`;
+  return name.endsWith(suffix) ? name.slice(0, -suffix.length).trim() : name;
+}
+
+function formatNotificationDate(iso: string | null | undefined, locale: string): string {
+  const parsed = parseDateIso(iso);
+  if (!parsed) return "";
+  const [year, month, day] = parsed.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(locale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function translateError(

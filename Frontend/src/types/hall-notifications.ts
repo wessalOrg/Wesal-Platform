@@ -23,6 +23,8 @@ export type HallBookingNotification = {
   hallId: string;
   requesterName: string;
   requesterUserId: string;
+  /** Mobile number the seeker supplied with the booking, when available. */
+  requesterPhone?: string;
   date: string;
   periods: BookingPeriodType[];
   slotStarts?: string[];

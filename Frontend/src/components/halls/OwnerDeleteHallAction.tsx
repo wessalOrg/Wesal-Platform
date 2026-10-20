@@ -6,6 +6,7 @@ import DestructiveActionButton from "@/components/halls/DestructiveActionButton"
 import HallDeletionFeedback from "@/components/halls/HallDeletionFeedback";
 import HallDeletionStateWrapper from "@/components/halls/HallDeletionStateWrapper";
 import { useDeleteHall } from "@/hooks/useDeleteHall";
+import { useT } from "@/i18n";
 import {
   HALL_DELETION_EXIT_MS,
   hallDeletionFeedbackKind,
@@ -24,6 +25,7 @@ export default function OwnerDeleteHallAction({
   hallName,
   onDeleted,
 }: OwnerDeleteHallActionProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [alreadyGone, setAlreadyGone] = useState(false);
@@ -74,19 +76,36 @@ export default function OwnerDeleteHallAction({
   }, [deleting, exiting]);
 
   return (
-    <HallDeletionStateWrapper state={visualState}>
-      <div className="space-y-2" data-testid="owner-delete-hall">
-        <DestructiveActionButton
-          hallId={hallId}
-          busy={deleting}
-          disabled={locked}
-          expanded={open}
-          describedBy={feedbackKind ? errorId : undefined}
-          onClick={handleOpen}
-        />
-        {!open && feedbackKind ? (
-          <HallDeletionFeedback id={errorId} kind={feedbackKind} message={error} />
-        ) : null}
+    <HallDeletionStateWrapper state={visualState} className="flex h-full min-w-0 w-full">
+      <div
+        className="flex h-full w-full min-w-0 flex-col gap-3 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_22px_rgba(90,55,45,0.05)] sm:p-5"
+        data-testid="owner-delete-hall"
+      >
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-extrabold text-[var(--wesal-maroon-dark)] sm:text-[0.95rem]">
+            {t("owner.hall.delete")}
+          </h3>
+          <p className="mt-1.5 text-sm leading-6 text-[var(--wesal-muted)]">
+            {t("owner.hall.deleteSectionHint")}
+          </p>
+        </div>
+
+        <div className="mt-auto border-t border-[var(--wesal-border)] pt-3">
+          <DestructiveActionButton
+            hallId={hallId}
+            busy={deleting}
+            disabled={locked}
+            expanded={open}
+            describedBy={feedbackKind ? errorId : undefined}
+            onClick={handleOpen}
+          />
+          {!open && feedbackKind ? (
+            <div className="mt-2">
+              <HallDeletionFeedback id={errorId} kind={feedbackKind} message={error} />
+            </div>
+          ) : null}
+        </div>
+
         <DeleteHallConfirmationDialog
           open={open}
           hallId={hallId}

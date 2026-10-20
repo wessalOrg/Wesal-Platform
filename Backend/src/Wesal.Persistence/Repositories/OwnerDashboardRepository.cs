@@ -106,7 +106,8 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
             select new
             {
                 Booking = booking,
-                RequesterName = requester.FullName
+                RequesterName = requester.FullName,
+                ProfilePhone = requester.PhoneNumber
             })
             .ToListAsync(cancellationToken);
 
@@ -123,12 +124,50 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
                 TimeRange = row.Booking.HourlyTimeRange,
                 RequesterUserId = row.Booking.RequesterUserId,
                 RequesterName = row.RequesterName,
+                RequesterPhone = ResolveRequesterPhone(row.Booking.NameOnBooking, row.ProfilePhone),
                 Status = row.Booking.Status,
                 RequestedAt = row.Booking.CreatedAt,
                 DepositAmount = row.Booking.DepositAmount,
                 DepositPaymentConfirmedAt = row.Booking.DepositPaymentConfirmedAt
             })
             .ToList();
+    }
+
+    /// <summary>
+    /// Prefer the phone the seeker typed into the booking name (suffix after " - "),
+    /// then the account phone on the user profile.
+    /// </summary>
+    private static string ResolveRequesterPhone(string? nameOnBooking, string? profilePhone)
+    {
+        var fromBooking = ExtractPhoneSuffix(nameOnBooking);
+        if (!string.IsNullOrWhiteSpace(fromBooking))
+        {
+            return fromBooking;
+        }
+
+        return string.IsNullOrWhiteSpace(profilePhone) ? string.Empty : profilePhone.Trim();
+    }
+
+    private static string? ExtractPhoneSuffix(string? nameOnBooking)
+    {
+        if (string.IsNullOrWhiteSpace(nameOnBooking))
+        {
+            return null;
+        }
+
+        var separator = nameOnBooking.LastIndexOf(" - ", StringComparison.Ordinal);
+        if (separator < 0)
+        {
+            return null;
+        }
+
+        var candidate = nameOnBooking[(separator + 3)..].Trim();
+        if (candidate.Length < 7 || !candidate.Any(char.IsDigit))
+        {
+            return null;
+        }
+
+        return candidate;
     }
 
     public async Task<IReadOnlyList<Booking>?> GetActiveBookingsInRangeAsync(

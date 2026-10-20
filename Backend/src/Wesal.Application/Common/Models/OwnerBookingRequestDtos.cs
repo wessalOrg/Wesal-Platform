@@ -27,6 +27,12 @@ public sealed class OwnerBookingRequestDto
 
     public string RequesterName { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Mobile number the seeker supplied with the booking (parsed from
+    /// <c>NameOnBooking</c>), falling back to the account phone when absent.
+    /// </summary>
+    public string RequesterPhone { get; init; } = string.Empty;
+
     public BookingStatus Status { get; init; }
 
     public DateTimeOffset RequestedAt { get; init; }

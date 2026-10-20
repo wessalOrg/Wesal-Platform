@@ -23,37 +23,63 @@ export default function HallRejectionReasonNotice({
 
   return (
     <aside
-      className="min-w-0 rounded-2xl border border-[#f1c0bb] bg-[#fdecea] p-4 sm:p-5"
+      className="inline-flex w-fit max-w-sm items-start gap-2 rounded-xl border border-[#f1c0bb] bg-[#fdecea] px-2.5 py-2"
       role="status"
       data-testid="hall-rejection-reason"
       data-hall-id={hallId}
     >
-      <p className="text-sm font-bold text-[#b42318]">{t("owner.hallRejection.title")}</p>
-      {status === "loading" || status === "idle" ? (
-        <p className="mt-2 text-sm text-[var(--wesal-muted)]">{t("common.loading")}</p>
-      ) : status === "found" && reason ? (
-        <p
-          className="mt-2 whitespace-pre-line break-words text-sm leading-7 text-[var(--wesal-text)]"
-          data-testid="hall-rejection-reason-text"
+      <WarningIcon />
+      <div className="min-w-0">
+        <p className="text-xs font-bold leading-snug text-[#b42318]">
+          {t("owner.hallRejection.title")}
+        </p>
+        {status === "loading" || status === "idle" ? (
+          <p className="mt-1 text-[11px] leading-snug text-[var(--wesal-muted)]">
+            {t("common.loading")}
+          </p>
+        ) : status === "found" && reason ? (
+          <p
+            className="mt-1 whitespace-pre-line break-words text-[11px] leading-snug text-[var(--wesal-text)]"
+            data-testid="hall-rejection-reason-text"
+          >
+            {reason}
+          </p>
+        ) : (
+          <p className="mt-1 text-[11px] leading-snug text-[var(--wesal-muted)]">
+            {status === "error"
+              ? t("owner.hallRejection.error")
+              : t("owner.hallRejection.unavailable")}
+          </p>
+        )}
+        <p className="mt-1 text-[11px] leading-snug text-[var(--wesal-muted)]">
+          {t("owner.hallRejection.hint")}
+        </p>
+        <Link
+          href={ownerAdminMessagesPath(hallId)}
+          className="mt-1.5 inline-flex min-h-7 items-center rounded-lg border border-[#f1c0bb] bg-white px-2.5 text-[11px] font-semibold text-[#b42318] hover:bg-[#fff7f6]"
         >
-          {reason}
-        </p>
-      ) : (
-        <p className="mt-2 text-sm leading-7 text-[var(--wesal-muted)]">
-          {status === "error"
-            ? t("owner.hallRejection.error")
-            : t("owner.hallRejection.unavailable")}
-        </p>
-      )}
-      <p className="mt-2 text-xs leading-6 text-[var(--wesal-muted)]">
-        {t("owner.hallRejection.hint")}
-      </p>
-      <Link
-        href={ownerAdminMessagesPath(hallId)}
-        className="btn-outline mt-3 inline-flex min-h-10 items-center"
-      >
-        {t("owner.hallRejection.contact")}
-      </Link>
+          {t("owner.hallRejection.contact")}
+        </Link>
+      </div>
     </aside>
+  );
+}
+
+function WarningIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#b42318]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3.5 2.8 19.2a1.2 1.2 0 0 0 1.05 1.8h16.3a1.2 1.2 0 0 0 1.05-1.8L12 3.5Z" />
+      <path d="M12 9v5" />
+      <path d="M12 17h.01" />
+    </svg>
   );
 }

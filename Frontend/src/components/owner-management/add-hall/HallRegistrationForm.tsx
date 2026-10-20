@@ -79,21 +79,23 @@ export default function HallRegistrationForm() {
           isSubmitting ? "pointer-events-none opacity-[0.92]" : ""
         }`}
       >
-        <HallBasicInfoSection
-          values={values}
-          fieldErrors={fieldErrors}
-          disabled={isSubmitting}
-          onChange={patchValues}
-          resolveError={resolveError}
-        />
+        <div className="grid min-w-0 grid-cols-1 items-stretch gap-[1.1rem] lg:grid-cols-2 lg:gap-5">
+          <HallBasicInfoSection
+            values={values}
+            fieldErrors={fieldErrors}
+            disabled={isSubmitting}
+            onChange={patchValues}
+            resolveError={resolveError}
+          />
 
-        <HallLocationSection
-          values={values}
-          fieldErrors={fieldErrors}
-          disabled={isSubmitting}
-          onChange={patchValues}
-          resolveError={resolveError}
-        />
+          <HallLocationSection
+            values={values}
+            fieldErrors={fieldErrors}
+            disabled={isSubmitting}
+            onChange={patchValues}
+            resolveError={resolveError}
+          />
+        </div>
 
         <HallFeaturesSection
           values={values}
@@ -103,22 +105,24 @@ export default function HallRegistrationForm() {
           resolveError={resolveError}
         />
 
-        <HallMediaSection
-          values={values}
-          fieldErrors={fieldErrors}
-          disabled={isSubmitting}
-          onChange={patchValues}
-          resolveError={resolveError}
-        />
+        <div className="grid min-w-0 grid-cols-1 items-stretch gap-[1.1rem] lg:grid-cols-2 lg:gap-5">
+          <HallMediaSection
+            values={values}
+            fieldErrors={fieldErrors}
+            disabled={isSubmitting}
+            onChange={patchValues}
+            resolveError={resolveError}
+          />
 
-        <HallPhotosSection
-          photos={values.photos}
-          fieldErrors={fieldErrors}
-          disabled={isSubmitting}
-          onAdd={addPhotos}
-          onRemove={removePhoto}
-          resolveError={resolveError}
-        />
+          <HallPhotosSection
+            photos={values.photos}
+            fieldErrors={fieldErrors}
+            disabled={isSubmitting}
+            onAdd={addPhotos}
+            onRemove={removePhoto}
+            resolveError={resolveError}
+          />
+        </div>
       </div>
 
       <HallFormActions

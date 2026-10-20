@@ -18,7 +18,9 @@ import {
   ownerHallViewPath,
 } from "@/lib/hall-owner-query-keys";
 import { localizeHallName } from "@/lib/localize-hall-display";
+import { GoldStar } from "@/components/ui/GoldStar";
 import { fetchOwnerHallDetails } from "@/services/hall-owner-hall-management";
+import { fetchHallById } from "@/services/halls";
 import { useT } from "@/i18n";
 import type { HallOwnerHall } from "@/types/hall-owner-halls";
 import type { HallOwnerHallDetails } from "@/types/hall-owner-hall-management";
@@ -53,7 +55,24 @@ export default function OwnerHallsPage() {
     void Promise.all(
       ids.map(async (id) => {
         try {
-          return [id, await fetchOwnerHallDetails(id)] as const;
+          const details = await fetchOwnerHallDetails(id);
+          if (details.rating != null) return [id, details] as const;
+          try {
+            const publicHall = await fetchHallById(id);
+            if (publicHall.status === "ok" && publicHall.hall.rating != null) {
+              return [
+                id,
+                {
+                  ...details,
+                  rating: publicHall.hall.rating,
+                  reviewCount: publicHall.hall.reviewCount ?? null,
+                },
+              ] as const;
+            }
+          } catch {
+            /* keep owner details without rating */
+          }
+          return [id, details] as const;
         } catch {
           return null;
         }
@@ -103,7 +122,7 @@ export default function OwnerHallsPage() {
 
   return (
     <div className="space-y-5" data-testid="owner-halls-page">
-      <header>
+      <header className="owner-halls-page-intro">
         <h1 className="text-xl font-extrabold text-[var(--wesal-maroon-dark)]">
           {t("owner.hallsPage.title")}
         </h1>
@@ -225,28 +244,30 @@ export default function OwnerHallsPage() {
             </p>
           ) : (
             <ul className="grid gap-4" data-testid="owner-halls-page-list">
-              {visibleHalls.map((hall) => (
+              {visibleHalls.map((hall, index) => (
                 <OwnerHallCard
                   key={hall.id}
                   hall={hall}
                   details={detailsById[hall.id]}
+                  index={index}
                 />
               ))}
             </ul>
           )}
 
           <div className="flex justify-center">
-            <section className="relative w-full max-w-3xl overflow-hidden rounded-[26px] border border-[#edd9d1] bg-[linear-gradient(135deg,#fffdfb_0%,#faf1ec_45%,#f6e8e1_100%)] px-4 py-5 shadow-[0_14px_34px_rgba(120,70,60,0.1)] sm:px-6">
+            <section className="owner-add-hall-banner relative w-full max-w-3xl overflow-hidden rounded-[26px] border border-[#edd9d1] bg-[linear-gradient(135deg,#fffdfb_0%,#faf1ec_45%,#f6e8e1_100%)] px-4 py-5 shadow-[0_14px_34px_rgba(120,70,60,0.1)] sm:px-6">
               <div className="pointer-events-none absolute inset-0" aria-hidden="true">
                 <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(226,201,138,0.75),transparent)]" />
-                <div className="absolute -start-10 -top-12 h-36 w-44 rounded-full bg-[radial-gradient(circle,rgba(193,123,127,0.22),transparent_68%)] blur-[1px]" />
-                <div className="absolute -bottom-14 end-0 h-40 w-48 rounded-full bg-[radial-gradient(circle,rgba(196,160,92,0.2),transparent_70%)]" />
+                <div className="owner-add-hall-banner-blob absolute -start-10 -top-12 h-36 w-44 rounded-full bg-[radial-gradient(circle,rgba(193,123,127,0.22),transparent_68%)] blur-[1px]" />
+                <div className="owner-add-hall-banner-blob-delay absolute -bottom-14 end-0 h-40 w-48 rounded-full bg-[radial-gradient(circle,rgba(196,160,92,0.2),transparent_70%)]" />
                 <div className="absolute start-1/3 top-0 h-20 w-40 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.7),transparent_70%)]" />
-                <LeafBranch className="absolute end-3 top-1/2 hidden h-[4.5rem] w-14 -translate-y-1/2 text-[var(--wesal-gold)]/45 sm:block" />
+                <div className="owner-add-hall-banner-sheen" />
+                <LeafBranch className="owner-add-hall-banner-leaf absolute end-3 top-1/2 hidden h-[4.5rem] w-14 -translate-y-1/2 text-[var(--wesal-gold)]/45 sm:block" />
               </div>
               <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
                 <div className="flex min-w-0 items-center gap-3.5">
-                  <span className="relative inline-flex h-14 w-14 shrink-0 items-center justify-center">
+                  <span className="owner-add-hall-banner-icon relative inline-flex h-14 w-14 shrink-0 items-center justify-center">
                     <AddHallIcon />
                   </span>
                   <div className="min-w-0">
@@ -304,9 +325,11 @@ function hallPhotoUrls(details?: HallOwnerHallDetails): string[] {
 function OwnerHallCard({
   hall,
   details,
+  index = 0,
 }: {
   hall: HallOwnerHall;
   details?: HallOwnerHallDetails;
+  index?: number;
 }) {
   const t = useT();
   const lang = useUiLang();
@@ -339,7 +362,10 @@ function OwnerHallCard({
     lane === "available" ? "bg-[#12b76a]" : lane === "review" ? "bg-[#f5a524]" : "bg-[#b42318]";
 
   return (
-    <li className="overflow-hidden rounded-[28px] border border-[var(--wesal-border)] bg-white">
+    <li
+      className="owner-hall-card overflow-hidden rounded-[28px] border border-[var(--wesal-border)] bg-white"
+      style={{ animationDelay: `${Math.min(index, 6) * 70}ms` }}
+    >
       <div className="flex flex-col md:flex-row">
         <HallCardPhotos images={photos} emptyLabel={t("owner.hallsPage.title")} />
         <div className="flex min-w-0 flex-1 flex-col gap-3 p-3 sm:p-4">
@@ -353,14 +379,43 @@ function OwnerHallCard({
                 </p>
               ) : null}
             </div>
-            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${badgeClass}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
-              {t(badgeKey)}
-            </span>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${badgeClass}`}>
+                <span className={`owner-hall-card-dot h-1.5 w-1.5 rounded-full ${dotClass}`} />
+                {t(badgeKey)}
+              </span>
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-[#fff8e8] px-2 py-0.5 text-[11px] font-bold text-[var(--wesal-text)]"
+                aria-label={
+                  details?.rating != null && Number.isFinite(details.rating)
+                    ? t("halls.details.ratingAria", {
+                        rating: Number(details.rating).toFixed(1),
+                      })
+                    : t("halls.details.ratingLabel")
+                }
+                data-testid="owner-hall-card-rating"
+              >
+                <GoldStar size={12} />
+                <span>
+                  {details?.rating != null && Number.isFinite(details.rating)
+                    ? Number(details.rating).toFixed(1)
+                    : "—"}
+                </span>
+                {details?.reviewCount != null && details.reviewCount > 0 ? (
+                  <span className="font-medium text-[var(--wesal-muted)]">
+                    ({details.reviewCount})
+                  </span>
+                ) : null}
+              </span>
+            </div>
           </div>
 
           <dl className="flex flex-wrap gap-2.5">
-            <SubscriptionStat hallId={showSubscription ? hall.id : null} ended={hall.systemLocked} />
+            <SubscriptionStat
+              hallId={showSubscription ? hall.id : null}
+              ended={hall.systemLocked}
+              fallbackDays={hall.daysRemaining}
+            />
             <StatTile
               icon={<PeopleIcon />}
               label={t("owner.hallsPage.capacity")}
@@ -469,24 +524,38 @@ function HallCardPhotos({ images, emptyLabel }: { images: string[]; emptyLabel: 
   );
 }
 
-function SubscriptionStat({ hallId, ended }: { hallId: string | null; ended: boolean }) {
+function SubscriptionStat({
+  hallId,
+  ended,
+  fallbackDays,
+}: {
+  hallId: string | null;
+  ended: boolean;
+  fallbackDays?: number | null;
+}) {
   const t = useT();
   const { status, subscription } = useSubscription(ended ? null : hallId, !ended && hallId != null);
   let value = "—";
-  let valueClass = "text-[var(--wesal-text)]";
+  let valueClass = "text-[#047857]";
+  let tone: "default" | "success" | "danger" = "success";
   if (ended) {
     value = t("owner.subscription.hallsExpiredNote");
     valueClass = "text-[#b42318]";
+    tone = "danger";
   } else if (status === "ready" && subscription) {
     const days = subscription.daysRemaining;
     const finished = subscription.status === "expired" || (days != null && days <= 0);
     if (finished) {
       value = t("owner.subscription.hallsExpiredNote");
       valueClass = "text-[#b42318]";
-    } else if (subscription.status === "active" && days != null) {
+      tone = "danger";
+    } else if (days != null) {
       value = t("owner.hallsPage.days", { count: days });
-      valueClass = "text-[var(--wesal-maroon-dark)]";
+    } else if (fallbackDays != null && fallbackDays > 0) {
+      value = t("owner.hallsPage.days", { count: fallbackDays });
     }
+  } else if (fallbackDays != null && fallbackDays > 0) {
+    value = t("owner.hallsPage.days", { count: fallbackDays });
   }
   return (
     <StatTile
@@ -494,6 +563,7 @@ function SubscriptionStat({ hallId, ended }: { hallId: string | null; ended: boo
       label={t("owner.hallsPage.subscriptionLeft")}
       value={value}
       valueClass={valueClass}
+      tone={tone}
       testId={ended || valueClass.includes("b42318") ? "hall-subscription-ended-note" : "hall-subscription-days-note"}
     />
   );
@@ -504,19 +574,40 @@ function StatTile({
   label,
   value,
   valueClass = "text-[var(--wesal-text)]",
+  tone = "default",
   testId,
 }: {
   icon: ReactNode;
   label: string;
   value: string;
   valueClass?: string;
+  tone?: "default" | "success" | "danger";
   testId?: string;
 }) {
+  const shellClass =
+    tone === "success"
+      ? "bg-[#e7f6ee]"
+      : tone === "danger"
+        ? "bg-[#fdecec]"
+        : "bg-[#fbf4f1]";
+  const iconClass =
+    tone === "success"
+      ? "text-[#047857]"
+      : tone === "danger"
+        ? "text-[#b42318]"
+        : "text-[var(--wesal-maroon)]";
+  const labelClass =
+    tone === "success"
+      ? "text-[#067647]/80"
+      : tone === "danger"
+        ? "text-[#b42318]/75"
+        : "text-[var(--wesal-muted)]";
+
   return (
-    <div className="inline-flex w-fit max-w-full items-center gap-2 rounded-xl bg-[#fbf4f1] px-3 py-2">
-      <span className="text-[var(--wesal-maroon)]">{icon}</span>
+    <div className={`inline-flex w-fit max-w-full items-center gap-2 rounded-xl px-3 py-2 ${shellClass}`}>
+      <span className={iconClass}>{icon}</span>
       <div className="min-w-0">
-        <p className="whitespace-nowrap text-[11px] leading-tight text-[var(--wesal-muted)]">{label}</p>
+        <p className={`whitespace-nowrap text-[11px] leading-tight ${labelClass}`}>{label}</p>
         <p className={`whitespace-nowrap text-sm font-extrabold leading-tight ${valueClass}`} data-testid={testId}>
           {value}
         </p>
@@ -580,8 +671,10 @@ function AddHallIcon() {
       <path d="M28.6 34.2h6.8a2.2 2.2 0 0 1 2.2 2.2V47h-11.2v-10.6a2.2 2.2 0 0 1 2.2-2.2Z" fill="#a86267" />
       <path d="M22.2 34.4h5v5.6a1.7 1.7 0 0 1-1.7 1.7h-1.6a1.7 1.7 0 0 1-1.7-1.7v-5.6Z" fill="#b8757a" />
       <path d="M36.8 34.4h5v5.6a1.7 1.7 0 0 1-1.7 1.7h-1.6a1.7 1.7 0 0 1-1.7-1.7v-5.6Z" fill="#b8757a" />
-      <circle cx="45.2" cy="18.8" r="8" fill="#8a3d48" />
-      <path d="M45.2 15.2v7.2M41.6 18.8h7.2" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" />
+      <g className="owner-add-hall-banner-plus">
+        <circle cx="45.2" cy="18.8" r="8" fill="#8a3d48" />
+        <path d="M45.2 15.2v7.2M41.6 18.8h7.2" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" />
+      </g>
     </svg>
   );
 }

@@ -62,8 +62,9 @@ export default function HallMediaSection({
     <HallFormSection
       id="hall-media-heading"
       title={t("owner.management.addHall.sections.media")}
+      className="h-full"
     >
-      <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-1 gap-4">
         <HallFormField
           id="hall-youtube"
           label={t("owner.management.addHall.fields.youtubeVideoUrl")}
@@ -145,7 +146,9 @@ export default function HallMediaSection({
                 <HallImage
                   src={currentCoverUrl}
                   alt=""
-                  className="h-full w-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="80px"
                 />
               </span>
             ) : null}
