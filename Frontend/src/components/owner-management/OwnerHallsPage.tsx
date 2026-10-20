@@ -236,34 +236,37 @@ export default function OwnerHallsPage() {
           )}
 
           <div className="flex justify-center">
-            <section className="relative w-full max-w-3xl overflow-hidden rounded-[22px] border border-[#efe2db] bg-[#fcf8f5] px-4 py-4 shadow-[0_10px_28px_rgba(90,55,45,0.08)] sm:px-5">
+            <section className="relative w-full max-w-3xl overflow-hidden rounded-[26px] border border-[#edd9d1] bg-[linear-gradient(135deg,#fffdfb_0%,#faf1ec_45%,#f6e8e1_100%)] px-4 py-5 shadow-[0_14px_34px_rgba(120,70,60,0.1)] sm:px-6">
               <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-                <div className="absolute -start-8 -top-10 h-28 w-36 rounded-full bg-[radial-gradient(circle,rgba(216,160,155,0.28),transparent_70%)]" />
-                <div className="absolute -bottom-12 -end-6 h-32 w-40 rounded-full bg-[radial-gradient(circle,rgba(232,190,170,0.3),transparent_72%)]" />
-                <LeafBranch className="absolute end-2 top-1/2 hidden h-16 w-12 -translate-y-1/2 text-[#8a6a5c]/40 sm:block" />
+                <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(226,201,138,0.75),transparent)]" />
+                <div className="absolute -start-10 -top-12 h-36 w-44 rounded-full bg-[radial-gradient(circle,rgba(193,123,127,0.22),transparent_68%)] blur-[1px]" />
+                <div className="absolute -bottom-14 end-0 h-40 w-48 rounded-full bg-[radial-gradient(circle,rgba(196,160,92,0.2),transparent_70%)]" />
+                <div className="absolute start-1/3 top-0 h-20 w-40 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.7),transparent_70%)]" />
+                <LeafBranch className="absolute end-3 top-1/2 hidden h-[4.5rem] w-14 -translate-y-1/2 text-[var(--wesal-gold)]/45 sm:block" />
               </div>
-              <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f4e6e1] text-[var(--wesal-maroon-dark)]">
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+                <div className="flex min-w-0 items-center gap-3.5">
+                  <span className="relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(160deg,#fff,#f3e0da)] text-[var(--wesal-maroon-dark)] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_18px_rgba(168,98,103,0.14)] ring-1 ring-[#e8cfc7]">
                     <HallHouseIcon />
-                    <span className="absolute -end-0.5 -top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--wesal-maroon)] text-[11px] font-bold text-white">
+                    <span className="absolute -end-1 -top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[linear-gradient(145deg,var(--wesal-maroon),var(--wesal-maroon-dark))] text-xs font-bold text-white shadow-[0_4px_10px_rgba(168,98,103,0.35)] ring-2 ring-[#fcf8f5]">
                       +
                     </span>
                   </span>
                   <div className="min-w-0">
-                    <h2 className="text-sm font-extrabold text-[var(--wesal-maroon-dark)]">
+                    <h2 className="text-[0.95rem] font-extrabold leading-6 text-[var(--wesal-maroon-dark)] sm:text-base">
                       {t("owner.hallsPage.addBannerTitle")}
                     </h2>
-                    <p className="mt-0.5 text-xs leading-5 text-[var(--wesal-muted)]">
+                    <span className="mt-1.5 block h-0.5 w-12 rounded-full bg-[linear-gradient(90deg,var(--wesal-gold-soft),var(--wesal-maroon),transparent)]" />
+                    <p className="mt-1.5 text-xs leading-5 text-[var(--wesal-muted)] sm:text-[13px] sm:leading-6">
                       {t("owner.hallsPage.addBannerBody")}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 sm:shrink-0">
-                  <span className="hidden h-10 w-px bg-[#e4d2cb] sm:block" aria-hidden="true" />
+                <div className="flex items-center gap-3.5 sm:shrink-0">
+                  <span className="hidden h-12 w-px bg-[linear-gradient(180deg,transparent,#e0c7be,transparent)] sm:block" aria-hidden="true" />
                   <button
                     type="button"
-                    className="btn-primary min-h-10 rounded-full px-5 text-xs"
+                    className="btn-primary min-h-11 rounded-full px-6 text-xs shadow-[0_10px_22px_rgba(168,98,103,0.28)] sm:text-sm"
                     disabled={isInitiating}
                     onClick={beginAddHall}
                   >
@@ -272,7 +275,12 @@ export default function OwnerHallsPage() {
                     ) : (
                       <span className="inline-flex items-center gap-1.5">
                         <span>{t("owner.hallsPage.addBannerCta")}</span>
-                        <span aria-hidden="true">+</span>
+                        <span
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[13px] font-bold"
+                          aria-hidden="true"
+                        >
+                          +
+                        </span>
                       </span>
                     )}
                   </button>
@@ -556,34 +564,41 @@ function HallAction({
 
 function HallHouseIcon() {
   return (
-    <svg viewBox="0 0 48 48" className="h-7 w-7" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 48 48" className="h-8 w-8" fill="none" aria-hidden="true">
       <path
-        d="M8 22.5 24 9l16 13.5V39a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V22.5Z"
+        d="M8 22.5 24 9l16 13.5V38.5a2.5 2.5 0 0 1-2.5 2.5h-27A2.5 2.5 0 0 1 8 38.5V22.5Z"
+        fill="currentColor"
+        fillOpacity="0.08"
         stroke="currentColor"
-        strokeWidth="2.2"
+        strokeWidth="2"
         strokeLinejoin="round"
       />
-      <path d="M19 41V27h10v14" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-      <path d="M14 20.5 24 12l10 8.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M19.5 41V28.5h9V41" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M14 21 24 12.5 34 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M28 15.5V11h4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
 function LeafBranch({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 48 64" className={className} fill="none" aria-hidden="true">
-      <path d="M24 58C24 40 18 28 10 16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    <svg viewBox="0 0 56 72" className={className} fill="none" aria-hidden="true">
+      <path d="M20 66c2-18-2-30-10-44" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       <path
-        d="M12 20c4-1 8 2 9 6-4 1-8-2-9-6ZM16 30c4 0 8 3 8 7-4 0-8-3-8-7ZM20 40c3.5.5 6.5 3.5 6 7-3.5-.5-6.5-3.5-6-7Z"
+        d="M11 24c5-1.5 10 2.5 11 7.5-5 1.5-10-2.5-11-7.5ZM15 36c5 0 10 3.5 10 8.5-5 0-10-3.5-10-8.5ZM19 48c4.5.5 8 4 7.5 8.5-4.5-.5-8-4-7.5-8.5Z"
+        fill="currentColor"
+        fillOpacity="0.12"
         stroke="currentColor"
         strokeWidth="1.2"
         strokeLinejoin="round"
       />
-      <path d="M24 50c2-6 8-10 14-11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M22 58c3-8 11-13 18-14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
       <path
-        d="M34 36c3 2 4 6 2 9-3-2-4-6-2-9ZM38 42c2.5 2 3 5.5 1 8-2.5-2-3-5.5-1-8Z"
+        d="M36 40c4 2.5 5.5 7.5 3 11.5-4-2.5-5.5-7.5-3-11.5ZM41 48c3.5 2.5 4.5 7 2 10.5-3.5-2.5-4.5-7-2-10.5Z"
+        fill="currentColor"
+        fillOpacity="0.12"
         stroke="currentColor"
-        strokeWidth="1.1"
+        strokeWidth="1.15"
         strokeLinejoin="round"
       />
     </svg>
