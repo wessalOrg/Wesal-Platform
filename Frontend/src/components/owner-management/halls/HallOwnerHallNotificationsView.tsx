@@ -96,9 +96,12 @@ export default function HallOwnerHallNotificationsView({
             />
           </div>
 
-          <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
-            <OwnerAvailabilitySchedule hallId={hallId} hallName={hallName} enabled={bookingEnabled} />
-          </div>
+          <OwnerAvailabilitySchedule
+            hallId={hallId}
+            hallName={hallName}
+            enabled={bookingEnabled}
+            framed
+          />
         </div>
       </HallBookingDataGate>
     </section>
