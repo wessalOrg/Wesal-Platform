@@ -30,11 +30,13 @@ const BOOKING_IMAGES = [
   "/home/planners-card.png",
 ] as const;
 
+type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+
 export function bookingsForDate(
   date: string,
   notifications: HallBookingNotification[],
   day: OwnerBookingsCalendarDay | undefined,
-  translate: (key: string) => string,
+  translate: TranslateFn,
   locale: string,
   manualBookings: OwnerManualBooking[] = [],
 ): OwnerCalendarBookingCardModel[] {
@@ -64,7 +66,7 @@ export function bookingsForDate(
 
 export function upcomingBookings(
   notifications: HallBookingNotification[],
-  translate: (key: string) => string,
+  translate: TranslateFn,
   locale: string,
   limit = 6,
   manualBookings: OwnerManualBooking[] = [],
@@ -100,7 +102,7 @@ export function formatUpcomingDateLabel(date: string, locale: string): string {
 
 function notificationToCard(
   item: HallBookingNotification,
-  translate: (key: string) => string,
+  translate: TranslateFn,
   locale: string,
   index: number,
 ): OwnerCalendarBookingCardModel {
@@ -129,7 +131,7 @@ function notificationToCard(
 
 function manualToCard(
   item: OwnerManualBooking,
-  translate: (key: string) => string,
+  translate: TranslateFn,
   locale: string,
   index: number,
 ): OwnerCalendarBookingCardModel {
