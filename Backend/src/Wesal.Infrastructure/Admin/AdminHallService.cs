@@ -26,6 +26,7 @@ namespace Wesal.Infrastructure.Admin;
 public class AdminHallService : IAdminHallService
 {
     private readonly IHallRepository _hallRepository;
+    private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHallSearchIndexer _indexer;
     private readonly IConversationRepository _conversationRepository;
@@ -39,6 +40,7 @@ public class AdminHallService : IAdminHallService
 
     public AdminHallService(
         IHallRepository hallRepository,
+        IBookingRepository bookingRepository,
         IUnitOfWork unitOfWork,
         IHallSearchIndexer indexer,
         IConversationRepository conversationRepository,
@@ -51,6 +53,7 @@ public class AdminHallService : IAdminHallService
         ILogger<AdminHallService> logger)
     {
         _hallRepository = hallRepository;
+        _bookingRepository = bookingRepository;
         _unitOfWork = unitOfWork;
         _indexer = indexer;
         _conversationRepository = conversationRepository;
@@ -65,26 +68,33 @@ public class AdminHallService : IAdminHallService
 
     public async Task<HallApprovalResponse> ApproveHallAsync(Guid hallId, CancellationToken cancellationToken = default)
     {
-        var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
-        if (hall == null || hall.IsDeleted)
-            throw new NotFoundException("Hall", hallId);
+        var (hall, changed) = await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        {
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
+                throw new NotFoundException("Hall", hallId);
 
-        if (hall.Status == HallStatus.Approved)
+            var current = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
+            if (current is null || current.IsDeleted)
+                throw new NotFoundException("Hall", hallId);
+
+            if (current.Status == HallStatus.Approved)
+                return (current, false);
+
+            if (current.Status != HallStatus.PendingReview && current.Status != HallStatus.Rejected)
+                throw new BusinessRuleException("HallNotPending", $"Hall with status {current.Status} cannot be approved.");
+
+            current.Status = HallStatus.Approved;
+            current.UpdatedAt = _dateTime.Now;
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return (current, true);
+        }, cancellationToken);
+
+        if (!changed)
         {
             // Idempotent - already approved, ensure indexed; no duplicate owner notification.
             await TryIndexAsync(hall, cancellationToken);
             return new HallApprovalResponse { HallId = hall.Id, HallName = hall.Name, Status = hall.Status, ApprovedAt = hall.UpdatedAt ?? hall.CreatedAt };
         }
-
-        // Edit 26: a corrected (or mistakenly) rejected hall returns to Approved through
-        // the same action as a pending submission. Any other non-approved status keeps
-        // the previous refusal so approval can never mint an unexpected state.
-        if (hall.Status != HallStatus.PendingReview && hall.Status != HallStatus.Rejected)
-            throw new BusinessRuleException("HallNotPending", $"Hall with status {hall.Status} cannot be approved.");
-
-        hall.Status = HallStatus.Approved;
-        hall.UpdatedAt = _dateTime.Now;
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("Hall {HallId} approved, triggering search indexing", hallId);
 
         // Trigger indexing after successful commit - never rollback approval on indexing failure
@@ -246,14 +256,19 @@ public class AdminHallService : IAdminHallService
 
     public async Task DeleteHallAsync(Guid hallId, CancellationToken cancellationToken = default)
     {
-        var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
-        if (hall is null || hall.IsDeleted)
-            throw new NotFoundException("Hall", hallId);
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        {
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
+                throw new NotFoundException("Hall", hallId);
 
-        hall.IsDeleted = true;
-        hall.UpdatedAt = _dateTime.Now;
+            var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
+            if (hall is null || hall.IsDeleted)
+                throw new NotFoundException("Hall", hallId);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+            hall.IsDeleted = true;
+            hall.UpdatedAt = _dateTime.Now;
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
 
         _logger.LogInformation("Admin deleted hall {HallId}", hallId);
     }

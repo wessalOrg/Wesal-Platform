@@ -322,8 +322,10 @@ public class HallAccessGuardShould : IDisposable
 
     // --- US-ADMIN-05: owner calendar blocked on locked hall ---
 
-    [Fact]
-    public async Task SetDayBlock_AdminLocked_ThrowsHallLocked()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(-1)] // Access denial must take precedence even when the date is invalid.
+    public async Task SetDayBlock_AdminLocked_ThrowsHallLocked(int daysFromToday)
     {
         var owner = await CreateOwnerAsync("owner@example.com");
         var hall = AddHall(owner.Id, "Grand Hall", adminLocked: true);
@@ -337,7 +339,7 @@ public class HallAccessGuardShould : IDisposable
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
             service.SetDayBlockAsync(hall.Id, new OwnerDayBlockRequest
             {
-                Date = new DateOnly(2026, 9, 1),
+                Date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(daysFromToday),
                 IsOpen = false
             }));
         Assert.Equal(HallManagementAccess.HallLockedCode, ex.Code);

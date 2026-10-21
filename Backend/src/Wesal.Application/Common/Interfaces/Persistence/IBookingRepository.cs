@@ -5,6 +5,16 @@ namespace Wesal.Application.Common.Interfaces.Persistence;
 
 public interface IBookingRepository
 {
+    /// <summary>
+    /// Locks the hall row for the current transaction. Booking admission and every Hall
+    /// mutation that changes admission eligibility or its schedule use this as their
+    /// first database operation before reading state to validate or change. PostgreSQL
+    /// implementations hold a row-level lock until the transaction commits or rolls back.
+    /// </summary>
+    Task<bool> LockHallForAvailabilityChangeAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(Booking booking, CancellationToken cancellationToken = default);
 
     Task<Booking?> GetByIdWithHallAsync(Guid bookingId, CancellationToken cancellationToken = default);

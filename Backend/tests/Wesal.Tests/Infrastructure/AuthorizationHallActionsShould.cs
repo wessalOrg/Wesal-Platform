@@ -1,4 +1,4 @@
-﻿using Wesal.Application.Common.Interfaces;
+using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
@@ -128,6 +128,8 @@ public class AuthorizationHallActionsShould
 
     private sealed class FakeBookingRepository : IBookingRepository
     {
+        // Test double acknowledges the required contract; only PostgreSQL integration tests model database locking.
+        public Task<bool> LockHallForAvailabilityChangeAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult(true);
         public List<Booking> Bookings { get; } = [];
 
         public Task AddAsync(Booking booking, CancellationToken cancellationToken = default)

@@ -85,7 +85,9 @@ public sealed class OwnerHallService : IOwnerHallService
 
         var ownerId = await ResolveOwnerAsync(cancellationToken);
 
-        var hall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken);
+        // An untracked preflight avoids holding a stale tracked Hall instance when the
+        // authoritative row is reloaded after acquiring the shared transaction lock.
+        var hall = await _ownerDashboardRepository.GetOwnedHallAsync(hallId, ownerId, cancellationToken);
 
         if (hall is null)
         {
@@ -114,21 +116,33 @@ public sealed class OwnerHallService : IOwnerHallService
             // whole hours, and narrowing it past a live booking is refused with the same
             // ConflictException the hourly-settings path uses, so this endpoint can never
             // strand an active booking by reshaping the window around it.
-            await EnsureWindowChangeAllowedAsync(hall, effectiveRequest, cancellationToken);
-
-            await _unitOfWork.ExecuteInTransactionAsync(async () =>
+            hall = await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
-                ApplyHallDetails(hall, effectiveRequest);
+                if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
+                {
+                    throw new NotFoundException(nameof(Hall), hallId);
+                }
+
+                var lockedHall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken)
+                    ?? throw new NotFoundException(nameof(Hall), hallId);
+                HallManagementAccess.EnsureDataEditable(lockedHall);
+
+                // Re-read and validate the window after the common row lock, so a
+                // concurrent booking or dedicated settings update cannot invalidate it.
+                await EnsureWindowChangeAllowedAsync(lockedHall, effectiveRequest, cancellationToken);
+
+                ApplyHallDetails(lockedHall, effectiveRequest);
 
                 // Resubmission (FR-ADM-01, US-ADMIN-03): editing a Rejected hall re-queues
                 // it for review. Editing an Approved or PendingReview hall never changes
                 // its approval state.
-                if (hall.Status == HallStatus.Rejected)
+                if (lockedHall.Status == HallStatus.Rejected)
                 {
-                    hall.Status = HallStatus.PendingReview;
+                    lockedHall.Status = HallStatus.PendingReview;
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return lockedHall;
             }, cancellationToken);
         }
         catch (Exception ex)
@@ -176,22 +190,21 @@ public sealed class OwnerHallService : IOwnerHallService
 
         var ownerId = await ResolveOwnerAsync(cancellationToken);
 
-        var hall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken);
-
-        if (hall is null)
-        {
-            throw new NotFoundException(nameof(Hall), hallId);
-        }
-
-        // Deletion is allowed regardless of payment status, admin lock, or system
-        // lock — the owner can always remove their own hall. Ownership is already
-        // enforced by the repository (GetOwnedHallForUpdateAsync scopes to ownerId).
-
-        hall.IsDeleted = true;
-        hall.UpdatedAt = DateTimeOffset.UtcNow;
-
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
+            {
+                throw new NotFoundException(nameof(Hall), hallId);
+            }
+
+            var hall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Hall), hallId);
+
+            // Deletion remains allowed regardless of payment or lock state. The shared
+            // lock ensures a booking either commits before this soft delete or rechecks
+            // IsDeleted after the delete commits.
+            hall.IsDeleted = true;
+            hall.UpdatedAt = DateTimeOffset.UtcNow;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
     }

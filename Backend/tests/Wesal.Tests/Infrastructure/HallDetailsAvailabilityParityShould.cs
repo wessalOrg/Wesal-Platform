@@ -209,6 +209,8 @@ public class HallDetailsAvailabilityParityShould
 
     private sealed class StubBookingRepository : IBookingRepository
     {
+        // Test double acknowledges the required contract; only PostgreSQL integration tests model database locking.
+        public Task<bool> LockHallForAvailabilityChangeAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult(true);
         private readonly IReadOnlyList<TimeOnly> _bookedStarts;
         private readonly bool _dayOpen;
 

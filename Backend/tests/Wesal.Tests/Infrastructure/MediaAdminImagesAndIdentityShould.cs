@@ -129,6 +129,7 @@ public class MediaAdminImagesAndIdentityShould : IDisposable
 
     private AdminHallReviewService CreateAdminService(string adminId, IDocumentStorage? storage = null)
         => new(new AdminDashboardRepository(_context), new HallRepository(_context),
+            new BookingRepository(_context),
             new UnitOfWork(_context), new ConversationRepository(_context),
             new MessageRepository(_context),
             new FakeCurrentUser(adminId, true, ApplicationRoles.Admin), TestClock(),

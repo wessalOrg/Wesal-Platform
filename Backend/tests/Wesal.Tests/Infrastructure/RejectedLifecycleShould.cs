@@ -135,7 +135,7 @@ public class RejectedLifecycleShould : IDisposable
             new UnitOfWork(_context), NullLogger<OwnerHallService>.Instance);
 
     private AdminHallService CreateAdminHallService(string adminId)
-        => new(new HallRepository(_context), new UnitOfWork(_context),
+        => new(new HallRepository(_context), new BookingRepository(_context), new UnitOfWork(_context),
             new FakeHallSearchIndexer(), new ConversationRepository(_context),
             new MessageRepository(_context), new RecordingConversationNotifier(),
             new FakeCurrentUser(adminId, true, ApplicationRoles.Admin), TestClock(),
@@ -144,6 +144,7 @@ public class RejectedLifecycleShould : IDisposable
 
     private AdminHallReviewService CreateAdminReviewService(string adminId)
         => new(new AdminDashboardRepository(_context), new HallRepository(_context),
+            new BookingRepository(_context),
             new UnitOfWork(_context), new ConversationRepository(_context),
             new MessageRepository(_context),
             new FakeCurrentUser(adminId, true, ApplicationRoles.Admin), TestClock(),

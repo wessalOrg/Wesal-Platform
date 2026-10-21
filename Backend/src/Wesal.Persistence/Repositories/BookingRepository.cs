@@ -15,6 +15,48 @@ public sealed class BookingRepository : IBookingRepository
         _context = context;
     }
 
+    /// <summary>
+    /// Serializes hourly booking creation with owner availability changes. Call only
+    /// after the unit of work has begun its transaction; the lock is held through the
+    /// later invariant checks and writes until that transaction completes.
+    /// </summary>
+    public async Task<bool> LockHallForAvailabilityChangeAsync(
+        Guid hallId,
+        CancellationToken cancellationToken = default)
+    {
+        // EF InMemory (and fakes using the interface default) has no row-locking
+        // capability; preserve its existing service-test behavior without claiming
+        // it exercises PostgreSQL synchronization.
+        if (!_context.Database.IsRelational())
+        {
+            return await _context.Halls.AnyAsync(hall => hall.Id == hallId, cancellationToken);
+        }
+
+        if (_context.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "The hall availability lock must be acquired inside a unit-of-work transaction.");
+        }
+
+        // EF tracking queries do not refresh entities already in the identity map.
+        // Detach a Hall loaded by an earlier candidate/preflight read so callers that
+        // reload after this lock observe the row version that became current while they
+        // waited for the database lock.
+        var previouslyTrackedHall = _context.Halls.Local.FirstOrDefault(hall => hall.Id == hallId);
+        if (previouslyTrackedHall is not null)
+        {
+            _context.Entry(previouslyTrackedHall).State = EntityState.Detached;
+        }
+
+        var hall = await _context.Halls
+            .FromSqlInterpolated($"SELECT * FROM wesal.\"Halls\" WHERE \"Id\" = {hallId} FOR UPDATE")
+            .AsNoTracking()
+            .IgnoreAutoIncludes()
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return hall is not null;
+    }
+
     public async Task AddAsync(Booking booking, CancellationToken cancellationToken = default)
     {
         await _context.Bookings.AddAsync(booking, cancellationToken);

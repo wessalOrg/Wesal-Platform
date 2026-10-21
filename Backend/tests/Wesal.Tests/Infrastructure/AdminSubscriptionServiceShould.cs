@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Common;
@@ -98,10 +99,11 @@ public class AdminSubscriptionServiceShould : IDisposable
           return hall;
       }
 
-    private AdminSubscriptionService CreateService()
+    private AdminSubscriptionService CreateService(Wesal.Application.Common.Interfaces.Persistence.IBookingRepository? bookingRepository = null)
         => new(
             new AdminDashboardRepository(_context),
             new HallRepository(_context),
+            bookingRepository ?? new BookingRepository(_context),
             Options.Create(new SubscriptionPaymentOptions
             {
                 SubscriptionPriceIls = 120m,
@@ -116,6 +118,24 @@ public class AdminSubscriptionServiceShould : IDisposable
             new FakeDateTime(),
             NullLogger<AdminSubscriptionService>.Instance,
             new Wesal.Infrastructure.Notifications.NotificationService(_provider.GetRequiredService<UserManager<ApplicationUser>>()));
+
+    [Fact]
+    public async Task SubscriptionPaymentMutation_UsesTheSharedHallLock()
+    {
+        AddOwner("owner-lock", "Owner", "+970111", "owner-lock@example.com");
+        var hall = AddHall("Paid gate", "owner-lock", payment: HallPaymentStatus.Unpaid, systemLocked: true);
+        var bookingRepository = new Mock<Wesal.Application.Common.Interfaces.Persistence.IBookingRepository>();
+        bookingRepository.Setup(repo => repo.LockHallForAvailabilityChangeAsync(hall.Id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        var service = CreateService(bookingRepository.Object);
+        await service.MarkSubscriptionPaidAsync(hall.Id);
+        await service.MarkSubscriptionNotPaidAsync(hall.Id);
+
+        bookingRepository.Verify(repo => repo.LockHallForAvailabilityChangeAsync(hall.Id, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        var persisted = await _context.Halls.FindAsync(hall.Id);
+        Assert.Equal(HallPaymentStatus.Unpaid, persisted!.PaymentStatus);
+        Assert.False(persisted.SystemLocked);
+    }
 
     private sealed class FakeConversationNotifier : IConversationNotifier
     {

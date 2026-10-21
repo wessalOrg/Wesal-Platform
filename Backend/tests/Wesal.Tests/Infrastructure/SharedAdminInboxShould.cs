@@ -916,6 +916,7 @@ public class SharedAdminInboxShould : IDisposable
         => new(
             new AdminDashboardRepository(_context),
             new HallRepository(_context),
+            new BookingRepository(_context),
             Microsoft.Extensions.Options.Options.Create(new SubscriptionPaymentOptions()),
             new UnitOfWork(_context),
             new ConversationRepository(_context),

@@ -105,7 +105,7 @@ public class OwnerEditAdminVisibilityShould : IDisposable
             new LocalHallMediaStorage(Options.Create(new HallMediaOptions())), new UnitOfWork(_context), NullLogger<OwnerHallService>.Instance);
 
     private AdminHallReviewService CreateAdminService()
-        => new(new AdminDashboardRepository(_context), new HallRepository(_context), new UnitOfWork(_context),
+        => new(new AdminDashboardRepository(_context), new HallRepository(_context), new BookingRepository(_context), new UnitOfWork(_context),
             new ConversationRepository(_context), new MessageRepository(_context),
             new FakeCurrentUser("admin-1", true, ApplicationRoles.Admin),
             new FakeDateTime(new DateTimeOffset(2026, 8, 15, 10, 0, 0, TimeSpan.Zero)),

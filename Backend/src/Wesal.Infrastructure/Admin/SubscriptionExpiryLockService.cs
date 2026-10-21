@@ -35,6 +35,7 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
 
     private readonly IAdminDashboardRepository _adminDashboardRepository;
     private readonly IHallRepository _hallRepository;
+    private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IConversationRepository _conversationRepository;
     private readonly IMessageRepository _messageRepository;
@@ -45,6 +46,7 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
     public SubscriptionExpiryLockService(
         IAdminDashboardRepository adminDashboardRepository,
         IHallRepository hallRepository,
+        IBookingRepository bookingRepository,
         IUnitOfWork unitOfWork,
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository,
@@ -54,6 +56,7 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
     {
         _adminDashboardRepository = adminDashboardRepository;
         _hallRepository = hallRepository;
+        _bookingRepository = bookingRepository;
         _unitOfWork = unitOfWork;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
@@ -81,6 +84,11 @@ public sealed class SubscriptionExpiryLockService : ISubscriptionExpiryLockServi
                 // payment that landed since the candidate scan is never locked.
                 var hall = await _unitOfWork.ExecuteInTransactionAsync<Hall?>(async () =>
                 {
+                    if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(candidate.Id, cancellationToken))
+                        return null;
+
+                    // Candidate rows come from an earlier, no-tracking scan. Reload only
+                    // after the shared lock so eligibility is evaluated from current state.
                     var current = await _hallRepository.GetHallByIdForUpdateAsync(candidate.Id, cancellationToken);
 
                     if (current is null

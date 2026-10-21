@@ -400,6 +400,7 @@ public class AdminMessageOwnerThreadShould : IDisposable
         => new(
             new AdminDashboardRepository(_context),
             new HallRepository(_context),
+            new BookingRepository(_context),
             new UnitOfWork(_context),
             new ConversationRepository(_context),
             new MessageRepository(_context),

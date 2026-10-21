@@ -740,6 +740,8 @@ public class HourlySlotServiceShould
 
     private sealed class FakeBookingRepository : IBookingRepository
     {
+        // Test double acknowledges the required contract; only PostgreSQL integration tests model database locking.
+        public Task<bool> LockHallForAvailabilityChangeAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult(true);
         public List<Booking> AddedBookings { get; } = [];
 
         public List<HallSlotAvailability> Slots { get; } = [];
