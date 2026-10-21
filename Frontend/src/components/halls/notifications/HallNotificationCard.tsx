@@ -222,7 +222,7 @@ export default function HallNotificationCard({
           {showChat ? (
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-1.5 self-start rounded-full bg-[#fff1e8] px-3 py-1.5 text-[0.68rem] font-bold text-[#c06a3a] transition hover:bg-[#ffe8dc] disabled:opacity-60 lg:self-end"
+              className="inline-flex items-center justify-center gap-1.5 self-start rounded-full bg-[var(--wesal-pink)] px-3 py-1.5 text-[0.68rem] font-bold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60 lg:self-end"
               disabled={messagingSeeker}
               aria-busy={messagingSeeker || undefined}
               data-testid={`hall-notification-chat-seeker-${notification.id}`}
