@@ -26,7 +26,7 @@ export default function AcceptActionButton({
   return (
     <button
       type="button"
-      className="hall-accept-btn inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-[#1f8a4c] bg-[#1f8a4c] px-3 text-[0.78rem] font-bold text-white transition hover:bg-[#197a42] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f8a4c] disabled:pointer-events-none disabled:opacity-60"
+      className="hall-accept-btn inline-flex w-fit items-center justify-center gap-1 rounded-md border border-[#1f8a4c] bg-[#1f8a4c] px-2.5 py-1.5 text-[0.72rem] font-bold leading-none text-white transition hover:bg-[#197a42] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f8a4c] disabled:pointer-events-none disabled:opacity-60"
       data-testid={`hall-notification-accept-${bookingId}`}
       data-state={busy ? "loading" : locked ? "disabled" : "default"}
       disabled={locked}
@@ -47,7 +47,7 @@ export default function AcceptActionButton({
 
 function CheckIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3 w-3 shrink-0" fill="none" aria-hidden="true">
       <path
         d="M5.5 12.5 10 17l8.5-9.5"
         stroke="currentColor"

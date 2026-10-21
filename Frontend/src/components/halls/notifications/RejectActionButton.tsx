@@ -26,7 +26,7 @@ export default function RejectActionButton({
   return (
     <button
       type="button"
-      className="hall-reject-btn inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-[#c0392b] bg-white px-3 text-[0.78rem] font-bold text-[#c0392b] transition hover:bg-[#fdecea] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c0392b] disabled:pointer-events-none disabled:opacity-60"
+      className="hall-reject-btn inline-flex w-fit items-center justify-center gap-1 rounded-md border border-[#c0392b] bg-white px-2.5 py-1.5 text-[0.72rem] font-bold leading-none text-[#c0392b] transition hover:bg-[#fdecea] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c0392b] disabled:pointer-events-none disabled:opacity-60"
       data-testid={`hall-notification-reject-${bookingId}`}
       data-state={busy ? "loading" : locked ? "disabled" : "default"}
       disabled={locked}
@@ -47,7 +47,7 @@ export default function RejectActionButton({
 
 function CloseIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3 w-3 shrink-0" fill="none" aria-hidden="true">
       <path
         d="M7 7l10 10M17 7 7 17"
         stroke="currentColor"
