@@ -79,8 +79,9 @@ public class SwaggerDocumentShould
     /// Search, and owner-statistics routes; 156 adds the seeker-facing GET /bookings
     /// "My bookings" endpoint; 158 adds the seeker's saved-halls list and per-hall save/remove
     /// "أضف للمفضلة" endpoints; 162 adds the durable Help Center ticket list, filing, read
-    /// receipt, and the Admin queue/reply endpoints; 168 adds Google's two auth
-    /// operations under the existing auth path.
+    /// receipt, and the Admin queue/reply endpoints; 166 adds the account-lock administration
+    /// operations; 167 adds the Admin per-conversation read receipt used by the grouped queue.
+    /// Google login and registration add operations to the existing auth path.
     /// </summary>
     private const int ExpectedPathCount = 168;
 
