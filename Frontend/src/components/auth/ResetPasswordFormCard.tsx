@@ -55,7 +55,11 @@ export default function ResetPasswordFormCard({
     }
   };
 
-  const localizeApiFieldMessage = (field: FieldKey, message: string): string => {
+  const localizeApiFieldMessage = (
+    field: FieldKey,
+    message: string,
+    passwordValue = newPassword,
+  ): string => {
     const lower = message.toLowerCase();
     if (field === "confirmPassword") {
       if (lower.includes("match")) return t("auth.register.form.error.passwordMismatch");
@@ -70,7 +74,7 @@ export default function ResetPasswordFormCard({
     if (lower.includes("special") || lower.includes("non.alphanumeric")) {
       return t("auth.register.form.error.passwordSpecial");
     }
-    return passwordIssueMessage(getRegisterPasswordIssue(newPassword));
+    return passwordIssueMessage(getRegisterPasswordIssue(passwordValue));
   };
 
   const validateField = (field: FieldKey, values: { newPassword: string; confirmPassword: string }): string | undefined => {
@@ -153,8 +157,8 @@ export default function ResetPasswordFormCard({
       await resetPassword({
         email: email ?? "",
         token: token ?? "",
-        newPassword,
-        confirmPassword,
+        newPassword: values.newPassword,
+        confirmPassword: values.confirmPassword,
       });
       setSubmitted(true);
     } catch (err) {
@@ -164,7 +168,7 @@ export default function ResetPasswordFormCard({
           const localized: FieldErrors = {};
           (Object.keys(fieldErrors) as FieldKey[]).forEach((field) => {
             const raw = fieldErrors[field]?.[0];
-            if (raw) localized[field] = localizeApiFieldMessage(field, raw);
+            if (raw) localized[field] = localizeApiFieldMessage(field, raw, values.newPassword);
           });
 
           const hasNewPassword = Boolean(localized.newPassword);
