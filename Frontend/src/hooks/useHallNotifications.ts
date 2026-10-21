@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { notificationErrorKind } from "@/lib/hall-notifications";
 import { parseBookingPeriodType } from "@/lib/booking-period";
+import { parseNameOnBooking } from "@/lib/name-on-booking";
 import {
   BOOKING_ACCEPTED_EVENT,
   BOOKING_CANCELLED_EVENT,
@@ -215,11 +216,14 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
       const period = parseBookingPeriodType(event.period);
       setItems((current) => {
         if (current.some((item) => item.id === event.id)) return current;
+        const packed = parseNameOnBooking(event.requesterName);
         const incoming: HallBookingNotification = {
           id: event.id,
           hallId: event.hallId || scopedId,
-          requesterName: event.requesterName ?? "",
+          requesterName: packed.displayName || event.requesterName || "",
           requesterUserId: "",
+          requesterPhone: packed.phone,
+          eventTypeLabel: packed.eventTypeLabel,
           date: event.date ?? "",
           periods: period ? [period] : [],
           status: "Pending",

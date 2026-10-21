@@ -2,6 +2,7 @@ import { parseDateIso } from "@/lib/booking-date";
 import { parseDepositAmount } from "@/lib/booking-deposits";
 import { parseBookingStatus } from "@/lib/booking-status";
 import { normalizeTimeOnly } from "@/lib/hourly-slots";
+import { parseNameOnBooking } from "@/lib/name-on-booking";
 import type { BookingPeriodType } from "@/types/booking";
 import type { OwnerHallBookingRequest } from "@/types/owner-hall-booking-requests";
 
@@ -26,6 +27,8 @@ export type OwnerHallBookingRequestDto = {
   requesterFullName?: string | null;
   customerName?: string | null;
   fullName?: string | null;
+  nameOnBooking?: string | null;
+  requesterPhone?: string | null;
   date?: string | null;
   requestedDate?: string | null;
   period?: string | number | null;
@@ -56,6 +59,8 @@ function readId(dto: OwnerHallBookingRequestDto): string | null {
 }
 
 function readRequesterName(dto: OwnerHallBookingRequestDto): string {
+  const packed = parseNameOnBooking(String(dto.nameOnBooking ?? "").trim());
+  if (packed.displayName) return packed.displayName;
   return (
     String(
       dto.requesterName ??
@@ -127,11 +132,19 @@ export function mapOwnerHallBookingRequestDto(
   const timeRange = String(dto.timeRange ?? "").trim();
   if (periods.length === 0 && slotStarts.length === 0 && !timeRange) return null;
 
+  const packed = parseNameOnBooking(String(dto.nameOnBooking ?? "").trim());
+  const phone =
+    packed.phone ||
+    String(dto.requesterPhone ?? "").trim() ||
+    undefined;
+
   return {
     id,
     hallId: String(dto.hallId ?? "").trim() || fallbackHallId,
     requesterName: readRequesterName(dto),
     requesterUserId: String(dto.requesterUserId ?? "").trim() || undefined,
+    requesterPhone: phone,
+    eventTypeLabel: packed.eventTypeLabel,
     date,
     periods,
     slotStarts,

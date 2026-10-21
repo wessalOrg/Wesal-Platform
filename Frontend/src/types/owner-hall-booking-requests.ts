@@ -6,6 +6,8 @@ export type OwnerHallBookingRequest = {
   hallId: string;
   requesterName: string;
   requesterUserId?: string;
+  requesterPhone?: string;
+  eventTypeLabel?: string;
   date: string;
   periods: BookingPeriodType[];
   slotStarts?: string[];

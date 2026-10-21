@@ -243,6 +243,7 @@ export default function HallNotificationsView({
         busy={Boolean(acceptTarget && accept.acceptingId === acceptTarget.id)}
         errorKey={acceptTarget ? accept.errorById[acceptTarget.id] ?? null : null}
         requesterName={acceptTarget?.requesterName.trim() || t("common.user")}
+        eventTypeLabel={acceptTarget?.eventTypeLabel?.trim() || undefined}
         dateLabel={acceptDateLabel}
         periodLabels={acceptPeriodLabels}
         hallName={hallName}

@@ -1486,6 +1486,8 @@ const ar: MessageCatalog = {
   "owner.notifications.date": "تاريخ الحجز",
   "owner.notifications.periods": "الفترة المطلوبة",
   "owner.notifications.phone": "رقم الجوال",
+  "owner.notifications.eventType": "المناسبة: {value}",
+  "owner.notifications.eventTypeLabel": "نوع المناسبة",
   "owner.notifications.valueMissing": "غير متوفر",
   "owner.notifications.accept": "موافقة على الطلب",
   "owner.notifications.accepting": "جاري القبول",

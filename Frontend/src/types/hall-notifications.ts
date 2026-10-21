@@ -25,6 +25,8 @@ export type HallBookingNotification = {
   requesterUserId: string;
   /** Mobile number the seeker supplied with the booking, when available. */
   requesterPhone?: string;
+  /** Event type the seeker typed on confirm (from nameOnBooking packing). */
+  eventTypeLabel?: string;
   date: string;
   periods: BookingPeriodType[];
   slotStarts?: string[];

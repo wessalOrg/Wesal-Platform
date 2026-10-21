@@ -21,6 +21,7 @@ import {
   formatHourlyRange,
   normalizeTimeOnly,
 } from "@/lib/hourly-slots";
+import { nameOnBookingLabel } from "@/lib/name-on-booking";
 import type {
   BlockDayInput,
   HourlyBookingInput,
@@ -229,22 +230,6 @@ function mapHourlySubmitError(err: unknown): ApiError {
   if (err.status === 401) return new ApiError("errors.booking.unauthorized", 401);
   if (err.status === 403) return new ApiError("errors.booking.forbidden", 403);
   return new ApiError("errors.hourly.generic", err.status);
-}
-
-const NAME_ON_BOOKING_MAX = 100;
-
-/**
- * The hourly-booking API has no dedicated phone/event fields; the owner sees
- * `nameOnBooking`, so we pack them as "Name · Event - Phone" within 100 chars.
- */
-function nameOnBookingLabel(name: string, eventTypeLabel?: string, phone?: string): string {
-  const event = eventTypeLabel?.trim();
-  const base = event ? `${name} · ${event}` : name;
-  const number = phone?.trim();
-  if (!number) return base.slice(0, NAME_ON_BOOKING_MAX);
-  const suffix = ` - ${number}`;
-  const room = Math.max(NAME_ON_BOOKING_MAX - suffix.length, 0);
-  return `${base.slice(0, room).trim()}${suffix}`;
 }
 
 export async function submitHourlyBooking(input: HourlyBookingInput): Promise<HourlyBookingResult> {

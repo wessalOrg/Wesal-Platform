@@ -119,12 +119,13 @@ function notificationToCard(
 
   const phone = item.requesterPhone?.trim() || undefined;
   const rawName = item.requesterName.trim();
-  const customerName = stripPhoneFromName(rawName, phone) || translate("common.user");
+  const customerName = stripPackedBookingName(rawName, phone) || translate("common.user");
+  const eventLabel = item.eventTypeLabel?.trim();
 
   return {
     id: item.id,
     date: parseDateIso(item.date) || item.date,
-    title: translate("owner.calendar.bookingTitle"),
+    title: eventLabel || translate("owner.calendar.bookingTitle"),
     customerName,
     phone,
     requesterUserId: item.requesterUserId?.trim() || undefined,
@@ -136,11 +137,17 @@ function notificationToCard(
   };
 }
 
-function stripPhoneFromName(name: string, phone: string | undefined): string {
+/** Strip phone / event packing leftovers if an older payload still embeds them in the name. */
+function stripPackedBookingName(name: string, phone: string | undefined): string {
   if (!name) return "";
-  if (!phone) return name;
-  const suffix = ` - ${phone}`;
-  return name.endsWith(suffix) ? name.slice(0, -suffix.length).trim() : name;
+  let value = name;
+  if (phone) {
+    const suffix = ` - ${phone}`;
+    if (value.endsWith(suffix)) value = value.slice(0, -suffix.length).trim();
+  }
+  const eventSep = value.indexOf(" · ");
+  if (eventSep >= 0) value = value.slice(0, eventSep).trim();
+  return value;
 }
 
 function manualToCard(

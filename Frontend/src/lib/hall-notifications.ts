@@ -3,6 +3,7 @@ import { parseDateIso } from "@/lib/booking-date";
 import { parseDepositAmount } from "@/lib/booking-deposits";
 import { parseBookingPeriodType } from "@/lib/booking-period";
 import { normalizeTimeOnly } from "@/lib/hourly-slots";
+import { parseNameOnBooking } from "@/lib/name-on-booking";
 import { parseCanDeleteFlag } from "@/lib/owner-delete-booking";
 import { parseCanPublishFlag, parsePublishedFlag } from "@/lib/owner-publish-booking";
 import {
@@ -158,13 +159,20 @@ export function mapHallBookingNotification(
     asText(data.bookingId || data.bookingRequestId || data.id) ||
     `notification-${fallbackHallId}-${index}`;
   const date = parseDateIso(data.date ?? data.requestedDate);
-  const requesterName =
+  const packed = parseNameOnBooking(asText(data.nameOnBooking));
+  const profileName =
     asText(data.requesterName) ||
     asText(data.requesterFullName) ||
     asText(data.requesterUserName) ||
     asText(data.fullName) ||
     asText(data.name);
-  const requesterPhone = requesterPhoneFromDto(data, requesterName);
+  // Prefer the name/event/phone the seeker typed on confirm (nameOnBooking), then profile fields.
+  const requesterName = packed.displayName || profileName;
+  const requesterPhone =
+    packed.phone ||
+    requesterPhoneFromDto(data, profileName || requesterName) ||
+    undefined;
+  const eventTypeLabel = packed.eventTypeLabel;
 
   const depositPaymentConfirmedAt = confirmedAtFromDto(data.depositPaymentConfirmedAt);
   const parsedStatus = data.status == null ? null : parseOwnerBookingRequestStatus(data.status);
@@ -180,7 +188,8 @@ export function mapHallBookingNotification(
     hallId: asText(data.hallId) || fallbackHallId,
     requesterName,
     requesterUserId: asText(data.requesterUserId || data.userId),
-    requesterPhone: requesterPhone || undefined,
+    requesterPhone,
+    eventTypeLabel,
     date: date ?? asText(data.date ?? data.requestedDate),
     periods: periodsFromDto(data),
     slotStarts: slotStartsFromDto(data),

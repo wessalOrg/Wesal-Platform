@@ -123,7 +123,10 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
                     .ToList(),
                 TimeRange = row.Booking.HourlyTimeRange,
                 RequesterUserId = row.Booking.RequesterUserId,
-                RequesterName = row.RequesterName,
+                RequesterName = ResolveRequesterDisplayName(row.Booking.NameOnBooking, row.RequesterName),
+                NameOnBooking = string.IsNullOrWhiteSpace(row.Booking.NameOnBooking)
+                    ? null
+                    : row.Booking.NameOnBooking.Trim(),
                 RequesterPhone = ResolveRequesterPhone(row.Booking.NameOnBooking, row.ProfilePhone),
                 Status = row.Booking.Status,
                 RequestedAt = row.Booking.CreatedAt,
@@ -131,6 +134,21 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
                 DepositPaymentConfirmedAt = row.Booking.DepositPaymentConfirmedAt
             })
             .ToList();
+    }
+
+    /// <summary>
+    /// Prefer the name the seeker typed into NameOnBooking (before " · " event and
+    /// " - " phone packing), then the account full name.
+    /// </summary>
+    private static string ResolveRequesterDisplayName(string? nameOnBooking, string profileFullName)
+    {
+        var fromBooking = ExtractDisplayName(nameOnBooking);
+        if (!string.IsNullOrWhiteSpace(fromBooking))
+        {
+            return fromBooking;
+        }
+
+        return string.IsNullOrWhiteSpace(profileFullName) ? string.Empty : profileFullName.Trim();
     }
 
     /// <summary>
@@ -146,6 +164,33 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
         }
 
         return string.IsNullOrWhiteSpace(profilePhone) ? string.Empty : profilePhone.Trim();
+    }
+
+    private static string? ExtractDisplayName(string? nameOnBooking)
+    {
+        if (string.IsNullOrWhiteSpace(nameOnBooking))
+        {
+            return null;
+        }
+
+        var value = nameOnBooking.Trim();
+        var phoneSep = value.LastIndexOf(" - ", StringComparison.Ordinal);
+        if (phoneSep >= 0)
+        {
+            var candidate = value[(phoneSep + 3)..].Trim();
+            if (candidate.Length >= 7 && candidate.Any(char.IsDigit))
+            {
+                value = value[..phoneSep].Trim();
+            }
+        }
+
+        var eventSep = value.IndexOf(" · ", StringComparison.Ordinal);
+        if (eventSep >= 0)
+        {
+            value = value[..eventSep].Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
     private static string? ExtractPhoneSuffix(string? nameOnBooking)

@@ -66,6 +66,7 @@ export default function HallNotificationCard({
   const phone = notification.requesterPhone?.trim() || "";
   const requester =
     displayRequesterName(notification.requesterName, phone) || t("common.user");
+  const eventTypeLabel = notification.eventTypeLabel?.trim() || "";
   const dateLabel =
     formatNotificationDate(notification.date, locale) ||
     t("owner.notifications.valueMissing");
@@ -179,6 +180,11 @@ export default function HallNotificationCard({
                   {phone ? (
                     <p dir="ltr" className="truncate text-start text-[0.7rem] text-[var(--wesal-muted)]">
                       {phone}
+                    </p>
+                  ) : null}
+                  {eventTypeLabel ? (
+                    <p className="mt-0.5 truncate text-[0.7rem] font-semibold text-[var(--wesal-maroon)]">
+                      {t("owner.notifications.eventType", { value: eventTypeLabel })}
                     </p>
                   ) : null}
                 </div>
@@ -380,11 +386,15 @@ function formatBookingRelative(
 }
 
 function displayRequesterName(rawName: string, phone: string): string {
-  const name = rawName.trim();
+  let name = rawName.trim();
   if (!name) return "";
-  if (!phone) return name;
-  const suffix = ` - ${phone}`;
-  return name.endsWith(suffix) ? name.slice(0, -suffix.length).trim() : name;
+  if (phone) {
+    const suffix = ` - ${phone}`;
+    if (name.endsWith(suffix)) name = name.slice(0, -suffix.length).trim();
+  }
+  const eventSep = name.indexOf(" · ");
+  if (eventSep >= 0) name = name.slice(0, eventSep).trim();
+  return name;
 }
 
 function formatNotificationDate(iso: string | null | undefined, locale: string): string {

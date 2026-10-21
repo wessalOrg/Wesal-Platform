@@ -15,6 +15,7 @@ type AcceptConfirmModalProps = {
   busy?: boolean;
   errorKey?: string | null;
   requesterName: string;
+  eventTypeLabel?: string;
   dateLabel?: string;
   periodLabels?: string[];
   hallName?: string | null;
@@ -27,6 +28,7 @@ export default function AcceptConfirmModal({
   busy = false,
   errorKey = null,
   requesterName,
+  eventTypeLabel,
   dateLabel,
   periodLabels = [],
   hallName,
@@ -99,6 +101,12 @@ export default function AcceptConfirmModal({
             <dt className="text-[var(--wesal-muted)]">{t("owner.notifications.requester")}</dt>
             <dd className="font-semibold text-[var(--wesal-text)]">{requesterName}</dd>
           </div>
+          {eventTypeLabel?.trim() ? (
+            <div className="flex justify-between gap-3">
+              <dt className="text-[var(--wesal-muted)]">{t("owner.notifications.eventTypeLabel")}</dt>
+              <dd className="font-semibold text-[var(--wesal-text)]">{eventTypeLabel.trim()}</dd>
+            </div>
+          ) : null}
           {dateLabel ? (
             <div className="flex justify-between gap-3">
               <dt className="text-[var(--wesal-muted)]">{t("owner.notifications.date")}</dt>

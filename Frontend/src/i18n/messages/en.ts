@@ -1494,6 +1494,8 @@ const en: MessageCatalog = {
   "owner.notifications.date": "Booking date",
   "owner.notifications.periods": "Requested period",
   "owner.notifications.phone": "Mobile number",
+  "owner.notifications.eventType": "Occasion: {value}",
+  "owner.notifications.eventTypeLabel": "Event type",
   "owner.notifications.valueMissing": "Unavailable",
   "owner.notifications.accept": "Approve booking",
   "owner.notifications.accepting": "Accepting…",

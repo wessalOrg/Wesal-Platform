@@ -25,7 +25,18 @@ public sealed class OwnerBookingRequestDto
 
     public string RequesterUserId { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Display name for the card. Prefer the name the seeker typed into
+    /// <c>NameOnBooking</c> (before event/phone packing), then the account full name.
+    /// </summary>
     public string RequesterName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Raw value persisted on the booking when the seeker confirmed
+    /// (packed as "Name · Event - Phone" by the client). Used to surface the
+    /// typed name, event type, and phone on owner cards.
+    /// </summary>
+    public string? NameOnBooking { get; init; }
 
     /// <summary>
     /// Mobile number the seeker supplied with the booking (parsed from
