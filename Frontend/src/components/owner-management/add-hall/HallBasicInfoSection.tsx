@@ -35,51 +35,49 @@ export default function HallBasicInfoSection({
     <HallFormSection
       id="hall-basic-heading"
       title={t("owner.management.addHall.sections.basic")}
+      icon={<BasicInfoDocIcon />}
+      className="h-full"
     >
-      <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="md:col-span-2">
-          <HallFormField
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+        <HallFormField
+          id="hall-name"
+          label={t("owner.management.addHall.fields.hallName")}
+          required
+          error={nameError}
+        >
+          <input
             id="hall-name"
-            label={t("owner.management.addHall.fields.hallName")}
-            required
-            error={nameError}
-          >
-            <input
-              id="hall-name"
-              type="text"
-              value={values.hallName}
-              disabled={disabled}
-              autoComplete="organization"
-              aria-invalid={nameError ? true : undefined}
-              aria-describedby={nameError ? "hall-name-error" : undefined}
-              onChange={(event) => onChange({ hallName: event.target.value })}
-              className={hallFieldClassName(Boolean(nameError))}
-            />
-          </HallFormField>
-        </div>
+            type="text"
+            value={values.hallName}
+            disabled={disabled}
+            autoComplete="organization"
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? "hall-name-error" : undefined}
+            onChange={(event) => onChange({ hallName: event.target.value })}
+            className={hallFieldClassName(Boolean(nameError))}
+          />
+        </HallFormField>
 
-        <div className="md:col-span-2">
-          <HallFormField
+        <HallFormField
+          id="hall-phone"
+          label={t("owner.management.addHall.fields.ownerPhone")}
+          required
+          error={phoneError}
+        >
+          <input
             id="hall-phone"
-            label={t("owner.management.addHall.fields.ownerPhone")}
-            required
-            error={phoneError}
-          >
-            <input
-              id="hall-phone"
-              type="tel"
-              inputMode="tel"
-              dir="ltr"
-              value={values.ownerPhone}
-              disabled={disabled}
-              autoComplete="tel"
-              aria-invalid={phoneError ? true : undefined}
-              aria-describedby={phoneError ? "hall-phone-error" : undefined}
-              onChange={(event) => onChange({ ownerPhone: event.target.value })}
-              className={`${hallFieldClassName(Boolean(phoneError))} text-right`}
-            />
-          </HallFormField>
-        </div>
+            type="tel"
+            inputMode="tel"
+            dir="ltr"
+            value={values.ownerPhone}
+            disabled={disabled}
+            autoComplete="tel"
+            aria-invalid={phoneError ? true : undefined}
+            aria-describedby={phoneError ? "hall-phone-error" : undefined}
+            onChange={(event) => onChange({ ownerPhone: event.target.value })}
+            className={`${hallFieldClassName(Boolean(phoneError))} text-right`}
+          />
+        </HallFormField>
 
         <HallFormField
           id="hall-capacity"
@@ -126,5 +124,30 @@ export default function HallBasicInfoSection({
         </HallFormField>
       </div>
     </HallFormSection>
+  );
+}
+
+function BasicInfoDocIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path
+        d="M7 3.75h7.2L19 8.55V20.25a1.5 1.5 0 0 1-1.5 1.5h-10.5A1.5 1.5 0 0 1 5.5 20.25V5.25A1.5 1.5 0 0 1 7 3.75Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14.2 3.75V8.1H19"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.5 12.5h7M8.5 16h5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

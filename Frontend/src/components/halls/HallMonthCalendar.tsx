@@ -32,6 +32,10 @@ type HallMonthCalendarProps = {
   onVisibleMonthChange?: (year: number, monthIndex: number) => void;
   /** Owner day-close calendar: blocked days stay clickable so they can be reopened. */
   allowClosedSelect?: boolean;
+  /** Owner dashboard calendar: show a Today control beside the month title. */
+  showTodayButton?: boolean;
+  /** Hide the status legend row (used when the parent card already explains selection). */
+  hideLegend?: boolean;
 };
 
 type Cursor = { year: number; month: number };
@@ -84,6 +88,8 @@ export default function HallMonthCalendar({
   allowAnyDay = false,
   onVisibleMonthChange,
   allowClosedSelect = false,
+  showTodayButton = false,
+  hideLegend = false,
 }: HallMonthCalendarProps) {
   const t = useT();
 
@@ -195,6 +201,12 @@ export default function HallMonthCalendar({
     );
   };
 
+  const goToToday = () => {
+    const todayIso = allowAnyDay ? localTodayIso() : utcTodayIso();
+    setCursor(toCursor(todayIso));
+    selectIso(todayIso, byIso.get(todayIso));
+  };
+
   const ownerLegend = legend === "owner";
 
   return (
@@ -202,79 +214,103 @@ export default function HallMonthCalendar({
       <div
         className={
           ownerLegend
-            ? "flex flex-col items-center gap-3"
+            ? showTodayButton
+              ? "flex flex-col gap-3"
+              : "flex flex-col items-center gap-3"
             : "flex flex-col gap-3"
         }
       >
         <div
-          className={`flex items-center gap-2 ${ownerLegend ? "justify-center" : "w-full justify-between"}`}
-          dir={ownerLegend ? undefined : "ltr"}
+          className={`flex items-center gap-2 ${
+            showTodayButton
+              ? "w-full justify-between"
+              : ownerLegend
+                ? "justify-center"
+                : "w-full justify-between"
+          }`}
+          dir={ownerLegend && !showTodayButton ? undefined : "ltr"}
         >
-          <button
-            type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
-            onClick={() => shiftMonth(-1)}
-            aria-label={t("halls.booking.prevMonth")}
-          >
-            <MonthChevron direction="prev" />
-          </button>
-          <p className="min-w-0 text-center text-sm font-bold text-[var(--wesal-text)]">
-            {monthLabel(cursor.year, cursor.month, locale)}
-          </p>
-          <button
-            type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
-            onClick={() => shiftMonth(1)}
-            aria-label={t("halls.booking.nextMonth")}
-          >
-            <MonthChevron direction="next" />
-          </button>
+          {showTodayButton ? (
+            <button
+              type="button"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-[0.78rem] font-semibold text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+              onClick={goToToday}
+              data-testid="hall-cal-today"
+            >
+              <TodayCalendarIcon />
+              {t("owner.calendar.today")}
+            </button>
+          ) : null}
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+              onClick={() => shiftMonth(-1)}
+              aria-label={t("halls.booking.prevMonth")}
+            >
+              <MonthChevron direction="prev" />
+            </button>
+            <p className="min-w-0 text-center text-sm font-bold text-[var(--wesal-text)] sm:text-base">
+              {monthLabel(cursor.year, cursor.month, locale)}
+            </p>
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+              onClick={() => shiftMonth(1)}
+              aria-label={t("halls.booking.nextMonth")}
+            >
+              <MonthChevron direction="next" />
+            </button>
+          </div>
+          {showTodayButton ? <span className="invisible min-h-9 min-w-[5.5rem]" aria-hidden="true" /> : null}
         </div>
 
-        <ul
-          className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.75rem] text-[var(--wesal-muted)] ${
-            ownerLegend ? "justify-center" : ""
-          }`}
-        >
-          {legend === "owner" ? (
-            <>
+        {hideLegend ? null : (
+          <ul
+            className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.75rem] text-[var(--wesal-muted)] ${
+              ownerLegend ? "justify-center" : ""
+            }`}
+          >
+            {legend === "owner" ? (
+              <>
+                <li className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[var(--wesal-maroon)]" />
+                  {t("owner.calendar.legendSelected")}
+                </li>
+                <li className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#1f8a4c]" />
+                  {t("owner.calendar.legendBooked")}
+                </li>
+                <li className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full border border-[var(--wesal-border)] bg-white" />
+                  {t("owner.calendar.legendNone")}
+                </li>
+              </>
+            ) : (
               <li className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-[var(--wesal-maroon)]" />
-                {t("owner.calendar.legendSelected")}
+                <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />
+                {t("halls.booking.legendAvailable")}
               </li>
-              <li className="inline-flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#1f8a4c]" />
-                {t("owner.calendar.legendBooked")}
-              </li>
-              <li className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full border border-[var(--wesal-border)] bg-white" />
-                {t("owner.calendar.legendNone")}
-              </li>
-            </>
-          ) : (
-            <li className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />
-              {t("halls.booking.legendAvailable")}
-            </li>
-          )}
-          {legend === "full" ? (
-            <>
-              <li className="inline-flex items-center gap-1.5">
-                <span className="hall-cal-legend-partial" aria-hidden="true" />
-                {t("halls.booking.legendPartial")}
-              </li>
+            )}
+            {legend === "full" ? (
+              <>
+                <li className="inline-flex items-center gap-1.5">
+                  <span className="hall-cal-legend-partial" aria-hidden="true" />
+                  {t("halls.booking.legendPartial")}
+                </li>
+                <li className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-[#dc4c4c]" />
+                  {t("halls.booking.legendBooked")}
+                </li>
+              </>
+            ) : legend === "owner" ? null : (
               <li className="inline-flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-sm bg-[#dc4c4c]" />
                 {t("halls.booking.legendBooked")}
               </li>
-            </>
-          ) : legend === "owner" ? null : (
-            <li className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-[#dc4c4c]" />
-              {t("halls.booking.legendBooked")}
-            </li>
-          )}
-        </ul>
+            )}
+          </ul>
+        )}
       </div>
 
       <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[0.65rem] font-semibold text-[var(--wesal-muted)] sm:gap-1.5 sm:text-xs">
@@ -371,6 +407,15 @@ function MonthChevron({ direction }: { direction: "prev" | "next" }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function TodayCalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-[var(--wesal-maroon)]" fill="none" aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="15" rx="2.2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 3.5v3.5M16 3.5v3.5M3.5 10h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }

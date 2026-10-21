@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import HallRejectionReasonNotice from "@/components/owner-management/halls/HallRejectionReasonNotice";
 import OwnerHallAdminLockedNotice from "@/components/halls/OwnerHallAdminLockedNotice";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
@@ -11,13 +10,17 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import { HALL_REGION_LABEL_KEYS, isHallRegion } from "@/constants/hallRegions";
 import { useAddHallInitiation } from "@/hooks/useAddHallInitiation";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
+import { useSubscription } from "@/hooks/useSubscription";
 import { HALL_OWNER_CALENDAR_PATH } from "@/lib/account-profile-path";
 import {
   ownerHallNotificationsPath,
   ownerHallPath,
+  ownerHallViewPath,
 } from "@/lib/hall-owner-query-keys";
 import { localizeHallName } from "@/lib/localize-hall-display";
+import { GoldStar } from "@/components/ui/GoldStar";
 import { fetchOwnerHallDetails } from "@/services/hall-owner-hall-management";
+import { fetchHallById } from "@/services/halls";
 import { useT } from "@/i18n";
 import type { HallOwnerHall } from "@/types/hall-owner-halls";
 import type { HallOwnerHallDetails } from "@/types/hall-owner-hall-management";
@@ -25,18 +28,12 @@ import type { HallOwnerHallDetails } from "@/types/hall-owner-hall-management";
 type HallLane = "available" | "review" | "unavailable";
 type HallFilter = "all" | HallLane;
 
-const MABROUK_SRC = "/assistant/wesal-ai-groom-full.png?v=2";
-
 function hallLane(hall: HallOwnerHall): HallLane {
   if (hall.adminLocked || hall.systemLocked || hall.status === "Rejected") {
     return "unavailable";
   }
   if (hall.status === "Approved" && hall.paymentStatus === "Paid") return "available";
   return "review";
-}
-
-function isPublicHall(hall: HallOwnerHall): boolean {
-  return hallLane(hall) === "available";
 }
 
 export default function OwnerHallsPage() {
@@ -47,7 +44,6 @@ export default function OwnerHallsPage() {
   const { startAddHall, isInitiating } = useAddHallInitiation();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<HallFilter>("all");
-  const [grid, setGrid] = useState(true);
   const [detailsById, setDetailsById] = useState<Record<string, HallOwnerHallDetails>>({});
 
   const hallIds = halls.map((hall) => hall.id).join("|");
@@ -59,7 +55,24 @@ export default function OwnerHallsPage() {
     void Promise.all(
       ids.map(async (id) => {
         try {
-          return [id, await fetchOwnerHallDetails(id)] as const;
+          const details = await fetchOwnerHallDetails(id);
+          if (details.rating != null) return [id, details] as const;
+          try {
+            const publicHall = await fetchHallById(id);
+            if (publicHall.status === "ok" && publicHall.hall.rating != null) {
+              return [
+                id,
+                {
+                  ...details,
+                  rating: publicHall.hall.rating,
+                  reviewCount: publicHall.hall.reviewCount ?? null,
+                },
+              ] as const;
+            }
+          } catch {
+            /* keep owner details without rating */
+          }
+          return [id, details] as const;
         } catch {
           return null;
         }
@@ -109,46 +122,14 @@ export default function OwnerHallsPage() {
 
   return (
     <div className="space-y-5" data-testid="owner-halls-page">
-      <section className="relative overflow-hidden rounded-[28px] border border-[var(--wesal-border)] bg-[linear-gradient(180deg,var(--wesal-pink-soft),var(--wesal-white))] px-5 py-6 sm:px-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-3xl font-extrabold text-[var(--wesal-maroon-dark)] sm:text-4xl">
-              {t("owner.hallsPage.title")}
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-7 text-[var(--wesal-muted)]">
-              {t("owner.hallsPage.subtitle")}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link href="/halls" className="btn-outline min-h-11 rounded-full px-5" prefetch>
-                {t("owner.hallsPage.explore")}
-              </Link>
-              <button
-                type="button"
-                className="btn-primary min-h-11 rounded-full px-5"
-                disabled={isInitiating}
-                aria-busy={isInitiating || undefined}
-                onClick={beginAddHall}
-              >
-                {isInitiating
-                  ? t("owner.management.addHall.starting")
-                  : `+ ${t("owner.hallsPage.addNew")}`}
-              </button>
-            </div>
-          </div>
-          <img
-            src={MABROUK_SRC}
-            alt=""
-            className="mx-auto h-36 w-auto object-contain sm:h-44"
-          />
-        </div>
-      </section>
-
-      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t("owner.hallsPage.stat.total")} value={counts.total} />
-        <StatCard label={t("owner.hallsPage.stat.available")} value={counts.available} />
-        <StatCard label={t("owner.hallsPage.stat.review")} value={counts.review} />
-        <StatCard label={t("owner.hallsPage.stat.unavailable")} value={counts.unavailable} />
-      </ul>
+      <header className="owner-halls-page-intro">
+        <h1 className="text-xl font-extrabold text-[var(--wesal-maroon-dark)]">
+          {t("owner.hallsPage.title")}
+        </h1>
+        <p className="mt-1 text-xs leading-5 text-[var(--wesal-muted)]">
+          {t("owner.hallsPage.subtitle")}
+        </p>
+      </header>
 
       {paymentDueHalls.length > 0 ? (
         <section
@@ -224,33 +205,13 @@ export default function OwnerHallsPage() {
       {halls.length > 0 ? (
         <>
           <div className="flex flex-col gap-3 rounded-[24px] border border-[var(--wesal-border)] bg-white p-3 sm:flex-row sm:items-center">
-            <div className="flex shrink-0 gap-1">
-              <button
-                type="button"
-                className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${grid ? "bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]" : "text-[var(--wesal-muted)]"}`}
-                aria-pressed={grid}
-                aria-label={t("owner.hallsPage.viewGrid")}
-                onClick={() => setGrid(true)}
-              >
-                <GridIcon />
-              </button>
-              <button
-                type="button"
-                className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${grid ? "text-[var(--wesal-muted)]" : "bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]"}`}
-                aria-pressed={!grid}
-                aria-label={t("owner.hallsPage.viewList")}
-                onClick={() => setGrid(false)}
-              >
-                <ListIcon />
-              </button>
-            </div>
             <label className="relative min-w-0 flex-1">
               <span className="sr-only">{t("owner.hallsPage.search")}</span>
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t("owner.hallsPage.search")}
-                className="h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
+                className="h-9 w-full rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-3 text-xs text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
               />
             </label>
             <div className="flex flex-wrap gap-2">
@@ -282,53 +243,93 @@ export default function OwnerHallsPage() {
               {t("owner.hallsPage.emptySearch")}
             </p>
           ) : (
-            <ul
-              className={grid ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}
-              data-testid="owner-halls-page-list"
-            >
-              {visibleHalls.map((hall) => (
+            <ul className="grid gap-4" data-testid="owner-halls-page-list">
+              {visibleHalls.map((hall, index) => (
                 <OwnerHallCard
                   key={hall.id}
                   hall={hall}
                   details={detailsById[hall.id]}
-                  list={!grid}
+                  index={index}
                 />
               ))}
             </ul>
           )}
 
-          <section className="flex flex-col items-start justify-between gap-4 rounded-[24px] border border-[var(--wesal-border)] bg-white px-5 py-5 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="text-lg font-bold text-[var(--wesal-text)]">
-                {t("owner.hallsPage.addBannerTitle")}
-              </h2>
-              <p className="mt-1 text-sm text-[var(--wesal-muted)]">
-                {t("owner.hallsPage.addBannerBody")}
-              </p>
-            </div>
-            <button
-              type="button"
-              className="btn-primary min-h-11 rounded-full"
-              disabled={isInitiating}
-              onClick={beginAddHall}
-            >
-              {`+ ${t("owner.hallsPage.addBannerCta")}`}
-            </button>
-          </section>
+          <div className="flex justify-center">
+            <section className="owner-add-hall-banner relative w-full max-w-3xl overflow-hidden rounded-[26px] border border-[#edd9d1] bg-[linear-gradient(135deg,#fffdfb_0%,#faf1ec_45%,#f6e8e1_100%)] px-4 py-5 shadow-[0_14px_34px_rgba(120,70,60,0.1)] sm:px-6">
+              <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+                <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(226,201,138,0.75),transparent)]" />
+                <div className="owner-add-hall-banner-blob absolute -start-10 -top-12 h-36 w-44 rounded-full bg-[radial-gradient(circle,rgba(193,123,127,0.22),transparent_68%)] blur-[1px]" />
+                <div className="owner-add-hall-banner-blob-delay absolute -bottom-14 end-0 h-40 w-48 rounded-full bg-[radial-gradient(circle,rgba(196,160,92,0.2),transparent_70%)]" />
+                <div className="absolute start-1/3 top-0 h-20 w-40 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.7),transparent_70%)]" />
+                <div className="owner-add-hall-banner-sheen" />
+                <LeafBranch className="owner-add-hall-banner-leaf absolute end-3 top-1/2 hidden h-[4.5rem] w-14 -translate-y-1/2 text-[var(--wesal-gold)]/45 sm:block" />
+              </div>
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+                <div className="flex min-w-0 items-center gap-3.5">
+                  <span className="owner-add-hall-banner-icon relative inline-flex h-14 w-14 shrink-0 items-center justify-center">
+                    <AddHallIcon />
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="text-[0.95rem] font-extrabold leading-6 text-[var(--wesal-maroon-dark)] sm:text-base">
+                      {t("owner.hallsPage.addBannerTitle")}
+                    </h2>
+                    <span className="mt-1.5 block h-0.5 w-12 rounded-full bg-[linear-gradient(90deg,var(--wesal-gold-soft),var(--wesal-maroon),transparent)]" />
+                    <p className="mt-1.5 text-xs leading-5 text-[var(--wesal-muted)] sm:text-[13px] sm:leading-6">
+                      {t("owner.hallsPage.addBannerBody")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3.5 sm:shrink-0">
+                  <span className="hidden h-12 w-px bg-[linear-gradient(180deg,transparent,#e0c7be,transparent)] sm:block" aria-hidden="true" />
+                  <button
+                    type="button"
+                    className="btn-primary min-h-11 rounded-full px-6 text-xs shadow-[0_10px_22px_rgba(168,98,103,0.28)] sm:text-sm"
+                    disabled={isInitiating}
+                    onClick={beginAddHall}
+                  >
+                    {isInitiating ? (
+                      t("owner.management.addHall.starting")
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>{t("owner.hallsPage.addBannerCta")}</span>
+                        <span
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[13px] font-bold"
+                          aria-hidden="true"
+                        >
+                          +
+                        </span>
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
         </>
       ) : null}
     </div>
   );
 }
 
+function hallPhotoUrls(details?: HallOwnerHallDetails): string[] {
+  if (!details) return [];
+  const urls: string[] = [];
+  if (details.mainImageUrl) urls.push(details.mainImageUrl);
+  for (const photo of details.photos) {
+    if (photo.url && !urls.includes(photo.url)) urls.push(photo.url);
+  }
+  return urls;
+}
+
 function OwnerHallCard({
   hall,
   details,
-  list,
+  index = 0,
 }: {
   hall: HallOwnerHall;
   details?: HallOwnerHallDetails;
-  list: boolean;
+  index?: number;
 }) {
   const t = useT();
   const lang = useUiLang();
@@ -338,9 +339,11 @@ function OwnerHallCard({
     details?.region && isHallRegion(details.region)
       ? t(HALL_REGION_LABEL_KEYS[details.region])
       : "";
-  const location = [regionLabel, details?.address].filter(Boolean).join(" · ");
-  const cover = details?.mainImageUrl || details?.photos[0]?.url || "";
+  const location = [regionLabel, details?.address].filter(Boolean).join(" - ");
   const locked = hall.adminLocked;
+  const photos = hallPhotoUrls(details);
+  const showSubscription =
+    hall.status === "Approved" && (hall.paymentStatus === "Paid" || hall.systemLocked);
   const badgeKey =
     lane === "available"
       ? "owner.hallsPage.badge.available"
@@ -349,116 +352,442 @@ function OwnerHallCard({
         : lane === "review"
           ? "owner.hallsPage.badge.review"
           : "owner.hallsPage.badge.unavailable";
+  const badgeClass =
+    lane === "available"
+      ? "bg-[#e7f6ee] text-[#047857]"
+      : lane === "review"
+        ? "bg-[#fff4e5] text-[#9a5b12]"
+        : "bg-[#fdecec] text-[#b42318]";
+  const dotClass =
+    lane === "available" ? "bg-[#12b76a]" : lane === "review" ? "bg-[#f5a524]" : "bg-[#b42318]";
 
   return (
-    <li className="overflow-hidden rounded-[24px] border border-[var(--wesal-border)] bg-white">
-      <div className={list ? "sm:flex" : ""}>
-        <div className={`relative bg-[var(--wesal-pink-soft)] ${list ? "sm:w-64 sm:shrink-0" : "h-48"}`}>
-          {cover ? (
-            <img src={cover} alt="" className={`h-full w-full object-cover ${list ? "h-48 sm:h-full" : "h-48"}`} />
-          ) : (
-            <div className="flex h-48 items-center justify-center text-[var(--wesal-muted)]">
-              {t("owner.hallsPage.title")}
+    <li
+      className="owner-hall-card overflow-hidden rounded-[28px] border border-[var(--wesal-border)] bg-white"
+      style={{ animationDelay: `${Math.min(index, 6) * 70}ms` }}
+    >
+      <div className="flex flex-col md:flex-row">
+        <HallCardPhotos images={photos} emptyLabel={t("owner.hallsPage.title")} />
+        <div className="flex min-w-0 flex-1 flex-col gap-3 p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-extrabold text-[var(--wesal-maroon-dark)]">{name}</h2>
+              {location ? (
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--wesal-muted)]">
+                  <PinIcon />
+                  <span className="truncate">{location}</span>
+                </p>
+              ) : null}
             </div>
-          )}
-          <span
-            className={`absolute start-3 top-3 rounded-full px-3 py-1 text-xs font-bold ${
-              lane === "available"
-                ? "bg-[#e8f6ee] text-[#047857]"
-                : lane === "review"
-                  ? "bg-[#fff4e5] text-[#9a5b12]"
-                  : "bg-[#fdecec] text-[#b42318]"
-            }`}
-          >
-            {t(badgeKey)}
-          </span>
-        </div>
-        <div className="min-w-0 flex-1 p-4">
-          <h2 className="truncate text-lg font-extrabold text-[var(--wesal-text)]">{name}</h2>
-          {location ? <p className="mt-1 text-sm text-[var(--wesal-muted)]">{location}</p> : null}
-          <dl className="mt-4 grid grid-cols-2 gap-3">
-            <div>
-              <dt className="text-xs text-[var(--wesal-muted)]">{t("owner.hallsPage.capacity")}</dt>
-              <dd className="font-bold text-[var(--wesal-text)]">
-                {details && details.capacity > 0
-                  ? t("owner.hallsPage.guests", { count: details.capacity })
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-[var(--wesal-muted)]">{t("owner.hallsPage.priceFrom")}</dt>
-              <dd className="font-bold text-[var(--wesal-text)]">
-                {details?.showPrice && details.price != null && details.price > 0
-                  ? `${details.price.toLocaleString("en-US")} ₪`
-                  : "—"}
-              </dd>
-            </div>
-          </dl>
-          {hall.status === "Approved" && (hall.paymentStatus === "Paid" || hall.systemLocked) ? (
-            <div className="mt-3">
-              <OwnerPaidSubscriptionDays hallId={hall.id} ended={hall.systemLocked} />
-            </div>
-          ) : null}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {isPublicHall(hall) ? (
-              <Link href={`/halls/${encodeURIComponent(hall.id)}`} className="seeker-home-soft-btn" prefetch>
-                {t("owner.hallsPage.viewHall")}
-              </Link>
-            ) : (
-              <span className="seeker-home-soft-btn pointer-events-none opacity-50" aria-disabled="true">
-                {t("owner.hallsPage.viewHall")}
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${badgeClass}`}>
+                <span className={`owner-hall-card-dot h-1.5 w-1.5 rounded-full ${dotClass}`} />
+                {t(badgeKey)}
               </span>
-            )}
-            {locked ? (
-              <span className="seeker-home-soft-btn pointer-events-none opacity-50" aria-disabled="true">
-                {t("owner.hallsPage.editData")}
-              </span>
-            ) : (
-              <Link href={ownerHallPath(hall.id)} className="btn-primary min-h-10 rounded-full px-4 text-xs" prefetch>
-                {t("owner.hallsPage.editData")}
-              </Link>
-            )}
-            {locked ? (
-              <span className="seeker-home-soft-btn pointer-events-none opacity-50" aria-disabled="true">
-                {t("owner.hallsPage.availability")}
-              </span>
-            ) : (
-              <Link
-                href={`${HALL_OWNER_CALENDAR_PATH}?hall=${encodeURIComponent(hall.id)}`}
-                className="seeker-home-soft-btn"
-                prefetch
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-[#fff8e8] px-2 py-0.5 text-[11px] font-bold text-[var(--wesal-text)]"
+                aria-label={
+                  details?.rating != null && Number.isFinite(details.rating)
+                    ? t("halls.details.ratingAria", {
+                        rating: Number(details.rating).toFixed(1),
+                      })
+                    : t("halls.details.ratingLabel")
+                }
+                data-testid="owner-hall-card-rating"
               >
-                {t("owner.hallsPage.availability")}
-              </Link>
-            )}
-            {locked ? null : (
-              <Link href={ownerHallNotificationsPath(hall.id)} className="seeker-home-soft-btn" prefetch>
-                {t("owner.hallsPage.requests")}
-              </Link>
-            )}
+                <GoldStar size={12} />
+                <span>
+                  {details?.rating != null && Number.isFinite(details.rating)
+                    ? Number(details.rating).toFixed(1)
+                    : "—"}
+                </span>
+                {details?.reviewCount != null && details.reviewCount > 0 ? (
+                  <span className="font-medium text-[var(--wesal-muted)]">
+                    ({details.reviewCount})
+                  </span>
+                ) : null}
+              </span>
+            </div>
           </div>
+
+          <dl className="flex flex-wrap gap-2.5">
+            <SubscriptionStat
+              hallId={showSubscription ? hall.id : null}
+              ended={hall.systemLocked}
+              fallbackDays={hall.daysRemaining}
+            />
+            <StatTile
+              icon={<PeopleIcon />}
+              label={t("owner.hallsPage.capacity")}
+              value={
+                details && details.capacity > 0
+                  ? t("owner.hallsPage.guests", { count: details.capacity })
+                  : "—"
+              }
+            />
+            <StatTile
+              icon={<ShekelIcon />}
+              label={t("owner.hallsPage.priceFrom")}
+              value={
+                details?.showPrice && details.price != null && details.price > 0
+                  ? `${details.price.toLocaleString("en-US")} ₪`
+                  : "—"
+              }
+              valueClass="text-[var(--wesal-maroon-dark)]"
+            />
+          </dl>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <HallAction
+              href={locked ? undefined : ownerHallPath(hall.id)}
+              label={t("owner.hallsPage.editData")}
+              icon={<PencilIcon />}
+            />
+            <HallAction
+              href={locked ? undefined : `${HALL_OWNER_CALENDAR_PATH}?hall=${encodeURIComponent(hall.id)}`}
+              label={t("owner.hallsPage.availability")}
+              icon={<CalendarIcon />}
+            />
+            {locked ? null : (
+              <HallAction
+                href={ownerHallNotificationsPath(hall.id)}
+                label={t("owner.hallsPage.requests")}
+                icon={<ChatIcon />}
+              />
+            )}
+            <HallAction
+              href={ownerHallViewPath(hall.id)}
+              label={t("owner.hallsPage.viewHall")}
+              icon={<ArrowIcon />}
+              primary
+              className="sm:ms-auto"
+            />
+          </div>
+
           {hall.status === "Rejected" && !locked ? (
-            <div className="mt-3">
-              <HallRejectionReasonNotice hallId={hall.id} rejected />
-            </div>
+            <HallRejectionReasonNotice hallId={hall.id} rejected />
           ) : null}
-          {locked ? (
-            <div className="mt-3">
-              <OwnerHallAdminLockedNotice />
-            </div>
-          ) : null}
+          {locked ? <OwnerHallAdminLockedNotice /> : null}
         </div>
       </div>
     </li>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function HallCardPhotos({ images, emptyLabel }: { images: string[]; emptyLabel: string }) {
+  const t = useT();
+  const [index, setIndex] = useState(0);
+  const count = images.length;
+  const current = count > 0 ? images[index % count] : "";
+
+  function step(delta: number) {
+    if (count < 2) return;
+    setIndex((value) => (value + delta + count) % count);
+  }
+
   return (
-    <li className="rounded-[22px] border border-[var(--wesal-border)] bg-white px-4 py-4">
-      <p className="text-sm text-[var(--wesal-muted)]">{label}</p>
-      <p className="mt-2 text-3xl font-extrabold text-[var(--wesal-maroon-dark)]">{value}</p>
-    </li>
+    <div className="relative min-h-44 w-full shrink-0 bg-[var(--wesal-pink-soft)] md:w-64">
+      {current ? (
+        <img src={current} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      ) : (
+        <div className="flex min-h-44 items-center justify-center px-4 text-xs text-[var(--wesal-muted)]">
+          {emptyLabel}
+        </div>
+      )}
+      {count > 0 ? (
+        <span className="absolute end-2.5 top-2.5 inline-flex items-center gap-1 rounded-md bg-black/45 px-1.5 py-0.5 text-[11px] font-bold text-white">
+          <ImageIcon />
+          {count}
+        </span>
+      ) : null}
+      {count > 1 ? (
+        <div className="absolute inset-x-0 bottom-2.5 flex justify-center gap-1.5">
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white"
+            aria-label={t("owner.hallsPage.prevPhoto")}
+            onClick={() => step(-1)}
+          >
+            <Chevron dir="right" />
+          </button>
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white"
+            aria-label={t("owner.hallsPage.nextPhoto")}
+            onClick={() => step(1)}
+          >
+            <Chevron dir="left" />
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SubscriptionStat({
+  hallId,
+  ended,
+  fallbackDays,
+}: {
+  hallId: string | null;
+  ended: boolean;
+  fallbackDays?: number | null;
+}) {
+  const t = useT();
+  const { status, subscription } = useSubscription(ended ? null : hallId, !ended && hallId != null);
+  let value = "—";
+  let valueClass = "text-[#047857]";
+  let tone: "default" | "success" | "danger" = "success";
+  if (ended) {
+    value = t("owner.subscription.hallsExpiredNote");
+    valueClass = "text-[#b42318]";
+    tone = "danger";
+  } else if (status === "ready" && subscription) {
+    const days = subscription.daysRemaining;
+    const finished = subscription.status === "expired" || (days != null && days <= 0);
+    if (finished) {
+      value = t("owner.subscription.hallsExpiredNote");
+      valueClass = "text-[#b42318]";
+      tone = "danger";
+    } else if (days != null) {
+      value = t("owner.hallsPage.days", { count: days });
+    } else if (fallbackDays != null && fallbackDays > 0) {
+      value = t("owner.hallsPage.days", { count: fallbackDays });
+    }
+  } else if (fallbackDays != null && fallbackDays > 0) {
+    value = t("owner.hallsPage.days", { count: fallbackDays });
+  }
+  return (
+    <StatTile
+      icon={<CalendarIcon />}
+      label={t("owner.hallsPage.subscriptionLeft")}
+      value={value}
+      valueClass={valueClass}
+      tone={tone}
+      testId={ended || valueClass.includes("b42318") ? "hall-subscription-ended-note" : "hall-subscription-days-note"}
+    />
+  );
+}
+
+function StatTile({
+  icon,
+  label,
+  value,
+  valueClass = "text-[var(--wesal-text)]",
+  tone = "default",
+  testId,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  valueClass?: string;
+  tone?: "default" | "success" | "danger";
+  testId?: string;
+}) {
+  const shellClass =
+    tone === "success"
+      ? "bg-[#e7f6ee]"
+      : tone === "danger"
+        ? "bg-[#fdecec]"
+        : "bg-[#fbf4f1]";
+  const iconClass =
+    tone === "success"
+      ? "text-[#047857]"
+      : tone === "danger"
+        ? "text-[#b42318]"
+        : "text-[var(--wesal-maroon)]";
+  const labelClass =
+    tone === "success"
+      ? "text-[#067647]/80"
+      : tone === "danger"
+        ? "text-[#b42318]/75"
+        : "text-[var(--wesal-muted)]";
+
+  return (
+    <div className={`inline-flex w-fit max-w-full items-center gap-2 rounded-xl px-3 py-2 ${shellClass}`}>
+      <span className={iconClass}>{icon}</span>
+      <div className="min-w-0">
+        <p className={`whitespace-nowrap text-[11px] leading-tight ${labelClass}`}>{label}</p>
+        <p className={`whitespace-nowrap text-sm font-extrabold leading-tight ${valueClass}`} data-testid={testId}>
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function HallAction({
+  href,
+  label,
+  icon,
+  primary = false,
+  className = "",
+}: {
+  href?: string;
+  label: string;
+  icon: ReactNode;
+  primary?: boolean;
+  className?: string;
+}) {
+  const classes = `inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-bold ${
+    primary
+      ? "bg-[var(--wesal-maroon)] text-white"
+      : "bg-[#f7eee9] text-[var(--wesal-maroon-dark)]"
+  } ${href ? "" : "pointer-events-none opacity-50"} ${className}`;
+  if (!href) {
+    return (
+      <span className={classes} aria-disabled="true">
+        <span>{label}</span>
+        {icon}
+      </span>
+    );
+  }
+  return (
+    <Link href={href} className={classes} prefetch>
+      <span>{label}</span>
+      {icon}
+    </Link>
+  );
+}
+
+function AddHallIcon() {
+  return (
+    <svg viewBox="0 0 64 64" className="h-14 w-14 drop-shadow-sm" aria-hidden="true">
+      <defs>
+        <radialGradient id="addHallGlow" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#f7e7e4" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="addHallRoof" x1="16" y1="16" x2="48" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#d49a9d" />
+          <stop offset="100%" stopColor="#c17b7f" />
+        </linearGradient>
+      </defs>
+      <circle cx="32" cy="32" r="30" fill="#f6e6e3" />
+      <circle cx="32" cy="32" r="30" fill="url(#addHallGlow)" />
+      <path d="M20 30h24v15.5c0 1.4-1.1 2.5-2.5 2.5h-19c-1.4 0-2.5-1.1-2.5-2.5V30Z" fill="#fdf7f5" />
+      <path d="M17 30.8 32 16.2 47 30.8c-1.2-.7-3.4-1.3-15-1.3s-13.8.6-15 1.3Z" fill="url(#addHallRoof)" />
+      <path d="M20 45.2h24" stroke="#c9898d" strokeWidth="3" strokeLinecap="round" />
+      <path d="M28.6 34.2h6.8a2.2 2.2 0 0 1 2.2 2.2V47h-11.2v-10.6a2.2 2.2 0 0 1 2.2-2.2Z" fill="#a86267" />
+      <path d="M22.2 34.4h5v5.6a1.7 1.7 0 0 1-1.7 1.7h-1.6a1.7 1.7 0 0 1-1.7-1.7v-5.6Z" fill="#b8757a" />
+      <path d="M36.8 34.4h5v5.6a1.7 1.7 0 0 1-1.7 1.7h-1.6a1.7 1.7 0 0 1-1.7-1.7v-5.6Z" fill="#b8757a" />
+      <g className="owner-add-hall-banner-plus">
+        <circle cx="45.2" cy="18.8" r="8" fill="#8a3d48" />
+        <path d="M45.2 15.2v7.2M41.6 18.8h7.2" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function LeafBranch({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 56 72" className={className} fill="none" aria-hidden="true">
+      <path d="M20 66c2-18-2-30-10-44" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M11 24c5-1.5 10 2.5 11 7.5-5 1.5-10-2.5-11-7.5ZM15 36c5 0 10 3.5 10 8.5-5 0-10-3.5-10-8.5ZM19 48c4.5.5 8 4 7.5 8.5-4.5-.5-8-4-7.5-8.5Z"
+        fill="currentColor"
+        fillOpacity="0.12"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <path d="M22 58c3-8 11-13 18-14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path
+        d="M36 40c4 2.5 5.5 7.5 3 11.5-4-2.5-5.5-7.5-3-11.5ZM41 48c3.5 2.5 4.5 7 2 10.5-3.5-2.5-4.5-7-2-10.5Z"
+        fill="currentColor"
+        fillOpacity="0.12"
+        stroke="currentColor"
+        strokeWidth="1.15"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
+      <path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Z" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="11" r="2" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" aria-hidden="true">
+      <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 3.5v3M16 3.5v3M4 9.5h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PeopleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" aria-hidden="true">
+      <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6.5 19c.8-2.8 2.8-4 5.5-4s4.7 1.2 5.5 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ShekelIcon() {
+  return (
+    <span
+      className="inline-flex h-4 w-4 shrink-0 items-center justify-center font-['Segoe_UI','Arial',sans-serif] text-[15px] font-bold leading-none"
+      aria-hidden="true"
+    >
+      ₪
+    </span>
+  );
+}
+
+function ImageIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+      <rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="9" cy="10" r="1.4" fill="currentColor" />
+      <path d="M7 16l3.2-3.2 2.2 2.2L16 11l3 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+      <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M12.5 7.5l4 4" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+      <path d="M6 16.5 4 20l4-1.5A8 8 0 1 0 6 16.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+      <path d="M14 6 8 12l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function Chevron({ dir }: { dir: "left" | "right" }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+      <path
+        d={dir === "left" ? "M14 6 8 12l6 6" : "M10 6l6 6-6 6"}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -474,7 +803,7 @@ function FilterChip({
   return (
     <button
       type="button"
-      className={`rounded-full px-3 py-2 text-xs font-bold ${
+      className={`rounded-full px-2.5 py-1.5 text-[11px] font-bold ${
         active
           ? "bg-[var(--wesal-maroon)] text-white"
           : "border border-[var(--wesal-border)] bg-white text-[var(--wesal-text)]"
@@ -484,24 +813,5 @@ function FilterChip({
     >
       {label}
     </button>
-  );
-}
-
-function GridIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-      <rect x="4" y="4" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
-      <rect x="14" y="4" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
-      <rect x="4" y="14" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
-      <rect x="14" y="14" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
-  );
-}
-
-function ListIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-      <path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
   );
 }

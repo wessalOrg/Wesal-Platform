@@ -33,4 +33,11 @@ public sealed class HelpTicket
 
     /// <summary>True when a reply arrived and the owner has not opened the ticket since.</summary>
     public bool UserUnread { get; set; }
+
+    /// <summary>
+    /// When an Admin last opened the ticket owner's conversation, or null while the ticket is
+    /// still unread by the Admin team. Shared across every Admin, so opening the conversation
+    /// on any account clears the badge for all of them.
+    /// </summary>
+    public DateTimeOffset? ReadByAdminAt { get; set; }
 }

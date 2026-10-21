@@ -4,12 +4,15 @@
 }
 
 .hall-subscription-body {
-  min-height: 8.25rem;
+  min-height: 0;
 }
 
 .hall-sub-tone-active {
-  border-inline-start-width: 0.28rem;
-  border-inline-start-color: #059669;
+  border-color: #86efac;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(167, 243, 208, 0.35), transparent 36%),
+    linear-gradient(155deg, #f3fbf7 0%, #ffffff 48%, #eef9f3 100%);
+  box-shadow: 0 10px 24px rgba(5, 150, 105, 0.08);
 }
 
 .hall-sub-tone-unpaid {
@@ -46,9 +49,67 @@
   isolation: isolate;
 }
 
+.hall-sub-tone-active .hall-subscription-title {
+  color: #065f46;
+}
+
+.hall-sub-timeline {
+  width: 100%;
+}
+
+.hall-sub-progress {
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(167, 243, 208, 0.55);
+}
+
+.hall-sub-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6ee7b7 0%, #10b981 55%, #059669 100%);
+}
+
+.hall-sub-feature {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.25rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(167, 243, 208, 0.75);
+  background: rgba(255, 255, 255, 0.86);
+  padding: 0.55rem 0.4rem 0.5rem;
+  text-align: center;
+}
+
+.hall-sub-feature-icon {
+  display: inline-flex;
+  color: #059669;
+}
+
+.hall-sub-feature-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #065f46;
+}
+
+.hall-sub-feature-state {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #10b981;
+}
+
+.hall-sub-illustration {
+  filter: drop-shadow(0 8px 12px rgba(16, 185, 129, 0.16));
+}
+
 @media (min-width: 640px) {
-  .hall-subscription-body {
-    min-height: 7.5rem;
+  .hall-sub-features {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

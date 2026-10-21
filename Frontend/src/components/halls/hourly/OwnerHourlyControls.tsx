@@ -20,12 +20,15 @@ type OwnerHourlyControlsProps = {
   hallId: string;
   disabled?: boolean;
   paymentStatus?: HallPaymentStatus;
+  /** Nested inside a parent card — drops outer border/shadow. */
+  embedded?: boolean;
 };
 
 export default function OwnerHourlyControls({
   hallId,
   disabled = false,
   paymentStatus,
+  embedded = false,
 }: OwnerHourlyControlsProps) {
   const t = useT();
   const lang = useUiLang();
@@ -101,6 +104,7 @@ export default function OwnerHourlyControls({
           today,
         ),
       );
+      setDate("");
       setNotice(t(blocked ? "owner.hourly.dayBlocked" : "owner.hourly.dayUnblocked"));
     } catch (err) {
       setError(t(hourlyWriteErrorKey(err, true)));
@@ -111,24 +115,40 @@ export default function OwnerHourlyControls({
 
   return (
     <section
-      className="mt-5 rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] p-4"
+      className={
+        embedded
+          ? "flex min-w-0 flex-col rounded-2xl border border-[var(--wesal-border)] bg-[#faf7f5] p-3.5 sm:p-4"
+          : "flex min-w-0 flex-col rounded-[1.35rem] border border-[var(--wesal-border)] bg-white p-4 shadow-[0_10px_28px_rgba(90,55,45,0.06)] sm:p-5"
+      }
       data-testid="owner-hourly-controls"
+      aria-labelledby="hall-hourly-settings-heading"
     >
+      <div className="flex items-center gap-2">
+        <CalendarBadgeIcon />
+        <h2
+          id="hall-hourly-settings-heading"
+          className="text-base font-extrabold text-[var(--wesal-maroon-dark)] sm:text-lg"
+        >
+          {t("owner.hourly.title")}
+        </h2>
+      </div>
+
       {unpaid ? (
         <p
-          className="mb-3 rounded-xl bg-[rgba(196,160,92,0.14)] px-3 py-2 text-sm leading-6 text-[var(--wesal-text)]"
+          className="mt-3 rounded-xl bg-[rgba(196,160,92,0.14)] px-3 py-2 text-xs leading-5 text-[var(--wesal-text)]"
           role="status"
           data-testid="owner-hourly-payment-required"
         >
           {t("owner.hourly.paymentRequired")}
         </p>
       ) : null}
+
       <button
         type="button"
         role="switch"
         aria-checked={showBooked}
         disabled={busy || controlsLocked}
-        className="flex w-full items-start gap-3 rounded-xl bg-white px-3 py-3 text-start"
+        className="mt-3 flex w-full items-start gap-3 rounded-xl border border-[var(--wesal-border)] bg-[#faf6f4] px-3 py-2.5 text-start"
         data-testid="owner-show-booked-toggle"
         onClick={() => {
           void persistVisibility(!showBooked);
@@ -147,20 +167,16 @@ export default function OwnerHourlyControls({
           />
         </span>
         <span className="min-w-0">
-          <span className="block text-sm font-semibold text-[var(--wesal-text)]">
+          <span className="block text-sm font-bold text-[var(--wesal-text)]">
             {t("owner.hourly.showBooked")}
           </span>
-          <span className="mt-1 block text-xs leading-5 text-[var(--wesal-muted)]">
+          <span className="mt-0.5 block text-[11px] leading-4 text-[var(--wesal-muted)]">
             {t("owner.hourly.showBookedHint")}
           </span>
         </span>
       </button>
 
-      <p className="mt-4 text-sm font-semibold text-[var(--wesal-text)]">
-        {t("owner.hourly.blockDay")}
-      </p>
-      <p className="mt-1 text-xs leading-5 text-[var(--wesal-muted)]">{t("owner.hourly.blockHint")}</p>
-      <div className="mt-3">
+      <div className="mt-3 min-w-0 flex-1 rounded-xl border border-[var(--wesal-border)] bg-[#f7f4f2] p-3">
         <HallMonthCalendar
           dayStatuses={dayStatuses}
           selectedDateIso={date || null}
@@ -177,11 +193,11 @@ export default function OwnerHourlyControls({
         />
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
-        <div className="block min-w-0 flex-1 text-sm font-semibold text-[var(--wesal-text)]">
-          {t("owner.hourly.blockDate")}
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold text-[var(--wesal-text)]">{t("owner.hourly.blockDate")}</p>
           <p
-            className={`mt-1 flex min-h-12 items-center rounded-xl border bg-white px-3.5 py-2 text-sm font-medium ${
+            className={`mt-1 flex min-h-10 items-center rounded-xl border bg-white px-3 text-sm font-semibold ${
               date
                 ? "border-[var(--wesal-maroon)] text-[var(--wesal-maroon-dark)]"
                 : "border-[var(--wesal-border)] text-[var(--wesal-muted)]"
@@ -193,51 +209,69 @@ export default function OwnerHourlyControls({
         </div>
         <button
           type="button"
-          className="btn-outline min-h-11"
+          className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-[#e8b4b0] bg-white px-3 text-xs font-bold text-[#b42318] disabled:opacity-45"
           disabled={busy || controlsLocked || !canClose}
           onClick={() => void persistDay(date, true)}
           data-testid="owner-block-day"
         >
+          <CloseIcon />
           {t("owner.hourly.blockDay")}
         </button>
         <button
           type="button"
-          className="btn-outline min-h-11"
+          className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-[var(--wesal-maroon)]/35 bg-white px-3 text-xs font-bold text-[var(--wesal-maroon-dark)] disabled:opacity-45"
           disabled={busy || controlsLocked || !canReopen}
           onClick={() => void persistDay(date, false)}
           data-testid="owner-unblock-day"
         >
+          <CalendarBadgeIcon className="h-3.5 w-3.5" />
           {t("owner.hourly.unblockDay")}
         </button>
       </div>
 
       {blockedDays.length > 0 ? (
-        <div className="mt-4" data-testid="owner-blocked-days">
-          <p className="text-sm font-semibold text-[var(--wesal-text)]">
-            {t("owner.hourly.blockedList")}
-          </p>
-          <ul className="mt-2 space-y-2">
+        <div className="mt-3" data-testid="owner-blocked-days">
+          <p className="text-xs font-bold text-[var(--wesal-text)]">{t("owner.hourly.blockedList")}</p>
+          <ul className="mt-1.5 flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
             {blockedDays.map((iso) => (
-              <li
-                key={iso}
-                className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-white px-3 py-2"
-              >
-                <span className="min-w-0 truncate text-sm text-[var(--wesal-text)]">
-                  {formatBookingDateLabel(iso, locale)}
-                </span>
-                <button
-                  type="button"
-                  className="btn-outline min-h-9 shrink-0 px-3 text-sm"
-                  disabled={busy || controlsLocked}
+              <li key={iso}>
+                <div
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    date === iso
+                      ? "bg-[var(--wesal-maroon)] text-white"
+                      : "bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon-dark)]"
+                  }`}
                   data-date={iso}
-                  data-testid="owner-unblock-listed-day"
-                  onClick={() => {
-                    setDate(iso);
-                    void persistDay(iso, false);
-                  }}
                 >
-                  {t("owner.hourly.unblockDay")}
-                </button>
+                  <button
+                    type="button"
+                    className="disabled:opacity-50"
+                    disabled={busy || controlsLocked}
+                    data-testid="owner-select-blocked-day"
+                    onClick={() => {
+                      setDate(iso);
+                      setNotice(null);
+                      setError(null);
+                    }}
+                  >
+                    {formatBookingDateLabel(iso, locale)}
+                  </button>
+                  <button
+                    type="button"
+                    className={`leading-none disabled:opacity-50 ${
+                      date === iso ? "text-white/80" : "text-[var(--wesal-muted)]"
+                    }`}
+                    disabled={busy || controlsLocked}
+                    aria-label={t("owner.hourly.unblockDay")}
+                    data-testid="owner-unblock-listed-day"
+                    onClick={() => {
+                      setDate(iso);
+                      void persistDay(iso, false);
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -245,12 +279,12 @@ export default function OwnerHourlyControls({
       ) : null}
 
       {notice ? (
-        <p className="mt-3 text-sm text-[var(--wesal-maroon)]" role="status">
+        <p className="mt-2 text-xs font-medium text-[var(--wesal-maroon)]" role="status">
           {notice}
         </p>
       ) : null}
       {error ? (
-        <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mt-2 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs text-red-700" role="alert">
           {error}
         </p>
       ) : null}
@@ -270,4 +304,33 @@ function hourlyWriteErrorKey(err: unknown, includeOccupied = false): string {
     return "owner.hourly.blockOccupied";
   }
   return "owner.hourly.saveFailed";
+}
+
+function CalendarBadgeIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={`shrink-0 text-[var(--wesal-maroon)] ${className}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden="true"
+    >
+      <rect x="3.5" y="5" width="17" height="15" rx="2.2" />
+      <path d="M8 3.5v3.5M16 3.5v3.5M3.5 10h17" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+      <path
+        d="M5 5l10 10M15 5 5 15"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }

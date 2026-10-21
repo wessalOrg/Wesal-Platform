@@ -13,6 +13,7 @@ import {
   isInvalidLoginCredentialsError,
   mapLoginApiFieldErrors,
 } from "@/lib/api-error";
+import { resolveLoginDestination } from "@/lib/account-profile-path";
 import {
   clearRememberedEmail,
   getRememberedEmail,
@@ -22,7 +23,6 @@ import {
 } from "@/lib/auth-persist";
 import {
   clearBookingHallContext,
-  resolveAuthRedirect,
   setStoredAuth,
 } from "@/lib/auth-storage";
 import { setAccessToken } from "@/lib/auth-token";
@@ -210,7 +210,10 @@ export default function LoginFormCard({
       });
       void refreshSession();
       clearBookingHallContext();
-      navigateAfterAuth(router, resolveAuthRedirect(redirectTo, action));
+      navigateAfterAuth(
+        router,
+        resolveLoginDestination(result.role, redirectTo, action),
+      );
     } catch (error) {
       if (!(error instanceof ApiError)) {
         setFormError(t("auth.login.form.error.generic"));
@@ -256,7 +259,10 @@ export default function LoginFormCard({
       setStoredAuth({ token: user.token, user: { id: user.id, name: user.fullName, email: user.email, role: user.role } });
       applyLocalSession({ isAuthenticated: true, role: user.role || null, userName: user.fullName || null });
       void refreshSession(); clearBookingHallContext();
-      navigateAfterAuth(router, resolveAuthRedirect(redirectTo, action));
+      navigateAfterAuth(
+        router,
+        resolveLoginDestination(user.role, redirectTo, action),
+      );
     } catch {
       setFormError(t("auth.google.error"));
     } finally { setPending(false); }

@@ -290,16 +290,15 @@ public class RatingServiceShould
     }
 
     [Fact]
-    public async Task CreateRating_Admin_CanRate()
+    public async Task CreateRating_Admin_IsForbidden()
     {
         var hall = CreateApprovedHall("Test Hall");
         var repository = new FakeRatingRepository();
         var hallRepository = new FakeHallRepository(hall);
         var service = CreateService(repository, hallRepository, authenticated: true, roles: [ApplicationRoles.Admin]);
 
-        var result = await service.CreateRatingAsync(new CreateRatingRequest { HallId = hall.Id, Value = 5 });
-
-        Assert.Equal(5, result.Value);
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.CreateRatingAsync(new CreateRatingRequest { HallId = hall.Id, Value = 5 }));
     }
 
     private static Hall CreateApprovedHall(string name)

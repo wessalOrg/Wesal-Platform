@@ -30,6 +30,11 @@ type NotificationDto = {
   requesterUserName?: string;
   fullName?: string;
   name?: string;
+  nameOnBooking?: string;
+  requesterPhone?: string;
+  contactPhone?: string;
+  phoneNumber?: string;
+  phone?: string;
   requesterUserId?: string;
   userId?: string;
   date?: string;
@@ -124,6 +129,26 @@ function confirmedAtFromDto(value: unknown): string | null {
   return trimmed && trimmed !== "0001-01-01T00:00:00+00:00" ? trimmed : null;
 }
 
+/** Phone embedded in nameOnBooking as "Name - 05…" (hourly booking client convention). */
+function phoneSuffixFromName(value: string): string {
+  const separator = value.lastIndexOf(" - ");
+  if (separator < 0) return "";
+  const candidate = value.slice(separator + 3).trim();
+  if (candidate.length < 7 || !/\d/.test(candidate)) return "";
+  return candidate;
+}
+
+function requesterPhoneFromDto(data: NotificationDto, requesterName: string): string {
+  return (
+    asText(data.requesterPhone) ||
+    asText(data.contactPhone) ||
+    asText(data.phoneNumber) ||
+    asText(data.phone) ||
+    phoneSuffixFromName(asText(data.nameOnBooking)) ||
+    phoneSuffixFromName(requesterName)
+  );
+}
+
 export function mapHallBookingNotification(
   data: NotificationDto,
   fallbackHallId: string,
@@ -139,6 +164,7 @@ export function mapHallBookingNotification(
     asText(data.requesterUserName) ||
     asText(data.fullName) ||
     asText(data.name);
+  const requesterPhone = requesterPhoneFromDto(data, requesterName);
 
   const depositPaymentConfirmedAt = confirmedAtFromDto(data.depositPaymentConfirmedAt);
   const parsedStatus = data.status == null ? null : parseOwnerBookingRequestStatus(data.status);
@@ -154,6 +180,7 @@ export function mapHallBookingNotification(
     hallId: asText(data.hallId) || fallbackHallId,
     requesterName,
     requesterUserId: asText(data.requesterUserId || data.userId),
+    requesterPhone: requesterPhone || undefined,
     date: date ?? asText(data.date ?? data.requestedDate),
     periods: periodsFromDto(data),
     slotStarts: slotStartsFromDto(data),

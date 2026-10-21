@@ -13,7 +13,7 @@ export default function ActiveSubscriptionDays({
 
   return (
     <p
-      className="rounded-xl bg-[rgba(5,150,105,0.1)] px-3.5 py-2.5 text-sm font-semibold text-[#047857]"
+      className="hall-sub-metric hall-sub-metric--days text-sm font-semibold leading-snug"
       role="status"
       data-testid="hall-subscription-days-remaining"
     >

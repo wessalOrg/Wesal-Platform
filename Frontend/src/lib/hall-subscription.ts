@@ -150,6 +150,14 @@ export function mapHallSubscription(payload: unknown, hallId: string): HallSubsc
       data.subscriptionExpiresAt,
       data.subscription_expires_at,
     ]);
+  const cycleStart = firstDate([
+    data.cycleStart,
+    data.CycleStart,
+    data.subscriptionCycleStart,
+    data.SubscriptionCycleStart,
+    data.periodStart,
+    data.currentPeriodStart,
+  ]);
   const remaining =
     asInt(data.daysRemaining ?? data.days_remaining) ??
     (cycleEnd ? utcDaysRemaining(cycleEnd) : null);
@@ -166,6 +174,7 @@ export function mapHallSubscription(payload: unknown, hallId: string): HallSubsc
     subscriptionStatus: status,
     isPaid,
     billing,
+    cycleStart,
     subscriptionExpiresAt: cycleEnd,
     daysRemaining: remaining,
     expiryWarningDispatched: asBool(data.expiryWarningDispatched),

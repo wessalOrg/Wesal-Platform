@@ -19,6 +19,7 @@ import {
   fetchOwnerHallDetails,
   updateOwnerHall,
 } from "@/services/hall-owner-hall-management";
+import { fetchHallById } from "@/services/halls";
 import {
   reportOwnedHallAdminLocked,
   reportOwnedHallPaymentRequired,
@@ -88,9 +89,28 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
 
     try {
       // Hall-scoped fetch boundary: one in-flight load per hallId (generation-guarded).
-      const next = await fetchOwnerHallDetails(requestHallId);
+      let next = await fetchOwnerHallDetails(requestHallId);
       if (generation !== loadGenerationRef.current) return;
       if (next.id !== requestHallId) return;
+      if (next.rating == null) {
+        try {
+          const publicHall = await fetchHallById(requestHallId);
+          if (
+            generation === loadGenerationRef.current &&
+            publicHall.status === "ok" &&
+            publicHall.hall.rating != null
+          ) {
+            next = {
+              ...next,
+              rating: publicHall.hall.rating,
+              reviewCount: publicHall.hall.reviewCount ?? null,
+            };
+          }
+        } catch {
+          /* keep owner details without public rating */
+        }
+      }
+      if (generation !== loadGenerationRef.current) return;
       hydrateFromDetails(next);
       setLoadStatus("ready");
     } catch (err) {

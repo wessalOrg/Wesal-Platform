@@ -11,7 +11,44 @@ import type { HallOwnerHall } from "@/types/hall-owner-halls";
  */
 export const OWNER_HALLS_PATH = "/owner/halls";
 
-const DEMO_OWNER_HALLS: HallOwnerHall[] = [];
+const DEMO_OWNER_HALLS: HallOwnerHall[] = [
+  {
+    id: "demo-hall-approved",
+    name: "قاعة النور",
+    status: "Approved",
+    paymentStatus: "Paid",
+    paymentReceiptUploadedAt: null,
+    daysRemaining: 18,
+    subscriptionExpiresAt: null,
+    expiryWarning: null,
+    adminLocked: false,
+    systemLocked: false,
+  },
+  {
+    id: "demo-hall-pending",
+    name: "قاعة الأمل",
+    status: "Pending",
+    paymentStatus: "Unpaid",
+    paymentReceiptUploadedAt: null,
+    daysRemaining: null,
+    subscriptionExpiresAt: null,
+    expiryWarning: null,
+    adminLocked: false,
+    systemLocked: false,
+  },
+  {
+    id: "demo-hall-rejected",
+    name: "قاعة الياسمين",
+    status: "Rejected",
+    paymentStatus: "Unpaid",
+    paymentReceiptUploadedAt: null,
+    daysRemaining: null,
+    subscriptionExpiresAt: null,
+    expiryWarning: null,
+    adminLocked: false,
+    systemLocked: false,
+  },
+];
 
 function ownerHallsUsesMock(): boolean {
   if (!isDemoModeEnabled()) return false;

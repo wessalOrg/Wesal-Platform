@@ -6,6 +6,10 @@ export function ownerHallPath(hallId: string): string {
   return `/owner/halls/${encodeURIComponent(hallId)}`;
 }
 
+export function ownerHallViewPath(hallId: string): string {
+  return `${ownerHallPath(hallId)}/view`;
+}
+
 export function ownerHallSubscriptionPath(hallId: string): string {
   return `${ownerHallPath(hallId)}#hall-subscription-heading-${hallId}`;
 }

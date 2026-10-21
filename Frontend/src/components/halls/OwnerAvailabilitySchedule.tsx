@@ -21,12 +21,15 @@ type OwnerAvailabilityScheduleProps = {
   hallId: string;
   hallName?: string;
   enabled?: boolean;
+  /** When true, wrap non-empty content in the white booking-page card. */
+  framed?: boolean;
 };
 
 export default function OwnerAvailabilitySchedule({
   hallId,
   hallName,
   enabled = true,
+  framed = false,
 }: OwnerAvailabilityScheduleProps) {
   const t = useT();
   const lang = useUiLang();
@@ -148,7 +151,11 @@ export default function OwnerAvailabilitySchedule({
   const deletePeriodLabels =
     deleteTarget?.periods.map((period) => t(bookingPeriodI18nKey(period))) ?? [];
 
-  return (
+  if (cards.length === 0 && !deleteTarget) {
+    return null;
+  }
+
+  const body = (
     <div className="space-y-4" data-testid="owner-availability-schedule">
       {cards.length > 0 ? (
         <section className="space-y-3" aria-labelledby="owner-schedule-publish-heading">
@@ -200,6 +207,14 @@ export default function OwnerAvailabilitySchedule({
           });
         }}
       />
+    </div>
+  );
+
+  if (!framed) return body;
+
+  return (
+    <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
+      {body}
     </div>
   );
 }

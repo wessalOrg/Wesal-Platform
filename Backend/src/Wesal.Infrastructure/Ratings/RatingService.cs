@@ -166,8 +166,12 @@ public sealed class RatingService : IRatingService
 
     private void EnsureRegisteredUser()
     {
-        if (!_currentUser.Roles.Contains(ApplicationRoles.RegisteredUser, StringComparer.OrdinalIgnoreCase)
-            && !_currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase))
+        if (_currentUser.Roles.Contains(ApplicationRoles.Admin, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new ForbiddenException("Administrators cannot rate halls.");
+        }
+
+        if (!_currentUser.Roles.Contains(ApplicationRoles.RegisteredUser, StringComparer.OrdinalIgnoreCase))
         {
             throw new ForbiddenException("Only registered users can rate halls.");
         }

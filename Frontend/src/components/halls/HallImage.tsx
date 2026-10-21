@@ -66,11 +66,27 @@ export default function HallImage({
     );
   }
 
+  // next/image requires either `fill` or explicit width/height. Call sites that
+  // omit both (e.g. thumbnails in a sized parent) still need a valid render.
+  if (!fill) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={failed ? PLACEHOLDER : resolved}
+        alt={alt}
+        className={className}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        onError={handleError}
+      />
+    );
+  }
+
   return (
     <Image
       src={failed ? PLACEHOLDER : resolved}
       alt={alt}
-      fill={fill}
+      fill
       className={className}
       sizes={sizes}
       quality={75}

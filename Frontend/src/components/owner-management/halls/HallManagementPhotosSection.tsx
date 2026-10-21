@@ -72,6 +72,7 @@ export default function HallManagementPhotosSection({
     <HallFormSection
       id="hall-mgmt-photos-heading"
       title={t("owner.management.addHall.sections.photos")}
+      className="h-full"
     >
       <HallFormField
         id="hall-mgmt-photos"
@@ -81,31 +82,20 @@ export default function HallManagementPhotosSection({
         hint={t("owner.management.hallEdit.photosHint")}
       >
         <div className="flex min-w-0 flex-col gap-3">
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
-            <input
-              ref={inputRef}
-              id="hall-mgmt-photos-add"
-              type="file"
-              accept="image/*"
-              multiple
-              disabled={disabled}
-              aria-invalid={photosError ? true : undefined}
-              aria-describedby={
-                photosError ? "hall-mgmt-photos-error" : "hall-mgmt-photos-hint"
-              }
-              onChange={onFileChange}
-              className="sr-only"
-            />
-            <button
-              type="button"
-              disabled={disabled}
-              className="btn-primary inline-flex min-h-11 w-full items-center justify-center sm:w-auto"
-              data-testid="owner-hall-edit-photos-pick"
-              onClick={() => inputRef.current?.click()}
-            >
-              {t("owner.management.addHall.fields.photosPick")}
-            </button>
-          </div>
+          <input
+            ref={inputRef}
+            id="hall-mgmt-photos-add"
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={disabled}
+            aria-invalid={photosError ? true : undefined}
+            aria-describedby={
+              photosError ? "hall-mgmt-photos-error" : "hall-mgmt-photos-hint"
+            }
+            onChange={onFileChange}
+            className="sr-only"
+          />
 
           {hasPhotos ? (
             <ul
@@ -197,6 +187,19 @@ export default function HallManagementPhotosSection({
               {t("owner.management.hallEdit.photosEmpty")}
             </p>
           )}
+
+          <button
+            type="button"
+            disabled={disabled}
+            className="btn-primary inline-flex h-9 w-fit items-center justify-center gap-1 rounded-full px-3.5 text-xs font-bold"
+            data-testid="owner-hall-edit-photos-pick"
+            onClick={() => inputRef.current?.click()}
+          >
+            <span className="text-sm font-bold leading-none" aria-hidden="true">
+              +
+            </span>
+            <span>{t("owner.management.addHall.fields.photosPick")}</span>
+          </button>
         </div>
       </HallFormField>
     </HallFormSection>

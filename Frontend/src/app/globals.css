@@ -3826,6 +3826,183 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   flex: 0 0 auto;
 }
 
+.owner-halls-page-intro {
+  animation: owner-halls-intro-in 0.55s ease-out backwards;
+}
+
+.owner-hall-card {
+  animation: owner-hall-card-in 0.55s ease-out backwards;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.owner-hall-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--wesal-maroon) 28%, var(--wesal-border));
+  box-shadow: 0 12px 28px rgba(120, 70, 60, 0.1);
+}
+
+.owner-hall-card-dot {
+  animation: owner-hall-card-dot 2.4s ease-in-out infinite;
+}
+
+@keyframes owner-halls-intro-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes owner-hall-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes owner-hall-card-dot {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-halls-page-intro,
+  .owner-hall-card,
+  .owner-hall-card-dot {
+    animation: none;
+  }
+
+  .owner-hall-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+.owner-add-hall-banner-icon {
+  animation: owner-add-hall-float 4.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.owner-add-hall-banner-plus {
+  transform-origin: 45.2px 18.8px;
+  animation: owner-add-hall-plus 2.8s ease-in-out infinite;
+}
+
+.owner-add-hall-banner-leaf {
+  transform-origin: 70% 80%;
+  animation: owner-add-hall-leaf 5.5s ease-in-out infinite;
+}
+
+.owner-add-hall-banner-blob {
+  animation: owner-add-hall-blob 7s ease-in-out infinite;
+}
+
+.owner-add-hall-banner-blob-delay {
+  animation: owner-add-hall-blob 8.5s ease-in-out infinite reverse;
+}
+
+.owner-add-hall-banner-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.38) 48%,
+    transparent 62%
+  );
+  transform: translateX(-120%) skewX(-16deg);
+  animation: owner-add-hall-sheen 7.5s ease-in-out infinite;
+}
+
+@keyframes owner-add-hall-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes owner-add-hall-plus {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes owner-add-hall-leaf {
+  0%,
+  100% {
+    transform: translateY(-50%) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(calc(-50% - 2px)) rotate(3deg);
+  }
+}
+
+@keyframes owner-add-hall-blob {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes owner-add-hall-sheen {
+  0%,
+  68% {
+    transform: translateX(-120%) skewX(-16deg);
+    opacity: 0;
+  }
+  72% {
+    opacity: 0.7;
+  }
+  88% {
+    transform: translateX(140%) skewX(-16deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(140%) skewX(-16deg);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-add-hall-banner-icon,
+  .owner-add-hall-banner-plus,
+  .owner-add-hall-banner-leaf,
+  .owner-add-hall-banner-blob,
+  .owner-add-hall-banner-blob-delay,
+  .owner-add-hall-banner-sheen {
+    animation: none;
+  }
+}
+
 .owner-halls-section {
   display: flex;
   flex-direction: column;

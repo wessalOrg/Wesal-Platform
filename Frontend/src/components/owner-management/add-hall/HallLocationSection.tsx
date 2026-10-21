@@ -40,8 +40,10 @@ export default function HallLocationSection({
     <HallFormSection
       id="hall-location-heading"
       title={t("owner.management.addHall.sections.location")}
+      icon={<LocationPinIcon />}
+      className="h-full"
     >
-      <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
         <HallFormField
           id="hall-region"
           label={t("owner.management.addHall.fields.region")}
@@ -59,46 +61,44 @@ export default function HallLocationSection({
           />
         </HallFormField>
 
-        <div className="md:col-span-1">
-          <HallFormField
-            id="hall-address"
-            label={t("owner.management.addHall.fields.address")}
-            required
-            error={addressError}
-            hint={t("owner.management.addHall.fields.addressHint")}
-          >
-            {useAddressDropdown ? (
-              <HallAddressSelect
-                id="hall-address"
-                value={values.address}
-                addresses={catalogAddresses}
-                disabled={disabled}
-                hasError={Boolean(addressError)}
-                aria-invalid={addressError ? true : undefined}
-                aria-describedby={
-                  addressError ? "hall-address-error" : "hall-address-hint"
-                }
-                onChange={(address) => onChange({ address })}
-              />
-            ) : (
-              <input
-                id="hall-address"
-                type="text"
-                autoComplete="street-address"
-                value={values.address}
-                disabled={disabled || !values.region}
-                aria-invalid={addressError ? true : undefined}
-                aria-describedby={
-                  addressError ? "hall-address-error" : "hall-address-hint"
-                }
-                onChange={(event) => onChange({ address: event.target.value })}
-                className={hallFieldClassName(Boolean(addressError))}
-              />
-            )}
-          </HallFormField>
-        </div>
+        <HallFormField
+          id="hall-address"
+          label={t("owner.management.addHall.fields.address")}
+          required
+          error={addressError}
+          hint={t("owner.management.addHall.fields.addressHint")}
+        >
+          {useAddressDropdown ? (
+            <HallAddressSelect
+              id="hall-address"
+              value={values.address}
+              addresses={catalogAddresses}
+              disabled={disabled}
+              hasError={Boolean(addressError)}
+              aria-invalid={addressError ? true : undefined}
+              aria-describedby={
+                addressError ? "hall-address-error" : "hall-address-hint"
+              }
+              onChange={(address) => onChange({ address })}
+            />
+          ) : (
+            <input
+              id="hall-address"
+              type="text"
+              autoComplete="street-address"
+              value={values.address}
+              disabled={disabled || !values.region}
+              aria-invalid={addressError ? true : undefined}
+              aria-describedby={
+                addressError ? "hall-address-error" : "hall-address-hint"
+              }
+              onChange={(event) => onChange({ address: event.target.value })}
+              className={hallFieldClassName(Boolean(addressError))}
+            />
+          )}
+        </HallFormField>
 
-        <div className="md:col-span-2">
+        <div className="sm:col-span-2">
           <HallFormField
             id="hall-detailed-address"
             label={t("owner.management.addHall.fields.detailedAddress")}
@@ -120,11 +120,33 @@ export default function HallLocationSection({
                 "owner.management.addHall.fields.detailedAddressPlaceholder",
               )}
               onChange={(event) => onChange({ detailedAddress: event.target.value })}
-              className={`${hallFieldClassName(Boolean(detailedAddressError))} min-h-[6.5rem] max-w-full resize-y break-words whitespace-pre-wrap`}
+              className={`${hallFieldClassName(Boolean(detailedAddressError))} min-h-[5.5rem] max-w-full resize-y break-words whitespace-pre-wrap`}
             />
           </HallFormField>
         </div>
       </div>
     </HallFormSection>
+  );
+}
+
+function LocationPinIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path
+        d="M12 21s6.2-5.35 6.2-10.1A6.2 6.2 0 0 0 12 4.7a6.2 6.2 0 0 0-6.2 6.2C5.8 15.65 12 21 12 21Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="10.7" r="2.15" stroke="currentColor" strokeWidth="1.7" />
+      <ellipse
+        cx="12"
+        cy="21.2"
+        rx="4.2"
+        ry="1.1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+    </svg>
   );
 }

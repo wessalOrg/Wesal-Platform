@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import OwnerAddBookingModal from "@/components/owner-management/halls/OwnerAddBookingModal";
 import OwnerHallBookingsCalendar from "@/components/owner-management/halls/OwnerHallBookingsCalendar";
+import SuccessToast from "@/components/ui/SuccessToast";
 import { useAddHallInitiation } from "@/hooks/useAddHallInitiation";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useT } from "@/i18n";
 import { HALL_OWNER_CALENDAR_PATH } from "@/lib/account-profile-path";
+import type { UiLang } from "@/lib/language";
 import { localizeHallName } from "@/lib/localize-hall-display";
+import type { HallOwnerHall } from "@/types/hall-owner-halls";
 
 /**
  * Standalone Hall Owner bookings calendar (Edit 25).
@@ -22,6 +26,9 @@ export default function OwnerBookingsCalendarPage() {
   const searchParams = useSearchParams();
   const { halls, status, errorKey, refetch } = useHallOwnerHalls();
   const { startAddHall, isInitiating } = useAddHallInitiation();
+  const [addOpen, setAddOpen] = useState(false);
+  const [savedToast, setSavedToast] = useState(false);
+  const [focusDate, setFocusDate] = useState<string | null>(null);
 
   const requestedId = searchParams.get("hall")?.trim() ?? "";
   const selectedHall = halls.find((hall) => hall.id === requestedId) ?? halls[0] ?? null;
@@ -46,10 +53,23 @@ export default function OwnerBookingsCalendarPage() {
   return (
     <div className="seeker-home min-w-0" data-testid="owner-bookings-calendar-page">
       <section className="seeker-welcome">
-        <div className="seeker-welcome-copy">
+        <div className="seeker-welcome-copy min-w-0">
           <h1 className="seeker-welcome-title">{t("owner.calendar.title")}</h1>
           <p className="seeker-welcome-body">{t("owner.calendar.pageSubtitle")}</p>
         </div>
+        {selectedHall ? (
+          <div className="flex items-center justify-start sm:justify-end">
+            <button
+              type="button"
+              className="btn-primary inline-flex min-h-11 shrink-0 items-center justify-center gap-2 px-4"
+              data-testid="owner-calendar-add-booking"
+              onClick={() => setAddOpen(true)}
+            >
+              <PlusIcon />
+              {t("owner.calendar.addBooking")}
+            </button>
+          </div>
+        ) : null}
       </section>
 
       {waiting ? (
@@ -104,26 +124,15 @@ export default function OwnerBookingsCalendarPage() {
       ) : null}
 
       {selectedHall ? (
-        <section className="min-w-0 space-y-4 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
+        <section className="min-w-0 space-y-4">
           {halls.length > 1 ? (
-            <label className="block max-w-md" htmlFor="owner-calendar-hall">
-              <span className="mb-2 block text-sm font-bold text-[var(--wesal-text)]">
-                {t("owner.calendar.selectHall")}
-              </span>
-              <select
-                id="owner-calendar-hall"
-                className="min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm font-semibold text-[var(--wesal-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
-                value={selectedHall.id}
-                data-testid="owner-calendar-hall-select"
-                onChange={(event) => selectHall(event.target.value)}
-              >
-                {halls.map((hall) => (
-                  <option key={hall.id} value={hall.id}>
-                    {localizeHallName(hall.id, hall.name, lang)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <OwnerCalendarHallPicker
+              halls={halls}
+              selectedId={selectedHall.id}
+              lang={lang}
+              label={t("owner.calendar.selectHall")}
+              onSelect={selectHall}
+            />
           ) : (
             <p className="text-sm font-bold text-[var(--wesal-text)]" data-testid="owner-calendar-hall-name">
               <span className="font-semibold text-[var(--wesal-muted)]">
@@ -138,9 +147,156 @@ export default function OwnerBookingsCalendarPage() {
             hallId={selectedHall.id}
             enabled
             detailsTitle
+            focusDate={focusDate}
           />
         </section>
       ) : null}
+
+      {selectedHall ? (
+        <OwnerAddBookingModal
+          open={addOpen}
+          halls={halls}
+          defaultHallId={selectedHall.id}
+          defaultDate={focusDate}
+          onClose={() => setAddOpen(false)}
+          onSaved={(_id, hallId, date) => {
+            if (hallId !== selectedHall.id) selectHall(hallId);
+            setFocusDate(date);
+            setSavedToast(true);
+          }}
+        />
+      ) : null}
+
+      <SuccessToast
+        open={savedToast}
+        message={t("owner.calendar.add.saved")}
+        onClose={() => setSavedToast(false)}
+      />
     </div>
+  );
+}
+
+function OwnerCalendarHallPicker({
+  halls,
+  selectedId,
+  lang,
+  label,
+  onSelect,
+}: {
+  halls: HallOwnerHall[];
+  selectedId: string;
+  lang: UiLang;
+  label: string;
+  onSelect: (hallId: string) => void;
+}) {
+  const listId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const selected = halls.find((hall) => hall.id === selectedId) ?? halls[0];
+  const selectedLabel = selected
+    ? localizeHallName(selected.id, selected.name, lang)
+    : "";
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative block max-w-md" ref={rootRef}>
+      <span id={`${listId}-label`} className="mb-2 block text-sm font-bold text-[var(--wesal-text)]">
+        {label}
+      </span>
+      <button
+        type="button"
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm font-semibold text-[var(--wesal-text)] shadow-[0_4px_12px_rgba(90,55,45,0.04)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-labelledby={`${listId}-label`}
+        aria-controls={listId}
+        data-testid="owner-calendar-hall-select"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="min-w-0 truncate">{selectedLabel}</span>
+        <ChevronIcon open={open} />
+      </button>
+      {open ? (
+        <ul
+          id={listId}
+          role="listbox"
+          aria-labelledby={`${listId}-label`}
+          className="absolute z-20 mt-1.5 max-h-64 w-full overflow-auto rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_32px_rgba(90,55,45,0.12)]"
+          data-testid="owner-calendar-hall-menu"
+        >
+          {halls.map((hall) => {
+            const active = hall.id === selectedId;
+            const name = localizeHallName(hall.id, hall.name, lang);
+            return (
+              <li key={hall.id} role="presentation">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  className={`flex min-h-10 w-full items-center px-3 text-start text-sm font-semibold transition ${
+                    active
+                      ? "bg-[var(--wesal-maroon)] text-white"
+                      : "bg-white text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
+                  }`}
+                  onClick={() => {
+                    onSelect(hall.id);
+                    setOpen(false);
+                  }}
+                >
+                  {name}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className={`h-4 w-4 shrink-0 text-[var(--wesal-maroon)] transition ${open ? "rotate-180" : ""}`}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5 7.5 10 12.5 15 7.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" aria-hidden="true">
+      <path
+        d="M10 4v12M4 10h12"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

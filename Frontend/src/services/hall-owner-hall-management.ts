@@ -52,44 +52,116 @@ function ownerHallManagementUsesMock(): boolean {
   return !token || token.startsWith("stub-");
 }
 
-const DEMO_HALL_META: Record<
-  string,
-  Pick<HallOwnerHallDetails, "name" | "status" | "editability">
-> = {};
+type DemoHallSeed = Pick<
+  HallOwnerHallDetails,
+  | "name"
+  | "status"
+  | "editability"
+  | "region"
+  | "address"
+  | "capacity"
+  | "price"
+  | "paymentStatus"
+  | "mainImageUrl"
+  | "rating"
+  | "reviewCount"
+> & {
+  photos?: string[];
+};
+
+const DEMO_HALL_META: Record<string, DemoHallSeed> = {
+  "demo-hall-approved": {
+    name: "قاعة النور",
+    status: "Approved",
+    editability: "editable",
+    region: "Gaza",
+    address: "تل الهوا",
+    capacity: 450,
+    price: 1500,
+    paymentStatus: "Paid",
+    mainImageUrl: "/halls/featured-lotus.webp",
+    photos: ["/halls/featured-02.webp", "/halls/featured-03.webp"],
+    rating: 4.8,
+    reviewCount: 36,
+  },
+  "demo-hall-pending": {
+    name: "قاعة الأمل",
+    status: "Pending",
+    editability: "editable",
+    region: "North Gaza",
+    address: "جباليا",
+    capacity: 320,
+    price: 980,
+    paymentStatus: "Unpaid",
+    mainImageUrl: "/halls/featured-02.webp",
+    photos: ["/halls/featured-04.webp"],
+    rating: 4.2,
+    reviewCount: 11,
+  },
+  "demo-hall-rejected": {
+    name: "قاعة الياسمين",
+    status: "Rejected",
+    editability: "editable",
+    region: "South Gaza",
+    address: "خانيونس",
+    capacity: 280,
+    price: 850,
+    paymentStatus: "Unpaid",
+    mainImageUrl: "/halls/featured-05.webp",
+    photos: [],
+    rating: 3.9,
+    reviewCount: 7,
+  },
+};
 
 function buildDemoHallDetails(hallId: string): HallOwnerHallDetails {
   const meta = DEMO_HALL_META[hallId] ?? {
     name: "",
     status: "Pending" as const,
     editability: "editable" as const,
+    region: "Gaza" as const,
+    address: "",
+    capacity: 0,
+    price: 0,
+    paymentStatus: "Unpaid" as const,
+    mainImageUrl: null,
+    photos: [],
   };
+
+  const photos = (meta.photos ?? []).map((url, index) => ({
+    id: `${hallId}-photo-${index}`,
+    url,
+    apiUrl: url,
+  }));
 
   return {
     id: hallId,
     name: meta.name,
     status: meta.status,
     editability: meta.editability,
-    contactPhone: "",
-    region: "Gaza",
-    address: "",
-    detailedAddress: "",
+    contactPhone: "+970599000010",
+    region: meta.region,
+    address: meta.address,
+    detailedAddress: meta.address,
     description: "",
-    capacity: 0,
-    price: 0,
+    capacity: meta.capacity,
+    price: meta.price,
     showPrice: true,
     youtubeVideoUrl: "",
     features: [],
     otherFeatures: "",
-    paymentStatus: "Unpaid",
+    paymentStatus: meta.paymentStatus,
     paymentReceiptUploadedAt: null,
-    hasPaymentReceipt: false,
-    mainImageUrl: null,
-    mainImageApiUrl: null,
+    hasPaymentReceipt: meta.paymentStatus !== "Unpaid",
+    mainImageUrl: meta.mainImageUrl,
+    mainImageApiUrl: meta.mainImageUrl,
     hourlySlotStart: null,
     hourlySlotEnd: null,
-    photos: [],
+    photos,
     adminLocked: false,
     systemLocked: false,
+    rating: meta.rating ?? null,
+    reviewCount: meta.reviewCount ?? null,
   };
 }
 

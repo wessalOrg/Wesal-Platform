@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import OwnerDeleteHallAction from "@/components/halls/OwnerDeleteHallAction";
+import OwnerHourlyControls from "@/components/halls/hourly/OwnerHourlyControls";
 import ManagementAccessBlockedState from "@/components/halls/ManagementAccessBlockedState";
 import PaymentStatusBadge from "@/components/halls/PaymentStatusBadge";
 import OwnerSubscriptionStatus from "@/components/halls/subscription/OwnerSubscriptionStatus";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
 import HallRejectionReasonNotice from "@/components/owner-management/halls/HallRejectionReasonNotice";
-import HallManagementForm from "@/components/owner-management/halls/HallManagementForm";
+import HallFormActions from "@/components/owner-management/add-hall/HallFormActions";
+import HallManagementForm, {
+  OWNER_HALL_EDIT_FORM_ID,
+} from "@/components/owner-management/halls/HallManagementForm";
 import HallManagementSectionNav from "@/components/owner-management/halls/HallManagementSectionNav";
 import { useHallOwnerHallManagement } from "@/hooks/useHallOwnerHallManagement";
 import { useSelectedOwnerHall } from "@/hooks/useSelectedOwnerHall";
@@ -136,14 +140,16 @@ export default function HallOwnerHallManagementView({
           hallName={headerName}
           paymentStatus={paymentStatus}
         />
-        <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
-          <OwnerDeleteHallAction
-            hallId={hallId}
-            hallName={headerName}
-            onDeleted={() => {
-              router.replace(HALL_OWNER_HALLS_PATH);
-            }}
-          />
+        <div className="flex min-w-0 justify-center">
+          <div className="w-full max-w-xs">
+            <OwnerDeleteHallAction
+              hallId={hallId}
+              hallName={headerName}
+              onDeleted={() => {
+                router.replace(HALL_OWNER_HALLS_PATH);
+              }}
+            />
+          </div>
         </div>
       </section>
     );
@@ -236,9 +242,8 @@ export default function HallOwnerHallManagementView({
 
       <HallRejectionReasonNotice hallId={hallId} rejected={details.status === "Rejected"} />
 
-      <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
+      <div className="min-w-0 space-y-6 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:space-y-8 sm:p-6">
         <HallManagementForm
-          hallId={hallId}
           values={values}
           fieldErrors={fieldErrors}
           formError={formError}
@@ -246,7 +251,7 @@ export default function HallOwnerHallManagementView({
           isSubmitting={isSubmitting}
           isSuccess={isSuccess}
           controlsDisabled={controlsDisabled}
-          paymentStatus={details.paymentStatus}
+          hideActions
           onPatch={patchValues}
           onRemoveExistingPhoto={removeExistingPhoto}
           onSetCover={setCoverPhoto}
@@ -261,10 +266,54 @@ export default function HallOwnerHallManagementView({
               : t("owner.management.hallEdit.success")
           }
         />
+
+        <div
+          className="grid min-w-0 grid-cols-1 items-start gap-4 border-t border-[var(--wesal-border)] pt-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] lg:gap-4"
+          data-testid="owner-hall-booking-subscription-panel"
+        >
+          {/* RTL: first column sits on the right and takes more than half */}
+          <OwnerHourlyControls
+            hallId={hallId}
+            disabled={controlsDisabled}
+            paymentStatus={details.paymentStatus}
+            embedded
+          />
+          <OwnerSubscriptionStatus
+            hallId={hallId}
+            hallName={headerName}
+            embedded
+          />
+        </div>
       </div>
 
-      <OwnerSubscriptionStatus hallId={hallId} hallName={headerName} />
-      <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
+      <div className="grid min-w-0 grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
+        {/* RTL: first column sits on the right (save), second on the left (delete) */}
+        <HallFormActions
+          isSubmitting={isSubmitting}
+          formError={formError}
+          isSuccess={isSuccess}
+          resolveMessage={(value) =>
+            value && (value.startsWith("owner.") || value.startsWith("errors."))
+              ? t(value)
+              : value
+          }
+          submitLabel={t("owner.management.hallEdit.actions.save")}
+          savingLabel={t("owner.management.hallEdit.actions.saving")}
+          successMessage={
+            resubmitted
+              ? t("owner.management.hallEdit.resubmitted")
+              : t("owner.management.hallEdit.success")
+          }
+          submitDisabled={details.editability === "locked"}
+          submitTestId="owner-hall-edit-submit"
+          successTestId="owner-hall-edit-success"
+          errorTestId="owner-hall-edit-form-error"
+          formId={OWNER_HALL_EDIT_FORM_ID}
+          endCard={{
+            cancelHref: HALL_OWNER_HALLS_PATH,
+          }}
+        />
+
         <OwnerDeleteHallAction
           hallId={hallId}
           hallName={headerName}

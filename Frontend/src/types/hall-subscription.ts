@@ -13,6 +13,7 @@ export type HallSubscription = {
   subscriptionStatus: HallSubscriptionStatus;
   isPaid: boolean;
   billing: HallSubscriptionBilling | null;
+  cycleStart: string | null;
   subscriptionExpiresAt: string | null;
   daysRemaining: number | null;
   expiryWarningDispatched: boolean;

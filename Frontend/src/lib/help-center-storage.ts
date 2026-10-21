@@ -35,7 +35,10 @@ export function readHelpCenterStore(): HelpCenterStore {
     }
     return {
       version: 1,
-      tickets: parsed.tickets.filter(isHelpTicket),
+      tickets: parsed.tickets.filter(isHelpTicket).map((ticket) => ({
+        ...ticket,
+        adminUnread: ticket.adminUnread === true,
+      })),
     };
   } catch {
     return emptyStore();
@@ -162,6 +165,7 @@ export function createHelpTicket(input: {
     reply: null,
     repliedAt: null,
     userUnread: false,
+    adminUnread: true,
   };
   const store = readHelpCenterStore();
   writeHelpCenterStore({ version: 1, tickets: [ticket, ...store.tickets] });
@@ -179,6 +183,7 @@ export function replyToHelpTicket(id: string, reply: string): HelpTicket | null 
     reply: reply.trim(),
     repliedAt: new Date().toISOString(),
     userUnread: true,
+    adminUnread: false,
   };
   const tickets = [...store.tickets];
   tickets[index] = updated;
@@ -195,6 +200,18 @@ export function markHelpTicketRead(id: string): void {
   const tickets = [...store.tickets];
   tickets[index] = { ...current, userUnread: false };
   writeHelpCenterStore({ version: 1, tickets });
+}
+
+/** Marks every question in the asker's conversation read for the Admin team. */
+export function markHelpConversationRead(userId: string): void {
+  const store = readHelpCenterStore();
+  let changed = false;
+  const tickets = store.tickets.map((ticket) => {
+    if (ticket.userId !== userId || !ticket.adminUnread) return ticket;
+    changed = true;
+    return { ...ticket, adminUnread: false };
+  });
+  if (changed) writeHelpCenterStore({ version: 1, tickets });
 }
 
 export function listRepliedHelpTicketsForUser(userId: string): HelpTicket[] {

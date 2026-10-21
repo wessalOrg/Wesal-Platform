@@ -49,6 +49,9 @@ export type HallOwnerHallDetails = {
   photos: ExistingHallPhoto[];
   adminLocked: boolean;
   systemLocked: boolean;
+  /** Public average rating when available (1–5). */
+  rating?: number | null;
+  reviewCount?: number | null;
 };
 
 export type HallEditFormValues = {

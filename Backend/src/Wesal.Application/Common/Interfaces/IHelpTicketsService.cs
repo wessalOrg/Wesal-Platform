@@ -30,4 +30,10 @@ public interface IHelpTicketsService
         Guid id,
         ReplyHelpTicketRequestDto request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Marks the ticket owner's whole conversation read for the Admin team. Idempotent; the
+    /// read marker is shared across all Admins.
+    /// </summary>
+    Task MarkConversationReadAsync(string userId, CancellationToken cancellationToken = default);
 }

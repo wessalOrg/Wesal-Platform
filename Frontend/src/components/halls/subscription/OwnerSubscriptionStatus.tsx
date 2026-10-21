@@ -8,11 +8,14 @@ import { useT } from "@/i18n";
 type OwnerSubscriptionStatusProps = {
   hallId: string;
   hallName?: string;
+  /** Nested inside a parent card — softer panel chrome. */
+  embedded?: boolean;
 };
 
 export default function OwnerSubscriptionStatus({
   hallId,
   hallName,
+  embedded = false,
 }: OwnerSubscriptionStatusProps) {
   const t = useT();
   const { status, subscription, errorKey, retry } = useSubscription(hallId, true);
@@ -26,6 +29,7 @@ export default function OwnerSubscriptionStatus({
         subscription={subscription}
         errorMessage={errorKey ? t(errorKey) : null}
         onRetry={retry}
+        embedded={embedded}
       />
     </SubscriptionErrorBoundary>
   );

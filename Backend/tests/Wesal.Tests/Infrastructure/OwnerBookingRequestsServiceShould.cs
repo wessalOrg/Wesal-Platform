@@ -136,6 +136,7 @@ public class OwnerBookingRequestsServiceShould : IDisposable
         Assert.Contains(new TimeOnly(10, 0), item.SlotStarts);
         Assert.Equal(requester.Id, item.RequesterUserId);
         Assert.Equal("Mahmoud Salah", item.RequesterName);
+        Assert.Equal("+970599200007", item.RequesterPhone);
         Assert.Equal(BookingStatus.Pending, item.Status);
     }
 

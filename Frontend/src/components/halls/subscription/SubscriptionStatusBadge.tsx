@@ -10,7 +10,7 @@ type SubscriptionStatusBadgeProps = {
 
 const styles: Record<HallSubscriptionStatus, string> = {
   active:
-    "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200",
+    "bg-[#ecfdf5] text-[#065f46] ring-1 ring-[#86efac] shadow-[0_4px_12px_rgba(16,185,129,0.12)]",
   unpaid:
     "bg-[rgba(196,160,92,0.2)] text-[#7a5c1f] ring-1 ring-[rgba(196,160,92,0.45)]",
   expired:

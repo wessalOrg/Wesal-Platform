@@ -230,16 +230,15 @@ public class CommentServiceShould
     }
 
     [Fact]
-    public async Task CreateComment_Admin_CanComment()
+    public async Task CreateComment_Admin_IsForbidden()
     {
         var hall = CreateApprovedHall("Test Hall");
         var repository = new FakeCommentRepository();
         var hallRepository = new FakeHallRepository(hall);
         var service = CreateService(repository, hallRepository, authenticated: true, roles: [ApplicationRoles.Admin]);
 
-        var result = await service.CreateCommentAsync(new CreateCommentRequest { HallId = hall.Id, Content = "Admin note" });
-
-        Assert.Equal("Admin note", result.Content);
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.CreateCommentAsync(new CreateCommentRequest { HallId = hall.Id, Content = "Admin note" }));
     }
 
     private static Hall CreateApprovedHall(string name)

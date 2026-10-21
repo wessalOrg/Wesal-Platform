@@ -18,6 +18,8 @@ export type HelpTicket = {
   repliedAt: string | null;
   /** User has not opened the Wesal Team thread since the last admin reply. */
   userUnread: boolean;
+  /** No Admin has opened this user's conversation since the question arrived. */
+  adminUnread: boolean;
 };
 
 export type HelpCenterStore = {

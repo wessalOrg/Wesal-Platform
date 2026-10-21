@@ -58,6 +58,7 @@ public class SwaggerDocumentShould
     private const string HelpTicketReadPath = "/api/v{version}/help/tickets/{id}/read";
     private const string AdminHelpTicketsPath = "/api/v{version}/admin/help/tickets";
     private const string AdminHelpTicketReplyPath = "/api/v{version}/admin/help/tickets/{id}/reply";
+    private const string AdminHelpConversationReadPath = "/api/v{version}/admin/help/tickets/conversations/{userId}/read";
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
@@ -351,6 +352,7 @@ public class SwaggerDocumentShould
         Assert.Contains(HelpTicketReadPath, document.Paths.Keys);
         Assert.Contains(AdminHelpTicketsPath, document.Paths.Keys);
         Assert.Contains(AdminHelpTicketReplyPath, document.Paths.Keys);
+        Assert.Contains(AdminHelpConversationReadPath, document.Paths.Keys);
     }
 
     [Fact]

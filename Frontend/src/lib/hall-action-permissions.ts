@@ -33,10 +33,6 @@ function isRegisteredUserRole(role: string | null | undefined): boolean {
   return value === "registereduser" || value === "regularuser";
 }
 
-function isAdminRole(role: string | null | undefined): boolean {
-  return normalizeRole(role) === "admin";
-}
-
 /**
  * Frontend policy for hall interactive actions.
  * Mirrors backend authorization; not a security boundary.
@@ -56,7 +52,6 @@ export function getHallActionPermissions({
   const ownsHall = authenticated && isOwnHall;
   const registered = isRegisteredUserRole(session.role);
   const hallOwner = isHallOwnerRole(session.role);
-  const admin = isAdminRole(session.role);
   const canActAsBooker = registered || hallOwner;
 
   return {
@@ -64,8 +59,8 @@ export function getHallActionPermissions({
     isGuest,
     isOwnHall: ownsHall,
     canBook: authenticated && !ownsHall && canActAsBooker,
-    canComment: authenticated && !ownsHall && (canActAsBooker || admin),
-    canRate: authenticated && !ownsHall && (canActAsBooker || admin),
+    canComment: authenticated && !ownsHall && canActAsBooker,
+    canRate: authenticated && !ownsHall && canActAsBooker,
     canContactOwner: authenticated && !ownsHall && canActAsBooker,
   };
 }

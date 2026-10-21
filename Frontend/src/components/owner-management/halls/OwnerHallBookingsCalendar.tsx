@@ -1,25 +1,36 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import HallMonthCalendar, {
   type CalendarDayStatus,
 } from "@/components/halls/HallMonthCalendar";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import OwnerCalendarBookingCard from "@/components/owner-management/halls/OwnerCalendarBookingCard";
+import { useHallNotifications } from "@/hooks/useHallNotifications";
 import { useOwnerBookingsCalendar } from "@/hooks/useOwnerBookingsCalendar";
 import { useT } from "@/i18n";
-import { formatBookingDateLong } from "@/lib/booking-date";
-import { formatHourlyRange } from "@/lib/hourly-slots";
-import { bookedHourRanges } from "@/lib/owner-bookings-calendar";
-import type {
-  OwnerBookingsCalendarDay,
-  OwnerBookingsCalendarStatus,
-} from "@/types/owner-bookings-calendar";
+import { formatBookingDateLong, localTodayIso, parseDateIso } from "@/lib/booking-date";
+import {
+  bookingsForDate,
+  formatUpcomingDateLabel,
+  upcomingBookings,
+} from "@/lib/owner-calendar-bookings";
+import {
+  listOwnerManualBookings,
+  subscribeOwnerManualBookings,
+} from "@/lib/owner-manual-bookings-store";
+import type { OwnerBookingsCalendarStatus } from "@/types/owner-bookings-calendar";
+import type { HallBookingNotification } from "@/types/hall-notifications";
+import type { OwnerManualBooking } from "@/types/owner-manual-booking";
 
 type OwnerHallBookingsCalendarProps = {
   hallId: string;
   enabled: boolean;
   /** Standalone page labels the details column. The hall notifications card already has its own title. */
   detailsTitle?: boolean;
+  /** Prefill / focus a day after creating a booking from the page modal. */
+  focusDate?: string | null;
 };
 
 type MonthRange = { fromDate: string; toDate: string };
@@ -27,12 +38,31 @@ type MonthRange = { fromDate: string; toDate: string };
 export default function OwnerHallBookingsCalendar({
   hallId,
   enabled,
-  detailsTitle = false,
+  focusDate = null,
 }: OwnerHallBookingsCalendarProps) {
   const t = useT();
   const locale = useUiLang();
+  const dateLocale = locale === "ar" ? "ar-EG" : "en-GB";
   const { load, range, onVisibleMonthChange, retry } = useOwnerBookingsCalendar(hallId, enabled);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const notifications = useHallNotifications(hallId, enabled);
+  const [selectedDate, setSelectedDate] = useState<string | null>(() => localTodayIso());
+  const [manualBookings, setManualBookings] = useState<OwnerManualBooking[]>(() =>
+    listOwnerManualBookings(hallId),
+  );
+
+  useEffect(() => {
+    setManualBookings(listOwnerManualBookings(hallId));
+    return subscribeOwnerManualBookings(() => {
+      setManualBookings(listOwnerManualBookings(hallId));
+    });
+  }, [hallId]);
+
+  useEffect(() => {
+    const iso = parseDateIso(focusDate);
+    if (iso) setSelectedDate(iso);
+  }, [focusDate]);
+
+  const notificationItems = notifications.items;
 
   const dayStatuses = useMemo(() => {
     if (load.status !== "ready") return undefined;
@@ -40,42 +70,58 @@ export default function OwnerHallBookingsCalendar({
     for (const day of load.calendar.days) {
       statuses[day.date] = day.hasBookedHours ? "booked" : "available";
     }
+    for (const booking of manualBookings) {
+      const date = parseDateIso(booking.date);
+      if (date) statuses[date] = "booked";
+    }
     return statuses;
-  }, [load]);
+  }, [load, manualBookings]);
 
   const selectedInView = isDateInRange(selectedDate, range);
+  const activeDate = selectedInView ? selectedDate : null;
+  const upcoming = upcomingBookings(notificationItems, t, dateLocale, 6, manualBookings);
 
   return (
     <div
-      className="grid min-w-0 grid-cols-1 items-stretch gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(17rem,0.75fr)] lg:gap-8"
+      className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-5"
       data-testid="owner-bookings-calendar"
       data-hall-id={hallId}
     >
-      <HallMonthCalendar
-        dayStatuses={dayStatuses}
-        selectedDateIso={selectedInView ? selectedDate : null}
-        onSelect={(day) => {
-          const iso = day.dateIso ?? null;
-          if (iso) setSelectedDate(iso);
-        }}
-        disabled={!enabled}
-        locale={locale}
-        legend="owner"
-        allowAnyDay
-        onVisibleMonthChange={onVisibleMonthChange}
-      />
+      <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
+        <section className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_10px_28px_rgba(90,55,45,0.05)] sm:p-5">
+          <HallMonthCalendar
+            dayStatuses={dayStatuses}
+            selectedDateIso={activeDate}
+            onSelect={(day) => {
+              const iso = day.dateIso ?? null;
+              if (iso) setSelectedDate(iso);
+            }}
+            disabled={!enabled}
+            locale={locale}
+            legend="owner"
+            allowAnyDay
+            showTodayButton
+            hideLegend
+            onVisibleMonthChange={onVisibleMonthChange}
+          />
+        </section>
 
-      <div className="flex min-w-0 flex-col">
-        {detailsTitle ? (
-          <h2 className="mb-3 text-base font-extrabold text-[var(--wesal-maroon)]">
-            {t("owner.calendar.dayDetails")}
-          </h2>
-        ) : null}
-        <SelectedDayBookingStatus
-          className="min-h-40 flex-1"
-          selectedDate={selectedInView ? selectedDate : null}
+        <UpcomingBookingsRail
+          hallId={hallId}
+          items={upcoming}
+          locale={dateLocale}
+          onPickDate={(date) => setSelectedDate(date)}
+        />
+      </div>
+
+      <div className="order-1 min-w-0 lg:order-2">
+        <SelectedDayPanel
+          hallId={hallId}
+          selectedDate={activeDate}
           load={load}
-          locale={locale}
+          notifications={notificationItems}
+          manualBookings={manualBookings}
+          locale={dateLocale}
           onRetry={retry}
         />
       </div>
@@ -83,25 +129,28 @@ export default function OwnerHallBookingsCalendar({
   );
 }
 
-function SelectedDayBookingStatus({
+function SelectedDayPanel({
+  hallId,
   selectedDate,
   load,
+  notifications,
+  manualBookings,
   locale,
   onRetry,
-  className = "",
 }: {
+  hallId: string;
   selectedDate: string | null;
   load: OwnerBookingsCalendarStatus;
+  notifications: HallBookingNotification[];
+  manualBookings: OwnerManualBooking[];
   locale: string;
   onRetry: () => void;
-  className?: string;
 }) {
   const t = useT();
 
   if (load.status === "error") {
     return (
       <CalendarDayError
-        className={className}
         heading={selectedDate ? formatBookingDateLong(selectedDate, locale) : null}
         onRetry={onRetry}
       />
@@ -111,7 +160,7 @@ function SelectedDayBookingStatus({
   if (!selectedDate) {
     return (
       <p
-        className={`flex flex-col justify-center rounded-2xl border border-dashed border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-6 text-sm leading-7 text-[var(--wesal-muted)] ${className}`}
+        className="flex min-h-40 flex-col justify-center rounded-2xl border border-dashed border-[var(--wesal-border)] bg-white px-4 py-6 text-sm leading-7 text-[var(--wesal-muted)] shadow-[0_10px_28px_rgba(90,55,45,0.04)]"
         data-testid="owner-calendar-idle"
       >
         {t("owner.calendar.pickDay")}
@@ -124,81 +173,139 @@ function SelectedDayBookingStatus({
   if (load.status === "loading" || load.status === "idle") {
     return (
       <section
-        className={`flex flex-col justify-center rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-5 ${className}`}
+        className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)]"
         aria-busy="true"
         aria-live="polite"
         data-testid="owner-calendar-loading"
       >
-        <h4 className="text-base font-extrabold text-[var(--wesal-maroon)]">{heading}</h4>
-        <p className="mt-3 text-sm leading-7 text-[var(--wesal-muted)]">{t("owner.calendar.loading")}</p>
+        <DayHeader heading={heading} countLabel={t("owner.calendar.loading")} />
       </section>
     );
   }
 
   const day = load.calendar.days.find((item) => item.date === selectedDate);
-  if (!day) {
-    return <CalendarDayError className={className} heading={heading} onRetry={onRetry} />;
-  }
+  const cards = bookingsForDate(
+    selectedDate,
+    notifications,
+    day,
+    t,
+    locale,
+    manualBookings,
+  );
 
-  if (day.hasBookedHours) {
-    return <BookedDay className={className} heading={heading} day={day} locale={locale} />;
+  if (cards.length === 0) {
+    return (
+      <section
+        className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)]"
+        role="status"
+        aria-live="polite"
+        data-testid="owner-calendar-empty"
+      >
+        <DayHeader heading={heading} countLabel={t("owner.calendar.dayCount", { count: 0 })} />
+        <p className="mt-4 text-sm font-semibold leading-7 text-[var(--wesal-text)]">
+          {t("owner.calendar.empty")}
+        </p>
+      </section>
+    );
   }
 
   return (
-    <section
-      className={`flex flex-col justify-center rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-5 ${className}`}
-      role="status"
-      aria-live="polite"
-      data-testid="owner-calendar-empty"
-    >
-      <h4 className="text-base font-extrabold text-[var(--wesal-maroon)]">{heading}</h4>
-      <p className="mt-3 text-sm font-semibold leading-7 text-[var(--wesal-text)]">
-        {t("owner.calendar.empty")}
-      </p>
+    <section className="min-w-0 space-y-3" data-testid="owner-calendar-booked">
+      <div className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-4 shadow-[0_10px_28px_rgba(90,55,45,0.05)]">
+        <DayHeader
+          heading={heading}
+          countLabel={t("owner.calendar.dayCount", { count: cards.length })}
+        />
+      </div>
+      <ul className="space-y-3">
+        {cards.map((booking) => (
+          <li key={booking.id}>
+            <OwnerCalendarBookingCard
+              booking={booking}
+              detailsHref={`/owner/halls/${encodeURIComponent(hallId)}/notifications?request_id=${encodeURIComponent(booking.id)}`}
+            />
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
 
-function BookedDay({
-  heading,
-  day,
+function DayHeader({ heading, countLabel }: { heading: string; countLabel: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className="text-base font-extrabold text-[var(--wesal-text)] sm:text-lg">{heading}</h2>
+        <p className="mt-1 text-[0.78rem] text-[var(--wesal-muted)]">{countLabel}</p>
+      </div>
+      <span className="mt-1 inline-flex text-[var(--wesal-maroon)]" aria-hidden="true">
+        <HeaderChevron />
+      </span>
+    </div>
+  );
+}
+
+function UpcomingBookingsRail({
+  hallId,
+  items,
   locale,
-  className = "",
+  onPickDate,
 }: {
-  heading: string;
-  day: OwnerBookingsCalendarDay;
+  hallId: string;
+  items: ReturnType<typeof upcomingBookings>;
   locale: string;
-  className?: string;
+  onPickDate: (date: string) => void;
 }) {
   const t = useT();
-  const ranges = bookedHourRanges(day.bookedHours).map((range) =>
-    formatHourlyRange(range.start, range.end, locale),
-  );
+  if (items.length === 0) return null;
 
   return (
     <section
-      className={`flex flex-col justify-center rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-5 ${className}`}
-      role="status"
-      aria-live="polite"
-      data-testid="owner-calendar-booked"
+      className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_10px_28px_rgba(90,55,45,0.05)] sm:p-5"
+      data-testid="owner-calendar-upcoming"
     >
-      <h4 className="text-base font-extrabold text-[var(--wesal-maroon)]">{heading}</h4>
-      <p className="mt-3 text-sm font-bold leading-7 text-[var(--wesal-text)]">
-        {t("owner.calendar.hasBooked")}
-      </p>
-      {ranges.length > 0 ? (
-        <ul className="mt-3 space-y-2" aria-label={t("owner.calendar.hasBooked")}>
-          {ranges.map((label, index) => (
-            <li
-              key={`${label}-${index}`}
-              dir="ltr"
-              className="rounded-xl bg-[var(--wesal-pink-soft)] px-3 py-2 text-sm font-semibold text-[var(--wesal-text)]"
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-extrabold text-[var(--wesal-text)] sm:text-base">
+          {t("owner.calendar.upcoming")}
+        </h3>
+        <Link
+          href={`/owner/halls/${encodeURIComponent(hallId)}/notifications`}
+          className="inline-flex items-center gap-1 text-[0.78rem] font-bold text-[var(--wesal-maroon)]"
+        >
+          {t("owner.calendar.viewAll")}
+          <span className="rtl:rotate-180" aria-hidden="true">
+            ‹
+          </span>
+        </Link>
+      </div>
+      <ul className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">
+        {items.map((item) => (
+          <li key={`upcoming-${item.id}`} className="min-w-[15.5rem] shrink-0">
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 rounded-2xl border border-[var(--wesal-border)] bg-[#faf8f6] p-2.5 text-start transition hover:bg-[var(--wesal-pink-soft)]"
+              onClick={() => onPickDate(item.date)}
             >
-              {label}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#efe8e2]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.imageSrc} alt="" className="h-full w-full object-cover" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-extrabold text-[var(--wesal-text)]">{item.title}</p>
+                <p className="mt-0.5 truncate text-[0.72rem] text-[var(--wesal-muted)]">
+                  {formatUpcomingDateLabel(item.date, locale)}
+                </p>
+                <p dir="ltr" className="mt-0.5 truncate text-[0.72rem] font-semibold text-[var(--wesal-text)]">
+                  {item.timeLabel}
+                </p>
+              </div>
+              <span className="text-[var(--wesal-maroon)] rtl:rotate-180" aria-hidden="true">
+                ‹
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -206,17 +313,15 @@ function BookedDay({
 function CalendarDayError({
   heading,
   onRetry,
-  className = "",
 }: {
   heading: string | null;
   onRetry: () => void;
-  className?: string;
 }) {
   const t = useT();
 
   return (
     <section
-      className={`flex flex-col justify-center rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-5 ${className}`}
+      className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)]"
       role="alert"
       data-testid="owner-calendar-error"
     >
@@ -234,6 +339,20 @@ function CalendarDayError({
         {t("common.retry")}
       </button>
     </section>
+  );
+}
+
+function HeaderChevron() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-5 w-5 rtl:rotate-180" fill="none" aria-hidden="true">
+      <path
+        d="M7.5 4.5 13 10l-5.5 5.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
