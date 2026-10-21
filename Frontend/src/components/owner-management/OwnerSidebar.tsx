@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import WesalLogo from "@/components/brand/WesalLogo";
 import AddHallEntryAction from "@/components/owner-management/AddHallEntryAction";
+import HallsNavIcon from "@/components/brand/HallsNavIcon";
 import HallOwnerHallsSection from "@/components/owner-management/halls/HallOwnerHallsSection";
 import {
   HALL_OWNER_DASHBOARD_NAV,
@@ -206,29 +207,9 @@ function NavIcon({ id }: { id: HallOwnerDashboardNavId }) {
         </svg>
       );
     case "account":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
-          <circle cx="12" cy="8" r="3.1" stroke="currentColor" strokeWidth="1.7" />
-          <path
-            d="M5.6 19c1.6-2.9 3.9-4.2 6.4-4.2s4.8 1.3 6.4 4.2"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
+      return <SettingsGearIcon />;
     case "halls":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
-          <path
-            d="M4 20V8.5L12 4l8 4.5V20"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinejoin="round"
-          />
-          <path d="M9 20v-6h6v6" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-        </svg>
-      );
+      return <HallsNavIcon className="h-[1.35rem] w-[1.35rem]" />;
     case "calendar":
       return (
         <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
@@ -262,6 +243,20 @@ function NavIcon({ id }: { id: HallOwnerDashboardNavId }) {
     default:
       return null;
   }
+}
+
+function SettingsGearIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <path
+        d="M10.2 3.6h3.6l.5 2.1c.5.2 1 .4 1.4.8l2.1-.6 1.8 3.1-1.6 1.4c.1.4.1.8.1 1.2s0 .8-.1 1.2l1.6 1.4-1.8 3.1-2.1-.6c-.4.3-.9.6-1.4.8l-.5 2.1h-3.6l-.5-2.1c-.5-.2-1-.4-1.4-.8l-2.1.6-1.8-3.1 1.6-1.4c-.1-.4-.1-.8-.1-1.2s0-.8.1-1.2L4.4 9l1.8-3.1 2.1.6c.4-.3.9-.6 1.4-.8l.5-2.1Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="2.8" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
 }
 
 function LogoutIcon() {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import HallsNavIcon from "@/components/brand/HallsNavIcon";
 import WesalBrandLockup from "@/components/brand/WesalBrandLockup";
 import AuthAccountMenu from "@/components/layout/AuthAccountMenu";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
@@ -129,13 +130,14 @@ export default function Navbar({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`whitespace-nowrap rounded-full px-1.5 py-1.5 transition xl:px-2.5 ${
+                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-1.5 py-1.5 transition xl:px-2.5 ${
                     active
                       ? "text-[var(--wesal-maroon)] underline decoration-[var(--wesal-maroon)] decoration-2 underline-offset-8"
                       : "hover:text-[var(--wesal-maroon)]"
                   }`}
                   onClick={() => setHash(navHash(link.href))}
                 >
+                  {link.href === "/halls" ? <HallsNavIcon className="h-[1.15rem] w-[1.15rem]" /> : null}
                   {t(link.key)}
                 </Link>
               );
@@ -220,12 +222,13 @@ export default function Navbar({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="flex min-h-11 items-center py-2 text-sm font-medium text-[var(--wesal-text)]"
+                  className="flex min-h-11 items-center gap-2 py-2 text-sm font-medium text-[var(--wesal-text)]"
                   onClick={() => {
                     setHash(navHash(link.href));
                     setOpen(false);
                   }}
                 >
+                  {link.href === "/halls" ? <HallsNavIcon className="h-5 w-5" /> : null}
                   {t(link.key)}
                 </Link>
               ))}
