@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import AcceptActionButton from "@/components/halls/notifications/AcceptActionButton";
 import AcceptanceFeedback from "@/components/halls/notifications/AcceptanceFeedback";
 import RejectActionButton from "@/components/halls/notifications/RejectActionButton";
@@ -62,14 +61,11 @@ export default function HallNotificationCard({
   const t = useT();
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
-  const [detailsOpen, setDetailsOpen] = useState(Boolean(highlighted));
   const phone = notification.requesterPhone?.trim() || "";
   const requester =
     displayRequesterName(notification.requesterName, phone) || t("common.user");
   const eventTypeLabel = notification.eventTypeLabel?.trim() || "";
-  const dateLabel =
-    formatNotificationDate(notification.date, locale) ||
-    t("owner.notifications.valueMissing");
+  const { weekdayLabel, dateLabel } = formatNotificationDayDate(notification.date, locale);
   const periodLabels = bookingWhenLabels(notification, t, locale);
   const whenLabel =
     periodLabels.length > 0
@@ -110,10 +106,6 @@ export default function HallNotificationCard({
     notification.status === "AcceptedPendingDeposit" ||
     Boolean(notification.rejectionReason);
 
-  useEffect(() => {
-    if (highlighted || errorText) setDetailsOpen(true);
-  }, [highlighted, errorText]);
-
   return (
     <article
       className={`hall-notification-card min-w-0 overflow-hidden rounded-2xl border bg-white shadow-[0_8px_20px_rgba(90,55,45,0.06)] ${cardTone(visualState)} ${
@@ -129,7 +121,8 @@ export default function HallNotificationCard({
       aria-busy={accepting || rejecting || confirming || undefined}
     >
       <div className="flex min-w-0 flex-col gap-3 p-3 lg:flex-row lg:items-center lg:gap-3 lg:p-3.5">
-        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          {/* 1) Hall image + name */}
           <div className="flex min-w-0 items-center gap-2.5 sm:w-[11.5rem] sm:shrink-0">
             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#efe8e2] sm:h-[3.75rem] sm:w-[3.75rem]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -143,57 +136,62 @@ export default function HallNotificationCard({
             </p>
           </div>
 
-          <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 sm:items-center sm:gap-4">
-            <div className="min-w-0">
-              <div className="flex items-start gap-1.5">
-                <span className="mt-0.5 text-[var(--wesal-maroon)]" aria-hidden="true">
-                  <DocIcon />
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-[0.78rem] font-bold text-[var(--wesal-text)]">
-                    {dateLabel}
+          {/* 2–4) Day + date, then time, remaining under time in red */}
+          <div className="min-w-0 sm:min-w-[9.5rem] sm:flex-1">
+            <div className="flex items-start gap-1.5">
+              <span className="mt-0.5 text-[var(--wesal-maroon)]" aria-hidden="true">
+                <DocIcon />
+              </span>
+              <div className="min-w-0">
+                {weekdayLabel ? (
+                  <p className="truncate text-[0.72rem] font-semibold text-[var(--wesal-muted)]">
+                    {weekdayLabel}
                   </p>
-                  <p className="mt-0.5 truncate text-[0.72rem] font-semibold text-[var(--wesal-text)]">
-                    {whenLabel}
+                ) : null}
+                <p className="truncate text-[0.78rem] font-bold text-[var(--wesal-text)]">
+                  {dateLabel || t("owner.notifications.valueMissing")}
+                </p>
+                <p className="mt-0.5 truncate text-[0.72rem] font-semibold text-[var(--wesal-text)]">
+                  {whenLabel}
+                </p>
+                {relativeLabel ? (
+                  <p className="mt-0.5 text-[0.68rem] font-semibold text-[#c0392b]">
+                    {t("owner.notifications.timeRemaining", { value: relativeLabel })}
                   </p>
-                  {relativeLabel ? (
-                    <p className="mt-0.5 text-[0.68rem] font-semibold text-[#c0392b]">
-                      {relativeLabel}
-                    </p>
-                  ) : null}
-                </div>
+                ) : null}
               </div>
             </div>
+          </div>
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-sm font-extrabold text-[var(--wesal-maroon)]"
-                  aria-hidden="true"
-                >
-                  {avatarLetter}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-[0.78rem] font-extrabold text-[var(--wesal-text)]">
-                    {requester}
+          {/* 5–7) Customer avatar, name, phone (+ event type) */}
+          <div className="min-w-0 sm:min-w-[9rem] sm:flex-1">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-sm font-extrabold text-[var(--wesal-maroon)]"
+                aria-hidden="true"
+              >
+                {avatarLetter}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-[0.78rem] font-extrabold text-[var(--wesal-text)]">
+                  {requester}
+                </p>
+                {phone ? (
+                  <p dir="ltr" className="truncate text-start text-[0.7rem] text-[var(--wesal-muted)]">
+                    {phone}
                   </p>
-                  {phone ? (
-                    <p dir="ltr" className="truncate text-start text-[0.7rem] text-[var(--wesal-muted)]">
-                      {phone}
-                    </p>
-                  ) : null}
-                  {eventTypeLabel ? (
-                    <p className="mt-0.5 truncate text-[0.7rem] font-semibold text-[var(--wesal-maroon)]">
-                      {t("owner.notifications.eventType", { value: eventTypeLabel })}
-                    </p>
-                  ) : null}
-                </div>
+                ) : null}
+                {eventTypeLabel ? (
+                  <p className="mt-0.5 truncate text-[0.7rem] font-semibold text-[var(--wesal-maroon)]">
+                    {t("owner.notifications.eventType", { value: eventTypeLabel })}
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col items-stretch gap-2 border-t border-[var(--wesal-border)] pt-3 lg:min-w-[14rem] lg:items-stretch lg:border-t-0 lg:pt-0">
+        <div className="flex shrink-0 flex-col items-stretch gap-2 border-t border-[var(--wesal-border)] pt-3 lg:min-w-[12rem] lg:border-t-0 lg:pt-0">
           {depositBadge ? (
             <span
               className={`inline-flex self-start rounded-lg px-2.5 py-1 text-[0.68rem] font-bold lg:self-end ${depositBadge.className}`}
@@ -202,46 +200,25 @@ export default function HallNotificationCard({
             </span>
           ) : null}
 
-          {hasDetailBody || showChat ? (
-            <div
-              className={`grid gap-2 ${hasDetailBody && showChat ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2" : "grid-cols-1"}`}
+          {showChat ? (
+            <button
+              type="button"
+              className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-[rgba(166,99,99,0.35)] bg-[#faf6f2] px-3 text-[0.78rem] font-bold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
+              disabled={messagingSeeker}
+              aria-busy={messagingSeeker || undefined}
+              data-testid={`hall-notification-chat-seeker-${notification.id}`}
+              onClick={() => onMessageSeeker?.(notification)}
             >
-              {hasDetailBody ? (
-                <button
-                  type="button"
-                  className="btn-primary inline-flex min-h-10 w-full items-center justify-center gap-1.5 !rounded-xl !px-3 !text-[0.78rem]"
-                  data-testid={`hall-notification-details-${notification.id}`}
-                  aria-expanded={detailsOpen}
-                  onClick={() => setDetailsOpen((open) => !open)}
-                >
-                  {detailsOpen
-                    ? t("owner.notifications.hideDetails")
-                    : t("owner.notifications.viewDetails")}
-                  <span aria-hidden="true">{detailsOpen ? "‹" : "›"}</span>
-                </button>
-              ) : null}
-
-              {showChat ? (
-                <button
-                  type="button"
-                  className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-[rgba(166,99,99,0.35)] bg-[#faf6f2] px-3 text-[0.78rem] font-bold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
-                  disabled={messagingSeeker}
-                  aria-busy={messagingSeeker || undefined}
-                  data-testid={`hall-notification-chat-seeker-${notification.id}`}
-                  onClick={() => onMessageSeeker?.(notification)}
-                >
-                  <ChatIcon />
-                  {messagingSeeker
-                    ? t("owner.notifications.chatWithSeekerOpening")
-                    : t("owner.notifications.contactCustomer")}
-                </button>
-              ) : null}
-            </div>
+              <ChatIcon />
+              {messagingSeeker
+                ? t("owner.notifications.chatWithSeekerOpening")
+                : t("owner.notifications.contactCustomer")}
+            </button>
           ) : null}
         </div>
       </div>
 
-      {detailsOpen && hasDetailBody ? (
+      {hasDetailBody ? (
         <div className="border-t border-[var(--wesal-border)] bg-[#faf8f6] px-3.5 py-3 sm:px-4">
           {notification.status === "AcceptedPendingDeposit" ? (
             <p
@@ -397,16 +374,22 @@ function displayRequesterName(rawName: string, phone: string): string {
   return name;
 }
 
-function formatNotificationDate(iso: string | null | undefined, locale: string): string {
+function formatNotificationDayDate(
+  iso: string | null | undefined,
+  locale: string,
+): { weekdayLabel: string; dateLabel: string } {
   const parsed = parseDateIso(iso);
-  if (!parsed) return "";
+  if (!parsed) return { weekdayLabel: "", dateLabel: "" };
   const [year, month, day] = parsed.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const date = new Date(year, month - 1, day);
+  return {
+    weekdayLabel: date.toLocaleDateString(locale, { weekday: "long" }),
+    dateLabel: date.toLocaleDateString(locale, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+  };
 }
 
 function translateError(

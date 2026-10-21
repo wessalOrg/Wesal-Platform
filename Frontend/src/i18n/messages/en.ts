@@ -1496,6 +1496,7 @@ const en: MessageCatalog = {
   "owner.notifications.phone": "Mobile number",
   "owner.notifications.eventType": "Occasion: {value}",
   "owner.notifications.eventTypeLabel": "Event type",
+  "owner.notifications.timeRemaining": "Time left: {value}",
   "owner.notifications.valueMissing": "Unavailable",
   "owner.notifications.accept": "Approve booking",
   "owner.notifications.accepting": "Accepting…",
