@@ -21,8 +21,17 @@
 }
 
 .hall-sub-tone-expired {
+  border-color: #fca5a5;
   border-inline-start-width: 0.28rem;
-  border-inline-start-color: #b45309;
+  border-inline-start-color: #dc2626;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(254, 202, 202, 0.4), transparent 36%),
+    linear-gradient(155deg, #fef2f2 0%, #ffffff 48%, #fee2e2 100%);
+  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.08);
+}
+
+.hall-sub-tone-expired .hall-subscription-title {
+  color: #991b1b;
 }
 
 .hall-sub-tone-locked {

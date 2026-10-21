@@ -14,7 +14,7 @@ const styles: Record<HallSubscriptionStatus, string> = {
   unpaid:
     "bg-[rgba(196,160,92,0.2)] text-[#7a5c1f] ring-1 ring-[rgba(196,160,92,0.45)]",
   expired:
-    "bg-[#fff4e8] text-[#9a4a12] ring-1 ring-[#f3d2b0]",
+    "bg-[#fef2f2] text-[#b91c1c] ring-1 ring-[#fca5a5] shadow-[0_4px_12px_rgba(220,38,38,0.12)]",
   locked:
     "bg-[var(--wesal-pink)] text-[var(--wesal-maroon-dark)] ring-1 ring-[rgba(168,98,103,0.35)]",
 };
