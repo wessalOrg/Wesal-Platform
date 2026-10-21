@@ -488,6 +488,8 @@ const ar: MessageCatalog = {
   "auth.google.namePrompt": "أدخل اسمك لإكمال إنشاء الحساب",
   "auth.google.finishRegistration": "إنشاء الحساب عبر Google",
   "auth.google.cancelRegistration": "إلغاء والعودة إلى التسجيل العادي",
+  "auth.google.alreadyRegistered": "لديك حساب مسجل بهذا البريد الإلكتروني بالفعل. سجّل الدخول من صفحة تسجيل الدخول.",
+  "auth.google.goToLogin": "الانتقال إلى تسجيل الدخول",
   "auth.google.error": "تعذر إكمال الدخول عبر Google. حاول مرة أخرى.",
   "auth.google.unavailable": "تسجيل Google غير مهيأ حاليًا.",
   "auth.login.noAccount": "ليس لديك حساب ؟",

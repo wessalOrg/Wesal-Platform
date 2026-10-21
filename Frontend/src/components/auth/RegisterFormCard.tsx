@@ -73,6 +73,7 @@ export default function RegisterFormCard({
   const [success, setSuccess] = useState(previewSuccess);
   const [googleRegistrationToken, setGoogleRegistrationToken] = useState("");
   const [googleEmail, setGoogleEmail] = useState("");
+  const [googleAccountExists, setGoogleAccountExists] = useState(false);
 
   useEffect(() => {
     if (!pending) return;
@@ -355,17 +356,18 @@ export default function RegisterFormCard({
 
   const onGoogleCredential = async (credential: string) => {
     if (!credential || pending) return;
+    setGoogleAccountExists(false);
     setPending(true); setFormError(null);
     try {
       const result = await googleLogin(credential, accountType ?? "RegularUser");
       if (result.user?.token) {
-        setAccessToken(result.user.token);
-        setStoredAuth({ token: result.user.token, user: { id: result.user.id, name: result.user.fullName, email: result.user.email, role: result.user.role } });
-        applyLocalSession({ isAuthenticated: true, role: result.user.role || null, userName: result.user.fullName || null });
-        void refreshSession(); clearBookingHallContext();
-        navigateAfterAuth(router, resolveAuthRedirect()); return;
+        setGoogleAccountExists(true);
+        setGoogleEmail(result.user.email ?? "");
+        setFormError(t("auth.google.alreadyRegistered"));
+        return;
       }
       if (!result.requiresRegistration || !result.registrationToken) throw new Error("Invalid Google response");
+      setGoogleAccountExists(false);
       setGoogleRegistrationToken(result.registrationToken);
       setGoogleEmail(result.email ?? "");
       setFullName("");
@@ -385,7 +387,14 @@ export default function RegisterFormCard({
           data-testid="register-form-error"
         >
           <p>{formError}</p>
-          {showConflictLogin ? (
+          {googleAccountExists ? (
+            <p className="mt-1.5">
+              {googleEmail ? <span dir="ltr">{googleEmail} </span> : null}
+              <Link href={loginHref} onClick={markAuthNavigation} className="font-semibold underline underline-offset-2" data-testid="register-google-existing-login">
+                {t("auth.google.goToLogin")}
+              </Link>
+            </p>
+          ) : showConflictLogin ? (
             <p className="mt-1.5">
               <Link
                 href={loginHref}
@@ -494,7 +503,7 @@ export default function RegisterFormCard({
         <p className="text-center text-sm text-[var(--wesal-muted)]">{t("auth.google.namePrompt")} {googleEmail ? <span dir="ltr">({googleEmail})</span> : null}</p>
         <RegisterField label={t("auth.register.form.fullName")} value={fullName} onChange={setFullName} placeholder={t("auth.register.form.fullNamePlaceholder")} autoComplete="name" maxLength={REGISTER_LIMITS.maxFullNameLength} />
         <button type="button" onClick={() => void finishGoogleRegistration()} disabled={!fullName.trim() || pending} className="btn-primary w-full !min-h-11 !rounded-xl" aria-busy={pending || undefined}>{pending ? t("auth.register.form.submitting") : t("auth.google.finishRegistration")}</button>
-        <button type="button" onClick={() => { setGoogleRegistrationToken(""); setGoogleEmail(""); setFormError(null); }} disabled={pending} className="w-full text-center text-sm text-[var(--wesal-muted)] underline underline-offset-2">{t("auth.google.cancelRegistration")}</button>
+        <button type="button" onClick={() => { setGoogleRegistrationToken(""); setGoogleEmail(""); setFormError(null); setGoogleAccountExists(false); }} disabled={pending} className="w-full text-center text-sm text-[var(--wesal-muted)] underline underline-offset-2">{t("auth.google.cancelRegistration")}</button>
         </div>
       )}
 

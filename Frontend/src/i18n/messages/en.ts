@@ -491,6 +491,8 @@ const en: MessageCatalog = {
   "auth.google.namePrompt": "Enter your name to finish creating your account",
   "auth.google.finishRegistration": "Create account with Google",
   "auth.google.cancelRegistration": "Cancel and return to standard registration",
+  "auth.google.alreadyRegistered": "You already have an account with this email address. Sign in from the login page.",
+  "auth.google.goToLogin": "Go to login",
   "auth.google.error": "Could not complete Google sign in. Please try again.",
   "auth.google.unavailable": "Google sign in is not configured yet.",
   "auth.login.noAccount": "Don't have an account?",
