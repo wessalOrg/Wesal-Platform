@@ -76,46 +76,34 @@ export function normalizeTimeOnly(value: unknown): string {
   return `${pad(Number(match[1]))}:${match[2]}`;
 }
 
-/** 13:00 → "1:00 م", 24:00 → "12:00 ص". Noon stays "12:00 م". */
-export function formatClockHour(value: string, locale: string): string {
+/** 13:00 → "1:00" (12h face). Use for ranges — no ص/م/AM/PM so RTL cannot reorder. */
+export function formatClockFace(value: string): string {
   const parts = String(value).split(":");
   const hour = Number(parts[0]);
   const minute = Number(parts[1] ?? "0");
   if (!Number.isFinite(hour)) return value;
   const face = String(hour % 12 || 12);
   const mins = Number.isFinite(minute) ? String(minute).padStart(2, "0") : "00";
+  return `${face}:${mins}`;
+}
+
+/** 13:00 → "1:00 م", 24:00 → "12:00 ص". Noon stays "12:00 م". */
+export function formatClockHour(value: string, locale: string): string {
+  const hour = Number(String(value).split(":")[0]);
+  if (!Number.isFinite(hour)) return value;
+  const face = formatClockFace(value);
   const morning = hour >= 24 || hour < 12;
-  if (locale.startsWith("ar")) return `${face}:${mins} ${morning ? "ص" : "م"}`;
-  return `${face}:${mins} ${morning ? "AM" : "PM"}`;
+  if (locale.startsWith("ar")) return `${face} ${morning ? "ص" : "م"}`;
+  return `${face} ${morning ? "AM" : "PM"}`;
 }
 
-export function formatClockRange(from: string, to: string, locale: string): string {
-  return `${formatClockHour(from, locale)} – ${formatClockHour(to, locale)}`;
+export function formatClockRange(from: string, to: string, _locale?: string): string {
+  // Design: "12:00 - 3:00" — digits only, LTR-isolated for RTL UIs.
+  return `\u200E${formatClockFace(from)} - ${formatClockFace(to)}\u200E`;
 }
 
-export function formatHourlyRange(start: string, end: string, locale: string): string {
-  // Prefer ص/م in Arabic so ranges stay readable next to RTL labels.
-  if (locale.startsWith("ar")) {
-    return formatClockRange(start, end, locale);
-  }
-  const [startHour, startMinute = 0] = start.split(":").map(Number);
-  const [endHour, endMinute = 0] = end.split(":").map(Number);
-  const startDate = new Date(2026, 0, 1, startHour, startMinute || 0);
-  const endDate = new Date(2026, 0, 1, endHour, endMinute || 0);
-  const startLabel = toHourlyClock(startDate, locale);
-  const endLabel = toHourlyClock(endDate, locale);
-  // Isolate the Latin range so surrounding Arabic labels cannot reorder AM/PM.
-  return `\u200E${startLabel} – ${endLabel}\u200E`;
-}
-
-function toHourlyClock(date: Date, timeLocale: string): string {
-  return date
-    .toLocaleTimeString(timeLocale, {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })
-    .replace(/\b(am|pm)\b/gi, (token) => token.toUpperCase());
+export function formatHourlyRange(start: string, end: string, locale?: string): string {
+  return formatClockRange(start, end, locale);
 }
 
 export function buildHourlySlots(

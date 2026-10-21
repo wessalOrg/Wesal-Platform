@@ -144,16 +144,16 @@ export default function HallNotificationCard({
         <Divider />
 
         {/* Time + remaining — clock pill on the right (RTL), text beside it */}
-        <div className="flex min-w-0 items-center justify-center gap-2.5 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10.5rem] lg:flex-1 lg:justify-start lg:border-t-0 lg:px-3.5 lg:py-3.5">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f6ecec] text-[#c0392b]">
+        <div className="flex min-w-0 items-center justify-center gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10.5rem] lg:flex-1 lg:justify-start lg:border-t-0 lg:px-3.5 lg:py-3.5">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f6ecec] text-[#c0392b]">
             <ClockIcon />
           </span>
           <div className="min-w-0 text-start">
-            <p dir="ltr" className="truncate text-start text-[0.9rem] font-extrabold leading-5 text-[#2a221c]">
+            <p dir="ltr" className="truncate text-start text-[0.78rem] font-extrabold leading-4 text-[#2a221c]">
               {formatTimeRangeDisplay(whenLabel)}
             </p>
             {relativeLabel ? (
-              <p className="mt-1 text-[0.72rem] font-semibold leading-4 text-[#c0392b]">
+              <p className="mt-0.5 text-[0.65rem] font-semibold leading-4 text-[#c0392b]">
                 {t("owner.notifications.timeRemaining", { value: relativeLabel })}
               </p>
             ) : null}
@@ -179,10 +179,10 @@ export default function HallNotificationCard({
 
         <Divider />
 
-        {/* Customer — avatar+name, then phone circle+number, occasion indented left */}
-        <div className="flex min-w-0 flex-col justify-center gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[11.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#f5eaea]">
+        {/* Customer — compact icons + text; occasion aligned under the icon column */}
+        <div className="flex min-w-0 flex-col justify-center gap-1.5 border-t border-[var(--wesal-border)] py-3 lg:min-w-[11.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-[#f5eaea]">
               {requesterAvatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -192,31 +192,31 @@ export default function HallNotificationCard({
                 />
               ) : (
                 <span
-                  className="inline-flex h-full w-full items-center justify-center text-sm font-extrabold text-[#6b2f3a]"
+                  className="inline-flex h-full w-full items-center justify-center text-[0.7rem] font-extrabold text-[#6b2f3a]"
                   aria-hidden="true"
                 >
                   {avatarLetter}
                 </span>
               )}
             </div>
-            <p className="min-w-0 truncate text-[0.9rem] font-extrabold text-[#1a1410]">
+            <p className="min-w-0 truncate text-[0.75rem] font-extrabold text-[#1a1410]">
               {requester}
             </p>
           </div>
 
           {phone ? (
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5eaea] text-[#6b2f3a]">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f5eaea] text-[#6b2f3a]">
                 <PhoneIcon />
               </span>
-              <p dir="ltr" className="truncate text-start text-[0.9rem] font-extrabold text-[#1a1410]">
+              <p dir="ltr" className="truncate text-start text-[0.75rem] font-extrabold text-[#1a1410]">
                 {phone}
               </p>
             </div>
           ) : null}
 
           {eventTypeLabel ? (
-            <p className="truncate ps-[calc(2.5rem+0.625rem+0.75rem)] text-[0.72rem] font-bold text-[#6b2f3a]">
+            <p className="truncate text-[0.65rem] font-bold leading-4 text-[#6b2f3a]">
               {t("owner.notifications.eventType", { value: eventTypeLabel })}
             </p>
           ) : null}
@@ -464,12 +464,15 @@ function formatTimeRangeDisplay(label: string): string {
     .replace(/\s*[—–]\s*/g, " - ")
     .replace(/\s*,\s*/g, " - ")
     .replace(/\s*،\s*/g, " - ")
+    // Drop meridian markers so ranges stay as "12:00 - 3:00" like the design.
+    .replace(/\s*(ص|م|AM|PM)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
     .trim();
 }
 
 function ClockIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-[1.15rem] w-[1.15rem]" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="8.1" stroke="currentColor" strokeWidth="1.85" />
       <path d="M12 7.75v4.35l3.1 1.85" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -487,7 +490,7 @@ function CalendarIcon() {
 
 function PhoneIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
       <path
         d="M8.2 4.8h2.1l1.1 3.2-1.4 1.1a12.4 12.4 0 0 0 4.9 4.9l1.1-1.4 3.2 1.1v2.1c0 .7-.5 1.3-1.2 1.4-6.9.9-12.7-4.9-11.8-11.8.1-.7.7-1.2 1.4-1.2Z"
         stroke="currentColor"
