@@ -96,6 +96,7 @@ export default function HallNotificationCard({
   });
   const depositBadge = depositBadgeFor(notification, t);
   const avatarLetter = requester.trim().charAt(0) || "؟";
+  const requesterAvatarUrl = notification.requesterAvatarUrl?.trim() || "";
   const imageSrc = hallImageSrc?.trim() || FALLBACK_HALL_IMAGE;
   const hasActions = showAccept || showReject || showConfirm;
   const hasDetailBody =
@@ -178,20 +179,31 @@ export default function HallNotificationCard({
 
         <Divider />
 
-        {/* Customer — avatar on the right, centered */}
-        <div className="flex min-w-0 items-center justify-center gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
-          <span
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-sm font-extrabold text-[var(--wesal-maroon-dark)]"
-            aria-hidden="true"
-          >
-            {avatarLetter}
-          </span>
+        {/* Customer — photo beside name; phone then occasion underneath */}
+        <div className="flex min-w-0 items-center justify-center gap-2.5 border-t border-[var(--wesal-border)] py-3 lg:min-w-[11rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
+          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[var(--wesal-pink)]">
+            {requesterAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={requesterAvatarUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span
+                className="inline-flex h-full w-full items-center justify-center text-sm font-extrabold text-[var(--wesal-maroon-dark)]"
+                aria-hidden="true"
+              >
+                {avatarLetter}
+              </span>
+            )}
+          </div>
           <div className="min-w-0 text-center sm:text-start">
             <p className="truncate text-[0.84rem] font-extrabold text-[#2a221c]">
               {requester}
             </p>
             {phone ? (
-              <p className="mt-0.5 flex items-center justify-center gap-1 text-[0.74rem] font-bold text-[#5c4f46] sm:justify-start">
+              <p className="mt-1 flex items-center justify-center gap-1 text-[0.74rem] font-bold text-[#5c4f46] sm:justify-start">
                 <span className="text-[var(--wesal-maroon-dark)]" aria-hidden="true">
                   <PhoneIcon />
                 </span>
@@ -199,7 +211,7 @@ export default function HallNotificationCard({
               </p>
             ) : null}
             {eventTypeLabel ? (
-              <p className="mt-0.5 truncate text-[0.7rem] font-bold text-[var(--wesal-maroon-dark)]">
+              <p className="mt-1 truncate text-[0.7rem] font-bold text-[var(--wesal-maroon-dark)]">
                 {t("owner.notifications.eventType", { value: eventTypeLabel })}
               </p>
             ) : null}

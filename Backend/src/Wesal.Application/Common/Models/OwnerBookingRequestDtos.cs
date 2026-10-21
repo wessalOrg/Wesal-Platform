@@ -44,6 +44,11 @@ public sealed class OwnerBookingRequestDto
     /// </summary>
     public string RequesterPhone { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Profile photo the seeker uploaded to their account, when present.
+    /// </summary>
+    public string? RequesterAvatarUrl { get; init; }
+
     public BookingStatus Status { get; init; }
 
     public DateTimeOffset RequestedAt { get; init; }

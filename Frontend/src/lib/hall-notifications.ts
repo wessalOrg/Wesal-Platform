@@ -3,6 +3,7 @@ import { parseDateIso } from "@/lib/booking-date";
 import { parseDepositAmount } from "@/lib/booking-deposits";
 import { parseBookingPeriodType } from "@/lib/booking-period";
 import { normalizeTimeOnly } from "@/lib/hourly-slots";
+import { resolveMediaUrl } from "@/lib/hall-media-url";
 import { parseNameOnBooking } from "@/lib/name-on-booking";
 import { parseCanDeleteFlag } from "@/lib/owner-delete-booking";
 import { parseCanPublishFlag, parsePublishedFlag } from "@/lib/owner-publish-booking";
@@ -36,6 +37,9 @@ type NotificationDto = {
   contactPhone?: string;
   phoneNumber?: string;
   phone?: string;
+  requesterAvatarUrl?: string;
+  profilePictureUrl?: string;
+  avatarUrl?: string;
   requesterUserId?: string;
   userId?: string;
   date?: string;
@@ -173,6 +177,12 @@ export function mapHallBookingNotification(
     requesterPhoneFromDto(data, profileName || requesterName) ||
     undefined;
   const eventTypeLabel = packed.eventTypeLabel;
+  const requesterAvatarUrl =
+    resolveMediaUrl(
+      asText(data.requesterAvatarUrl) ||
+        asText(data.profilePictureUrl) ||
+        asText(data.avatarUrl),
+    ) || undefined;
 
   const depositPaymentConfirmedAt = confirmedAtFromDto(data.depositPaymentConfirmedAt);
   const parsedStatus = data.status == null ? null : parseOwnerBookingRequestStatus(data.status);
@@ -189,6 +199,7 @@ export function mapHallBookingNotification(
     requesterName,
     requesterUserId: asText(data.requesterUserId || data.userId),
     requesterPhone,
+    requesterAvatarUrl,
     eventTypeLabel,
     date: date ?? asText(data.date ?? data.requestedDate),
     periods: periodsFromDto(data),

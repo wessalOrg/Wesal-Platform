@@ -107,7 +107,8 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
             {
                 Booking = booking,
                 RequesterName = requester.FullName,
-                ProfilePhone = requester.PhoneNumber
+                ProfilePhone = requester.PhoneNumber,
+                ProfilePictureUrl = requester.ProfilePictureUrl
             })
             .ToListAsync(cancellationToken);
 
@@ -128,6 +129,9 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
                     ? null
                     : row.Booking.NameOnBooking.Trim(),
                 RequesterPhone = ResolveRequesterPhone(row.Booking.NameOnBooking, row.ProfilePhone),
+                RequesterAvatarUrl = string.IsNullOrWhiteSpace(row.ProfilePictureUrl)
+                    ? null
+                    : row.ProfilePictureUrl.Trim(),
                 Status = row.Booking.Status,
                 RequestedAt = row.Booking.CreatedAt,
                 DepositAmount = row.Booking.DepositAmount,
