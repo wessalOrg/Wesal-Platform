@@ -32,13 +32,15 @@ export default function GoogleAuthButton({ onCredential, disabled }: { onCredent
           if (response.credential) credentialHandler.current(response.credential);
         },
       });
+      const availableWidth = Math.floor(buttonHost.getBoundingClientRect().width);
+      const buttonWidth = Math.max(200, Math.min(360, availableWidth || 360));
       window.google.accounts.id.renderButton(buttonHost, {
         type: "standard",
         theme: "outline",
         size: "large",
         text: "continue_with",
         shape: "rectangular",
-        width: "360",
+        width: String(buttonWidth),
         locale: "ar",
       });
       renderedHost.current = buttonHost;
@@ -55,8 +57,8 @@ export default function GoogleAuthButton({ onCredential, disabled }: { onCredent
       onLoad={() => setLoaded(true)}
       onError={() => setRenderFailed(true)}
     />
-    <div className={`flex min-h-10 justify-center ${disabled ? "pointer-events-none opacity-60" : ""}`}>
-      <div ref={setButtonHost} />
+    <div className={`flex min-h-10 w-full justify-center ${disabled ? "pointer-events-none opacity-60" : ""}`}>
+      <div ref={setButtonHost} className="w-full max-w-[360px]" data-testid="google-auth-button-host" />
     </div>
     {renderFailed ? <p className="mt-2 text-center text-xs text-[#b42318]" role="alert">{t("auth.google.error")}</p> : null}
   </>;
