@@ -143,17 +143,19 @@ export default function HallNotificationCard({
 
         <Divider />
 
-        {/* Time + remaining — clock pill on the right (RTL), text beside it */}
-        <div className="flex min-w-0 items-center justify-center gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10.5rem] lg:flex-1 lg:justify-start lg:border-t-0 lg:px-3.5 lg:py-3.5">
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f6ecec] text-[#c0392b]">
+        {/* Time + remaining — seeker range as-is; layout matches design mock */}
+        <div className="flex w-full min-w-0 items-center justify-start gap-3 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#f6ecec] text-[#c0392b]">
             <ClockIcon />
           </span>
           <div className="min-w-0 text-start">
-            <p dir="ltr" className="truncate text-start text-[0.78rem] font-extrabold leading-4 text-[#2a221c]">
-              {formatTimeRangeDisplay(whenLabel)}
+            <p className="truncate text-[15px] font-extrabold leading-none text-[#2a221c]">
+              <span dir="ltr" className="inline-block">
+                {formatTimeRangeDisplay(whenLabel)}
+              </span>
             </p>
             {relativeLabel ? (
-              <p className="mt-0.5 text-[0.65rem] font-semibold leading-4 text-[#c0392b]">
+              <p className="mt-1.5 text-[12px] font-semibold leading-none text-[#c0392b]">
                 {t("owner.notifications.timeRemaining", { value: relativeLabel })}
               </p>
             ) : null}
@@ -162,16 +164,16 @@ export default function HallNotificationCard({
 
         <Divider />
 
-        {/* Day + date — icon on the right, centered */}
-        <div className="flex min-w-0 items-center justify-center gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[9.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
-          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon-dark)]">
+        {/* Day + date — same icon/text rhythm as time block */}
+        <div className="flex w-full min-w-0 items-center justify-start gap-3 border-t border-[var(--wesal-border)] py-3 lg:min-w-[9.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#f6ecec] text-[#c0392b]">
             <CalendarIcon />
           </span>
-          <div className="min-w-0 text-center sm:text-start">
-            <p className="truncate text-[0.84rem] font-extrabold text-[#2a221c]">
+          <div className="min-w-0 text-start">
+            <p className="truncate text-[15px] font-extrabold leading-none text-[#2a221c]">
               {weekdayLabel || t("owner.notifications.valueMissing")}
             </p>
-            <p className="mt-0.5 truncate text-[0.74rem] font-bold text-[#5c4f46]">
+            <p className="mt-1.5 truncate text-[12px] font-semibold leading-none text-[#5c4f46]">
               {dateLabel || t("owner.notifications.valueMissing")}
             </p>
           </div>
@@ -472,7 +474,7 @@ function formatTimeRangeDisplay(label: string): string {
 
 function ClockIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-[1.15rem] w-[1.15rem]" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="8.1" stroke="currentColor" strokeWidth="1.85" />
       <path d="M12 7.75v4.35l3.1 1.85" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round" />
     </svg>

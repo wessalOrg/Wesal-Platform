@@ -76,7 +76,18 @@ export function normalizeTimeOnly(value: unknown): string {
   return `${pad(Number(match[1]))}:${match[2]}`;
 }
 
-/** 13:00 → "1:00" (12h face). Use for ranges — no ص/م/AM/PM so RTL cannot reorder. */
+/** 13:00 → "13:00", 9:00 → "09:00" (24h, zero-padded). */
+export function formatClockHHmm(value: string): string {
+  const parts = String(value).split(":");
+  const hour = Number(parts[0]);
+  const minute = Number(parts[1] ?? "0");
+  if (!Number.isFinite(hour)) return value;
+  const displayHour = hour >= 24 ? 24 : hour;
+  const mins = Number.isFinite(minute) ? String(minute).padStart(2, "0") : "00";
+  return `${String(displayHour).padStart(2, "0")}:${mins}`;
+}
+
+/** 13:00 → "1:00" (12h face without meridian). */
 export function formatClockFace(value: string): string {
   const parts = String(value).split(":");
   const hour = Number(parts[0]);
@@ -98,8 +109,8 @@ export function formatClockHour(value: string, locale: string): string {
 }
 
 export function formatClockRange(from: string, to: string, _locale?: string): string {
-  // Design: "12:00 - 3:00" — digits only, LTR-isolated for RTL UIs.
-  return `\u200E${formatClockFace(from)} - ${formatClockFace(to)}\u200E`;
+  // Design: "12:00 - 15:00" — 24h digits, LTR-isolated for RTL UIs.
+  return `\u200E${formatClockHHmm(from)} - ${formatClockHHmm(to)}\u200E`;
 }
 
 export function formatHourlyRange(start: string, end: string, locale?: string): string {
