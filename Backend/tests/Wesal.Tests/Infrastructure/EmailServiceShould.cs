@@ -62,6 +62,7 @@ public class EmailServiceShould
         Assert.Equal("test-key", capturedApiKey);
         Assert.Contains("\"email\":\"wesalplatform.gaza@gmail.com\"", capturedPayload);
         Assert.Contains("\"email\":\"user@example.com\"", capturedPayload);
+        Assert.Contains("\"name\":\"Wesal User\"", capturedPayload);
         Assert.Contains("\"textContent\":\"Reset body\"", capturedPayload);
     }
 

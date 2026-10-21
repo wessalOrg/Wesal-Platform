@@ -140,7 +140,7 @@ public sealed class AuthService : IAuthService
             if (!sent)
             {
                 _logger.LogWarning(
-                    "Password reset link could not be delivered to {Email}. Configure Email:Host (SMTP) so reset emails reach users.",
+                    "Password reset link could not be delivered to {Email}. Check the configured email provider settings so reset emails reach users.",
                     user.Email);
             }
         }

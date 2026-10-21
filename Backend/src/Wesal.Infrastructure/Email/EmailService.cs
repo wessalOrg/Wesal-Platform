@@ -144,7 +144,14 @@ public sealed class EmailService : IEmailService
             request.Content = JsonContent.Create(new
             {
                 sender = new { name = sender.Name, email = sender.Address },
-                to = new[] { new { name = recipient.Name, email = recipient.Address } },
+                to = new[]
+                {
+                    new
+                    {
+                        name = string.IsNullOrWhiteSpace(recipient.Name) ? "Wesal User" : recipient.Name,
+                        email = recipient.Address
+                    }
+                },
                 subject,
                 textContent = body
             });
