@@ -122,14 +122,14 @@ export default function HallNotificationCard({
     >
       <div className="flex min-w-0 flex-col gap-0 p-3 lg:flex-row lg:items-stretch lg:p-0">
         {/* Hall — start (right in RTL) */}
-        <div className="flex min-w-0 items-center gap-2.5 lg:w-[13.5rem] lg:shrink-0 lg:px-3.5 lg:py-3.5">
+        <div className="flex min-w-0 items-center justify-center gap-2.5 lg:w-[13.5rem] lg:shrink-0 lg:px-3.5 lg:py-3.5">
           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#efe8e2] sm:h-[3.75rem] sm:w-[3.75rem]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageSrc} alt="" className="h-full w-full object-cover" />
           </div>
           <div className="flex min-w-0 items-center gap-1">
             <p
-              className="min-w-0 truncate text-sm font-extrabold text-[var(--wesal-text)]"
+              className="min-w-0 truncate text-sm font-extrabold text-[#2a221c]"
               title={hallName || undefined}
             >
               {hallName?.trim() || t("owner.notifications.hall")}
@@ -142,17 +142,17 @@ export default function HallNotificationCard({
 
         <Divider />
 
-        {/* Time + remaining — icon on the right */}
-        <div className="flex min-w-0 items-start gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]">
+        {/* Time + remaining — icon on the right, centered */}
+        <div className="flex min-w-0 items-center justify-center gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon-dark)]">
             <ClockIcon />
           </span>
-          <div className="min-w-0">
-            <p dir="ltr" className="truncate text-start text-[0.82rem] font-extrabold text-[var(--wesal-text)]">
+          <div className="min-w-0 text-center sm:text-start">
+            <p dir="ltr" className="truncate text-[0.84rem] font-extrabold tracking-wide text-[#2a221c] sm:text-start">
               {whenLabel}
             </p>
             {relativeLabel ? (
-              <p className="mt-1 text-[0.68rem] font-semibold leading-4 text-[#c0392b]">
+              <p className="mt-0.5 text-[0.7rem] font-bold leading-4 text-[#a83228]">
                 {t("owner.notifications.timeRemaining", { value: relativeLabel })}
               </p>
             ) : null}
@@ -161,16 +161,16 @@ export default function HallNotificationCard({
 
         <Divider />
 
-        {/* Day + date — icon on the right */}
-        <div className="flex min-w-0 items-start gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[9.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]">
+        {/* Day + date — icon on the right, centered */}
+        <div className="flex min-w-0 items-center justify-center gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[9.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon-dark)]">
             <CalendarIcon />
           </span>
-          <div className="min-w-0">
-            <p className="truncate text-[0.82rem] font-extrabold text-[var(--wesal-text)]">
+          <div className="min-w-0 text-center sm:text-start">
+            <p className="truncate text-[0.84rem] font-extrabold text-[#2a221c]">
               {weekdayLabel || t("owner.notifications.valueMissing")}
             </p>
-            <p className="mt-1 truncate text-[0.72rem] font-semibold text-[var(--wesal-muted)]">
+            <p className="mt-0.5 truncate text-[0.74rem] font-bold text-[#5c4f46]">
               {dateLabel || t("owner.notifications.valueMissing")}
             </p>
           </div>
@@ -178,28 +178,28 @@ export default function HallNotificationCard({
 
         <Divider />
 
-        {/* Customer — avatar on the right of name block */}
-        <div className="flex min-w-0 items-center gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
+        {/* Customer — avatar on the right, centered */}
+        <div className="flex min-w-0 items-center justify-center gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
           <span
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-sm font-extrabold text-[var(--wesal-maroon)]"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-sm font-extrabold text-[var(--wesal-maroon-dark)]"
             aria-hidden="true"
           >
             {avatarLetter}
           </span>
-          <div className="min-w-0">
-            <p className="truncate text-[0.82rem] font-extrabold text-[var(--wesal-text)]">
+          <div className="min-w-0 text-center sm:text-start">
+            <p className="truncate text-[0.84rem] font-extrabold text-[#2a221c]">
               {requester}
             </p>
             {phone ? (
-              <p className="mt-1 flex items-center gap-1 text-[0.72rem] font-semibold text-[var(--wesal-muted)]">
-                <span className="text-[var(--wesal-maroon)]" aria-hidden="true">
+              <p className="mt-0.5 flex items-center justify-center gap-1 text-[0.74rem] font-bold text-[#5c4f46] sm:justify-start">
+                <span className="text-[var(--wesal-maroon-dark)]" aria-hidden="true">
                   <PhoneIcon />
                 </span>
                 <span dir="ltr">{phone}</span>
               </p>
             ) : null}
             {eventTypeLabel ? (
-              <p className="mt-1 truncate text-[0.68rem] font-semibold text-[var(--wesal-maroon)]">
+              <p className="mt-0.5 truncate text-[0.7rem] font-bold text-[var(--wesal-maroon-dark)]">
                 {t("owner.notifications.eventType", { value: eventTypeLabel })}
               </p>
             ) : null}
@@ -209,10 +209,10 @@ export default function HallNotificationCard({
         <Divider />
 
         {/* Status + chat */}
-        <div className="flex shrink-0 flex-col items-stretch justify-center gap-2 border-t border-[var(--wesal-border)] pt-3 lg:w-[11.5rem] lg:border-t-0 lg:px-3.5 lg:py-3.5">
+        <div className="flex shrink-0 flex-col items-center justify-center gap-2 border-t border-[var(--wesal-border)] pt-3 lg:w-[11.5rem] lg:border-t-0 lg:px-3.5 lg:py-3.5">
           {depositBadge ? (
             <span
-              className={`inline-flex items-center gap-1.5 self-start rounded-full px-2.5 py-1 text-[0.68rem] font-bold lg:self-end ${depositBadge.className}`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.68rem] font-bold ${depositBadge.className}`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${depositBadge.dot}`} aria-hidden="true" />
               {depositBadge.label}
@@ -222,7 +222,7 @@ export default function HallNotificationCard({
           {showChat ? (
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-1.5 self-start rounded-full bg-[var(--wesal-pink)] px-3 py-1.5 text-[0.68rem] font-bold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60 lg:self-end"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--wesal-pink)] px-3 py-1.5 text-[0.68rem] font-bold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
               disabled={messagingSeeker}
               aria-busy={messagingSeeker || undefined}
               data-testid={`hall-notification-chat-seeker-${notification.id}`}
