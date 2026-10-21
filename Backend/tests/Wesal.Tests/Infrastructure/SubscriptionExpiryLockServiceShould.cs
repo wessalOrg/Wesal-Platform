@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
@@ -71,16 +72,30 @@ public class SubscriptionExpiryLockServiceShould : IDisposable
         return hall;
     }
 
-    private SubscriptionExpiryLockService CreateService()
+    private SubscriptionExpiryLockService CreateService(Wesal.Application.Common.Interfaces.Persistence.IBookingRepository? bookingRepository = null)
         => new(
             new AdminDashboardRepository(_context),
             new HallRepository(_context),
+            bookingRepository ?? new BookingRepository(_context),
             new UnitOfWork(_context),
             new ConversationRepository(_context),
             new MessageRepository(_context),
             new FakeDateTime(),
             NullLogger<SubscriptionExpiryLockService>.Instance,
             new Wesal.Infrastructure.Notifications.NotificationService(_provider.GetRequiredService<UserManager<ApplicationUser>>()));
+
+    [Fact]
+    public async Task ExpiryLock_RechecksCandidateAfterAcquiringTheSharedHallLock()
+    {
+        var hall = AddHall("Expired candidate", cycleEnd: Today.AddDays(-1));
+        var bookingRepository = new Mock<Wesal.Application.Common.Interfaces.Persistence.IBookingRepository>();
+        bookingRepository.Setup(repo => repo.LockHallForAvailabilityChangeAsync(hall.Id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        Assert.Equal(1, await CreateService(bookingRepository.Object).LockExpiredCyclesAsync());
+
+        bookingRepository.Verify(repo => repo.LockHallForAvailabilityChangeAsync(hall.Id, It.IsAny<CancellationToken>()), Times.Once);
+        Assert.True((await _context.Halls.FindAsync(hall.Id))!.SystemLocked);
+    }
 
     // --- US-ADMIN-09: automatic expiry lock ---
 

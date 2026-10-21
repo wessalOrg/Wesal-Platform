@@ -38,6 +38,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
 {
     private readonly IAdminDashboardRepository _adminDashboardRepository;
     private readonly IHallRepository _hallRepository;
+    private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IConversationRepository _conversationRepository;
     private readonly IMessageRepository _messageRepository;
@@ -53,6 +54,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
     public AdminHallReviewService(
         IAdminDashboardRepository adminDashboardRepository,
         IHallRepository hallRepository,
+        IBookingRepository bookingRepository,
         IUnitOfWork unitOfWork,
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository,
@@ -67,6 +69,7 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
     {
         _adminDashboardRepository = adminDashboardRepository;
         _hallRepository = hallRepository;
+        _bookingRepository = bookingRepository;
         _unitOfWork = unitOfWork;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
@@ -196,54 +199,36 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
-
-        if (hall is null || hall.IsDeleted)
+        var (hall, changed) = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            throw new NotFoundException(nameof(Hall), hallId);
-        }
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
+                throw new NotFoundException(nameof(Hall), hallId);
 
-        if (hall.Status == HallStatus.Rejected)
-        {
-            return new AdminRejectHallResultDto
-            {
-                HallId = hall.Id,
-                Name = hall.Name,
-                Status = hall.Status,
-                IsAlreadyRejected = true,
-                NotificationDelivered = false
-            };
-        }
+            var current = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
+            if (current is null || current.IsDeleted)
+                throw new NotFoundException(nameof(Hall), hallId);
 
-        if (hall.Status == HallStatus.Approved && !request.ConfirmLiveApproved)
-        {
-            throw new ConflictException(
-                "This hall is currently Approved (live). Rejecting it will take the hall offline; send an explicit confirmation to proceed.");
-        }
+            if (current.Status == HallStatus.Rejected)
+                return (current, false);
 
-        if (hall.Status == HallStatus.Approved || hall.Status == HallStatus.PendingReview)
-        {
-            hall.Status = HallStatus.Rejected;
-            hall.UpdatedAt = _dateTime.Now;
+            if (current.Status == HallStatus.Approved && !request.ConfirmLiveApproved)
+                throw new ConflictException("This hall is currently Approved (live). Rejecting it will take the hall offline; send an explicit confirmation to proceed.");
+
+            if (current.Status != HallStatus.Approved && current.Status != HallStatus.PendingReview)
+                throw new BusinessRuleException("HallNotPending", $"A hall with status {current.Status} cannot be rejected.");
+
+            current.Status = HallStatus.Rejected;
+            current.UpdatedAt = _dateTime.Now;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return (current, true);
+        }, cancellationToken);
 
-            _logger.LogInformation("Hall {HallId} was rejected by admin {AdminId}", hall.Id, ResolveAdminUserId());
+        if (!changed)
+            return new AdminRejectHallResultDto { HallId = hall.Id, Name = hall.Name, Status = hall.Status, IsAlreadyRejected = true, NotificationDelivered = false };
 
-            var notificationDelivered = await TryDeliverRejectionMessageAsync(hall, request.Reason, cancellationToken);
-
-            return new AdminRejectHallResultDto
-            {
-                HallId = hall.Id,
-                Name = hall.Name,
-                Status = hall.Status,
-                IsAlreadyRejected = false,
-                NotificationDelivered = notificationDelivered
-            };
-        }
-
-        throw new BusinessRuleException(
-            "HallNotPending",
-            $"A hall with status {hall.Status} cannot be rejected.");
+        _logger.LogInformation("Hall {HallId} was rejected by admin {AdminId}", hall.Id, ResolveAdminUserId());
+        var notificationDelivered = await TryDeliverRejectionMessageAsync(hall, request.Reason, cancellationToken);
+        return new AdminRejectHallResultDto { HallId = hall.Id, Name = hall.Name, Status = hall.Status, IsAlreadyRejected = false, NotificationDelivered = notificationDelivered };
     }
 
     public async Task<AdminLockHallResultDto> LockHallAsync(
@@ -252,24 +237,27 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
-
-        if (hall is null || hall.IsDeleted)
+        var (hall, changed) = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            throw new NotFoundException(nameof(Hall), hallId);
-        }
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
+                throw new NotFoundException(nameof(Hall), hallId);
+            var current = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
+            if (current is null || current.IsDeleted)
+                throw new NotFoundException(nameof(Hall), hallId);
+            var didChange = !current.IsAdminLocked;
+            if (didChange)
+            {
+                current.IsAdminLocked = true;
+                current.LockedByAdminUserId = ResolveAdminUserId();
+                current.LockedAt = _dateTime.Now;
+                current.UpdatedAt = _dateTime.Now;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            return (current, didChange);
+        }, cancellationToken);
 
-        if (!hall.IsAdminLocked)
-        {
-            hall.IsAdminLocked = true;
-            hall.LockedByAdminUserId = ResolveAdminUserId();
-            hall.LockedAt = _dateTime.Now;
-            hall.UpdatedAt = _dateTime.Now;
-
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
+        if (changed)
             _logger.LogInformation("Hall {HallId} was locked by admin {AdminId}", hall.Id, hall.LockedByAdminUserId);
-        }
 
         return new AdminLockHallResultDto
         {
@@ -287,32 +275,44 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
-
-        if (hall is null || hall.IsDeleted)
+        var (hall, changed, systemLockCorrected) = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            throw new NotFoundException(nameof(Hall), hallId);
-        }
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
+                throw new NotFoundException(nameof(Hall), hallId);
+            var current = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
+            if (current is null || current.IsDeleted)
+                throw new NotFoundException(nameof(Hall), hallId);
 
-        if (hall.IsAdminLocked)
-        {
-            var adminId = ResolveAdminUserId();
+            var didChange = current.IsAdminLocked;
+            var correctedSystemLock = false;
+            if (didChange)
+            {
+                var adminId = ResolveAdminUserId();
+                current.IsAdminLocked = false;
+                current.UnlockedByAdminUserId = adminId;
+                current.UnlockedAt = _dateTime.Now;
+                current.UpdatedAt = _dateTime.Now;
 
-            hall.IsAdminLocked = false;
-            hall.UnlockedByAdminUserId = adminId;
-            hall.UnlockedAt = _dateTime.Now;
-            hall.UpdatedAt = _dateTime.Now;
+                // Preserve the unlock consistency correction while still under the lock.
+                var today = DateOnly.FromDateTime(_dateTime.Now.UtcDateTime);
+                if (current.SystemLocked
+                    && current.PaymentStatus == HallPaymentStatus.Paid
+                    && current.SubscriptionCycleEnd is not null
+                    && current.SubscriptionCycleEnd >= today)
+                {
+                    current.SystemLocked = false;
+                    correctedSystemLock = true;
+                }
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            return (current, didChange, correctedSystemLock);
+        }, cancellationToken);
 
-            _logger.LogInformation("Hall {HallId} was unlocked by admin {AdminId}", hall.Id, adminId);
-
-            // Verification step (US-ADMIN-06): re-read the freshest combined lock state
-            // and correct a left-over inconsistency (e.g. SystemLocked still set although
-            // the hall is Paid with an active cycle) so the returned state and the owner's
-            // restored access are truthful.
-            await VerifyUnlockStateAsync(hall.Id, cancellationToken);
-        }
+        if (changed)
+            _logger.LogInformation("Hall {HallId} was unlocked by admin {AdminId}", hall.Id, hall.UnlockedByAdminUserId);
+        if (systemLockCorrected)
+            _logger.LogInformation("Unlock verification corrected a stale SystemLocked flag for hall {HallId}", hall.Id);
 
         return new AdminUnlockHallResultDto
         {
@@ -472,34 +472,6 @@ public sealed class AdminHallReviewService : IAdminHallReviewService
             OwnerBlocked = ownerBlocked,
             DeliveryPending = ownerBlocked
         };
-    }
-
-    private async Task VerifyUnlockStateAsync(Guid hallId, CancellationToken cancellationToken)
-    {
-        var fresh = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
-
-        if (fresh is null || fresh.IsDeleted)
-        {
-            return;
-        }
-
-        var today = DateOnly.FromDateTime(_dateTime.Now.UtcDateTime);
-
-        // A payment confirmation racing the manual unlock can leave SystemLocked set even
-        // though the hall is Paid with an active cycle. Correct that inconsistency so the
-        // manual unlock restores access as the business rule intends.
-        if (fresh.SystemLocked
-            && fresh.PaymentStatus == HallPaymentStatus.Paid
-            && fresh.SubscriptionCycleEnd is not null
-            && fresh.SubscriptionCycleEnd >= today)
-        {
-            fresh.SystemLocked = false;
-            fresh.UpdatedAt = _dateTime.Now;
-
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation("Unlock verification corrected a stale SystemLocked flag for hall {HallId}", fresh.Id);
-        }
     }
 
     private async Task<bool> IsOwnerBlockedAsync(string ownerId, CancellationToken cancellationToken)

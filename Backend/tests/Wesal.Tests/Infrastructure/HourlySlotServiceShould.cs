@@ -1,3 +1,4 @@
+using System.Globalization;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -257,7 +258,7 @@ public class HourlySlotServiceShould
         var service = CreateService(hallRepository, bookingRepository, registeredUser: true);
 
         var result = await service.CreateHourlyBookingAsync(
-            CreateRequest(hall.Id, date, new TimeOnly(10, 0), "Layla Hassan"));
+            CreateRequest(hall.Id, date, new TimeOnly(10, 0, 0), "Layla Hassan"));
 
         var booking = Assert.Single(bookingRepository.AddedBookings);
         Assert.Equal(hall.Id, booking.HallId);
@@ -265,6 +266,7 @@ public class HourlySlotServiceShould
         Assert.Equal(new TimeOnly(10, 0), Assert.Single(booking.Slots).StartTime);
         Assert.Equal("Layla Hassan", booking.NameOnBooking);
         Assert.Equal(BookingStatus.Pending, booking.Status);
+        Assert.Null(booking.DepositPaymentConfirmedAt);
         Assert.Equal(booking.Id, result.BookingId);
         Assert.Equal(new TimeOnly(10, 0), Assert.Single(result.SlotStarts));
         // WESAL-TASK-8 (Edit 8): the atomic claim now holds the hour as Reserved. It used to
@@ -290,8 +292,11 @@ public class HourlySlotServiceShould
         Assert.Empty(bookingRepository.AddedBookings);
     }
 
-    [Fact]
-    public async Task CreateHourlyBookingAsync_UnalignedSlot_ThrowsValidation()
+    [Theory]
+    [InlineData("10:30:00")]
+    [InlineData("10:00:30")]
+    [InlineData("10:00:00.0000001")]
+    public async Task CreateHourlyBookingAsync_UnalignedSlot_ThrowsValidation(string time)
     {
         var hall = CreateHall("Approved Hall", showBookedSlots: true);
         var hallRepository = new FakeHallRepository();
@@ -301,10 +306,57 @@ public class HourlySlotServiceShould
 
         var service = CreateService(hallRepository, bookingRepository, registeredUser: true);
 
-        await Assert.ThrowsAsync<ValidationException>(() =>
-            service.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, new TimeOnly(10, 30))));
+        var start = TimeOnly.Parse(time, CultureInfo.InvariantCulture);
+        var exception = await Assert.ThrowsAsync<ValidationException>(() =>
+            service.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, start)));
 
+        Assert.Contains("SlotStarts", exception.Errors.Keys);
         Assert.Empty(bookingRepository.AddedBookings);
+        Assert.Empty(bookingRepository.Slots);
+    }
+
+    [Theory]
+    [InlineData("10:00:30")]
+    [InlineData("10:00:00.0000001")]
+    public async Task CreateHourlyBookingAsync_OffsetCannotBypassHeldHour(string time)
+    {
+        var hall = CreateHall("Approved Hall", showBookedSlots: true);
+        var hallRepository = new FakeHallRepository();
+        hallRepository.Halls.Add(hall);
+        var bookingRepository = new FakeBookingRepository();
+        var date = Tomorrow();
+        var firstSeeker = CreateService(hallRepository, bookingRepository, userId: "seeker-1");
+        var secondSeeker = CreateService(hallRepository, bookingRepository, userId: "seeker-2");
+        var hour = new TimeOnly(10, 0, 0);
+
+        var original = await firstSeeker.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, hour));
+        // A free earlier hour must not be reserved before rejecting the malformed overlap.
+        var invalidRequest = new HourlyBookingRequestDto
+        {
+            HallId = hall.Id,
+            Date = date,
+            SlotStarts = [new TimeOnly(9, 0), TimeOnly.Parse(time, CultureInfo.InvariantCulture)],
+            NameOnBooking = "Second seeker",
+            RequesterName = "Second seeker"
+        };
+
+        await Assert.ThrowsAsync<ValidationException>(() => secondSeeker.CreateHourlyBookingAsync(invalidRequest));
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            secondSeeker.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, hour)));
+
+        var booking = Assert.Single(bookingRepository.AddedBookings);
+        Assert.Equal(original.BookingId, booking.Id);
+        Assert.Equal("seeker-1", booking.RequesterUserId);
+        Assert.Equal(BookingStatus.Pending, booking.Status);
+        Assert.Null(booking.DepositPaymentConfirmedAt);
+        var slot = Assert.Single(bookingRepository.Slots);
+        Assert.Equal(hour, slot.StartTime);
+        Assert.Equal(HallSlotStatus.Reserved, slot.Status);
+
+        // The next non-overlapping hour remains bookable, without rounding invalid input.
+        await secondSeeker.CreateHourlyBookingAsync(CreateRequest(hall.Id, date, new TimeOnly(11, 0)));
+        Assert.Equal(2, bookingRepository.AddedBookings.Count);
+        Assert.Equal(2, bookingRepository.Slots.Count);
     }
 
     [Fact]
@@ -688,6 +740,8 @@ public class HourlySlotServiceShould
 
     private sealed class FakeBookingRepository : IBookingRepository
     {
+        // Test double acknowledges the required contract; only PostgreSQL integration tests model database locking.
+        public Task<bool> LockHallForAvailabilityChangeAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult(true);
         public List<Booking> AddedBookings { get; } = [];
 
         public List<HallSlotAvailability> Slots { get; } = [];

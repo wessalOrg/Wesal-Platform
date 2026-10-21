@@ -188,29 +188,36 @@ public class HourlySlotService : IHourlySlotService
         cancellationToken.ThrowIfCancellationRequested();
 
         var requesterUserId = EnsureAuthenticatedRequester();
-
-        var hall = await _hallRepository.GetHallByIdAsync(request.HallId, cancellationToken)
-            ?? throw new NotFoundException(nameof(Hall), request.HallId);
-
-        if (hall.IsDeleted || hall.Status != HallStatus.Approved)
-        {
-            throw new NotFoundException(nameof(Hall), request.HallId);
-        }
-
-        HallManagementAccess.EnsureAcceptingBookings(hall);
-
-        EnsureNotBookingOwnHall(hall, requesterUserId);
-
-        EnsureFutureBookingDate(request.Date);
-
-        var slotStarts = EnsureSlotsWithinWindow(hall, request.SlotStarts);
+        Hall hallForNotification = null!;
+        IReadOnlyList<TimeOnly> requestedSlotStarts = [];
 
         var booking = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            // WESAL-TASK-1 hardening (atomicity): the day-gate check now runs inside the
-            // same transaction as the slot reservation and the booking insert, so an owner
-            // closing the day concurrently can no longer interleave between the two and
-            // leave a booking on a day that reports as blocked.
+            // This is the common first lock for seeker creation and owner availability
+            // edits. At PostgreSQL READ COMMITTED, a caller waiting here takes a fresh
+            // snapshot on its next statement and therefore rechecks the winner's commit.
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId: request.HallId, cancellationToken))
+            {
+                throw new NotFoundException(nameof(Hall), request.HallId);
+            }
+
+            var hall = await _hallRepository.GetHallByIdAsync(request.HallId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Hall), request.HallId);
+
+            if (hall.IsDeleted || hall.Status != HallStatus.Approved)
+            {
+                throw new NotFoundException(nameof(Hall), request.HallId);
+            }
+
+            HallManagementAccess.EnsureAcceptingBookings(hall);
+            EnsureNotBookingOwnHall(hall, requesterUserId);
+            EnsureFutureBookingDate(request.Date);
+            var slotStarts = EnsureSlotsWithinWindow(hall, request.SlotStarts);
+            hallForNotification = hall;
+            requestedSlotStarts = slotStarts;
+
+            // Recheck the gate only after acquiring the common hall row lock. The
+            // day-block path uses this same lock before checking active bookings.
             if (!await _bookingRepository.IsDayOpenAsync(hall.Id, request.Date, cancellationToken))
             {
                 throw new ConflictException(
@@ -269,7 +276,7 @@ public class HourlySlotService : IHourlySlotService
         // notice, so a SignalR hiccup can neither roll back the request nor fail the
         // seeker's call. The owner id comes from the hall loaded above (trusted backend
         // data), never from the request body.
-        await NotifyOwnerOfRequestAsync(hall, booking, cancellationToken);
+        await NotifyOwnerOfRequestAsync(hallForNotification, booking, cancellationToken);
 
         // WESAL-TASK-13 (Edit 13): the seeker who just sent the request is told so in their
         // own language, with a click-through to their own bookings. Previously the requester
@@ -286,7 +293,7 @@ public class HourlySlotService : IHourlySlotService
             BookingId = booking.Id,
             HallId = booking.HallId,
             Date = booking.Date,
-            SlotStarts = slotStarts,
+            SlotStarts = requestedSlotStarts,
             TimeRange = booking.HourlyTimeRange,
             Status = booking.Status
         };
@@ -394,11 +401,11 @@ public class HourlySlotService : IHourlySlotService
 
         foreach (var slotStart in slotStarts)
         {
-            if (slotStart.Minute != 0)
+            if (slotStart.Ticks % TimeSpan.TicksPerHour != 0)
             {
                 throw new ValidationException(new Dictionary<string, string[]>
                 {
-                    ["SlotStarts"] = ["Hourly slots are 60 minutes and must start on the hour (minutes == 00), e.g. 10:00."]
+                    ["SlotStarts"] = ["Hourly slots must start exactly on the hour, with zero minutes, seconds, and fractional seconds."]
                 });
             }
 

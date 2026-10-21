@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Entities;
@@ -35,9 +36,10 @@ public class AdminHallServiceShould : IDisposable
         _service = CreateService(_indexer);
     }
 
-    private AdminHallService CreateService(IHallSearchIndexer indexer)
+    private AdminHallService CreateService(IHallSearchIndexer indexer, Wesal.Application.Common.Interfaces.Persistence.IBookingRepository? bookingRepository = null)
         => new(
             new TestHallRepository(_context),
+            bookingRepository ?? new BookingRepository(_context),
             new TestUnitOfWork(_context),
             indexer,
             new ConversationRepository(_context),
@@ -99,6 +101,24 @@ public class AdminHallServiceShould : IDisposable
         var reloaded = await _context.Halls.FindAsync(hall.Id);
         Assert.Equal(HallStatus.Approved, reloaded!.Status);
         Assert.True(await _indexer.IsIndexedAsync(hall.Id));
+    }
+
+    [Fact]
+    public async Task ApprovalAndDeletion_AcquireTheSharedHallLockBeforeWriting()
+    {
+        var bookingRepository = new Mock<Wesal.Application.Common.Interfaces.Persistence.IBookingRepository>();
+        bookingRepository.Setup(repo => repo.LockHallForAvailabilityChangeAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var service = CreateService(_indexer, bookingRepository.Object);
+        var pending = CreateHall(HallStatus.PendingReview);
+        var approved = CreateHall(HallStatus.Approved);
+
+        await service.ApproveHallAsync(pending.Id);
+        await service.DeleteHallAsync(approved.Id);
+
+        bookingRepository.Verify(repo => repo.LockHallForAvailabilityChangeAsync(pending.Id, It.IsAny<CancellationToken>()), Times.Once);
+        bookingRepository.Verify(repo => repo.LockHallForAvailabilityChangeAsync(approved.Id, It.IsAny<CancellationToken>()), Times.Once);
+        Assert.True((await _context.Halls.FindAsync(approved.Id))!.IsDeleted);
     }
 
     [Fact]

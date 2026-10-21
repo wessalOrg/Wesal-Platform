@@ -62,29 +62,30 @@ public sealed class OwnerHourlyAvailabilityService : IOwnerHourlyAvailabilitySer
 
         var ownerId = await ResolveOwnerAsync(cancellationToken);
 
-        var hall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken)
-            ?? throw new NotFoundException(nameof(Hall), hallId);
-
-        HallManagementAccess.EnsureAllowed(hall);
-
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
-        if (request.Date < today)
-        {
-            throw new ValidationException(new Dictionary<string, string[]>
-            {
-                ["Date"] = ["A day can only be blocked or unblocked for today or a future date."]
-            });
-        }
-
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            // WESAL-TASK-1 hardening (atomicity): the occupied-day check used to run as a
-            // separate round-trip before the transaction opened, leaving a window in which
-            // a booking could be created between the check and the write. Colocating the
-            // check with the write means the guard and the state change commit or fail as
-            // one unit, mirroring the booking side, which likewise checks the day gate
-            // inside the transaction that reserves and inserts.
+            // This is the same first lock used by seeker booking creation and window edits.
+            // GetOwnedHallForUpdateAsync is only a tracked query; it does not acquire a DB lock.
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
+            {
+                throw new NotFoundException(nameof(Hall), hallId);
+            }
+
+            var hall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Hall), hallId);
+
+            HallManagementAccess.EnsureAllowed(hall);
+
+            // Preserve access-error precedence using the Hall state reloaded under the lock.
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            if (request.Date < today)
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    ["Date"] = ["A day can only be blocked or unblocked for today or a future date."]
+                });
+            }
+
             //
             // Blocking must never silently orphan a live booking. Reuse the codebase's
             // existing rule for an occupied unit (Pending or Accepted is "active") and
@@ -116,72 +117,66 @@ public sealed class OwnerHourlyAvailabilityService : IOwnerHourlyAvailabilitySer
         cancellationToken.ThrowIfCancellationRequested();
 
         var ownerId = await ResolveOwnerAsync(cancellationToken);
-
-        var hall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken)
-            ?? throw new NotFoundException(nameof(Hall), hallId);
-
-        HallManagementAccess.EnsureAllowed(hall);
-
-        // Merge the partial request over the current persisted values so an omitted
-        // property is left untouched, then validate the *effective* window.
-        var effectiveStart = request.HourlySlotStart ?? hall.HourlySlotStart ?? DefaultWindowStart;
-        var effectiveEnd = request.HourlySlotEnd ?? hall.HourlySlotEnd ?? DefaultWindowEnd;
-
-        if (effectiveStart >= effectiveEnd)
+        return await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            throw new ValidationException(new Dictionary<string, string[]>
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
             {
-                ["HourlySlotStart"] = ["The bookable window must start before it ends (HourlySlotStart < HourlySlotEnd)."]
-            });
-        }
+                throw new NotFoundException(nameof(Hall), hallId);
+            }
 
-        // WESAL-TASK-1 hardening: the seeker catalog is generated from the window bounds, so
-        // narrowing the window would drop an already-booked hour out of the catalog while the
-        // booking stayed real and active - invisible but still occupying that hour. Refuse the
-        // change with the same ConflictException used when a day-block would orphan a live
-        // booking, so an owner can never strand a booking by reshaping the window around it.
-        // Only a window change can strand a booking, so an untouched window costs no query.
-        // This check runs BEFORE any mutation so a refused write leaves the tracked
-        // aggregate (and therefore the caller's unit of work) exactly as it was.
-        if (request.HourlySlotStart.HasValue || request.HourlySlotEnd.HasValue)
-        {
-            var strandsBooking = await _bookingRepository.HasActiveHourlyBookingsOutsideWindowAsync(
-                hallId,
-                effectiveStart,
-                effectiveEnd,
-                cancellationToken);
+            var hall = await _ownerDashboardRepository.GetOwnedHallForUpdateAsync(hallId, ownerId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Hall), hallId);
 
-            if (strandsBooking)
+            HallManagementAccess.EnsureAllowed(hall);
+
+            // Read the current window only after taking the shared lock. Omitted fields
+            // preserve values committed by an earlier lock holder.
+            var effectiveStart = request.HourlySlotStart ?? hall.HourlySlotStart ?? DefaultWindowStart;
+            var effectiveEnd = request.HourlySlotEnd ?? hall.HourlySlotEnd ?? DefaultWindowEnd;
+
+            if (effectiveStart >= effectiveEnd)
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    ["HourlySlotStart"] = ["The bookable window must start before it ends (HourlySlotStart < HourlySlotEnd)."]
+                });
+            }
+
+            // A narrowed window cannot strand a Pending or Accepted booking. This query
+            // and the settings write are serialized with new reservations by the hall lock.
+            if ((request.HourlySlotStart.HasValue || request.HourlySlotEnd.HasValue)
+                && await _bookingRepository.HasActiveHourlyBookingsOutsideWindowAsync(
+                    hallId, effectiveStart, effectiveEnd, cancellationToken))
             {
                 throw new ConflictException(
-                    $"The new bookable window would hide an hour that already has an active booking. Cancel or complete that booking first, or keep the window wide enough to include it.");
+                    "The new bookable window would hide an hour that already has an active booking. Cancel or complete that booking first, or keep the window wide enough to include it.");
             }
-        }
 
-        if (request.ShowBookedSlots.HasValue)
-        {
-            hall.ShowBookedSlots = request.ShowBookedSlots.Value;
-        }
+            if (request.ShowBookedSlots.HasValue)
+            {
+                hall.ShowBookedSlots = request.ShowBookedSlots.Value;
+            }
 
-        if (request.HourlySlotStart.HasValue)
-        {
-            hall.HourlySlotStart = request.HourlySlotStart.Value;
-        }
+            if (request.HourlySlotStart.HasValue)
+            {
+                hall.HourlySlotStart = request.HourlySlotStart.Value;
+            }
 
-        if (request.HourlySlotEnd.HasValue)
-        {
-            hall.HourlySlotEnd = request.HourlySlotEnd.Value;
-        }
+            if (request.HourlySlotEnd.HasValue)
+            {
+                hall.HourlySlotEnd = request.HourlySlotEnd.Value;
+            }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new OwnerHourlySettingsDto
-        {
-            HallId = hallId,
-            ShowBookedSlots = hall.ShowBookedSlots,
-            HourlySlotStart = hall.HourlySlotStart ?? DefaultWindowStart,
-            HourlySlotEnd = hall.HourlySlotEnd ?? DefaultWindowEnd
-        };
+            return new OwnerHourlySettingsDto
+            {
+                HallId = hallId,
+                ShowBookedSlots = hall.ShowBookedSlots,
+                HourlySlotStart = hall.HourlySlotStart ?? DefaultWindowStart,
+                HourlySlotEnd = hall.HourlySlotEnd ?? DefaultWindowEnd
+            };
+        }, cancellationToken);
     }
 
     private static readonly TimeOnly DefaultWindowStart = HallBookingWindow.DefaultStart;

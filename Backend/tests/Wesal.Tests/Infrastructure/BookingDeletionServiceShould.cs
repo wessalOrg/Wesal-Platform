@@ -343,6 +343,8 @@ public class BookingDeletionServiceShould
 
     private sealed class FakeBookingRepository : IBookingRepository
     {
+        // Test double acknowledges the required contract; only PostgreSQL integration tests model database locking.
+        public Task<bool> LockHallForAvailabilityChangeAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult(true);
         private readonly List<Booking> _bookings;
 
         public FakeBookingRepository(List<Booking> bookings)

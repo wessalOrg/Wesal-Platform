@@ -206,6 +206,7 @@ public class AdminDashboardRepository : IAdminDashboardRepository
         CancellationToken cancellationToken = default)
     {
         return await _context.Halls
+            .AsNoTracking()
             .Where(hall => !hall.IsDeleted
                 && hall.Status == HallStatus.Approved
                 && hall.PaymentStatus == HallPaymentStatus.Paid

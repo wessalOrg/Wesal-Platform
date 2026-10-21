@@ -32,6 +32,7 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
 {
     private readonly IAdminDashboardRepository _adminDashboardRepository;
     private readonly IHallRepository _hallRepository;
+    private readonly IBookingRepository _bookingRepository;
     private readonly IOptions<SubscriptionPaymentOptions> _subscriptionPaymentOptions;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IConversationRepository _conversationRepository;
@@ -45,6 +46,7 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
     public AdminSubscriptionService(
         IAdminDashboardRepository adminDashboardRepository,
         IHallRepository hallRepository,
+        IBookingRepository bookingRepository,
         IOptions<SubscriptionPaymentOptions> subscriptionPaymentOptions,
         IUnitOfWork unitOfWork,
         IConversationRepository conversationRepository,
@@ -57,6 +59,7 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
     {
         _adminDashboardRepository = adminDashboardRepository;
         _hallRepository = hallRepository;
+        _bookingRepository = bookingRepository;
         _subscriptionPaymentOptions = subscriptionPaymentOptions;
         _unitOfWork = unitOfWork;
         _conversationRepository = conversationRepository;
@@ -109,30 +112,45 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
-
-        if (hall is null || hall.IsDeleted)
+        var (result, changedHall) = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            throw new NotFoundException(nameof(Hall), hallId);
-        }
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
+                throw new NotFoundException(nameof(Hall), hallId);
 
-        if (hall.Status != HallStatus.Approved)
-        {
-            throw new BusinessRuleException(
-                "HallNotApproved",
-                $"Only an Approved hall can be marked as paid; hall {hallId} has status {hall.Status}.");
-        }
+            var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
+            if (hall is null || hall.IsDeleted)
+                throw new NotFoundException(nameof(Hall), hallId);
+            if (hall.Status != HallStatus.Approved)
+                throw new BusinessRuleException("HallNotApproved", $"Only an Approved hall can be marked as paid; hall {hallId} has status {hall.Status}.");
 
-        var today = DateOnly.FromDateTime(_dateTime.Now.UtcDateTime);
+            var today = DateOnly.FromDateTime(_dateTime.Now.UtcDateTime);
+            if (hall.PaymentStatus == HallPaymentStatus.Paid
+                && hall.SubscriptionCycleEnd is not null
+                && hall.SubscriptionCycleEnd >= today)
+            {
+                return (new AdminMarkPaidResultDto
+                {
+                    HallId = hall.Id,
+                    Name = hall.Name,
+                    PaymentStatus = hall.PaymentStatus,
+                    SystemLocked = hall.SystemLocked,
+                    AdminLocked = hall.IsAdminLocked,
+                    CycleStart = hall.SubscriptionCycleStart,
+                    CycleEnd = hall.SubscriptionCycleEnd,
+                    AmountIls = _subscriptionPaymentOptions.Value.SubscriptionPriceIls,
+                    AlreadyPaidWithActiveCycle = true
+                }, (Hall?)null);
+            }
 
-        if (hall.PaymentStatus == HallPaymentStatus.Paid
-            && hall.SubscriptionCycleEnd is not null
-            && hall.SubscriptionCycleEnd >= today)
-        {
-            // Idempotent no-op: the hall already has a confirmed, still-active cycle.
-            // A second call must never create an overlapping cycle or clear a separate
-            // manual Admin lock.
-            return new AdminMarkPaidResultDto
+            var cycleDays = _subscriptionPaymentOptions.Value.SubscriptionCycleDays;
+            hall.PaymentStatus = HallPaymentStatus.Paid;
+            hall.SystemLocked = false;
+            hall.SubscriptionCycleStart = today;
+            hall.SubscriptionCycleEnd = today.AddDays(cycleDays);
+            hall.UpdatedAt = _dateTime.Now;
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return (new AdminMarkPaidResultDto
             {
                 HallId = hall.Id,
                 Name = hall.Name,
@@ -142,37 +160,17 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
                 CycleStart = hall.SubscriptionCycleStart,
                 CycleEnd = hall.SubscriptionCycleEnd,
                 AmountIls = _subscriptionPaymentOptions.Value.SubscriptionPriceIls,
-                AlreadyPaidWithActiveCycle = true
-            };
-        }
-
-        var cycleDays = _subscriptionPaymentOptions.Value.SubscriptionCycleDays;
-
-        hall.PaymentStatus = HallPaymentStatus.Paid;
-        hall.SystemLocked = false;
-        hall.SubscriptionCycleStart = today;
-        hall.SubscriptionCycleEnd = today.AddDays(cycleDays);
-        hall.UpdatedAt = _dateTime.Now;
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                AlreadyPaidWithActiveCycle = false
+            }, hall);
+        }, cancellationToken);
 
         // Notify the owner through the hall's conversation inbox that their payment was
         // confirmed and the hall is now live (US-ADMIN-10). Best-effort: never fails the
         // payment confirmation.
-        await TryNotifyOwnerAsync(hall, cancellationToken);
+        if (changedHall is not null)
+            await TryNotifyOwnerAsync(changedHall, cancellationToken);
 
-        return new AdminMarkPaidResultDto
-        {
-            HallId = hall.Id,
-            Name = hall.Name,
-            PaymentStatus = hall.PaymentStatus,
-            SystemLocked = hall.SystemLocked,
-            AdminLocked = hall.IsAdminLocked,
-            CycleStart = hall.SubscriptionCycleStart,
-            CycleEnd = hall.SubscriptionCycleEnd,
-            AmountIls = _subscriptionPaymentOptions.Value.SubscriptionPriceIls,
-            AlreadyPaidWithActiveCycle = false
-        };
+        return result;
     }
 
     /// <summary>
@@ -212,20 +210,27 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
-
-        if (hall is null || hall.IsDeleted)
+        var (result, changed) = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            throw new NotFoundException(nameof(Hall), hallId);
-        }
+            if (!await _bookingRepository.LockHallForAvailabilityChangeAsync(hallId, cancellationToken))
+                throw new NotFoundException(nameof(Hall), hallId);
+            var hall = await _hallRepository.GetHallByIdForUpdateAsync(hallId, cancellationToken);
+            if (hall is null || hall.IsDeleted)
+                throw new NotFoundException(nameof(Hall), hallId);
 
-        var alreadyUnpaid = hall.PaymentStatus == HallPaymentStatus.Unpaid
-            && hall.SubscriptionCycleStart is null
-            && hall.SubscriptionCycleEnd is null;
+            var alreadyUnpaid = hall.PaymentStatus == HallPaymentStatus.Unpaid
+                && hall.SubscriptionCycleStart is null
+                && hall.SubscriptionCycleEnd is null;
+            if (!alreadyUnpaid)
+            {
+                hall.PaymentStatus = HallPaymentStatus.Unpaid;
+                hall.SubscriptionCycleStart = null;
+                hall.SubscriptionCycleEnd = null;
+                hall.UpdatedAt = _dateTime.Now;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
 
-        if (alreadyUnpaid)
-        {
-            return new AdminMarkPaidResultDto
+            return (new AdminMarkPaidResultDto
             {
                 HallId = hall.Id,
                 Name = hall.Name,
@@ -236,33 +241,16 @@ public sealed class AdminSubscriptionService : IAdminSubscriptionService
                 CycleEnd = hall.SubscriptionCycleEnd,
                 AmountIls = _subscriptionPaymentOptions.Value.SubscriptionPriceIls,
                 AlreadyPaidWithActiveCycle = false
-            };
-        }
+            }, !alreadyUnpaid);
+        }, cancellationToken);
 
-        hall.PaymentStatus = HallPaymentStatus.Unpaid;
-        hall.SubscriptionCycleStart = null;
-        hall.SubscriptionCycleEnd = null;
-        hall.UpdatedAt = _dateTime.Now;
+        if (changed)
+            _logger.LogInformation(
+                "Subscription payment for hall {HallId} was revoked by admin {AdminId}",
+                hallId,
+                _currentUser.UserId);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Subscription payment for hall {HallId} was revoked by admin {AdminId}",
-            hallId,
-            _currentUser.UserId);
-
-        return new AdminMarkPaidResultDto
-        {
-            HallId = hall.Id,
-            Name = hall.Name,
-            PaymentStatus = hall.PaymentStatus,
-            SystemLocked = hall.SystemLocked,
-            AdminLocked = hall.IsAdminLocked,
-            CycleStart = hall.SubscriptionCycleStart,
-            CycleEnd = hall.SubscriptionCycleEnd,
-            AmountIls = _subscriptionPaymentOptions.Value.SubscriptionPriceIls,
-            AlreadyPaidWithActiveCycle = false
-        };
+        return result;
     }
 
     private async Task TryNotifyOwnerAsync(Hall hall, CancellationToken cancellationToken)

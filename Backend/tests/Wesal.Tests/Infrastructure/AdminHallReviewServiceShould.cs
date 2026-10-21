@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
@@ -110,10 +111,12 @@ public class AdminHallReviewServiceShould : IDisposable
         ICurrentUserService currentUser,
         IDateTime? dateTime = null,
         INotificationService? notificationService = null,
-        INotificationDispatcher? notificationDispatcher = null)
+        INotificationDispatcher? notificationDispatcher = null,
+        Wesal.Application.Common.Interfaces.Persistence.IBookingRepository? bookingRepository = null)
         => new(
             new AdminDashboardRepository(_context),
             new HallRepository(_context),
+            bookingRepository ?? new BookingRepository(_context),
             new UnitOfWork(_context),
             new ConversationRepository(_context),
             new MessageRepository(_context),
@@ -125,6 +128,22 @@ public class AdminHallReviewServiceShould : IDisposable
             notificationService ?? new FakeNotificationService(),
             notificationDispatcher ?? new RecordingNotificationDispatcher(),
             NullLogger<AdminHallReviewService>.Instance);
+
+    [Fact]
+    public async Task ManualHallLock_UsesTheSharedHallLockAndPersistsEligibilityGate()
+    {
+        var hall = AddHall("owner-1", "Review lock", HallStatus.Approved);
+        var bookingRepository = new Mock<Wesal.Application.Common.Interfaces.Persistence.IBookingRepository>();
+        bookingRepository.Setup(repo => repo.LockHallForAvailabilityChangeAsync(hall.Id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        var service = CreateService(new FakeCurrentUser("admin-1", true, ApplicationRoles.Admin), bookingRepository: bookingRepository.Object);
+        await service.LockHallAsync(hall.Id);
+        Assert.True((await _context.Halls.FindAsync(hall.Id))!.IsAdminLocked);
+        await service.UnlockHallAsync(hall.Id);
+
+        bookingRepository.Verify(repo => repo.LockHallForAvailabilityChangeAsync(hall.Id, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        Assert.False((await _context.Halls.FindAsync(hall.Id))!.IsAdminLocked);
+    }
 
     private sealed class FakeDocumentStorage : IDocumentStorage
     {

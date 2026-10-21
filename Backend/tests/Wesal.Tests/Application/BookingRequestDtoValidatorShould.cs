@@ -1,3 +1,4 @@
+using System.Globalization;
 using Wesal.Application.Common.Models;
 using Wesal.Application.Common.Validation;
 
@@ -5,6 +6,26 @@ namespace Wesal.Tests.Application;
 
 public class BookingRequestDtoValidatorShould
 {
+    [Theory]
+    [InlineData("10:00:00", true)]
+    [InlineData("10:00:30", false)]
+    [InlineData("10:00:00.0000001", false)]
+    [InlineData("10:30:00", false)]
+    public async Task Validate_SlotStart_MustBeExactlyHourAligned(string time, bool expectedValid)
+    {
+        var start = TimeOnly.Parse(time, CultureInfo.InvariantCulture);
+        var request = CreateRequest(slotStarts: [new TimeOnly(9, 0), start]);
+
+        var result = await new HourlyBookingRequestDtoValidator().ValidateAsync(request);
+
+        Assert.Equal(expectedValid, result.IsValid);
+        if (!expectedValid)
+        {
+            Assert.Contains(result.Errors, error => error.PropertyName == "SlotStarts[1]");
+        }
+        Assert.Equal(start, request.SlotStarts[1]);
+    }
+
     [Fact]
     public async Task Validate_ValidRequest_Passes()
     {
@@ -76,12 +97,13 @@ public class BookingRequestDtoValidatorShould
         DateOnly? date = null,
         string nameOnBooking = "Layla Hassan",
         string requesterName = "Layla Hassan",
-        bool defaultDate = false)
+        bool defaultDate = false,
+        IReadOnlyList<TimeOnly>? slotStarts = null)
         => new()
         {
             HallId = hallId ?? Guid.NewGuid(),
             Date = defaultDate ? default : date ?? new DateOnly(2026, 9, 10),
-            SlotStarts = [new TimeOnly(10, 0)],
+            SlotStarts = slotStarts ?? [new TimeOnly(10, 0)],
             NameOnBooking = nameOnBooking,
             RequesterName = requesterName
         };

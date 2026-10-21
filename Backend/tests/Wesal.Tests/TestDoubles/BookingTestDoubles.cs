@@ -190,6 +190,8 @@ internal sealed class RecordingMessageRepository : IMessageRepository
 /// </summary>
 internal sealed class FakeHourlySlotStore : IBookingRepository
 {
+        // Test double acknowledges the required contract; only PostgreSQL integration tests model database locking.
+        public Task<bool> LockHallForAvailabilityChangeAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult(true);
     private readonly Dictionary<(Guid HallId, DateOnly Date, TimeOnly Start), HallSlotStatus> _slots = [];
 
     public List<Booking> Bookings { get; } = [];
