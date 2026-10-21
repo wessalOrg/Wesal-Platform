@@ -34,7 +34,7 @@ export default function ResetPasswordFormCard({
 
   const passwordIssueMessage = (
     issue: ReturnType<typeof getRegisterPasswordIssue>,
-  ): string => {
+  ): string | undefined => {
     switch (issue) {
       case "required":
         return t("auth.resetPassword.form.error.newPassword");
@@ -51,7 +51,7 @@ export default function ResetPasswordFormCard({
       case "special":
         return t("auth.register.form.error.passwordSpecial");
       default:
-        return t("auth.resetPassword.form.error.newPassword");
+        return undefined;
     }
   };
 
@@ -74,7 +74,8 @@ export default function ResetPasswordFormCard({
     if (lower.includes("special") || lower.includes("non.alphanumeric")) {
       return t("auth.register.form.error.passwordSpecial");
     }
-    return passwordIssueMessage(getRegisterPasswordIssue(passwordValue));
+    const issue = getRegisterPasswordIssue(passwordValue);
+    return issue ? (passwordIssueMessage(issue) ?? message) : message;
   };
 
   const validateField = (field: FieldKey, values: { newPassword: string; confirmPassword: string }): string | undefined => {
