@@ -80,7 +80,8 @@ export default function ResetPasswordFormCard({
 
   const validateField = (field: FieldKey, values: { newPassword: string; confirmPassword: string }): string | undefined => {
     if (field === "newPassword") {
-      return passwordIssueMessage(getRegisterPasswordIssue(values.newPassword));
+      const issue = getRegisterPasswordIssue(values.newPassword);
+      return issue ? passwordIssueMessage(issue) : undefined;
     }
     if (!values.confirmPassword) return t("auth.resetPassword.form.error.confirmPassword");
     if (values.newPassword !== values.confirmPassword) {
