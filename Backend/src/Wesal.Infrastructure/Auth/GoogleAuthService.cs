@@ -42,7 +42,27 @@ public sealed class GoogleAuthService
         var payload = await VerifyAsync(credential, ct);
         var user = await _users.FindByLoginAsync("Google", payload.Subject);
         if (user is null)
-            return new GoogleAuthResponse { RequiresRegistration = true, RegistrationToken = CreateRegistrationToken(payload), Email = payload.Email, GoogleName = payload.Name, AccountType = accountType };
+        {
+            // Google has verified ownership of this email. Reuse an existing
+            // local account with the same email by linking this Google identity.
+            user = await _users.FindByEmailAsync(payload.Email);
+            if (user is not null)
+            {
+                var linkResult = await _users.AddLoginAsync(user, new UserLoginInfo("Google", payload.Subject, "Google"));
+                if (!linkResult.Succeeded)
+                {
+                    // Handle a concurrent link only when it belongs to this account.
+                    var linkedUser = await _users.FindByLoginAsync("Google", payload.Subject);
+                    if (linkedUser is null || linkedUser.Id != user.Id)
+                        throw new ConflictException("Google account is already associated with another user.");
+                    user = linkedUser;
+                }
+            }
+            else
+            {
+                return new GoogleAuthResponse { RequiresRegistration = true, RegistrationToken = CreateRegistrationToken(payload), Email = payload.Email, GoogleName = payload.Name, AccountType = accountType };
+            }
+        }
         var roles = await _users.GetRolesAsync(user);
         return new GoogleAuthResponse { User = MakeLoginResponse(user, roles) };
     }
