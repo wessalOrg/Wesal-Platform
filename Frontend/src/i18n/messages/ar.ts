@@ -483,6 +483,12 @@ const ar: MessageCatalog = {
   "auth.login.form.error.network":
     "الخادم يستغرق وقتاً للإقلاع. انتظر قليلاً ثم حاول مرة أخرى — المشكلة ليست في الإنترنت.",
   "auth.login.form.error.generic": "تعذر تسجيل الدخول. يرجى التحقق من البيانات ثم المحاولة مرة أخرى.",
+  "auth.google.or": "أو",
+  "auth.google.notRegistered": "هذا الحساب غير موجود في وصال. أنشئ حسابًا أولًا من صفحة التسجيل.",
+  "auth.google.namePrompt": "أدخل اسمك لإكمال إنشاء الحساب",
+  "auth.google.finishRegistration": "إنشاء الحساب عبر Google",
+  "auth.google.error": "تعذر إكمال الدخول عبر Google. حاول مرة أخرى.",
+  "auth.google.unavailable": "تسجيل Google غير مهيأ حاليًا.",
   "auth.login.noAccount": "ليس لديك حساب ؟",
   "auth.login.registerLink": "إنشاء حساب",
   "auth.login.forgotPassword": "هل نسيت كلمة المرور؟",

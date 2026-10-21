@@ -27,6 +27,7 @@ Optional / feature-gated:
 - `RateLimiting__Enabled`, `RateLimiting__PermitLimit`, `RateLimiting__WindowSeconds` — optional global HTTP limiter, off by default
 - `RateLimiting__Assistant__Enabled`, `RateLimiting__Assistant__TokenLimit`, `RateLimiting__Assistant__TokensPerPeriod`, `RateLimiting__Assistant__ReplenishmentPeriodSeconds`, `RateLimiting__Assistant__ConcurrencyLimit` — assistant-only cost protection, enabled by default (6-token burst, 12 turns/minute, 2 concurrent turns)
 - `GoogleAI__GeminiModel`, `GoogleAI__ApiKey` — optional (deterministic fallbacks apply)
+- `GoogleAuth__ClientId` — Google OAuth Web Client ID. Must match the frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 - `Email__Enable`, `Email__Host`, `Email__From`, `Email__Port`, `Email__Username`, `Email__Password` — REQUIRED only if password-reset e-mail must deliver; otherwise the API answers forgot-password generically and logs that SMTP is unconfigured
 - `PasswordReset__FrontendBaseUrl` — must be the deployed Vercel origin when SMTP is on
 - Hall media (durable Cloudflare R2; REQUIRED in production — container temp storage loses every upload on restart):

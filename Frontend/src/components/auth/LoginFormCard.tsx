@@ -28,6 +28,8 @@ import {
 import { setAccessToken } from "@/lib/auth-token";
 import { isValidLoginEmail } from "@/lib/login-validation";
 import { loginAccount } from "@/services/auth";
+import { googleLogin } from "@/services/auth";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 
 type LoginFormCardProps = {
   registerHref: string;
@@ -239,6 +241,27 @@ export default function LoginFormCard({
     }
   };
 
+  const onGoogleCredential = async (credential: string) => {
+    if (!credential || pending) return;
+    setPending(true); setFormError(null);
+    try {
+      const result = await googleLogin(credential);
+      if (result.requiresRegistration) {
+        setFormError(t("auth.google.notRegistered"));
+        return;
+      }
+      const user = result.user;
+      if (!user?.token) { setFormError(t("auth.login.form.error.generic")); return; }
+      setAccessToken(user.token);
+      setStoredAuth({ token: user.token, user: { id: user.id, name: user.fullName, email: user.email, role: user.role } });
+      applyLocalSession({ isAuthenticated: true, role: user.role || null, userName: user.fullName || null });
+      void refreshSession(); clearBookingHallContext();
+      navigateAfterAuth(router, resolveAuthRedirect(redirectTo, action));
+    } catch {
+      setFormError(t("auth.google.error"));
+    } finally { setPending(false); }
+  };
+
   return (
     <div data-testid="login-form">
       {formError ? (
@@ -309,6 +332,9 @@ export default function LoginFormCard({
           {pending ? t("auth.login.form.submitting") : t("auth.login.form.submit")}
         </button>
       </form>
+
+      <div className="my-4 flex items-center gap-3 text-xs text-[var(--wesal-muted)]"><span className="h-px flex-1 bg-[var(--wesal-border)]" />{t("auth.google.or")}<span className="h-px flex-1 bg-[var(--wesal-border)]" /></div>
+      <GoogleAuthButton onCredential={(credential) => void onGoogleCredential(credential)} disabled={pending} />
 
       <p className="mt-4 text-center text-sm text-[var(--wesal-muted)]">
         {t("auth.login.noAccount")}{" "}

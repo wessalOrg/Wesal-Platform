@@ -19,19 +19,42 @@ public class AuthController : ControllerBase
     private readonly ICurrentUserService _currentUser;
     private readonly IAuthService _authService;
     private readonly IChatSessionService _chatSessionService;
+    private readonly Wesal.Infrastructure.Auth.GoogleAuthService _googleAuthService;
 
     public AuthController(
         ILoginService loginService,
         ILogoutService logoutService,
         ICurrentUserService currentUser,
         IAuthService authService,
-        IChatSessionService chatSessionService)
+        IChatSessionService chatSessionService,
+        Wesal.Infrastructure.Auth.GoogleAuthService googleAuthService)
     {
         _loginService = loginService;
         _logoutService = logoutService;
         _currentUser = currentUser;
         _authService = authService;
         _chatSessionService = chatSessionService;
+        _googleAuthService = googleAuthService;
+    }
+
+    [HttpPost("google/login")]
+    [AllowAnonymous]
+    public async Task<ActionResult<Wesal.Application.Common.Models.GoogleAuthResponse>> GoogleLogin(
+        [FromBody] Wesal.Application.Common.Models.GoogleAuthRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _googleAuthService.LoginAsync(request.Credential, request.AccountType, cancellationToken);
+        return Ok(response);
+    }
+
+    [HttpPost("google/register")]
+    [AllowAnonymous]
+    public async Task<ActionResult<Wesal.Application.Common.Models.GoogleAuthResponse>> GoogleRegister(
+        [FromBody] Wesal.Application.Common.Models.GoogleRegisterRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _googleAuthService.RegisterAsync(request, cancellationToken);
+        return Ok(response);
     }
 
     [HttpPost("register")]

@@ -46,6 +46,25 @@ export type LoginResult = {
   token: string;
 };
 
+export type GoogleAuthResult = {
+  requiresRegistration: boolean;
+  registrationToken?: string;
+  email?: string;
+  googleName?: string;
+  accountType?: string;
+  user?: LoginResult;
+};
+
+export async function googleLogin(credential: string, accountType = ""): Promise<GoogleAuthResult> {
+  const { data } = await api.post<GoogleAuthResult>("/auth/google/login", { credential, accountType }, { timeout: AUTH_REQUEST_TIMEOUT_MS });
+  return data;
+}
+
+export async function googleRegister(payload: { registrationToken: string; fullName: string; accountType: string }): Promise<GoogleAuthResult> {
+  const { data } = await api.post<GoogleAuthResult>("/auth/google/register", payload, { timeout: AUTH_REQUEST_TIMEOUT_MS });
+  return data;
+}
+
 type LoginResultDto = LoginResult & {
   userId?: string;
   name?: string;

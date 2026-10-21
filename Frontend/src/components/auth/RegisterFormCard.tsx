@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import RegisterSuccessModal from "@/components/auth/RegisterSuccessModal";
-import { markAuthNavigation } from "@/lib/auth-nav";
+import { markAuthNavigation, navigateAfterAuth } from "@/lib/auth-nav";
 import { useT } from "@/i18n";
 import {
   ApiError,
@@ -23,6 +23,12 @@ import {
 import { isHallOwnerAccountType } from "@/lib/account-role";
 import { notifySeekerWelcome } from "@/lib/platform-notifications-store";
 import { registerAccount } from "@/services/auth";
+import { googleLogin, googleRegister } from "@/services/auth";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useRouter } from "next/navigation";
+import { clearBookingHallContext, resolveAuthRedirect, setStoredAuth } from "@/lib/auth-storage";
+import { setAccessToken } from "@/lib/auth-token";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 
 type RegisterFormCardProps = {
   accountType: AccountType | null;
@@ -50,6 +56,8 @@ export default function RegisterFormCard({
   previewSuccess = false,
 }: RegisterFormCardProps) {
   const t = useT();
+  const router = useRouter();
+  const { applyLocalSession, refreshSession } = useAuth();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -63,6 +71,8 @@ export default function RegisterFormCard({
   const [pending, setPending] = useState(false);
   const [slowServer, setSlowServer] = useState(false);
   const [success, setSuccess] = useState(previewSuccess);
+  const [googleRegistrationToken, setGoogleRegistrationToken] = useState("");
+  const [googleEmail, setGoogleEmail] = useState("");
 
   useEffect(() => {
     if (!pending) return;
@@ -327,6 +337,43 @@ export default function RegisterFormCard({
     }
   };
 
+  const finishGoogleRegistration = async () => {
+    if (!googleRegistrationToken || !fullName.trim() || pending) return;
+    setPending(true); setFormError(null);
+    try {
+      const result = await googleRegister({ registrationToken: googleRegistrationToken, fullName: fullName.trim(), accountType: accountType ?? "RegularUser" });
+      if (!result.user?.token) throw new Error("Google registration did not return a session");
+      setAccessToken(result.user.token);
+      setStoredAuth({ token: result.user.token, user: { id: result.user.id, name: result.user.fullName, email: result.user.email, role: result.user.role } });
+      applyLocalSession({ isAuthenticated: true, role: result.user.role || null, userName: result.user.fullName || null });
+      void refreshSession(); clearBookingHallContext();
+      navigateAfterAuth(router, resolveAuthRedirect());
+    } catch (error) {
+      setFormError(error instanceof ApiError && error.status === 409 ? t("auth.register.form.error.emailDuplicate") : t("auth.google.error"));
+    } finally { setPending(false); }
+  };
+
+  const onGoogleCredential = async (credential: string) => {
+    if (!credential || pending) return;
+    setPending(true); setFormError(null);
+    try {
+      const result = await googleLogin(credential, accountType ?? "RegularUser");
+      if (result.user?.token) {
+        setAccessToken(result.user.token);
+        setStoredAuth({ token: result.user.token, user: { id: result.user.id, name: result.user.fullName, email: result.user.email, role: result.user.role } });
+        applyLocalSession({ isAuthenticated: true, role: result.user.role || null, userName: result.user.fullName || null });
+        void refreshSession(); clearBookingHallContext();
+        navigateAfterAuth(router, resolveAuthRedirect()); return;
+      }
+      if (!result.requiresRegistration || !result.registrationToken) throw new Error("Invalid Google response");
+      setGoogleRegistrationToken(result.registrationToken);
+      setGoogleEmail(result.email ?? "");
+      setFullName("");
+    } catch {
+      setFormError(t("auth.google.error"));
+    } finally { setPending(false); }
+  };
+
   return (
     <div data-testid="register-form-card">
       <RegisterSuccessModal open={success} loginHref={loginHref} />
@@ -436,6 +483,14 @@ export default function RegisterFormCard({
           </p>
         ) : null}
       </form>
+
+      <div className="my-4 flex items-center gap-3 text-xs text-[var(--wesal-muted)]"><span className="h-px flex-1 bg-[var(--wesal-border)]" />{t("auth.google.or")}<span className="h-px flex-1 bg-[var(--wesal-border)]" /></div>
+      <GoogleAuthButton onCredential={(credential) => void onGoogleCredential(credential)} disabled={pending} />
+      {googleRegistrationToken ? <div className="mt-4 space-y-3 rounded-xl border border-[var(--wesal-border)] p-3" data-testid="google-register-name">
+        <p className="text-center text-sm text-[var(--wesal-muted)]">{t("auth.google.namePrompt")} {googleEmail ? <span dir="ltr">({googleEmail})</span> : null}</p>
+        <RegisterField label={t("auth.register.form.fullName")} value={fullName} onChange={setFullName} placeholder={t("auth.register.form.fullNamePlaceholder")} autoComplete="name" maxLength={REGISTER_LIMITS.maxFullNameLength} />
+        <button type="button" onClick={() => void finishGoogleRegistration()} disabled={!fullName.trim() || pending} className="btn-primary w-full !min-h-11 !rounded-xl" aria-busy={pending || undefined}>{pending ? t("auth.register.form.submitting") : t("auth.google.finishRegistration")}</button>
+      </div> : null}
 
       <p className="mt-3.5 text-center text-xs text-[var(--wesal-muted)] sm:text-sm">
         {t("auth.register.haveAccount")}{" "}

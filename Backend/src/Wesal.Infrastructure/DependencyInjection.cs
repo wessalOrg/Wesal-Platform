@@ -55,6 +55,10 @@ public static class DependencyInjection
         services.AddOptions<GoogleAiSettings>()
             .Bind(configuration.GetSection(GoogleAiSettings.SectionName));
 
+        services.AddOptions<GoogleAuthSettings>()
+            .Bind(configuration.GetSection(GoogleAuthSettings.SectionName));
+        services.AddScoped<GoogleAuthService>();
+
         services.AddOptions<AdminProvisioningOptions>()
             .Bind(configuration.GetSection(AdminProvisioningOptions.SectionName));
 
