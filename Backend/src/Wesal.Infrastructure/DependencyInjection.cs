@@ -129,6 +129,7 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddScoped<ISubscriptionExpiryLockService, SubscriptionExpiryLockService>();
         services.Configure<SubscriptionExpiryLockOptions>(configuration.GetSection(SubscriptionExpiryLockOptions.SectionName));
         services.AddHostedService<SubscriptionExpiryLockBackgroundService>();
+        services.AddHttpClient();
         services.AddScoped<IEmailService, EmailService>();
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
         services.Configure<PasswordResetOptions>(configuration.GetSection(PasswordResetOptions.SectionName));

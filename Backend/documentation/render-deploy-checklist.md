@@ -28,17 +28,15 @@ Optional / feature-gated:
 - `RateLimiting__Assistant__Enabled`, `RateLimiting__Assistant__TokenLimit`, `RateLimiting__Assistant__TokensPerPeriod`, `RateLimiting__Assistant__ReplenishmentPeriodSeconds`, `RateLimiting__Assistant__ConcurrencyLimit` — assistant-only cost protection, enabled by default (6-token burst, 12 turns/minute, 2 concurrent turns)
 - `GoogleAI__GeminiModel`, `GoogleAI__ApiKey` — optional (deterministic fallbacks apply)
 - `GoogleAuth__ClientId` — Google OAuth Web Client ID. Must match the frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
-- Password reset via Brevo SMTP (set these on the existing Render API service; never commit SMTP credentials):
+- Password reset via Brevo HTTPS API (works on Render Free; set these on the existing Render API service; never commit credentials):
   - `Email__Enable=true`
-  - `Email__Host=smtp-relay.brevo.com`
-  - `Email__Port=587`
-  - `Email__UseSsl=true` (MailKit uses required STARTTLS on port 587)
+  - `Email__Provider=BrevoApi`
   - `Email__From=Wesal Platform <wesalplatform.gaza@gmail.com>` (add and verify this exact sender in Brevo first)
-  - `Email__Username=<SMTP login shown in Brevo SMTP settings>`
-  - `Email__Password=<SMTP key from Brevo; this is not the Brevo API key>`
+  - `Email__ApiKey=<Brevo API key from SMTP & API settings>` (this is the API key, not the SMTP key)
   - `PasswordReset__FrontendBaseUrl=https://wesal-platform-alpha.vercel.app`
   - Brevo sends a bilingual reset email with a 24-hour link. After the new password is saved, the reset screen links back to `/login` on the same Vercel origin.
-  - Brevo requires the SMTP sender to be verified and transactional sending to be activated. Free Gmail senders cannot have their domain authenticated and may be rejected; for reliable delivery, use a sender on a domain you control and authenticate that domain in Brevo.
+  - The existing `Email__Host`, `Email__Port`, `Email__Username`, and `Email__Password` settings remain available if `Email__Provider` is set to `Smtp` (the default).
+  - Brevo requires the sender to be verified and transactional sending to be activated. For reliable delivery, use a sender on a domain you control and authenticate that domain in Brevo.
 - Hall media (durable Cloudflare R2; REQUIRED in production — container temp storage loses every upload on restart):
   - `HallMedia__Provider=R2`
   - `HallMedia__R2__ServiceUrl=https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
