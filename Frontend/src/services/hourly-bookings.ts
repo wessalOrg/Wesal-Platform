@@ -234,15 +234,17 @@ function mapHourlySubmitError(err: unknown): ApiError {
 const NAME_ON_BOOKING_MAX = 100;
 
 /**
- * The hourly-booking API has no phone field; the owner sees `nameOnBooking`, so the
- * booker's phone is appended to it (e.g. "Sara - 0599123456"), within the 100-char limit.
+ * The hourly-booking API has no dedicated phone/event fields; the owner sees
+ * `nameOnBooking`, so we pack them as "Name · Event - Phone" within 100 chars.
  */
-function nameWithPhone(name: string, phone?: string): string {
+function nameOnBookingLabel(name: string, eventTypeLabel?: string, phone?: string): string {
+  const event = eventTypeLabel?.trim();
+  const base = event ? `${name} · ${event}` : name;
   const number = phone?.trim();
-  if (!number) return name.slice(0, NAME_ON_BOOKING_MAX);
+  if (!number) return base.slice(0, NAME_ON_BOOKING_MAX);
   const suffix = ` - ${number}`;
   const room = Math.max(NAME_ON_BOOKING_MAX - suffix.length, 0);
-  return `${name.slice(0, room).trim()}${suffix}`;
+  return `${base.slice(0, room).trim()}${suffix}`;
 }
 
 export async function submitHourlyBooking(input: HourlyBookingInput): Promise<HourlyBookingResult> {
@@ -261,7 +263,7 @@ export async function submitHourlyBooking(input: HourlyBookingInput): Promise<Ho
           hallId: input.hallId,
           date: input.date,
           slotStarts: starts.map(toSlotStartPayload),
-          nameOnBooking: nameWithPhone(name, input.phoneNumber),
+          nameOnBooking: nameOnBookingLabel(name, input.eventTypeLabel, input.phoneNumber),
           requesterName,
           contactPhone: input.contactPhone?.trim() || undefined,
         },
@@ -274,6 +276,7 @@ export async function submitHourlyBooking(input: HourlyBookingInput): Promise<Ho
         slotTime: input.slotTime,
         customerName: name,
         requesterName,
+        eventTypeLabel: input.eventTypeLabel,
         bookingId: String(root.bookingId ?? ""),
       };
     } catch (err) {

@@ -72,11 +72,13 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
   const [rangeFrom, setRangeFrom] = useState("");
   const [rangeTo, setRangeTo] = useState("");
   const [confirmedStarts, setConfirmedStarts] = useState<string[]>([]);
-  // The booking name always comes from the signed-in account (never typed); the phone is
-  // prefilled from the account and may be edited for this booking.
-  const accountName = accountDisplayName(identity.displayName, identity.email);
+  // Prefill from the signed-in account; both may be edited for this booking only.
+  const accountNameDefault = accountDisplayName(identity.displayName, identity.email);
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const accountName = nameDraft ?? accountNameDefault;
   const [phoneDraft, setPhoneDraft] = useState<string | null>(null);
   const phone = phoneDraft ?? identity.phoneNumber?.trim() ?? "";
+  const [eventType, setEventType] = useState("");
   const [promptOpen, setPromptOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -233,7 +235,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
 
   const submit = useCallback(async () => {
     if (!canSubmit || !dateIso || confirmedStarts.length === 0 || submitting) return false;
-    const customerName = accountName;
+    const customerName = accountName.trim();
     const customerPhone = phone.trim();
     if (!customerName) {
       setErrorKey("errors.hourly.nameRequired");
@@ -245,6 +247,11 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
     }
     if (!isValidRegisterPhone(customerPhone)) {
       setErrorKey("errors.hourly.phoneInvalid");
+      return false;
+    }
+    const eventTypeLabel = eventType.trim();
+    if (!eventTypeLabel) {
+      setErrorKey("errors.hourly.eventTypeRequired");
       return false;
     }
 
@@ -260,6 +267,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
         phoneNumber: customerPhone,
         contactPhone: customerPhone,
         requesterName: customerName,
+        eventTypeLabel,
       });
       if (result.bookingId) {
         rememberUserBookings([
@@ -304,7 +312,9 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
         }
       }
       setPromptOpen(false);
+      setNameDraft(null);
       setPhoneDraft(null);
+      setEventType("");
       setConfirmedStarts([]);
       onConfirmed?.(null);
       await reload();
@@ -326,6 +336,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
     submitting,
     accountName,
     phone,
+    eventType,
     hallId,
     hallName,
     locale,
@@ -367,8 +378,11 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
     promptOpen,
     closePrompt,
     accountName,
+    setAccountName: setNameDraft,
     phone,
     setPhone: setPhoneDraft,
+    eventType,
+    setEventType,
     submit,
     submitting,
     errorKey,

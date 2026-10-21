@@ -31,6 +31,8 @@ export type HourlyBookingInput = {
   phoneNumber?: string;
   requesterName?: string;
   contactPhone?: string;
+  /** Free-text occasion type attached to nameOnBooking for the owner. */
+  eventTypeLabel?: string;
 };
 
 export type HourlyBookingResult = HourlyBookingInput & {

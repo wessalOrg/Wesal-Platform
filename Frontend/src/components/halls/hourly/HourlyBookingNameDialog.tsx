@@ -4,10 +4,13 @@ import { useT } from "@/i18n";
 
 type HourlyBookingNameDialogProps = {
   open: boolean;
-  /** Account name — read-only, taken from the signed-in profile. */
+  /** Prefills from the signed-in profile; editable for this booking. */
   name: string;
+  onNameChange: (value: string) => void;
   phone: string;
   onPhoneChange: (value: string) => void;
+  eventType: string;
+  onEventTypeChange: (value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -19,8 +22,11 @@ type HourlyBookingNameDialogProps = {
 export default function HourlyBookingNameDialog({
   open,
   name,
+  onNameChange,
   phone,
   onPhoneChange,
+  eventType,
+  onEventTypeChange,
   onClose,
   onSubmit,
   submitting,
@@ -30,6 +36,9 @@ export default function HourlyBookingNameDialog({
 }: HourlyBookingNameDialogProps) {
   const t = useT();
   if (!open) return null;
+
+  const canSubmit =
+    Boolean(name.trim()) && Boolean(phone.trim()) && Boolean(eventType.trim());
 
   return (
     <div className="fixed inset-0 z-[120]" role="presentation" data-testid="hourly-name-dialog">
@@ -60,15 +69,19 @@ export default function HourlyBookingNameDialog({
             </>
           ) : null}
         </p>
-        <p className="mt-4 text-sm font-semibold text-[var(--wesal-text)]">
+        <label className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]" htmlFor="hourly-name">
           {t("halls.hourly.bookingAs")}
-        </p>
-        <p
-          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink)]/50 px-3 py-2.5 text-sm text-[var(--wesal-text)]"
+        </label>
+        <input
+          id="hourly-name"
+          type="text"
+          value={name}
+          onChange={(event) => onNameChange(event.target.value)}
+          autoComplete="name"
+          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 py-2.5 text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
+          disabled={submitting}
           data-testid="hourly-account-name"
-        >
-          {name || "—"}
-        </p>
+        />
         <label className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]" htmlFor="hourly-phone">
           {t("halls.hourly.phone")}
         </label>
@@ -81,11 +94,29 @@ export default function HourlyBookingNameDialog({
           onChange={(event) => onPhoneChange(event.target.value)}
           autoComplete="tel"
           placeholder="05xxxxxxxx"
-          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] px-3 py-2.5 text-sm outline-none focus:border-[var(--wesal-maroon)] rtl:text-right"
+          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 py-2.5 text-sm outline-none focus:border-[var(--wesal-maroon)] rtl:text-right"
           disabled={submitting}
           data-testid="hourly-phone-input"
         />
         <p className="mt-1.5 text-xs text-[var(--wesal-muted)]">{t("halls.hourly.phoneHint")}</p>
+
+        <label
+          className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]"
+          htmlFor="hourly-event-type"
+        >
+          {t("halls.hourly.eventType")}
+        </label>
+        <input
+          id="hourly-event-type"
+          type="text"
+          value={eventType}
+          onChange={(event) => onEventTypeChange(event.target.value)}
+          placeholder={t("halls.hourly.eventTypePlaceholder")}
+          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 py-2.5 text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
+          disabled={submitting}
+          data-testid="hourly-event-type"
+        />
+
         {errorText ? (
           <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             {errorText}
@@ -99,7 +130,7 @@ export default function HourlyBookingNameDialog({
             type="button"
             className="btn-primary flex-1 disabled:opacity-60"
             onClick={onSubmit}
-            disabled={submitting || !name.trim() || !phone.trim()}
+            disabled={submitting || !canSubmit}
             data-testid="hourly-name-submit"
           >
             {submitting ? t("halls.booking.submitting") : t("halls.booking.submit")}

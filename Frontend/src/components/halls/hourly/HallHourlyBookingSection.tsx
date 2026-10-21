@@ -115,8 +115,11 @@ export default function HallHourlyBookingSection({
       <HourlyBookingNameDialog
         open={booking.promptOpen}
         name={booking.accountName}
+        onNameChange={booking.setAccountName}
         phone={booking.phone}
         onPhoneChange={booking.setPhone}
+        eventType={booking.eventType}
+        onEventTypeChange={booking.setEventType}
         onClose={booking.closePrompt}
         onSubmit={() => {
           void booking.submit().then((ok) => {
