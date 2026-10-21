@@ -79,9 +79,10 @@ public class SwaggerDocumentShould
     /// Search, and owner-statistics routes; 156 adds the seeker-facing GET /bookings
     /// "My bookings" endpoint; 158 adds the seeker's saved-halls list and per-hall save/remove
     /// "أضف للمفضلة" endpoints; 162 adds the durable Help Center ticket list, filing, read
-    /// receipt, and the Admin queue/reply endpoints.
+    /// receipt, and the Admin queue/reply endpoints; 168 adds Google's two auth
+    /// operations under the existing auth path.
     /// </summary>
-    private const int ExpectedPathCount = 166;
+    private const int ExpectedPathCount = 168;
 
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
