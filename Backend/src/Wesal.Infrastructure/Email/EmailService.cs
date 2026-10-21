@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Wesal.Application.Common.Interfaces;
 
 namespace Wesal.Infrastructure.Email;
@@ -151,10 +152,14 @@ public sealed class EmailService : IEmailService
             using var response = await _httpClientFactory.CreateClient().SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                var (errorCode, errorMessage) = ReadBrevoError(responseBody);
                 _logger.LogWarning(
-                    "Brevo API rejected e-mail for {To} with HTTP status {StatusCode}",
+                    "Brevo API rejected e-mail for {To} with HTTP status {StatusCode}. Error code: {BrevoErrorCode}; message: {BrevoErrorMessage}",
                     to,
-                    (int)response.StatusCode);
+                    (int)response.StatusCode,
+                    errorCode,
+                    errorMessage);
                 return false;
             }
 
@@ -170,4 +175,28 @@ public sealed class EmailService : IEmailService
             return false;
         }
     }
+
+    private static (string Code, string Message) ReadBrevoError(string responseBody)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(responseBody);
+            var root = document.RootElement;
+            var code = root.TryGetProperty("code", out var codeElement) && codeElement.ValueKind == JsonValueKind.String
+                ? codeElement.GetString()
+                : null;
+            var message = root.TryGetProperty("message", out var messageElement) && messageElement.ValueKind == JsonValueKind.String
+                ? messageElement.GetString()
+                : null;
+
+            return (LimitErrorDetail(code), LimitErrorDetail(message));
+        }
+        catch (JsonException)
+        {
+            return ("unavailable", "Brevo returned a non-JSON error response");
+        }
+    }
+
+    private static string LimitErrorDetail(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "unavailable" : value[..Math.Min(value.Length, 300)];
 }
