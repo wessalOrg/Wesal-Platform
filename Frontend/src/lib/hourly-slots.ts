@@ -98,12 +98,24 @@ export function formatClockHour(value: string, locale: string): string {
 }
 
 export function formatClockRange(from: string, to: string, locale = "ar"): string {
-  // Seeker UI + booking requests: 12h with ص/م (not 14:00), LTR-stable in RTL.
-  return `\u200E${formatClockHour(from, locale)} - ${formatClockHour(to, locale)}\u200E`;
+  // 12h + ص/م like the seeker UI. Render with StableClockRangeText in RTL screens.
+  return `${formatClockHour(from, locale)} - ${formatClockHour(to, locale)}`;
 }
 
 export function formatHourlyRange(start: string, end: string, locale = "ar"): string {
   return formatClockRange(start, end, locale);
+}
+
+/** Split a range label into LTR-safe chunks: ["2:00 م", "6:00 م"]. */
+export function splitClockRangeLabel(label: string): string[] {
+  return String(label ?? "")
+    .replace(/[\u2066\u2067\u2068\u2069\u200E\u200F]/g, "")
+    .replace(/\s*[—–]\s*/g, " - ")
+    .replace(/\s*،\s*/g, " - ")
+    .replace(/\s*,\s*/g, " - ")
+    .split(/\s+-\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 export function buildHourlySlots(

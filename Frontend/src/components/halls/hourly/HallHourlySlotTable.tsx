@@ -1,5 +1,6 @@
 "use client";
 
+import StableClockRangeText from "@/components/halls/StableClockRangeText";
 import { useT } from "@/i18n";
 import type { HourlySlot } from "@/types/hourly-booking";
 
@@ -47,12 +48,10 @@ export default function HallHourlySlotTable({
                 selected ? "bg-[var(--wesal-pink-soft)]" : "",
               ].join(" ")}
             >
-              <span
-                dir="ltr"
+              <StableClockRangeText
+                label={slot.label}
                 className="justify-self-start whitespace-nowrap text-sm font-semibold tabular-nums tracking-wide text-[var(--wesal-text)]"
-              >
-                {slot.label}
-              </span>
+              />
               <button
                 type="button"
                 disabled={disabled && !booked}

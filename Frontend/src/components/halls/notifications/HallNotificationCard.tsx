@@ -3,6 +3,7 @@
 import AcceptActionButton from "@/components/halls/notifications/AcceptActionButton";
 import AcceptanceFeedback from "@/components/halls/notifications/AcceptanceFeedback";
 import RejectActionButton from "@/components/halls/notifications/RejectActionButton";
+import StableClockRangeText from "@/components/halls/StableClockRangeText";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 import { formatDepositAmount } from "@/lib/booking-deposits";
@@ -149,10 +150,8 @@ export default function HallNotificationCard({
             <ClockIcon />
           </span>
           <div className="min-w-0 text-start">
-            <p className="truncate text-[15px] font-extrabold leading-none text-[#2a221c]">
-              <span dir="ltr" className="inline-block">
-                {formatTimeRangeDisplay(whenLabel)}
-              </span>
+            <p className="truncate text-start text-[15px] font-extrabold leading-none text-[#2a221c]">
+              <StableClockRangeText label={whenLabel} />
             </p>
             {relativeLabel ? (
               <p className="mt-1.5 text-[12px] font-semibold leading-none text-[#c0392b]">
@@ -459,16 +458,6 @@ function cardTone(state: string): string {
     return "border-red-200";
   }
   return "border-[var(--wesal-border)]";
-}
-
-function formatTimeRangeDisplay(label: string): string {
-  // Keep seeker labels as-is (e.g. "2:00 م - 6:00 م"); only normalize separators.
-  return label
-    .replace(/\s*[—–]\s*/g, " - ")
-    .replace(/\s*,\s*/g, " - ")
-    .replace(/\s*،\s*/g, " - ")
-    .replace(/\s{2,}/g, " ")
-    .trim();
 }
 
 function ClockIcon() {

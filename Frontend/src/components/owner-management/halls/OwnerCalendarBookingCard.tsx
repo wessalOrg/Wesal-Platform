@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import StableClockRangeText from "@/components/halls/StableClockRangeText";
 import { useT } from "@/i18n";
 import { formatDepositAmount } from "@/lib/booking-deposits";
 import type { OwnerCalendarBookingCardModel } from "@/lib/owner-calendar-bookings";
@@ -45,9 +46,7 @@ export default function OwnerCalendarBookingCard({
           content: (
             <span className="inline-flex min-w-0 items-center gap-1">
               <span className="shrink-0">{t("owner.calendar.detail.timeLabel")}</span>
-              <span dir="ltr" className="truncate font-bold">
-                {booking.timeLabel}
-              </span>
+              <StableClockRangeText label={booking.timeLabel} className="truncate font-bold" />
             </span>
           ),
         }
