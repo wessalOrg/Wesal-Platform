@@ -24,6 +24,7 @@ type HallContactButtonProps = {
   onOpened?: () => void;
   variant?: "bar" | "bubble" | "compact";
   label?: string;
+  className?: string;
 };
 
 export default function HallContactButton({
@@ -33,6 +34,7 @@ export default function HallContactButton({
   onOpened,
   variant = "bar",
   label,
+  className = "",
 }: HallContactButtonProps) {
   const t = useT();
   const { authReady, isGuest, canContactOwner } = useHallPermissions({ isOwner: isOwnHall });
@@ -43,11 +45,13 @@ export default function HallContactButton({
   const compact = variant === "compact";
   const faceLabel = starting ? t("halls.contact.opening") : (label ?? t("halls.contact.cta"));
   const faceClass = compact ? CONTACT_COMPACT_CLASS : CONTACT_BAR_CLASS;
-  const wrapClass = compact
-    ? "inline-flex max-w-full"
-    : bubble
-      ? "relative min-w-0 h-full w-full"
-      : "min-w-0 flex-1";
+  const wrapClass = `${
+    compact
+      ? "inline-flex max-w-full"
+      : bubble
+        ? "relative min-w-0 h-full w-full"
+        : "min-w-0 flex-1"
+  } ${className}`.trim();
 
   if (!authReady) {
     return (

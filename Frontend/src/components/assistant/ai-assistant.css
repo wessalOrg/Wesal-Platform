@@ -58,8 +58,9 @@
   position: absolute;
   z-index: 5;
   top: 44%;
-  left: calc(100% - 0.1rem);
-  right: auto;
+  /* Sit toward the page center when the mascot is docked on the inline-end. */
+  inset-inline-end: calc(100% - 0.1rem);
+  inset-inline-start: auto;
   padding: 0.42rem 0.95rem;
   border-radius: 999px;
   border: 1.5px solid rgba(232, 201, 138, 0.85);
@@ -72,7 +73,7 @@
   box-shadow:
     0 8px 18px rgba(80, 42, 45, 0.14),
     0 0 10px rgba(232, 201, 138, 0.35);
-  transform-origin: 0 50%;
+  transform-origin: 100% 50%;
   animation: wesal-ai-tab 4.2s ease-in-out;
 }
 
@@ -116,8 +117,8 @@
   content: "";
   position: absolute;
   top: 50%;
-  right: 100%;
-  left: auto;
+  inset-inline-start: 100%;
+  inset-inline-end: auto;
   width: 0.55rem;
   height: 1.5px;
   background: rgba(232, 201, 138, 0.9);

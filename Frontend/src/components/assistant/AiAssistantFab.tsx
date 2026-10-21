@@ -85,7 +85,7 @@ function AiAssistantFab({
       data-testid="ai-assistant-fab"
       data-open={open ? "true" : undefined}
       data-dragging={isDragging ? "true" : undefined}
-      className={`wesal-ai-fab wesal-ai-fab--figure fixed bottom-2 end-3 z-[105] flex h-[12rem] w-[6.5rem] touch-none flex-col items-center justify-end outline-none focus-visible:ring-4 focus-visible:ring-[rgba(193,123,127,0.35)] sm:bottom-3 sm:end-4 sm:h-[14.75rem] sm:w-[8rem]${
+      className={`wesal-ai-fab wesal-ai-fab--figure fixed bottom-2 end-3 z-[105] flex h-[9.25rem] w-[5.1rem] touch-none flex-col items-center justify-end outline-none focus-visible:ring-4 focus-visible:ring-[rgba(193,123,127,0.35)] sm:bottom-3 sm:end-4 sm:h-[12.5rem] sm:w-[6.75rem] md:h-[14.75rem] md:w-[8rem]${
         isDragging ? " wesal-ai-fab-dragging" : ""
       }`}
     >

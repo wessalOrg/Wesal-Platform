@@ -43,7 +43,7 @@ export default function HourlyBookedAlertPopup({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="hourly-booked-message"
-        className="absolute inset-x-4 top-1/2 mx-auto w-full max-w-sm -translate-y-1/2 rounded-3xl border border-[var(--wesal-gold)]/60 bg-[var(--wesal-pink)] p-6 text-center shadow-[0_24px_60px_rgba(90,40,45,0.28)]"
+        className="absolute left-1/2 top-1/2 w-[min(24rem,calc(100vw-2rem))] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-[var(--wesal-gold)]/60 bg-[var(--wesal-pink)] p-5 text-center shadow-[0_24px_60px_rgba(90,40,45,0.28)] sm:p-6"
       >
         <span
           className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-[3px] border-[var(--wesal-gold)] bg-white shadow-[0_8px_20px_rgba(193,123,127,0.28)]"

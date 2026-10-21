@@ -180,52 +180,77 @@ export default function Navbar({
       </div>
 
       {open ? (
-        <div
-          id="mobile-nav"
-          className={`wesal-navbar-mobile max-h-[min(32rem,calc(100svh-3.5rem))] overflow-y-auto border-t border-[var(--wesal-border)]/60 px-5 py-4 lg:hidden ${
-            overlay ? "wesal-navbar-mobile--overlay" : ""
-          }`}
-        >
-          <div className="flex flex-col gap-3">
-            {NAV_HREFS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="flex min-h-11 items-center py-2 text-sm font-medium text-[var(--wesal-text)]"
-                onClick={() => {
-                  setHash(navHash(link.href));
-                  setOpen(false);
-                }}
+        <div className="wesal-navbar-mobile-layer lg:hidden" role="presentation">
+          <button
+            type="button"
+            className="wesal-navbar-mobile-backdrop"
+            aria-label={t("common.close")}
+            onClick={() => setOpen(false)}
+          />
+          <div
+            id="mobile-nav"
+            className={`wesal-navbar-mobile wesal-navbar-mobile--drawer overflow-y-auto px-5 py-4 ${
+              overlay ? "wesal-navbar-mobile--overlay" : ""
+            }`}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm font-bold text-[var(--wesal-maroon)]">{t("nav.menu")}</p>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)]"
+                aria-label={t("common.close")}
+                onClick={() => setOpen(false)}
               >
-                {t(link.key)}
-              </Link>
-            ))}
-            <div className="flex items-center gap-2">
-              <LanguageSwitcher compact />
-              {authenticated ? <NavbarNotificationsButton /> : null}
-              {authenticated ? <NavbarMessagesButton onNavigate={() => setOpen(false)} /> : null}
+                ✕
+              </button>
             </div>
-            <PwaInstallButton variant="full" />
-            {status === "loading" ? (
-              <div
-                className="h-11 w-full animate-pulse rounded-xl bg-[var(--wesal-pink)]"
-                aria-hidden="true"
-              />
-            ) : authenticated ? (
-              <AuthAccountMenu
-                stacked
-                loggingOut={isLoggingOut}
-                onLogout={() => void logout()}
-                onNavigate={() => setOpen(false)}
-              />
-            ) : (
-              <GuestActions
-                login={t("nav.login")}
-                register={t("nav.register")}
-                stacked
-                onNavigate={() => setOpen(false)}
-              />
-            )}
+            <div className="flex flex-col gap-3">
+              {authenticated && status !== "loading" ? (
+                <p className="wesal-navbar-mobile-hello text-base font-bold text-[var(--wesal-maroon)]">
+                  {t("nav.hello")}{" "}
+                  {session.userName?.trim() || t("nav.account")}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <LanguageSwitcher compact />
+                {authenticated ? <NavbarMessagesButton onNavigate={() => setOpen(false)} /> : null}
+                {authenticated ? <NavbarNotificationsButton /> : null}
+              </div>
+              {NAV_HREFS.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="flex min-h-11 items-center py-2 text-sm font-medium text-[var(--wesal-text)]"
+                  onClick={() => {
+                    setHash(navHash(link.href));
+                    setOpen(false);
+                  }}
+                >
+                  {t(link.key)}
+                </Link>
+              ))}
+              <PwaInstallButton variant="full" />
+              {status === "loading" ? (
+                <div
+                  className="h-11 w-full animate-pulse rounded-xl bg-[var(--wesal-pink)]"
+                  aria-hidden="true"
+                />
+              ) : authenticated ? (
+                <AuthAccountMenu
+                  stacked
+                  loggingOut={isLoggingOut}
+                  onLogout={() => void logout()}
+                  onNavigate={() => setOpen(false)}
+                />
+              ) : (
+                <GuestActions
+                  login={t("nav.login")}
+                  register={t("nav.register")}
+                  stacked
+                  onNavigate={() => setOpen(false)}
+                />
+              )}
+            </div>
           </div>
         </div>
       ) : null}

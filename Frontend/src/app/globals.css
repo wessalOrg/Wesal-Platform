@@ -81,10 +81,22 @@ h6 {
   width: 100%;
   max-width: 72rem;
   margin-inline: auto;
-  padding-inline: 1.25rem;
+  padding-inline: 1.1rem;
+}
+
+@media (max-width: 639.98px) {
+  .container-wesal {
+    padding-inline: 1rem;
+  }
 }
 
 @media (min-width: 640px) {
+  .container-wesal {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
   .container-wesal {
     padding-inline: 2rem;
   }
@@ -2957,18 +2969,19 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .wesal-account-chip-name {
   min-width: 0;
-  max-width: 9rem;
+  max-width: min(11.5rem, 48vw);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--wesal-maroon);
 }
 
 @media (min-width: 1024px) {
   .wesal-account-chip-name {
-    max-width: 12rem;
+    max-width: 14rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -5154,6 +5167,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 @media (max-width: 767.98px) {
+  /* Always slide in from the physical right as a full-height overlay (RTL + LTR). */
   .seeker-dash-sidebar {
     position: fixed;
     top: 0;
@@ -5161,8 +5175,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     right: 0;
     left: auto;
     z-index: 80;
-    width: min(18.75rem, 88vw);
-    max-width: 18.75rem;
+    width: min(100vw, 22rem);
+    max-width: 100vw;
     height: 100svh;
     max-height: 100svh;
     border-radius: 0;
@@ -5178,15 +5192,16 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   }
 
   [dir="ltr"] .seeker-dash-sidebar {
-    right: auto;
-    left: 0;
-    border-inline-start: 0;
-    border-inline-end: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
-    transform: translateX(-105%);
-    box-shadow: 12px 0 40px rgba(40, 25, 20, 0.18);
+    right: 0;
+    left: auto;
+    border-inline-start: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+    border-inline-end: 0;
+    transform: translateX(105%);
+    box-shadow: -12px 0 40px rgba(40, 25, 20, 0.18);
   }
 
-  .seeker-dash-sidebar--open {
+  .seeker-dash-sidebar--open,
+  [dir="ltr"] .seeker-dash-sidebar--open {
     transform: translateX(0);
     visibility: visible;
     pointer-events: auto;
@@ -5237,19 +5252,25 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     order: 0;
   }
 
+  /* English / LTR: sidebar on the left so the dashboard opens correctly */
   [dir="ltr"] .seeker-dash-sidebar,
   [dir="ltr"] .seeker-dash-sidebar--open {
     order: 0;
-    right: 0;
-    left: auto;
-    border-inline-start: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
-    border-inline-end: 0;
+    right: auto;
+    left: 0;
+    border-inline-start: 0;
+    border-inline-end: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
   }
 
   .seeker-dash-main {
-    /* Always clear the fixed sidebar on the physical right */
+    /* RTL: clear the fixed sidebar on the physical right */
     margin-right: var(--seeker-sidebar-w);
     margin-left: 0;
+  }
+
+  [dir="ltr"] .seeker-dash-main {
+    margin-right: 0;
+    margin-left: var(--seeker-sidebar-w);
   }
 }
 
@@ -5476,6 +5497,11 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   .seeker-dash-main {
     margin-right: var(--seeker-sidebar-w);
     margin-left: 0;
+  }
+
+  [dir="ltr"] .seeker-dash-main {
+    margin-right: 0;
+    margin-left: var(--seeker-sidebar-w);
   }
 }
 
@@ -8155,6 +8181,265 @@ html[dir="rtl"] .seeker-notify-panel {
 
   .wesal-mabrouk-ask:hover {
     transform: none;
+  }
+}
+
+/* ─── Mobile / tablet responsive polish (layout only) ─── */
+
+@media (max-width: 1023.98px) {
+  html {
+    font-size: 15px;
+  }
+
+  .wesal-account-chip-name {
+    max-width: min(11rem, 46vw);
+    font-size: 0.78rem;
+  }
+
+  .wesal-account-menu {
+    width: min(17rem, calc(100vw - 1.25rem));
+  }
+
+  .wesal-account-menu-head {
+    padding: 0.75rem 0.85rem 0.7rem;
+    gap: 0.55rem;
+  }
+
+  .wesal-account-menu-head-avatar {
+    height: 2.25rem;
+    width: 2.25rem;
+    font-size: 0.72rem;
+  }
+
+  .wesal-account-menu-head-name,
+  .wesal-account-menu-title {
+    font-size: 0.82rem;
+    overflow: visible;
+    text-overflow: unset;
+    white-space: normal;
+  }
+
+  .seeker-dash-topbar-title {
+    font-size: 0.92rem;
+    line-height: 1.35;
+    white-space: normal;
+  }
+
+  .seeker-dash-notify,
+  .wesal-navbar-notify-btn {
+    height: 2.35rem;
+    width: 2.35rem;
+  }
+
+  .seeker-dash-notify-bell svg,
+  .wesal-navbar-notify-btn svg {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  .seeker-notify-item-body,
+  .seeker-notify-item-title {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .appointment-saved-panel,
+  [data-testid="hourly-booked-popup"] [role="alertdialog"],
+  [data-testid="hourly-booking-sent-popup"] [role="dialog"],
+  [role="dialog"].appointment-saved-panel {
+    max-width: min(22rem, calc(100vw - 1.75rem));
+    padding: 1rem;
+  }
+
+  .hall-details-view-shell,
+  [data-testid="hall-details-popup"] {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 639.98px) {
+  html {
+    font-size: 14.5px;
+  }
+
+  .consult-topics {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .consult-chip {
+    min-width: 0;
+    white-space: normal;
+    font-size: 0.7rem;
+    line-height: 1.25;
+    padding: 0.4rem 0.35rem;
+    min-height: 2.35rem;
+  }
+
+  .consult-chip:nth-child(-n + 3) {
+    grid-column: span 2;
+  }
+
+  .consult-chip:nth-child(n + 4) {
+    grid-column: span 3;
+  }
+
+  .consult-input::placeholder {
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .wesal-footer .container-wesal > .grid {
+    text-align: center;
+    justify-items: center;
+  }
+
+  .wesal-footer .container-wesal > .grid > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-inline: 0 !important;
+  }
+
+  .wesal-footer ul {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .seeker-messages-workspace,
+  .owner-chat-workspace {
+    min-height: min(42rem, calc(100svh - 7.5rem)) !important;
+    margin-inline: 0.35rem;
+  }
+
+  /* Floating inbox: keep inside the viewport on narrow phones */
+  .wesal-messages-inbox-panel {
+    max-width: calc(100vw - 1.5rem);
+    max-height: calc(100svh - 1.5rem);
+  }
+
+  /* Notifications: full-screen drawer from the physical right on phones */
+  .seeker-notify-panel {
+    position: fixed;
+    inset: 0;
+    top: 0;
+    right: 0;
+    left: auto;
+    z-index: 120;
+    width: min(100vw, 26rem);
+    max-width: 100vw;
+    height: 100svh;
+    max-height: 100svh;
+    border-radius: 0;
+    transform: none;
+    animation: wesal-notify-drawer-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  html[dir="rtl"] .seeker-notify-panel {
+    right: 0;
+    left: auto;
+  }
+}
+
+/* Guest + auth hamburger: full overlay drawer from the physical right */
+.wesal-navbar-mobile-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.wesal-navbar-mobile-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  cursor: default;
+  background: rgba(40, 25, 20, 0.42);
+}
+
+.wesal-navbar-mobile--drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  z-index: 1;
+  width: min(100vw, 22rem);
+  max-width: 100vw;
+  height: 100svh;
+  max-height: 100svh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  border-inline-start: 1px solid color-mix(in srgb, var(--wesal-border) 70%, white);
+  box-shadow: -14px 0 40px rgba(40, 25, 20, 0.2);
+  animation: wesal-notify-drawer-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.wesal-navbar-mobile-hello {
+  margin: 0;
+  line-height: 1.4;
+}
+
+@keyframes wesal-notify-drawer-in {
+  from {
+    opacity: 0.6;
+    transform: translateX(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .consult-topics {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .consult-chip {
+    min-width: 0;
+    white-space: normal;
+    font-size: 0.74rem;
+  }
+
+  .consult-chip:nth-child(-n + 3) {
+    grid-column: span 2;
+  }
+
+  .consult-chip:nth-child(n + 4) {
+    grid-column: span 3;
+  }
+
+  /* Tablet: center the notification panel under the profile/header area */
+  .seeker-notify-panel {
+    position: fixed;
+    inset: auto;
+    top: 4.25rem;
+    left: 50%;
+    right: auto;
+    z-index: 120;
+    width: min(24rem, calc(100vw - 2rem));
+    height: auto;
+    max-height: min(70vh, 28rem);
+    border-radius: 1.2rem;
+    transform: translateX(-50%);
+    /* Keep translateX(-50%) through the entrance so centering is not wiped. */
+    animation: seeker-notify-panel-center-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes seeker-notify-panel-center-in {
+  from {
+    opacity: 0.85;
+    transform: translateX(-50%) translateY(-0.45rem) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
   }
 }
 

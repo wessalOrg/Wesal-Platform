@@ -111,14 +111,16 @@ export default function HallDetailsHeader({
       {showMeta ? (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[var(--wesal-text)]">
+            <p className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-[var(--wesal-text)] sm:w-auto">
               <StarIcon />
               {rating ? (
-                <span>
-                  {rating}
-                  {reviewCount != null
-                    ? ` (${reviewCount} ${t("halls.details.reviewsCount")})`
-                    : ""}
+                <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5">
+                  <span>{rating}</span>
+                  {reviewCount != null ? (
+                    <span className="text-[var(--wesal-muted)]">
+                      ({reviewCount} {t("halls.details.reviewsCount")})
+                    </span>
+                  ) : null}
                 </span>
               ) : (
                 <span>{t("halls.details.ratingLabel")}</span>
@@ -130,15 +132,10 @@ export default function HallDetailsHeader({
             </p>
           </div>
 
-          <div className="flex items-center gap-5">
-            <button
-              type="button"
-              onClick={() => void share()}
-              className="hall-meta-action inline-flex items-center gap-2 text-sm font-semibold text-[var(--wesal-muted)]"
-            >
-              <ShareIcon bump={shareBump} />
-              {copied ? t("halls.details.shareCopied") : t("halls.details.share")}
-            </button>
+          <div
+            dir="ltr"
+            className="flex w-full items-center justify-between gap-3 sm:w-auto sm:min-w-[12rem] sm:justify-between"
+          >
             <button
               type="button"
               onClick={toggleSaved}
@@ -147,6 +144,14 @@ export default function HallDetailsHeader({
             >
               <HeartIcon filled={saved} />
               {saved ? t("halls.details.saved") : t("halls.details.save")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void share()}
+              className="hall-meta-action inline-flex items-center gap-2 text-sm font-semibold text-[var(--wesal-muted)]"
+            >
+              <ShareIcon bump={shareBump} />
+              {copied ? t("halls.details.shareCopied") : t("halls.details.share")}
             </button>
           </div>
         </div>
