@@ -133,8 +133,8 @@ public sealed class AuthService : IAuthService
 
             var sent = await _emailService.TrySendAsync(
                 user.Email,
-                "Reset your Wesal password",
-                $"You requested a password reset for your Wesal account. Open the link below within the next 24 hours to choose a new password:\n\n{resetUrl}\n\nIf you did not request this, you can safely ignore this email.",
+                "إعادة تعيين كلمة مرور وصال | Reset your Wesal password",
+                $"مرحبًا،\n\nتلقينا طلبًا لإعادة تعيين كلمة مرور حسابك في وصال. اضغط على الرابط التالي خلال 24 ساعة لاختيار كلمة مرور جديدة:\n\n{resetUrl}\n\nإذا لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة.\n\n---\n\nHello,\nWe received a request to reset your Wesal password. Open the link below within 24 hours to choose a new password:\n\n{resetUrl}\n\nIf you did not request this, you can safely ignore this email.",
                 cancellationToken);
 
             if (!sent)

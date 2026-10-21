@@ -1,7 +1,8 @@
-using System.Net;
-using System.Net.Mail;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MimeKit;
 using Wesal.Application.Common.Interfaces;
 
 namespace Wesal.Infrastructure.Email;
@@ -26,7 +27,7 @@ public sealed class EmailOptions
 }
 
 /// <summary>
-/// SMTP-backed <see cref="IEmailService"/> (US-ADMIN-08, FR-SUB-02). When no SMTP
+/// MailKit SMTP-backed <see cref="IEmailService"/> (US-ADMIN-08, FR-SUB-02). When no SMTP
 /// endpoint is configured (<c>Email:Enable</c> false or <c>Email:Host</c> empty) or the
 /// send itself fails, the service reports failure — it never pretends an e-mail was
 /// sent — so callers can apply their retry-with-escalation behaviour instead of
@@ -49,45 +50,48 @@ public sealed class EmailService : IEmailService
         string body,
         CancellationToken cancellationToken = default)
     {
-        if (!_options.Enable || string.IsNullOrWhiteSpace(_options.Host))
+        if (!_options.Enable ||
+            string.IsNullOrWhiteSpace(_options.Host) ||
+            string.IsNullOrWhiteSpace(_options.From) ||
+            string.IsNullOrWhiteSpace(_options.Username) ||
+            string.IsNullOrWhiteSpace(_options.Password))
         {
             _logger.LogWarning(
-                "E-mail send skipped for {To}: no SMTP endpoint configured (Email:Enable={Enable}, Email:Host set={HostSet})",
+                "E-mail send skipped for {To}: SMTP is not fully configured (Email:Enable={Enable}, Host/From/Username/Password set={Configured})",
                 to,
                 _options.Enable,
-                !string.IsNullOrWhiteSpace(_options.Host));
+                !string.IsNullOrWhiteSpace(_options.Host) &&
+                !string.IsNullOrWhiteSpace(_options.From) &&
+                !string.IsNullOrWhiteSpace(_options.Username) &&
+                !string.IsNullOrWhiteSpace(_options.Password));
             return false;
         }
 
         try
         {
-#pragma warning disable SYSLIB0014
+            var message = new MimeMessage();
+            message.From.Add(MailboxAddress.Parse(_options.From ?? string.Empty));
+            message.To.Add(MailboxAddress.Parse(to));
+            message.Subject = subject;
+            message.Body = new TextPart("plain") { Text = body };
+
             using var client = new SmtpClient
             {
-                Host = _options.Host,
-                Port = _options.Port,
-                EnableSsl = _options.UseSsl,
-                Timeout = 30_000,
-                DeliveryMethod = SmtpDeliveryMethod.Network,
-                UseDefaultCredentials = string.IsNullOrWhiteSpace(_options.Username),
-                Credentials = string.IsNullOrWhiteSpace(_options.Username)
-                    ? null
-                    : new NetworkCredential(_options.Username, _options.Password)
+                Timeout = 30_000
             };
 
-            var message = new MailMessage
-            {
-                From = new MailAddress(_options.From ?? string.Empty),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = false
-            };
+            var socketOptions = !_options.UseSsl
+                ? SecureSocketOptions.None
+                : _options.Port == 465
+                    ? SecureSocketOptions.SslOnConnect
+                    : SecureSocketOptions.StartTls;
 
-            message.To.Add(to);
-
-            await client.SendMailAsync(message, cancellationToken);
+            await client.ConnectAsync(_options.Host, _options.Port, socketOptions, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(_options.Username))
+                await client.AuthenticateAsync(_options.Username, _options.Password ?? string.Empty, cancellationToken);
+            await client.SendAsync(message, cancellationToken);
+            await client.DisconnectAsync(true, cancellationToken);
             return true;
-#pragma warning restore SYSLIB0014
         }
         catch (OperationCanceledException)
         {
