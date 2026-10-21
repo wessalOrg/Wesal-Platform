@@ -19,12 +19,14 @@ export default function RejectActionButton({
 }: RejectActionButtonProps) {
   const t = useT();
   const locked = busy || disabled;
-  const label = busy ? t("owner.notifications.rejecting") : t("owner.notifications.reject");
+  const label = busy
+    ? t("owner.notifications.rejecting")
+    : t("owner.notifications.rejectShort");
 
   return (
     <button
       type="button"
-      className="btn-outline hall-reject-btn min-h-11 gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)] disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none disabled:opacity-60"
+      className="hall-reject-btn inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#c0392b] bg-white px-4 text-sm font-bold text-[#c0392b] transition hover:bg-[#fdecea] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c0392b] disabled:pointer-events-none disabled:opacity-60"
       data-testid={`hall-notification-reject-${bookingId}`}
       data-state={busy ? "loading" : locked ? "disabled" : "default"}
       disabled={locked}
@@ -37,9 +39,22 @@ export default function RejectActionButton({
         onClick();
       }}
     >
-      {busy ? <Spinner /> : null}
+      {busy ? <Spinner /> : <CloseIcon />}
       {label}
     </button>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" aria-hidden="true">
+      <path
+        d="M7 7l10 10M17 7 7 17"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

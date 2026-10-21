@@ -69,7 +69,7 @@ export default function HallNotificationCard({
   const periodLabels = bookingWhenLabels(notification, t, locale);
   const whenLabel =
     periodLabels.length > 0
-      ? periodLabels.join(lang === "ar" ? "، " : ", ")
+      ? periodLabels.join(lang === "ar" ? " — " : " - ")
       : t("owner.notifications.valueMissing");
   const relativeLabel = formatBookingRelative(notification.date, t);
   const showAccept = Boolean(onAccept) && canAcceptBookingRequest(notification.status);
@@ -120,82 +120,101 @@ export default function HallNotificationCard({
       data-highlighted={highlighted ? "true" : undefined}
       aria-busy={accepting || rejecting || confirming || undefined}
     >
-      <div className="flex min-w-0 flex-col gap-3 p-3 lg:flex-row lg:items-center lg:gap-3 lg:p-3.5">
-        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          {/* 1) Hall image + name */}
-          <div className="flex min-w-0 items-center gap-2.5 sm:w-[11.5rem] sm:shrink-0">
-            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#efe8e2] sm:h-[3.75rem] sm:w-[3.75rem]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imageSrc} alt="" className="h-full w-full object-cover" />
-            </div>
+      <div className="flex min-w-0 flex-col gap-0 p-3 lg:flex-row lg:items-stretch lg:p-0">
+        {/* Hall — start (right in RTL) */}
+        <div className="flex min-w-0 items-center gap-2.5 lg:w-[13.5rem] lg:shrink-0 lg:px-3.5 lg:py-3.5">
+          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#efe8e2] sm:h-[3.75rem] sm:w-[3.75rem]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageSrc} alt="" className="h-full w-full object-cover" />
+          </div>
+          <div className="flex min-w-0 items-center gap-1">
             <p
               className="min-w-0 truncate text-sm font-extrabold text-[var(--wesal-text)]"
               title={hallName || undefined}
             >
               {hallName?.trim() || t("owner.notifications.hall")}
             </p>
-          </div>
-
-          {/* 2–4) Day + date, then time, remaining under time in red */}
-          <div className="min-w-0 sm:min-w-[9.5rem] sm:flex-1">
-            <div className="flex items-start gap-1.5">
-              <span className="mt-0.5 text-[var(--wesal-maroon)]" aria-hidden="true">
-                <DocIcon />
-              </span>
-              <div className="min-w-0">
-                {weekdayLabel ? (
-                  <p className="truncate text-[0.72rem] font-semibold text-[var(--wesal-muted)]">
-                    {weekdayLabel}
-                  </p>
-                ) : null}
-                <p className="truncate text-[0.78rem] font-bold text-[var(--wesal-text)]">
-                  {dateLabel || t("owner.notifications.valueMissing")}
-                </p>
-                <p className="mt-0.5 truncate text-[0.72rem] font-semibold text-[var(--wesal-text)]">
-                  {whenLabel}
-                </p>
-                {relativeLabel ? (
-                  <p className="mt-0.5 text-[0.68rem] font-semibold text-[#c0392b]">
-                    {t("owner.notifications.timeRemaining", { value: relativeLabel })}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          {/* 5–7) Customer avatar, name, phone (+ event type) */}
-          <div className="min-w-0 sm:min-w-[9rem] sm:flex-1">
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-sm font-extrabold text-[var(--wesal-maroon)]"
-                aria-hidden="true"
-              >
-                {avatarLetter}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-[0.78rem] font-extrabold text-[var(--wesal-text)]">
-                  {requester}
-                </p>
-                {phone ? (
-                  <p dir="ltr" className="truncate text-start text-[0.7rem] text-[var(--wesal-muted)]">
-                    {phone}
-                  </p>
-                ) : null}
-                {eventTypeLabel ? (
-                  <p className="mt-0.5 truncate text-[0.7rem] font-semibold text-[var(--wesal-maroon)]">
-                    {t("owner.notifications.eventType", { value: eventTypeLabel })}
-                  </p>
-                ) : null}
-              </div>
-            </div>
+            <span className="shrink-0 text-[var(--wesal-maroon)]" aria-hidden="true">
+              <ChevronIcon />
+            </span>
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col items-stretch gap-2 border-t border-[var(--wesal-border)] pt-3 lg:min-w-[12rem] lg:border-t-0 lg:pt-0">
+        <Divider />
+
+        {/* Time + remaining — icon on the right */}
+        <div className="flex min-w-0 items-start gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]">
+            <ClockIcon />
+          </span>
+          <div className="min-w-0">
+            <p dir="ltr" className="truncate text-start text-[0.82rem] font-extrabold text-[var(--wesal-text)]">
+              {whenLabel}
+            </p>
+            {relativeLabel ? (
+              <p className="mt-1 text-[0.68rem] font-semibold leading-4 text-[#c0392b]">
+                {t("owner.notifications.timeRemaining", { value: relativeLabel })}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <Divider />
+
+        {/* Day + date — icon on the right */}
+        <div className="flex min-w-0 items-start gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[9.5rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]">
+            <CalendarIcon />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[0.82rem] font-extrabold text-[var(--wesal-text)]">
+              {weekdayLabel || t("owner.notifications.valueMissing")}
+            </p>
+            <p className="mt-1 truncate text-[0.72rem] font-semibold text-[var(--wesal-muted)]">
+              {dateLabel || t("owner.notifications.valueMissing")}
+            </p>
+          </div>
+        </div>
+
+        <Divider />
+
+        {/* Customer — avatar on the right of name block */}
+        <div className="flex min-w-0 items-center gap-2 border-t border-[var(--wesal-border)] py-3 lg:min-w-[10rem] lg:flex-1 lg:border-t-0 lg:px-3.5 lg:py-3.5">
+          <span
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-sm font-extrabold text-[var(--wesal-maroon)]"
+            aria-hidden="true"
+          >
+            {avatarLetter}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[0.82rem] font-extrabold text-[var(--wesal-text)]">
+              {requester}
+            </p>
+            {phone ? (
+              <p className="mt-1 flex items-center gap-1 text-[0.72rem] font-semibold text-[var(--wesal-muted)]">
+                <span className="text-[var(--wesal-maroon)]" aria-hidden="true">
+                  <PhoneIcon />
+                </span>
+                <span dir="ltr">{phone}</span>
+              </p>
+            ) : null}
+            {eventTypeLabel ? (
+              <p className="mt-1 truncate text-[0.68rem] font-semibold text-[var(--wesal-maroon)]">
+                {t("owner.notifications.eventType", { value: eventTypeLabel })}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <Divider />
+
+        {/* Status + chat */}
+        <div className="flex shrink-0 flex-col items-stretch justify-center gap-2 border-t border-[var(--wesal-border)] pt-3 lg:w-[11.5rem] lg:border-t-0 lg:px-3.5 lg:py-3.5">
           {depositBadge ? (
             <span
-              className={`inline-flex self-start rounded-lg px-2.5 py-1 text-[0.68rem] font-bold lg:self-end ${depositBadge.className}`}
+              className={`inline-flex items-center gap-1.5 self-start rounded-full px-2.5 py-1 text-[0.68rem] font-bold lg:self-end ${depositBadge.className}`}
             >
+              <span className={`h-1.5 w-1.5 rounded-full ${depositBadge.dot}`} aria-hidden="true" />
               {depositBadge.label}
             </span>
           ) : null}
@@ -203,7 +222,7 @@ export default function HallNotificationCard({
           {showChat ? (
             <button
               type="button"
-              className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-[rgba(166,99,99,0.35)] bg-[#faf6f2] px-3 text-[0.78rem] font-bold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
+              className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-[rgba(166,99,99,0.35)] bg-white px-3 text-[0.75rem] font-bold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
               disabled={messagingSeeker}
               aria-busy={messagingSeeker || undefined}
               data-testid={`hall-notification-chat-seeker-${notification.id}`}
@@ -241,7 +260,9 @@ export default function HallNotificationCard({
           ) : null}
 
           {showCancelled ? <AcceptanceFeedback kind="cancelled-status" /> : null}
-          {showFinalized ? <AcceptanceFeedback kind="finalized" /> : null}
+          {showFinalized && notification.status === "Rejected" ? (
+            <AcceptanceFeedback kind="finalized" />
+          ) : null}
           {!showCancelled && feedback === "conflict" ? (
             <AcceptanceFeedback id={errorId} kind="conflict" />
           ) : null}
@@ -253,7 +274,6 @@ export default function HallNotificationCard({
             <div
               className={`hall-request-actions ${
                 showCancelled ||
-                showFinalized ||
                 feedback ||
                 notification.status === "AcceptedPendingDeposit" ||
                 notification.rejectionReason
@@ -301,10 +321,14 @@ export default function HallNotificationCard({
   );
 }
 
+function Divider() {
+  return <div className="hidden w-px shrink-0 self-stretch bg-[var(--wesal-border)] lg:block" aria-hidden="true" />;
+}
+
 function depositBadgeFor(
   notification: HallBookingNotification,
   t: (key: string, params?: Record<string, string | number>) => string,
-): { label: string; className: string } | null {
+): { label: string; className: string; dot: string } | null {
   if (notification.status === "AcceptedPendingDeposit") {
     return {
       label:
@@ -314,30 +338,35 @@ function depositBadgeFor(
             })
           : t("owner.notifications.status.pendingDeposit"),
       className: "bg-[#fff4e5] text-[#b86a0a]",
+      dot: "bg-[#d97706]",
     };
   }
   if (notification.status === "FullyBooked") {
     return {
       label: t("owner.notifications.status.fullyBooked"),
       className: "bg-[#e8f7ee] text-[#1f8a4c]",
+      dot: "bg-[#1f8a4c]",
     };
   }
   if (notification.status === "Rejected") {
     return {
       label: t("owner.notifications.status.rejected"),
       className: "bg-[#fdecea] text-[#b42318]",
+      dot: "bg-[#b42318]",
     };
   }
   if (notification.status === "Cancelled") {
     return {
       label: t("owner.notifications.status.cancelled"),
       className: "bg-[#f3f0ed] text-[var(--wesal-muted)]",
+      dot: "bg-[var(--wesal-muted)]",
     };
   }
   if (notification.status === "Pending") {
     return {
       label: t("owner.notifications.depositBadgeNone"),
       className: "bg-[#fff1e8] text-[#c06a3a]",
+      dot: "bg-[#c06a3a]",
     };
   }
   return null;
@@ -414,11 +443,33 @@ function cardTone(state: string): string {
   return "border-[var(--wesal-border)]";
 }
 
-function DocIcon() {
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.25" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 8.25v4.1l2.6 1.55" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+      <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8 3.5v3M16 3.5v3M4 9.5h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PhoneIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
-      <path d="M7 4.5h8.5L19 8v11.5H7z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M15 4.5V8h3.5M9 12h6M9 15.5h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path
+        d="M8.2 4.8h2.1l1.1 3.2-1.4 1.1a12.4 12.4 0 0 0 4.9 4.9l1.1-1.4 3.2 1.1v2.1c0 .7-.5 1.3-1.2 1.4-6.9.9-12.7-4.9-11.8-11.8.1-.7.7-1.2 1.4-1.2Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -432,6 +483,14 @@ function ChatIcon() {
         strokeWidth="1.7"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-4 w-4 rtl:rotate-180" fill="none" aria-hidden="true">
+      <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

@@ -1499,6 +1499,7 @@ const en: MessageCatalog = {
   "owner.notifications.timeRemaining": "Time left: {value}",
   "owner.notifications.valueMissing": "Unavailable",
   "owner.notifications.accept": "Approve booking",
+  "owner.notifications.acceptShort": "Approve",
   "owner.notifications.accepting": "Accepting…",
   "owner.notifications.confirmAcceptTitle": "Confirm approval",
   "owner.notifications.confirmAcceptBody":
@@ -1517,6 +1518,7 @@ const en: MessageCatalog = {
   "owner.notifications.hall": "Hall",
   "owner.notifications.cancel": "Cancel",
   "owner.notifications.reject": "Reject request",
+  "owner.notifications.rejectShort": "Reject",
   "owner.notifications.rejecting": "Rejecting…",
   "owner.notifications.rejectTitle": "Booking rejection reason",
   "owner.notifications.rejectHint":

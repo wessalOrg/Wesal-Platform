@@ -1491,6 +1491,7 @@ const ar: MessageCatalog = {
   "owner.notifications.timeRemaining": "الوقت المتبقي: {value}",
   "owner.notifications.valueMissing": "غير متوفر",
   "owner.notifications.accept": "موافقة على الطلب",
+  "owner.notifications.acceptShort": "موافقة",
   "owner.notifications.accepting": "جاري القبول",
   "owner.notifications.confirmAcceptTitle": "تأكيد الموافقة",
   "owner.notifications.confirmAcceptBody":
@@ -1509,6 +1510,7 @@ const ar: MessageCatalog = {
   "owner.notifications.hall": "القاعة",
   "owner.notifications.cancel": "إلغاء",
   "owner.notifications.reject": "رفض الطلب",
+  "owner.notifications.rejectShort": "رفض",
   "owner.notifications.rejecting": "جاري الرفض",
   "owner.notifications.rejectTitle": "سبب رفض الحجز",
   "owner.notifications.rejectHint": "يرجى توضيح سبب رفض طلب الحجز لإرساله للعميل.",

@@ -19,12 +19,14 @@ export default function AcceptActionButton({
 }: AcceptActionButtonProps) {
   const t = useT();
   const locked = busy || disabled;
-  const label = busy ? t("owner.notifications.accepting") : t("owner.notifications.accept");
+  const label = busy
+    ? t("owner.notifications.accepting")
+    : t("owner.notifications.acceptShort");
 
   return (
     <button
       type="button"
-      className="btn-primary hall-accept-btn min-h-11 gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)] disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none disabled:opacity-60"
+      className="hall-accept-btn inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#1f8a4c] bg-[#1f8a4c] px-4 text-sm font-bold text-white transition hover:bg-[#197a42] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f8a4c] disabled:pointer-events-none disabled:opacity-60"
       data-testid={`hall-notification-accept-${bookingId}`}
       data-state={busy ? "loading" : locked ? "disabled" : "default"}
       disabled={locked}
@@ -37,9 +39,23 @@ export default function AcceptActionButton({
         onClick();
       }}
     >
-      {busy ? <Spinner /> : null}
+      {busy ? <Spinner /> : <CheckIcon />}
       {label}
     </button>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" aria-hidden="true">
+      <path
+        d="M5.5 12.5 10 17l8.5-9.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
