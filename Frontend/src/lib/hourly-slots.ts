@@ -76,18 +76,7 @@ export function normalizeTimeOnly(value: unknown): string {
   return `${pad(Number(match[1]))}:${match[2]}`;
 }
 
-/** 13:00 → "13:00", 9:00 → "09:00" (24h, zero-padded). */
-export function formatClockHHmm(value: string): string {
-  const parts = String(value).split(":");
-  const hour = Number(parts[0]);
-  const minute = Number(parts[1] ?? "0");
-  if (!Number.isFinite(hour)) return value;
-  const displayHour = hour >= 24 ? 24 : hour;
-  const mins = Number.isFinite(minute) ? String(minute).padStart(2, "0") : "00";
-  return `${String(displayHour).padStart(2, "0")}:${mins}`;
-}
-
-/** 13:00 → "1:00" (12h face without meridian). */
+/** 13:00 → "1:00" (12h digits — same face the seeker picks). */
 export function formatClockFace(value: string): string {
   const parts = String(value).split(":");
   const hour = Number(parts[0]);
@@ -108,12 +97,12 @@ export function formatClockHour(value: string, locale: string): string {
   return `${face} ${morning ? "AM" : "PM"}`;
 }
 
-export function formatClockRange(from: string, to: string, _locale?: string): string {
-  // Design: "12:00 - 15:00" — 24h digits, LTR-isolated for RTL UIs.
-  return `\u200E${formatClockHHmm(from)} - ${formatClockHHmm(to)}\u200E`;
+export function formatClockRange(from: string, to: string, locale = "ar"): string {
+  // Seeker UI + booking requests: 12h with ص/م (not 14:00), LTR-stable in RTL.
+  return `\u200E${formatClockHour(from, locale)} - ${formatClockHour(to, locale)}\u200E`;
 }
 
-export function formatHourlyRange(start: string, end: string, locale?: string): string {
+export function formatHourlyRange(start: string, end: string, locale = "ar"): string {
   return formatClockRange(start, end, locale);
 }
 

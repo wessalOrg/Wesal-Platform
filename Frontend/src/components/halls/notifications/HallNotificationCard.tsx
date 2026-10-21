@@ -462,12 +462,11 @@ function cardTone(state: string): string {
 }
 
 function formatTimeRangeDisplay(label: string): string {
+  // Keep seeker labels as-is (e.g. "2:00 م - 6:00 م"); only normalize separators.
   return label
     .replace(/\s*[—–]\s*/g, " - ")
     .replace(/\s*,\s*/g, " - ")
     .replace(/\s*،\s*/g, " - ")
-    // Drop meridian markers so ranges stay as "12:00 - 3:00" like the design.
-    .replace(/\s*(ص|م|AM|PM)\b/gi, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
