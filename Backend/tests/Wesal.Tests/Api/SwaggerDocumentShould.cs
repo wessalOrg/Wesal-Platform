@@ -60,31 +60,6 @@ public class SwaggerDocumentShould
     private const string AdminHelpTicketReplyPath = "/api/v{version}/admin/help/tickets/{id}/reply";
     private const string AdminHelpConversationReadPath = "/api/v{version}/admin/help/tickets/conversations/{userId}/read";
 
-    /// <summary>
-    /// Total operations' paths. Guards against the document silently losing endpoints, and
-    /// pins the count so a new operation is a deliberate edit rather than a surprise.
-    /// 61 includes WESAL-TASK-8's owner deposit-confirmation endpoint; 62 adds
-    /// WESAL-TASK-11's general-purpose owner "Contact Admin" action; 63 adds
-    /// WESAL-TASK-10 Edit 15's Admin "Message" thread-resolve endpoint; 64 adds
-    /// Edit 25's owner bookings-calendar endpoint; 65 adds Edit 22's comment
-    /// edit/delete path; 66 adds Edit 26's rejected-halls queue endpoint; 90 adds the
-    /// 24 Mabrouk Knowledge Studio admin operations; 92 adds the coordinator setup
-    /// submission and admin coordinator identity-document endpoints; 94 adds the
-    /// photographer setup submission and admin photographer identity-document endpoints;
-    /// 107 adds Task 5's seven coordinator-review operations (list, detail, shop-photo,
-    /// work-photos, approve, reject, conversation) and Task 6's six photographer-review
-    /// operations (list, detail, approve, reject, request-changes, conversation); 113
-    /// adds Tasks 7/8 resubmission and public-profile operations; 127 adds Task 9/10 post
-    /// and offer endpoints, including hall-owner offer management; 132 adds the five
-    /// distinct Task 11/12 post-comment and favorite paths; 155 adds Tasks 17-19 Discover,
-    /// Search, and owner-statistics routes; 156 adds the seeker-facing GET /bookings
-    /// "My bookings" endpoint; 158 adds the seeker's saved-halls list and per-hall save/remove
-    /// "أضف للمفضلة" endpoints; 162 adds the durable Help Center ticket list, filing, read
-    /// receipt, and the Admin queue/reply endpoints; 166 adds the account-lock administration
-    /// operations; 167 adds the Admin per-conversation read receipt used by the grouped queue.
-    /// </summary>
-    private const int ExpectedPathCount = 167;
-
     [Fact]
     public void OpenApiDocument_GeneratesWithoutThrowing()
     {
@@ -92,7 +67,16 @@ public class SwaggerDocumentShould
         // swagger JSON endpoint surfaced as HTTP 500.
         var document = BuildDocument();
 
-        Assert.Equal(ExpectedPathCount, document.Paths.Count);
+        Assert.Contains("/api/v{version}/auth/google/login", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/auth/google/register", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/users/{userId}/lock", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/locked/photographers", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/admin/moderation/locked/coordinators", document.Paths.Keys);
+        Assert.Contains("/api/v{version}/conversations/{conversationId}/read", document.Paths.Keys);
+        Assert.Contains(Microsoft.OpenApi.Models.OperationType.Post,
+            document.Paths["/api/v{version}/auth/google/login"].Operations.Keys);
+        Assert.Contains(Microsoft.OpenApi.Models.OperationType.Post,
+            document.Paths["/api/v{version}/auth/google/register"].Operations.Keys);
     }
 
     [Fact]

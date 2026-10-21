@@ -486,6 +486,12 @@ const en: MessageCatalog = {
   "auth.login.form.error.network":
     "The server is waking up. Wait a moment and try again — this is not a problem with your internet.",
   "auth.login.form.error.generic": "Could not sign in. Check your details and try again.",
+  "auth.google.or": "OR",
+  "auth.google.notRegistered": "This Google account is not registered on Wesal. Create an account first from the registration page.",
+  "auth.google.namePrompt": "Enter your name to finish creating your account",
+  "auth.google.finishRegistration": "Create account with Google",
+  "auth.google.error": "Could not complete Google sign in. Please try again.",
+  "auth.google.unavailable": "Google sign in is not configured yet.",
   "auth.login.noAccount": "Don't have an account?",
   "auth.login.registerLink": "Create an account",
   "auth.login.forgotPassword": "Forgot your password?",
