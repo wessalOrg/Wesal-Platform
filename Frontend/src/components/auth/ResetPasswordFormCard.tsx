@@ -32,9 +32,6 @@ export default function ResetPasswordFormCard({
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const canSubmit =
-    newPassword.length > 0 && confirmPassword.length > 0 && !pending;
-
   const passwordIssueMessage = (
     issue: ReturnType<typeof getRegisterPasswordIssue>,
   ): string => {
@@ -87,9 +84,8 @@ export default function ResetPasswordFormCard({
     return undefined;
   };
 
-  const validateAll = (): FieldErrors => {
+  const validateAll = (values: { newPassword: string; confirmPassword: string }): FieldErrors => {
     const errors: FieldErrors = {};
-    const values = { newPassword, confirmPassword };
     (["newPassword", "confirmPassword"] as FieldKey[]).forEach((field) => {
       const message = validateField(field, values);
       if (message) errors[field] = message;
@@ -136,7 +132,18 @@ export default function ResetPasswordFormCard({
     event.preventDefault();
     if (pending) return;
 
-    const errors = validateAll();
+    // Read the actual form controls on submit as well as React state. Some mobile
+    // browsers/password managers fill controlled password fields without firing
+    // React's change event, which otherwise makes visible values validate as empty.
+    const formData = new FormData(event.currentTarget);
+    const values = {
+      newPassword: String(formData.get("newPassword") ?? ""),
+      confirmPassword: String(formData.get("confirmPassword") ?? ""),
+    };
+    setNewPassword(values.newPassword);
+    setConfirmPassword(values.confirmPassword);
+
+    const errors = validateAll(values);
     setFieldErrors(errors);
     setFormError(null);
     if (Object.keys(errors).length > 0) return;
@@ -258,6 +265,7 @@ export default function ResetPasswordFormCard({
 
       <form onSubmit={(event) => void onSubmit(event)} className="space-y-3.5" noValidate>
         <PasswordField
+          name="newPassword"
           label={t("auth.resetPassword.form.newPassword")}
           value={newPassword}
           onChange={(value) => updateField("newPassword", value)}
@@ -271,6 +279,7 @@ export default function ResetPasswordFormCard({
           hideLabel={t("auth.register.form.hidePassword")}
         />
         <PasswordField
+          name="confirmPassword"
           label={t("auth.resetPassword.form.confirmPassword")}
           value={confirmPassword}
           onChange={(value) => updateField("confirmPassword", value)}
@@ -286,7 +295,7 @@ export default function ResetPasswordFormCard({
 
         <button
           type="submit"
-          disabled={!canSubmit}
+          disabled={pending}
           aria-busy={pending || undefined}
           className="btn-primary wesal-auth-submit mt-1.5 w-full !min-h-12 !rounded-xl !text-base"
           data-testid="reset-password-submit"
@@ -301,6 +310,7 @@ export default function ResetPasswordFormCard({
 }
 
 function PasswordField({
+  name,
   label,
   value,
   onChange,
@@ -313,6 +323,7 @@ function PasswordField({
   showLabel,
   hideLabel,
 }: {
+  name: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -334,9 +345,11 @@ function PasswordField({
       </span>
       <div className="relative">
         <input
+          name={name}
           type={showPassword ? "text" : "password"}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          onInput={(event) => onChange(event.currentTarget.value)}
           onBlur={onBlur}
           placeholder={placeholder}
           autoComplete={autoComplete}
