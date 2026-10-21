@@ -394,11 +394,11 @@ public class HourlySlotService : IHourlySlotService
 
         foreach (var slotStart in slotStarts)
         {
-            if (slotStart.Minute != 0)
+            if (slotStart.Ticks % TimeSpan.TicksPerHour != 0)
             {
                 throw new ValidationException(new Dictionary<string, string[]>
                 {
-                    ["SlotStarts"] = ["Hourly slots are 60 minutes and must start on the hour (minutes == 00), e.g. 10:00."]
+                    ["SlotStarts"] = ["Hourly slots must start exactly on the hour, with zero minutes, seconds, and fractional seconds."]
                 });
             }
 

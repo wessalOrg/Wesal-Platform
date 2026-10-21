@@ -26,6 +26,10 @@ public class HourlyBookingRequestDtoValidator : AbstractValidator<HourlyBookingR
             .Must(slots => slots is { Count: > 0 })
             .WithMessage("Select at least one hourly slot to book.");
 
+        RuleForEach(request => request.SlotStarts)
+            .Must(start => start.Ticks % TimeSpan.TicksPerHour == 0)
+            .WithMessage("Hourly slots must start exactly on the hour, with zero minutes, seconds, and fractional seconds.");
+
         RuleFor(request => request.NameOnBooking)
             .NotEmpty()
             .WithMessage("The name on the booking is required.")
