@@ -15,6 +15,11 @@ import {
 import { subscribeOwnerBookingRequestEvents } from "@/services/booking-notification-realtime";
 import { fetchHallBookingNotifications } from "@/services/hall-notifications";
 import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
+import { mergeApiNotificationsWithManual } from "@/lib/owner-manual-booking-notification";
+import {
+  listOwnerManualBookings,
+  subscribeOwnerManualBookings,
+} from "@/lib/owner-manual-bookings-store";
 import { isPaymentRequiredApiError } from "@/lib/payment-required-error";
 import { isSystemLockedApiError } from "@/lib/system-locked-error";
 import {
@@ -52,6 +57,7 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
   const [items, setItems] = useState<HallBookingNotification[]>([]);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const statusRef = useRef(status);
+  const apiItemsRef = useRef<HallBookingNotification[]>([]);
 
   useEffect(() => {
     statusRef.current = status;
@@ -60,9 +66,17 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
   if (scopedId !== seenId) {
     setSeenId(scopedId);
     setItems([]);
+    apiItemsRef.current = [];
     setErrorKey(null);
     setStatus(scopedId ? "loading" : "idle");
   }
+
+  const publishMerged = useCallback((apiItems: HallBookingNotification[], hallId: string) => {
+    apiItemsRef.current = apiItems;
+    const merged = mergeApiNotificationsWithManual(apiItems, listOwnerManualBookings(hallId));
+    setItems(merged);
+    setStatus(merged.length === 0 ? "empty" : "ready");
+  }, []);
 
   useEffect(() => {
     if (!scopedId) return;
@@ -74,7 +88,13 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
       .then((next) => {
         if (cancelled) return;
         setItems((current) => {
-          const merged = mergePendingWithKeptSchedule(next, current);
+          const withoutManual = current.filter((item) => !item.id.startsWith("manual-"));
+          const mergedApi = mergePendingWithKeptSchedule(next, withoutManual);
+          const merged = mergeApiNotificationsWithManual(
+            mergedApi,
+            listOwnerManualBookings(scopedId),
+          );
+          apiItemsRef.current = mergedApi;
           setStatus(merged.length === 0 ? "empty" : "ready");
           return merged;
         });
@@ -85,6 +105,7 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
         const kind = notificationErrorKind(err);
         if (isPaymentRequiredApiError(err)) {
           setItems([]);
+          apiItemsRef.current = [];
           setErrorKey(null);
           setStatus("forbidden");
           reportOwnedHallPaymentRequired(scopedId);
@@ -92,12 +113,23 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
         }
         if (isSystemLockedApiError(err)) {
           setItems([]);
+          apiItemsRef.current = [];
           setErrorKey(null);
           setStatus("forbidden");
           reportOwnedHallSystemLocked(scopedId);
           return;
         }
+        // Keep locally added calendar bookings visible even if the API list fails.
+        const manualOnly = mergeApiNotificationsWithManual([], listOwnerManualBookings(scopedId));
+        if (manualOnly.length > 0 && kind !== "unauthorized" && kind !== "forbidden") {
+          apiItemsRef.current = [];
+          setItems(manualOnly);
+          setErrorKey(null);
+          setStatus("ready");
+          return;
+        }
         setItems([]);
+        apiItemsRef.current = [];
         setErrorKey(
           kind === "unauthorized"
             ? "errors.owner.notifications.unauthorized"
@@ -120,6 +152,14 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
       controller.abort();
     };
   }, [scopedId, retryTick]);
+
+  useEffect(() => {
+    if (!scopedId) return;
+    return subscribeOwnerManualBookings(() => {
+      if (statusRef.current === "forbidden" || statusRef.current === "unauthorized") return;
+      publishMerged(apiItemsRef.current, scopedId);
+    });
+  }, [scopedId, publishMerged]);
 
   useEffect(() => {
     if (!scopedId) return;

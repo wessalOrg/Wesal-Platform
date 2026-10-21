@@ -1919,6 +1919,7 @@ const ar: MessageCatalog = {
   "owner.calendar.detail.occasion": "المناسبة: {value}",
   "owner.calendar.detail.guests": "الضيوف: {count} ضيف",
   "owner.calendar.detail.time": "الوقت: {value}",
+  "owner.calendar.detail.timeLabel": "الوقت:",
   "owner.calendar.detail.price": "السعر: {value}",
   "owner.calendar.status.confirmed": "مؤكد",
   "owner.calendar.status.deposit": "بانتظار العربون",

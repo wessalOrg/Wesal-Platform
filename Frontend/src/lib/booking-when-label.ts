@@ -27,7 +27,16 @@ export function bookingWhenLabels(
   locale: string,
 ): string[] {
   const range = item.timeRange?.trim();
-  if (range) return [range];
+  if (range) {
+    const parts = range.split(/\s*[-–—]\s*/);
+    if (parts.length === 2) {
+      const from = normalizeTimeOnly(parts[0]);
+      const to = normalizeTimeOnly(parts[1]);
+      if (from && to) return [formatHourlyRange(from, to, locale)];
+    }
+    // Keep raw Latin ranges LTR-stable inside RTL labels.
+    return [`\u200E${range}\u200E`];
+  }
   const starts = item.slotStarts?.length
     ? item.slotStarts
     : item.slotStart

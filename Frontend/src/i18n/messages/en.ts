@@ -1973,6 +1973,7 @@ const en: MessageCatalog = {
   "owner.calendar.detail.occasion": "Occasion: {value}",
   "owner.calendar.detail.guests": "Guests: {count}",
   "owner.calendar.detail.time": "Time: {value}",
+  "owner.calendar.detail.timeLabel": "Time:",
   "owner.calendar.detail.price": "Price: {value}",
   "owner.calendar.status.confirmed": "Confirmed",
   "owner.calendar.status.deposit": "Awaiting deposit",

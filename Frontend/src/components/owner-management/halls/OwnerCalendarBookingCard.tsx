@@ -28,24 +28,31 @@ export default function OwnerCalendarBookingCard({
       ? {
           key: "occasion",
           icon: <OccasionIcon />,
-          text: t("owner.calendar.detail.occasion", { value: booking.title }),
+          content: t("owner.calendar.detail.occasion", { value: booking.title }),
         }
       : null,
     booking.guestsLabel
       ? {
           key: "guests",
           icon: <GuestsIcon />,
-          text: booking.guestsLabel,
+          content: booking.guestsLabel,
         }
       : null,
     booking.timeLabel
       ? {
           key: "time",
           icon: <ClockIcon />,
-          text: t("owner.calendar.detail.time", { value: booking.timeLabel }),
+          content: (
+            <span className="inline-flex min-w-0 items-center gap-1">
+              <span className="shrink-0">{t("owner.calendar.detail.timeLabel")}</span>
+              <span dir="ltr" className="truncate font-bold">
+                {booking.timeLabel}
+              </span>
+            </span>
+          ),
         }
       : null,
-  ].filter(Boolean) as Array<{ key: string; icon: ReactNode; text: string }>;
+  ].filter(Boolean) as Array<{ key: string; icon: ReactNode; content: ReactNode }>;
 
   return (
     <article
@@ -98,7 +105,7 @@ export default function OwnerCalendarBookingCard({
               <span className="text-[var(--wesal-maroon)]" aria-hidden="true">
                 {item.icon}
               </span>
-              <span className="truncate">{item.text}</span>
+              <span className="min-w-0 truncate">{item.content}</span>
             </div>
           ))}
         </div>
