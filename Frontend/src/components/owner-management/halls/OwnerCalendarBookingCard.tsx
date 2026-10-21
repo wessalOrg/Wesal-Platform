@@ -9,25 +9,20 @@ import type { OwnerCalendarBookingCardModel } from "@/lib/owner-calendar-booking
 type OwnerCalendarBookingCardProps = {
   booking: OwnerCalendarBookingCardModel;
   detailsHref: string;
+  onMessageSeeker?: (booking: OwnerCalendarBookingCardModel) => void;
+  messagingSeeker?: boolean;
 };
 
 export default function OwnerCalendarBookingCard({
   booking,
   detailsHref,
+  onMessageSeeker,
+  messagingSeeker = false,
 }: OwnerCalendarBookingCardProps) {
   const t = useT();
   const statusTone = statusBadgeTone(booking.statusKind, booking.depositAmount != null);
   const avatarLetter = booking.customerName.trim().charAt(0) || "؟";
-  const bookingRef = shortBookingRef(booking.id);
-  const phoneDigits = booking.phone?.replace(/[^\d+]/g, "") || "";
-  const telHref = phoneDigits ? `tel:${phoneDigits}` : null;
-  const priceLabel =
-    booking.totalAmount != null ? formatDepositAmount(booking.totalAmount) : null;
-  const depositLabel =
-    booking.depositAmount != null ? formatDepositAmount(booking.depositAmount) : null;
-  const remainingLabel =
-    booking.remainingAmount != null ? formatDepositAmount(booking.remainingAmount) : null;
-  const showMoneyRow = depositLabel != null || remainingLabel != null;
+  const showChat = Boolean(onMessageSeeker) && Boolean(booking.requesterUserId?.trim());
   const detailItems = [
     booking.title
       ? {
@@ -50,13 +45,6 @@ export default function OwnerCalendarBookingCard({
           text: t("owner.calendar.detail.time", { value: booking.timeLabel }),
         }
       : null,
-    priceLabel
-      ? {
-          key: "price",
-          icon: <PriceIcon />,
-          text: t("owner.calendar.detail.price", { value: priceLabel }),
-        }
-      : null,
   ].filter(Boolean) as Array<{ key: string; icon: ReactNode; text: string }>;
 
   return (
@@ -68,22 +56,15 @@ export default function OwnerCalendarBookingCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
           <span
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--wesal-maroon)] text-base font-extrabold text-white"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-maroon)] text-base font-extrabold text-white"
             aria-hidden="true"
           >
             {avatarLetter}
           </span>
           <div className="min-w-0">
-            <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <p className="truncate text-sm font-extrabold text-[var(--wesal-text)]">
-                {booking.customerName}
-              </p>
-              {bookingRef ? (
-                <p className="text-[0.72rem] font-semibold text-[var(--wesal-muted)]">
-                  {t("owner.calendar.bookingRef", { id: bookingRef })}
-                </p>
-              ) : null}
-            </div>
+            <p className="truncate text-sm font-extrabold text-[var(--wesal-text)]">
+              {booking.customerName}
+            </p>
             {booking.phone ? (
               <p
                 dir="ltr"
@@ -91,7 +72,11 @@ export default function OwnerCalendarBookingCard({
               >
                 {booking.phone}
               </p>
-            ) : null}
+            ) : (
+              <p className="mt-0.5 text-[0.72rem] font-semibold text-[var(--wesal-muted)]">
+                {t("owner.notifications.valueMissing")}
+              </p>
+            )}
           </div>
         </div>
 
@@ -119,27 +104,25 @@ export default function OwnerCalendarBookingCard({
         </div>
       ) : null}
 
-      {showMoneyRow ? (
-        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.78rem] font-bold">
-          {depositLabel != null ? (
-            <span className="text-[#1f8a4c]">
-              {t("owner.calendar.money.depositPaidLine", { amount: depositLabel })}
-            </span>
-          ) : null}
-          {depositLabel != null && remainingLabel != null ? (
-            <span className="text-[var(--wesal-muted)]" aria-hidden="true">
-              ·
-            </span>
-          ) : null}
-          {remainingLabel != null ? (
-            <span className="text-[var(--wesal-maroon)]">
-              {t("owner.calendar.money.remainingLine", { amount: remainingLabel })}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[#f7f4f1] px-2.5 py-2.5 text-center">
+        <MoneyCell
+          label={t("owner.calendar.money.total")}
+          value={booking.totalAmount}
+          tone="neutral"
+        />
+        <MoneyCell
+          label={t("owner.calendar.money.deposit")}
+          value={booking.depositAmount}
+          tone="positive"
+        />
+        <MoneyCell
+          label={t("owner.calendar.money.remaining")}
+          value={booking.remainingAmount}
+          tone="danger"
+        />
+      </div>
 
-      <div className={`mt-3 grid gap-2 ${telHref ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+      <div className={`mt-3 grid gap-2 ${showChat ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
         <Link
           href={detailsHref}
           className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--wesal-maroon)] px-3 text-sm font-bold text-white transition hover:opacity-95"
@@ -148,26 +131,50 @@ export default function OwnerCalendarBookingCard({
           <EyeIcon />
           {t("owner.calendar.viewBookingDetails")}
         </Link>
-        {telHref ? (
-          <a
-            href={telHref}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[rgba(166,99,99,0.35)] bg-[#faf6f2] px-3 text-sm font-bold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)]"
+        {showChat ? (
+          <button
+            type="button"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[rgba(166,99,99,0.35)] bg-[#faf6f2] px-3 text-sm font-bold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
+            disabled={messagingSeeker}
+            aria-busy={messagingSeeker || undefined}
             data-testid={`owner-calendar-booking-contact-${booking.id}`}
+            onClick={() => onMessageSeeker?.(booking)}
           >
-            <PhoneIcon />
-            {t("owner.notifications.contactCustomer")}
-          </a>
+            <ChatIcon />
+            {messagingSeeker
+              ? t("owner.notifications.chatWithSeekerOpening")
+              : t("owner.notifications.contactCustomer")}
+          </button>
         ) : null}
       </div>
     </article>
   );
 }
 
-function shortBookingRef(id: string): string {
-  const trimmed = id.trim();
-  if (!trimmed) return "";
-  if (trimmed.includes("-hours-")) return "";
-  return trimmed.length <= 10 ? trimmed : trimmed.slice(0, 8);
+function MoneyCell({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number | null | undefined;
+  tone: "neutral" | "positive" | "danger";
+}) {
+  const color =
+    tone === "positive"
+      ? "text-[#1f8a4c]"
+      : tone === "danger"
+        ? "text-[#c0392b]"
+        : "text-[var(--wesal-text)]";
+
+  return (
+    <div className="min-w-0">
+      <p className="text-[0.62rem] font-medium text-[var(--wesal-muted)]">{label}</p>
+      <p className={`mt-0.5 truncate text-[0.78rem] font-extrabold ${color}`} dir="ltr">
+        {value == null ? "—" : `${formatDepositAmount(value)} ₪`}
+      </p>
+    </div>
+  );
 }
 
 function statusBadgeTone(
@@ -243,25 +250,11 @@ function GuestsIcon() {
   );
 }
 
-function PriceIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
-      <path
-        d="M8.5 7.5h7.2a2 2 0 0 1 1.9 2.6l-1.4 4.2a2 2 0 0 1-1.9 1.4H9.2a2 2 0 0 1-1.9-1.4L6 10.1A2 2 0 0 1 8.5 7.5Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
-      />
-      <path d="M9 7.5V6.2A2.2 2.2 0 0 1 11.2 4h1.6A2.2 2.2 0 0 1 15 6.2V7.5" stroke="currentColor" strokeWidth="1.7" />
-    </svg>
-  );
-}
-
-function PhoneIcon() {
+function ChatIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-[var(--wesal-maroon)]" fill="none" aria-hidden="true">
       <path
-        d="M8.2 4.8h2.1l1.1 3.2-1.4 1.1a12.4 12.4 0 0 0 4.9 4.9l1.1-1.4 3.2 1.1v2.1c0 .7-.5 1.3-1.2 1.4-6.9.9-12.7-4.9-11.8-11.8.1-.7.7-1.2 1.4-1.2Z"
+        d="M5 6.5h14v9.5H9.2L5 19.2V6.5Z"
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinejoin="round"

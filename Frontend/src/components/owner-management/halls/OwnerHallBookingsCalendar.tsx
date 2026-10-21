@@ -9,6 +9,7 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import OwnerCalendarBookingCard from "@/components/owner-management/halls/OwnerCalendarBookingCard";
 import { useHallNotifications } from "@/hooks/useHallNotifications";
 import { useOwnerBookingsCalendar } from "@/hooks/useOwnerBookingsCalendar";
+import { useOwnerSeekerChat } from "@/hooks/useOwnerSeekerChat";
 import { useT } from "@/i18n";
 import { formatBookingDateLong, localTodayIso, parseDateIso } from "@/lib/booking-date";
 import {
@@ -147,6 +148,7 @@ function SelectedDayPanel({
   onRetry: () => void;
 }) {
   const t = useT();
+  const seekerChat = useOwnerSeekerChat();
 
   if (load.status === "error") {
     return (
@@ -223,6 +225,10 @@ function SelectedDayPanel({
             <OwnerCalendarBookingCard
               booking={booking}
               detailsHref={`/owner/halls/${encodeURIComponent(hallId)}/notifications?request_id=${encodeURIComponent(booking.id)}`}
+              messagingSeeker={seekerChat.opening}
+              onMessageSeeker={(item) => {
+                void seekerChat.openWithSeeker(hallId, item.requesterUserId);
+              }}
             />
           </li>
         ))}

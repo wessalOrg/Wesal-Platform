@@ -14,6 +14,8 @@ export type OwnerCalendarBookingCardModel = {
   title: string;
   customerName: string;
   phone?: string;
+  /** Platform seeker id — enables in-app chat from the calendar card. */
+  requesterUserId?: string;
   guestsLabel?: string;
   timeLabel: string;
   statusKind: OwnerCalendarBookingStatusKind;
@@ -125,6 +127,7 @@ function notificationToCard(
     title: translate("owner.calendar.bookingTitle"),
     customerName,
     phone,
+    requesterUserId: item.requesterUserId?.trim() || undefined,
     timeLabel:
       when.length > 0 ? when.join(locale.startsWith("ar") ? "، " : ", ") : translate("owner.notifications.valueMissing"),
     statusKind,
