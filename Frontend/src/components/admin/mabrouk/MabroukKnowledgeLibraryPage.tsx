@@ -82,7 +82,10 @@ export default function MabroukKnowledgeLibraryPage() {
   }
 
   async function publish(article: KnowledgeArticle) {
-    if (!window.confirm(t("admin.mabrouk.editor.publishConfirm"))) return;
+    const message = article.verificationStatus === "Verified"
+      ? t("admin.mabrouk.editor.publishConfirm")
+      : t("admin.mabrouk.editor.publishUnverifiedConfirm");
+    if (!window.confirm(message)) return;
     try {
       await adminMabroukService.publish(article.id, "Published from the Knowledge Library.");
       setNotice(t("admin.mabrouk.action.success"));

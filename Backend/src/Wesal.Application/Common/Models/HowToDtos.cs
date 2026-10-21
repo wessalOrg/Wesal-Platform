@@ -13,4 +13,5 @@ public sealed record HowToResponse(
     string Answer,
     string Category,
     string ResponseLanguage,
-    DateTime Timestamp);
+    DateTime Timestamp,
+    bool FromKnowledgeBase = false);
