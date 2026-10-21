@@ -148,7 +148,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
         aria-label={t("common.close")}
         onClick={close}
       />
-      <div className="relative z-10 flex h-[100dvh] w-full min-h-0 max-w-6xl flex-col overflow-hidden sm:h-[min(92dvh,900px)]">
+      <div className="relative z-10 mx-auto flex h-[100dvh] w-full min-h-0 max-w-[min(100%,36rem)] flex-col overflow-hidden sm:h-[min(88dvh,820px)] sm:max-w-3xl md:max-w-5xl lg:max-w-6xl">
         {content}
       </div>
     </div>
@@ -297,10 +297,10 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                   {viewHall.name}
                 </h1>
               </button>
-              <div className="mt-5 flex flex-nowrap items-center gap-2">
+              <div className="mt-5 flex w-full flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <button
                   type="button"
-                  className="inline-flex !h-10 !w-52 items-center rounded-full bg-[var(--wesal-maroon)] py-0.5 pe-1 ps-0.5 text-start text-white transition-colors hover:bg-[var(--wesal-maroon-dark)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+                  className="inline-flex !h-10 w-full items-center rounded-full bg-[var(--wesal-maroon)] py-0.5 pe-1 ps-0.5 text-start text-white transition-colors hover:bg-[var(--wesal-maroon-dark)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)] sm:!w-52"
                   data-testid="hall-popup-details-cta"
                   onClick={() => {
                     onClose?.();
@@ -324,7 +324,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                   hallId={viewHall.id}
                   hallName={viewHall.name}
                   variant="inline"
-                  className="!h-10 !w-52"
+                  className="!h-10 w-full sm:!w-52"
                 />
               </div>
             </div>

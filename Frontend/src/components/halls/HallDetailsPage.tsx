@@ -285,7 +285,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
             <AskMabroukAboutHallButton
               hallId={viewHall.id}
               hallName={viewHall.name}
-              className="!w-[12.5rem] max-w-full shrink-0"
+              className="w-full max-w-full shrink-0 sm:!w-[12.5rem]"
             />
           </section>
         ) : null}
@@ -335,7 +335,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           }`}
         >
           {showCalendar ? (
-            <div className="hall-details-booking-calendar order-2 lg:order-1">
+            <div className="hall-details-booking-calendar order-1">
               <HallHourlyBookingSection
                 hallId={viewHall.id}
                 hallName={viewHall.name}
@@ -346,7 +346,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
             </div>
           ) : null}
           <div
-            className={`hall-details-booking-summary order-1 lg:order-2 ${
+            className={`hall-details-booking-summary order-2 ${
               showCalendar ? "" : "max-w-[20rem] lg:ms-auto"
             }`}
           >
@@ -458,16 +458,17 @@ function HallInquiryActions({
         <PhoneIcon />
         {t("halls.details.tabs.inquiry")}
       </h2>
-      <p className="mt-2 text-sm leading-7 text-[var(--wesal-muted)]">
+      <p className="mt-2 overflow-x-auto whitespace-nowrap text-xs leading-6 text-[var(--wesal-muted)] [scrollbar-width:none] sm:text-sm sm:leading-7 [&::-webkit-scrollbar]:hidden">
         {t("halls.details.inquiryHint")}
       </p>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="mt-3 flex w-full flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <HallContactButton
           hallId={hallId}
           isOwnHall={isOwnHall}
           isAvailable={isAvailable}
           variant="compact"
           label={t("halls.details.inquiryMessages")}
+          className="w-full sm:w-auto"
         />
         {whatsappHref ? (
           <a
@@ -475,7 +476,7 @@ function HallInquiryActions({
             target="_blank"
             rel="noopener noreferrer"
             aria-label={t("halls.details.inquiryWhatsAppAria")}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1ebe5d]"
+            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1ebe5d] sm:w-auto"
           >
             <WhatsAppIcon />
             {t("halls.details.inquiryWhatsApp")}
@@ -484,7 +485,7 @@ function HallInquiryActions({
         {phone ? (
           <span
             dir="ltr"
-            className="inline-flex h-9 items-center rounded-full border border-[var(--wesal-border)] bg-white text-xs font-bold text-[var(--wesal-text)] transition hover:border-[var(--wesal-maroon)] hover:shadow-sm"
+            className="inline-flex h-9 w-full items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-xs font-bold text-[var(--wesal-text)] transition hover:border-[var(--wesal-maroon)] hover:shadow-sm sm:w-auto"
           >
             <a
               href={`tel:${phone.replace(/[^\d+]/g, "")}`}

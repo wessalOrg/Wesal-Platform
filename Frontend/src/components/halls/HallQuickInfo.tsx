@@ -95,7 +95,13 @@ export default function HallQuickInfo({ hall }: HallQuickInfoProps) {
             <p className="text-[0.7rem] font-semibold text-[var(--wesal-muted)] sm:text-xs">
               {item.label}
             </p>
-            <p className="mt-0.5 truncate text-sm font-bold text-[var(--wesal-text)]">
+            <p
+              className={`mt-0.5 text-sm font-bold leading-snug text-[var(--wesal-text)] ${
+                item.id === "price"
+                  ? "whitespace-normal break-words text-[0.78rem] sm:text-sm"
+                  : "truncate"
+              }`}
+            >
               {item.value}
             </p>
           </div>
