@@ -46,7 +46,10 @@ export function bookingsForDate(
     .filter((item) => parseDateIso(item.date) === date)
     .map((item, index) => manualToCard(item, translate, locale, index));
 
+  // Manual bookings are already rendered from the local store; skip the same
+  // rows when useHallNotifications merged them into the notifications list.
   const matched = notifications
+    .filter((item) => !isManualBookingId(item.id))
     .filter((item) => parseDateIso(item.date) === date)
     .filter((item) => item.status === "Pending" || item.status === "AcceptedPendingDeposit" || item.status === "FullyBooked")
     .map((item, index) => notificationToCard(item, translate, locale, index + manual.length));
@@ -75,6 +78,7 @@ export function upcomingBookings(
 ): OwnerCalendarBookingCardModel[] {
   const today = localTodayIso();
   const fromNotifications = notifications
+    .filter((item) => !isManualBookingId(item.id))
     .filter((item) => {
       const date = parseDateIso(item.date);
       if (!date || date < today) return false;
@@ -96,6 +100,10 @@ export function upcomingBookings(
   return [...fromManual, ...fromNotifications]
     .sort((left, right) => left.date.localeCompare(right.date))
     .slice(0, limit);
+}
+
+function isManualBookingId(id: string): boolean {
+  return id.startsWith("manual-");
 }
 
 export function formatUpcomingDateLabel(date: string, locale: string): string {
