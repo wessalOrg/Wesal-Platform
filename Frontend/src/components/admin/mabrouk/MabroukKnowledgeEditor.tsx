@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/i18n";
+import { ApiError } from "@/lib/api-error";
 import { adminMabroukService } from "@/services/admin-mabrouk";
 import type {
   KnowledgeArticle,
@@ -44,13 +45,15 @@ function fromArticle(article: KnowledgeArticle | null): FormState {
     answerEn: article?.answerEn ?? "",
     source: article?.source ?? "",
     priority: article?.priority ?? 10,
-    verificationStatus: article?.verificationStatus === "Verified" ? "Verified" : "NeedsVerification",
+    verificationStatus: article
+      ? article.verificationStatus === "Verified" ? "Verified" : "NeedsVerification"
+      : "Verified",
     effectiveFrom: article?.effectiveFrom ?? "",
     effectiveUntil: article?.effectiveUntil ?? "",
     reviewAt: article?.reviewAt ?? "",
     overridesBuiltInKey: article?.overridesBuiltInKey ?? "",
     aliasesText: article?.aliases.map((alias) => alias.text).join("\n") ?? "",
-    changeNote: "",
+    changeNote: article ? "" : "Manual answer created in Mabrouk Studio.",
     aiInput: "",
   };
 }
@@ -61,6 +64,7 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
   const [editingId, setEditingId] = useState(article && !article.isBuiltIn ? article.id : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [suggestion, setSuggestion] = useState<KnowledgeDraftSuggestion | null>(null);
   const [conflicts, setConflicts] = useState<{ severity: string; message: string }[]>([]);
   const [preview, setPreview] = useState<SimulatorResult | null>(null);
@@ -72,7 +76,14 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
   );
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setNotice("");
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function failureMessage(error: unknown): string {
+    return error instanceof ApiError && error.message.trim()
+      ? error.message
+      : t("admin.mabrouk.action.failure");
   }
 
   function buildInput(): KnowledgeArticleInput {
@@ -98,8 +109,13 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
   }
 
   async function persistDraft(): Promise<KnowledgeArticle | null> {
+    if (!form.changeNote.trim()) {
+      setError(t("admin.mabrouk.editor.changeNoteRequired"));
+      return null;
+    }
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       const result = editingId
         ? await adminMabroukService.updateKnowledge(editingId, buildInput())
@@ -107,8 +123,8 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
       setEditingId(result.id);
       onSaved(result);
       return result;
-    } catch {
-      setError(t("admin.mabrouk.action.failure"));
+    } catch (error) {
+      setError(failureMessage(error));
       return null;
     } finally {
       setBusy(false);
@@ -117,7 +133,10 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
 
   async function saveDraft() {
     const saved = await persistDraft();
-    if (saved) setError("");
+    if (saved) {
+      setError("");
+      setNotice(t("admin.mabrouk.editor.draftSaved"));
+    }
   }
 
   async function createAiSuggestion() {
@@ -137,8 +156,8 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
       const baseKey = result.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       if (!form.key && baseKey) setField("key", baseKey);
       setConflicts(result.potentialConflicts.map((message) => ({ severity: "warning", message })));
-    } catch {
-      setError(t("admin.mabrouk.action.failure"));
+    } catch (error) {
+      setError(failureMessage(error));
     } finally {
       setBusy(false);
     }
@@ -151,8 +170,8 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
     try {
       const question = aliases[0] ?? form.title;
       setPreview(await adminMabroukService.simulate(question, /[\u0600-\u06ff]/.test(question) ? "ar" : "en", true, saved.id));
-    } catch {
-      setError(t("admin.mabrouk.action.failure"));
+    } catch (error) {
+      setError(failureMessage(error));
     } finally {
       setBusy(false);
     }
@@ -170,12 +189,14 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
         setError(t("admin.mabrouk.editor.conflicts"));
         return;
       }
-      if (!window.confirm(t("admin.mabrouk.editor.publishConfirm"))) return;
+      if (!window.confirm(form.verificationStatus === "Verified"
+        ? t("admin.mabrouk.editor.publishConfirm")
+        : t("admin.mabrouk.editor.publishUnverifiedConfirm"))) return;
       const published = await adminMabroukService.publish(saved.id, form.changeNote);
       onSaved(published);
       onClose();
-    } catch {
-      setError(t("admin.mabrouk.action.failure"));
+    } catch (error) {
+      setError(failureMessage(error));
     } finally {
       setBusy(false);
     }
@@ -244,6 +265,11 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
                 <option value="Verified">{t("admin.mabrouk.editor.verified")}</option>
                 <option value="NeedsVerification">{t("admin.mabrouk.editor.needsVerification")}</option>
               </select>
+              {form.verificationStatus !== "Verified" ? (
+                <p className="text-xs font-semibold leading-5 text-amber-800" data-testid="mabrouk-verification-warning">
+                  {t("admin.mabrouk.editor.verificationWarning")}
+                </p>
+              ) : null}
             </Field>
             <Field label={t("admin.mabrouk.editor.answerAr")} className="sm:col-span-2">
               <textarea className={textareaClass} value={form.answerAr} onChange={(event) => setField("answerAr", event.target.value)} maxLength={12000} />
@@ -253,6 +279,7 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
             </Field>
             <Field label={t("admin.mabrouk.editor.aliases")} className="sm:col-span-2">
               <textarea className="min-h-28 w-full resize-y rounded-xl border border-[var(--wesal-border)] bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-[var(--wesal-maroon)]" placeholder={t("admin.mabrouk.editor.addAlias")} value={form.aliasesText} onChange={(event) => setField("aliasesText", event.target.value)} />
+              <p className="text-xs leading-5 text-[var(--wesal-muted)]">{t("admin.mabrouk.editor.aliasHint")}</p>
             </Field>
             <Field label={t("admin.mabrouk.editor.effectiveFrom")}>
               <input className={inputClass} type="date" value={form.effectiveFrom} onChange={(event) => setField("effectiveFrom", event.target.value)} />
@@ -282,6 +309,7 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
             </section>
           ) : null}
           {error ? <p className="rounded-xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-sm text-[var(--wesal-maroon-dark)]" role="alert">{error}</p> : null}
+          {notice ? <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800" role="status" data-testid="mabrouk-editor-notice">{notice}</p> : null}
           {preview ? (
             <section className="rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] p-4" data-testid="mabrouk-draft-preview">
               <p className="text-xs font-bold text-[var(--wesal-muted)]">{t("admin.mabrouk.simulator.answer")}</p>

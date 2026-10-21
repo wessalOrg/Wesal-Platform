@@ -202,7 +202,8 @@ public sealed partial class HowToService : IHowToService
                     ComposeAnswer(official, effectiveLanguage),
                     official.Category,
                     effectiveLanguage,
-                    DateTime.UtcNow);
+                    DateTime.UtcNow,
+                    FromKnowledgeBase: true);
             }
         }
 
@@ -285,7 +286,11 @@ public sealed partial class HowToService : IHowToService
             return new HowToResponse(AddHallVisibility(language), "hall-approval", language ?? DefaultLanguage, DateTime.UtcNow);
 
         var answer = await AskHowToAsync(question, language, cancellationToken, allowModel: false);
-        return IsKnownAnswerCategory(answer.Category) ? answer : null;
+        // Official categories are trusted product facts; a verified Dynamic answer
+        // that proved its relevance at alias/title level is trusted as well even
+        // when an Admin filed it under a custom category. Weak lexical matches
+        // never set this flag, so they still fall through to orchestration.
+        return IsKnownAnswerCategory(answer.Category) || answer.FromKnowledgeBase ? answer : null;
     }
 
     /// <summary>
@@ -304,7 +309,7 @@ public sealed partial class HowToService : IHowToService
         "platform", "faq", "policies", "support", "creator", "booking", "booking-cancel",
         "booking-rejected", "registration", "login", "hall-owner", "hall-approval", "language",
         "install", "ratings", "comments", "messaging", "subscription", "availability", "booking-status",
-        "mabrouk-development-team",
+        "mabrouk", "mabrouk-development-team",
         "hall-management", "hall-details", "search", "capabilities"
     };
 
