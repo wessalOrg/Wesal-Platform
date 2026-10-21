@@ -222,7 +222,7 @@ export default function HallNotificationCard({
           {showChat ? (
             <button
               type="button"
-              className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-[rgba(166,99,99,0.35)] bg-white px-3 text-[0.75rem] font-bold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-1.5 self-start rounded-full bg-[#fff1e8] px-3 py-1.5 text-[0.68rem] font-bold text-[#c06a3a] transition hover:bg-[#ffe8dc] disabled:opacity-60 lg:self-end"
               disabled={messagingSeeker}
               aria-busy={messagingSeeker || undefined}
               data-testid={`hall-notification-chat-seeker-${notification.id}`}
@@ -476,7 +476,7 @@ function PhoneIcon() {
 
 function ChatIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
       <path
         d="M5 6.5h14v9.5H9.2L5 19.2V6.5Z"
         stroke="currentColor"
