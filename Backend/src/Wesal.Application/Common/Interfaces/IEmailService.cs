@@ -20,4 +20,17 @@ public interface IEmailService
         string subject,
         string body,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends an email with optional recipient display name and HTML alternative.
+    /// Existing email-service implementations can fall back to the plain-text overload.
+    /// </summary>
+    Task<bool> TrySendAsync(
+        string to,
+        string subject,
+        string body,
+        string? recipientName,
+        string? htmlBody,
+        CancellationToken cancellationToken = default)
+        => TrySendAsync(to, subject, body, cancellationToken);
 }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using System.Net;
+using System.Text.Json;
 using Wesal.Infrastructure.Email;
 
 namespace Wesal.Tests.Infrastructure;
@@ -55,15 +56,23 @@ public class EmailServiceShould
                 capturedPayload = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
             })));
 
-        var sent = await service.TrySendAsync("user@example.com", "Reset", "Reset body");
+        var sent = await service.TrySendAsync(
+            "user@example.com",
+            "Reset",
+            "Reset body",
+            "Mohammed Shamaa",
+            "<html><body><a href=\"https://wesal.test/reset-password\">Reset</a></body></html>");
 
         Assert.True(sent);
         Assert.Equal("https://api.brevo.com/v3/smtp/email", capturedUri);
         Assert.Equal("test-key", capturedApiKey);
-        Assert.Contains("\"email\":\"wesalplatform.gaza@gmail.com\"", capturedPayload);
-        Assert.Contains("\"email\":\"user@example.com\"", capturedPayload);
-        Assert.Contains("\"name\":\"Wesal User\"", capturedPayload);
-        Assert.Contains("\"textContent\":\"Reset body\"", capturedPayload);
+        using var payload = JsonDocument.Parse(capturedPayload!);
+        Assert.Equal("wesalplatform.gaza@gmail.com", payload.RootElement.GetProperty("sender").GetProperty("email").GetString());
+        var recipient = payload.RootElement.GetProperty("to")[0];
+        Assert.Equal("user@example.com", recipient.GetProperty("email").GetString());
+        Assert.Equal("Mohammed Shamaa", recipient.GetProperty("name").GetString());
+        Assert.Contains("href=", payload.RootElement.GetProperty("htmlContent").GetString());
+        Assert.False(payload.RootElement.TryGetProperty("textContent", out _));
     }
 
     [Fact]

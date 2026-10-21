@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Text.Encodings.Web;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Models;
 using Wesal.Domain.Constants;
@@ -130,11 +131,39 @@ public sealed class AuthService : IAuthService
         {
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var resetUrl = BuildResetUrl(user.Email, token);
+            var encodedResetUrl = HtmlEncoder.Default.Encode(resetUrl);
+            var encodedFullName = HtmlEncoder.Default.Encode(user.FullName);
+            var plainBody = $"مرحبًا {user.FullName}،\n\nتلقينا طلبًا لإعادة تعيين كلمة مرور حسابك في وصال. افتح الرابط التالي خلال 24 ساعة لاختيار كلمة مرور جديدة:\n\n{resetUrl}\n\nإذا لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة.\n\n---\n\nHello {user.FullName},\nWe received a request to reset your Wesal password. Open the link below within 24 hours to choose a new password:\n\n{resetUrl}\n\nIf you did not request this, you can safely ignore this email.";
+            var htmlBody = $"""
+                <!doctype html>
+                <html lang="ar" dir="rtl">
+                <head><meta charset="utf-8"></head>
+                <body style="margin:0;background:#f7f3f1;padding:24px;font-family:Arial,sans-serif;color:#302522">
+                  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:32px;text-align:center">
+                    <h2 style="color:#8e4b4b">مرحبًا {encodedFullName}،</h2>
+                    <p>تلقينا طلبًا لإعادة تعيين كلمة مرور حسابك في وصال.</p>
+                    <p>اضغط الزر أدناه خلال 24 ساعة لاختيار كلمة مرور جديدة:</p>
+                    <a href="{encodedResetUrl}" style="display:inline-block;margin:16px 0;padding:14px 26px;border-radius:10px;background:#a85d63;color:#fff;text-decoration:none;font-weight:bold">إعادة تعيين كلمة المرور</a>
+                    <p style="font-size:13px;color:#666">إذا لم يعمل الزر، انسخ هذا الرابط وافتحه في المتصفح:</p>
+                    <p dir="ltr" style="overflow-wrap:anywhere;font-size:12px"><a href="{encodedResetUrl}">{encodedResetUrl}</a></p>
+                    <p style="font-size:13px;color:#666">إذا لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة.</p>
+                    <hr style="border:0;border-top:1px solid #eee;margin:24px 0">
+                    <div dir="ltr">
+                      <h3>Reset your Wesal password</h3>
+                      <p>Hello {encodedFullName}, click below within 24 hours to choose a new password.</p>
+                      <a href="{encodedResetUrl}" style="display:inline-block;margin:12px 0;padding:14px 26px;border-radius:10px;background:#a85d63;color:#fff;text-decoration:none;font-weight:bold">Reset password</a>
+                    </div>
+                  </div>
+                </body>
+                </html>
+                """;
 
             var sent = await _emailService.TrySendAsync(
                 user.Email,
                 "إعادة تعيين كلمة مرور وصال | Reset your Wesal password",
-                $"مرحبًا،\n\nتلقينا طلبًا لإعادة تعيين كلمة مرور حسابك في وصال. اضغط على الرابط التالي خلال 24 ساعة لاختيار كلمة مرور جديدة:\n\n{resetUrl}\n\nإذا لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة.\n\n---\n\nHello,\nWe received a request to reset your Wesal password. Open the link below within 24 hours to choose a new password:\n\n{resetUrl}\n\nIf you did not request this, you can safely ignore this email.",
+                plainBody,
+                user.FullName,
+                htmlBody,
                 cancellationToken);
 
             if (!sent)

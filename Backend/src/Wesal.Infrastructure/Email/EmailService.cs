@@ -58,9 +58,18 @@ public sealed class EmailService : IEmailService
         string subject,
         string body,
         CancellationToken cancellationToken = default)
+        => await TrySendAsync(to, subject, body, null, null, cancellationToken);
+
+    public async Task<bool> TrySendAsync(
+        string to,
+        string subject,
+        string body,
+        string? recipientName,
+        string? htmlBody,
+        CancellationToken cancellationToken = default)
     {
         if (string.Equals(_options.Provider, EmailOptions.BrevoApiProvider, StringComparison.OrdinalIgnoreCase))
-            return await TrySendWithBrevoApiAsync(to, subject, body, cancellationToken);
+            return await TrySendWithBrevoApiAsync(to, subject, body, recipientName, htmlBody, cancellationToken);
 
         if (!_options.Enable ||
             string.IsNullOrWhiteSpace(_options.Host) ||
@@ -83,9 +92,24 @@ public sealed class EmailService : IEmailService
         {
             var message = new MimeMessage();
             message.From.Add(MailboxAddress.Parse(_options.From ?? string.Empty));
-            message.To.Add(MailboxAddress.Parse(to));
+            var recipient = MailboxAddress.Parse(to);
+            message.To.Add(new MailboxAddress(
+                string.IsNullOrWhiteSpace(recipientName) ? recipient.Name : recipientName,
+                recipient.Address));
             message.Subject = subject;
-            message.Body = new TextPart("plain") { Text = body };
+            if (string.IsNullOrWhiteSpace(htmlBody))
+            {
+                message.Body = new TextPart("plain") { Text = body };
+            }
+            else
+            {
+                var alternatives = new Multipart("alternative")
+                {
+                    new TextPart("plain") { Text = body },
+                    new TextPart("html") { Text = htmlBody }
+                };
+                message.Body = alternatives;
+            }
 
             using var client = new SmtpClient
             {
@@ -120,6 +144,8 @@ public sealed class EmailService : IEmailService
         string to,
         string subject,
         string body,
+        string? recipientName,
+        string? htmlBody,
         CancellationToken cancellationToken)
     {
         if (!_options.Enable ||
@@ -138,23 +164,26 @@ public sealed class EmailService : IEmailService
         {
             var sender = MailboxAddress.Parse(_options.From);
             var recipient = MailboxAddress.Parse(to);
+            var displayName = !string.IsNullOrWhiteSpace(recipientName)
+                ? recipientName
+                : !string.IsNullOrWhiteSpace(recipient.Name)
+                    ? recipient.Name
+                    : "Wesal User";
             using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
             request.Headers.TryAddWithoutValidation("api-key", _options.ApiKey);
             request.Headers.TryAddWithoutValidation("accept", "application/json");
-            request.Content = JsonContent.Create(new
+            var payload = new Dictionary<string, object>
             {
-                sender = new { name = sender.Name, email = sender.Address },
-                to = new[]
+                ["sender"] = new { name = sender.Name, email = sender.Address },
+                ["to"] = new[]
                 {
-                    new
-                    {
-                        name = string.IsNullOrWhiteSpace(recipient.Name) ? "Wesal User" : recipient.Name,
-                        email = recipient.Address
-                    }
+                    new { name = displayName, email = recipient.Address }
                 },
-                subject,
-                textContent = body
-            });
+                ["subject"] = subject
+            };
+            payload[string.IsNullOrWhiteSpace(htmlBody) ? "textContent" : "htmlContent"] =
+                string.IsNullOrWhiteSpace(htmlBody) ? body : htmlBody;
+            request.Content = JsonContent.Create(payload);
 
             using var response = await _httpClientFactory.CreateClient().SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)

@@ -210,6 +210,9 @@ public class AuthServiceShould : IDisposable
         Assert.Contains(TestFrontendUrl + "/reset-password", sent.Body);
         Assert.Contains("token=", sent.Body);
         Assert.NotEmpty(ExtractResetToken(sent.Body));
+        Assert.Equal("Reset Tester", sent.RecipientName);
+        Assert.Contains("<a href=\"https://wesal.test/reset-password?", sent.HtmlBody);
+        Assert.Contains("Reset password", sent.HtmlBody);
     }
 
     [Fact]
@@ -408,6 +411,27 @@ public class AuthServiceShould : IDisposable
             return Task.FromResult(!FailSends);
         }
 
-        public sealed record EmailRecord(string To, string Subject, string Body);
+        public Task<bool> TrySendAsync(
+            string to,
+            string subject,
+            string body,
+            string? recipientName,
+            string? htmlBody,
+            CancellationToken cancellationToken = default)
+        {
+            if (!FailSends)
+            {
+                Sent.Add(new EmailRecord(to, subject, body, recipientName, htmlBody));
+            }
+
+            return Task.FromResult(!FailSends);
+        }
+
+        public sealed record EmailRecord(
+            string To,
+            string Subject,
+            string Body,
+            string? RecipientName = null,
+            string? HtmlBody = null);
     }
 }
