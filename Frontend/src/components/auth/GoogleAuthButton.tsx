@@ -22,6 +22,19 @@ export default function GoogleAuthButton({ onCredential, disabled }: { onCredent
   }, [onCredential]);
 
   useEffect(() => {
+    if (!loaded || !clientId || renderedHost.current === buttonHost) return;
+
+    // A cached GIS script may not trigger onLoad after this component remounts.
+    // Give the SDK a short window to become available, then show an error instead
+    // of leaving an empty space if Google could not initialize the button.
+    const timeout = window.setTimeout(() => {
+      if (renderedHost.current !== buttonHost) setRenderFailed(true);
+    }, 8000);
+
+    return () => window.clearTimeout(timeout);
+  }, [loaded, clientId, buttonHost]);
+
+  useEffect(() => {
     if (!loaded || !clientId || !window.google) return;
     if (!buttonHost || renderedHost.current === buttonHost) return;
 
@@ -55,6 +68,7 @@ export default function GoogleAuthButton({ onCredential, disabled }: { onCredent
       src="https://accounts.google.com/gsi/client"
       strategy="afterInteractive"
       onLoad={() => setLoaded(true)}
+      onReady={() => setLoaded(true)}
       onError={() => setRenderFailed(true)}
     />
     <div className={`flex min-h-10 w-full justify-center ${disabled ? "pointer-events-none opacity-60" : ""}`}>
