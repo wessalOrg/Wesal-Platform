@@ -487,6 +487,7 @@ const ar: MessageCatalog = {
   "auth.google.notRegistered": "هذا الحساب غير موجود في وصال. أنشئ حسابًا أولًا من صفحة التسجيل.",
   "auth.google.namePrompt": "أدخل اسمك لإكمال إنشاء الحساب",
   "auth.google.finishRegistration": "إنشاء الحساب عبر Google",
+  "auth.google.cancelRegistration": "إلغاء والعودة إلى التسجيل العادي",
   "auth.google.error": "تعذر إكمال الدخول عبر Google. حاول مرة أخرى.",
   "auth.google.unavailable": "تسجيل Google غير مهيأ حاليًا.",
   "auth.login.noAccount": "ليس لديك حساب ؟",
