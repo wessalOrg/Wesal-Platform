@@ -6,8 +6,8 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import { HALL_REGION_LABEL_KEYS, isHallRegion } from "@/constants/hallRegions";
 import { useT } from "@/i18n";
 import { HALL_OWNER_HALLS_PATH } from "@/lib/account-profile-path";
+import HallYouTubeEmbed from "@/components/halls/HallYouTubeEmbed";
 import { localizeHallName } from "@/lib/localize-hall-display";
-import { toStoredYouTubeUrl, toYouTubeVideoId } from "@/lib/youtube-embed";
 import { fetchOwnerHallDetails } from "@/services/hall-owner-hall-management";
 import type { HallOwnerHallDetails } from "@/types/hall-owner-hall-management";
 
@@ -67,9 +67,6 @@ export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewP
   const name = localizeHallName(details.id, details.name, lang);
   const region = details.region && isHallRegion(details.region) ? t(HALL_REGION_LABEL_KEYS[details.region]) : "";
   const photos = hallPhotoUrls(details);
-  const youtubeHref = toYouTubeVideoId(details.youtubeVideoUrl)
-    ? toStoredYouTubeUrl(details.youtubeVideoUrl)
-    : "";
   const price =
     details.price != null && details.price > 0 ? `${details.price.toLocaleString("en-US")} ₪` : "—";
   const hours =
@@ -97,19 +94,9 @@ export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewP
         ) : (
           <p className="px-5 py-8 text-sm text-[var(--wesal-muted)]">{t("owner.management.addHall.sections.photos")}</p>
         )}
-        {youtubeHref ? (
-          <a
-            href={youtubeHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2 px-5 pb-5 text-base font-semibold text-[var(--wesal-text)]"
-          >
-            <span className="font-bold text-[#241c18]">{t("halls.details.youtubeLead")}</span>{" "}
-            <span className="font-bold text-[var(--wesal-maroon)] underline underline-offset-4 group-hover:text-[var(--wesal-maroon-dark)]">
-              {t("halls.details.youtubeHere")}
-            </span>
-          </a>
-        ) : null}
+        <div className="px-5 pb-5">
+          <HallYouTubeEmbed url={details.youtubeVideoUrl} variant="link" />
+        </div>
       </section>
 
       <section className="rounded-[28px] border border-[var(--wesal-border)] bg-white p-5">

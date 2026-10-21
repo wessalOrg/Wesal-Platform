@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
 import { useT } from "@/i18n";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 import { toYouTubeEmbedUrl, toYouTubeVideoId } from "@/lib/youtube-embed";
@@ -28,6 +29,11 @@ export default function HallYouTubeEmbed({
   const videoId = toYouTubeVideoId(url);
   const embedBase = toYouTubeEmbedUrl(url);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -46,6 +52,65 @@ export default function HallYouTubeEmbed({
 
   const embedSrc = `${embedBase}?autoplay=1&rel=0&modestbranding=1`;
 
+  const openModal = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setOpen(true);
+  };
+
+  const closeModal = () => setOpen(false);
+
+  const modal =
+    open && mounted
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[400] flex items-center justify-center p-3 sm:p-4"
+            role="presentation"
+            data-testid="hall-youtube-modal"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 cursor-default bg-[rgba(40,25,20,0.72)]"
+              aria-label={t("common.close")}
+              onClick={closeModal}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={titleId}
+              className="relative w-full max-w-4xl overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[#1a1210] shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2.5 sm:px-4">
+                <p id={titleId} className="truncate text-sm font-bold text-white/95">
+                  {t("halls.details.youtubeWatch")}
+                </p>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  aria-label={t("common.close")}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/95 text-[var(--wesal-maroon)] shadow transition hover:bg-[var(--wesal-maroon)] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  data-testid="hall-youtube-close"
+                >
+                  <CloseIcon />
+                </button>
+              </div>
+              <div className="aspect-video w-full bg-black">
+                <iframe
+                  src={embedSrc}
+                  title={t("halls.details.youtube")}
+                  className="h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <>
       {variant === "poster" ? (
@@ -58,7 +123,7 @@ export default function HallYouTubeEmbed({
           </p>
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={openModal}
             aria-label={t("halls.details.youtubeWatch")}
             className="group relative block aspect-video w-full overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-black"
             data-testid="hall-youtube-open"
@@ -83,7 +148,7 @@ export default function HallYouTubeEmbed({
       ) : (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={openModal}
           className="group inline-flex items-center gap-2 text-base font-semibold text-[var(--wesal-text)]"
           data-testid="hall-youtube-link"
           aria-haspopup="dialog"
@@ -97,56 +162,7 @@ export default function HallYouTubeEmbed({
           </span>
         </button>
       )}
-
-      {open ? (
-        <div
-          className="fixed inset-0 z-[300] flex items-center justify-center p-3 sm:p-4"
-          role="presentation"
-          data-testid="hall-youtube-modal"
-        >
-          <button
-            type="button"
-            className="absolute inset-0 cursor-default bg-[rgba(40,25,20,0.72)]"
-            aria-label={t("common.close")}
-            onClick={() => setOpen(false)}
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            className="relative w-full max-w-4xl overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[#1a1210] shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2.5 sm:px-4">
-              <p
-                id={titleId}
-                className="truncate text-sm font-bold text-white/95"
-              >
-                {t("halls.details.youtubeWatch")}
-              </p>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label={t("common.close")}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/95 text-[var(--wesal-maroon)] shadow transition hover:bg-[var(--wesal-maroon)] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                data-testid="hall-youtube-close"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-            <div className="aspect-video w-full bg-black">
-              <iframe
-                src={embedSrc}
-                title={t("halls.details.youtube")}
-                className="h-full w-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {modal}
     </>
   );
 }
