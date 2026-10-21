@@ -115,18 +115,29 @@ function notificationToCard(
         ? "deposit"
         : "pending";
 
+  const phone = item.requesterPhone?.trim() || undefined;
+  const rawName = item.requesterName.trim();
+  const customerName = stripPhoneFromName(rawName, phone) || translate("common.user");
+
   return {
     id: item.id,
     date: parseDateIso(item.date) || item.date,
     title: translate("owner.calendar.bookingTitle"),
-    customerName: item.requesterName.trim() || translate("common.user"),
-    phone: item.requesterPhone?.trim() || undefined,
+    customerName,
+    phone,
     timeLabel:
       when.length > 0 ? when.join(locale.startsWith("ar") ? "، " : ", ") : translate("owner.notifications.valueMissing"),
     statusKind,
     imageSrc: BOOKING_IMAGES[index % BOOKING_IMAGES.length],
     depositAmount: deposit,
   };
+}
+
+function stripPhoneFromName(name: string, phone: string | undefined): string {
+  if (!name) return "";
+  if (!phone) return name;
+  const suffix = ` - ${phone}`;
+  return name.endsWith(suffix) ? name.slice(0, -suffix.length).trim() : name;
 }
 
 function manualToCard(
@@ -150,7 +161,7 @@ function manualToCard(
     phone: item.phone.trim() || undefined,
     guestsLabel:
       item.guests != null
-        ? translate("owner.calendar.add.guestsCount", { count: item.guests })
+        ? translate("owner.calendar.detail.guests", { count: item.guests })
         : undefined,
     timeLabel: formatHourlyRange(item.timeFrom, item.timeTo, locale),
     statusKind,

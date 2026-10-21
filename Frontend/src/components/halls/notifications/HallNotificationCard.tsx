@@ -187,7 +187,7 @@ export default function HallNotificationCard({
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col items-stretch gap-2 border-t border-[var(--wesal-border)] pt-3 lg:min-w-[10rem] lg:items-end lg:border-t-0 lg:pt-0">
+        <div className="flex shrink-0 flex-col items-stretch gap-2 border-t border-[var(--wesal-border)] pt-3 lg:min-w-[14rem] lg:items-stretch lg:border-t-0 lg:pt-0">
           {depositBadge ? (
             <span
               className={`inline-flex self-start rounded-lg px-2.5 py-1 text-[0.68rem] font-bold lg:self-end ${depositBadge.className}`}
@@ -196,35 +196,41 @@ export default function HallNotificationCard({
             </span>
           ) : null}
 
-          {hasDetailBody ? (
-            <button
-              type="button"
-              className="btn-primary inline-flex min-h-10 w-full items-center justify-center gap-1.5 !rounded-xl !px-3 !text-[0.78rem] lg:w-auto"
-              data-testid={`hall-notification-details-${notification.id}`}
-              aria-expanded={detailsOpen}
-              onClick={() => setDetailsOpen((open) => !open)}
+          {hasDetailBody || showChat ? (
+            <div
+              className={`grid gap-2 ${hasDetailBody && showChat ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2" : "grid-cols-1"}`}
             >
-              {detailsOpen
-                ? t("owner.notifications.hideDetails")
-                : t("owner.notifications.viewDetails")}
-              <span aria-hidden="true">{detailsOpen ? "‹" : "›"}</span>
-            </button>
-          ) : null}
+              {hasDetailBody ? (
+                <button
+                  type="button"
+                  className="btn-primary inline-flex min-h-10 w-full items-center justify-center gap-1.5 !rounded-xl !px-3 !text-[0.78rem]"
+                  data-testid={`hall-notification-details-${notification.id}`}
+                  aria-expanded={detailsOpen}
+                  onClick={() => setDetailsOpen((open) => !open)}
+                >
+                  {detailsOpen
+                    ? t("owner.notifications.hideDetails")
+                    : t("owner.notifications.viewDetails")}
+                  <span aria-hidden="true">{detailsOpen ? "‹" : "›"}</span>
+                </button>
+              ) : null}
 
-          {showChat ? (
-            <button
-              type="button"
-              className="inline-flex min-h-9 items-center justify-center gap-1.5 text-[0.75rem] font-bold text-[var(--wesal-maroon)] hover:underline lg:justify-end"
-              disabled={messagingSeeker}
-              aria-busy={messagingSeeker || undefined}
-              data-testid={`hall-notification-chat-seeker-${notification.id}`}
-              onClick={() => onMessageSeeker?.(notification)}
-            >
-              <ChatIcon />
-              {messagingSeeker
-                ? t("owner.notifications.chatWithSeekerOpening")
-                : t("owner.notifications.contactCustomer")}
-            </button>
+              {showChat ? (
+                <button
+                  type="button"
+                  className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-[rgba(166,99,99,0.35)] bg-[#faf6f2] px-3 text-[0.78rem] font-bold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
+                  disabled={messagingSeeker}
+                  aria-busy={messagingSeeker || undefined}
+                  data-testid={`hall-notification-chat-seeker-${notification.id}`}
+                  onClick={() => onMessageSeeker?.(notification)}
+                >
+                  <ChatIcon />
+                  {messagingSeeker
+                    ? t("owner.notifications.chatWithSeekerOpening")
+                    : t("owner.notifications.contactCustomer")}
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
