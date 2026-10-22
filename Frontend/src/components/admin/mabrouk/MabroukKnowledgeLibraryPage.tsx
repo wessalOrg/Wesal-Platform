@@ -245,6 +245,11 @@ function FilterSelect({
   );
 }
 
+const actionBtnClass =
+  "btn-outline box-border min-h-10 w-full min-w-0 justify-center px-2 text-[0.8rem] md:min-h-9";
+const actionPrimaryBtnClass =
+  "btn-primary box-border min-h-10 w-full min-w-0 justify-center px-2 text-[0.8rem] md:min-h-9";
+
 function KnowledgeCard({
   article, onEdit, onPreview, onHistory, onPublish, onArchive, onOverride, onDuplicate, onReview, t,
 }: {
@@ -263,17 +268,15 @@ function KnowledgeCard({
   const verificationLabel = t("admin.mabrouk.verification." + article.verificationStatus);
   return (
     <article className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.04)] sm:p-5">
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="break-words text-base font-bold text-[var(--wesal-text)]">{article.title}</h3>
-          <p className="mt-1 break-all text-xs text-[var(--wesal-muted)]" dir="ltr">{article.key}</p>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Badge>{article.isBuiltIn ? t("admin.mabrouk.knowledge.builtInBadge") : t("admin.mabrouk.knowledge.dynamic")}</Badge>
-          <Badge>{statusLabel}</Badge>
-          <Badge>{verificationLabel}</Badge>
-        </div>
+      <header className="min-w-0">
+        <h3 className="break-words text-base font-bold text-[var(--wesal-text)]">{article.title}</h3>
+        <p className="mt-1 break-all text-xs text-[var(--wesal-muted)]" dir="ltr">{article.key}</p>
       </header>
+      <div className="mt-3 grid w-full grid-cols-3 gap-1.5 px-1">
+        <Badge>{article.isBuiltIn ? t("admin.mabrouk.knowledge.builtInBadge") : t("admin.mabrouk.knowledge.dynamic")}</Badge>
+        <Badge>{statusLabel}</Badge>
+        <Badge>{verificationLabel}</Badge>
+      </div>
       <p className="mt-3 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-[var(--wesal-muted)]">{article.answerAr || t("admin.mabrouk.editor.draftOnly")}</p>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--wesal-muted)]">
         <span>{t("admin.mabrouk.editor.category")}: {article.category}</span>
@@ -283,24 +286,24 @@ function KnowledgeCard({
         {article.overridesBuiltInKey ? <span dir="ltr">{article.overridesBuiltInKey}</span> : null}
       </div>
       {article.hasUnpublishedDraft ? <p className="mt-2 text-xs font-semibold text-amber-800">{t("admin.mabrouk.editor.pendingDraft")}</p> : null}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" className="btn-outline min-h-9 px-3" onClick={onPreview}>{t("admin.mabrouk.knowledge.preview")}</button>
+      <div className="mt-4 grid w-full grid-cols-2 gap-2 px-1">
+        <button type="button" className={actionBtnClass} onClick={onPreview}>{t("admin.mabrouk.knowledge.preview")}</button>
         {article.isBuiltIn ? (
-          <button type="button" className="btn-outline min-h-9 px-3" onClick={onOverride}>{t("admin.mabrouk.knowledge.override")}</button>
+          <button type="button" className={actionBtnClass} onClick={onOverride}>{t("admin.mabrouk.knowledge.override")}</button>
         ) : (
           <>
-            <button type="button" className="btn-outline min-h-9 px-3" onClick={onEdit}>{t("admin.mabrouk.knowledge.edit")}</button>
+            <button type="button" className={actionBtnClass} onClick={onEdit}>{t("admin.mabrouk.knowledge.edit")}</button>
             {article.publicationStatus === "Draft" || article.hasUnpublishedDraft ? (
-              <button type="button" className="btn-primary min-h-9 px-3" onClick={onPublish}>{t("admin.mabrouk.knowledge.publish")}</button>
+              <button type="button" className={actionPrimaryBtnClass} onClick={onPublish}>{t("admin.mabrouk.knowledge.publish")}</button>
             ) : null}
             {article.publicationStatus === "Published" && article.reviewAt && new Date(article.reviewAt) <= new Date() ? (
-              <button type="button" className="btn-outline min-h-9 px-3" onClick={onReview}>{t("admin.mabrouk.knowledge.reviewDue")}</button>
+              <button type="button" className={actionBtnClass} onClick={onReview}>{t("admin.mabrouk.knowledge.reviewDue")}</button>
             ) : null}
             {article.publicationStatus !== "Archived" ? (
-              <button type="button" className="btn-outline min-h-9 px-3" onClick={onArchive}>{t("admin.mabrouk.knowledge.archive")}</button>
+              <button type="button" className={actionBtnClass} onClick={onArchive}>{t("admin.mabrouk.knowledge.archive")}</button>
             ) : null}
-            <button type="button" className="btn-outline min-h-9 px-3" onClick={onDuplicate}>{t("admin.mabrouk.knowledge.duplicate")}</button>
-            <button type="button" className="btn-outline min-h-9 px-3" onClick={onHistory}>{t("admin.mabrouk.knowledge.history")}</button>
+            <button type="button" className={actionBtnClass} onClick={onDuplicate}>{t("admin.mabrouk.knowledge.duplicate")}</button>
+            <button type="button" className={actionBtnClass} onClick={onHistory}>{t("admin.mabrouk.knowledge.history")}</button>
           </>
         )}
       </div>
@@ -309,5 +312,9 @@ function KnowledgeCard({
 }
 
 function Badge({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-full bg-[var(--wesal-pink-soft)] px-2.5 py-1 text-[0.68rem] font-bold text-[var(--wesal-maroon-dark)]">{children}</span>;
+  return (
+    <span className="inline-flex min-h-7 w-full min-w-0 items-center justify-center truncate rounded-full bg-[var(--wesal-pink-soft)] px-1.5 py-1 text-center text-[0.62rem] font-bold leading-4 whitespace-nowrap text-[var(--wesal-maroon-dark)]">
+      {children}
+    </span>
+  );
 }

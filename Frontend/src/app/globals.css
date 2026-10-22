@@ -8278,7 +8278,7 @@ html[dir="rtl"] .seeker-notify-panel {
     font-size: 14.5px;
   }
 
-  /* Landing: keep category-sized cards; don’t pinch hall cards extra */
+  /* Landing: match hall/provider cards to category card width */
   main .occasion-service-card,
   main .how-card,
   main .join-card,
@@ -8286,6 +8286,16 @@ html[dir="rtl"] .seeker-notify-panel {
   [data-testid="home-categories-section"] li > a {
     max-width: 22.5rem;
     margin-inline: auto;
+  }
+
+  [data-testid="featured-halls-section"] .container-wesal {
+    padding-inline: 0.85rem;
+  }
+
+  [data-testid="featured-halls-section"] .hall-card {
+    max-width: none;
+    width: 100%;
+    margin-inline: 0;
   }
 
   [data-testid="home-categories-section"] .aspect-square {
@@ -8354,16 +8364,15 @@ html[dir="rtl"] .seeker-notify-panel {
     max-height: calc(100svh - 1.5rem);
   }
 
-  /* Notifications: full-screen drawer from the physical right on phones */
+  /* Notifications: full-viewport sheet so nothing is clipped */
   .seeker-notify-panel {
     position: fixed;
     inset: 0;
-    top: 0;
+    left: 0;
     right: 0;
-    left: auto;
-    z-index: 120;
-    width: min(100vw, 26rem);
-    max-width: 100vw;
+    z-index: 130;
+    width: 100%;
+    max-width: none;
     height: 100svh;
     max-height: 100svh;
     border-radius: 0;
@@ -8372,8 +8381,8 @@ html[dir="rtl"] .seeker-notify-panel {
   }
 
   html[dir="rtl"] .seeker-notify-panel {
+    left: 0;
     right: 0;
-    left: auto;
   }
 }
 
