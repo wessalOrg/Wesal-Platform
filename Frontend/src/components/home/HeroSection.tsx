@@ -33,7 +33,7 @@ export default async function HeroSection() {
   return (
     <section
       aria-labelledby="wesal-hero-title"
-      className="hero-stage relative isolate overflow-hidden px-4 py-6 md:px-6 md:py-8"
+      className="hero-stage relative isolate overflow-hidden px-4 py-3 max-md:flex max-md:h-[calc(100svh-3.5rem)] max-md:min-h-[calc(100svh-3.5rem)] max-md:flex-col sm:max-md:h-[calc(100svh-4rem)] sm:max-md:min-h-[calc(100svh-4rem)] md:px-6 md:py-8"
       data-testid="hero-section"
     >
       <div
@@ -131,8 +131,8 @@ export default async function HeroSection() {
         </div>
       </div>
 
-      <div className="hero-card hero-showcase md:hidden">
-        <div className="hero-satin relative overflow-hidden rounded-t-[24px] px-6 pb-10 pt-8 sm:px-10 sm:pb-8 sm:pt-10">
+      <div className="hero-card hero-showcase flex min-h-0 flex-1 flex-col md:hidden">
+        <div className="hero-satin relative flex min-h-0 flex-1 flex-col justify-center overflow-hidden rounded-t-[24px] px-6 py-5 sm:px-10 sm:py-6">
           <div className="hero-cream-decor hero-cream-decor--mobile" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -147,7 +147,7 @@ export default async function HeroSection() {
             <HeroCopy intro={intro} />
           </div>
         </div>
-        <div className="hero-photo-pane relative min-h-[22rem] w-full overflow-hidden rounded-b-[24px] sm:min-h-[28rem]">
+        <div className="hero-photo-pane relative min-h-0 w-full flex-1 overflow-hidden rounded-b-[24px]">
           <svg
             className="pointer-events-none absolute inset-x-0 top-0 z-10 h-11 w-full -translate-y-[1px]"
             viewBox="0 0 1000 80"

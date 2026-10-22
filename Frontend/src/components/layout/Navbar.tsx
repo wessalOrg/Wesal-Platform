@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import WesalBrandLockup from "@/components/brand/WesalBrandLockup";
+import AccountNotificationsPanel from "@/components/layout/AccountNotificationsPanel";
 import AuthAccountMenu from "@/components/layout/AuthAccountMenu";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import NavbarMessagesButton from "@/components/layout/NavbarMessagesButton";
 import NavbarNotificationsButton from "@/components/layout/NavbarNotificationsButton";
 import PwaInstallButton from "@/components/pwa/PwaInstallButton";
+import { useDismissibleOverlay } from "@/hooks/useDismissibleOverlay";
 import { useTranslateLang } from "@/i18n";
 import { getAccountProfilePath } from "@/lib/account-profile-path";
 import { markAuthNavigation } from "@/lib/auth-nav";
@@ -48,6 +51,7 @@ export default function Navbar({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const notify = useDismissibleOverlay();
   const [hash, setHash] = useState("");
   const [menuPath, setMenuPath] = useState(pathname);
   const router = useRouter();
@@ -144,9 +148,16 @@ export default function Navbar({
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:gap-3">
             <PwaInstallButton />
-            <div className="hidden shrink-0 items-center gap-1.5 sm:gap-2 lg:flex">
+            <div ref={notify.rootRef} className="hidden shrink-0 items-center gap-1.5 sm:gap-2 lg:flex">
               <LanguageSwitcher />
-              {authenticated ? <NavbarNotificationsButton /> : null}
+              {authenticated ? (
+                <NavbarNotificationsButton
+                  open={notify.open}
+                  panelId={notify.panelId}
+                  onToggle={notify.toggle}
+                  onClose={notify.close}
+                />
+              ) : null}
               {authenticated ? <NavbarMessagesButton /> : null}
             </div>
             {status === "loading" ? (
@@ -220,7 +231,16 @@ export default function Navbar({
             {authenticated ? (
               <div className="relative z-10 mb-3 flex flex-wrap items-center justify-center gap-2">
                 <NavbarMessagesButton onNavigate={() => setOpen(false)} />
-                <NavbarNotificationsButton />
+                <NavbarNotificationsButton
+                  open={notify.open}
+                  panelId={notify.panelId}
+                  showPanel={false}
+                  onToggle={() => {
+                    setOpen(false);
+                    notify.setOpen(true);
+                  }}
+                  onClose={notify.close}
+                />
               </div>
             ) : null}
             <nav className="wesal-navbar-mobile-links relative z-10 flex flex-col items-center gap-1" aria-label={t("nav.main")}>
@@ -264,8 +284,26 @@ export default function Navbar({
           </div>
         </div>
       ) : null}
+      <BodyPortal>
+        <div className="lg:hidden">
+          <AccountNotificationsPanel
+            open={notify.open}
+            onClose={notify.close}
+            panelId={notify.panelId}
+          />
+        </div>
+      </BodyPortal>
     </header>
   );
+}
+
+function BodyPortal({ children }: { children: ReactNode }) {
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setTarget(document.body);
+  }, []);
+  if (!target) return null;
+  return createPortal(children, target);
 }
 
 function GuestActions({

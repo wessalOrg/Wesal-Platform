@@ -25,7 +25,14 @@ export function useDismissibleOverlay() {
 
     const onPointerDown = (event: PointerEvent) => {
       const root = rootRef.current;
-      if (!root || root.contains(event.target as Node)) return;
+      const target = event.target as Node | null;
+      if (root && target && root.contains(target)) return;
+      if (
+        target instanceof Element &&
+        target.closest("[data-testid='account-notifications-panel']")
+      ) {
+        return;
+      }
       setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {

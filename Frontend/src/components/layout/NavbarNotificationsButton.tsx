@@ -6,19 +6,37 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { useT } from "@/i18n";
 
+type NavbarNotificationsButtonProps = {
+  open?: boolean;
+  panelId?: string;
+  showPanel?: boolean;
+  onToggle?: () => void;
+  onClose?: () => void;
+};
+
 /**
  * Navbar notifications bell — sits beside the language switcher.
  */
-export default function NavbarNotificationsButton() {
+export default function NavbarNotificationsButton({
+  open: openProp,
+  panelId: panelIdProp,
+  showPanel = true,
+  onToggle,
+  onClose,
+}: NavbarNotificationsButtonProps) {
   const t = useT();
   const identity = useUserIdentity();
-  const { open, close, toggle, rootRef, panelId } = useDismissibleOverlay();
+  const overlay = useDismissibleOverlay();
+  const open = openProp ?? overlay.open;
+  const panelId = panelIdProp ?? overlay.panelId;
+  const toggle = onToggle ?? overlay.toggle;
+  const close = onClose ?? overlay.close;
   const { unreadCount, hasUnread } = useNotifications();
 
   if (!identity.authenticated) return null;
 
   return (
-    <div ref={rootRef} className="seeker-notify-wrap wesal-navbar-notify">
+    <div ref={openProp == null ? overlay.rootRef : undefined} className="seeker-notify-wrap wesal-navbar-notify">
       <button
         type="button"
         className={`seeker-dash-notify wesal-navbar-notify-btn${
@@ -41,7 +59,9 @@ export default function NavbarNotificationsButton() {
         ) : null}
       </button>
 
-      <AccountNotificationsPanel open={open} onClose={close} panelId={panelId} />
+      {showPanel ? (
+        <AccountNotificationsPanel open={open} onClose={close} panelId={panelId} />
+      ) : null}
     </div>
   );
 }
