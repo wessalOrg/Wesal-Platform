@@ -33,7 +33,7 @@ export default function HeroCopy({ titleId, intro }: HeroCopyProps) {
   const arrow = lang === "ar" ? "←" : "→";
 
   return (
-    <LangDir className="hero-copy-enter mx-auto w-full max-w-[22rem] text-center">
+    <LangDir className="hero-copy-enter mx-auto w-full max-w-[24.5rem] text-center">
       <p className="sr-only">{intro.platformName}</p>
 
       <h1
@@ -63,21 +63,21 @@ export default function HeroCopy({ titleId, intro }: HeroCopyProps) {
         {t("home.hero.description")}
       </p>
 
-      <div className="hero-copy-desc mt-6 flex flex-wrap items-center justify-center gap-3">
+      <div className="hero-copy-desc hero-copy-actions mt-8 flex w-full flex-nowrap items-center justify-center gap-2 sm:mt-6">
         <button
           type="button"
-          className="btn-primary min-h-11 whitespace-nowrap px-5 text-sm"
+          className="btn-primary min-h-11 shrink-0 px-3 text-[0.72rem] font-semibold whitespace-nowrap sm:px-5 sm:text-sm"
           onClick={requestOpenAssistant}
           data-testid="hero-cta-start"
         >
           {t("home.hero.ctaStart")}
-          <span aria-hidden="true" className="ms-2">
+          <span aria-hidden="true" className="ms-1.5 sm:ms-2">
             {arrow}
           </span>
         </button>
         <Link
           href="/halls"
-          className="btn-outline min-h-11 gap-2 whitespace-nowrap px-5 text-sm"
+          className="btn-outline min-h-11 shrink-0 gap-1.5 px-3 text-[0.72rem] font-semibold whitespace-nowrap sm:gap-2 sm:px-5 sm:text-sm"
           data-testid="hero-cta-explore"
         >
           <CompassIcon />

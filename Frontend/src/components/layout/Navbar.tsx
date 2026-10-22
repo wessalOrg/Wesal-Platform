@@ -189,38 +189,46 @@ export default function Navbar({
           />
           <div
             id="mobile-nav"
-            className={`wesal-navbar-mobile wesal-navbar-mobile--drawer overflow-y-auto px-5 py-4 ${
+            className={`wesal-navbar-mobile wesal-navbar-mobile--drawer flex flex-col overflow-y-auto px-5 py-4 ${
               overlay ? "wesal-navbar-mobile--overlay" : ""
             }`}
           >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-bold text-[var(--wesal-maroon)]">{t("nav.menu")}</p>
+            <div className="wesal-navbar-mobile-ink" aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/hero/dream-ink.webp" alt="" className="wesal-navbar-mobile-ink-img" decoding="async" />
+            </div>
+            <div className="wesal-navbar-mobile-head relative z-10 mb-5 flex items-center gap-2">
+              <p className="wesal-navbar-mobile-title min-w-0 flex-1 font-extrabold text-[var(--wesal-maroon)]">
+                {t("nav.menu")}
+              </p>
+              <LanguageSwitcher compact className="wesal-navbar-mobile-lang" />
               <button
                 type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)]"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-border)] text-base text-[var(--wesal-maroon)]"
                 aria-label={t("common.close")}
                 onClick={() => setOpen(false)}
               >
                 ✕
               </button>
             </div>
-            <div className="flex flex-col gap-3">
-              {authenticated && status !== "loading" ? (
-                <p className="wesal-navbar-mobile-hello text-base font-bold text-[var(--wesal-maroon)]">
-                  {t("nav.hello")}{" "}
-                  {session.userName?.trim() || t("nav.account")}
-                </p>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-2">
-                <LanguageSwitcher compact />
-                {authenticated ? <NavbarMessagesButton onNavigate={() => setOpen(false)} /> : null}
-                {authenticated ? <NavbarNotificationsButton /> : null}
+            {authenticated && status !== "loading" ? (
+              <p className="wesal-navbar-mobile-hello relative z-10 mb-3 text-center text-base font-bold text-[var(--wesal-maroon)]">
+                {t("nav.hello")}{" "}
+                {session.userName?.trim() || t("nav.account")}
+              </p>
+            ) : null}
+            {authenticated ? (
+              <div className="relative z-10 mb-3 flex flex-wrap items-center justify-center gap-2">
+                <NavbarMessagesButton onNavigate={() => setOpen(false)} />
+                <NavbarNotificationsButton />
               </div>
+            ) : null}
+            <nav className="wesal-navbar-mobile-links relative z-10 flex flex-col items-center gap-1" aria-label={t("nav.main")}>
               {NAV_HREFS.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="flex min-h-11 items-center py-2 text-sm font-medium text-[var(--wesal-text)]"
+                  className="flex min-h-11 w-full items-center justify-center py-2.5 text-center text-sm font-medium text-[var(--wesal-text)]"
                   onClick={() => {
                     setHash(navHash(link.href));
                     setOpen(false);
@@ -229,6 +237,8 @@ export default function Navbar({
                   {t(link.key)}
                 </Link>
               ))}
+            </nav>
+            <div className="relative z-10 mt-auto flex flex-col gap-2.5 pt-8 pb-16">
               <PwaInstallButton variant="full" />
               {status === "loading" ? (
                 <div
@@ -279,7 +289,7 @@ function GuestActions({
       <Link
         href="/login"
         prefetch
-        className={`btn-outline min-h-11 whitespace-nowrap ${stacked ? "w-full" : "shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
+        className={`btn-outline whitespace-nowrap ${stacked ? "min-h-[3.15rem] w-full text-base" : "min-h-11 shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
         onClick={goAuth}
       >
         {login}
@@ -287,7 +297,7 @@ function GuestActions({
       <Link
         href="/register"
         prefetch
-        className={`btn-primary min-h-11 whitespace-nowrap ${stacked ? "w-full" : "shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
+        className={`btn-primary whitespace-nowrap ${stacked ? "min-h-[3.15rem] w-full text-base" : "min-h-11 shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
         onClick={goAuth}
       >
         {register}

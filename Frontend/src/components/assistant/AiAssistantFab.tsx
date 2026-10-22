@@ -58,6 +58,36 @@ function AiAssistantFab({
   const label = open ? t("assistant.fab.close") : t("assistant.fab.open");
   const name = t("assistant.title");
   const [greetIndex, setGreetIndex] = useState(0);
+  const [dock, setDock] = useState<"left" | "right">(() =>
+    typeof document !== "undefined" && document.documentElement.dir === "rtl" ? "left" : "right",
+  );
+
+  useEffect(() => {
+    const el = buttonRef?.current;
+    if (!el) return;
+
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setDock(rect.left + rect.width / 2 > window.innerWidth / 2 ? "right" : "left");
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    if (!isDragging) {
+      return () => window.removeEventListener("resize", update);
+    }
+
+    let frame = 0;
+    const tick = () => {
+      update();
+      frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.cancelAnimationFrame(frame);
+    };
+  }, [buttonRef, style, isDragging]);
 
   useEffect(() => {
     if (open) return;
@@ -85,7 +115,8 @@ function AiAssistantFab({
       data-testid="ai-assistant-fab"
       data-open={open ? "true" : undefined}
       data-dragging={isDragging ? "true" : undefined}
-      className={`wesal-ai-fab wesal-ai-fab--figure fixed bottom-2 end-3 z-[105] flex h-[9.25rem] w-[5.1rem] touch-none flex-col items-center justify-end outline-none focus-visible:ring-4 focus-visible:ring-[rgba(193,123,127,0.35)] sm:bottom-3 sm:end-4 sm:h-[12.5rem] sm:w-[6.75rem] md:h-[14.75rem] md:w-[8rem]${
+      data-dock={dock}
+      className={`wesal-ai-fab wesal-ai-fab--figure fixed bottom-2 end-3 z-[105] flex h-[10.75rem] w-[5.9rem] touch-none flex-col items-center justify-end outline-none focus-visible:ring-4 focus-visible:ring-[rgba(193,123,127,0.35)] sm:bottom-3 sm:end-4 sm:h-[13.25rem] sm:w-[7.15rem] md:h-[14.75rem] md:w-[8rem]${
         isDragging ? " wesal-ai-fab-dragging" : ""
       }`}
     >
