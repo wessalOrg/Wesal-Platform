@@ -134,7 +134,7 @@ public sealed class AuthService : IAuthService
             var encodedResetUrl = HtmlEncoder.Default.Encode(resetUrl);
             var encodedFullName = HtmlEncoder.Default.Encode(user.FullName);
             var logoUrl = HtmlEncoder.Default.Encode(
-                $"{_passwordResetOptions.FrontendBaseUrl.Trim().TrimEnd('/')}/logo-wesal.png");
+                $"{_passwordResetOptions.FrontendBaseUrl.Trim().TrimEnd('/')}/logo-wesal-white.png");
             var plainBody = $"مرحبًا {user.FullName}،\n\nتلقينا طلبًا لإعادة تعيين كلمة مرور حسابك في وصال. افتح الرابط التالي خلال 24 ساعة لاختيار كلمة مرور جديدة:\n\n{resetUrl}\n\nإذا لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة.\n\n---\n\nHello {user.FullName},\nWe received a request to reset your Wesal password. Open the link below within 24 hours to choose a new password:\n\n{resetUrl}\n\nIf you did not request this, you can safely ignore this email.";
             var htmlBody = $"""
                 <!doctype html>
