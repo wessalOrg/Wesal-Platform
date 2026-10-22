@@ -27,12 +27,18 @@ const SUPPORT_LINKS = [
   { href: "/halls", labelKey: "footer.browseHalls" },
 ] as const;
 
+const sectionTitleClass =
+  "mb-3 inline-block w-full border-b-2 border-rose-300/50 pb-1 text-base font-bold text-[var(--wesal-maroon)] md:text-lg lg:mb-0 lg:border-b-0 lg:pb-0 lg:text-xs lg:font-extrabold";
+
+const linkListClass =
+  "flex flex-col items-center gap-2.5 text-center text-sm leading-6 text-[var(--wesal-muted)] lg:mt-2.5 lg:items-start lg:gap-1.5 lg:text-start lg:text-sm";
+
 export default function Footer() {
   const t = useT();
   const addHall = useAddHallCta();
 
   return (
-    <footer className="wesal-footer relative isolate overflow-hidden border-t border-[var(--wesal-border)]">
+    <footer className="wesal-footer relative isolate overflow-hidden border-t border-[var(--wesal-border)] pb-2 lg:pb-0">
       <div className="footer-marble" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -45,14 +51,14 @@ export default function Footer() {
       </div>
 
       <div className="container-wesal relative z-10 py-7 sm:py-8">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
-          <div className="sm:col-span-2 lg:col-span-1 -ms-5 sm:-ms-7 lg:-ms-20">
+        <div className="grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-5">
+          <div className="col-span-2 flex flex-col items-center text-center md:items-start md:text-start md:-ms-7 lg:col-span-1 lg:-ms-20">
             <WesalBrandLockup logoClassName="h-8 w-auto" nameClassName="text-base" />
             <p className="mt-2.5 max-w-xs text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm sm:leading-7">
               {t("brand.tagline")}
             </p>
 
-            <div className="mt-3.5 flex items-center gap-1.5">
+            <div className="mt-3.5 flex items-center justify-center gap-1.5 md:justify-start">
               <SocialLink href="https://www.facebook.com" label={t("footer.facebook")}>
                 <FacebookIcon />
               </SocialLink>
@@ -65,16 +71,14 @@ export default function Footer() {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-xs font-extrabold text-[var(--wesal-maroon)] sm:text-sm">
-              {t("footer.quickLinks")}
-            </h3>
-            <ul className="mt-2.5 space-y-1.5 text-xs text-[var(--wesal-muted)] sm:text-sm">
+          <div className="px-2 ps-5 text-center lg:px-0 lg:text-start">
+            <h3 className={sectionTitleClass}>{t("footer.quickLinks")}</h3>
+            <ul className={linkListClass}>
               {QUICK_LINKS.map((item) => (
                 <li key={item.href + item.labelKey}>
                   <Link
                     href={item.href}
-                    className="transition-colors hover:text-[var(--wesal-maroon)]"
+                    className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
                   >
                     {t(item.labelKey)}
                   </Link>
@@ -83,58 +87,59 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div>
-            <h3 className="text-xs font-extrabold text-[var(--wesal-maroon)] sm:text-sm">
-              {t("footer.account")}
-            </h3>
-            <ul className="mt-2.5 space-y-1.5 text-xs text-[var(--wesal-muted)] sm:text-sm">
-              {ACCOUNT_LINKS.map((item) => (
-                <li key={item.href + item.labelKey}>
+          <div className="flex flex-col gap-2.5 px-2 ps-5 text-center lg:gap-4 lg:px-0 lg:text-start">
+            <div>
+              <h3 className={sectionTitleClass}>{t("footer.account")}</h3>
+              <ul className={linkListClass}>
+                {ACCOUNT_LINKS.map((item) => (
+                  <li key={item.href + item.labelKey}>
+                    <Link
+                      href={item.href}
+                      className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                    >
+                      {t(item.labelKey)}
+                    </Link>
+                  </li>
+                ))}
+                <li>
                   <Link
-                    href={item.href}
-                    className="transition-colors hover:text-[var(--wesal-maroon)]"
+                    href={addHall.href}
+                    className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                    aria-disabled={!addHall.isReady || undefined}
+                    data-testid="footer-add-hall-cta"
+                    onClick={addHall.guardClick}
+                    onMouseEnter={addHall.prefetch}
+                    onFocus={addHall.prefetch}
                   >
-                    {t(item.labelKey)}
+                    {t("footer.registerHall")}
                   </Link>
                 </li>
-              ))}
-              <li>
-                <Link
-                  href={addHall.href}
-                  className="transition-colors hover:text-[var(--wesal-maroon)]"
-                  aria-disabled={!addHall.isReady || undefined}
-                  data-testid="footer-add-hall-cta"
-                  onClick={addHall.guardClick}
-                  onMouseEnter={addHall.prefetch}
-                  onFocus={addHall.prefetch}
-                >
-                  {t("footer.registerHall")}
-                </Link>
-              </li>
-            </ul>
+              </ul>
+            </div>
 
-            <h3 className="mt-4 text-xs font-extrabold text-[var(--wesal-maroon)] sm:text-sm">
-              {t("footer.help")}
-            </h3>
-            <ul className="mt-2.5 space-y-1.5 text-xs text-[var(--wesal-muted)] sm:text-sm">
-              {SUPPORT_LINKS.map((item) => (
-                <li key={item.href + item.labelKey}>
-                  <Link
-                    href={item.href}
-                    className="transition-colors hover:text-[var(--wesal-maroon)]"
-                  >
-                    {t(item.labelKey)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div>
+              <h3 className={sectionTitleClass}>{t("footer.help")}</h3>
+              <ul className={linkListClass}>
+                {SUPPORT_LINKS.map((item) => (
+                  <li key={item.href + item.labelKey}>
+                    <Link
+                      href={item.href}
+                      className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                    >
+                      {t(item.labelKey)}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
-          <div id="contact" className="scroll-mt-20">
-            <h3 className="text-xs font-extrabold text-[var(--wesal-maroon)] sm:text-sm">
-              {t("footer.contact")}
-            </h3>
-            <ul className="mt-2.5 space-y-2 text-xs text-[var(--wesal-muted)] sm:text-sm">
+          <div
+            id="contact"
+            className="col-span-2 mt-1 scroll-mt-20 pt-2 text-center lg:col-span-1 lg:mt-0 lg:pt-0 lg:text-start"
+          >
+            <h3 className={`${sectionTitleClass} mx-auto text-center`}>{t("footer.contact")}</h3>
+            <ul className={`${linkListClass} mx-3 gap-2.5 text-center lg:mx-0 lg:gap-2 lg:text-start`}>
               <li>
                 <ContactRow icon={<PinIcon />}>
                   <span>{t("footer.location")}</span>
@@ -170,15 +175,15 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="container-wesal relative z-10 pb-3.5 pt-1">
+      <div className="container-wesal relative z-10 mb-0 pb-2 pt-1">
         <div className="mb-2 h-px w-full bg-[#e6d5c8]" />
-        <div className="flex items-center justify-between gap-3 text-[11px] text-[var(--wesal-muted)] sm:text-xs">
-          <p>
+        <div className="wesal-footer-legal flex flex-nowrap items-center justify-between gap-2 text-[11px] text-[var(--wesal-muted)] sm:gap-3 sm:text-xs">
+          <p className="min-w-0 shrink whitespace-nowrap">
             © {new Date().getFullYear()} {t("brand.name")} — {t("footer.rights")}
           </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <span>{t("footer.privacy")}</span>
-            <span>{t("footer.terms")}</span>
+          <div className="flex shrink-0 flex-nowrap items-center gap-2 sm:gap-3">
+            <span className="whitespace-nowrap">{t("footer.privacy")}</span>
+            <span className="whitespace-nowrap">{t("footer.terms")}</span>
           </div>
         </div>
       </div>
@@ -194,8 +199,8 @@ function ContactRow({
   children: ReactNode;
 }) {
   return (
-    <span className="flex items-start gap-2">
-      <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[var(--wesal-maroon)]">
+    <span className="mx-auto flex w-full items-center justify-center gap-2 lg:mx-0 lg:justify-start">
+      <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[var(--wesal-maroon)]">
         {icon}
       </span>
       <span className="min-w-0 leading-5">{children}</span>

@@ -16,8 +16,8 @@ const GOLD_D =
 
 const CREAM_D = `${CURVE_D} L0,${VBH} L0,0 Z`;
 
-const EDGE_MOBILE = "M 0 28 C 280 72, 720 72, 1000 28";
-const CREAM_MOBILE = "M 0 0 L 1000 0 L 1000 28 C 720 72, 280 72, 0 28 Z";
+const EDGE_MOBILE = "M 0 20 C 280 48, 720 48, 1000 20";
+const CREAM_MOBILE = "M 0 0 L 1000 0 L 1000 20 C 720 48, 280 48, 0 20 Z";
 
 export default async function HeroSection() {
   const goldId = "wesal-hero-gold";
@@ -132,7 +132,7 @@ export default async function HeroSection() {
       </div>
 
       <div className="hero-card hero-showcase md:hidden">
-        <div className="hero-satin relative overflow-hidden rounded-t-[24px] px-6 py-12 sm:px-10">
+        <div className="hero-satin relative overflow-hidden rounded-t-[24px] px-6 pb-10 pt-8 sm:px-10 sm:pb-8 sm:pt-10">
           <div className="hero-cream-decor hero-cream-decor--mobile" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -149,7 +149,7 @@ export default async function HeroSection() {
         </div>
         <div className="hero-photo-pane relative min-h-[22rem] w-full overflow-hidden rounded-b-[24px] sm:min-h-[28rem]">
           <svg
-            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 w-full -translate-y-[1px]"
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-11 w-full -translate-y-[1px]"
             viewBox="0 0 1000 80"
             preserveAspectRatio="none"
             aria-hidden="true"
