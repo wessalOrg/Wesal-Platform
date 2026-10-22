@@ -133,27 +133,56 @@ public sealed class AuthService : IAuthService
             var resetUrl = BuildResetUrl(user.Email, token);
             var encodedResetUrl = HtmlEncoder.Default.Encode(resetUrl);
             var encodedFullName = HtmlEncoder.Default.Encode(user.FullName);
+            var logoUrl = HtmlEncoder.Default.Encode(
+                $"{_passwordResetOptions.FrontendBaseUrl.Trim().TrimEnd('/')}/logo-wesal.png");
             var plainBody = $"مرحبًا {user.FullName}،\n\nتلقينا طلبًا لإعادة تعيين كلمة مرور حسابك في وصال. افتح الرابط التالي خلال 24 ساعة لاختيار كلمة مرور جديدة:\n\n{resetUrl}\n\nإذا لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة.\n\n---\n\nHello {user.FullName},\nWe received a request to reset your Wesal password. Open the link below within 24 hours to choose a new password:\n\n{resetUrl}\n\nIf you did not request this, you can safely ignore this email.";
             var htmlBody = $"""
                 <!doctype html>
                 <html lang="ar" dir="rtl">
-                <head><meta charset="utf-8"></head>
-                <body style="margin:0;background:#f7f3f1;padding:24px;font-family:Arial,sans-serif;color:#302522">
-                  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:32px;text-align:center">
-                    <h2 style="color:#8e4b4b">مرحبًا {encodedFullName}،</h2>
-                    <p>تلقينا طلبًا لإعادة تعيين كلمة مرور حسابك في وصال.</p>
-                    <p>اضغط الزر أدناه خلال 24 ساعة لاختيار كلمة مرور جديدة:</p>
-                    <a href="{encodedResetUrl}" style="display:inline-block;margin:16px 0;padding:14px 26px;border-radius:10px;background:#a85d63;color:#fff;text-decoration:none;font-weight:bold">إعادة تعيين كلمة المرور</a>
-                    <p style="font-size:13px;color:#666">إذا لم يعمل الزر، انسخ هذا الرابط وافتحه في المتصفح:</p>
-                    <p dir="ltr" style="overflow-wrap:anywhere;font-size:12px"><a href="{encodedResetUrl}">{encodedResetUrl}</a></p>
-                    <p style="font-size:13px;color:#666">إذا لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة.</p>
-                    <hr style="border:0;border-top:1px solid #eee;margin:24px 0">
-                    <div dir="ltr">
-                      <h3>Reset your Wesal password</h3>
-                      <p>Hello {encodedFullName}, click below within 24 hours to choose a new password.</p>
-                      <a href="{encodedResetUrl}" style="display:inline-block;margin:12px 0;padding:14px 26px;border-radius:10px;background:#a85d63;color:#fff;text-decoration:none;font-weight:bold">Reset password</a>
-                    </div>
-                  </div>
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <meta name="color-scheme" content="light">
+                  <title>إعادة تعيين كلمة مرور وصال</title>
+                </head>
+                <body style="margin:0;padding:0;background-color:#f6f1ec;font-family:Arial,Tahoma,sans-serif;color:#3d342e">
+                  <div style="display:none;max-height:0;overflow:hidden;opacity:0">اختر كلمة مرور جديدة وآمنة لحسابك في وصال.</div>
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f6f1ec">
+                    <tr><td align="center" style="padding:36px 16px">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;background-color:#ffffff;border:1px solid #eee6de;border-radius:20px;overflow:hidden">
+                        <tr><td align="center" style="padding:30px 24px 26px;background-color:#c17b7f">
+                          <img src="{logoUrl}" width="86" height="86" alt="شعار وصال" style="display:block;width:86px;height:86px;object-fit:contain;border-radius:18px;background-color:#c17b7f">
+                          <p style="margin:14px 0 0;color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:1px">وصال</p>
+                          <p dir="ltr" style="margin:5px 0 0;color:#fff8f6;font-size:13px;letter-spacing:2px">WESAL</p>
+                        </td></tr>
+                        <tr><td align="center" style="padding:34px 32px 18px">
+                          <div style="width:54px;height:54px;line-height:54px;border-radius:50%;background-color:#f5e8e4;color:#a86267;font-size:25px;font-weight:bold">↻</div>
+                          <h1 style="margin:20px 0 12px;color:#a86267;font-size:25px;line-height:1.5">إعادة تعيين كلمة المرور</h1>
+                          <p style="margin:0;color:#3d342e;font-size:16px;line-height:1.9">مرحبًا {encodedFullName}،</p>
+                          <p style="margin:8px 0 0;color:#8a7a70;font-size:15px;line-height:1.9">تلقينا طلبًا لإعادة تعيين كلمة مرور حسابك. اضغط الزر أدناه لاختيار كلمة مرور جديدة وآمنة.</p>
+                          <p style="margin:12px 0 0;color:#8a7a70;font-size:13px">لأمان حسابك، تنتهي صلاحية الرابط خلال 24 ساعة.</p>
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:26px auto 20px"><tr><td align="center" bgcolor="#c17b7f" style="border-radius:12px">
+                            <a href="{encodedResetUrl}" style="display:inline-block;padding:15px 32px;border:1px solid #c17b7f;border-radius:12px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold">إعادة تعيين كلمة المرور</a>
+                          </td></tr></table>
+                          <div dir="ltr" style="margin:0 auto 24px;max-width:440px">
+                            <p style="margin:0;color:#3d342e;font-size:15px;line-height:1.8">Hello {encodedFullName},</p>
+                            <p style="margin:6px 0 0;color:#8a7a70;font-size:14px;line-height:1.8">We received a request to reset your Wesal password. Use the button below to choose a new, secure password. This link expires in 24 hours.</p>
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:18px auto 0"><tr><td align="center" bgcolor="#c17b7f" style="border-radius:12px">
+                              <a href="{encodedResetUrl}" style="display:inline-block;padding:13px 30px;border:1px solid #c17b7f;border-radius:12px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold">Reset password</a>
+                            </td></tr></table>
+                          </div>
+                          <p style="margin:0;color:#8a7a70;font-size:13px;line-height:1.8">إذا لم يعمل الزر، انسخ الرابط التالي والصقه في متصفحك:</p>
+                          <p dir="ltr" style="margin:10px 0 0;padding:12px;background-color:#fcf9f7;border:1px solid #eee6de;border-radius:10px;overflow-wrap:anywhere;text-align:left;font-size:12px;line-height:1.7"><a href="{encodedResetUrl}" style="color:#a86267;text-decoration:underline">{encodedResetUrl}</a></p>
+                          <div style="height:1px;margin:26px 0;background-color:#eee6de"></div>
+                          <p style="margin:0;color:#8a7a70;font-size:13px;line-height:1.8">إذا لم تطلب إعادة تعيين كلمة المرور، تجاهل هذه الرسالة. سيبقى حسابك آمنًا.</p>
+                        </td></tr>
+                        <tr><td align="center" style="padding:20px 24px;background-color:#fcf9f7;border-top:1px solid #eee6de">
+                          <p dir="ltr" style="margin:0;color:#8a7a70;font-size:13px">Need help? Wesal Account Security</p>
+                          <p style="margin:7px 0 0;color:#a89b92;font-size:12px">© وصال | WESAL</p>
+                        </td></tr>
+                      </table>
+                    </td></tr>
+                  </table>
                 </body>
                 </html>
                 """;
