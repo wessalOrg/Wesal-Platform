@@ -6,6 +6,7 @@ import StableClockRangeText from "@/components/halls/StableClockRangeText";
 import { useT } from "@/i18n";
 import { formatDepositAmount } from "@/lib/booking-deposits";
 import type { OwnerCalendarBookingCardModel } from "@/lib/owner-calendar-bookings";
+import ExternalBookingActions from "./ExternalBookingActions";
 
 type OwnerCalendarBookingCardProps = {
   booking: OwnerCalendarBookingCardModel;
@@ -59,6 +60,7 @@ export default function OwnerCalendarBookingCard({
       data-testid="owner-calendar-booking-card"
       data-booking-id={booking.id}
     >
+      {booking.source === "ExternalManual" ? <p className="mb-2 text-xs font-bold text-emerald-700">{t("owner.external.badge")}</p> : null}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
           <span
@@ -153,6 +155,7 @@ export default function OwnerCalendarBookingCard({
           </button>
         ) : null}
       </div>
+      {booking.source === "ExternalManual" && booking.hallId ? <ExternalBookingActions hallId={booking.hallId} bookingId={booking.id} /> : null}
     </article>
   );
 }

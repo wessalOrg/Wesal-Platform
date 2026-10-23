@@ -17,10 +17,6 @@ import {
   formatUpcomingDateLabel,
   upcomingBookings,
 } from "@/lib/owner-calendar-bookings";
-import {
-  listOwnerManualBookings,
-  subscribeOwnerManualBookings,
-} from "@/lib/owner-manual-bookings-store";
 import type { OwnerBookingsCalendarStatus } from "@/types/owner-bookings-calendar";
 import type { HallBookingNotification } from "@/types/hall-notifications";
 import type { OwnerManualBooking } from "@/types/owner-manual-booking";
@@ -35,6 +31,7 @@ type OwnerHallBookingsCalendarProps = {
 };
 
 type MonthRange = { fromDate: string; toDate: string };
+const NO_LEGACY_BOOKINGS: OwnerManualBooking[] = [];
 
 export default function OwnerHallBookingsCalendar({
   hallId,
@@ -45,18 +42,9 @@ export default function OwnerHallBookingsCalendar({
   const locale = useUiLang();
   const dateLocale = locale === "ar" ? "ar-EG" : "en-GB";
   const { load, range, onVisibleMonthChange, retry } = useOwnerBookingsCalendar(hallId, enabled);
-  const notifications = useHallNotifications(hallId, enabled);
+  const notifications = useHallNotifications(hallId, enabled, range);
   const [selectedDate, setSelectedDate] = useState<string | null>(() => localTodayIso());
-  const [manualBookings, setManualBookings] = useState<OwnerManualBooking[]>(() =>
-    listOwnerManualBookings(hallId),
-  );
-
-  useEffect(() => {
-    setManualBookings(listOwnerManualBookings(hallId));
-    return subscribeOwnerManualBookings(() => {
-      setManualBookings(listOwnerManualBookings(hallId));
-    });
-  }, [hallId]);
+  const manualBookings = NO_LEGACY_BOOKINGS;
 
   useEffect(() => {
     const iso = parseDateIso(focusDate);

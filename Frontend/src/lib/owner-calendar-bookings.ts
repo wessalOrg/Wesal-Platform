@@ -10,6 +10,8 @@ export type OwnerCalendarBookingStatusKind = "confirmed" | "deposit" | "pending"
 
 export type OwnerCalendarBookingCardModel = {
   id: string;
+  hallId?: string;
+  source?: "Online" | "ExternalManual";
   date: string;
   title: string;
   customerName: string;
@@ -51,7 +53,7 @@ export function bookingsForDate(
   const matched = notifications
     .filter((item) => !isManualBookingId(item.id))
     .filter((item) => parseDateIso(item.date) === date)
-    .filter((item) => item.status === "Pending" || item.status === "AcceptedPendingDeposit" || item.status === "FullyBooked")
+    .filter((item) => item.status === "Pending" || item.status === "AcceptedPendingDeposit" || (item.status === "FullyBooked" || item.status === "Confirmed"))
     .map((item, index) => notificationToCard(item, translate, locale, index + manual.length));
 
   if (manual.length > 0 || matched.length > 0) return [...manual, ...matched];
@@ -85,7 +87,7 @@ export function upcomingBookings(
       return (
         item.status === "Pending" ||
         item.status === "AcceptedPendingDeposit" ||
-        item.status === "FullyBooked"
+        (item.status === "FullyBooked" || item.status === "Confirmed")
       );
     })
     .map((item, index) => notificationToCard(item, translate, locale, index));
@@ -119,7 +121,7 @@ function notificationToCard(
   const when = bookingWhenLabels(item, translate, locale);
   const deposit = item.depositAmount ?? null;
   const statusKind: OwnerCalendarBookingStatusKind =
-    item.status === "FullyBooked"
+    (item.status === "FullyBooked" || item.status === "Confirmed")
       ? "confirmed"
       : item.status === "AcceptedPendingDeposit"
         ? "deposit"
@@ -132,8 +134,10 @@ function notificationToCard(
 
   return {
     id: item.id,
+    hallId: item.hallId,
+    source: "source" in item ? item.source : undefined,
     date: parseDateIso(item.date) || item.date,
-    title: eventLabel || translate("owner.calendar.bookingTitle"),
+    title: item.source === "ExternalManual" && eventLabel ? translate(`owner.calendar.add.event.${eventLabel}`) : eventLabel || translate("owner.calendar.bookingTitle"),
     customerName,
     phone,
     requesterUserId: item.requesterUserId?.trim() || undefined,

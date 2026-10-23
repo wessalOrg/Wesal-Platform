@@ -7,7 +7,10 @@ import { formatBookingDateLong, localTodayIso, parseDateIso } from "@/lib/bookin
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 import { formatAmountMatchingInput, parseDepositAmount } from "@/lib/booking-deposits";
 import { localizeHallName } from "@/lib/localize-hall-display";
-import { addOwnerManualBooking } from "@/lib/owner-manual-bookings-store";
+import { saveExternalBooking } from "@/services/owner-external-bookings";
+import { slotStartsBetween } from "@/lib/hourly-slots";
+import { ApiError } from "@/lib/api-error";
+import type { ExternalBooking, ExternalBookingInput } from "@/types/external-booking";
 import type { HallOwnerHall } from "@/types/hall-owner-halls";
 import type { OwnerManualEventType } from "@/types/owner-manual-booking";
 
@@ -41,6 +44,7 @@ function normalizeTimeValue(value: string): string {
 
 type OwnerAddBookingModalProps = {
   open: boolean;
+  booking?: ExternalBooking;
   halls: HallOwnerHall[];
   defaultHallId: string;
   defaultDate?: string | null;
@@ -64,6 +68,7 @@ type FormState = {
 
 export default function OwnerAddBookingModal({
   open,
+  booking,
   halls,
   defaultHallId,
   defaultDate = null,
@@ -75,17 +80,20 @@ export default function OwnerAddBookingModal({
   const titleId = useId();
   const dateLocale = lang === "ar" ? "ar-EG" : "en-GB";
   const timeOptions = useMemo(() => buildTimeOptions(lang === "ar" ? "ar" : "en"), [lang]);
+  const submission = useRef<{ signature: string; key: string } | null>(null);
+  const inFlight = useRef(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [form, setForm] = useState<FormState>(() =>
-    emptyForm(defaultHallId, defaultDate),
+    booking ? formFromBooking(booking) : emptyForm(defaultHallId, defaultDate),
   );
   const [wasOpen, setWasOpen] = useState(open);
 
   if (wasOpen !== open) {
     setWasOpen(open);
     if (open) {
-      setForm(emptyForm(defaultHallId || halls[0]?.id || "", defaultDate));
+      setForm(booking ? formFromBooking(booking) : emptyForm(defaultHallId || halls[0]?.id || "", defaultDate));
       setErrors({});
       setSaving(false);
     }
@@ -147,7 +155,8 @@ export default function OwnerAddBookingModal({
     return Object.keys(next).length === 0;
   }
 
-  function handleSave() {
+  async function handleSave() {
+    if (inFlight.current) return;
     if (!validate()) return;
     const hall = halls.find((item) => item.id === form.hallId);
     if (!hall) {
@@ -155,28 +164,36 @@ export default function OwnerAddBookingModal({
       return;
     }
 
-    setSaving(true);
-    try {
-      const guests = form.guests.trim() ? Number(form.guests) : null;
-      const booking = addOwnerManualBooking({
-        hallId: hall.id,
-        hallName: localizeHallName(hall.id, hall.name, lang),
-        eventType: form.eventType,
-        customerName: form.customerName.trim(),
-        phone: form.phone.trim(),
-        date: parseDateIso(form.date) || form.date,
-        timeFrom: form.timeFrom,
-        timeTo: form.timeTo,
-        guests: Number.isFinite(guests) && guests != null && guests > 0 ? guests : null,
-        totalAmount: parseDepositAmount(form.totalAmount),
-        depositAmount: parseDepositAmount(form.depositAmount),
-        notes: form.notes.trim(),
-      });
-      onSaved?.(booking.id, booking.hallId, booking.date);
-      onClose();
-    } finally {
-      setSaving(false);
+    const input: ExternalBookingInput = {
+      customerName: form.customerName.trim(), phone: form.phone.trim(), eventType: form.eventType,
+      date: parseDateIso(form.date) || form.date,
+      slotStarts: booking && form.timeFrom === formFromBooking(booking).timeFrom && form.timeTo === formFromBooking(booking).timeTo
+        ? booking.slotStarts : slotStartsBetween(form.timeFrom, form.timeTo).map((time) => time + ":00"),
+      guests: form.guests.trim() ? Number(form.guests) : null, notes: form.notes.trim(),
+      totalAmount: parseDepositAmount(form.totalAmount), amountReceivedExternally: parseDepositAmount(form.depositAmount),
+    };
+    if (!input.slotStarts.length || (form.totalAmount.trim() && input.totalAmount == null) ||
+        (form.depositAmount.trim() && input.amountReceivedExternally == null) ||
+        (input.guests != null && (!Number.isInteger(input.guests) || input.guests < 1))) {
+      setSaveError(t("owner.external.invalid")); return;
     }
+    const signature = JSON.stringify({ hallId: hall.id, input, revision: booking?.revision });
+    if (submission.current && submission.current.signature !== signature) {
+      setSaveError(t("owner.external.retryOriginal")); return;
+    }
+    submission.current ??= { signature, key: crypto.randomUUID() };
+    inFlight.current = true;
+    setSaving(true); setSaveError(null);
+    try {
+      const saved = await saveExternalBooking(hall.id, input, submission.current.key, booking);
+      submission.current = null;
+      onSaved?.(saved.bookingId, saved.hallId, saved.date);
+      onClose();
+    } catch (error) {
+      if (error instanceof ApiError && error.status && error.status >= 400 && error.status < 500) submission.current = null;
+      setSaveError(error instanceof ApiError && error.status === 412 ? t("owner.external.stale") :
+        error instanceof ApiError && error.status === 409 ? t("owner.external.conflict") : t("owner.external.saveError"));
+    } finally { inFlight.current = false; setSaving(false); }
   }
 
   return (
@@ -207,10 +224,10 @@ export default function OwnerAddBookingModal({
               className="flex items-center gap-2 text-lg font-extrabold text-[var(--wesal-maroon)] sm:text-xl"
             >
               <AddCalendarIcon />
-              {t("owner.calendar.add.title")}
+              {t(booking ? "owner.external.edit" : "owner.calendar.add.title")}
             </h2>
             <p className="mt-1 text-sm leading-7 text-[var(--wesal-muted)]">
-              {t("owner.calendar.add.subtitle")}
+              {t("owner.external.subtitle")}
             </p>
           </div>
           <button
@@ -224,14 +241,15 @@ export default function OwnerAddBookingModal({
           </button>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+        <fieldset disabled={saving} className="min-h-0 min-w-0 flex-1 overflow-y-auto border-0 px-4 py-4 sm:px-6 sm:py-5">
+          {saveError ? <p role="alert" className="mb-3 text-sm text-red-700">{saveError}</p> : null}
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label={t("owner.calendar.add.hall")} required error={errors.hallId}>
               <SiteSelect
                 value={form.hallId}
                 icon={<HallIcon />}
                 testId="owner-add-booking-hall"
-                options={halls.map((hall) => ({
+                options={halls.filter((hall) => !booking || hall.id === booking.hallId).map((hall) => ({
                   value: hall.id,
                   label: localizeHallName(hall.id, hall.name, lang),
                 }))}
@@ -356,7 +374,7 @@ export default function OwnerAddBookingModal({
                 testId="owner-add-booking-total"
               />
               <MoneyField
-                label={t("owner.calendar.money.deposit")}
+                label={t("owner.external.amountReceived")}
                 value={form.depositAmount}
                 onChange={(value) => patch("depositAmount", value)}
                 testId="owner-add-booking-deposit"
@@ -403,7 +421,7 @@ export default function OwnerAddBookingModal({
               onChange={(event) => patch("notes", event.target.value)}
             />
           </section>
-        </div>
+        </fieldset>
 
         <footer className="flex flex-col-reverse gap-2 border-t border-[var(--wesal-border)] px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
           <button
@@ -420,7 +438,7 @@ export default function OwnerAddBookingModal({
             disabled={saving}
             aria-busy={saving || undefined}
             data-testid="owner-add-booking-save"
-            onClick={handleSave}
+            onClick={() => void handleSave()}
           >
             <PlusIcon />
             {saving ? t("owner.calendar.add.saving") : t("owner.calendar.add.save")}
@@ -429,6 +447,14 @@ export default function OwnerAddBookingModal({
       </div>
     </div>
   );
+}
+
+function formFromBooking(b: ExternalBooking): FormState {
+  const starts = b.slotStarts.map((x) => x.slice(0, 5)).sort();
+  const end = String(Number(starts.at(-1)?.slice(0, 2) ?? "0") + 1).padStart(2, "0") + ":00";
+  return { hallId: b.hallId, eventType: b.eventType, customerName: b.customerName, phone: b.phone,
+    date: b.date, timeFrom: starts[0] ?? "09:00", timeTo: end, guests: b.guests?.toString() ?? "",
+    totalAmount: b.totalAmount?.toString() ?? "", depositAmount: b.amountReceivedExternally?.toString() ?? "", notes: b.notes };
 }
 
 function emptyForm(hallId: string, defaultDate: string | null): FormState {

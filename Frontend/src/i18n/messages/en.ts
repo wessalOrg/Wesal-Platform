@@ -5,6 +5,21 @@ import type { MessageCatalog } from "@/i18n/types";
  * via translate() so incomplete coverage never shows raw keys.
  */
 const en: MessageCatalog = {
+  "owner.external.subtitle": "Confirmed external reservation. Hours are booked immediately; no Wesal payment confirmation is required.",
+  "owner.external.badge": "External · Confirmed",
+  "owner.external.edit": "Edit external booking",
+  "owner.external.cancel": "Cancel external booking",
+  "owner.external.amountReceived": "Amount received externally (optional)",
+  "owner.external.invalid": "Check the selected hours and optional amounts.",
+  "owner.external.retryOriginal": "The previous result is uncertain. Retry the original values before changing this booking.",
+  "owner.external.stale": "This booking changed. Close and reopen it to load the latest version.",
+  "owner.external.conflict": "These hours are unavailable or the hall is not eligible. Reload and choose valid hours.",
+  "owner.external.saveError": "Could not save. Check the details and retry; an uncertain retry uses the same request.",
+  "owner.external.reason": "Cancellation reason (optional)",
+  "owner.external.confirmCancel": "Cancel this confirmed external booking and release its hours?",
+  "owner.external.history": "External booking history",
+  "owner.external.cancelled": "External · Cancelled",
+  "owner.external.retry": "Retry",
   "brand.name": "Wesal",
   "brand.tagline":
     "Halls, event planners, and photographers in Gaza — search, compare, and book with confidence.",
