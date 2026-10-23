@@ -18,6 +18,7 @@ using Wesal.Domain.Constants;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Bookings;
 using Wesal.Infrastructure.Middleware;
+using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Repositories;
 using Wesal.Tests.Infrastructure;
 
@@ -25,6 +26,41 @@ namespace Wesal.Tests.Api;
 
 public sealed class ExternalBookingApiShould
 {
+    [Theory]
+    [InlineData("identity", 403)]
+    [InlineData("restriction", 403)]
+    [InlineData("unlocked", 200)]
+    public async Task BothOwnerRoutesEnforceTheSameAccountLocksBeforeReturningCustomerDetails(string kind, int status)
+    {
+        await using var h = await ExternalBookingHarness.CreateAsync();
+        var booking = await h.CreateAsync();
+        if (kind == "identity")
+        {
+            await using var db = h.Context();
+            var user = await db.Users.FindAsync("owner");
+            user!.LockoutEnabled = true;
+            user.LockoutEnd = DateTimeOffset.UtcNow.AddDays(1);
+            await db.SaveChangesAsync();
+        }
+        if (kind == "restriction") h.AccountLocks.Setup(x => x.GetLockedUntilAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DateTimeOffset.UtcNow.AddDays(1));
+        await using var op = h.Operation();
+        var general = new OwnerBookingRequestsService(op.Users, h.Current, new OwnerDashboardRepository(op.Db), h.AccountLocks.Object);
+        using var server = Server(op.Service, general);
+        using var client = server.CreateClient();
+        client.DefaultRequestHeaders.Add("Test-Role", ApplicationRoles.HallOwner);
+        var prefix = $"/api/v1/owner/halls/{h.HallId}";
+        foreach (var path in new[] { "/bookings", $"/external-bookings/{booking.BookingId}",
+            "/external-bookings?fromDate=2026-11-16&toDate=2026-11-16", $"/external-bookings/{booking.BookingId}/history" })
+        {
+            var response = await client.GetAsync(prefix + path);
+            Assert.Equal(status, (int)response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync();
+            if (status == 200) Assert.Contains("0599123456", body);
+            else { Assert.DoesNotContain("0599123456", body); Assert.DoesNotContain("External customer", body); }
+        }
+    }
+
     [Theory]
     [InlineData("guest",401)]
     [InlineData("RegisteredUser",403)]
@@ -85,8 +121,12 @@ public sealed class ExternalBookingApiShould
         await using var verify=h.Context();Assert.Equal(Wesal.Domain.Enums.BookingStatus.Confirmed,(await verify.Bookings.FindAsync(b.BookingId))!.Status);
     }
 
-    private static TestServer Server(IOwnerExternalBookingService service)=>new(new WebHostBuilder().ConfigureServices(services=> {
+    private static TestServer Server(IOwnerExternalBookingService service, IOwnerBookingRequestsService? general = null)=>new(new WebHostBuilder().ConfigureServices(services=> {
         services.AddLogging();services.AddSingleton(service);
+        if (general is not null)
+            foreach (var parameter in typeof(OwnerController).GetConstructors().Single().GetParameters())
+                services.AddSingleton(parameter.ParameterType, parameter.ParameterType == typeof(IOwnerBookingRequestsService)
+                    ? general : ((Mock)Activator.CreateInstance(typeof(Mock<>).MakeGenericType(parameter.ParameterType))!).Object);
         services.AddAuthentication("test").AddScheme<AuthenticationSchemeOptions,OwnerAuthentication>("test",_=>{});
         services.AddAuthorization(o=>o.AddPolicy(ApplicationPolicies.RequireHallOwner,p=>p.RequireAuthenticatedUser().RequireRole(ApplicationRoles.HallOwner)));
         services.AddControllers().AddApplicationPart(typeof(OwnerExternalBookingsController).Assembly);

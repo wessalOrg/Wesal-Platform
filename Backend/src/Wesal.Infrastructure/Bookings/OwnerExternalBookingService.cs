@@ -12,6 +12,7 @@ using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Identity;
+using Wesal.Infrastructure.Authorization;
 
 namespace Wesal.Infrastructure.Bookings;
 
@@ -153,8 +154,7 @@ public sealed class OwnerExternalBookingService(
         if (!current.IsAuthenticated || string.IsNullOrWhiteSpace(current.UserId)) throw new UnauthorizedException("Sign in to manage external bookings.");
         if (!current.Roles.Contains(ApplicationRoles.HallOwner, StringComparer.OrdinalIgnoreCase)) throw new ForbiddenException("Hall owner access is required.");
         var user = await users.FindByIdAsync(current.UserId) ?? throw new UnauthorizedException("The account no longer exists.");
-        if (await users.IsLockedOutAsync(user)) throw new ForbiddenException("The account is locked.");
-        await accountLocks.EnsureUnlockedAsync(current.UserId, ct);
+        await OwnerBookingSecurity.EnsureUnlockedAsync(users, user, accountLocks, ct);
         return current.UserId;
     }
 
