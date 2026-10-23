@@ -132,7 +132,7 @@ export default async function HeroSection() {
       </div>
 
       <div className="hero-card hero-showcase flex min-h-0 flex-1 flex-col md:hidden">
-        <div className="hero-satin relative flex min-h-0 flex-1 flex-col justify-center overflow-hidden rounded-t-[24px] px-6 py-5 sm:px-10 sm:py-6">
+        <div className="hero-satin relative flex min-h-0 flex-1 flex-col justify-center overflow-hidden rounded-t-[24px] px-5 py-4 sm:px-10 sm:py-6">
           <div className="hero-cream-decor hero-cream-decor--mobile" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img

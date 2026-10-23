@@ -79,28 +79,37 @@ export default function MabroukHistoryPage() {
         <section className="space-y-3">
           {revisions.map((revision) => (
             <article key={revision.id} className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-bold text-[var(--wesal-text)]">
-                    {t("admin.mabrouk.history.version")} {revision.version} · {t("admin.mabrouk.actionName." + revision.action)}
-                  </h3>
-                  <p className="mt-1 text-xs text-[var(--wesal-muted)]">
-                    {t("admin.mabrouk.history.changedBy")}: {revision.createdByUserId ?? t("admin.role")} · {new Date(revision.createdAt).toLocaleString()}
-                  </p>
-                  {revision.changeNote ? <p className="mt-2 text-sm text-[var(--wesal-muted)]">{revision.changeNote}</p> : null}
-                </div>
-                <button type="button" className="btn-outline" disabled={busy} onClick={() => void rollback(revision)}>
+              <div>
+                <h3 className="text-base font-bold text-[var(--wesal-text)]">
+                  {t("admin.mabrouk.history.version")} {revision.version} · {t("admin.mabrouk.actionName." + revision.action)}
+                </h3>
+                <p className="mt-1 text-xs text-[var(--wesal-muted)]">
+                  {t("admin.mabrouk.history.changedBy")}: {revision.createdByUserId ?? t("admin.role")} · {new Date(revision.createdAt).toLocaleString()}
+                </p>
+                {revision.changeNote ? <p className="mt-2 text-sm text-[var(--wesal-muted)]">{revision.changeNote}</p> : null}
+              </div>
+              <div className="mt-3 px-1.5 md:px-0">
+                <button
+                  type="button"
+                  className="btn-outline w-full justify-center md:w-auto"
+                  disabled={busy}
+                  onClick={() => void rollback(revision)}
+                >
                   {t("admin.mabrouk.history.rollback")}
                 </button>
               </div>
-              <details className="mt-4 rounded-xl bg-[#fcfbf9] p-3">
-                <summary className="cursor-pointer text-xs font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.history.viewVersion")}</summary>
-                <div className="mt-3 space-y-3 text-sm">
-                  <p className="font-semibold text-[var(--wesal-text)]">{revision.snapshot.title}</p>
-                  <p className="whitespace-pre-wrap leading-6 text-[var(--wesal-muted)]">{revision.snapshot.answerAr}</p>
-                  {revision.snapshot.answerEn ? <p className="whitespace-pre-wrap leading-6 text-[var(--wesal-muted)]" dir="ltr">{revision.snapshot.answerEn}</p> : null}
-                </div>
-              </details>
+              <div className="mt-2 px-1.5 md:px-0">
+                <details className="rounded-xl bg-[#fcfbf9]">
+                  <summary className="flex min-h-10 w-full cursor-pointer items-center justify-center px-3 text-sm font-bold text-[var(--wesal-maroon-dark)] md:inline-flex md:w-auto md:justify-start">
+                    {t("admin.mabrouk.history.viewVersion")}
+                  </summary>
+                  <div className="space-y-3 px-3 pb-3 text-sm">
+                    <p className="font-semibold text-[var(--wesal-text)]">{revision.snapshot.title}</p>
+                    <p className="whitespace-pre-wrap leading-6 text-[var(--wesal-muted)]">{revision.snapshot.answerAr}</p>
+                    {revision.snapshot.answerEn ? <p className="whitespace-pre-wrap leading-6 text-[var(--wesal-muted)]" dir="ltr">{revision.snapshot.answerEn}</p> : null}
+                  </div>
+                </details>
+              </div>
             </article>
           ))}
         </section>

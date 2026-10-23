@@ -9,6 +9,7 @@ type MobileSidebarTriggerProps = {
   onClose: () => void;
   openLabelKey?: string;
   closeLabelKey?: string;
+  compact?: boolean;
 };
 
 export default function MobileSidebarTrigger({
@@ -18,15 +19,18 @@ export default function MobileSidebarTrigger({
   onClose,
   openLabelKey = "owner.management.openMenu",
   closeLabelKey = "owner.management.closeMenu",
+  compact = false,
 }: MobileSidebarTriggerProps) {
   const t = useT();
+  const label = isSidebarOpen ? t(closeLabelKey) : t(openLabelKey);
 
   return (
     <button
       type="button"
-      className="owner-mgmt-menu-trigger"
+      className={"owner-mgmt-menu-trigger" + (compact ? " owner-mgmt-menu-trigger--compact" : "")}
       aria-expanded={isSidebarOpen}
       aria-controls={sidebarId}
+      aria-label={compact ? label : undefined}
       data-testid="owner-management-menu-trigger"
       onClick={() => {
         if (isSidebarOpen) onClose();
@@ -36,8 +40,8 @@ export default function MobileSidebarTrigger({
       <span className="owner-mgmt-menu-trigger-icon" aria-hidden="true">
         {isSidebarOpen ? <CloseIcon /> : <MenuIcon />}
       </span>
-      <span>
-        {isSidebarOpen ? t(closeLabelKey) : t(openLabelKey)}
+      <span className={compact ? "hidden md:inline" : undefined}>
+        {label}
       </span>
     </button>
   );

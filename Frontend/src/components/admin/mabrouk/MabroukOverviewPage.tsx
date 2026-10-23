@@ -59,27 +59,30 @@ export default function MabroukOverviewPage() {
     <div className="space-y-5" data-testid="mabrouk-overview">
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         {metrics.map(([label, count]) => (
-          <article key={label} className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.04)] sm:p-5">
+          <article
+            key={label}
+            className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.04)] last:col-span-2 sm:p-5 sm:last:col-span-3 xl:last:col-span-1"
+          >
             <p className="text-xs font-semibold leading-5 text-[var(--wesal-muted)]">{t(label)}</p>
             <p className="mt-2 text-2xl font-extrabold text-[var(--wesal-maroon-dark)]">{count}</p>
           </article>
         ))}
       </section>
 
-      <section className="rounded-2xl border border-[var(--wesal-border)] bg-white p-5 sm:p-6">
+      <section className="rounded-2xl border border-[var(--wesal-border)] bg-white px-3.5 py-4 sm:p-6">
         <h2 className="text-base font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.sources.title")}</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
           <SourceCard title={t("admin.mabrouk.knowledge.builtInBadge")} body={t("admin.mabrouk.sources.builtIn")} />
           <SourceCard title={t("admin.mabrouk.knowledge.dynamic")} body={t("admin.mabrouk.sources.dynamic")} />
           <SourceCard title={t("admin.mabrouk.knowledge.verification")} body={t("admin.mabrouk.sources.capabilities")} />
           <SourceCard title={t("admin.mabrouk.simulator.source")} body={t("admin.mabrouk.sources.live")} />
         </div>
-        <p className="mt-4 rounded-xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-sm leading-6 text-[var(--wesal-text)]">
+        <p className="mt-4 rounded-xl bg-[var(--wesal-pink-soft)] px-3.5 py-3 text-sm leading-6 text-[var(--wesal-text)]">
           {t("admin.mabrouk.sources.note")}
         </p>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
         <OverviewList
           title={t("admin.mabrouk.recentQuestions")}
           empty={data.recentUnanswered.length === 0}
@@ -135,9 +138,9 @@ export default function MabroukOverviewPage() {
 
 function SourceCard({ title, body }: { title: string; body: string }) {
   return (
-    <article className="rounded-xl border border-[var(--wesal-border)] bg-[#fcfbf9] p-4">
+    <article className="rounded-xl border border-[var(--wesal-border)] bg-[#fcfbf9] px-3.5 py-3.5 sm:p-4">
       <h3 className="text-sm font-bold text-[var(--wesal-text)]">{title}</h3>
-      <p className="mt-2 text-xs leading-5 text-[var(--wesal-muted)]">{body}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--wesal-muted)]">{body}</p>
     </article>
   );
 }
@@ -151,7 +154,7 @@ function OverviewList({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-5">
+    <section className="rounded-2xl border border-[var(--wesal-border)] bg-white px-3.5 py-4 sm:p-5">
       <h2 className="text-base font-bold text-[var(--wesal-maroon-dark)]">{title}</h2>
       {empty ? <p className="py-6 text-sm text-[var(--wesal-muted)]">{emptyText}</p> : <ul className="mt-2">{children}</ul>}
     </section>

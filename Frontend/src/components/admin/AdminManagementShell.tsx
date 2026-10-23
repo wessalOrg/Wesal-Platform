@@ -65,10 +65,25 @@ export default function AdminManagementShell({
       />
 
       <div className="seeker-dash-main">
-        <header className="seeker-dash-topbar">
-          <div className="seeker-dash-topbar-start">
-            <div className="md:hidden">
+        <header className="seeker-dash-topbar admin-dash-topbar">
+          <p className="seeker-dash-topbar-title">{t("admin.appTitle")}</p>
+          <div className="admin-dash-topbar-actions">
+            <div className="seeker-dash-topbar-end admin-dash-topbar-tools">
+              <NavbarNotificationsButton />
+              <LanguageSwitcher iconOnly className="seeker-dash-lang" />
+              <span className="seeker-dash-userchip">
+                <span className="seeker-dash-userchip-avatar" aria-hidden="true">
+                  {initials(displayName)}
+                </span>
+                <span className="seeker-dash-userchip-meta">
+                  <span className="seeker-dash-userchip-name">{displayName}</span>
+                  <span className="seeker-dash-userchip-role">{t("admin.role")}</span>
+                </span>
+              </span>
+            </div>
+            <div className="admin-dash-topbar-menu md:hidden">
               <MobileSidebarTrigger
+                compact
                 isSidebarOpen={isSidebarOpen}
                 sidebarId={SIDEBAR_ID}
                 onOpen={() => setIsSidebarOpen(true)}
@@ -77,21 +92,6 @@ export default function AdminManagementShell({
                 closeLabelKey="admin.closeMenu"
               />
             </div>
-            <p className="seeker-dash-topbar-title">{t("admin.appTitle")}</p>
-          </div>
-
-          <div className="seeker-dash-topbar-end">
-            <NavbarNotificationsButton />
-            <LanguageSwitcher iconOnly className="seeker-dash-lang" />
-            <span className="seeker-dash-userchip">
-              <span className="seeker-dash-userchip-avatar" aria-hidden="true">
-                {initials(displayName)}
-              </span>
-              <span className="seeker-dash-userchip-meta">
-                <span className="seeker-dash-userchip-name">{displayName}</span>
-                <span className="seeker-dash-userchip-role">{t("admin.role")}</span>
-              </span>
-            </span>
           </div>
         </header>
 

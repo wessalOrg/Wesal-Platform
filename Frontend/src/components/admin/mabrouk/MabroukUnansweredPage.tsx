@@ -142,16 +142,18 @@ export default function MabroukUnansweredPage() {
 
   return (
     <div className="space-y-4" data-testid="mabrouk-unanswered">
-      <section className="flex flex-wrap items-start justify-between gap-3">
+      <section className="space-y-3">
         <div>
           <h2 className="text-lg font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.gaps.title")}</h2>
           <p className="mt-1 text-sm leading-6 text-[var(--wesal-muted)]">{t("admin.mabrouk.gaps.subtitle")}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <label className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm text-[var(--wesal-text)]">
+        <div className="px-1.5 md:px-0">
+          <label className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm text-[var(--wesal-text)] md:inline-flex md:w-auto md:justify-start">
             <input type="checkbox" checked={includeClosed} onChange={(event) => setIncludeClosed(event.target.checked)} />
             {t("admin.mabrouk.gaps.showClosed")}
           </label>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-outline" disabled={busy || unresolved.length < 2} onClick={() => void suggestGroups()}>
             ✨ {t("admin.mabrouk.gaps.suggestGroups")}
           </button>
@@ -165,7 +167,7 @@ export default function MabroukUnansweredPage() {
 
       {suggestions.length > 0 ? (
         <section className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-5">
-          <h3 className="text-sm font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.gaps.suggestedGroups")}</h3>
+          <h3 className="text-base font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.gaps.suggestedGroups")}</h3>
           <div className="mt-3 space-y-3">
             {suggestions.map((suggestion, index) => (
               <article key={index} className="rounded-xl bg-[var(--wesal-pink-soft)] p-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
