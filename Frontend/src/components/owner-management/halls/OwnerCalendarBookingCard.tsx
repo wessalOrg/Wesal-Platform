@@ -6,6 +6,7 @@ import StableClockRangeText from "@/components/halls/StableClockRangeText";
 import { useT } from "@/i18n";
 import { formatDepositAmount } from "@/lib/booking-deposits";
 import type { OwnerCalendarBookingCardModel } from "@/lib/owner-calendar-bookings";
+import ExternalBookingActions from "./ExternalBookingActions";
 
 type OwnerCalendarBookingCardProps = {
   booking: OwnerCalendarBookingCardModel;
@@ -46,7 +47,7 @@ export default function OwnerCalendarBookingCard({
           content: (
             <span className="inline-flex min-w-0 items-center gap-1">
               <span className="shrink-0">{t("owner.calendar.detail.timeLabel")}</span>
-              <StableClockRangeText label={booking.timeLabel} className="truncate font-bold" />
+              <StableClockRangeText label={booking.timeLabel} className={booking.source === "ExternalManual" ? "font-bold" : "truncate font-bold"} />
             </span>
           ),
         }
@@ -59,6 +60,7 @@ export default function OwnerCalendarBookingCard({
       data-testid="owner-calendar-booking-card"
       data-booking-id={booking.id}
     >
+      {booking.source === "ExternalManual" ? <p className="mb-2 text-xs font-bold text-emerald-700">{t("owner.external.badge")}</p> : null}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
           <span
@@ -104,7 +106,7 @@ export default function OwnerCalendarBookingCard({
               <span className="text-[var(--wesal-maroon)]" aria-hidden="true">
                 {item.icon}
               </span>
-              <span className="min-w-0 truncate">{item.content}</span>
+              <span className={item.key === "time" && booking.source === "ExternalManual" ? "min-w-0" : "min-w-0 truncate"}>{item.content}</span>
             </div>
           ))}
         </div>
@@ -153,6 +155,7 @@ export default function OwnerCalendarBookingCard({
           </button>
         ) : null}
       </div>
+      {booking.source === "ExternalManual" && booking.hallId ? <ExternalBookingActions hallId={booking.hallId} bookingId={booking.id} /> : null}
     </article>
   );
 }

@@ -318,7 +318,8 @@ public class OwnerBookingRequestsServiceShould : IDisposable
         => new(
             _userManager,
             currentUser,
-            new OwnerDashboardRepository(_context));
+            new OwnerDashboardRepository(_context),
+            new Moq.Mock<IAccountLockService> { CallBase = true }.Object);
 
     private async Task<ApplicationUser> CreateUserAsync(
         string email,

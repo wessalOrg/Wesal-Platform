@@ -15,11 +15,7 @@ import {
 import { subscribeOwnerBookingRequestEvents } from "@/services/booking-notification-realtime";
 import { fetchHallBookingNotifications } from "@/services/hall-notifications";
 import { notifyHallOwnerHallsChanged } from "@/lib/hall-owner-halls-events";
-import { mergeApiNotificationsWithManual } from "@/lib/owner-manual-booking-notification";
-import {
-  listOwnerManualBookings,
-  subscribeOwnerManualBookings,
-} from "@/lib/owner-manual-bookings-store";
+import { EXTERNAL_BOOKINGS_CHANGED, listExternalBookings, externalToNotification } from "@/services/owner-external-bookings";
 import { isPaymentRequiredApiError } from "@/lib/payment-required-error";
 import { isSystemLockedApiError } from "@/lib/system-locked-error";
 import {
@@ -49,7 +45,7 @@ function statusFromKind(
  * Hall-scoped booking-request notifications.
  * Changing `hallId` immediately drops the previous hall's list.
  */
-export function useHallNotifications(hallId: string | null, enabled: boolean) {
+export function useHallNotifications(hallId: string | null, enabled: boolean, range?: { fromDate: string; toDate: string } | null) {
   const scopedId = enabled && hallId?.trim() ? hallId.trim() : null;
   const [seenId, setSeenId] = useState<string | null>(scopedId);
   const [retryTick, setRetryTick] = useState(0);
@@ -57,7 +53,6 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
   const [items, setItems] = useState<HallBookingNotification[]>([]);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const statusRef = useRef(status);
-  const apiItemsRef = useRef<HallBookingNotification[]>([]);
 
   useEffect(() => {
     statusRef.current = status;
@@ -66,17 +61,9 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
   if (scopedId !== seenId) {
     setSeenId(scopedId);
     setItems([]);
-    apiItemsRef.current = [];
     setErrorKey(null);
     setStatus(scopedId ? "loading" : "idle");
   }
-
-  const publishMerged = useCallback((apiItems: HallBookingNotification[], hallId: string) => {
-    apiItemsRef.current = apiItems;
-    const merged = mergeApiNotificationsWithManual(apiItems, listOwnerManualBookings(hallId));
-    setItems(merged);
-    setStatus(merged.length === 0 ? "empty" : "ready");
-  }, []);
 
   useEffect(() => {
     if (!scopedId) return;
@@ -85,16 +72,18 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
     let cancelled = false;
 
     void fetchHallBookingNotifications(scopedId, controller.signal)
+      .catch(async (error: unknown) => {
+        if (!isPaymentRequiredApiError(error) && !isSystemLockedApiError(error)) throw error;
+        const year = new Date().getFullYear();
+        return (await listExternalBookings(scopedId, range?.fromDate ?? `${year}-01-01`, range?.toDate ?? `${year}-12-31`, controller.signal))
+          .map(externalToNotification);
+      })
       .then((next) => {
         if (cancelled) return;
         setItems((current) => {
           const withoutManual = current.filter((item) => !item.id.startsWith("manual-"));
           const mergedApi = mergePendingWithKeptSchedule(next, withoutManual);
-          const merged = mergeApiNotificationsWithManual(
-            mergedApi,
-            listOwnerManualBookings(scopedId),
-          );
-          apiItemsRef.current = mergedApi;
+          const merged = mergedApi;
           setStatus(merged.length === 0 ? "empty" : "ready");
           return merged;
         });
@@ -105,7 +94,6 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
         const kind = notificationErrorKind(err);
         if (isPaymentRequiredApiError(err)) {
           setItems([]);
-          apiItemsRef.current = [];
           setErrorKey(null);
           setStatus("forbidden");
           reportOwnedHallPaymentRequired(scopedId);
@@ -113,23 +101,12 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
         }
         if (isSystemLockedApiError(err)) {
           setItems([]);
-          apiItemsRef.current = [];
           setErrorKey(null);
           setStatus("forbidden");
           reportOwnedHallSystemLocked(scopedId);
           return;
         }
-        // Keep locally added calendar bookings visible even if the API list fails.
-        const manualOnly = mergeApiNotificationsWithManual([], listOwnerManualBookings(scopedId));
-        if (manualOnly.length > 0 && kind !== "unauthorized" && kind !== "forbidden") {
-          apiItemsRef.current = [];
-          setItems(manualOnly);
-          setErrorKey(null);
-          setStatus("ready");
-          return;
-        }
         setItems([]);
-        apiItemsRef.current = [];
         setErrorKey(
           kind === "unauthorized"
             ? "errors.owner.notifications.unauthorized"
@@ -151,15 +128,15 @@ export function useHallNotifications(hallId: string | null, enabled: boolean) {
       cancelled = true;
       controller.abort();
     };
-  }, [scopedId, retryTick]);
+  }, [scopedId, retryTick, range?.fromDate, range?.toDate]);
 
   useEffect(() => {
-    if (!scopedId) return;
-    return subscribeOwnerManualBookings(() => {
-      if (statusRef.current === "forbidden" || statusRef.current === "unauthorized") return;
-      publishMerged(apiItemsRef.current, scopedId);
-    });
-  }, [scopedId, publishMerged]);
+    const changed = (event: Event) => {
+      if ((event as CustomEvent<{ hallId: string }>).detail?.hallId === scopedId) setRetryTick((n) => n + 1);
+    };
+    window.addEventListener(EXTERNAL_BOOKINGS_CHANGED, changed);
+    return () => window.removeEventListener(EXTERNAL_BOOKINGS_CHANGED, changed);
+  }, [scopedId]);
 
   useEffect(() => {
     if (!scopedId) return;

@@ -74,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IExternalBookingRepository, ExternalBookingRepository>();
         services.AddScoped<IAISessionRepository, AISessionRepository>();
         services.AddScoped<IAiConversationSessionStore, AiConversationSessionStore>();
         services.AddHostedService<AiConversationSessionCleanupService>();

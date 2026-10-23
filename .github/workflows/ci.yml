@@ -107,6 +107,9 @@ jobs:
       - name: Mabrouk assistant contract (routes, navigation safety, context, recovery)
         run: npm run verify:assistant
 
+      - name: External booking owner and availability contracts
+        run: npm run verify:external-bookings
+
       - name: Production env gate
         run: node scripts/verify-production-env.mjs
 

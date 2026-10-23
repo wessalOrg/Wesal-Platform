@@ -4,6 +4,7 @@ export function tryParseOwnerBookingRequestStatus(
   value: string | number | null | undefined,
 ): OwnerBookingRequestStatus | null {
   if (value == null || value === "") return null;
+  if (value === 4 || value === "4" || String(value).toLowerCase() === "confirmed") return "Confirmed";
   if (value === 0 || value === "0") return "Pending";
   if (value === 1 || value === "1") return "Rejected";
   if (value === 3 || value === "3") return "Cancelled";
@@ -40,7 +41,7 @@ export function tryParseOwnerBookingRequestStatus(
 export function parseOwnerBookingRequestStatus(
   value: string | number | null | undefined,
 ): OwnerBookingRequestStatus {
-  return tryParseOwnerBookingRequestStatus(value) ?? "Pending";
+  return tryParseOwnerBookingRequestStatus(value) ?? "Unknown";
 }
 
 export function canAcceptBookingRequest(status: OwnerBookingRequestStatus | null): boolean {
@@ -62,6 +63,8 @@ export function statusAfterOwnerPublish(): "FullyBooked" {
 }
 
 export function ownerRequestStatusMessageKey(status: OwnerBookingRequestStatus): string {
+  if (status === "Confirmed") return "owner.external.badge";
+  if (status === "Unknown") return "owner.notifications.valueMissing";
   if (status === "AcceptedPendingDeposit") return "owner.notifications.status.pendingDeposit";
   if (status === "FullyBooked") return "owner.notifications.status.fullyBooked";
   if (status === "Rejected") return "bookings.status.rejected";

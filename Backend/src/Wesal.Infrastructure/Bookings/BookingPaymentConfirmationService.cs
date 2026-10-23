@@ -57,6 +57,9 @@ public sealed class BookingPaymentConfirmationService : IBookingPaymentConfirmat
 
         EnsureHallOwnership(booking);
 
+        if (booking.Source != BookingSource.Online)
+            throw new ExternalBookingException(409, "ExternalBookingWorkflow", "Use the external booking endpoints for this booking.");
+
         HallManagementAccess.EnsureAllowed(booking.Hall!);
 
         // The checks below are for a clear error message; the race is still resolved by

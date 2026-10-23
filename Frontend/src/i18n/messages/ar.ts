@@ -2,6 +2,25 @@ import type { MessageCatalog } from "@/i18n/types";
 
 /** Canonical Arabic messages — also used as fallback for missing English keys. */
 const ar: MessageCatalog = {
+  "owner.external.recovery": "نتيجة الحجز السابق في {hall} غير مؤكدة. احتفظنا ببياناته الأصلية. أعد المحاولة لحسم النتيجة قبل بدء حجز آخر.",
+  "owner.external.hours": "الفترات المحجوزة (تبقى الفجوات متاحة)",
+  "owner.external.addInterval": "إضافة فترة",
+  "owner.external.removeInterval": "إزالة فترة",
+  "owner.external.subtitle": "حجز خارجي مؤكد. تُحجز الساعات فوراً دون اعتماد أو تأكيد عربون عبر وصال.",
+  "owner.external.badge": "خارجي · مؤكد",
+  "owner.external.edit": "تعديل الحجز الخارجي",
+  "owner.external.cancel": "إلغاء الحجز الخارجي",
+  "owner.external.amountReceived": "المبلغ المستلم خارجياً (اختياري)",
+  "owner.external.invalid": "تحقق من الساعات والمبالغ الاختيارية.",
+  "owner.external.retryOriginal": "نتيجة الطلب السابق غير مؤكدة. أعد المحاولة بنفس البيانات قبل تغيير الحجز.",
+  "owner.external.stale": "تغيّر هذا الحجز. أغلقه وافتحه مجدداً لتحميل أحدث نسخة.",
+  "owner.external.conflict": "الساعات غير متاحة أو الصالة غير مؤهلة. حدّث البيانات واختر ساعات صالحة.",
+  "owner.external.saveError": "تعذّر الحفظ. تحقق من البيانات وأعد المحاولة؛ نستخدم نفس الطلب إذا لم تتضح النتيجة.",
+  "owner.external.reason": "سبب الإلغاء (اختياري)",
+  "owner.external.confirmCancel": "إلغاء هذا الحجز الخارجي المؤكد وإتاحة ساعاته؟",
+  "owner.external.history": "سجل الحجوزات الخارجية",
+  "owner.external.cancelled": "خارجي · ملغى",
+  "owner.external.retry": "إعادة المحاولة",
   "brand.name": "وِصال",
   "brand.tagline":
     "منصة تجمع القاعات ومنسقي المناسبات والمصورين في غزة — ابحث، قارن، واحجز بثقة.",

@@ -61,6 +61,9 @@ public sealed class BookingCancellationService : IBookingCancellationService
 
         EnsureRequesterOwnership(booking);
 
+        if (booking.Source != BookingSource.Online)
+            throw new ExternalBookingException(409, "ExternalBookingWorkflow", "Use the external booking endpoints for this booking.");
+
         // WESAL-TASK-8 (Edit 8): an approved booking whose deposit has not been confirmed is
         // still the requester's to call off, so cancellation now covers Accepted as well as
         // Pending. Once the owner confirmed the deposit the booking is paid and the

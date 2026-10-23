@@ -1,3 +1,4 @@
+using Wesal.Domain.Enums;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -69,6 +70,9 @@ public sealed class BookingDeletionService : IBookingDeletionService
         }
 
         EnsureHallOwnership(booking);
+
+        if (booking.Source != BookingSource.Online)
+            throw new ExternalBookingException(409, "ExternalBookingWorkflow", "Use the external booking endpoints for this booking.");
 
         HallManagementAccess.EnsureAllowed(booking.Hall!);
 

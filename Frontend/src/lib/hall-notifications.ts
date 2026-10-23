@@ -23,6 +23,9 @@ import type {
 } from "@/types/hall-notifications";
 
 type NotificationDto = {
+  source?: string | number;
+  revision?: number;
+  externalEventType?: string;
   bookingId?: string;
   bookingRequestId?: string;
   id?: string;
@@ -176,7 +179,8 @@ export function mapHallBookingNotification(
     packed.phone ||
     requesterPhoneFromDto(data, profileName || requesterName) ||
     undefined;
-  const eventTypeLabel = packed.eventTypeLabel;
+  const external = data.source === "ExternalManual" || data.source === 1;
+  const eventTypeLabel = external ? data.externalEventType : packed.eventTypeLabel;
   const requesterAvatarUrl =
     resolveMediaUrl(
       asText(data.requesterAvatarUrl) ||
@@ -185,18 +189,20 @@ export function mapHallBookingNotification(
     ) || undefined;
 
   const depositPaymentConfirmedAt = confirmedAtFromDto(data.depositPaymentConfirmedAt);
-  const parsedStatus = data.status == null ? null : parseOwnerBookingRequestStatus(data.status);
+  const parsedStatus = parseOwnerBookingRequestStatus(data.status);
   // The server keeps Status = Accepted after the owner confirms the deposit and only
   // stamps DepositPaymentConfirmedAt. Without this, a refresh puts the request back
   // under "awaiting deposit" and the confirm button stays.
   const status = depositPaymentConfirmedAt ? "FullyBooked" : parsedStatus;
   const isPublished = Boolean(depositPaymentConfirmedAt) || parsePublishedFlag(data) || status === "FullyBooked";
-  const canPublish = !isPublished && parseCanPublishFlag(data);
+  const canPublish = !external && !isPublished && parseCanPublishFlag(data);
 
   return {
     id,
     hallId: asText(data.hallId) || fallbackHallId,
     requesterName,
+    source: external ? "ExternalManual" : "Online",
+    revision: data.revision,
     requesterUserId: asText(data.requesterUserId || data.userId),
     requesterPhone,
     requesterAvatarUrl,
@@ -211,7 +217,7 @@ export function mapHallBookingNotification(
     depositPaymentConfirmedAt,
     canPublish,
     isPublished,
-    canDelete: parseCanDeleteFlag(data),
+    canDelete: !external && parseCanDeleteFlag(data),
   };
 }
 
