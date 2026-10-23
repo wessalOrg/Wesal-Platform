@@ -34,7 +34,7 @@ export default function MabroukStudioFrame({ children }: { children: React.React
       </section>
 
       <nav
-        className="flex gap-1 overflow-x-auto rounded-2xl border border-[var(--wesal-border)] bg-white p-1"
+        className="mabrouk-studio-tabs"
         aria-label={t("admin.mabrouk.title")}
         data-testid="mabrouk-studio-tabs"
       >
@@ -45,10 +45,7 @@ export default function MabroukStudioFrame({ children }: { children: React.React
               key={tab.path}
               href={tab.path}
               aria-current={active ? "page" : undefined}
-              className={"min-h-10 shrink-0 rounded-xl px-3 py-2 text-sm font-semibold transition sm:px-4 " +
-                (active
-                  ? "bg-[var(--wesal-maroon)] text-white"
-                  : "text-[var(--wesal-muted)] hover:bg-[var(--wesal-pink-soft)] hover:text-[var(--wesal-maroon-dark)]")}
+              className={"mabrouk-studio-tab" + (active ? " mabrouk-studio-tab--active" : "")}
             >
               {t(tab.key)}
             </Link>

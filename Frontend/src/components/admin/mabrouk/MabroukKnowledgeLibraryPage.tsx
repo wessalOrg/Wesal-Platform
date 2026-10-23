@@ -138,21 +138,27 @@ export default function MabroukKnowledgeLibraryPage() {
 
   return (
     <div className="space-y-4" data-testid="mabrouk-knowledge-library">
-      <section className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <section className="space-y-3">
+        <div className="px-1.5">
           <h2 className="text-lg font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.knowledge.title")}</h2>
           <p className="mt-1 text-sm leading-6 text-[var(--wesal-muted)]">{t("admin.mabrouk.knowledge.subtitle")}</p>
         </div>
-        <button type="button" className="btn-primary" onClick={() => { setSelected(null); setEditorOpen(true); }}>
-          + {t("admin.mabrouk.knowledge.create")}
-        </button>
+        <div className="px-1.5 md:flex md:justify-end md:px-0">
+          <button
+            type="button"
+            className="btn-primary w-full justify-center md:w-auto"
+            onClick={() => { setSelected(null); setEditorOpen(true); }}
+          >
+            + {t("admin.mabrouk.knowledge.create")}
+          </button>
+        </div>
       </section>
 
       <form
-        className="grid gap-2 rounded-2xl border border-[var(--wesal-border)] bg-white p-3 sm:grid-cols-2 xl:grid-cols-6"
+        className="mabrouk-library-filters grid gap-2 rounded-2xl border border-[var(--wesal-border)] bg-white p-3 sm:grid-cols-2 xl:grid-cols-6"
         onSubmit={(event) => { event.preventDefault(); setAppliedSearch(search.trim()); }}
       >
-        <input className="min-h-11 rounded-xl border border-[var(--wesal-border)] px-3 text-sm outline-none focus:border-[var(--wesal-maroon)] sm:col-span-2 xl:col-span-2"
+        <input className="min-h-11 rounded-xl border border-[var(--wesal-border)] px-3 text-center text-sm outline-none focus:border-[var(--wesal-maroon)] sm:col-span-2 sm:text-start xl:col-span-2"
           placeholder={t("admin.mabrouk.knowledge.search")} value={search} onChange={(event) => setSearch(event.target.value)} />
         <FilterSelect label={t("admin.mabrouk.knowledge.source")} value={source} onChange={setSource}>
           <option value="">{t("admin.mabrouk.knowledge.allSources")}</option>
@@ -181,7 +187,7 @@ export default function MabroukKnowledgeLibraryPage() {
           <option value="expiring">{t("admin.mabrouk.knowledge.expiring")}</option>
           <option value="expired">{t("admin.mabrouk.knowledge.expired")}</option>
         </FilterSelect>
-        <button type="submit" className="btn-outline min-h-11">{t("admin.mabrouk.knowledge.applyFilters")}</button>
+        <button type="submit" className="btn-outline min-h-11 w-full justify-center">{t("admin.mabrouk.knowledge.applyFilters")}</button>
       </form>
 
       {notice ? <p className="rounded-xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-sm text-[var(--wesal-maroon-dark)]" role="status">{notice}</p> : null}
@@ -238,7 +244,7 @@ function FilterSelect({
     <label className="block min-w-0">
       <span className="sr-only">{label}</span>
       <select value={value} onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-2.5 text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]">
+        className="mabrouk-library-filter min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-2.5 text-center text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]">
         {children}
       </select>
     </label>

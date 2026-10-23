@@ -51,7 +51,7 @@ export default function HeroCopy({ titleId, intro }: HeroCopyProps) {
       <div className="hero-copy-tagline mt-5 flex items-center gap-3">
         <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-maroon)]/70" />
         <p
-          className="hero-copy-eyebrow shrink-0 text-[2rem] font-extrabold leading-none text-[var(--wesal-maroon)] sm:text-[2.4rem]"
+          className="hero-copy-eyebrow shrink-0 text-[1.55rem] font-extrabold leading-none text-[var(--wesal-maroon)] sm:text-[2.4rem]"
           aria-hidden="true"
         >
           {t("brand.name")}
@@ -59,11 +59,11 @@ export default function HeroCopy({ titleId, intro }: HeroCopyProps) {
         <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-maroon)]/70" />
       </div>
 
-      <p className="hero-copy-desc mt-5 text-sm leading-8 text-black sm:text-[0.95rem]">
+      <p className="hero-copy-desc mt-3.5 text-sm leading-7 text-black sm:mt-5 sm:text-[0.95rem] sm:leading-8">
         {t("home.hero.description")}
       </p>
 
-      <div className="hero-copy-desc hero-copy-actions mt-8 flex w-full flex-nowrap items-center justify-center gap-2 sm:mt-6">
+      <div className="hero-copy-desc hero-copy-actions mt-5 flex w-full flex-nowrap items-center justify-center gap-2 sm:mt-6">
         <button
           type="button"
           className="btn-primary min-h-11 shrink-0 px-3 text-[0.72rem] font-semibold whitespace-nowrap sm:px-5 sm:text-sm"

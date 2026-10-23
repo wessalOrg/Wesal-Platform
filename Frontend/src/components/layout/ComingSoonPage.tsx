@@ -13,16 +13,16 @@ export default function ComingSoonPage({ titleKey }: { titleKey: string }) {
   return (
     <>
       <Navbar />
-      <main className="container-wesal flex min-h-[70svh] flex-col items-center justify-center px-4 py-16 text-center">
+      <main className="wesal-simple-page container-wesal flex flex-col items-center justify-center px-4 py-6 text-center sm:py-16">
         <p className="text-sm font-semibold tracking-wide text-[var(--wesal-muted)]">{t(titleKey)}</p>
-        <h1 className="coming-soon-wave mt-5 text-6xl font-extrabold sm:text-8xl">
+        <h1 className="coming-soon-wave mt-4 text-5xl font-extrabold sm:mt-5 sm:text-8xl">
           {t("comingSoon.word")}
         </h1>
         <Link
           href="/"
           aria-label={t("common.backHome")}
           data-testid="coming-soon-back"
-          className="mt-12 inline-flex h-12 w-12 items-center justify-center rounded-full border border-[var(--wesal-gold)] text-[var(--wesal-maroon-dark)] transition-colors hover:bg-[var(--wesal-gold)] hover:text-white"
+          className="mt-8 inline-flex h-12 w-12 items-center justify-center rounded-full border border-[var(--wesal-gold)] text-[var(--wesal-maroon-dark)] transition-colors hover:bg-[var(--wesal-gold)] hover:text-white sm:mt-12"
         >
           <BackHomeArrow flip={lang === "en"} />
         </Link>

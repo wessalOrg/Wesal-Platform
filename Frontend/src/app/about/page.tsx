@@ -15,27 +15,27 @@ export default function AboutPage() {
     <>
       <Navbar />
       <main
-        className="container-wesal flex min-h-[70svh] flex-col items-center justify-center px-4 py-16 text-center"
+        className="wesal-simple-page container-wesal flex flex-col items-center justify-center px-4 py-6 text-center sm:py-16"
         data-testid="about-page"
       >
         <p className="text-sm font-semibold tracking-wide text-[var(--wesal-muted)]">
           {t("about.title")}
         </p>
-        <h1 className="coming-soon-wave mt-5 text-6xl font-extrabold sm:text-8xl">
+        <h1 className="coming-soon-wave mt-4 text-5xl font-extrabold sm:mt-5 sm:text-8xl">
           {t("brand.name")}
         </h1>
         <div
-          className="mx-auto mt-6 h-px w-40 bg-gradient-to-r from-transparent via-[var(--wesal-gold)] to-transparent"
+          className="mx-auto mt-5 h-px w-40 bg-gradient-to-r from-transparent via-[var(--wesal-gold)] to-transparent sm:mt-6"
           aria-hidden="true"
         />
-        <p className="mt-6 max-w-2xl text-base leading-9 text-[var(--wesal-text)] sm:text-lg">
+        <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--wesal-text)] sm:mt-6 sm:text-lg sm:leading-9">
           {t("about.body")}
         </p>
         <Link
           href="/"
           aria-label={t("common.backHome")}
           data-testid="about-back"
-          className="mt-12 inline-flex h-12 w-12 items-center justify-center rounded-full border border-[var(--wesal-gold)] text-[var(--wesal-maroon-dark)] transition-colors hover:bg-[var(--wesal-gold)] hover:text-white"
+          className="mt-8 inline-flex h-12 w-12 items-center justify-center rounded-full border border-[var(--wesal-gold)] text-[var(--wesal-maroon-dark)] transition-colors hover:bg-[var(--wesal-gold)] hover:text-white sm:mt-12"
         >
           <BackHomeArrow flip={lang === "en"} />
         </Link>

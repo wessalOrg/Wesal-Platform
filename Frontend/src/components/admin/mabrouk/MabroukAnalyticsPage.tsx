@@ -62,16 +62,28 @@ export default function MabroukAnalyticsPage() {
 
   return (
     <div className="space-y-5" data-testid="mabrouk-analytics">
-      <section className="flex flex-wrap items-center justify-between gap-3">
+      <section className="space-y-3">
         <div>
           <h2 className="text-lg font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.analytics.title")}</h2>
           <p className="mt-1 text-sm leading-6 text-[var(--wesal-muted)]">{t("admin.mabrouk.analytics.noUsageTracking")}</p>
         </div>
-        <button type="button" className="btn-outline" disabled={exporting} onClick={() => void exportData()}>{t("admin.mabrouk.analytics.export")}</button>
+        <div className="px-1.5 md:flex md:justify-end md:px-0">
+          <button
+            type="button"
+            className="btn-outline w-full justify-center md:w-auto"
+            disabled={exporting}
+            onClick={() => void exportData()}
+          >
+            {t("admin.mabrouk.analytics.export")}
+          </button>
+        </div>
       </section>
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         {metrics.map(([label, value]) => (
-          <article key={label} className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.04)]">
+          <article
+            key={label}
+            className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.04)] last:col-span-2 sm:last:col-span-1 xl:last:col-span-1"
+          >
             <p className="text-xs font-semibold leading-5 text-[var(--wesal-muted)]">{t(label)}</p>
             <p className="mt-2 text-2xl font-extrabold text-[var(--wesal-maroon-dark)]">{value}</p>
           </article>
@@ -79,7 +91,7 @@ export default function MabroukAnalyticsPage() {
       </section>
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-5">
-          <h3 className="text-sm font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.analytics.topGaps")}</h3>
+          <h3 className="text-base font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.analytics.topGaps")}</h3>
           {data.topUnresolvedTopics.length === 0 ? <p className="mt-4 text-sm text-[var(--wesal-muted)]">{t("admin.mabrouk.empty")}</p> : (
             <ul className="mt-2 divide-y divide-[var(--wesal-border)]">
               {data.topUnresolvedTopics.map((gap) => <li key={gap.id} className="flex items-center justify-between gap-3 py-3">
@@ -90,7 +102,7 @@ export default function MabroukAnalyticsPage() {
           )}
         </section>
         <section className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-5">
-          <h3 className="text-sm font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.analytics.updated")}</h3>
+          <h3 className="text-base font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.analytics.updated")}</h3>
           {data.recentlyUpdated.length === 0 ? <p className="mt-4 text-sm text-[var(--wesal-muted)]">{t("admin.mabrouk.empty")}</p> : (
             <ul className="mt-2 divide-y divide-[var(--wesal-border)]">
               {data.recentlyUpdated.map((article) => <li key={article.id} className="py-3">

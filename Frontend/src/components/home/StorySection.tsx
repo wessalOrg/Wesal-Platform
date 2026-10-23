@@ -78,7 +78,7 @@ export default function StorySection() {
   return (
     <section
       id="occasion-story"
-      className="occasion-story relative scroll-mt-20 py-10 sm:py-14"
+      className="occasion-story relative scroll-mt-20 py-7 sm:py-14"
       aria-labelledby="occasion-story-heading"
     >
       <Reveal>
@@ -94,19 +94,19 @@ export default function StorySection() {
           <div className="story-copy" dir={lang === "ar" ? "rtl" : "ltr"}>
               <h2
                 id="occasion-story-heading"
-                className="whitespace-nowrap text-3xl font-extrabold text-[var(--wesal-maroon)] sm:text-5xl"
+                className="whitespace-nowrap text-[1.45rem] font-extrabold text-[var(--wesal-maroon)] sm:text-5xl"
               >
                 {t("home.story.title")}
               </h2>
-              <p className="mt-5 text-lg leading-9 text-[var(--wesal-text)]/80">
+              <p className="mt-3.5 text-[0.92rem] leading-7 text-[var(--wesal-text)]/80 sm:mt-5 sm:text-lg sm:leading-9">
                 {t("home.story.body1")}
               </p>
-              <p className="mt-4 text-lg leading-9 text-[var(--wesal-text)]/80">
+              <p className="mt-3 text-[0.92rem] leading-7 text-[var(--wesal-text)]/80 sm:mt-4 sm:text-lg sm:leading-9">
                 {t("home.story.body2")}
               </p>
               <ul
                 ref={statsRef}
-                className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3"
+                className="mt-5 grid grid-cols-1 gap-2.5 sm:mt-8 sm:grid-cols-3 sm:gap-3"
                 dir={cardsFromLeft ? "ltr" : undefined}
               >
                 {STATS.map((stat, index) => (
