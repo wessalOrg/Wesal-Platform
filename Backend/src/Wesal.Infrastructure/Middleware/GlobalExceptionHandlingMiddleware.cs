@@ -40,6 +40,8 @@ public class GlobalExceptionHandlingMiddleware
     {
         var (statusCode, title, code, errors) = exception switch
         {
+            ExternalBookingException external => (external.StatusCode, external.Message, external.Code,
+                (IReadOnlyDictionary<string, string[]>?)null),
             ValidationException validation => (
                 StatusCodes.Status400BadRequest,
                 "Validation failed",

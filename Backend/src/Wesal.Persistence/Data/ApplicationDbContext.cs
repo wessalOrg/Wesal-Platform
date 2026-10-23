@@ -444,9 +444,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
         builder.Entity<Booking>(entity =>
         {
-            entity.ToTable("Bookings");
+            entity.ToTable("Bookings", table =>
+            {
+                table.HasCheckConstraint("CK_Bookings_Source", "\"Source\" IN (0,1)");
+                table.HasCheckConstraint("CK_Bookings_SourceState", "(\"Source\" = 0 AND \"RequesterUserId\" IS NOT NULL AND length(\"RequesterUserId\") > 0 AND \"Status\" IN (0,1,2,3)) OR (\"Source\" = 1 AND \"RequesterUserId\" IS NULL AND \"Status\" IN (3,4) AND \"DepositAmount\" IS NULL AND \"DepositPaymentConfirmedAt\" IS NULL)");
+                table.HasCheckConstraint("CK_Bookings_Revision", "\"Revision\" > 0");
+            });
 
-            entity.Property(booking => booking.RequesterUserId).IsRequired().HasMaxLength(450);
+            entity.Property(booking => booking.RequesterUserId).IsRequired(false).HasMaxLength(450);
+            entity.Property(booking => booking.Source).HasDefaultValue(BookingSource.Online);
+            entity.Property(booking => booking.Revision).HasDefaultValue(1L).IsConcurrencyToken();
 
             entity.Property(booking => booking.Date).HasColumnType("date");
 
@@ -472,6 +479,46 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
                 .WithMany()
                 .HasForeignKey(booking => booking.HallId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ExternalBookingDetails>(entity =>
+        {
+            entity.ToTable("ExternalBookingDetails", table => table.HasCheckConstraint("CK_ExternalBookingDetails_Amounts",
+                "(\"TotalAmount\" IS NULL OR \"TotalAmount\" >= 0) AND (\"AmountReceivedExternally\" IS NULL OR \"AmountReceivedExternally\" >= 0) AND (\"TotalAmount\" IS NULL OR \"AmountReceivedExternally\" IS NULL OR \"AmountReceivedExternally\" <= \"TotalAmount\")"));
+            entity.HasKey(x => x.BookingId);
+            entity.HasOne(x => x.Booking).WithOne(x => x.ExternalDetails).HasForeignKey<ExternalBookingDetails>(x => x.BookingId).OnDelete(DeleteBehavior.Restrict);
+            entity.Property(x => x.CustomerName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Phone).HasMaxLength(30).IsRequired();
+            entity.Property(x => x.EventType).HasMaxLength(30).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.CancellationReason).HasMaxLength(1000);
+            entity.Property(x => x.CancelledBy).HasMaxLength(450);
+            entity.Property(x => x.TotalAmount).HasColumnType("numeric(12,2)");
+            entity.Property(x => x.AmountReceivedExternally).HasColumnType("numeric(12,2)");
+        });
+
+        builder.Entity<BookingAuditEvent>(entity =>
+        {
+            entity.ToTable("BookingAuditEvents");
+            entity.HasKey(x => x.Id);
+            entity.HasOne(x => x.Booking).WithMany().HasForeignKey(x => x.BookingId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.BookingId, x.Revision }).IsUnique();
+            entity.Property(x => x.Operation).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.ActorUserId).HasMaxLength(450).IsRequired();
+            entity.Property(x => x.BeforeJson).HasColumnType("jsonb");
+            entity.Property(x => x.AfterJson).HasColumnType("jsonb").IsRequired();
+        });
+
+        builder.Entity<BookingMutationReceipt>(entity =>
+        {
+            entity.ToTable("BookingMutationReceipts");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.HallId, x.ActorUserId, x.Operation, x.Key }).IsUnique();
+            entity.Property(x => x.ActorUserId).HasMaxLength(450).IsRequired();
+            entity.Property(x => x.Operation).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Key).HasMaxLength(36).IsRequired();
+            entity.Property(x => x.RequestHash).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ResponseJson).HasColumnType("jsonb").IsRequired();
         });
 
         builder.Entity<BookingSlot>(entity =>
