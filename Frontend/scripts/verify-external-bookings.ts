@@ -8,6 +8,7 @@ import { bookingsForDate } from "../src/lib/owner-calendar-bookings";
 import { splitClockRangeLabel, formatClockRange } from "../src/lib/hourly-slots";
 import { externalToNotification } from "../src/services/owner-external-bookings";
 import type { ExternalBooking } from "../src/types/external-booking";
+import { bookingWhenLabels } from "../src/lib/booking-when-label";
 
 let checks = 0;
 function check(name: string, run: () => void) { run(); checks++; console.log(`ok - ${name}`); }
@@ -32,4 +33,17 @@ check("online accepted requests keep the deposit workflow", () => { const row = 
 check("RTL time range retains two correctly ordered clock chunks", () => { const chunks = splitClockRangeLabel(formatClockRange("14:00", "16:00", "ar")); assert.equal(chunks.length, 2); assert.match(chunks[0], /2:00/); assert.match(chunks[1], /4:00/); });
 check("external list adapter preserves persistent ID without customer account", () => { const row = externalToNotification({ bookingId: dto.bookingRequestId, hallId: "test-hall", source: "ExternalManual", status: "Confirmed", date: "2026-11-16", slotStarts: dto.slotStarts, customerName: "Customer", phone: "0599123456", revision: 1, eventType: "wedding" } as ExternalBooking); assert.equal(row.id, dto.bookingRequestId); assert.equal(row.requesterUserId, ""); });
 check("live occupancy and notification hooks do not consume legacy storage", () => { for (const file of ["src/hooks/useHallNotifications.ts", "src/components/owner-management/halls/OwnerHallBookingsCalendar.tsx", "src/components/owner-management/halls/OwnerAddBookingModal.tsx"]) { const text = fs.readFileSync(file, "utf8"); assert.doesNotMatch(text, /owner-manual-bookings-store|mergeApiNotificationsWithManual|addOwnerManualBooking/); } });
+check("disjoint slots override a misleading min/max range on cards", () => {
+  const item = { ...external, slotStarts: ["10:00:00", "12:00:00"], timeRange: "10:00 - 13:00" };
+  assert.deepEqual(bookingWhenLabels(item, (key) => key, "en"), ["10:00 AM - 11:00 AM", "12:00 PM - 1:00 PM"]);
+  const card = bookingsForDate(item.date, [item], undefined, (key) => key, "en")[0];
+  assert.equal(card.timeLabel, "10:00 AM - 11:00 AM, 12:00 PM - 1:00 PM");
+});
+check("consecutive slots merge without bridging gaps, independent of order", () => {
+  assert.deepEqual(bookingWhenLabels({ slotStarts: ["13:00:00", "10:00:00", "12:00:00", "10:00:00"] }, (key) => key, "en"),
+    ["10:00 AM - 11:00 AM", "12:00 PM - 2:00 PM"]);
+});
+check("online legacy ranges without slots retain their labels", () => {
+  assert.deepEqual(bookingWhenLabels({ timeRange: "10:00 - 13:00" }, (key) => key, "en"), ["10:00 AM - 1:00 PM"]);
+});
 console.log(`${checks} external booking checks passed`);

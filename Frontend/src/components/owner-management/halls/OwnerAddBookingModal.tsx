@@ -9,6 +9,7 @@ import { formatAmountMatchingInput, parseDepositAmount } from "@/lib/booking-dep
 import { localizeHallName } from "@/lib/localize-hall-display";
 import { saveExternalBooking } from "@/services/owner-external-bookings";
 import { slotStartsBetween } from "@/lib/hourly-slots";
+import { bookedHourRanges } from "@/lib/owner-bookings-calendar";
 import { ApiError } from "@/lib/api-error";
 import type { ExternalBooking, ExternalBookingInput } from "@/types/external-booking";
 import type { HallOwnerHall } from "@/types/hall-owner-halls";
@@ -60,11 +61,14 @@ type FormState = {
   date: string;
   timeFrom: string;
   timeTo: string;
+  ranges: Array<{ start: string; end: string }> | null;
   guests: string;
   totalAmount: string;
   depositAmount: string;
   notes: string;
 };
+
+type Submission = { key: string; hallId: string; input: ExternalBookingInput; draft: FormState; existing?: ExternalBooking };
 
 export default function OwnerAddBookingModal({
   open,
@@ -80,7 +84,7 @@ export default function OwnerAddBookingModal({
   const titleId = useId();
   const dateLocale = lang === "ar" ? "ar-EG" : "en-GB";
   const timeOptions = useMemo(() => buildTimeOptions(lang === "ar" ? "ar" : "en"), [lang]);
-  const submission = useRef<{ signature: string; key: string } | null>(null);
+  const [recovery, setRecovery] = useState<Submission | null>(null);
   const inFlight = useRef(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -93,9 +97,10 @@ export default function OwnerAddBookingModal({
   if (wasOpen !== open) {
     setWasOpen(open);
     if (open) {
-      setForm(booking ? formFromBooking(booking) : emptyForm(defaultHallId || halls[0]?.id || "", defaultDate));
+      setForm(recovery?.draft ?? (booking ? formFromBooking(booking) : emptyForm(defaultHallId || halls[0]?.id || "", defaultDate)));
       setErrors({});
       setSaving(false);
+      setSaveError(null);
     }
   }
 
@@ -157,7 +162,7 @@ export default function OwnerAddBookingModal({
 
   async function handleSave() {
     if (inFlight.current) return;
-    if (!validate()) return;
+    if (!recovery && !validate()) return;
     const hall = halls.find((item) => item.id === form.hallId);
     if (!hall) {
       setErrors((current) => ({ ...current, hallId: t("owner.calendar.add.errors.hall") }));
@@ -167,30 +172,32 @@ export default function OwnerAddBookingModal({
     const input: ExternalBookingInput = {
       customerName: form.customerName.trim(), phone: form.phone.trim(), eventType: form.eventType,
       date: parseDateIso(form.date) || form.date,
-      slotStarts: booking && form.timeFrom === formFromBooking(booking).timeFrom && form.timeTo === formFromBooking(booking).timeTo
-        ? booking.slotStarts : slotStartsBetween(form.timeFrom, form.timeTo).map((time) => time + ":00"),
+      slotStarts: [...new Set((form.ranges ?? [{ start: form.timeFrom, end: form.timeTo }])
+        .flatMap(({ start, end }) => slotStartsBetween(start, end)).map((time) => time + ":00"))].sort(),
       guests: form.guests.trim() ? Number(form.guests) : null, notes: form.notes.trim(),
       totalAmount: parseDepositAmount(form.totalAmount), amountReceivedExternally: parseDepositAmount(form.depositAmount),
     };
-    if (!input.slotStarts.length || (form.totalAmount.trim() && input.totalAmount == null) ||
+    if (!recovery && (!input.slotStarts.length || form.ranges?.some(({ start, end }) => end <= start) || (form.totalAmount.trim() && input.totalAmount == null) ||
         (form.depositAmount.trim() && input.amountReceivedExternally == null) ||
-        (input.guests != null && (!Number.isInteger(input.guests) || input.guests < 1))) {
+        (input.guests != null && (!Number.isInteger(input.guests) || input.guests < 1)))) {
       setSaveError(t("owner.external.invalid")); return;
     }
-    const signature = JSON.stringify({ hallId: hall.id, input, revision: booking?.revision });
-    if (submission.current && submission.current.signature !== signature) {
-      setSaveError(t("owner.external.retryOriginal")); return;
-    }
-    submission.current ??= { signature, key: crypto.randomUUID() };
+    const attempt = recovery ?? { key: crypto.randomUUID(), hallId: hall.id, input, draft: form, existing: booking };
     inFlight.current = true;
     setSaving(true); setSaveError(null);
     try {
-      const saved = await saveExternalBooking(hall.id, input, submission.current.key, booking);
-      submission.current = null;
+      const saved = await saveExternalBooking(attempt.hallId, attempt.input, attempt.key, attempt.existing);
+      setRecovery(null);
       onSaved?.(saved.bookingId, saved.hallId, saved.date);
       onClose();
     } catch (error) {
-      if (error instanceof ApiError && error.status && error.status >= 400 && error.status < 500) submission.current = null;
+      // After an uncertain result, only success or a rejection made AFTER receipt
+      // lookup resolves the original operation. Authentication/network errors do not.
+      const rejectedAfterReplay = error instanceof ApiError && ["RevisionRequired", "RevisionConflict", "ExternalBookingCancelled",
+        "HallNotApproved", "SubscriptionExpired", "HourAlreadyStarted", "InvalidHallWindow", "InvalidHours", "InvalidLocalTime", "DayBlocked", "SlotUnavailable"].includes(error.code ?? "");
+      const definitive = rejectedAfterReplay || (!recovery && error instanceof ApiError && error.status != null && error.status >= 400 && error.status < 500 && error.status !== 408);
+      if (definitive) { setRecovery(null); }
+      else { setRecovery(attempt); setForm(attempt.draft); }
       setSaveError(error instanceof ApiError && error.status === 412 ? t("owner.external.stale") :
         error instanceof ApiError && error.status === 409 ? t("owner.external.conflict") : t("owner.external.saveError"));
     } finally { inFlight.current = false; setSaving(false); }
@@ -217,7 +224,7 @@ export default function OwnerAddBookingModal({
         className="relative z-10 flex max-h-[min(94vh,52rem)] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_28px_80px_rgba(60,35,30,0.2)] sm:rounded-2xl"
         data-testid="owner-add-booking-modal"
       >
-        <header className="flex items-start justify-between gap-3 border-b border-[var(--wesal-border)] px-4 py-4 sm:px-6">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--wesal-border)] px-4 py-4 sm:px-6">
           <div className="min-w-0">
             <h2
               id={titleId}
@@ -234,6 +241,7 @@ export default function OwnerAddBookingModal({
             type="button"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--wesal-muted)] hover:bg-[var(--wesal-pink-soft)]"
             aria-label={t("common.close")}
+            data-testid="owner-add-booking-close"
             disabled={saving}
             onClick={onClose}
           >
@@ -241,7 +249,11 @@ export default function OwnerAddBookingModal({
           </button>
         </header>
 
-        <fieldset disabled={saving} className="min-h-0 min-w-0 flex-1 overflow-y-auto border-0 px-4 py-4 sm:px-6 sm:py-5">
+        {recovery ? <p role="status" data-testid="owner-booking-recovery" className="shrink-0 px-4 py-3 text-sm text-amber-900 sm:px-6">
+          {t("owner.external.recovery", { hall: localizeHallName(recovery.hallId, halls.find((hall) => hall.id === recovery.hallId)?.name ?? recovery.hallId, lang) })}
+        </p> : null}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+        <fieldset disabled={saving || Boolean(recovery)} className="min-w-0 border-0 px-4 py-4 sm:px-6 sm:py-5">
           {saveError ? <p role="alert" className="mb-3 text-sm text-red-700">{saveError}</p> : null}
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label={t("owner.calendar.add.hall")} required error={errors.hallId}>
@@ -336,7 +348,22 @@ export default function OwnerAddBookingModal({
               />
             </Field>
 
-            <Field
+            {form.ranges ? <div className="space-y-2 sm:col-span-2" data-testid="owner-edit-booking-ranges">
+              <p className="text-sm font-bold">{t("owner.external.hours")}</p>
+              {form.ranges.map((range, index) => <div key={index} className="flex items-end gap-2">
+                <Field label={t("owner.calendar.add.timeFrom")} required>
+                  <SiteSelect value={range.start} icon={<ClockIcon />} testId={`owner-edit-booking-range-from-${index}`} options={timeOptions}
+                    onChange={(start) => patch("ranges", form.ranges!.map((item, i) => i === index ? { ...item, start } : item))} />
+                </Field>
+                <Field label={t("owner.calendar.add.timeTo")} required>
+                  <SiteSelect value={range.end} icon={<ClockIcon />} testId={`owner-edit-booking-range-to-${index}`} options={timeOptions}
+                    onChange={(end) => patch("ranges", form.ranges!.map((item, i) => i === index ? { ...item, end } : item))} />
+                </Field>
+                <button type="button" className="btn-outline min-h-10 px-2 text-xs" disabled={form.ranges!.length === 1}
+                  onClick={() => patch("ranges", form.ranges!.filter((_, i) => i !== index))}>{t("owner.external.removeInterval")}</button>
+              </div>)}
+              <button type="button" className="btn-outline min-h-10 px-3 text-xs" onClick={() => patch("ranges", [...form.ranges!, { start: "14:00", end: "15:00" }])}>{t("owner.external.addInterval")}</button>
+            </div> : <><Field
               label={t("owner.calendar.add.timeFrom")}
               required
               error={errors.timeFrom}
@@ -359,6 +386,7 @@ export default function OwnerAddBookingModal({
                 onChange={(value) => patch("timeTo", value)}
               />
             </Field>
+            </>}
           </div>
 
           <section className="mt-5">
@@ -422,8 +450,9 @@ export default function OwnerAddBookingModal({
             />
           </section>
         </fieldset>
+        </div>
 
-        <footer className="flex flex-col-reverse gap-2 border-t border-[var(--wesal-border)] px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-[var(--wesal-border)] px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
           <button
             type="button"
             className="btn-outline min-h-11 w-full sm:w-auto sm:min-w-[8rem]"
@@ -441,7 +470,7 @@ export default function OwnerAddBookingModal({
             onClick={() => void handleSave()}
           >
             <PlusIcon />
-            {saving ? t("owner.calendar.add.saving") : t("owner.calendar.add.save")}
+            {saving ? t("owner.calendar.add.saving") : t(recovery ? "owner.external.retry" : "owner.calendar.add.save")}
           </button>
         </footer>
       </div>
@@ -450,10 +479,9 @@ export default function OwnerAddBookingModal({
 }
 
 function formFromBooking(b: ExternalBooking): FormState {
-  const starts = b.slotStarts.map((x) => x.slice(0, 5)).sort();
-  const end = String(Number(starts.at(-1)?.slice(0, 2) ?? "0") + 1).padStart(2, "0") + ":00";
+  const ranges = bookedHourRanges(b.slotStarts);
   return { hallId: b.hallId, eventType: b.eventType, customerName: b.customerName, phone: b.phone,
-    date: b.date, timeFrom: starts[0] ?? "09:00", timeTo: end, guests: b.guests?.toString() ?? "",
+    date: b.date, timeFrom: ranges[0]?.start ?? "09:00", timeTo: ranges[0]?.end ?? "10:00", ranges, guests: b.guests?.toString() ?? "",
     totalAmount: b.totalAmount?.toString() ?? "", depositAmount: b.amountReceivedExternally?.toString() ?? "", notes: b.notes };
 }
 
@@ -466,6 +494,7 @@ function emptyForm(hallId: string, defaultDate: string | null): FormState {
     date: parseDateIso(defaultDate) || localTodayIso(),
     timeFrom: "14:00",
     timeTo: "18:00",
+    ranges: null,
     guests: "",
     totalAmount: "",
     depositAmount: "",

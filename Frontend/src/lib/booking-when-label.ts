@@ -1,18 +1,10 @@
 import { bookingPeriodI18nKey } from "@/lib/booking-rejection-message";
 import { formatHourlyRange, normalizeTimeOnly } from "@/lib/hourly-slots";
+import { bookedHourRanges } from "@/lib/owner-bookings-calendar";
 
 export function formatSlotStartsLabel(slotStarts: string[] | undefined, locale: string): string[] {
   if (!slotStarts?.length) return [];
-  return slotStarts
-    .map((start) => {
-      const normalized = normalizeTimeOnly(start);
-      if (!normalized) return "";
-      const [hour] = normalized.split(":").map(Number);
-      if (!Number.isFinite(hour)) return normalized;
-      const end = `${String(hour + 1).padStart(2, "0")}:00`;
-      return formatHourlyRange(normalized, end, locale);
-    })
-    .filter(Boolean);
+  return bookedHourRanges(slotStarts).map(({ start, end }) => formatHourlyRange(start, end, locale));
 }
 
 export function bookingWhenLabels(
@@ -26,6 +18,10 @@ export function bookingWhenLabels(
   translate: (key: string) => string,
   locale: string,
 ): string[] {
+  // Persisted hours are authoritative; a legacy min/max range can include gaps.
+  const starts = item.slotStarts?.length ? item.slotStarts : item.slotStart ? [item.slotStart] : [];
+  const slots = formatSlotStartsLabel(starts, locale);
+  if (slots.length > 0) return slots;
   const range = item.timeRange?.trim();
   if (range) {
     const parts = range.split(/\s*[-–—]\s*/);
@@ -37,13 +33,6 @@ export function bookingWhenLabels(
     // Keep raw Latin ranges LTR-stable inside RTL labels.
     return [`\u200E${range}\u200E`];
   }
-  const starts = item.slotStarts?.length
-    ? item.slotStarts
-    : item.slotStart
-      ? [item.slotStart]
-      : [];
-  const slots = formatSlotStartsLabel(starts, locale);
-  if (slots.length > 0) return slots;
   const periods = item.periods ?? (item.period ? [item.period] : []);
   if (periods.length > 0) {
     return periods.map((period) => {

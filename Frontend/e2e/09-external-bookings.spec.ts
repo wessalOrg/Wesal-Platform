@@ -3,13 +3,15 @@ import { expect, test, type Page } from "@playwright/test";
 // Browser/API contract tests: every API call is intercepted; no account or live API is used.
 const hallId = "947f9b27-58d4-4ec6-9d51-522cb94cd428";
 const bookingId = "936de2f4-f7eb-46c4-995c-9b201dfb13a6";
+const secondHallId = "65f2676c-d018-4492-852f-084ecdbaf089";
 const legacy = JSON.stringify([{ id: "manual-legacy-test", hallId, customerName: "LEGACY ONLY", date: "2026-11-16", timeFrom: "10:00", timeTo: "12:00" }]);
 type Row = { bookingId: string; hallId: string; date: string; source: string; status: string; slotStarts: string[]; revision: number; customerName: string; phone: string; eventType: string; notes: string; [key: string]: unknown };
 
-async function setup(page: Page, options: { existing?: boolean; expired?: boolean; loseFirstResponse?: boolean } = {}) {
+async function setup(page: Page, options: { existing?: boolean; expired?: boolean; loseFirstResponse?: boolean; ambiguous5xx?: boolean; twoHalls?: boolean; disjoint?: boolean; rejectRetry?: boolean } = {}) {
   const date = new Date().toISOString().slice(0, 10);
   const rows: Row[] = options.existing ? [{ bookingId, hallId, date, source: "ExternalManual", status: "Confirmed", slotStarts: ["14:00:00", "15:00:00"], revision: 1, customerName: "External Customer", phone: "0599123456", eventType: "wedding", notes: "", timeRange: "14:00 - 16:00", guests: null, totalAmount: null, amountReceivedExternally: null, confirmedAt: date + "T10:00:00Z", cancelledAt: null, canEdit: true, canCancel: true, canDelete: false, canConfirmDeposit: false }] : [];
-  const keys: string[] = []; const revisions: string[] = []; let lost = false;
+  if (options.disjoint) { rows[0].slotStarts = ["10:00:00", "12:00:00"]; rows[0].timeRange = "10:00 - 13:00"; }
+  const keys: string[] = []; const revisions: string[] = []; const submissions: Array<{ path: string; input: unknown }> = []; let lost = false;
   await page.addInitScript(({ legacy }) => {
     const payload = btoa(JSON.stringify({ sub: "owner", role: "HallOwner", name: "Test Owner", exp: Math.floor(Date.now() / 1000) + 3600 }));
     const token = `test.${payload}.test`;
@@ -24,12 +26,14 @@ async function setup(page: Page, options: { existing?: boolean; expired?: boolea
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body), headers: { "access-control-allow-origin": "*" } });
     if (method === "OPTIONS") return json({});
     if (path === "/session") return json({ isAuthenticated: true, role: "HallOwner", userName: "Test Owner" });
-    if (path === "/owner/halls") return json([{ hallId, name: "Contract Hall", status: "Approved", paymentStatus: "Paid", subscriptionCycleEnd: "2099-01-01", systemLocked: options.expired ?? false }]);
+    if (path === "/owner/halls") return json([hallId, ...(options.twoHalls ? [secondHallId] : [])].map((id) => ({ hallId: id, name: id === hallId ? "Contract Hall" : "Second Hall", status: "Approved", paymentStatus: "Paid", subscriptionCycleEnd: "2099-01-01", systemLocked: options.expired ?? false })));
     if (path.endsWith("/external-bookings") && method === "POST") {
       keys.push(route.request().headers()["idempotency-key"]);
       const input = route.request().postDataJSON();
+      submissions.push({ path, input });
       if (!rows.length) rows.push({ ...input, bookingId, hallId, source: "ExternalManual", status: "Confirmed", revision: 1, timeRange: "14:00 - 18:00", confirmedAt: date + "T10:00:00Z", cancelledAt: null, canEdit: true, canCancel: true, canConfirmDeposit: false, canDelete: false });
-      if (options.loseFirstResponse && !lost) { lost = true; return route.abort("failed"); }
+      if ((options.loseFirstResponse || options.ambiguous5xx) && !lost) { lost = true; if (options.rejectRetry) rows.splice(0); return options.ambiguous5xx ? json({ code: "ServiceUnavailable" }, 503) : route.abort("failed"); }
+      if (options.rejectRetry && keys.length === 2) { rows.splice(0); return json({ code: "SlotUnavailable" }, 409); }
       return json(rows[0], 201);
     }
     if (path.endsWith("/external-bookings") && method === "GET") return json({ items: rows, page: 1, pageSize: 100 });
@@ -56,7 +60,7 @@ async function setup(page: Page, options: { existing?: boolean; expired?: boolea
   });
   await page.goto(`/owner/calendar?hall=${hallId}`);
   await expect(page.getByTestId("owner-bookings-calendar-page")).toBeVisible();
-  return { rows, keys, revisions, date };
+  return { rows, keys, revisions, date, submissions };
 }
 
 test("external confirmed calendar cards use server IDs and preserve legacy storage", async ({ page }) => {
@@ -99,4 +103,77 @@ test("expired subscription still permits external details editing and cancellati
   await dialog.getByRole("button").first().click(); await expect(dialog).toHaveCount(0);
   expect(state.rows[0].status).toBe("Cancelled"); expect(state.revisions[1]).toBe('"2"');
   await expect(page.getByTestId(`hall-cal-day-${state.date}`).getByTestId("owner-cal-booked-dot")).toHaveCount(0);
+});
+
+for (const ambiguous5xx of [false, true]) test(`uncertain create survives close/reopen and Hall switch (${ambiguous5xx ? "503" : "lost response"})`, async ({ page }) => {
+  const state = await setup(page, { loseFirstResponse: !ambiguous5xx, ambiguous5xx, twoHalls: true });
+  await page.getByTestId("owner-calendar-add-booking").click();
+  const modal = page.getByTestId("owner-add-booking-modal");
+  await modal.getByTestId("owner-add-booking-customer").fill("Original Draft");
+  await modal.getByTestId("owner-add-booking-phone").fill("0599123456");
+  await modal.getByTestId("owner-add-booking-notes").fill("Keep these exact details");
+  await modal.getByTestId("owner-add-booking-save").click();
+  await expect(page.getByTestId("owner-booking-recovery")).toBeVisible();
+  await modal.getByTestId("owner-add-booking-close").click();
+  await page.getByTestId("owner-calendar-hall-select").click();
+  await page.getByTestId("owner-calendar-hall-menu").getByRole("option").nth(1).click();
+  await expect(page).toHaveURL(new RegExp(secondHallId));
+  await page.getByTestId("owner-calendar-add-booking").click();
+  await expect(modal.getByTestId("owner-add-booking-customer")).toHaveValue("Original Draft");
+  await expect(modal.getByTestId("owner-add-booking-notes")).toHaveValue("Keep these exact details");
+  await expect(modal.getByTestId("owner-add-booking-customer")).toBeDisabled();
+  await expect(page.getByTestId("owner-booking-recovery")).toContainText("Contract Hall");
+  await modal.getByTestId("owner-add-booking-save").click();
+  await expect(modal).toHaveCount(0);
+  expect(state.keys).toHaveLength(2); expect(state.keys[0]).toBe(state.keys[1]);
+  expect(state.submissions[0]).toEqual(state.submissions[1]); expect(state.rows).toHaveLength(1);
+  await page.getByTestId("owner-calendar-add-booking").click();
+  await expect(page.getByTestId("owner-booking-recovery")).toHaveCount(0);
+  await expect(modal.getByTestId("owner-add-booking-customer")).toBeEnabled();
+  await modal.getByTestId("owner-add-booking-customer").fill("Fresh Draft");
+  await modal.getByTestId("owner-add-booking-phone").fill("0599123456");
+  await modal.getByTestId("owner-add-booking-save").click();
+  await expect(modal).toHaveCount(0); expect(state.keys[2]).not.toBe(state.keys[0]);
+});
+
+test("a definitive rejection resolves an uncertain create and allows corrected input", async ({ page }) => {
+  const state = await setup(page, { loseFirstResponse: true, rejectRetry: true });
+  await page.getByTestId("owner-calendar-add-booking").click();
+  const modal = page.getByTestId("owner-add-booking-modal");
+  await modal.getByTestId("owner-add-booking-customer").fill("Original Draft");
+  await modal.getByTestId("owner-add-booking-phone").fill("0599123456");
+  await modal.getByTestId("owner-add-booking-save").click();
+  await expect(page.getByTestId("owner-booking-recovery")).toBeVisible();
+  await modal.getByTestId("owner-add-booking-save").click();
+  await expect(page.getByTestId("owner-booking-recovery")).toHaveCount(0);
+  await modal.getByTestId("owner-add-booking-customer").fill("Corrected Draft");
+  await modal.getByTestId("owner-add-booking-save").click();
+  await expect(modal).toHaveCount(0);
+  expect(state.keys[0]).toBe(state.keys[1]); expect(state.keys[2]).not.toBe(state.keys[0]);
+});
+
+test("disjoint intervals render accurately and remain disjoint during metadata edits and rescheduling", async ({ page }) => {
+  const state = await setup(page, { existing: true, disjoint: true });
+  const day = page.getByTestId("owner-calendar-booked");
+  // Assert both intervals using the actual formatted labels in the current UI language.
+  const card = day.getByTestId("owner-calendar-booking-card");
+  await expect(card).toContainText("10:00"); await expect(card).toContainText("11:00");
+  await expect(card).toContainText("12:00"); await expect(card).toContainText("1:00");
+  await expect(card).toContainText(/[,،]/);
+  await day.getByTestId("external-booking-actions").getByRole("button").first().click();
+  const modal = page.getByTestId("owner-add-booking-modal");
+  await expect(modal.getByTestId("owner-edit-booking-range-from-0")).toContainText("10:00");
+  await expect(modal.getByTestId("owner-edit-booking-range-to-0")).toContainText("11:00");
+  await expect(modal.getByTestId("owner-edit-booking-range-from-1")).toContainText("12:00");
+  await expect(modal.getByTestId("owner-edit-booking-range-to-1")).toContainText("1:00");
+  await modal.getByTestId("owner-add-booking-notes").fill("Keep the gap");
+  await modal.getByTestId("owner-add-booking-save").click(); await expect(modal).toHaveCount(0);
+  expect(state.rows[0].slotStarts).toEqual(["10:00:00", "12:00:00"]);
+  await day.getByTestId("external-booking-actions").getByRole("button").first().click();
+  await modal.getByTestId("owner-edit-booking-range-from-1").click();
+  await page.getByTestId("owner-edit-booking-range-from-1-menu").getByRole("option").nth(14).click();
+  await modal.getByTestId("owner-edit-booking-range-to-1").click();
+  await page.getByTestId("owner-edit-booking-range-to-1-menu").getByRole("option").nth(15).click();
+  await modal.getByTestId("owner-add-booking-save").click(); await expect(modal).toHaveCount(0);
+  expect(state.rows[0].slotStarts).toEqual(["10:00:00", "14:00:00"]);
 });

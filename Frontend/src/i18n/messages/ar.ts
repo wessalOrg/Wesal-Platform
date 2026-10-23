@@ -2,6 +2,10 @@ import type { MessageCatalog } from "@/i18n/types";
 
 /** Canonical Arabic messages — also used as fallback for missing English keys. */
 const ar: MessageCatalog = {
+  "owner.external.recovery": "نتيجة الحجز السابق في {hall} غير مؤكدة. احتفظنا ببياناته الأصلية. أعد المحاولة لحسم النتيجة قبل بدء حجز آخر.",
+  "owner.external.hours": "الفترات المحجوزة (تبقى الفجوات متاحة)",
+  "owner.external.addInterval": "إضافة فترة",
+  "owner.external.removeInterval": "إزالة فترة",
   "owner.external.subtitle": "حجز خارجي مؤكد. تُحجز الساعات فوراً دون اعتماد أو تأكيد عربون عبر وصال.",
   "owner.external.badge": "خارجي · مؤكد",
   "owner.external.edit": "تعديل الحجز الخارجي",

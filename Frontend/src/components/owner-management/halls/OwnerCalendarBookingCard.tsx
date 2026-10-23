@@ -47,7 +47,7 @@ export default function OwnerCalendarBookingCard({
           content: (
             <span className="inline-flex min-w-0 items-center gap-1">
               <span className="shrink-0">{t("owner.calendar.detail.timeLabel")}</span>
-              <StableClockRangeText label={booking.timeLabel} className="truncate font-bold" />
+              <StableClockRangeText label={booking.timeLabel} className={booking.source === "ExternalManual" ? "font-bold" : "truncate font-bold"} />
             </span>
           ),
         }
@@ -106,7 +106,7 @@ export default function OwnerCalendarBookingCard({
               <span className="text-[var(--wesal-maroon)]" aria-hidden="true">
                 {item.icon}
               </span>
-              <span className="min-w-0 truncate">{item.content}</span>
+              <span className={item.key === "time" && booking.source === "ExternalManual" ? "min-w-0" : "min-w-0 truncate"}>{item.content}</span>
             </div>
           ))}
         </div>

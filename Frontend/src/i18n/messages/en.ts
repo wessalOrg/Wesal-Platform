@@ -5,6 +5,10 @@ import type { MessageCatalog } from "@/i18n/types";
  * via translate() so incomplete coverage never shows raw keys.
  */
 const en: MessageCatalog = {
+  "owner.external.recovery": "The previous booking for {hall} has an uncertain result. Its original details are preserved. Retry to resolve it before starting another booking.",
+  "owner.external.hours": "Reserved intervals (gaps remain available)",
+  "owner.external.addInterval": "Add interval",
+  "owner.external.removeInterval": "Remove interval",
   "owner.external.subtitle": "Confirmed external reservation. Hours are booked immediately; no Wesal payment confirmation is required.",
   "owner.external.badge": "External · Confirmed",
   "owner.external.edit": "Edit external booking",
