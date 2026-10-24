@@ -1289,7 +1289,7 @@ const ar: MessageCatalog = {
   "owner.visitorStats.favoritesTitle": "الحفظ في المفضلة",
   "owner.visitorStats.favoritesSubtitle": "أضافوا قاعتك للمفضلة",
   "owner.visitorStats.favoritesValue": "{count} مرة",
-  "owner.visitorStats.bookingsTitle": "طلبات الحجز المباشرة",
+  "owner.visitorStats.bookingsTitle": "طلبات الحجز\nالمباشرة",
   "owner.visitorStats.bookingsSubtitle": "من صفحة قاعتك",
   "owner.visitorStats.bookingsValue": "{count} طلباً",
   "owner.visitorStats.vsPreviousMonth": "{value} عن الشهر السابق",

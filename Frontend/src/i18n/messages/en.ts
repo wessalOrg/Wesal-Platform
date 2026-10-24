@@ -1297,7 +1297,7 @@ const en: MessageCatalog = {
   "owner.visitorStats.favoritesTitle": "Saved to favorites",
   "owner.visitorStats.favoritesSubtitle": "Added your hall to favorites",
   "owner.visitorStats.favoritesValue": "{count} times",
-  "owner.visitorStats.bookingsTitle": "Direct booking requests",
+  "owner.visitorStats.bookingsTitle": "Booking requests\n(direct)",
   "owner.visitorStats.bookingsSubtitle": "From your hall page",
   "owner.visitorStats.bookingsValue": "{count} requests",
   "owner.visitorStats.vsPreviousMonth": "{value} vs previous month",

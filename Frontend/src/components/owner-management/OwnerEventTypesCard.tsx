@@ -18,23 +18,23 @@ export default function OwnerEventTypesCard() {
 
   return (
     <section
-      className="h-full rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-4 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-5"
+      className="flex h-full flex-col rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-3.5 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-4"
       data-testid="owner-event-types-card"
     >
-      <header className="mb-4 flex items-center gap-2">
+      <header className="mb-3 flex items-center gap-2">
         <span
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f3dfe1] text-[#c17b7f]"
           aria-hidden="true"
         >
-          <UsersIcon />
+          <PartyPopperIcon />
         </span>
-        <h2 className="text-[0.9rem] font-extrabold text-[var(--wesal-text)]">
+        <h2 className="text-[0.88rem] font-extrabold text-[var(--wesal-text)]">
           {t("owner.insights.eventTypesTitle")}
         </h2>
       </header>
 
-      <div className="flex w-full items-center justify-between gap-4 sm:gap-6">
-        <div className="relative h-[9.5rem] w-[9.5rem] shrink-0 sm:h-[10.5rem] sm:w-[10.5rem]">
+      <div className="flex min-h-0 w-full flex-1 items-center gap-3 sm:gap-4">
+        <div className="relative aspect-square h-full max-h-[11.5rem] w-auto min-w-[8.5rem] shrink-0 sm:min-w-[9.5rem]">
           <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
             <circle cx="60" cy="60" r="42" fill="none" stroke="#f3eeec" strokeWidth="16" />
             {donutArcs(EVENT_SEGMENTS).map((arc) => (
@@ -62,20 +62,20 @@ export default function OwnerEventTypesCard() {
           </div>
         </div>
 
-        <ul className="min-w-0 flex-1 space-y-2.5">
+        <ul className="flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-2.5 sm:gap-3">
           {EVENT_SEGMENTS.map((segment) => (
-            <li key={segment.key} className="flex items-center justify-between gap-3">
+            <li key={segment.key} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
               <span className="flex min-w-0 items-center gap-2">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: segment.color }}
                   aria-hidden="true"
                 />
-                <span className="truncate text-[0.8rem] font-bold text-[var(--wesal-text)]">
+                <span className="truncate text-[0.78rem] font-bold text-[var(--wesal-text)]">
                   {t(`owner.insights.eventType.${segment.key}`)}
                 </span>
               </span>
-              <span className="shrink-0 text-[0.85rem] font-extrabold tabular-nums text-[var(--wesal-text)]">
+              <span className="shrink-0 text-end text-[0.82rem] font-extrabold tabular-nums text-[var(--wesal-text)]">
                 {segment.percent}%
               </span>
             </li>
@@ -105,16 +105,47 @@ function donutArcs(
   });
 }
 
-function UsersIcon() {
+function PartyPopperIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
-      <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="16.5" cy="10" r="2.4" stroke="currentColor" strokeWidth="1.6" />
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
       <path
-        d="M3.8 18.5c.7-2.6 2.9-4 5.2-4s4.5 1.4 5.2 4M14 14.8c1.7-.2 3.4.7 4.2 2.7"
+        d="M4.2 19.2 9.8 13.6l.9 3.2 3.2.9-5.6 5.6c-.9.9-2.4.5-2.9-.7L4.2 19.2Z"
+        fill="currentColor"
+        opacity="0.22"
+      />
+      <path
+        d="M4.2 19.2 9.8 13.6l.9 3.2 3.2.9-5.6 5.6c-.9.9-2.4.5-2.9-.7L4.2 19.2Z"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M8.2 15.2 5.6 17.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M9.4 16.8 7.2 19" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M12.2 10.2c1.1-2.4 3.2-4.1 5.6-4.8"
+        stroke="currentColor"
+        strokeWidth="1.5"
         strokeLinecap="round"
+      />
+      <path
+        d="M13.4 8.4c1.6-1.4 3.6-2.2 5.8-2.4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path d="M14.8 5.2 16 3.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M17.6 6.6 19.4 5.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M15.8 7.8 17.2 8.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="13.2" cy="4.8" r="0.9" fill="currentColor" />
+      <circle cx="19.2" cy="7.4" r="0.9" fill="currentColor" />
+      <circle cx="16.6" cy="3.2" r="0.7" fill="currentColor" />
+      <path
+        d="M18.2 9.4l.7-1.6.7 1.6 1.6.2-1.2 1.1.4 1.6-1.5-.8-1.5.8.4-1.6-1.2-1.1 1.6-.2Z"
+        fill="currentColor"
+      />
+      <path
+        d="M12.6 6.2l.45-1 .45 1 .95.12-.72.68.24 1-.9-.48-.9.48.24-1-.72-.68.95-.12Z"
+        fill="currentColor"
       />
     </svg>
   );
