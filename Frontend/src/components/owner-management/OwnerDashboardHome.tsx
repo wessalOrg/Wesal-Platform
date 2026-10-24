@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
+import OwnerBookingInsightsCards from "@/components/owner-management/OwnerBookingInsightsCards";
 import OwnerVisitorStatsCard from "@/components/owner-management/OwnerVisitorStatsCard";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
 import SubscriptionPaymentNotice from "@/components/halls/subscription/SubscriptionPaymentNotice";
@@ -192,12 +193,6 @@ export default function OwnerDashboardHome() {
         </section>
       ) : null}
 
-      <OwnerVisitorStatsCard
-        status={visitorStats.status}
-        stats={visitorStats.stats}
-        onRetry={visitorStats.reload}
-      />
-
       <section className="seeker-summary" aria-labelledby="owner-summary-heading">
         <h2 id="owner-summary-heading" className="seeker-home-section-title">
           {t("owner.summaryTitle")}
@@ -241,6 +236,16 @@ export default function OwnerDashboardHome() {
           </li>
         </ul>
       </section>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {/* In RTL, last column is the visual left — keep visitor stats there. */}
+        <OwnerBookingInsightsCards />
+        <OwnerVisitorStatsCard
+          status={visitorStats.status}
+          stats={visitorStats.stats}
+          onRetry={visitorStats.reload}
+        />
+      </div>
 
       <section className="seeker-pending-panel">
         <div className="seeker-pending-head">

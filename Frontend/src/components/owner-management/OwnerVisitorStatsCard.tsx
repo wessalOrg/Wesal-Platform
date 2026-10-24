@@ -7,7 +7,6 @@ import {
   formatConversionRate,
   formatStatCount,
   percentChange,
-  relativeBarPercent,
 } from "@/lib/owner-visitor-stats";
 import type {
   OwnerVisitorStats,
@@ -46,63 +45,54 @@ export default function OwnerVisitorStatsCard({
         ) / 10
       : null;
 
-  const peak = Math.max(
-    stats?.visitsThisMonth ?? 0,
-    stats?.favoritesThisMonth ?? 0,
-    stats?.bookingRequestsThisMonth ?? 0,
-    1,
-  );
-
   return (
     <section
-      className="overflow-hidden rounded-[1.35rem] border border-[rgba(168,98,103,0.18)] bg-white p-4 shadow-[0_10px_28px_rgba(90,55,45,0.06)] sm:p-5"
+      className="overflow-hidden rounded-2xl border border-[rgba(168,98,103,0.16)] bg-white p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
       aria-labelledby="owner-visitor-stats-heading"
       data-testid="owner-visitor-stats"
       data-load-status={status}
     >
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
-              aria-hidden="true"
-            >
-              <ChartIcon />
-            </span>
+      <header className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
+            aria-hidden="true"
+          >
+            <ChartIcon />
+          </span>
+          <div className="min-w-0">
             <h2
               id="owner-visitor-stats-heading"
-              className="text-base font-extrabold text-[var(--wesal-text)] sm:text-[1.05rem]"
+              className="truncate text-[0.82rem] font-extrabold leading-4 text-[var(--wesal-text)]"
             >
               {t("owner.visitorStats.title")}
             </h2>
+            <p className="mt-0.5 truncate text-[0.65rem] font-medium leading-3 text-[var(--wesal-muted)]">
+              {t("owner.visitorStats.subtitle")}
+            </p>
           </div>
-          <p className="mt-1 text-[0.78rem] font-medium text-[var(--wesal-muted)]">
-            {t("owner.visitorStats.subtitle")}
-          </p>
         </div>
-
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(168,98,103,0.2)] bg-[#faf7f5] px-2.5 py-1 text-[0.72rem] font-bold text-[var(--wesal-maroon-dark)]">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[rgba(168,98,103,0.18)] bg-[#faf7f5] px-2 py-0.5 text-[0.62rem] font-bold text-[var(--wesal-maroon-dark)]">
           <CalendarIcon />
           {t("owner.visitorStats.periodThisMonth")}
         </span>
       </header>
 
       {status === "loading" || status === "idle" ? (
-        <div className="mt-4 space-y-3" aria-busy="true">
-          <div className="h-[4.5rem] animate-pulse rounded-2xl bg-[var(--wesal-pink-soft)]" />
-          <div className="h-[4.5rem] animate-pulse rounded-2xl bg-[var(--wesal-pink-soft)]" />
-          <div className="h-[4.5rem] animate-pulse rounded-2xl bg-[var(--wesal-pink-soft)]" />
-          <div className="h-20 animate-pulse rounded-2xl bg-[var(--wesal-pink-soft)]" />
+        <div className="mt-2.5 grid grid-cols-3 gap-1.5" aria-busy="true">
+          <div className="h-16 animate-pulse rounded-xl bg-[var(--wesal-pink-soft)]" />
+          <div className="h-16 animate-pulse rounded-xl bg-[var(--wesal-pink-soft)]" />
+          <div className="h-16 animate-pulse rounded-xl bg-[var(--wesal-pink-soft)]" />
         </div>
       ) : null}
 
       {status === "error" ? (
-        <div className="mt-4 rounded-2xl bg-[rgba(180,35,24,0.06)] px-4 py-3" role="alert">
-          <p className="text-sm font-semibold text-[#b42318]">
+        <div className="mt-2.5 rounded-xl bg-[rgba(180,35,24,0.06)] px-3 py-2" role="alert">
+          <p className="text-[0.75rem] font-semibold text-[#b42318]">
             {t("owner.visitorStats.loadError")}
           </p>
           {onRetry ? (
-            <button type="button" className="btn-outline mt-3" onClick={onRetry}>
+            <button type="button" className="btn-outline mt-2 text-xs" onClick={onRetry}>
               {t("common.retry")}
             </button>
           ) : null}
@@ -110,112 +100,59 @@ export default function OwnerVisitorStatsCard({
       ) : null}
 
       {status === "ready" && stats ? (
-        <div className="mt-4 space-y-2.5">
-          <MetricRow
-            icon={<EyeIcon />}
-            iconClass="bg-[rgba(107,47,58,0.1)] text-[var(--wesal-maroon)]"
-            barClass="bg-[var(--wesal-maroon)]"
-            title={t("owner.visitorStats.visitsTitle")}
-            subtitle={t("owner.visitorStats.visitsSubtitle")}
-            value={t("owner.visitorStats.visitsValue", {
-              count: formatStatCount(stats.visitsThisMonth, locale),
-            })}
-            barPercent={relativeBarPercent(stats.visitsThisMonth, peak)}
-            change={visitsChange}
-            changeLabel={
-              visitsChange == null
-                ? null
-                : t("owner.visitorStats.vsPreviousMonth", {
-                    value: formatSignedPercent(visitsChange, locale),
-                  })
-            }
-          />
+        <div className="mt-2.5 space-y-2">
+          <div className="grid grid-cols-3 gap-1.5">
+            <MiniStat
+              icon={<EyeIcon />}
+              iconClass="bg-[rgba(107,47,58,0.1)] text-[var(--wesal-maroon)]"
+              label={t("owner.visitorStats.visitsTitle")}
+              value={formatStatCount(stats.visitsThisMonth, locale)}
+              change={visitsChange}
+            />
+            <MiniStat
+              icon={<HeartIcon />}
+              iconClass="bg-[rgba(196,160,92,0.18)] text-[#8a6a2a]"
+              label={t("owner.visitorStats.favoritesTitle")}
+              value={formatStatCount(stats.favoritesThisMonth, locale)}
+              change={favoritesChange}
+            />
+            <MiniStat
+              icon={<DocIcon />}
+              iconClass="bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
+              label={t("owner.visitorStats.bookingsTitle")}
+              value={formatStatCount(stats.bookingRequestsThisMonth, locale)}
+              change={bookingsChange}
+            />
+          </div>
 
-          <MetricRow
-            icon={<HeartIcon />}
-            iconClass="bg-[rgba(196,160,92,0.18)] text-[#8a6a2a]"
-            barClass="bg-[#c4a05c]"
-            title={t("owner.visitorStats.favoritesTitle")}
-            subtitle={t("owner.visitorStats.favoritesSubtitle")}
-            value={t("owner.visitorStats.favoritesValue", {
-              count: formatStatCount(stats.favoritesThisMonth, locale),
-            })}
-            barPercent={relativeBarPercent(stats.favoritesThisMonth, peak)}
-            change={favoritesChange}
-            changeLabel={
-              favoritesChange == null
-                ? null
-                : t("owner.visitorStats.vsPreviousMonth", {
-                    value: formatSignedPercent(favoritesChange, locale),
-                  })
-            }
-          />
-
-          <MetricRow
-            icon={<DocIcon />}
-            iconClass="bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
-            barClass="bg-[#c97a82]"
-            title={t("owner.visitorStats.bookingsTitle")}
-            subtitle={t("owner.visitorStats.bookingsSubtitle")}
-            value={t("owner.visitorStats.bookingsValue", {
-              count: formatStatCount(stats.bookingRequestsThisMonth, locale),
-            })}
-            barPercent={relativeBarPercent(stats.bookingRequestsThisMonth, peak)}
-            change={bookingsChange}
-            changeLabel={
-              bookingsChange == null
-                ? null
-                : t("owner.visitorStats.vsPreviousMonth", {
-                    value: formatSignedPercent(bookingsChange, locale),
-                  })
-            }
-          />
-
-          <div className="mt-1 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[var(--wesal-pink-soft)] px-3.5 py-3.5 sm:px-4">
-            <div className="flex min-w-0 items-start gap-2.5">
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-[var(--wesal-pink-soft)] px-2.5 py-2">
+            <div className="flex min-w-0 items-center gap-1.5">
               <span
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[var(--wesal-maroon)] shadow-sm"
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[var(--wesal-maroon)]"
                 aria-hidden="true"
               >
                 <UsersIcon />
               </span>
-              <div className="min-w-0">
-                <p className="text-sm font-extrabold text-[var(--wesal-text)]">
-                  {t("owner.visitorStats.conversionTitle")}
-                </p>
-                <p className="mt-0.5 text-[0.72rem] font-medium text-[var(--wesal-muted)]">
-                  {t("owner.visitorStats.conversionSubtitle")}
-                </p>
-              </div>
+              <p className="truncate text-[0.68rem] font-bold text-[var(--wesal-text)]">
+                {t("owner.visitorStats.conversionTitle")}
+              </p>
             </div>
-
-            <div className="flex items-center gap-2.5 ps-11 sm:ps-0">
-              <div className="text-start sm:text-end">
+            <div className="flex shrink-0 items-baseline gap-1.5">
+              <p
+                className="text-sm font-extrabold leading-none text-[var(--wesal-maroon-dark)]"
+                data-testid="owner-visitor-conversion-rate"
+              >
+                {formatConversionRate(stats.conversionRateThisMonth, locale)}
+              </p>
+              {conversionDelta != null && conversionDelta !== 0 ? (
                 <p
-                  className="text-2xl font-extrabold leading-none text-[var(--wesal-maroon-dark)]"
-                  data-testid="owner-visitor-conversion-rate"
+                  className={`text-[0.62rem] font-bold ${
+                    conversionDelta > 0 ? "text-[#059669]" : "text-[#b42318]"
+                  }`}
                 >
-                  {formatConversionRate(stats.conversionRateThisMonth, locale)}
+                  {formatSignedPercent(conversionDelta, locale, true)}
                 </p>
-                {conversionDelta != null && conversionDelta !== 0 ? (
-                  <p
-                    className={`mt-1 text-[0.7rem] font-bold ${
-                      conversionDelta > 0 ? "text-[#059669]" : "text-[#b42318]"
-                    }`}
-                  >
-                    {t("owner.visitorStats.conversionDelta", {
-                      value: formatSignedPercent(conversionDelta, locale, true),
-                    })}
-                  </p>
-                ) : (
-                  <p className="mt-1 text-[0.7rem] font-semibold text-[var(--wesal-muted)]">
-                    {t("owner.visitorStats.conversionFlat")}
-                  </p>
-                )}
-              </div>
-              <span className="hidden text-[#059669] sm:inline" aria-hidden="true">
-                <SparklineIcon />
-              </span>
+              ) : null}
             </div>
           </div>
         </div>
@@ -224,69 +161,45 @@ export default function OwnerVisitorStatsCard({
   );
 }
 
-function MetricRow({
+function MiniStat({
   icon,
   iconClass,
-  barClass,
-  title,
-  subtitle,
+  label,
   value,
-  barPercent,
   change,
-  changeLabel,
 }: {
   icon: ReactNode;
   iconClass: string;
-  barClass: string;
-  title: string;
-  subtitle: string;
+  label: string;
   value: string;
-  barPercent: number;
   change: number | null;
-  changeLabel: string | null;
 }) {
   const up = change != null && change >= 0;
   return (
-    <div className="rounded-2xl border border-[rgba(168,98,103,0.12)] bg-[#fcfaf9] px-3 py-3 sm:px-3.5">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <span
-            className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconClass}`}
-            aria-hidden="true"
-          >
-            {icon}
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-extrabold text-[var(--wesal-text)]">{title}</p>
-            <p className="mt-0.5 text-[0.72rem] font-medium text-[var(--wesal-muted)]">
-              {subtitle}
-            </p>
-          </div>
-        </div>
-        <p className="text-sm font-extrabold text-[var(--wesal-text)] sm:text-[0.95rem]">
-          {value}
-        </p>
-      </div>
-
-      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white">
-        <span
-          className={`block h-full rounded-full ${barClass}`}
-          style={{ width: `${barPercent}%` }}
-        />
-      </div>
-
-      {changeLabel ? (
+    <div className="min-w-0 rounded-xl border border-[rgba(168,98,103,0.12)] bg-[#fcfaf9] px-2 py-2 text-center">
+      <span
+        className={`mx-auto inline-flex h-6 w-6 items-center justify-center rounded-full ${iconClass}`}
+        aria-hidden="true"
+      >
+        {icon}
+      </span>
+      <p className="mt-1 truncate text-[0.58rem] font-bold leading-3 text-[var(--wesal-muted)]">
+        {label}
+      </p>
+      <p className="mt-0.5 truncate text-[0.85rem] font-extrabold leading-4 text-[var(--wesal-text)]">
+        {value}
+      </p>
+      {change != null ? (
         <p
-          className={`mt-2 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[0.68rem] font-bold ${
-            up
-              ? "bg-[rgba(5,150,105,0.1)] text-[#047857]"
-              : "bg-[rgba(180,35,24,0.08)] text-[#b42318]"
+          className={`mt-1 text-[0.58rem] font-bold leading-3 ${
+            up ? "text-[#047857]" : "text-[#b42318]"
           }`}
         >
-          <span aria-hidden="true">{up ? "↑" : "↓"}</span>
-          {changeLabel}
+          {up ? "↑" : "↓"} {formatSignedPercent(change, "en-GB")}
         </p>
-      ) : null}
+      ) : (
+        <p className="mt-1 text-[0.58rem] font-semibold leading-3 text-[var(--wesal-muted)]">—</p>
+      )}
     </div>
   );
 }
@@ -307,7 +220,7 @@ function formatSignedPercent(
 
 function ChartIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
       <path d="M4 19h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
       <path d="M7 16V10M12 16V7M17 16v-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
@@ -316,7 +229,7 @@ function ChartIcon() {
 
 function CalendarIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
       <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 3.5v3M16 3.5v3M4 9.5h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
@@ -325,7 +238,7 @@ function CalendarIcon() {
 
 function EyeIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
       <path
         d="M2.8 12S6.2 6.5 12 6.5 21.2 12 21.2 12 17.8 17.5 12 17.5 2.8 12 2.8 12Z"
         stroke="currentColor"
@@ -338,7 +251,7 @@ function EyeIcon() {
 
 function HeartIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
       <path
         d="M12 19s-6.5-4.1-8.4-7.6C2.2 9.2 3.4 6.5 6.2 6.1c1.6-.2 3.1.5 3.8 1.7.7-1.2 2.2-1.9 3.8-1.7 2.8.4 4 3.1 2.6 5.3C18.5 14.9 12 19 12 19Z"
         stroke="currentColor"
@@ -351,7 +264,7 @@ function HeartIcon() {
 
 function DocIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
       <path
         d="M7 3.8h7.2L19 8.5V20a1.2 1.2 0 0 1-1.2 1.2H7A1.2 1.2 0 0 1 5.8 20V5A1.2 1.2 0 0 1 7 3.8Z"
         stroke="currentColor"
@@ -365,7 +278,7 @@ function DocIcon() {
 
 function UsersIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
       <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.6" />
       <circle cx="16.5" cy="10" r="2.4" stroke="currentColor" strokeWidth="1.6" />
       <path
@@ -373,20 +286,6 @@ function UsersIcon() {
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function SparklineIcon() {
-  return (
-    <svg viewBox="0 0 40 24" className="h-6 w-10" fill="none" aria-hidden="true">
-      <path
-        d="M2 18 10 12l6 4 10-12 10 6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </svg>
   );
