@@ -25,9 +25,9 @@ export default function OwnerEventTypesCard() {
         <img
           src="/icons/party-popper.png"
           alt=""
-          width={32}
-          height={32}
-          className="h-8 w-8 shrink-0 rounded-lg object-cover"
+          width={22}
+          height={22}
+          className="h-[1.35rem] w-[1.35rem] shrink-0 rounded-md object-cover"
           aria-hidden="true"
         />
         <h2 className="text-[0.88rem] font-extrabold text-[var(--wesal-text)]">
