@@ -1289,6 +1289,7 @@ const ar: MessageCatalog = {
   "owner.visitorStats.bookingsSubtitle": "من صفحة قاعتك",
   "owner.visitorStats.bookingsValue": "{count} طلباً",
   "owner.visitorStats.vsPreviousMonth": "{value} عن الشهر السابق",
+  "owner.visitorStats.vsPreviousHint": "عن الشهر السابق",
   "owner.visitorStats.conversionTitle": "معدل تحويل المشاهدات",
   "owner.visitorStats.conversionSubtitle": "من زيارة إلى طلب حجز",
   "owner.visitorStats.conversionDelta": "({value} عن الشهر السابق)",

@@ -1297,6 +1297,7 @@ const en: MessageCatalog = {
   "owner.visitorStats.bookingsSubtitle": "From your hall page",
   "owner.visitorStats.bookingsValue": "{count} requests",
   "owner.visitorStats.vsPreviousMonth": "{value} vs previous month",
+  "owner.visitorStats.vsPreviousHint": "vs previous month",
   "owner.visitorStats.conversionTitle": "View conversion rate",
   "owner.visitorStats.conversionSubtitle": "From visit to booking request",
   "owner.visitorStats.conversionDelta": "({value} vs previous month)",
