@@ -135,7 +135,7 @@ public sealed class AuthService : IAuthService
             var encodedFullName = HtmlEncoder.Default.Encode(user.FullName);
             var logoUrl = HtmlEncoder.Default.Encode(
                 $"{_passwordResetOptions.FrontendBaseUrl.Trim().TrimEnd('/')}/logo-wesal-white.png");
-            var plainBody = $"مرحبًا {user.FullName}،\n\nتلقينا طلبًا لإعادة تعيين كلمة مرور حسابك في وصال. افتح الرابط التالي خلال 24 ساعة لاختيار كلمة مرور جديدة:\n\n{resetUrl}\n\nإذا لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة.\n\n---\n\nHello {user.FullName},\nWe received a request to reset your Wesal password. Open the link below within 24 hours to choose a new password:\n\n{resetUrl}\n\nIf you did not request this, you can safely ignore this email.";
+            var plainBody = $"مرحبًا {user.FullName}،\n\nتلقينا طلبًا لإعادة تعيين كلمة مرور حسابك في وصال. افتح الرابط التالي خلال 3 ساعات لاختيار كلمة مرور جديدة:\n\n{resetUrl}\n\nإذا لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة.\n\n---\n\nHello {user.FullName},\nWe received a request to reset your Wesal password. Open the link below within 3 hours to choose a new password:\n\n{resetUrl}\n\nIf you did not request this, you can safely ignore this email.";
             var htmlBody = $"""
                 <!doctype html>
                 <html lang="ar" dir="rtl">
@@ -160,13 +160,13 @@ public sealed class AuthService : IAuthService
                           <h1 style="margin:20px 0 12px;color:#a86267;font-size:25px;line-height:1.5">إعادة تعيين كلمة المرور</h1>
                           <p style="margin:0;color:#3d342e;font-size:16px;line-height:1.9">مرحبًا {encodedFullName}،</p>
                           <p style="margin:8px 0 0;color:#8a7a70;font-size:15px;line-height:1.9">تلقينا طلبًا لإعادة تعيين كلمة مرور حسابك. اضغط الزر أدناه لاختيار كلمة مرور جديدة وآمنة.</p>
-                          <p style="margin:12px 0 0;color:#8a7a70;font-size:13px">لأمان حسابك، تنتهي صلاحية الرابط خلال 24 ساعة.</p>
+                          <p style="margin:12px 0 0;color:#8a7a70;font-size:13px">لأمان حسابك، تنتهي صلاحية الرابط خلال 3 ساعات.</p>
                           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:26px auto 20px"><tr><td align="center" bgcolor="#c17b7f" style="border-radius:12px">
                             <a href="{encodedResetUrl}" style="display:inline-block;padding:15px 32px;border:1px solid #c17b7f;border-radius:12px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold">إعادة تعيين كلمة المرور</a>
                           </td></tr></table>
                           <div dir="ltr" style="margin:0 auto 24px;max-width:440px">
                             <p style="margin:0;color:#3d342e;font-size:15px;line-height:1.8">Hello {encodedFullName},</p>
-                            <p style="margin:6px 0 0;color:#8a7a70;font-size:14px;line-height:1.8">We received a request to reset your Wesal password. Use the button below to choose a new, secure password. This link expires in 24 hours.</p>
+                            <p style="margin:6px 0 0;color:#8a7a70;font-size:14px;line-height:1.8">We received a request to reset your Wesal password. Use the button below to choose a new, secure password. This link expires in 3 hours.</p>
                             <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:18px auto 0"><tr><td align="center" bgcolor="#c17b7f" style="border-radius:12px">
                               <a href="{encodedResetUrl}" style="display:inline-block;padding:13px 30px;border:1px solid #c17b7f;border-radius:12px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold">Reset password</a>
                             </td></tr></table>
