@@ -26,7 +26,10 @@ export default function OwnerBookingInsightsCards() {
   const t = useT();
 
   return (
-    <>
+    <div
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+      data-testid="owner-booking-insights"
+    >
       <section
         className="rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
         data-testid="owner-booking-insights-weekdays"
@@ -129,7 +132,7 @@ export default function OwnerBookingInsightsCards() {
           </ul>
         </div>
       </section>
-    </>
+    </div>
   );
 }
 

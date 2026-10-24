@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
 import OwnerBookingInsightsCards from "@/components/owner-management/OwnerBookingInsightsCards";
+import OwnerEventTypesCard from "@/components/owner-management/OwnerEventTypesCard";
 import OwnerVisitorStatsCard from "@/components/owner-management/OwnerVisitorStatsCard";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
 import SubscriptionPaymentNotice from "@/components/halls/subscription/SubscriptionPaymentNotice";
@@ -237,14 +238,16 @@ export default function OwnerDashboardHome() {
         </ul>
       </section>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {/* In RTL, last column is the visual left — keep visitor stats there. */}
+      <div className="flex flex-col gap-3">
         <OwnerBookingInsightsCards />
-        <OwnerVisitorStatsCard
-          status={visitorStats.status}
-          stats={visitorStats.stats}
-          onRetry={visitorStats.reload}
-        />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <OwnerEventTypesCard />
+          <OwnerVisitorStatsCard
+            status={visitorStats.status}
+            stats={visitorStats.stats}
+            onRetry={visitorStats.reload}
+          />
+        </div>
       </div>
 
       <section className="seeker-pending-panel">
