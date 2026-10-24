@@ -261,19 +261,17 @@ export default function OwnerDashboardHome() {
           onSelect={setInsightsHallId}
         />
         <OwnerBookingInsightsCards />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <OwnerEventTypesCard />
-          <OwnerVisitorStatsCard
-            status={visitorStats.status}
-            stats={visitorStats.stats}
-            onRetry={visitorStats.reload}
-            scopeLabel={
-              selectedInsightHallName
-                ? t("owner.visitorStats.subtitleForHall", { hall: selectedInsightHallName })
-                : undefined
-            }
-          />
-        </div>
+        <OwnerEventTypesCard />
+        <OwnerVisitorStatsCard
+          status={visitorStats.status}
+          stats={visitorStats.stats}
+          onRetry={visitorStats.reload}
+          scopeLabel={
+            selectedInsightHallName
+              ? t("owner.visitorStats.subtitleForHall", { hall: selectedInsightHallName })
+              : undefined
+          }
+        />
       </div>
 
       <section className="seeker-pending-panel">

@@ -58,15 +58,15 @@ export default function OwnerVisitorStatsCard({
 
   return (
     <section
-      className="overflow-hidden rounded-2xl border border-[rgba(168,98,103,0.16)] bg-[#faf8f6] p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
+      className="overflow-hidden rounded-[1.25rem] border border-[rgba(168,98,103,0.12)] bg-[#fdf8f8] p-4 shadow-[0_8px_24px_rgba(90,55,45,0.06)] sm:p-5"
       aria-labelledby="owner-visitor-stats-heading"
       data-testid="owner-visitor-stats"
       data-load-status={status}
     >
-      <header className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-start gap-1.5">
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2.5">
           <span
-            className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f3dfe1] text-[#c17b7f]"
             aria-hidden="true"
           >
             <ChartIcon />
@@ -74,32 +74,33 @@ export default function OwnerVisitorStatsCard({
           <div className="min-w-0">
             <h2
               id="owner-visitor-stats-heading"
-              className="truncate text-[0.82rem] font-extrabold leading-4 text-[var(--wesal-maroon)]"
+              className="truncate text-[0.95rem] font-extrabold leading-5 text-[#c17b7f]"
             >
               {t("owner.visitorStats.title")}
             </h2>
-            <p className="mt-0.5 truncate text-[0.62rem] font-medium leading-3 text-[var(--wesal-muted)]">
+            <p className="mt-1 truncate text-[0.7rem] font-medium leading-4 text-[var(--wesal-muted)]">
               {scopeLabel ?? t("owner.visitorStats.subtitle")}
             </p>
           </div>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[rgba(168,98,103,0.18)] bg-white px-2 py-0.5 text-[0.62rem] font-bold text-[var(--wesal-maroon-dark)]">
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[rgba(168,98,103,0.2)] bg-white px-2.5 py-1.5 text-[0.68rem] font-bold text-[#a86267]">
           <CalendarIcon />
           {t("owner.visitorStats.periodThisMonth")}
+          <ChevronIcon />
         </span>
       </header>
 
       {status === "loading" || status === "idle" ? (
-        <div className="mt-2.5 space-y-1.5" aria-busy="true">
-          <div className="h-11 animate-pulse rounded-xl bg-[var(--wesal-pink-soft)]" />
-          <div className="h-11 animate-pulse rounded-xl bg-[var(--wesal-pink-soft)]" />
-          <div className="h-11 animate-pulse rounded-xl bg-[var(--wesal-pink-soft)]" />
-          <div className="h-10 animate-pulse rounded-xl bg-[var(--wesal-pink-soft)]" />
+        <div className="mt-4 space-y-2.5" aria-busy="true">
+          <div className="h-14 animate-pulse rounded-2xl bg-[#f3dfe1]" />
+          <div className="h-14 animate-pulse rounded-2xl bg-[#f3dfe1]" />
+          <div className="h-14 animate-pulse rounded-2xl bg-[#f3dfe1]" />
+          <div className="h-14 animate-pulse rounded-2xl bg-[#f3dfe1]" />
         </div>
       ) : null}
 
       {status === "error" ? (
-        <div className="mt-2.5 rounded-xl bg-[rgba(180,35,24,0.06)] px-3 py-2" role="alert">
+        <div className="mt-4 rounded-2xl bg-[rgba(180,35,24,0.06)] px-3 py-2.5" role="alert">
           <p className="text-[0.75rem] font-semibold text-[#b42318]">
             {t("owner.visitorStats.loadError")}
           </p>
@@ -112,10 +113,10 @@ export default function OwnerVisitorStatsCard({
       ) : null}
 
       {status === "ready" && stats ? (
-        <div className="mt-2.5 space-y-1.5">
+        <div className="mt-4 space-y-2.5">
           <MetricRow
             icon={<EyeIcon />}
-            iconClass="bg-[rgba(193,123,127,0.14)] text-[var(--wesal-maroon)]"
+            iconClass="bg-[#f3dfe1] text-[#c17b7f]"
             title={t("owner.visitorStats.visitsTitle")}
             subtitle={t("owner.visitorStats.visitsSubtitle")}
             value={t("owner.visitorStats.visitsValue", {
@@ -123,12 +124,12 @@ export default function OwnerVisitorStatsCard({
             })}
             change={visitsChange}
             barPercent={barFill(stats.visitsThisMonth, barScale)}
-            barClass="bg-[var(--wesal-maroon)]"
+            barClass="bg-[#c17b7f]"
             vsHint={t("owner.visitorStats.vsPreviousHint")}
           />
           <MetricRow
             icon={<HeartIcon />}
-            iconClass="bg-[rgba(196,160,92,0.16)] text-[#8a6a2a]"
+            iconClass="bg-[rgba(196,160,92,0.18)] text-[#9a7a35]"
             title={t("owner.visitorStats.favoritesTitle")}
             subtitle={t("owner.visitorStats.favoritesSubtitle")}
             value={t("owner.visitorStats.favoritesValue", {
@@ -141,7 +142,7 @@ export default function OwnerVisitorStatsCard({
           />
           <MetricRow
             icon={<DocIcon />}
-            iconClass="bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon-dark)]"
+            iconClass="bg-[#f3dfe1] text-[#a86267]"
             title={t("owner.visitorStats.bookingsTitle")}
             subtitle={t("owner.visitorStats.bookingsSubtitle")}
             value={t("owner.visitorStats.bookingsValue", {
@@ -149,52 +150,54 @@ export default function OwnerVisitorStatsCard({
             })}
             change={bookingsChange}
             barPercent={barFill(stats.bookingRequestsThisMonth, barScale)}
-            barClass="bg-[var(--wesal-maroon-soft)]"
+            barClass="bg-[#d49a9d]"
             vsHint={t("owner.visitorStats.vsPreviousHint")}
           />
 
-          <div className="flex items-center gap-2 rounded-xl bg-[var(--wesal-pink-soft)] px-2.5 py-2">
-            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <div className="flex items-center gap-3 rounded-2xl bg-[#f3dfe1]/70 px-3.5 py-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
               <span
-                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[var(--wesal-maroon)]"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#c17b7f] shadow-[0_2px_8px_rgba(193,123,127,0.12)]"
                 aria-hidden="true"
               >
                 <UsersIcon />
               </span>
               <div className="min-w-0">
-                <p className="truncate text-[0.68rem] font-bold leading-3 text-[var(--wesal-text)]">
+                <p className="truncate text-[0.8rem] font-extrabold leading-4 text-[var(--wesal-text)]">
                   {t("owner.visitorStats.conversionTitle")}
                 </p>
-                <p className="mt-0.5 truncate text-[0.58rem] font-medium leading-3 text-[var(--wesal-muted)]">
+                <p className="mt-0.5 truncate text-[0.65rem] font-medium leading-4 text-[var(--wesal-muted)]">
                   {t("owner.visitorStats.conversionSubtitle")}
                 </p>
               </div>
             </div>
-            <span className="h-7 w-px shrink-0 bg-[rgba(168,98,103,0.2)]" aria-hidden="true" />
-            <div className="flex shrink-0 flex-col items-end gap-0.5">
-              <div className="flex items-center gap-1">
-                <SparkIcon />
+            <span className="hidden h-10 w-px shrink-0 bg-[rgba(168,98,103,0.22)] sm:block" aria-hidden="true" />
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <div className="flex items-center gap-1.5">
+                <TrendIcon />
                 <p
-                  className="text-sm font-extrabold leading-none text-[var(--wesal-maroon-dark)]"
+                  className="text-xl font-extrabold leading-none text-[#c17b7f]"
                   data-testid="owner-visitor-conversion-rate"
                 >
                   {formatConversionRate(stats.conversionRateThisMonth, locale)}
                 </p>
               </div>
               {conversionDelta != null && conversionDelta !== 0 ? (
-                <p
-                  className={`text-[0.55rem] font-bold leading-3 ${
-                    conversionDelta > 0 ? "text-[#059669]" : "text-[#b42318]"
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[0.62rem] font-bold ${
+                    conversionDelta > 0
+                      ? "bg-white/80 text-[#059669]"
+                      : "bg-white/80 text-[#b42318]"
                   }`}
                 >
                   {t("owner.visitorStats.conversionDelta", {
                     value: formatSignedPercent(conversionDelta, locale, true),
                   })}
-                </p>
+                </span>
               ) : (
-                <p className="text-[0.55rem] font-semibold leading-3 text-[var(--wesal-muted)]">
+                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[0.62rem] font-semibold text-[var(--wesal-muted)]">
                   {t("owner.visitorStats.conversionFlat")}
-                </p>
+                </span>
               )}
             </div>
           </div>
@@ -227,53 +230,54 @@ function MetricRow({
 }) {
   const up = change != null && change >= 0;
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-[rgba(168,98,103,0.12)] bg-white px-2 py-1.5">
+    <div className="flex items-center gap-2.5 rounded-2xl border border-[rgba(168,98,103,0.1)] bg-white px-3 py-3 shadow-[0_2px_10px_rgba(90,55,45,0.03)] sm:gap-3">
       <span
-        className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${iconClass}`}
+        className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconClass}`}
         aria-hidden="true"
       >
         {icon}
       </span>
+
+      <div className="min-w-0 w-[7.5rem] shrink-0 sm:w-[8.5rem]">
+        <p className="truncate text-[0.78rem] font-extrabold leading-4 text-[var(--wesal-text)]">
+          {title}
+        </p>
+        <p className="mt-0.5 truncate text-[0.62rem] font-medium leading-4 text-[var(--wesal-muted)]">
+          {subtitle}
+        </p>
+      </div>
+
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="truncate text-[0.68rem] font-extrabold leading-3 text-[var(--wesal-text)]">
-              {title}
-            </p>
-            <p className="mt-0.5 truncate text-[0.55rem] font-medium leading-3 text-[var(--wesal-muted)]">
-              {subtitle}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-start gap-1.5">
-            <p className="text-[0.72rem] font-extrabold leading-3 text-[var(--wesal-text)]">
-              {value}
-            </p>
-            {change != null ? (
-              <div
-                className={`rounded-md px-1 py-0.5 text-center ${
-                  up ? "bg-[rgba(4,120,87,0.08)]" : "bg-[rgba(180,35,24,0.08)]"
-                }`}
-              >
-                <p
-                  className={`text-[0.55rem] font-extrabold leading-3 ${
-                    up ? "text-[#047857]" : "text-[#b42318]"
-                  }`}
-                >
-                  {up ? "↑" : "↓"} {formatSignedPercent(change, "en-GB")}
-                </p>
-                <p className="text-[0.48rem] font-semibold leading-3 text-[var(--wesal-muted)]">
-                  {vsHint}
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </div>
-        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#f0ebe8]">
+        <div className="h-2 overflow-hidden rounded-full bg-[#f0ebe8]">
           <div
             className={`h-full rounded-full ${barClass}`}
             style={{ width: `${barPercent}%` }}
           />
         </div>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-2">
+        <p className="whitespace-nowrap text-[0.82rem] font-extrabold leading-4 text-[var(--wesal-text)]">
+          {value}
+        </p>
+        {change != null ? (
+          <div
+            className={`rounded-lg px-1.5 py-1 text-center ${
+              up ? "bg-[rgba(4,120,87,0.1)]" : "bg-[rgba(180,35,24,0.08)]"
+            }`}
+          >
+            <p
+              className={`text-[0.65rem] font-extrabold leading-3 ${
+                up ? "text-[#047857]" : "text-[#b42318]"
+              }`}
+            >
+              {up ? "↗" : "↘"} {formatSignedPercent(change, "en-GB")}
+            </p>
+            <p className="mt-0.5 text-[0.52rem] font-semibold leading-3 text-[var(--wesal-muted)]">
+              {vsHint}
+            </p>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -301,42 +305,55 @@ function formatSignedPercent(
 
 function ChartIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
-      <path d="M4 19h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <path d="M7 16V10M12 16V7M17 16v-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <svg viewBox="0 0 24 24" className="h-[1.1rem] w-[1.1rem]" fill="none" aria-hidden="true">
+      <path d="M4 19.5h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M7.5 16.5V11M12 16.5V7.5M16.5 16.5v-3.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function CalendarIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
-      <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+      <rect x="4" y="5" width="16" height="15" rx="2.2" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 3.5v3M16 3.5v3M4 9.5h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3 w-3 opacity-70" fill="none" aria-hidden="true">
+      <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
 function EyeIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
       <path
-        d="M2.8 12S6.2 6.5 12 6.5 21.2 12 21.2 12 17.8 17.5 12 17.5 2.8 12 2.8 12Z"
+        d="M2.6 12S6.4 6.2 12 6.2 21.4 12 21.4 12 17.6 17.8 12 17.8 2.6 12 2.6 12Z"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.7"
       />
-      <circle cx="12" cy="12" r="2.4" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.7" />
     </svg>
   );
 }
 
 function HeartIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
       <path
-        d="M12 19s-6.5-4.1-8.4-7.6C2.2 9.2 3.4 6.5 6.2 6.1c1.6-.2 3.1.5 3.8 1.7.7-1.2 2.2-1.9 3.8-1.7 2.8.4 4 3.1 2.6 5.3C18.5 14.9 12 19 12 19Z"
+        d="M12 19.2s-6.8-4.2-8.7-7.8C1.8 8.8 3.1 5.9 6.1 5.5c1.7-.2 3.3.5 4 1.8.7-1.3 2.3-2 4-1.8 3 .4 4.3 3.3 2.8 5.6-1.9 3.6-8.9 8.1-8.9 8.1Z"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.7"
         strokeLinejoin="round"
       />
     </svg>
@@ -345,43 +362,49 @@ function HeartIcon() {
 
 function DocIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
       <path
-        d="M7 3.8h7.2L19 8.5V20a1.2 1.2 0 0 1-1.2 1.2H7A1.2 1.2 0 0 1 5.8 20V5A1.2 1.2 0 0 1 7 3.8Z"
+        d="M7 3.6h7.4L19.2 8.4V20a1.3 1.3 0 0 1-1.3 1.3H7A1.3 1.3 0 0 1 5.7 20V4.9A1.3 1.3 0 0 1 7 3.6Z"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.7"
         strokeLinejoin="round"
       />
-      <path d="M14 3.8V8h4.5M8.5 12h7M8.5 15.5h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M14.2 3.6V8.2h4.6M8.4 12h7.2M8.4 15.6h5.2"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function UsersIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
-      <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="16.5" cy="10" r="2.4" stroke="currentColor" strokeWidth="1.6" />
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+      <circle cx="9" cy="8.8" r="3.1" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="16.6" cy="9.8" r="2.5" stroke="currentColor" strokeWidth="1.7" />
       <path
-        d="M3.8 18.5c.7-2.6 2.9-4 5.2-4s4.5 1.4 5.2 4M14 14.8c1.7-.2 3.4.7 4.2 2.7"
+        d="M3.6 18.6c.7-2.7 3-4.2 5.4-4.2s4.7 1.5 5.4 4.2M14.2 14.9c1.8-.2 3.6.7 4.4 2.8"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.7"
         strokeLinecap="round"
       />
     </svg>
   );
 }
 
-function SparkIcon() {
+function TrendIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3 text-[var(--wesal-maroon)]" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#c17b7f]" fill="none" aria-hidden="true">
       <path
-        d="M4 16c2-1.5 4.2-4.5 5.2-7.2.5 2.4 1.8 4.6 3.8 6.2 1.4-2 3.4-3.4 5.5-4"
+        d="M3.5 16.5 8 11l3.5 3.5L20 6.5"
         stroke="currentColor"
-        strokeWidth="1.7"
+        strokeWidth="1.9"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <path d="M15 6.5h5v5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
