@@ -7,7 +7,7 @@ const EVENT_SEGMENTS = [
   { key: "wedding" as const, percent: 45, color: "#c17b7f" },
   { key: "engagement" as const, percent: 20, color: "#a8d4e8" },
   { key: "family" as const, percent: 15, color: "#e8c9b0" },
-  { key: "birthday" as const, percent: 10, color: "#d7dde3" },
+  { key: "birthday" as const, percent: 10, color: "#b8a0c8" },
   { key: "other" as const, percent: 10, color: "#9aa7b5" },
 ];
 
@@ -18,23 +18,23 @@ export default function OwnerEventTypesCard() {
 
   return (
     <section
-      className="rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
+      className="rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-4 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-5"
       data-testid="owner-event-types-card"
     >
-      <header className="mb-2.5 flex items-center gap-1.5">
+      <header className="mb-4 flex items-center gap-2">
         <span
-          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
           aria-hidden="true"
         >
           <UsersIcon />
         </span>
-        <h2 className="text-[0.82rem] font-extrabold text-[var(--wesal-text)]">
+        <h2 className="text-[0.9rem] font-extrabold text-[var(--wesal-text)]">
           {t("owner.insights.eventTypesTitle")}
         </h2>
       </header>
 
-      <div className="flex items-center gap-3">
-        <div className="relative mx-auto h-[7.25rem] w-[7.25rem] shrink-0 sm:mx-0">
+      <div className="flex w-full items-center justify-between gap-4 sm:gap-6">
+        <div className="relative h-[9.5rem] w-[9.5rem] shrink-0 sm:h-[10.5rem] sm:w-[10.5rem]">
           <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
             <circle cx="60" cy="60" r="42" fill="none" stroke="#f3eeec" strokeWidth="16" />
             {donutArcs(EVENT_SEGMENTS).map((arc) => (
@@ -53,29 +53,29 @@ export default function OwnerEventTypesCard() {
             ))}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-2xl font-extrabold leading-none text-[var(--wesal-text)]">
+            <p className="text-3xl font-extrabold leading-none text-[var(--wesal-text)]">
               {TOTAL_BOOKINGS}
             </p>
-            <p className="mt-0.5 text-[0.68rem] font-bold text-[var(--wesal-muted)]">
+            <p className="mt-1 text-[0.75rem] font-bold text-[var(--wesal-muted)]">
               {t("owner.insights.bookingsUnit")}
             </p>
           </div>
         </div>
 
-        <ul className="min-w-0 flex-1 space-y-1.5">
+        <ul className="min-w-0 flex-1 space-y-2.5">
           {EVENT_SEGMENTS.map((segment) => (
-            <li key={segment.key} className="flex items-center justify-between gap-2">
-              <span className="flex min-w-0 items-center gap-1.5">
+            <li key={segment.key} className="flex items-center justify-between gap-3">
+              <span className="flex min-w-0 items-center gap-2">
                 <span
-                  className="h-2 w-2 shrink-0 rounded-full"
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: segment.color }}
                   aria-hidden="true"
                 />
-                <span className="truncate text-[0.68rem] font-bold text-[var(--wesal-text)]">
+                <span className="truncate text-[0.8rem] font-bold text-[var(--wesal-text)]">
                   {t(`owner.insights.eventType.${segment.key}`)}
                 </span>
               </span>
-              <span className="shrink-0 text-[0.7rem] font-extrabold tabular-nums text-[var(--wesal-text)]">
+              <span className="shrink-0 text-[0.85rem] font-extrabold tabular-nums text-[var(--wesal-text)]">
                 {segment.percent}%
               </span>
             </li>
@@ -107,7 +107,7 @@ function donutArcs(
 
 function UsersIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
       <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.6" />
       <circle cx="16.5" cy="10" r="2.4" stroke="currentColor" strokeWidth="1.6" />
       <path

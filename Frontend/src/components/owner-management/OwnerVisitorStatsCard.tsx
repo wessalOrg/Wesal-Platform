@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 import {
   formatConversionRate,
@@ -25,8 +24,8 @@ export default function OwnerVisitorStatsCard({
   onRetry,
 }: OwnerVisitorStatsCardProps) {
   const t = useT();
-  const lang = useUiLang();
-  const locale = lang === "ar" ? "ar-EG" : "en-GB";
+  /** Stats digits stay Western/English even when UI is Arabic. */
+  const locale = "en-GB";
 
   const visitsChange =
     stats != null ? percentChange(stats.visitsThisMonth, stats.visitsPreviousMonth) : null;
@@ -44,6 +43,15 @@ export default function OwnerVisitorStatsCard({
           (stats.conversionRateThisMonth - stats.conversionRatePreviousMonth) * 10,
         ) / 10
       : null;
+  const barScale =
+    stats != null
+      ? Math.max(
+          stats.visitsThisMonth,
+          stats.favoritesThisMonth,
+          stats.bookingRequestsThisMonth,
+          1,
+        )
+      : 1;
 
   return (
     <section
@@ -111,7 +119,7 @@ export default function OwnerVisitorStatsCard({
               count: formatStatCount(stats.visitsThisMonth, locale),
             })}
             change={visitsChange}
-            barPercent={barFill(stats.visitsThisMonth, stats.visitsPreviousMonth)}
+            barPercent={barFill(stats.visitsThisMonth, barScale)}
             barClass="bg-[var(--wesal-maroon)]"
             vsHint={t("owner.visitorStats.vsPreviousHint")}
           />
@@ -124,7 +132,7 @@ export default function OwnerVisitorStatsCard({
               count: formatStatCount(stats.favoritesThisMonth, locale),
             })}
             change={favoritesChange}
-            barPercent={barFill(stats.favoritesThisMonth, stats.favoritesPreviousMonth)}
+            barPercent={barFill(stats.favoritesThisMonth, barScale)}
             barClass="bg-[#c4a05c]"
             vsHint={t("owner.visitorStats.vsPreviousHint")}
           />
@@ -137,10 +145,7 @@ export default function OwnerVisitorStatsCard({
               count: formatStatCount(stats.bookingRequestsThisMonth, locale),
             })}
             change={bookingsChange}
-            barPercent={barFill(
-              stats.bookingRequestsThisMonth,
-              stats.bookingRequestsPreviousMonth,
-            )}
+            barPercent={barFill(stats.bookingRequestsThisMonth, barScale)}
             barClass="bg-[var(--wesal-maroon-soft)]"
             vsHint={t("owner.visitorStats.vsPreviousHint")}
           />
@@ -271,9 +276,10 @@ function MetricRow({
   );
 }
 
-function barFill(current: number, previous: number): number {
-  const base = Math.max(current, previous, 1);
-  return Math.round(Math.min(100, Math.max(10, (current / base) * 100)));
+/** Bar length relative to the largest metric this month (not vs previous, which is often 0 → 100%). */
+function barFill(current: number, scaleMax: number): number {
+  if (current <= 0) return 8;
+  return Math.round(Math.min(92, Math.max(14, (current / Math.max(scaleMax, 1)) * 92)));
 }
 
 function formatSignedPercent(
