@@ -14,7 +14,7 @@ const WEEKDAY_SHARES = [
 ];
 
 const HOUR_SEGMENTS = [
-  { key: "evening" as const, percent: 40, color: "#801540" },
+  { key: "evening" as const, percent: 40, color: "var(--wesal-maroon)" },
   { key: "afternoon" as const, percent: 35, color: "#8fbf8f" },
   { key: "morning" as const, percent: 20, color: "#f0d7a0" },
   { key: "other" as const, percent: 5, color: "#d7dde3" },
@@ -51,7 +51,7 @@ export default function OwnerBookingInsightsCards() {
               </span>
               <span className="h-2 overflow-hidden rounded-full bg-[#ece8e6]">
                 <span
-                  className="block h-full rounded-full bg-[#801540]"
+                  className="block h-full rounded-full bg-[var(--wesal-maroon)]"
                   style={{ width: `${day.percent}%` }}
                 />
               </span>

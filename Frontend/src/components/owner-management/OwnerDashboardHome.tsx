@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
 import OwnerBookingInsightsCards from "@/components/owner-management/OwnerBookingInsightsCards";
+import OwnerSubscriptionDaysCard from "@/components/owner-management/OwnerSubscriptionDaysCard";
 import OwnerVisitorStatsCard from "@/components/owner-management/OwnerVisitorStatsCard";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
 import SubscriptionPaymentNotice from "@/components/halls/subscription/SubscriptionPaymentNotice";
@@ -43,6 +44,30 @@ export default function OwnerDashboardHome() {
       approved: list.filter((item) => item.status === "Approved").length,
       rejected: list.filter((item) => item.status === "Rejected").length,
     };
+  }, [hallsState.halls]);
+
+  const subscriptionDays = useMemo(() => {
+    const paid = hallsState.halls.filter(
+      (hall) =>
+        hall.status === "Approved" &&
+        (hall.paymentStatus === "Paid" || hall.systemLocked),
+    );
+    if (paid.length === 0) {
+      return { daysRemaining: null as number | null, expired: false };
+    }
+    const allEnded = paid.every(
+      (hall) => hall.systemLocked || (hall.daysRemaining != null && hall.daysRemaining <= 0),
+    );
+    if (allEnded) {
+      return { daysRemaining: 0, expired: true };
+    }
+    const values = paid
+      .map((hall) => hall.daysRemaining)
+      .filter((days): days is number => days != null && days > 0);
+    if (values.length === 0) {
+      return { daysRemaining: null as number | null, expired: false };
+    }
+    return { daysRemaining: Math.min(...values), expired: false };
   }, [hallsState.halls]);
 
   const pendingHalls =
@@ -193,49 +218,58 @@ export default function OwnerDashboardHome() {
         </section>
       ) : null}
 
-      <section className="seeker-summary" aria-labelledby="owner-summary-heading">
-        <h2 id="owner-summary-heading" className="seeker-home-section-title">
-          {t("owner.summaryTitle")}
-        </h2>
-        <ul className="seeker-summary-grid">
-          <li className="seeker-summary-card">
-            <span className="seeker-summary-icon seeker-summary-icon--total" aria-hidden="true">
-              <BuildingIcon />
-            </span>
-            <p className="seeker-summary-value">
-              {hallsState.isLoading && hallsState.halls.length === 0 ? "—" : stats.total}
-            </p>
-            <p className="seeker-summary-label">{t("owner.stats.total")}</p>
-          </li>
-          <li className="seeker-summary-card">
-            <span className="seeker-summary-icon seeker-summary-icon--pending" aria-hidden="true">
-              <ClockIcon />
-            </span>
-            <p className="seeker-summary-value">
-              {hallsState.isLoading && hallsState.halls.length === 0 ? "—" : stats.pending}
-            </p>
-            <p className="seeker-summary-label">{t("owner.stats.pending")}</p>
-          </li>
-          <li className="seeker-summary-card">
-            <span className="seeker-summary-icon seeker-summary-icon--ok" aria-hidden="true">
-              <CheckIcon />
-            </span>
-            <p className="seeker-summary-value">
-              {hallsState.isLoading && hallsState.halls.length === 0 ? "—" : stats.approved}
-            </p>
-            <p className="seeker-summary-label">{t("owner.stats.approved")}</p>
-          </li>
-          <li className="seeker-summary-card">
-            <span className="seeker-summary-icon seeker-summary-icon--bad" aria-hidden="true">
-              <CloseIcon />
-            </span>
-            <p className="seeker-summary-value">
-              {hallsState.isLoading && hallsState.halls.length === 0 ? "—" : stats.rejected}
-            </p>
-            <p className="seeker-summary-label">{t("owner.stats.rejected")}</p>
-          </li>
-        </ul>
-      </section>
+      <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(16rem,0.75fr)]">
+        <section className="seeker-summary" aria-labelledby="owner-summary-heading">
+          <h2 id="owner-summary-heading" className="seeker-home-section-title">
+            {t("owner.summaryTitle")}
+          </h2>
+          <ul className="seeker-summary-grid">
+            <li className="seeker-summary-card">
+              <span className="seeker-summary-icon seeker-summary-icon--total" aria-hidden="true">
+                <BuildingIcon />
+              </span>
+              <p className="seeker-summary-value">
+                {hallsState.isLoading && hallsState.halls.length === 0 ? "—" : stats.total}
+              </p>
+              <p className="seeker-summary-label">{t("owner.stats.total")}</p>
+            </li>
+            <li className="seeker-summary-card">
+              <span className="seeker-summary-icon seeker-summary-icon--pending" aria-hidden="true">
+                <ClockIcon />
+              </span>
+              <p className="seeker-summary-value">
+                {hallsState.isLoading && hallsState.halls.length === 0 ? "—" : stats.pending}
+              </p>
+              <p className="seeker-summary-label">{t("owner.stats.pending")}</p>
+            </li>
+            <li className="seeker-summary-card">
+              <span className="seeker-summary-icon seeker-summary-icon--ok" aria-hidden="true">
+                <CheckIcon />
+              </span>
+              <p className="seeker-summary-value">
+                {hallsState.isLoading && hallsState.halls.length === 0 ? "—" : stats.approved}
+              </p>
+              <p className="seeker-summary-label">{t("owner.stats.approved")}</p>
+            </li>
+            <li className="seeker-summary-card">
+              <span className="seeker-summary-icon seeker-summary-icon--bad" aria-hidden="true">
+                <CloseIcon />
+              </span>
+              <p className="seeker-summary-value">
+                {hallsState.isLoading && hallsState.halls.length === 0 ? "—" : stats.rejected}
+              </p>
+              <p className="seeker-summary-label">{t("owner.stats.rejected")}</p>
+            </li>
+          </ul>
+        </section>
+
+        <OwnerSubscriptionDaysCard
+          loading={hallsState.isLoading && hallsState.halls.length === 0}
+          daysRemaining={subscriptionDays.daysRemaining}
+          expired={subscriptionDays.expired}
+          totalDays={30}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {/* In RTL, last column is the visual left — keep visitor stats there. */}
