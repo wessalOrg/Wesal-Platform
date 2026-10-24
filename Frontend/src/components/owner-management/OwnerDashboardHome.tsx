@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
 import OwnerBookingInsightsCards from "@/components/owner-management/OwnerBookingInsightsCards";
 import OwnerEventTypesCard from "@/components/owner-management/OwnerEventTypesCard";
+import OwnerInsightsHallFilter from "@/components/owner-management/OwnerInsightsHallFilter";
 import OwnerVisitorStatsCard from "@/components/owner-management/OwnerVisitorStatsCard";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
 import SubscriptionPaymentNotice from "@/components/halls/subscription/SubscriptionPaymentNotice";
@@ -35,6 +36,21 @@ export default function OwnerDashboardHome() {
   const { startAddHall, isInitiating } = useAddHallInitiation();
   const avatarUrl = useProfileAvatarUrl([profileState.profile?.id]);
   const visitorStats = useOwnerVisitorStats(profileState.authReady && Boolean(profileState.profile));
+  const [insightsHallId, setInsightsHallId] = useState<string | null>(null);
+
+  const insightHallOptions = useMemo(
+    () =>
+      hallsState.halls.map((hall) => ({
+        id: hall.id,
+        name: localizeHallName(hall.id, hall.name, lang),
+      })),
+    [hallsState.halls, lang],
+  );
+
+  const selectedInsightHallName =
+    insightsHallId == null
+      ? null
+      : (insightHallOptions.find((hall) => hall.id === insightsHallId)?.name ?? null);
 
   const stats = useMemo(() => {
     const list = hallsState.halls;
@@ -239,6 +255,11 @@ export default function OwnerDashboardHome() {
       </section>
 
       <div className="flex flex-col gap-3">
+        <OwnerInsightsHallFilter
+          halls={insightHallOptions}
+          selectedHallId={insightsHallId}
+          onSelect={setInsightsHallId}
+        />
         <OwnerBookingInsightsCards />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <OwnerEventTypesCard />
@@ -246,6 +267,11 @@ export default function OwnerDashboardHome() {
             status={visitorStats.status}
             stats={visitorStats.stats}
             onRetry={visitorStats.reload}
+            scopeLabel={
+              selectedInsightHallName
+                ? t("owner.visitorStats.subtitleForHall", { hall: selectedInsightHallName })
+                : undefined
+            }
           />
         </div>
       </div>

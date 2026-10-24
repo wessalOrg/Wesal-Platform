@@ -16,12 +16,15 @@ type OwnerVisitorStatsCardProps = {
   status: OwnerVisitorStatsLoadStatus;
   stats: OwnerVisitorStats | null;
   onRetry?: () => void;
+  /** Optional subtitle when a single hall is selected in the insights filter. */
+  scopeLabel?: string;
 };
 
 export default function OwnerVisitorStatsCard({
   status,
   stats,
   onRetry,
+  scopeLabel,
 }: OwnerVisitorStatsCardProps) {
   const t = useT();
   /** Stats digits stay Western/English even when UI is Arabic. */
@@ -76,7 +79,7 @@ export default function OwnerVisitorStatsCard({
               {t("owner.visitorStats.title")}
             </h2>
             <p className="mt-0.5 truncate text-[0.62rem] font-medium leading-3 text-[var(--wesal-muted)]">
-              {t("owner.visitorStats.subtitle")}
+              {scopeLabel ?? t("owner.visitorStats.subtitle")}
             </p>
           </div>
         </div>
