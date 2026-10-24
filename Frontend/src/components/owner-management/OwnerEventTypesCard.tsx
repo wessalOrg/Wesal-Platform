@@ -22,12 +22,14 @@ export default function OwnerEventTypesCard() {
       data-testid="owner-event-types-card"
     >
       <header className="mb-3 flex items-center gap-2">
-        <span
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f3dfe1] text-[#c17b7f]"
+        <img
+          src="/icons/party-popper.png"
+          alt=""
+          width={32}
+          height={32}
+          className="h-8 w-8 shrink-0 rounded-lg object-cover"
           aria-hidden="true"
-        >
-          <PartyPopperIcon />
-        </span>
+        />
         <h2 className="text-[0.88rem] font-extrabold text-[var(--wesal-text)]">
           {t("owner.insights.eventTypesTitle")}
         </h2>
@@ -105,48 +107,3 @@ function donutArcs(
   });
 }
 
-function PartyPopperIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-      <path
-        d="M4.2 19.2 9.8 13.6l.9 3.2 3.2.9-5.6 5.6c-.9.9-2.4.5-2.9-.7L4.2 19.2Z"
-        fill="currentColor"
-        opacity="0.22"
-      />
-      <path
-        d="M4.2 19.2 9.8 13.6l.9 3.2 3.2.9-5.6 5.6c-.9.9-2.4.5-2.9-.7L4.2 19.2Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path d="M8.2 15.2 5.6 17.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M9.4 16.8 7.2 19" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path
-        d="M12.2 10.2c1.1-2.4 3.2-4.1 5.6-4.8"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M13.4 8.4c1.6-1.4 3.6-2.2 5.8-2.4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path d="M14.8 5.2 16 3.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M17.6 6.6 19.4 5.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M15.8 7.8 17.2 8.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="13.2" cy="4.8" r="0.9" fill="currentColor" />
-      <circle cx="19.2" cy="7.4" r="0.9" fill="currentColor" />
-      <circle cx="16.6" cy="3.2" r="0.7" fill="currentColor" />
-      <path
-        d="M18.2 9.4l.7-1.6.7 1.6 1.6.2-1.2 1.1.4 1.6-1.5-.8-1.5.8.4-1.6-1.2-1.1 1.6-.2Z"
-        fill="currentColor"
-      />
-      <path
-        d="M12.6 6.2l.45-1 .45 1 .95.12-.72.68.24 1-.9-.48-.9.48.24-1-.72-.68.95-.12Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
