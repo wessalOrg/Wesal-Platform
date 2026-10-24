@@ -8388,14 +8388,14 @@ html[dir="rtl"] .seeker-notify-panel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 5.5rem;
-  width: 5.5rem;
+  height: 6.5rem;
+  width: 6.5rem;
   overflow: hidden;
   border-radius: 999px;
   border: 3px solid color-mix(in srgb, var(--seeker-maroon) 35%, white);
   background: var(--seeker-pink);
   color: var(--seeker-maroon);
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   font-weight: 800;
 }
 
@@ -8422,11 +8422,11 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .profile-avatar-crop-panel {
-  width: min(100%, 24rem);
-  border-radius: 1.2rem;
+  width: min(100%, 28rem);
+  border-radius: 1.25rem;
   border: 1px solid color-mix(in srgb, var(--wesal-maroon, #c17b7f) 18%, white);
   background: #fff;
-  padding: 1rem 1rem 1.1rem;
+  padding: 1.15rem 1.2rem 1.25rem;
   box-shadow: 0 18px 48px rgba(90, 55, 45, 0.2);
 }
 
@@ -8450,12 +8450,12 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .profile-avatar-crop-stage {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 17.5rem;
+  width: 21.25rem;
+  height: 21.25rem;
+  max-width: 100%;
+  margin-inline: auto;
   overflow: hidden;
-  border-radius: 1rem;
+  border-radius: 1.1rem;
   background: #1f1715;
   cursor: grab;
   touch-action: none;
@@ -8467,8 +8467,22 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .profile-avatar-crop-image {
+  position: absolute;
   max-width: none;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.profile-avatar-crop-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: #f5ebe8;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .profile-avatar-crop-mask {
@@ -8478,10 +8492,11 @@ html[dir="rtl"] .seeker-notify-panel {
   background: radial-gradient(
     circle at center,
     transparent 0,
-    transparent 8.75rem,
-    rgba(20, 12, 10, 0.58) 8.8rem
+    transparent 10.4rem,
+    rgba(20, 12, 10, 0.58) 10.45rem
   );
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--wesal-maroon, #c17b7f) 55%, white);
+  border-radius: 1.1rem;
 }
 
 .profile-avatar-crop-zoom {
