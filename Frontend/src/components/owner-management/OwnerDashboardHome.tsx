@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
 import HallApprovalStatusBadge from "@/components/owner-management/halls/HallApprovalStatusBadge";
+import OwnerVisitorStatsCard from "@/components/owner-management/OwnerVisitorStatsCard";
 import SubscriptionExpiryWarningBanner from "@/components/halls/subscription/SubscriptionExpiryWarningBanner";
 import SubscriptionPaymentNotice from "@/components/halls/subscription/SubscriptionPaymentNotice";
 import { useUiLang } from "@/components/layout/LanguageProvider";
@@ -11,6 +12,7 @@ import { OWNER_HALLS_PATH } from "@/constants/hallOwnerManagementNav";
 import { useAddHallInitiation } from "@/hooks/useAddHallInitiation";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useHallOwnerManagementProfile } from "@/hooks/useHallOwnerManagementProfile";
+import { useOwnerVisitorStats } from "@/hooks/useOwnerVisitorStats";
 import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { ownerHallPath } from "@/lib/hall-owner-query-keys";
 import { localizeHallName } from "@/lib/localize-hall-display";
@@ -30,6 +32,7 @@ export default function OwnerDashboardHome() {
   const hallsState = useHallOwnerHalls();
   const { startAddHall, isInitiating } = useAddHallInitiation();
   const avatarUrl = useProfileAvatarUrl([profileState.profile?.id]);
+  const visitorStats = useOwnerVisitorStats(profileState.authReady && Boolean(profileState.profile));
 
   const stats = useMemo(() => {
     const list = hallsState.halls;
@@ -188,6 +191,12 @@ export default function OwnerDashboardHome() {
           )}
         </section>
       ) : null}
+
+      <OwnerVisitorStatsCard
+        status={visitorStats.status}
+        stats={visitorStats.stats}
+        onRetry={visitorStats.reload}
+      />
 
       <section className="seeker-summary" aria-labelledby="owner-summary-heading">
         <h2 id="owner-summary-heading" className="seeker-home-section-title">

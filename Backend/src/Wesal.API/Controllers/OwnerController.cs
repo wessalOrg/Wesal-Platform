@@ -30,6 +30,7 @@ public class OwnerController : ControllerBase
     private readonly IOwnerBookingRequestsService _ownerBookingRequestsService;
     private readonly IOwnerHourlyAvailabilityService _ownerHourlyAvailabilityService;
     private readonly IHallSubscriptionService _hallSubscriptionService;
+    private readonly IOwnerVisitorStatsService _ownerVisitorStatsService;
     private readonly IOwnerIdentityService _ownerIdentityService;
     private readonly IValidator<UpdateOwnerHallRequest> _updateHallValidator;
 
@@ -42,6 +43,7 @@ public class OwnerController : ControllerBase
         IOwnerBookingRequestsService ownerBookingRequestsService,
         IOwnerHourlyAvailabilityService ownerHourlyAvailabilityService,
         IHallSubscriptionService hallSubscriptionService,
+        IOwnerVisitorStatsService ownerVisitorStatsService,
         IOwnerIdentityService ownerIdentityService,
         IValidator<UpdateOwnerHallRequest> updateHallValidator)
     {
@@ -53,6 +55,7 @@ public class OwnerController : ControllerBase
         _ownerBookingRequestsService = ownerBookingRequestsService;
         _ownerHourlyAvailabilityService = ownerHourlyAvailabilityService;
         _hallSubscriptionService = hallSubscriptionService;
+        _ownerVisitorStatsService = ownerVisitorStatsService;
         _ownerIdentityService = ownerIdentityService;
         _updateHallValidator = updateHallValidator;
     }
@@ -71,6 +74,22 @@ public class OwnerController : ControllerBase
     {
         var response = await _sidebarService.GetSidebarAsync(cancellationToken);
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Returns visitor engagement for all non-deleted halls owned by the authenticated
+    /// Hall Owner: page visits, favorites saves, direct booking requests, and conversion
+    /// rate for this calendar month versus the previous calendar month.
+    /// </summary>
+    [HttpGet("visitor-stats")]
+    [ProducesResponseType(typeof(OwnerVisitorStatsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OwnerVisitorStatsDto>> GetVisitorStats(CancellationToken cancellationToken)
+    {
+        var stats = await _ownerVisitorStatsService.GetVisitorStatsAsync(cancellationToken);
+        return Ok(stats);
     }
 
     /// <summary>

@@ -1154,6 +1154,25 @@ namespace Wesal.Persistence.Migrations
                     b.ToTable("HallFavorites", "wesal");
                 });
 
+            modelBuilder.Entity("Wesal.Domain.Entities.HallPageViewEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HallId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ViewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HallId", "ViewedAt");
+
+                    b.ToTable("HallPageViewEvents", "wesal");
+                });
+
             modelBuilder.Entity("Wesal.Domain.Entities.HallFeature", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2335,6 +2354,15 @@ namespace Wesal.Persistence.Migrations
                     b.HasOne("Wesal.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.HallPageViewEvent", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Hall", null)
+                        .WithMany()
+                        .HasForeignKey("HallId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

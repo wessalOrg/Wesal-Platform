@@ -19,19 +19,22 @@ public class HallsController : ControllerBase
     private readonly IAllHallsService _allHallsService;
     private readonly IHallSearchService _hallSearchService;
     private readonly IHourlySlotService _hourlySlotService;
+    private readonly IOwnerVisitorStatsService _ownerVisitorStatsService;
 
     public HallsController(
         IFeaturedHallsService featuredHallsService,
         IHallDetailsService hallDetailsService,
         IAllHallsService allHallsService,
         IHallSearchService hallSearchService,
-        IHourlySlotService hourlySlotService)
+        IHourlySlotService hourlySlotService,
+        IOwnerVisitorStatsService ownerVisitorStatsService)
     {
         _featuredHallsService = featuredHallsService;
         _hallDetailsService = hallDetailsService;
         _allHallsService = allHallsService;
         _hallSearchService = hallSearchService;
         _hourlySlotService = hourlySlotService;
+        _ownerVisitorStatsService = ownerVisitorStatsService;
     }
 
     /// <summary>
@@ -99,6 +102,10 @@ public class HallsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var hall = await _hallDetailsService.GetHallDetailsAsync(id, cancellationToken);
+
+        // Count only successful public HTTP detail loads (not internal AI tool calls).
+        // Persistence failures are swallowed inside the service so details still return.
+        await _ownerVisitorStatsService.RecordHallPageViewAsync(id, cancellationToken);
 
         return Ok(hall);
     }

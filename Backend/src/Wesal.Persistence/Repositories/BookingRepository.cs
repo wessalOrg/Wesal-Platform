@@ -695,4 +695,24 @@ public sealed class BookingRepository : IBookingRepository
                     && booking.Slots.Any(slot => slot.StartTime < windowStart || slot.StartTime >= windowEnd),
                 cancellationToken);
     }
+
+    public async Task<int> CountCreatedForHallsInRangeAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        CancellationToken cancellationToken = default)
+    {
+        if (hallIds.Count == 0)
+        {
+            return 0;
+        }
+
+        return await _context.Bookings
+            .AsNoTracking()
+            .CountAsync(
+                booking => hallIds.Contains(booking.HallId)
+                    && booking.CreatedAt >= fromInclusive
+                    && booking.CreatedAt < toExclusive,
+                cancellationToken);
+    }
 }

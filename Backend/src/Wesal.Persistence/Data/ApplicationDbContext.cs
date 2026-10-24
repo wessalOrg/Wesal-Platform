@@ -83,6 +83,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<HallOffer> HallOffers => Set<HallOffer>();
     public DbSet<ContentViewEvent> ContentViewEvents => Set<ContentViewEvent>();
 
+    /// <summary>Public hall-details page views used by owner visitor statistics.</summary>
+    public DbSet<HallPageViewEvent> HallPageViewEvents => Set<HallPageViewEvent>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -795,6 +798,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne<Post>().WithMany().HasForeignKey(view => view.PostId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(view => view.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(view => view.ProfileUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<HallPageViewEvent>(entity =>
+        {
+            entity.ToTable("HallPageViewEvents");
+            entity.HasKey(view => view.Id);
+            entity.Property(view => view.ViewedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(view => new { view.HallId, view.ViewedAt });
+            entity.HasOne<Hall>().WithMany().HasForeignKey(view => view.HallId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

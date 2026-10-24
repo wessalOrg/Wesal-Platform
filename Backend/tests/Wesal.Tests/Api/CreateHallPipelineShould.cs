@@ -116,6 +116,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         builder.Services.AddScoped<IOwnerBookingRequestsService, StubOwnerBookingRequestsService>();
         builder.Services.AddScoped<IOwnerHourlyAvailabilityService, StubOwnerHourlyAvailabilityService>();
         builder.Services.AddScoped<IHallSubscriptionService, StubHallSubscriptionService>();
+        builder.Services.AddScoped<IOwnerVisitorStatsService, StubOwnerVisitorStatsService>();
 
         _app = builder.Build();
         _app.UseMiddleware<Wesal.Infrastructure.Middleware.GlobalExceptionHandlingMiddleware>();
@@ -554,5 +555,14 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
     {
         public Task<OwnerHallSubscriptionDto> GetHallSubscriptionAsync(Guid hallId, CancellationToken cancellationToken = default)
             => Task.FromResult(new OwnerHallSubscriptionDto());
+    }
+
+    private sealed class StubOwnerVisitorStatsService : IOwnerVisitorStatsService
+    {
+        public Task RecordHallPageViewAsync(Guid hallId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<OwnerVisitorStatsDto> GetVisitorStatsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new OwnerVisitorStatsDto());
     }
 }
