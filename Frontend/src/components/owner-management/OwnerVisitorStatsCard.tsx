@@ -58,7 +58,7 @@ export default function OwnerVisitorStatsCard({
 
   return (
     <section
-      className="overflow-hidden rounded-[1.25rem] border border-[rgba(168,98,103,0.12)] bg-[#fdf8f8] p-4 shadow-[0_8px_24px_rgba(90,55,45,0.06)] sm:p-5"
+      className="h-full overflow-hidden rounded-[1.25rem] border border-[rgba(168,98,103,0.12)] bg-[#fdf8f8] p-4 shadow-[0_8px_24px_rgba(90,55,45,0.06)] sm:p-5"
       aria-labelledby="owner-visitor-stats-heading"
       data-testid="owner-visitor-stats"
       data-load-status={status}
@@ -230,54 +230,56 @@ function MetricRow({
 }) {
   const up = change != null && change >= 0;
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-[rgba(168,98,103,0.1)] bg-white px-3 py-3 shadow-[0_2px_10px_rgba(90,55,45,0.03)] sm:gap-3">
-      <span
-        className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconClass}`}
-        aria-hidden="true"
-      >
-        {icon}
-      </span>
+    <div className="rounded-2xl border border-[rgba(168,98,103,0.1)] bg-white px-2.5 py-2.5 shadow-[0_2px_10px_rgba(90,55,45,0.03)] sm:px-3 sm:py-3">
+      <div className="flex items-center gap-2 sm:gap-2.5">
+        <span
+          className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconClass}`}
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
 
-      <div className="min-w-0 w-[7.5rem] shrink-0 sm:w-[8.5rem]">
-        <p className="truncate text-[0.78rem] font-extrabold leading-4 text-[var(--wesal-text)]">
-          {title}
-        </p>
-        <p className="mt-0.5 truncate text-[0.62rem] font-medium leading-4 text-[var(--wesal-muted)]">
-          {subtitle}
-        </p>
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="h-2 overflow-hidden rounded-full bg-[#f0ebe8]">
-          <div
-            className={`h-full rounded-full ${barClass}`}
-            style={{ width: `${barPercent}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-2">
-        <p className="whitespace-nowrap text-[0.82rem] font-extrabold leading-4 text-[var(--wesal-text)]">
-          {value}
-        </p>
-        {change != null ? (
-          <div
-            className={`rounded-lg px-1.5 py-1 text-center ${
-              up ? "bg-[rgba(4,120,87,0.1)]" : "bg-[rgba(180,35,24,0.08)]"
-            }`}
-          >
-            <p
-              className={`text-[0.65rem] font-extrabold leading-3 ${
-                up ? "text-[#047857]" : "text-[#b42318]"
-              }`}
-            >
-              {up ? "↗" : "↘"} {formatSignedPercent(change, "en-GB")}
-            </p>
-            <p className="mt-0.5 text-[0.52rem] font-semibold leading-3 text-[var(--wesal-muted)]">
-              {vsHint}
-            </p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-[0.72rem] font-extrabold leading-4 text-[var(--wesal-text)] sm:text-[0.78rem]">
+                {title}
+              </p>
+              <p className="mt-0.5 truncate text-[0.58rem] font-medium leading-4 text-[var(--wesal-muted)] sm:text-[0.62rem]">
+                {subtitle}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-start gap-1.5">
+              <p className="whitespace-nowrap text-[0.75rem] font-extrabold leading-4 text-[var(--wesal-text)] sm:text-[0.82rem]">
+                {value}
+              </p>
+              {change != null ? (
+                <div
+                  className={`rounded-lg px-1.5 py-1 text-center ${
+                    up ? "bg-[rgba(4,120,87,0.1)]" : "bg-[rgba(180,35,24,0.08)]"
+                  }`}
+                >
+                  <p
+                    className={`text-[0.6rem] font-extrabold leading-3 ${
+                      up ? "text-[#047857]" : "text-[#b42318]"
+                    }`}
+                  >
+                    {up ? "↗" : "↘"} {formatSignedPercent(change, "en-GB")}
+                  </p>
+                  <p className="mt-0.5 text-[0.48rem] font-semibold leading-3 text-[var(--wesal-muted)]">
+                    {vsHint}
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </div>
-        ) : null}
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#f0ebe8]">
+            <div
+              className={`h-full rounded-full ${barClass}`}
+              style={{ width: `${barPercent}%` }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

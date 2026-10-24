@@ -18,7 +18,7 @@ export default function OwnerEventTypesCard() {
 
   return (
     <section
-      className="rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-4 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-5"
+      className="h-full rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-4 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-5"
       data-testid="owner-event-types-card"
     >
       <header className="mb-4 flex items-center gap-2">
