@@ -197,7 +197,9 @@ export function OwnerChatHallCard({
       <span className="owner-chat-hall-mark" aria-hidden="true">
         {conversationAvatarInitials(name)}
       </span>
-      <p className="owner-chat-hall-name">{name}</p>
+      <p className="owner-chat-hall-name" title={name}>
+        {name}
+      </p>
       {hallId ? (
         <Link
           href={`/halls/${encodeURIComponent(hallId)}`}

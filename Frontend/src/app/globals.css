@@ -6756,29 +6756,30 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .owner-chat-hall {
-  display: flex;
+  display: inline-flex;
+  max-width: 100%;
   min-width: 0;
   align-items: center;
-  gap: 0.75rem;
-  margin-top: 0.15rem;
-  border: 1px solid #efe8df;
-  border-radius: 1rem;
-  background: #fff;
-  padding: 0.65rem 0.75rem;
-  box-shadow: 0 8px 20px rgba(90, 55, 45, 0.04);
+  gap: 0.4rem;
+  margin-top: 0.1rem;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon, #c17b7f) 18%, white);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wesal-maroon, #c17b7f) 7%, white);
+  padding: 0.22rem 0.55rem 0.22rem 0.28rem;
+  box-shadow: none;
 }
 
 .owner-chat-hall-mark {
   display: inline-flex;
-  height: 3.1rem;
-  width: 3.6rem;
+  height: 1.35rem;
+  width: 1.35rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 0.8rem;
-  background: linear-gradient(160deg, #f3e6d4, #c4a05c);
-  color: #fff;
-  font-size: 0.85rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wesal-maroon, #c17b7f) 16%, white);
+  color: var(--wesal-maroon-dark, #a86267);
+  font-size: 0.58rem;
   font-weight: 800;
 }
 
@@ -6787,21 +6788,28 @@ html[dir="rtl"] .seeker-notify-panel {
   flex: 1;
   margin: 0;
   overflow: hidden;
-  color: #24324a;
-  font-size: 0.92rem;
-  font-weight: 800;
+  color: var(--wesal-text, #24324a);
+  font-size: 0.7rem;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .owner-chat-hall-link {
   flex-shrink: 0;
-  border: 1px solid #b7d7b4;
+  border: 0;
   border-radius: 999px;
-  padding: 0.35rem 0.7rem;
-  color: #3d8f55;
-  font-size: 0.72rem;
+  padding: 0.12rem 0.45rem;
+  background: white;
+  color: var(--wesal-maroon, #c17b7f);
+  font-size: 0.62rem;
   font-weight: 700;
+  text-decoration: none;
+}
+
+.owner-chat-hall-link:hover {
+  color: var(--wesal-maroon-dark, #a86267);
+  text-decoration: underline;
 }
 
 .owner-chat-thread-body {
