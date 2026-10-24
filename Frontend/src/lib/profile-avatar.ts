@@ -122,3 +122,79 @@ export function readImageFileAsDataUrl(
     reader.readAsDataURL(file);
   });
 }
+
+/** Read a file as a raw data URL for the crop/zoom editor (no compress yet). */
+export function readImageFileForCrop(
+  file: File,
+): Promise<{ ok: true; dataUrl: string } | { ok: false; issue: ProfileAvatarReadIssue }> {
+  if (!ACCEPTED.has(file.type)) {
+    return Promise.resolve({ ok: false, issue: "type" });
+  }
+  if (file.size > MAX_BYTES) {
+    return Promise.resolve({ ok: false, issue: "size" });
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onerror = () => resolve({ ok: false, issue: "read" });
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : "";
+      if (!dataUrl.startsWith("data:image/")) {
+        resolve({ ok: false, issue: "read" });
+        return;
+      }
+      resolve({ ok: true, dataUrl });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+export type AvatarCropArea = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+/** Crop a circular/square region then compress for localStorage. */
+export async function cropAndCompressAvatar(
+  imageSrc: string,
+  pixelCrop: AvatarCropArea,
+): Promise<string> {
+  const image = await loadImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  const size = Math.max(1, Math.round(Math.min(pixelCrop.width, pixelCrop.height)));
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return imageSrc;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    size,
+    size,
+  );
+
+  let dataUrl: string;
+  try {
+    dataUrl = canvas.toDataURL("image/jpeg", STORE_JPEG_QUALITY);
+  } catch {
+    dataUrl = imageSrc;
+  }
+  return compressDataUrl(dataUrl);
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("image-load-failed"));
+    image.src = src;
+  });
+}

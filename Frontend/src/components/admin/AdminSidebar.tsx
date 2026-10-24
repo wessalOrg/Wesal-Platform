@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import WesalLogo from "@/components/brand/WesalLogo";
 import {
+  ADMIN_ACCOUNT_PATH,
   ADMIN_HELP_QUESTIONS_PATH,
   ADMIN_MANAGEMENT_PATH,
   ADMIN_MABROUK_PATH,
@@ -54,6 +55,8 @@ export default function AdminSidebar({
     pathname === ADMIN_HELP_QUESTIONS_PATH ||
     pathname.startsWith(`${ADMIN_HELP_QUESTIONS_PATH}/`);
   const mabroukActive = pathname === ADMIN_MABROUK_PATH || pathname.startsWith(`${ADMIN_MABROUK_PATH}/`);
+  const accountActive =
+    pathname === ADMIN_ACCOUNT_PATH || pathname.startsWith(`${ADMIN_ACCOUNT_PATH}/`);
 
   useEffect(() => {
     let mounted = true;
@@ -249,6 +252,22 @@ export default function AdminSidebar({
 
         <div className="seeker-dash-sidebar-footer">
           <Link
+            href={ADMIN_ACCOUNT_PATH}
+            prefetch
+            className={`seeker-dash-sidebar-browse${
+              accountActive ? " seeker-dash-sidebar-link--active" : ""
+            }`}
+            data-testid="admin-nav-account"
+            onClick={onNavigate}
+            onMouseEnter={() => router.prefetch(ADMIN_ACCOUNT_PATH)}
+            onFocus={() => router.prefetch(ADMIN_ACCOUNT_PATH)}
+          >
+            <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+              <AccountIcon />
+            </span>
+            <span>{t("admin.nav.account")}</span>
+          </Link>
+          <Link
             href="/"
             prefetch
             className="seeker-dash-sidebar-browse"
@@ -388,6 +407,20 @@ function HomeSiteIcon() {
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function AccountIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <circle cx="12" cy="8.5" r="3.2" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M5.5 19c1.2-3 3.5-4.5 6.5-4.5s5.3 1.5 6.5 4.5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
       />
     </svg>
   );

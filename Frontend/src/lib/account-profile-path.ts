@@ -35,6 +35,9 @@ export const HALL_OWNER_ADD_HALL_PATH = "/owner/halls/add";
 /** Admin panel workspace (hall submissions). */
 export const ADMIN_MANAGEMENT_PATH = "/admin";
 
+/** Admin account / profile photo settings. */
+export const ADMIN_ACCOUNT_PATH = "/admin/account";
+
 /** Private Mabrouk Knowledge Studio workspace. */
 export const ADMIN_MABROUK_PATH = "/admin/mabrouk";
 

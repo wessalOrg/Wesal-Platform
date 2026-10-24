@@ -55,6 +55,7 @@ const PRIVATE_DYNAMIC_ROUTES: readonly { pattern: RegExp; redacted: string }[] =
 
 const KNOWN_PRIVATE_STATIC: readonly string[] = [
   "/admin",
+  "/admin/account",
   "/admin/help-questions",
   "/admin/messages",
   "/admin/rejected-halls",
