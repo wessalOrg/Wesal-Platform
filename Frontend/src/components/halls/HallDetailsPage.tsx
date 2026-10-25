@@ -222,9 +222,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     notes.length
       ? { id: "hall-notes", label: t("halls.details.tabs.notes") }
       : null,
-    !isOwnHall
-      ? { id: "hall-inquiry", label: t("halls.details.tabs.inquiry") }
-      : null,
+    { id: "hall-inquiry", label: t("halls.details.tabs.inquiry") },
   ].filter((section): section is { id: string; label: string } => section != null);
 
   if (unavailable) {
@@ -267,27 +265,28 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
         className="hall-details-info-box relative space-y-6 rounded-[1.75rem] border border-[color-mix(in_srgb,var(--wesal-border)_42%,transparent)] bg-white p-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)] sm:space-y-7 sm:p-7 lg:p-8"
         data-testid="hall-details-info"
       >
-        {!isOwnHall ? (
-          <div className="pointer-events-auto absolute end-4 top-4 z-10 hidden max-w-[12.5rem] sm:block lg:end-6 lg:top-5">
-            <AskMabroukAboutHallButton
-              hallId={viewHall.id}
-              hallName={viewHall.name}
-              className="!w-full"
-            />
-          </div>
-        ) : null}
+        <div className="pointer-events-auto absolute end-4 top-4 z-10 hidden max-w-[12.5rem] sm:block lg:end-6 lg:top-5">
+          <AskMabroukAboutHallButton
+            hallId={viewHall.id}
+            hallName={viewHall.name}
+            className="!w-full"
+          />
+        </div>
 
-        <HallDetailsHeader key={`${viewHall.id}-tabs`} hall={viewHall} sections={sections} part="tabs" />
+        <HallDetailsHeader
+          key={`${viewHall.id}-tabs`}
+          hall={viewHall}
+          sections={sections}
+          part="tabs"
+        />
 
-        {!isOwnHall ? (
-          <div className="sm:hidden">
-            <AskMabroukAboutHallButton
-              hallId={viewHall.id}
-              hallName={viewHall.name}
-              className="w-full"
-            />
-          </div>
-        ) : null}
+        <div className="sm:hidden">
+          <AskMabroukAboutHallButton
+            hallId={viewHall.id}
+            hallName={viewHall.name}
+            className="w-full"
+          />
+        </div>
 
         {detailedAddress ? (
           <section
@@ -313,33 +312,33 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           </div>
         ) : null}
 
-        {notes.length > 0 || !isOwnHall ? (
-          <div className="grid items-start gap-6 lg:grid-cols-2 lg:gap-8">
-            {notes.length > 0 ? (
-              <section id="hall-notes" className="scroll-mt-28">
-                <h2 className="flex items-center gap-1.5 text-sm font-bold text-[var(--wesal-text)] sm:text-base">
-                  <InfoIcon />
-                  {t("halls.details.tabs.notes")}
-                </h2>
-                <ul className="mt-2 list-disc space-y-1.5 ps-5 text-sm leading-6 text-[var(--wesal-muted)]">
-                  {notes.map((note) => (
-                    <li key={note}>{note}</li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
+        <div
+          className={`grid items-start gap-6 ${
+            notes.length > 0 ? "lg:grid-cols-2 lg:gap-8" : ""
+          }`}
+        >
+          {notes.length > 0 ? (
+            <section id="hall-notes" className="scroll-mt-28">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-[var(--wesal-text)] sm:text-base">
+                <InfoIcon />
+                {t("halls.details.tabs.notes")}
+              </h2>
+              <ul className="mt-2 list-disc space-y-1.5 ps-5 text-sm leading-6 text-[var(--wesal-muted)]">
+                {notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
-            {!isOwnHall ? (
-              <HallInquiryActions
-                hallId={viewHall.id}
-                hallName={viewHall.name}
-                ownerPhone={viewHall.ownerPhone}
-                isOwnHall={isOwnHall}
-                isAvailable={!unavailable}
-              />
-            ) : null}
-          </div>
-        ) : null}
+          <HallInquiryActions
+            hallId={viewHall.id}
+            hallName={viewHall.name}
+            ownerPhone={viewHall.ownerPhone}
+            isOwnHall={isOwnHall}
+            isAvailable={!unavailable}
+          />
+        </div>
       </section>
 
       <div className="hall-details-body min-w-0 space-y-5 lg:space-y-6">
