@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 :root {
   /* Soft light off-white + blush + gold from hall */
@@ -30,9 +30,9 @@
   font-family: var(--font-wesal-sans, "Segoe UI", Tahoma, sans-serif);
 }
 
-/* DIN Next LT Arabic reads a bit small — bump root size */
+/* DIN Next LT Arabic reads small — bump root so rem/Tailwind scale up */
 html {
-  font-size: 112.5%; /* 18px when browser default is 16px */
+  font-size: 125%; /* 20px when browser default is 16px */
 }
 
 /* Regular file only — clamp extrabold to bold */
