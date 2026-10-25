@@ -1,4 +1,4 @@
-/* Floating AI assistant — button, panel and message-state visuals. */
+﻿/* Floating AI assistant — button, panel and message-state visuals. */
 
 .wesal-ai-fab {
   background: transparent;
@@ -67,7 +67,9 @@
   background: linear-gradient(180deg, #fffdf8 0%, #fff 100%);
   color: var(--wesal-maroon-dark, #8a454b);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
+  -webkit-text-stroke: 0.4px currentColor;
+  paint-order: stroke fill;
   line-height: 1.3;
   white-space: nowrap;
   box-shadow:
@@ -125,6 +127,8 @@
   color: #fff;
   font-size: 0.78rem;
   font-weight: 800;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
   letter-spacing: 0.01em;
   line-height: 1.2;
   white-space: nowrap;
