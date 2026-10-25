@@ -175,4 +175,16 @@ public interface IBookingRepository
         TimeOnly windowEnd,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
+
+    /// <summary>
+    /// Counts seeker booking requests for the given halls whose <c>CreatedAt</c> falls in
+    /// [<paramref name="fromInclusive"/>, <paramref name="toExclusive"/>), across all
+    /// request statuses. Returns 0 when <paramref name="hallIds"/> is empty.
+    /// </summary>
+    Task<int> CountCreatedForHallsInRangeAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Hourly-slot availability is not supported by this booking repository.");
 }

@@ -1,14 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
 import HallIdentityDocumentSection from "@/components/owner-management/HallIdentityDocumentSection";
 import ManagementSectionError from "@/components/owner-management/ManagementSectionError";
+import ProfileAvatarField from "@/components/profile/ProfileAvatarField";
 import ProfileField from "@/components/profile/ProfileField";
 import SuccessToast from "@/components/ui/SuccessToast";
 import { useHallOwnerManagementProfile } from "@/hooks/useHallOwnerManagementProfile";
 import { useT } from "@/i18n";
 import {
-  readImageFileAsDataUrl,
   readProfileAvatar,
   resolveProfileAvatarUserIds,
   syncProfileAvatar,
@@ -72,8 +72,6 @@ const EMPTY_PASSWORD: ChangePasswordInput = {
 export default function HallOwnerProfileSection() {
   const t = useT();
   const profileState = useHallOwnerManagementProfile();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [draft, setDraft] = useState<ProfileDraft | null>(() =>
     profileState.profile ? toDraft(profileState.profile) : null,
   );
@@ -164,27 +162,6 @@ export default function HallOwnerProfileSection() {
       setProfileSuccess(true);
       setToastMessage(t("common.changesSaved"));
     }
-  };
-
-  const onPickAvatar = async (file: File | null) => {
-    if (!file) return;
-    setAvatarBusy(true);
-    setAvatarError(null);
-    setProfileSuccess(false);
-    const result = await readImageFileAsDataUrl(file);
-    setAvatarBusy(false);
-    if (!result.ok) {
-      setAvatarError(`seeker.settings.avatar.errors.${result.issue}`);
-      return;
-    }
-    setAvatarDraft(result.dataUrl);
-  };
-
-  const onRemoveAvatar = () => {
-    setAvatarDraft(null);
-    setAvatarError(null);
-    setProfileSuccess(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const onSavePassword = async (event: FormEvent) => {

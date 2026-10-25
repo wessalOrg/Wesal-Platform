@@ -44,7 +44,10 @@ export async function fetchHallBookingNotifications(
       .filter((item): item is HallBookingNotification => Boolean(item));
   } catch (err) {
     if (err instanceof ApiError) {
-      throw new ApiError(notificationErrorMessageKey(notificationErrorKind(err)), err.status);
+      // Preserve machine-readable access codes so owner-only external history can
+      // remain readable after subscription expiry without bypassing admin locks.
+      throw new ApiError(notificationErrorMessageKey(notificationErrorKind(err)), err.status, err.fieldErrors,
+        { code: err.code, detail: err.detail, details: err.details });
     }
     throw new ApiError("errors.owner.notifications.load");
   }

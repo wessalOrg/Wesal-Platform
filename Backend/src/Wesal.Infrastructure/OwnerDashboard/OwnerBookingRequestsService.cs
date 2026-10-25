@@ -6,6 +6,7 @@ using Wesal.Domain.Common;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Identity;
+using Wesal.Infrastructure.Authorization;
 
 namespace Wesal.Infrastructure.OwnerDashboard;
 
@@ -22,15 +23,18 @@ public sealed class OwnerBookingRequestsService : IOwnerBookingRequestsService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICurrentUserService _currentUser;
     private readonly IOwnerDashboardRepository _ownerDashboardRepository;
+    private readonly IAccountLockService _accountLocks;
 
     public OwnerBookingRequestsService(
         UserManager<ApplicationUser> userManager,
         ICurrentUserService currentUser,
-        IOwnerDashboardRepository ownerDashboardRepository)
+        IOwnerDashboardRepository ownerDashboardRepository,
+        IAccountLockService accountLocks)
     {
         _userManager = userManager;
         _currentUser = currentUser;
         _ownerDashboardRepository = ownerDashboardRepository;
+        _accountLocks = accountLocks;
     }
 
     public async Task<IReadOnlyList<OwnerBookingRequestDto>> GetBookingRequestsAsync(
@@ -143,6 +147,7 @@ public sealed class OwnerBookingRequestsService : IOwnerBookingRequestsService
             throw new NotFoundException("User", _currentUser.UserId);
         }
 
+        await OwnerBookingSecurity.EnsureUnlockedAsync(_userManager, user, _accountLocks, cancellationToken);
         return _currentUser.UserId;
     }
 }

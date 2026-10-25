@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.DataProtection;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Infrastructure.Identity;
@@ -55,6 +56,11 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+        // Password reset links should expire after three hours instead of the
+        // ASP.NET Identity default of one day.
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+            options.TokenLifespan = TimeSpan.FromHours(3));
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ICoordinatorRepository, CoordinatorRepository>();
         services.AddScoped<IPhotographerRepository, PhotographerRepository>();
@@ -65,6 +71,7 @@ public static class DependencyInjection
         services.AddScoped<IPostRepository, PostRepository>();
         services.AddScoped<IPostInteractionRepository, PostInteractionRepository>();
         services.AddScoped<IHallFavoriteRepository, HallFavoriteRepository>();
+        services.AddScoped<IHallPageViewRepository, HallPageViewRepository>();
         services.AddScoped<IHelpTicketRepository, HelpTicketRepository>();
         services.AddScoped<IProfessionalOfferRepository, ProfessionalOfferRepository>();
         services.AddScoped<IHallOfferRepository, HallOfferRepository>();
@@ -74,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IExternalBookingRepository, ExternalBookingRepository>();
         services.AddScoped<IAISessionRepository, AISessionRepository>();
         services.AddScoped<IAiConversationSessionStore, AiConversationSessionStore>();
         services.AddHostedService<AiConversationSessionCleanupService>();

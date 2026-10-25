@@ -460,7 +460,8 @@ public class HallSaveContractShould : IDisposable
             new StubOwnerSidebarService(), new StubHallCreationService(), new StubHallInitiationService(),
             new StubHallStatusTrackingService(), recorder, new StubOwnerBookingRequestsService(),
             new StubOwnerHourlyAvailabilityService(), new StubHallSubscriptionService(),
-            new StubOwnerIdentityService(), new UpdateOwnerHallRequestValidator());
+            new StubOwnerVisitorStatsService(), new StubOwnerIdentityService(),
+            new UpdateOwnerHallRequestValidator());
 
     private sealed class FakeCurrentUser : ICurrentUserService
     {
@@ -543,6 +544,15 @@ public class HallSaveContractShould : IDisposable
     {
         public Task<OwnerHallSubscriptionDto> GetHallSubscriptionAsync(Guid hallId, CancellationToken cancellationToken = default)
             => Task.FromResult(new OwnerHallSubscriptionDto());
+    }
+
+    private sealed class StubOwnerVisitorStatsService : IOwnerVisitorStatsService
+    {
+        public Task RecordHallPageViewAsync(Guid hallId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<OwnerVisitorStatsDto> GetVisitorStatsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new OwnerVisitorStatsDto());
     }
 
     private sealed class StubOwnerIdentityService : IOwnerIdentityService

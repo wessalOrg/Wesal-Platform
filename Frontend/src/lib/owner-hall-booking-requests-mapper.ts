@@ -19,6 +19,8 @@ export const OWNER_HALL_BOOKING_REQUESTS_PATH = (hallId: string) =>
   `/owner/halls/${encodeURIComponent(hallId)}/bookings`;
 
 export type OwnerHallBookingRequestDto = {
+  source?: string | number;
+  externalEventType?: string;
   id?: string | null;
   bookingId?: string | null;
   bookingRequestId?: string | null;
@@ -125,6 +127,8 @@ export function mapOwnerHallBookingRequestDto(
 ): OwnerHallBookingRequest | null {
   const id = readId(dto);
   if (!id) return null;
+  if ((dto.source === "ExternalManual" || dto.source === 1) &&
+      !["Confirmed", "Cancelled", "4", "3"].includes(String(dto.status))) return null;
   const date = parseDateIso(dto.date ?? dto.requestedDate);
   if (!date) return null;
   const periods = readPeriods(dto);
@@ -144,12 +148,12 @@ export function mapOwnerHallBookingRequestDto(
     requesterName: readRequesterName(dto),
     requesterUserId: String(dto.requesterUserId ?? "").trim() || undefined,
     requesterPhone: phone,
-    eventTypeLabel: packed.eventTypeLabel,
+    eventTypeLabel: dto.source === "ExternalManual" || dto.source === 1 ? dto.externalEventType : packed.eventTypeLabel,
     date,
     periods,
     slotStarts,
     timeRange: timeRange || undefined,
-    status: depositWasConfirmed(dto.depositPaymentConfirmedAt)
+    status: dto.source === "ExternalManual" || dto.source === 1 ? (["Cancelled", "3"].includes(String(dto.status)) ? "Cancelled" : "Confirmed") : depositWasConfirmed(dto.depositPaymentConfirmedAt)
       ? "Confirmed"
       : parseBookingStatus(dto.status),
     depositAmount: parseDepositAmount(dto.depositAmount),

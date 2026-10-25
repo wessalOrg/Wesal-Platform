@@ -47,4 +47,24 @@ public sealed class HallFavoriteRepository(ApplicationDbContext db) : IHallFavor
             .ThenByDescending(favorite => favorite.HallId)
             .Select(favorite => favorite.HallId)
             .ToListAsync(cancellationToken);
+
+    public async Task<int> CountForHallsInRangeAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        CancellationToken cancellationToken = default)
+    {
+        if (hallIds.Count == 0)
+        {
+            return 0;
+        }
+
+        return await db.HallFavorites
+            .AsNoTracking()
+            .CountAsync(
+                favorite => hallIds.Contains(favorite.HallId)
+                    && favorite.CreatedAt >= fromInclusive
+                    && favorite.CreatedAt < toExclusive,
+                cancellationToken);
+    }
 }

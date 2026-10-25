@@ -523,9 +523,19 @@ namespace Wesal.Persistence.Migrations
                         .HasColumnType("character varying(1000)");
 
                     b.Property<string>("RequesterUserId")
-                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("character varying(450)");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(1L);
+
+                    b.Property<int>("Source")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -548,7 +558,98 @@ namespace Wesal.Persistence.Migrations
 
                     b.HasIndex("HallId", "Date", "Status");
 
-                    b.ToTable("Bookings", "wesal");
+                    b.ToTable("Bookings", "wesal", t =>
+                        {
+                            t.HasCheckConstraint("CK_Bookings_Revision", "\"Revision\" > 0");
+
+                            t.HasCheckConstraint("CK_Bookings_Source", "\"Source\" IN (0,1)");
+
+                            t.HasCheckConstraint("CK_Bookings_SourceState", "(\"Source\" = 0 AND \"RequesterUserId\" IS NOT NULL AND length(\"RequesterUserId\") > 0 AND \"Status\" IN (0,1,2,3)) OR (\"Source\" = 1 AND \"RequesterUserId\" IS NULL AND \"Status\" IN (3,4) AND \"DepositAmount\" IS NULL AND \"DepositPaymentConfirmedAt\" IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.BookingAuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("AfterJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("BeforeJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("BookingAuditEvents", "wesal");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.BookingMutationReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("HallId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ResponseJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HallId", "ActorUserId", "Operation", "Key")
+                        .IsUnique();
+
+                    b.ToTable("BookingMutationReceipts", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.BookingSlot", b =>
@@ -802,6 +903,62 @@ namespace Wesal.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Wesal.Domain.Entities.ExternalBookingDetails", b =>
+                {
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("AmountReceivedExternally")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CancelledBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTimeOffset>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("Guests")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<decimal?>("TotalAmount")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.HasKey("BookingId");
+
+                    b.ToTable("ExternalBookingDetails", "wesal", t =>
+                        {
+                            t.HasCheckConstraint("CK_ExternalBookingDetails_Amounts", "(\"TotalAmount\" IS NULL OR \"TotalAmount\" >= 0) AND (\"AmountReceivedExternally\" IS NULL OR \"AmountReceivedExternally\" >= 0) AND (\"TotalAmount\" IS NULL OR \"AmountReceivedExternally\" IS NULL OR \"AmountReceivedExternally\" <= \"TotalAmount\")");
+                        });
+                });
+
             modelBuilder.Entity("Wesal.Domain.Entities.Hall", b =>
                 {
                     b.Property<Guid>("Id")
@@ -995,6 +1152,25 @@ namespace Wesal.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("HallFavorites", "wesal");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.HallPageViewEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HallId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ViewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HallId", "ViewedAt");
+
+                    b.ToTable("HallPageViewEvents", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.HallFeature", b =>
@@ -2066,6 +2242,17 @@ namespace Wesal.Persistence.Migrations
                     b.Navigation("Hall");
                 });
 
+            modelBuilder.Entity("Wesal.Domain.Entities.BookingAuditEvent", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+                });
+
             modelBuilder.Entity("Wesal.Domain.Entities.BookingSlot", b =>
                 {
                     b.HasOne("Wesal.Domain.Entities.Booking", "Booking")
@@ -2134,6 +2321,17 @@ namespace Wesal.Persistence.Migrations
                     b.Navigation("Conversation");
                 });
 
+            modelBuilder.Entity("Wesal.Domain.Entities.ExternalBookingDetails", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Booking", "Booking")
+                        .WithOne("ExternalDetails")
+                        .HasForeignKey("Wesal.Domain.Entities.ExternalBookingDetails", "BookingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+                });
+
             modelBuilder.Entity("Wesal.Domain.Entities.HallDayAvailability", b =>
                 {
                     b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
@@ -2156,6 +2354,15 @@ namespace Wesal.Persistence.Migrations
                     b.HasOne("Wesal.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.HallPageViewEvent", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Hall", null)
+                        .WithMany()
+                        .HasForeignKey("HallId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -2345,6 +2552,8 @@ namespace Wesal.Persistence.Migrations
 
             modelBuilder.Entity("Wesal.Domain.Entities.Booking", b =>
                 {
+                    b.Navigation("ExternalDetails");
+
                     b.Navigation("Slots");
                 });
 

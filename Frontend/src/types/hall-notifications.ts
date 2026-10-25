@@ -14,11 +14,15 @@ export type HallNotificationStatus =
 export type OwnerBookingRequestStatus =
   | "Pending"
   | "AcceptedPendingDeposit"
+  | "Confirmed"
+  | "Unknown"
   | "FullyBooked"
   | "Rejected"
   | "Cancelled";
 
 export type HallBookingNotification = {
+  source?: "Online" | "ExternalManual";
+  revision?: number;
   id: string;
   hallId: string;
   requesterName: string;

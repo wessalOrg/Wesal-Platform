@@ -79,6 +79,7 @@ public static class DependencyInjection
     services.AddScoped<IBookingPaymentConfirmationService, BookingPaymentConfirmationService>();
         services.AddScoped<IBookingDeletionService, BookingDeletionService>();
         services.AddScoped<IUserBookingsService, UserBookingsService>();
+        services.AddScoped<IOwnerExternalBookingService, OwnerExternalBookingService>();
         services.AddScoped<IOwnerBookingRequestNotifier, OwnerBookingRequestNotifier>();
         services.AddScoped<ISessionService, SessionService>();
         services.AddScoped<IRatingService, RatingService>();
@@ -119,6 +120,7 @@ services.AddSingleton<IDocumentStorage, DocumentStorage>();
         services.AddScoped<IOwnerHallService, OwnerHallService>();
         services.AddScoped<IOwnerHourlyAvailabilityService, OwnerHourlyAvailabilityService>();
         services.AddScoped<IHallSubscriptionService, HallSubscriptionService>();
+        services.AddScoped<IOwnerVisitorStatsService, OwnerVisitorStatsService>();
         services.AddScoped<IAdminHallService, AdminHallService>();
         services.AddScoped<IAdminHallReviewService, AdminHallReviewService>();
         // WESAL Tasks 5/6: the shared mechanics of an Administrator decision on a

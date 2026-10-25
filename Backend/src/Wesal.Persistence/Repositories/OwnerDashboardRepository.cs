@@ -1,3 +1,4 @@
+using Wesal.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
@@ -96,19 +97,20 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
         var open = await (
             from booking in _context.Bookings
                 .AsNoTracking()
+                .Where(BookingActivity.Active)
+                .Include(booking => booking.ExternalDetails)
                 .Include(booking => booking.Slots)
             join requester in _context.Users.AsNoTracking()
-                on booking.RequesterUserId equals requester.Id
+                on booking.RequesterUserId equals requester.Id into requesters
+            from requester in requesters.DefaultIfEmpty()
             where booking.HallId == hallId
-                && (booking.Status == BookingStatus.Pending
-                    || booking.Status == BookingStatus.Accepted)
             orderby booking.Date, booking.CreatedAt, booking.Id
             select new
             {
                 Booking = booking,
-                RequesterName = requester.FullName,
-                ProfilePhone = requester.PhoneNumber,
-                ProfilePictureUrl = requester.ProfilePictureUrl
+                RequesterName = requester == null ? "" : requester.FullName,
+                ProfilePhone = requester == null ? null : requester.PhoneNumber,
+                ProfilePictureUrl = requester == null ? null : requester.ProfilePictureUrl
             })
             .ToListAsync(cancellationToken);
 
@@ -123,12 +125,15 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
                     .Select(slot => slot.StartTime)
                     .ToList(),
                 TimeRange = row.Booking.HourlyTimeRange,
-                RequesterUserId = row.Booking.RequesterUserId,
-                RequesterName = ResolveRequesterDisplayName(row.Booking.NameOnBooking, row.RequesterName),
+                RequesterUserId = row.Booking.RequesterUserId ?? "",
+                Source = row.Booking.Source,
+                Revision = row.Booking.Revision,
+                ExternalEventType = row.Booking.ExternalDetails?.EventType,
+                RequesterName = row.Booking.ExternalDetails?.CustomerName ?? ResolveRequesterDisplayName(row.Booking.NameOnBooking, row.RequesterName),
                 NameOnBooking = string.IsNullOrWhiteSpace(row.Booking.NameOnBooking)
                     ? null
                     : row.Booking.NameOnBooking.Trim(),
-                RequesterPhone = ResolveRequesterPhone(row.Booking.NameOnBooking, row.ProfilePhone),
+                RequesterPhone = row.Booking.ExternalDetails?.Phone ?? ResolveRequesterPhone(row.Booking.NameOnBooking, row.ProfilePhone),
                 RequesterAvatarUrl = string.IsNullOrWhiteSpace(row.ProfilePictureUrl)
                     ? null
                     : row.ProfilePictureUrl.Trim(),
@@ -246,13 +251,12 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
         // freed their slots and must not paint the owner's calendar.
         return await _context.Bookings
             .AsNoTracking()
+            .Where(BookingActivity.Active)
             .Include(booking => booking.Slots)
             .Where(booking =>
                 booking.HallId == hallId
                 && booking.Date >= fromDate
-                && booking.Date <= toDate
-                && (booking.Status == BookingStatus.Pending
-                    || booking.Status == BookingStatus.Accepted))
+                && booking.Date <= toDate)
             .OrderBy(booking => booking.Date)
             .ThenBy(booking => booking.CreatedAt)
             .ThenBy(booking => booking.Id)

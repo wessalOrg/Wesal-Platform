@@ -12,4 +12,15 @@ public interface IHallFavoriteRepository
 
     /// <summary>The favorited hall ids for a user, most recently saved first.</summary>
     Task<IReadOnlyList<Guid>> ListHallIdsAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts favorites for the given halls whose <c>CreatedAt</c> falls in
+    /// [<paramref name="fromInclusive"/>, <paramref name="toExclusive"/>).
+    /// Returns 0 when <paramref name="hallIds"/> is empty.
+    /// </summary>
+    Task<int> CountForHallsInRangeAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        CancellationToken cancellationToken = default);
 }

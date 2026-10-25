@@ -10,6 +10,13 @@ type StableClockRangeTextProps = {
  * Each side is its own LTR span so ص/م stay glued to their digits.
  */
 export default function StableClockRangeText({ label, className }: StableClockRangeTextProps) {
+  const intervals = label.split(/\s*[,،]\s*/).filter(Boolean);
+  if (intervals.length > 1) return <span dir="ltr" className={`inline-flex flex-wrap items-center gap-1 ${className ?? ""}`}>
+    {intervals.map((interval, index) => <span key={`${interval}-${index}`} className="inline-flex items-center gap-1">
+      {index > 0 ? <span>{label.includes("،") ? "،" : ","}</span> : null}
+      <StableClockRangeText label={interval} />
+    </span>)}
+  </span>;
   const parts = splitClockRangeLabel(label);
   if (parts.length === 0) return null;
 

@@ -15,6 +15,7 @@ import {
 } from "@/lib/owner-acceptance-ui";
 import { canAcceptBookingRequest, canRejectBookingRequest } from "@/lib/owner-booking-status";
 import type { HallBookingNotification } from "@/types/hall-notifications";
+import ExternalBookingActions from "@/components/owner-management/halls/ExternalBookingActions";
 
 type HallNotificationCardProps = {
   notification: HallBookingNotification;
@@ -65,7 +66,8 @@ export default function HallNotificationCard({
   const phone = notification.requesterPhone?.trim() || "";
   const requester =
     displayRequesterName(notification.requesterName, phone) || t("common.user");
-  const eventTypeLabel = notification.eventTypeLabel?.trim() || "";
+  const eventTypeLabel = notification.source === "ExternalManual" && notification.eventTypeLabel
+    ? t(`owner.calendar.add.event.${notification.eventTypeLabel}`) : notification.eventTypeLabel?.trim() || "";
   const { weekdayLabel, dateLabel } = formatNotificationDayDate(notification.date, locale);
   const periodLabels = bookingWhenLabels(notification, t, locale);
   const whenLabel =
@@ -73,10 +75,11 @@ export default function HallNotificationCard({
       ? periodLabels.join(lang === "ar" ? " — " : " - ")
       : t("owner.notifications.valueMissing");
   const relativeLabel = formatBookingRelative(notification.date, t);
-  const showAccept = Boolean(onAccept) && canAcceptBookingRequest(notification.status);
-  const showReject = Boolean(onReject) && canRejectBookingRequest(notification.status);
+  const external = notification.source === "ExternalManual";
+  const showAccept = !external && Boolean(onAccept) && canAcceptBookingRequest(notification.status);
+  const showReject = !external && Boolean(onReject) && canRejectBookingRequest(notification.status);
   const showConfirm =
-    Boolean(onConfirmPayment) && notification.status === "AcceptedPendingDeposit";
+    !external && Boolean(onConfirmPayment) && notification.status === "AcceptedPendingDeposit";
   const showChat = Boolean(onMessageSeeker) && Boolean(notification.requesterUserId);
   const errorId = `hall-notification-action-error-${notification.id}`;
   const feedback =
@@ -334,6 +337,9 @@ export default function HallNotificationCard({
           ) : null}
         </div>
       ) : null}
+      {external && notification.status === "Confirmed" ? <div className="p-3">
+        <ExternalBookingActions hallId={notification.hallId} bookingId={notification.id} />
+      </div> : null}
     </article>
   );
 }
@@ -346,6 +352,10 @@ function depositBadgeFor(
   notification: HallBookingNotification,
   t: (key: string, params?: Record<string, string | number>) => string,
 ): { label: string; className: string; dot: string } | null {
+  if (notification.source === "ExternalManual") return {
+    label: t(notification.status === "Cancelled" ? "owner.external.cancelled" : "owner.external.badge"),
+    className: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-600",
+  };
   if (notification.status === "AcceptedPendingDeposit") {
     return {
       label:

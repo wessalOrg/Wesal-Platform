@@ -1,3 +1,4 @@
+using Wesal.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Domain.Entities;
@@ -84,7 +85,7 @@ public sealed class BookingRepository : IBookingRepository
             .AsNoTracking()
             .Include(booking => booking.Hall)
             .Include(booking => booking.Slots)
-            .Where(booking => booking.RequesterUserId == requesterUserId)
+            .Where(booking => booking.Source == BookingSource.Online && booking.RequesterUserId == requesterUserId)
             .OrderByDescending(booking => booking.Date)
             .ThenByDescending(booking => booking.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -95,7 +96,7 @@ public sealed class BookingRepository : IBookingRepository
     {
         return await _context.Bookings
             .Include(booking => booking.Hall)
-            .Where(booking => booking.Status == BookingStatus.Rejected)
+            .Where(booking => booking.Source == BookingSource.Online && booking.Status == BookingStatus.Rejected)
             .Where(booking => booking.RejectionReason != null)
             .Where(booking => booking.RejectionMessageId == null)
             .ToListAsync(cancellationToken);
@@ -109,7 +110,7 @@ public sealed class BookingRepository : IBookingRepository
         // already exists is skipped, so the retry cannot double-send.
         return await _context.Bookings
             .Include(booking => booking.Hall)
-            .Where(booking => booking.Status == BookingStatus.Accepted)
+            .Where(booking => booking.Source == BookingSource.Online && booking.Status == BookingStatus.Accepted)
             .Where(booking => booking.DepositAmount != null)
             .Where(booking => booking.ApprovalMessageId == null)
             .ToListAsync(cancellationToken);
@@ -128,7 +129,7 @@ public sealed class BookingRepository : IBookingRepository
         {
             return await _context.Bookings
                 .Where(booking =>
-                    booking.Id == bookingId
+                    booking.Id == bookingId && booking.Source == BookingSource.Online
                     && booking.RequesterUserId == requesterUserId
                     && (booking.Status == BookingStatus.Pending
                         || booking.Status == BookingStatus.Accepted)
@@ -142,7 +143,7 @@ public sealed class BookingRepository : IBookingRepository
 
         var pending = await _context.Bookings
             .Where(booking =>
-                booking.Id == bookingId
+                booking.Id == bookingId && booking.Source == BookingSource.Online
                 && booking.RequesterUserId == requesterUserId
                 && (booking.Status == BookingStatus.Pending
                     || booking.Status == BookingStatus.Accepted)
@@ -177,7 +178,7 @@ public sealed class BookingRepository : IBookingRepository
         {
             return await _context.Bookings
                 .Where(booking =>
-                    booking.Id == bookingId
+                    booking.Id == bookingId && booking.Source == BookingSource.Online
                     && booking.Status == BookingStatus.Pending)
                 .ExecuteUpdateAsync(
                     set =>
@@ -189,7 +190,7 @@ public sealed class BookingRepository : IBookingRepository
 
         var pending = await _context.Bookings
             .Where(booking =>
-                booking.Id == bookingId
+                booking.Id == bookingId && booking.Source == BookingSource.Online
                 && booking.Status == BookingStatus.Pending)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -222,7 +223,7 @@ public sealed class BookingRepository : IBookingRepository
         {
             return await _context.Bookings
                 .Where(booking =>
-                    booking.Id == bookingId
+                    booking.Id == bookingId && booking.Source == BookingSource.Online
                     && booking.Status == BookingStatus.Accepted
                     && booking.DepositPaymentConfirmedAt == null)
                 .ExecuteUpdateAsync(
@@ -234,7 +235,7 @@ public sealed class BookingRepository : IBookingRepository
 
         var approved = await _context.Bookings
             .Where(booking =>
-                booking.Id == bookingId
+                booking.Id == bookingId && booking.Source == BookingSource.Online
                 && booking.Status == BookingStatus.Accepted
                 && booking.DepositPaymentConfirmedAt == null)
             .FirstOrDefaultAsync(cancellationToken);
@@ -259,12 +260,12 @@ public sealed class BookingRepository : IBookingRepository
         if (_context.Database.IsRelational())
         {
             return await _context.Bookings
-                .Where(booking => booking.Id == bookingId)
+                .Where(booking => booking.Id == bookingId && booking.Source == BookingSource.Online)
                 .ExecuteDeleteAsync(cancellationToken);
         }
 
         var booking = await _context.Bookings
-            .FirstOrDefaultAsync(candidate => candidate.Id == bookingId, cancellationToken);
+            .FirstOrDefaultAsync(candidate => candidate.Id == bookingId && candidate.Source == BookingSource.Online, cancellationToken);
 
         if (booking is null)
         {
@@ -567,12 +568,11 @@ public sealed class BookingRepository : IBookingRepository
         // booking is live and must not be silently orphaned by an owner day-block.
         return await _context.Bookings
             .AsNoTracking()
+            .Where(BookingActivity.Active)
             .AnyAsync(
                 booking =>
                     booking.HallId == hallId
-                    && booking.Date == date
-                    && (booking.Status == BookingStatus.Pending
-                        || booking.Status == BookingStatus.Accepted),
+                    && booking.Date == date,
                 cancellationToken);
     }
 
@@ -603,13 +603,12 @@ public sealed class BookingRepository : IBookingRepository
         {
             var stillHeld = await _context.Bookings
                 .AsNoTracking()
+                .Where(BookingActivity.Active)
                 .AnyAsync(
                     candidate =>
                         candidate.Id != bookingId
                         && candidate.HallId == hallId
                         && candidate.Date == date
-                        && (candidate.Status == BookingStatus.Pending
-                            || candidate.Status == BookingStatus.Accepted)
                         && candidate.Slots.Any(other => other.StartTime == slotStart),
                     cancellationToken);
 
@@ -689,11 +688,31 @@ public sealed class BookingRepository : IBookingRepository
     {
         return await _context.Bookings
             .AsNoTracking()
+            .Where(BookingActivity.Active)
             .AnyAsync(
                 booking =>
                     booking.HallId == hallId
-                    && (booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Accepted)
                     && booking.Slots.Any(slot => slot.StartTime < windowStart || slot.StartTime >= windowEnd),
+                cancellationToken);
+    }
+
+    public async Task<int> CountCreatedForHallsInRangeAsync(
+        IReadOnlyCollection<Guid> hallIds,
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        CancellationToken cancellationToken = default)
+    {
+        if (hallIds.Count == 0)
+        {
+            return 0;
+        }
+
+        return await _context.Bookings
+            .AsNoTracking()
+            .CountAsync(
+                booking => hallIds.Contains(booking.HallId)
+                    && booking.CreatedAt >= fromInclusive
+                    && booking.CreatedAt < toExclusive,
                 cancellationToken);
     }
 }

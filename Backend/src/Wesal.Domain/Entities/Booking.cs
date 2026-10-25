@@ -9,7 +9,11 @@ public class Booking : BaseAuditableEntity
 
     public Hall Hall { get; set; } = null!;
 
-    public string RequesterUserId { get; set; } = string.Empty;
+    public string? RequesterUserId { get; set; } = string.Empty;
+
+    public BookingSource Source { get; set; } = BookingSource.Online;
+    public long Revision { get; set; } = 1;
+    public ExternalBookingDetails? ExternalDetails { get; set; }
 
     /// <summary>
     /// The calendar day this booking reserves. Every <see cref="BookingSlot"/> in

@@ -121,7 +121,8 @@ public class HourlyWorkingHoursLockAndCalendarShould : IDisposable
 
     private OwnerBookingRequestsService CreateOwnerBookingsService(string ownerId)
         => new(_userManager, new FakeCurrentUser(ownerId, true, ApplicationRoles.HallOwner),
-            new OwnerDashboardRepository(_context));
+            new OwnerDashboardRepository(_context),
+            new Moq.Mock<Wesal.Application.Common.Interfaces.IAccountLockService> { CallBase = true }.Object);
 
     private OwnerHallService CreateOwnerHallService(string ownerId)
         => new(_userManager, new FakeCurrentUser(ownerId, true, ApplicationRoles.HallOwner),

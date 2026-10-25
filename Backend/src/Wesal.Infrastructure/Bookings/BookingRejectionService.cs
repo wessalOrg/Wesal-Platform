@@ -80,6 +80,9 @@ public sealed class BookingRejectionService : IBookingRejectionService
 
         EnsureHallOwnership(booking);
 
+        if (booking.Source != BookingSource.Online)
+            throw new ExternalBookingException(409, "ExternalBookingWorkflow", "Use the external booking endpoints for this booking.");
+
         HallManagementAccess.EnsureAllowed(booking.Hall!);
 
         if (booking.Status == BookingStatus.Rejected)

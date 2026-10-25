@@ -10,6 +10,8 @@ type AcceptanceStateBadgeProps = {
 };
 
 const styles: Record<OwnerBookingRequestStatus, string> = {
+  Confirmed: "bg-emerald-50 text-emerald-700",
+  Unknown: "bg-gray-50 text-gray-700",
   Pending: "bg-[rgba(193,123,127,0.16)] text-[var(--wesal-maroon)]",
   AcceptedPendingDeposit:
     "bg-[rgba(196,160,92,0.22)] text-[#8a6a2a] ring-1 ring-[rgba(196,160,92,0.35)]",

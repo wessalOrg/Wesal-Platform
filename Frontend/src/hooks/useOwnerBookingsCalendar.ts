@@ -5,6 +5,8 @@ import { monthRangeIso } from "@/lib/owner-bookings-calendar";
 import { fetchOwnerBookingsCalendar } from "@/services/owner-bookings-calendar";
 import type { OwnerBookingsCalendarStatus } from "@/types/owner-bookings-calendar";
 
+import { EXTERNAL_BOOKINGS_CHANGED } from "@/services/owner-external-bookings";
+
 type MonthRange = { fromDate: string; toDate: string };
 
 /**
@@ -71,6 +73,14 @@ export function useOwnerBookingsCalendar(hallId: string, enabled: boolean) {
       controller.abort();
     };
   }, [scopedId, range, retryTick]);
+
+  useEffect(() => {
+    const changed = (event: Event) => {
+      if ((event as CustomEvent<{ hallId: string }>).detail?.hallId === scopedId) setRetryTick((n) => n + 1);
+    };
+    window.addEventListener(EXTERNAL_BOOKINGS_CHANGED, changed);
+    return () => window.removeEventListener(EXTERNAL_BOOKINGS_CHANGED, changed);
+  }, [scopedId]);
 
   return { load, range, onVisibleMonthChange, retry };
 }

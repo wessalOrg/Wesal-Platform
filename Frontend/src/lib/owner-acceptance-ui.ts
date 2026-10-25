@@ -13,7 +13,7 @@ export function notificationListGroup(
   item: HallBookingNotification,
 ): NotificationListGroup {
   if (item.status === "AcceptedPendingDeposit") return "depositPending";
-  if (item.status === "Rejected" || item.status === "FullyBooked" || item.status === "Cancelled") {
+  if (item.status === "Rejected" || (item.status === "FullyBooked" || item.status === "Confirmed") || item.status === "Cancelled") {
     return "handled";
   }
   return "pending";
@@ -86,8 +86,8 @@ export function cardAcceptanceState(options: {
   if (options.accepting) return "accepting";
   if (options.status === "AcceptedPendingDeposit") return "deposit-pending";
   if (options.status === "Cancelled") return "cancelled";
-  if (options.status === "Rejected" || options.status === "FullyBooked") return "finalized";
+  if (options.status === "Rejected" || options.status === "FullyBooked" || options.status === "Confirmed") return "finalized";
   if (acceptFeedbackKind(options.errorKey) === "conflict") return "conflict";
   if (canAcceptBookingRequest(options.status)) return "pending";
-  return "pending";
+  return "unknown";
 }

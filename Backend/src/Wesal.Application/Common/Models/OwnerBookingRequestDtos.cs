@@ -13,6 +13,9 @@ namespace Wesal.Application.Common.Models;
 /// </summary>
 public sealed class OwnerBookingRequestDto
 {
+    public BookingSource Source { get; init; }
+    public long Revision { get; init; }
+    public string? ExternalEventType { get; init; }
     public Guid BookingRequestId { get; init; }
 
     public Guid HallId { get; init; }

@@ -8,9 +8,13 @@ import MobileSidebarTrigger from "@/components/owner-management/MobileSidebarTri
 import AdminOwnerMessagePanelHost from "@/components/admin/halls/AdminOwnerMessagePanelHost";
 import { AdminOwnerMessageProvider } from "@/components/admin/halls/AdminOwnerMessageProvider";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { useAccountAccess } from "@/hooks/useAccountAccess";
+import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
+import { ADMIN_ACCOUNT_PATH } from "@/lib/account-profile-path";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 import { useT } from "@/i18n";
+import Link from "next/link";
 
 const SIDEBAR_ID = "admin-dash-sidebar";
 
@@ -28,6 +32,8 @@ export default function AdminManagementShell({
   const t = useT();
   const pathname = usePathname();
   const identity = useUserIdentity();
+  const account = useAccountAccess();
+  const avatarUrl = useProfileAvatarUrl([account.userId]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (prevPathname !== pathname) {
@@ -71,15 +77,24 @@ export default function AdminManagementShell({
             <div className="seeker-dash-topbar-end admin-dash-topbar-tools">
               <NavbarNotificationsButton />
               <LanguageSwitcher iconOnly className="seeker-dash-lang" />
-              <span className="seeker-dash-userchip">
+              <Link
+                href={ADMIN_ACCOUNT_PATH}
+                className="seeker-dash-userchip"
+                data-testid="admin-topbar-account"
+              >
                 <span className="seeker-dash-userchip-avatar" aria-hidden="true">
-                  {initials(displayName)}
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- local data URL avatar
+                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    initials(displayName)
+                  )}
                 </span>
                 <span className="seeker-dash-userchip-meta">
                   <span className="seeker-dash-userchip-name">{displayName}</span>
                   <span className="seeker-dash-userchip-role">{t("admin.role")}</span>
                 </span>
-              </span>
+              </Link>
             </div>
             <div className="admin-dash-topbar-menu md:hidden">
               <MobileSidebarTrigger
