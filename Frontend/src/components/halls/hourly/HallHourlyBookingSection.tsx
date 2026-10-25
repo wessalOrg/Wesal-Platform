@@ -119,7 +119,7 @@ export default function HallHourlyBookingSection({
         phone={booking.phone}
         onPhoneChange={booking.setPhone}
         eventType={booking.eventType}
-        onEventTypeChange={booking.setEventType}
+        onEventTypeChange={(value) => booking.setEventType(value)}
         onClose={booking.closePrompt}
         onSubmit={() => {
           void booking.submit().then((ok) => {

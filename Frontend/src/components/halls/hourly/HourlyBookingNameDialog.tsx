@@ -1,6 +1,8 @@
 "use client";
 
+import OccasionTypePicker from "@/components/halls/hourly/OccasionTypePicker";
 import { useT } from "@/i18n";
+import type { OccasionTypeKey } from "@/lib/occasion-types";
 
 type HourlyBookingNameDialogProps = {
   open: boolean;
@@ -10,7 +12,7 @@ type HourlyBookingNameDialogProps = {
   phone: string;
   onPhoneChange: (value: string) => void;
   eventType: string;
-  onEventTypeChange: (value: string) => void;
+  onEventTypeChange: (value: OccasionTypeKey) => void;
   onClose: () => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -53,7 +55,7 @@ export default function HourlyBookingNameDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="hourly-name-title"
-        className="absolute inset-x-4 top-1/2 mx-auto w-full max-w-md -translate-y-1/2 rounded-2xl border border-[var(--wesal-border)] bg-white p-5 shadow-[0_24px_60px_rgba(60,35,30,0.22)]"
+        className="hourly-name-dialog absolute inset-x-4 top-1/2 mx-auto w-full max-w-md -translate-y-1/2 rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] p-5 shadow-[0_24px_60px_rgba(60,35,30,0.22)]"
       >
         <h3 id="hourly-name-title" className="text-base font-bold text-[var(--wesal-text)]">
           {t("halls.hourly.confirmTitle")}
@@ -78,7 +80,7 @@ export default function HourlyBookingNameDialog({
           value={name}
           onChange={(event) => onNameChange(event.target.value)}
           autoComplete="name"
-          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 py-2.5 text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
+          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] px-3 py-2.5 text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
           disabled={submitting}
           data-testid="hourly-account-name"
         />
@@ -94,7 +96,7 @@ export default function HourlyBookingNameDialog({
           onChange={(event) => onPhoneChange(event.target.value)}
           autoComplete="tel"
           placeholder="05xxxxxxxx"
-          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 py-2.5 text-sm outline-none focus:border-[var(--wesal-maroon)] rtl:text-right"
+          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] px-3 py-2.5 text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)] rtl:text-right"
           disabled={submitting}
           data-testid="hourly-phone-input"
         />
@@ -106,15 +108,11 @@ export default function HourlyBookingNameDialog({
         >
           {t("halls.hourly.eventType")}
         </label>
-        <input
+        <OccasionTypePicker
           id="hourly-event-type"
-          type="text"
           value={eventType}
-          onChange={(event) => onEventTypeChange(event.target.value)}
-          placeholder={t("halls.hourly.eventTypePlaceholder")}
-          className="mt-1.5 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 py-2.5 text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
+          onChange={onEventTypeChange}
           disabled={submitting}
-          data-testid="hourly-event-type"
         />
 
         {errorText ? (

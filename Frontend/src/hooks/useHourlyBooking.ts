@@ -14,6 +14,13 @@ import {
   resolveHourlyDayStatus,
   slotStartsBetween,
 } from "@/lib/hourly-slots";
+import { useT } from "@/i18n";
+import { recordOccasionType } from "@/lib/occasion-type-stats";
+import {
+  isOccasionTypeKey,
+  occasionTypeI18nKey,
+  type OccasionTypeKey,
+} from "@/lib/occasion-types";
 import { rememberUserBookings } from "@/lib/user-bookings-store";
 import {
   fetchHourlyDay,
@@ -58,6 +65,7 @@ function mergeDay(days: HourlyDay[], next: HourlyDay): HourlyDay[] {
 }
 
 export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfirmed }: Options) {
+  const t = useT();
   const identity = useUserIdentity();
   const [visibleMonth, setVisibleMonth] = useState<VisibleMonth>(() => {
     const now = new Date();
@@ -78,7 +86,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
   const accountName = nameDraft ?? accountNameDefault;
   const [phoneDraft, setPhoneDraft] = useState<string | null>(null);
   const phone = phoneDraft ?? identity.phoneNumber?.trim() ?? "";
-  const [eventType, setEventType] = useState("");
+  const [eventType, setEventType] = useState<OccasionTypeKey | "">("");
   const [promptOpen, setPromptOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -249,11 +257,11 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
       setErrorKey("errors.hourly.phoneInvalid");
       return false;
     }
-    const eventTypeLabel = eventType.trim();
-    if (!eventTypeLabel) {
+    if (!isOccasionTypeKey(eventType)) {
       setErrorKey("errors.hourly.eventTypeRequired");
       return false;
     }
+    const eventTypeLabel = t(occasionTypeI18nKey(eventType));
 
     setSubmitting(true);
     setErrorKey(null);
@@ -270,6 +278,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
         eventTypeLabel,
       });
       if (result.bookingId) {
+        recordOccasionType(eventType);
         rememberUserBookings([
           {
             bookingId: result.bookingId,
@@ -343,6 +352,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
     selectedRangeLabel,
     reload,
     onConfirmed,
+    t,
   ]);
 
   const shiftMonth = useCallback((delta: number) => {
