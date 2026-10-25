@@ -11,7 +11,7 @@ export const OCCASION_TYPE_KEYS = [
 export type OccasionTypeKey = (typeof OCCASION_TYPE_KEYS)[number];
 
 export const OCCASION_TYPE_COLORS: Record<OccasionTypeKey, string> = {
-  wedding: "#8b5a7a", // موف غامق
+  wedding: "#c17b7f", // لون الموقع (wesal-maroon)
   family: "#c9a227", // أصفر ذهبي
   social: "#2f8eb8", // أزرق سماوي غامق
   official: "#3d6f8c", // أزرق سماوي أعمق
