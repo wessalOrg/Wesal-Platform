@@ -5,6 +5,7 @@ import { useT } from "@/i18n";
 import {
   OCCASION_TYPE_KEYS,
   type OccasionTypeKey,
+  occasionTypeExamplesI18nKey,
   occasionTypeI18nKey,
 } from "@/lib/occasion-types";
 
@@ -176,7 +177,7 @@ export default function OccasionTypePicker({
           id={listId}
           role="listbox"
           aria-label={t("halls.hourly.eventType")}
-          className="occasion-type-menu relative z-20 mt-1.5 rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] py-1 shadow-[0_16px_40px_rgba(40,25,20,0.18)]"
+          className="occasion-type-menu relative z-20 mt-1.5 max-h-[14.5rem] overflow-y-auto rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] py-0.5 shadow-[0_16px_40px_rgba(40,25,20,0.18)]"
           data-testid="hourly-event-type-list"
         >
           {OCCASION_TYPE_KEYS.map((key, index) => {
@@ -193,7 +194,7 @@ export default function OccasionTypePicker({
                     setOpen(false);
                   }}
                   className={[
-                    "flex w-full items-center gap-3 px-3.5 py-2.5 text-start text-sm transition sm:py-3",
+                    "flex w-full items-center gap-2.5 px-3 py-1.5 text-start text-[0.8125rem] transition",
                     active
                       ? "bg-[var(--wesal-pink-soft)] font-bold text-[var(--wesal-maroon)]"
                       : "font-semibold text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]/70",
@@ -204,7 +205,16 @@ export default function OccasionTypePicker({
                   <span className={active ? "text-[var(--wesal-maroon)]" : "text-[var(--wesal-muted)]"}>
                     <OccasionIcon type={key} />
                   </span>
-                  <span className="min-w-0 flex-1">{t(occasionTypeI18nKey(key))}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block leading-4">{t(occasionTypeI18nKey(key))}</span>
+                    <span
+                      className={`mt-px block truncate text-[0.65rem] font-normal leading-3.5 ${
+                        active ? "text-[var(--wesal-maroon)]/70" : "text-[var(--wesal-muted)]"
+                      }`}
+                    >
+                      {t(occasionTypeExamplesI18nKey(key))}
+                    </span>
+                  </span>
                 </button>
               </li>
             );

@@ -26,3 +26,9 @@ export function isOccasionTypeKey(value: string | null | undefined): value is Oc
 export function occasionTypeI18nKey(key: OccasionTypeKey): `occasion.type.${OccasionTypeKey}` {
   return `occasion.type.${key}`;
 }
+
+export function occasionTypeExamplesI18nKey(
+  key: OccasionTypeKey,
+): `occasion.type.${OccasionTypeKey}.examples` {
+  return `occasion.type.${key}.examples`;
+}
