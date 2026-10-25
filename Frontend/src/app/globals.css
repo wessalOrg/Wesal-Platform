@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 :root {
   /* Soft light off-white + blush + gold from hall */
@@ -7739,7 +7739,7 @@ html[dir="rtl"] .seeker-notify-panel {
   position: relative;
   align-items: center;
   justify-content: center;
-  min-height: 11rem;
+  min-height: 14.5rem;
 }
 
 @media (min-width: 900px) {
@@ -7750,8 +7750,8 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-welcome-orb {
   display: flex;
-  height: 8.5rem;
-  width: 8.5rem;
+  height: 12rem;
+  width: 12rem;
   align-items: center;
   justify-content: center;
   overflow: hidden;
@@ -7761,7 +7761,7 @@ html[dir="rtl"] .seeker-notify-panel {
     radial-gradient(circle at 30% 28%, #fff 0%, transparent 42%),
     linear-gradient(155deg, var(--seeker-pink) 0%, color-mix(in srgb, var(--seeker-maroon) 35%, white) 100%);
   box-shadow: 0 18px 40px rgba(193, 123, 127, 0.22);
-  font-size: 1.85rem;
+  font-size: 2.15rem;
   font-weight: 850;
   color: var(--seeker-maroon-dark);
 }
