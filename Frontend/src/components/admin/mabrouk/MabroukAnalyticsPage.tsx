@@ -82,7 +82,7 @@ export default function MabroukAnalyticsPage() {
         {metrics.map(([label, value]) => (
           <article
             key={label}
-            className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.04)] last:col-span-2 sm:last:col-span-1 xl:last:col-span-1"
+            className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.04)] last:col-span-2 last:text-center sm:last:col-span-1 sm:last:text-start xl:last:col-span-1"
           >
             <p className="text-xs font-semibold leading-5 text-[var(--wesal-muted)]">{t(label)}</p>
             <p className="mt-2 text-2xl font-extrabold text-[var(--wesal-maroon-dark)]">{value}</p>

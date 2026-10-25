@@ -26,7 +26,7 @@ export default function AdminMessageFilters({
 
   return (
     <div
-      className="flex flex-wrap gap-2"
+      className="flex w-full gap-1.5 px-1 sm:w-auto sm:flex-wrap sm:gap-2 sm:px-0"
       role="tablist"
       aria-label={t("admin.messages.filters.label")}
       data-testid="admin-message-filters"
@@ -40,7 +40,7 @@ export default function AdminMessageFilters({
             type="button"
             role="tab"
             aria-selected={active}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+            className={`min-w-0 flex-1 truncate rounded-full px-2 py-1.5 text-center text-[0.7rem] font-semibold transition sm:flex-none sm:px-3.5 sm:text-xs ${
               active
                 ? "bg-[var(--wesal-maroon-dark)] text-white shadow-[0_4px_12px_rgba(90,55,45,0.18)]"
                 : "bg-[#efefef] text-[var(--wesal-text)] hover:bg-[var(--wesal-pink)]"

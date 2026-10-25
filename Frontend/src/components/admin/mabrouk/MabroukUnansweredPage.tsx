@@ -153,11 +153,11 @@ export default function MabroukUnansweredPage() {
             {t("admin.mabrouk.gaps.showClosed")}
           </label>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-outline" disabled={busy || unresolved.length < 2} onClick={() => void suggestGroups()}>
+        <div className="flex flex-col gap-2 px-1.5 md:flex-row md:flex-wrap md:px-0">
+          <button type="button" className="btn-outline w-full justify-center text-center md:w-auto" disabled={busy || unresolved.length < 2} onClick={() => void suggestGroups()}>
             ✨ {t("admin.mabrouk.gaps.suggestGroups")}
           </button>
-          <button type="button" className="btn-outline" disabled={busy || selectedIds.length < 2} onClick={() => void mergeIds(selectedIds)}>
+          <button type="button" className="btn-outline w-full justify-center text-center md:w-auto" disabled={busy || selectedIds.length < 2} onClick={() => void mergeIds(selectedIds)}>
             {t("admin.mabrouk.gaps.merge")}
           </button>
         </div>

@@ -264,7 +264,6 @@ export default function SeekerSettingsPage() {
 
       <header className="seeker-settings-header">
         <h1 className="seeker-settings-title">{t("seeker.nav.settings")}</h1>
-        <p className="seeker-settings-lead">{t("profile.subtitle")}</p>
       </header>
 
       {profileState.status === "error" && !profile ? (
@@ -279,7 +278,6 @@ export default function SeekerSettingsPage() {
       <div className="seeker-settings-split">
         <section className="seeker-settings-card" data-testid="seeker-settings-profile">
           <h2 className="seeker-settings-section-title">{t("seeker.settings.profile.title")}</h2>
-          <p className="seeker-settings-section-lead">{t("seeker.settings.profile.subtitle")}</p>
 
           <div className="seeker-settings-avatar-row" data-testid="seeker-settings-avatar">
             <div className="seeker-settings-avatar" aria-hidden="true">
@@ -390,10 +388,10 @@ export default function SeekerSettingsPage() {
               />
             </div>
 
-            <div className="seeker-settings-actions">
+            <div className="seeker-settings-actions seeker-settings-actions--full">
               <button
                 type="submit"
-                className="btn-primary min-h-11"
+                className="btn-primary min-h-11 w-full justify-center text-center"
                 disabled={profileState.saving || !dirty || !profile}
                 data-testid="seeker-settings-profile-save"
               >

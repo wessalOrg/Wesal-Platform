@@ -61,7 +61,7 @@ export default function MabroukOverviewPage() {
         {metrics.map(([label, count]) => (
           <article
             key={label}
-            className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.04)] last:col-span-2 sm:p-5 sm:last:col-span-3 xl:last:col-span-1"
+            className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_24px_rgba(90,55,45,0.04)] last:col-span-2 last:text-center sm:p-5 sm:last:col-span-3 xl:last:col-span-1 xl:last:text-start"
           >
             <p className="text-xs font-semibold leading-5 text-[var(--wesal-muted)]">{t(label)}</p>
             <p className="mt-2 text-2xl font-extrabold text-[var(--wesal-maroon-dark)]">{count}</p>

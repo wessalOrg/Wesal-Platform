@@ -124,8 +124,9 @@ export default function HallIdentityDocumentSection({
               : "owner.management.identity.notUploaded",
           )}
         </span>
+      </div>
 
-        <div className="owner-identity-actions flex min-w-0 flex-wrap items-center gap-2">
+      <div className={`grid w-full gap-1.5 px-1 ${uploaded ? "grid-cols-2" : "grid-cols-1"}`}>
         <input
           ref={inputRef}
           type="file"
@@ -138,7 +139,7 @@ export default function HallIdentityDocumentSection({
         />
         <button
           type="button"
-          className="btn-primary min-h-11"
+          className="btn-primary min-h-9 w-full justify-center px-2 text-center text-[0.72rem]"
           disabled={busy}
           aria-busy={busy || undefined}
           data-testid="owner-identity-pick"
@@ -154,7 +155,7 @@ export default function HallIdentityDocumentSection({
         {uploaded ? (
           <button
             type="button"
-            className="btn-outline min-h-11"
+            className="btn-outline min-h-9 w-full justify-center px-2 text-center text-[0.72rem]"
             disabled={busy || previewLoading}
             data-testid="owner-identity-view"
             onClick={() => {
@@ -168,7 +169,6 @@ export default function HallIdentityDocumentSection({
                 : t("owner.management.identity.view")}
           </button>
         ) : null}
-        </div>
       </div>
 
       <p className="owner-identity-hint">

@@ -221,16 +221,14 @@ export default function HallOwnerProfileSection() {
 
       <header className="seeker-settings-header">
         <h1 className="seeker-settings-title">{t("owner.nav.settings")}</h1>
-        <p className="seeker-settings-lead">{t("profile.subtitle")}</p>
       </header>
 
       <div className="seeker-settings-split owner-settings-layout">
         <section className="seeker-settings-card owner-settings-profile" data-testid="owner-settings-profile">
           <h2 className="seeker-settings-section-title">{t("seeker.settings.profile.title")}</h2>
-          <p className="seeker-settings-section-lead">{t("seeker.settings.profile.subtitle")}</p>
 
-          <div className="seeker-settings-avatar-row" data-testid="owner-settings-avatar">
-            <div className="seeker-settings-avatar" aria-hidden="true">
+          <div className="seeker-settings-avatar-row [direction:ltr]" data-testid="owner-settings-avatar">
+            <div className="seeker-settings-avatar ms-auto" aria-hidden="true">
               {avatarDraft ? (
                 // eslint-disable-next-line @next/next/no-img-element -- local data URL preview
                 <img src={avatarDraft} alt="" className="seeker-settings-avatar-img" />
@@ -239,7 +237,7 @@ export default function HallOwnerProfileSection() {
               )}
             </div>
 
-            <div className="seeker-settings-avatar-actions">
+            <div className="seeker-settings-avatar-actions order-first !m-0">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -338,10 +336,10 @@ export default function HallOwnerProfileSection() {
               />
             </div>
 
-            <div className="seeker-settings-actions">
+            <div className="seeker-settings-actions seeker-settings-actions--full">
               <button
                 type="submit"
-                className="btn-primary min-h-11"
+                className="btn-primary min-h-11 w-full justify-center text-center"
                 disabled={profileState.saving || !dirty}
                 aria-busy={profileState.saving || undefined}
                 data-testid="owner-profile-save"
@@ -436,10 +434,10 @@ export default function HallOwnerProfileSection() {
               />
             </div>
 
-            <div className="seeker-settings-actions">
+            <div className="seeker-settings-actions seeker-settings-actions--full">
               <button
                 type="submit"
-                className="btn-primary min-h-11"
+                className="btn-primary min-h-11 w-full justify-center text-center"
                 disabled={
                   passwordSaving ||
                   !passwordDraft.currentPassword ||

@@ -282,7 +282,7 @@ export default function LoginFormCard({
 
       <form
         onSubmit={(event) => void onSubmit(event)}
-        className="space-y-3.5"
+        className="space-y-2.5 sm:space-y-3.5"
         noValidate
         data-testid="login-form-fields"
         data-ready={formReady ? "true" : "false"}
@@ -309,7 +309,7 @@ export default function LoginFormCard({
         />
 
         <div className="flex items-center justify-between gap-3">
-          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-[var(--wesal-maroon-dark)]">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-[var(--wesal-maroon-dark)] sm:text-sm">
             <input
               type="checkbox"
               checked={rememberMe}
@@ -322,7 +322,7 @@ export default function LoginFormCard({
           <Link
             href="/forgot-password"
             onClick={markAuthNavigation}
-            className="shrink-0 text-sm font-medium text-[var(--wesal-maroon)] underline-offset-2 hover:underline"
+            className="shrink-0 text-xs font-medium text-[var(--wesal-maroon)] underline-offset-2 hover:underline sm:text-sm"
           >
             {t("auth.login.forgotPassword")}
           </Link>
@@ -332,17 +332,17 @@ export default function LoginFormCard({
           type="submit"
           disabled={!canSubmit}
           aria-busy={pending || undefined}
-          className="btn-primary wesal-auth-submit mt-1.5 w-full !min-h-12 !rounded-xl !text-base"
+          className="btn-primary wesal-auth-submit mt-1 w-full !min-h-11 !rounded-xl !text-[0.95rem] sm:mt-1.5 sm:!min-h-12 sm:!text-base"
           data-testid="login-submit"
         >
           {pending ? t("auth.login.form.submitting") : t("auth.login.form.submit")}
         </button>
       </form>
 
-      <div className="my-4 flex items-center gap-3 text-xs text-[var(--wesal-muted)]"><span className="h-px flex-1 bg-[var(--wesal-border)]" />{t("auth.google.or")}<span className="h-px flex-1 bg-[var(--wesal-border)]" /></div>
+      <div className="my-3 flex items-center gap-3 text-xs text-[var(--wesal-muted)] sm:my-4"><span className="h-px flex-1 bg-[var(--wesal-border)]" />{t("auth.google.or")}<span className="h-px flex-1 bg-[var(--wesal-border)]" /></div>
       <GoogleAuthButton onCredential={(credential) => void onGoogleCredential(credential)} disabled={pending} />
 
-      <p className="mt-4 text-center text-sm text-[var(--wesal-muted)]">
+      <p className="mt-3 text-center text-xs text-[var(--wesal-muted)] sm:mt-4 sm:text-sm">
         {t("auth.login.noAccount")}{" "}
         <Link
           href={registerHref}
@@ -376,9 +376,9 @@ function LoginField({
   autoComplete?: string;
 }) {
   return (
-    <label className="block text-sm">
+    <label className="block text-xs sm:text-sm">
       <span
-        className={`wesal-register-field-label mb-1.5 block ${error ? "wesal-register-field-label--error" : ""}`}
+        className={`wesal-register-field-label mb-1 block sm:mb-1.5 ${error ? "wesal-register-field-label--error" : ""}`}
       >
         {label}
       </span>
@@ -391,7 +391,7 @@ function LoginField({
           placeholder={placeholder}
           autoComplete={autoComplete}
           aria-invalid={error ? true : undefined}
-          className={`wesal-register-field-input w-full rounded-xl border px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--wesal-maroon)] ${
+          className={`wesal-register-field-input w-full rounded-xl border px-3 py-2 text-[0.88rem] outline-none transition focus:border-[var(--wesal-maroon)] sm:px-3.5 sm:py-2.5 sm:text-[0.95rem] ${
             error ? "wesal-register-field-input--error" : "border-[var(--wesal-border)]"
           }`}
         />

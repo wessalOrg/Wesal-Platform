@@ -28,10 +28,10 @@ const SUPPORT_LINKS = [
 ] as const;
 
 const sectionTitleClass =
-  "mb-3 inline-block w-full border-b-2 border-rose-300/50 pb-1 text-base font-bold text-[var(--wesal-maroon)] md:text-lg lg:mb-0 lg:border-b-0 lg:pb-0 lg:text-xs lg:font-extrabold";
+  "mb-1.5 inline-block w-full border-b-2 border-rose-300/50 pb-0.5 text-[0.78rem] font-bold text-[var(--wesal-maroon)] sm:mb-2 sm:text-sm md:text-base lg:mb-0 lg:border-b-0 lg:pb-0 lg:text-xs lg:font-extrabold";
 
 const linkListClass =
-  "flex flex-col items-center gap-2.5 text-center text-sm leading-6 text-[var(--wesal-muted)] lg:mt-2.5 lg:items-start lg:gap-1.5 lg:text-start lg:text-sm";
+  "flex flex-col items-center gap-1 text-center text-[0.72rem] leading-5 text-[var(--wesal-muted)] sm:gap-1.5 sm:text-sm sm:leading-6 lg:mt-2.5 lg:items-start lg:gap-1.5 lg:text-start lg:text-sm";
 
 export default function Footer() {
   const t = useT();
@@ -50,15 +50,15 @@ export default function Footer() {
         <div className="footer-marble-wash" />
       </div>
 
-      <div className="container-wesal relative z-10 py-7 sm:py-8">
-        <div className="grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-5">
+      <div className="container-wesal relative z-10 py-4 sm:py-6 lg:py-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4 lg:gap-5">
           <div className="col-span-2 flex flex-col items-center text-center md:items-start md:text-start md:-ms-7 lg:col-span-1 lg:-ms-20">
-            <WesalBrandLockup logoClassName="h-8 w-auto" nameClassName="text-base" />
-            <p className="mt-2.5 max-w-xs text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm sm:leading-7">
+            <WesalBrandLockup logoClassName="h-7 w-auto sm:h-8" nameClassName="text-sm sm:text-base" />
+            <p className="mt-1.5 max-w-xs text-[0.7rem] leading-5 text-[var(--wesal-muted)] sm:mt-2.5 sm:text-sm sm:leading-7">
               {t("brand.tagline")}
             </p>
 
-            <div className="mt-3.5 flex items-center justify-center gap-1.5 md:justify-start">
+            <div className="mt-2.5 flex items-center justify-center gap-1.5 sm:mt-3.5 md:justify-start">
               <SocialLink href="https://www.facebook.com" label={t("footer.facebook")}>
                 <FacebookIcon />
               </SocialLink>
@@ -71,14 +71,14 @@ export default function Footer() {
             </div>
           </div>
 
-          <div className="px-2 ps-5 text-center lg:px-0 lg:text-start">
+          <div className="px-1 text-center sm:px-2 lg:px-0 lg:text-start">
             <h3 className={sectionTitleClass}>{t("footer.quickLinks")}</h3>
             <ul className={linkListClass}>
               {QUICK_LINKS.map((item) => (
                 <li key={item.href + item.labelKey}>
                   <Link
                     href={item.href}
-                    className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                    className="block py-px transition-colors hover:text-[var(--wesal-maroon)] sm:py-0.5"
                   >
                     {t(item.labelKey)}
                   </Link>
@@ -87,7 +87,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div className="flex flex-col gap-2.5 px-2 ps-5 text-center lg:gap-4 lg:px-0 lg:text-start">
+          <div className="flex flex-col gap-2 px-1 text-center sm:gap-2.5 sm:px-2 lg:gap-4 lg:px-0 lg:text-start">
             <div>
               <h3 className={sectionTitleClass}>{t("footer.account")}</h3>
               <ul className={linkListClass}>
@@ -95,7 +95,7 @@ export default function Footer() {
                   <li key={item.href + item.labelKey}>
                     <Link
                       href={item.href}
-                      className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                      className="block py-px transition-colors hover:text-[var(--wesal-maroon)] sm:py-0.5"
                     >
                       {t(item.labelKey)}
                     </Link>
@@ -104,7 +104,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href={addHall.href}
-                    className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                    className="block py-px transition-colors hover:text-[var(--wesal-maroon)] sm:py-0.5"
                     aria-disabled={!addHall.isReady || undefined}
                     data-testid="footer-add-hall-cta"
                     onClick={addHall.guardClick}
@@ -124,7 +124,7 @@ export default function Footer() {
                   <li key={item.href + item.labelKey}>
                     <Link
                       href={item.href}
-                      className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                      className="block py-px transition-colors hover:text-[var(--wesal-maroon)] sm:py-0.5"
                     >
                       {t(item.labelKey)}
                     </Link>
@@ -136,10 +136,10 @@ export default function Footer() {
 
           <div
             id="contact"
-            className="col-span-2 mt-1 scroll-mt-20 pt-2 text-center lg:col-span-1 lg:mt-0 lg:pt-0 lg:text-start"
+            className="col-span-2 mt-0.5 scroll-mt-20 pt-1 text-center lg:col-span-1 lg:mt-0 lg:pt-0 lg:text-start"
           >
             <h3 className={`${sectionTitleClass} mx-auto text-center`}>{t("footer.contact")}</h3>
-            <ul className={`${linkListClass} mx-3 gap-2.5 text-center lg:mx-0 lg:gap-2 lg:text-start`}>
+            <ul className={`${linkListClass} mx-1 gap-1.5 text-center sm:mx-3 sm:gap-2.5 lg:mx-0 lg:gap-2 lg:text-start`}>
               <li>
                 <ContactRow icon={<PinIcon />}>
                   <span>{t("footer.location")}</span>
@@ -199,7 +199,7 @@ function ContactRow({
   children: ReactNode;
 }) {
   return (
-    <span className="mx-auto flex w-full items-center justify-center gap-2 lg:mx-0 lg:justify-start">
+    <span className="mx-auto flex w-full items-center justify-center gap-1.5 lg:mx-0 lg:justify-start">
       <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[var(--wesal-maroon)]">
         {icon}
       </span>
@@ -223,7 +223,7 @@ function SocialLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--wesal-border)] bg-[var(--wesal-footer)] text-[var(--wesal-maroon)] transition-colors hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
+      className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--wesal-border)] bg-[var(--wesal-footer)] text-[var(--wesal-maroon)] transition-colors hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white sm:h-8 sm:w-8"
     >
       {children}
     </a>

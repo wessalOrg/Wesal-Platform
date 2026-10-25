@@ -129,7 +129,7 @@ export default function HallPhotosSection({
           <button
             type="button"
             disabled={disabled}
-            className="btn-primary inline-flex h-9 w-fit items-center justify-center gap-1 rounded-full px-3.5 text-xs font-bold"
+            className="btn-primary inline-flex min-h-11 w-full items-center justify-center gap-1 sm:w-auto"
             data-testid="owner-add-hall-photos-pick"
             onClick={() => inputRef.current?.click()}
           >

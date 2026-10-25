@@ -62,7 +62,7 @@ export default function HallFeaturesSection({
               <legend className="sr-only">
                 {t("owner.management.addHall.fields.features")}
               </legend>
-              <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="hall-features-pick-grid min-w-0">
                 {features.map((feature) => {
                   const selected = values.features.includes(feature);
                   return (
@@ -72,7 +72,7 @@ export default function HallFeaturesSection({
                       role="checkbox"
                       aria-checked={selected}
                       disabled={disabled}
-                      className={`flex min-w-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
+                      className={`flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-center text-xs font-medium transition ${
                         selected
                           ? "border-[var(--wesal-maroon)] bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
                           : "border-[var(--wesal-border)] bg-white text-[var(--wesal-text)] hover:border-[var(--wesal-maroon)]/40"

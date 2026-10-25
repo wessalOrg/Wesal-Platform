@@ -138,24 +138,29 @@ export default function AdminHallSubmissionDetailView({
 
       <section className="seeker-welcome seeker-welcome--compact">
         <div className="seeker-welcome-copy">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="seeker-welcome-title">{t("admin.halls.detail.pageTitle")}</h1>
-              <div className="admin-ops-badges mt-2">
-                <HallApprovalStatusBadge status={hall.approvalBadge} />
-                <AdminPaymentStatusBadge status={hall.paymentStatus} />
-                {hall.adminLocked || hall.systemLocked ? (
-                  <AdminHallLockBadge
-                    adminLocked={hall.adminLocked}
-                    systemLocked={hall.systemLocked}
-                  />
-                ) : null}
-              </div>
-              <p className="seeker-welcome-body mt-2">{t("admin.halls.detail.subtitle")}</p>
+          <div className="min-w-0">
+            <h1 className="seeker-welcome-title">{t("admin.halls.detail.pageTitle")}</h1>
+            <div className="admin-ops-badges mt-2">
+              <HallApprovalStatusBadge status={hall.approvalBadge} />
+              <AdminPaymentStatusBadge status={hall.paymentStatus} />
+              {hall.adminLocked || hall.systemLocked ? (
+                <AdminHallLockBadge
+                  adminLocked={hall.adminLocked}
+                  systemLocked={hall.systemLocked}
+                />
+              ) : null}
             </div>
-            <Link href={backHref} className="btn-outline min-h-10 shrink-0">
-              {t("admin.halls.detail.back")}
-            </Link>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="seeker-welcome-body mt-0 min-w-0 flex-1 leading-5">
+                {t("admin.halls.detail.subtitle")}
+              </p>
+              <Link
+                href={backHref}
+                className="btn-outline min-h-9 shrink-0 px-2.5 text-xs whitespace-nowrap sm:min-h-10 sm:px-3 sm:text-sm"
+              >
+                {t("admin.halls.detail.back")}
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -245,11 +250,11 @@ export default function AdminHallSubmissionDetailView({
               <p className="text-xs font-semibold text-[var(--wesal-muted)]">
                 {t("admin.halls.detail.features")}
               </p>
-              <ul className="mt-2 flex flex-wrap gap-2">
+              <ul className="mt-2 grid grid-cols-2 gap-2">
                 {hall.features.map((feature) => (
                   <li
                     key={feature}
-                    className="rounded-full bg-[var(--wesal-pink)] px-3 py-1 text-xs font-semibold text-[var(--wesal-maroon)]"
+                    className="flex min-h-8 items-center justify-center rounded-full bg-[var(--wesal-pink)] px-3 py-1 text-center text-xs font-semibold text-[var(--wesal-maroon)] last:odd:col-span-2"
                   >
                     {feature}
                   </li>

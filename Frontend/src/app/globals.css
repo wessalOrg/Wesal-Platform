@@ -4451,20 +4451,88 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .hall-amenities-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
   margin-top: 1rem;
 }
 
-@media (min-width: 640px) {
-  .hall-amenities-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.hall-amenities-grid > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 @media (min-width: 1024px) {
   .hall-amenities-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .hall-amenities-grid > :last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .hall-amenities-grid > :last-child:nth-child(4n + 1) {
+    grid-column: 1 / -1;
+  }
+
+  .hall-amenities-grid > :nth-last-child(2):nth-child(4n + 1),
+  .hall-amenities-grid > :last-child:nth-child(4n + 2) {
+    grid-column: span 2;
+  }
+}
+
+.hall-features-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+.hall-features-pick-grid > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 640px) {
+  .hall-features-pick-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .hall-features-pick-grid > * {
+    grid-column: span 2;
+  }
+
+  .hall-features-pick-grid > :last-child:nth-child(odd) {
+    grid-column: span 2;
+  }
+
+  .hall-features-pick-grid > :last-child:nth-child(3n + 1) {
+    grid-column: 1 / -1;
+  }
+
+  .hall-features-pick-grid > :nth-last-child(2):nth-child(3n + 1),
+  .hall-features-pick-grid > :last-child:nth-child(3n + 2) {
+    grid-column: span 3;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hall-features-pick-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .hall-features-pick-grid > *,
+  .hall-features-pick-grid > :last-child:nth-child(odd),
+  .hall-features-pick-grid > :last-child:nth-child(3n + 1),
+  .hall-features-pick-grid > :nth-last-child(2):nth-child(3n + 1),
+  .hall-features-pick-grid > :last-child:nth-child(3n + 2) {
+    grid-column: auto;
+  }
+
+  .hall-features-pick-grid > :last-child:nth-child(4n + 1) {
+    grid-column: 1 / -1;
+  }
+
+  .hall-features-pick-grid > :nth-last-child(2):nth-child(4n + 1),
+  .hall-features-pick-grid > :last-child:nth-child(4n + 2) {
+    grid-column: span 2;
   }
 }
 
@@ -4472,10 +4540,10 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 0.65rem;
   min-width: 0;
-  text-align: start;
+  text-align: center;
   border-radius: 1rem;
   border: 1px solid color-mix(in srgb, var(--wesal-border) 80%, white);
   background: #fff;
@@ -4505,6 +4573,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   font-size: 0.85rem;
   font-weight: 700;
   line-height: 1.35;
+  text-align: center;
   color: var(--wesal-text);
 }
 
@@ -5618,6 +5687,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   white-space: nowrap;
 }
 
+.dash-topbar-actions,
 .admin-dash-topbar-actions {
   display: flex;
   min-width: 0;
@@ -5626,11 +5696,13 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   gap: 0.5rem;
 }
 
+.dash-topbar-menu,
 .admin-dash-topbar-menu {
   flex-shrink: 0;
 }
 
 @media (max-width: 767.98px) {
+  .seeker-dash-topbar.dash-topbar,
   .seeker-dash-topbar.admin-dash-topbar {
     display: flex;
     flex-direction: column;
@@ -5641,20 +5713,24 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     padding: 0.5rem 0.75rem;
   }
 
+  .seeker-dash-topbar.dash-topbar .seeker-dash-topbar-title,
   .seeker-dash-topbar.admin-dash-topbar .seeker-dash-topbar-title {
     min-width: 0;
     font-size: 0.95rem;
   }
 
+  .dash-topbar-actions,
   .admin-dash-topbar-actions {
     width: 100%;
     justify-content: space-between;
   }
 
+  .dash-topbar-menu,
   .admin-dash-topbar-menu {
     margin-inline-start: auto;
   }
 
+  .dash-topbar-tools,
   .admin-dash-topbar-tools {
     width: auto;
     flex: 0 0 auto;
@@ -5662,6 +5738,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     gap: 0.5rem;
   }
 
+  .dash-topbar-tools .seeker-dash-userchip,
   .admin-dash-topbar-tools .seeker-dash-userchip {
     order: 1;
     height: 2.25rem;
@@ -5674,14 +5751,28 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     justify-content: center;
   }
 
+  .dash-topbar-tools .seeker-dash-lang,
   .admin-dash-topbar-tools .seeker-dash-lang {
     order: 2;
   }
 
-  .admin-dash-topbar-tools .seeker-notify-wrap {
+  .dash-topbar-audio {
     order: 3;
+    display: inline-flex;
   }
 
+  .dash-topbar-audio button {
+    height: 2.25rem;
+    width: 2.25rem;
+  }
+
+  .dash-topbar-tools .seeker-notify-wrap,
+  .admin-dash-topbar-tools .seeker-notify-wrap {
+    order: 4;
+  }
+
+  .dash-topbar-tools .seeker-dash-notify,
+  .dash-topbar-tools .seeker-dash-lang.lang-switch-trigger,
   .admin-dash-topbar-tools .seeker-dash-notify,
   .admin-dash-topbar-tools .seeker-dash-lang.lang-switch-trigger {
     height: 2.25rem;
@@ -5690,12 +5781,14 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     min-width: 2.25rem;
   }
 
+  .dash-topbar-tools .seeker-dash-userchip-avatar,
   .admin-dash-topbar-tools .seeker-dash-userchip-avatar {
     height: 2.25rem;
     width: 2.25rem;
     font-size: 0.68rem;
   }
 
+  .dash-topbar-tools .seeker-dash-userchip-meta,
   .admin-dash-topbar-tools .seeker-dash-userchip-meta {
     display: none;
   }
@@ -6621,24 +6714,28 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .owner-chat-filters {
   display: flex;
+  width: 100%;
+  box-sizing: border-box;
   gap: 0.4rem;
-  overflow-x: auto;
-  padding: 0.45rem 0.85rem 0.2rem;
+  padding: 0.45rem 0.5rem 0.2rem;
 }
 
 .owner-chat-filter {
   display: inline-flex;
-  flex-shrink: 0;
+  flex: 1 1 0;
+  min-width: 0;
   align-items: center;
+  justify-content: center;
   gap: 0.25rem;
   border: 1px solid #e6e1da;
   border-radius: 999px;
   background: #fff;
-  padding: 0.38rem 0.7rem;
+  padding: 0.38rem 0.45rem;
   color: #5c6573;
   font-size: 0.72rem;
   font-weight: 700;
   line-height: 1.3;
+  text-align: center;
 }
 
 .owner-chat-filter.is-active {
@@ -7641,9 +7738,19 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-welcome-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.7rem;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.55rem;
+  width: 100%;
   margin-top: 1.15rem;
+}
+
+@media (min-width: 768px) {
+  .seeker-welcome-actions {
+    flex-wrap: wrap;
+    width: auto;
+    gap: 0.7rem;
+  }
 }
 
 .seeker-btn-primary,
@@ -8365,10 +8472,22 @@ html[dir="rtl"] .seeker-notify-panel {
   gap: 0.7rem;
 }
 
+.seeker-settings-actions--full {
+  width: 100%;
+  padding-inline: 0.375rem;
+}
+
+.seeker-settings-actions--full .btn-primary {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
 .seeker-settings-avatar-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
   margin-top: 1rem;
   padding-bottom: 0.35rem;
@@ -8400,6 +8519,8 @@ html[dir="rtl"] .seeker-notify-panel {
 .seeker-settings-avatar-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-inline-start: auto;
   gap: 0.65rem;
 }
 
@@ -9055,6 +9176,134 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
     transform: translateX(-50%);
     /* Keep translateX(-50%) through the entrance so centering is not wiped. */
     animation: seeker-notify-panel-center-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+/* Phone: owner + seeker cards match the compact landing/admin card scale. */
+@media (max-width: 767.98px) {
+  [data-testid="seeker-dashboard"] .seeker-dash-content,
+  [data-testid="hall-owner-management"] .seeker-dash-content {
+    padding: 0.55rem 0.65rem 1rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-dash-content > *,
+  [data-testid="hall-owner-management"] .seeker-dash-content > * {
+    width: 100%;
+    max-width: 22.5rem;
+    margin-inline: auto;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-home,
+  [data-testid="hall-owner-management"] .seeker-home,
+  [data-testid="hall-owner-management"] [data-testid="owner-halls-page"] {
+    gap: 0.65rem;
+  }
+
+  [data-testid="hall-owner-management"] [data-testid="owner-halls-page"].space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.65rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-welcome,
+  [data-testid="hall-owner-management"] .seeker-welcome,
+  [data-testid="seeker-dashboard"] .seeker-welcome--compact,
+  [data-testid="hall-owner-management"] .seeker-welcome--compact {
+    gap: 0.45rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.9rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-welcome-title,
+  [data-testid="hall-owner-management"] .seeker-welcome-title {
+    font-size: 0.98rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-welcome-body,
+  [data-testid="hall-owner-management"] .seeker-welcome-body {
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-summary-grid,
+  [data-testid="hall-owner-management"] .seeker-summary-grid {
+    gap: 0.4rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-summary-card,
+  [data-testid="hall-owner-management"] .seeker-summary-card {
+    gap: 0.12rem;
+    padding: 0.5rem 0.55rem 0.55rem;
+    border-radius: 0.8rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-summary-value,
+  [data-testid="hall-owner-management"] .seeker-summary-value {
+    font-size: 1.05rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-summary-label,
+  [data-testid="hall-owner-management"] .seeker-summary-label {
+    font-size: 0.68rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-pending-panel,
+  [data-testid="hall-owner-management"] .seeker-pending-panel,
+  [data-testid="seeker-dashboard"] .seeker-settings-card,
+  [data-testid="hall-owner-management"] .seeker-settings-card,
+  [data-testid="seeker-dashboard"] .seeker-profile-card,
+  [data-testid="hall-owner-management"] .seeker-profile-card {
+    padding: 0.6rem 0.7rem 0.7rem;
+    border-radius: 0.85rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-quick-card,
+  [data-testid="hall-owner-management"] .seeker-quick-card {
+    min-height: 0;
+    padding: 0.6rem 0.7rem;
+    border-radius: 0.85rem;
+    gap: 0.35rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-quick-title,
+  [data-testid="hall-owner-management"] .seeker-quick-title,
+  [data-testid="seeker-dashboard"] .seeker-settings-section-title,
+  [data-testid="hall-owner-management"] .seeker-settings-section-title {
+    font-size: 0.88rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-home-booking-row,
+  [data-testid="hall-owner-management"] .seeker-home-booking-row {
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.7rem;
+  }
+
+  [data-testid="hall-owner-management"] .owner-hall-card,
+  [data-testid="hall-owner-management"] .owner-add-hall-banner {
+    border-radius: 0.85rem;
+  }
+
+  [data-testid="hall-owner-management"] .owner-hall-card .relative.min-h-44 {
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+
+  [data-testid="hall-owner-management"] .owner-hall-card .flex-1 {
+    gap: 0.55rem;
+    padding: 0.6rem 0.7rem;
+  }
+
+  [data-testid="hall-owner-management"] .owner-hall-card h2 {
+    font-size: 0.92rem;
+  }
+
+  [data-testid="hall-owner-management"] .owner-add-hall-banner {
+    padding: 0.7rem 0.75rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-settings-form,
+  [data-testid="hall-owner-management"] .seeker-settings-form {
+    gap: 0.7rem;
+    margin-top: 0.7rem;
   }
 }
 

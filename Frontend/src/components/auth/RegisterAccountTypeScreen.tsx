@@ -45,15 +45,15 @@ export default function RegisterAccountTypeScreen({
   }
   return (
     <div
-      className="wesal-register-card w-full rounded-[1.4rem] border border-white/70 bg-white/[0.97] p-5 shadow-[0_24px_60px_rgba(60,35,30,0.18)] sm:p-6 lg:p-7"
+      className="wesal-register-card w-full rounded-[1.15rem] border border-white/70 bg-white/[0.97] p-3.5 shadow-[0_24px_60px_rgba(60,35,30,0.18)] sm:rounded-[1.4rem] sm:p-6 lg:p-7"
       data-testid="register-account-type-screen"
     >
       <div className="flex flex-col items-center text-center">
-        <WesalLogo className="h-9 w-auto sm:h-10" variant="brand" />
-        <h2 className="mt-3 text-base font-bold text-[var(--wesal-maroon-dark)] sm:text-lg">
+        <WesalLogo className="h-7 w-auto sm:h-10" variant="brand" />
+        <h2 className="mt-2 text-[0.95rem] font-bold text-[var(--wesal-maroon-dark)] sm:mt-3 sm:text-lg">
           {t("auth.register.title")}
         </h2>
-        <p className="mt-1.5 max-w-[20rem] text-xs font-normal leading-4 text-[#525252] sm:max-w-[22rem] sm:text-[0.8rem] sm:leading-[1.15rem]">
+        <p className="mt-1 max-w-[20rem] text-[0.7rem] font-normal leading-4 text-[#525252] sm:mt-1.5 sm:max-w-[22rem] sm:text-[0.8rem] sm:leading-[1.15rem]">
           {t("auth.register.subtitle")}
         </p>
       </div>
@@ -61,7 +61,7 @@ export default function RegisterAccountTypeScreen({
       <div
         role="radiogroup"
         aria-labelledby={`${groupId}-label`}
-        className="wesal-register-type-toggle mt-6"
+        className="wesal-register-type-toggle mt-3.5 sm:mt-6"
       >
         <span id={`${groupId}-label`} className="sr-only">
           {t("auth.register.form.accountTypeLabel")}
@@ -113,7 +113,7 @@ export default function RegisterAccountTypeScreen({
         </p>
       ) : null}
 
-      <div className="mt-4 border-t border-[var(--wesal-border)]/80 pt-4">
+      <div className="mt-3 border-t border-[var(--wesal-border)]/80 pt-3 sm:mt-4 sm:pt-4">
         <RegisterFormCard
           accountType={selected}
           onRequireAccountType={() => {

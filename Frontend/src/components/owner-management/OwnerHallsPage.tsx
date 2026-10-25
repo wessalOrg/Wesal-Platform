@@ -214,7 +214,7 @@ export default function OwnerHallsPage() {
                 className="h-9 w-full rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-3 text-xs text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
               />
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid w-full grid-cols-2 gap-1.5 px-1 sm:flex sm:w-auto sm:flex-wrap sm:justify-end sm:gap-2 sm:px-0">
               <FilterChip
                 active={filter === "all"}
                 label={`${t("owner.hallsPage.filter.all")} (${counts.total})`}
@@ -280,18 +280,18 @@ export default function OwnerHallsPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3.5 sm:shrink-0">
+                <div className="flex w-full items-center px-1 sm:w-auto sm:shrink-0 sm:gap-3.5 sm:px-0">
                   <span className="hidden h-12 w-px bg-[linear-gradient(180deg,transparent,#e0c7be,transparent)] sm:block" aria-hidden="true" />
                   <button
                     type="button"
-                    className="btn-primary min-h-11 rounded-full px-6 text-xs shadow-[0_10px_22px_rgba(168,98,103,0.28)] sm:text-sm"
+                    className="btn-primary min-h-9 w-full justify-center rounded-full px-3 text-center text-[0.72rem] shadow-[0_10px_22px_rgba(168,98,103,0.28)] sm:min-h-11 sm:w-auto sm:px-6 sm:text-sm"
                     disabled={isInitiating}
                     onClick={beginAddHall}
                   >
                     {isInitiating ? (
                       t("owner.management.addHall.starting")
                     ) : (
-                      <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-flex items-center justify-center gap-1.5">
                         <span>{t("owner.hallsPage.addBannerCta")}</span>
                         <span
                           className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[13px] font-bold"
@@ -410,7 +410,7 @@ function OwnerHallCard({
             </div>
           </div>
 
-          <dl className="flex flex-wrap gap-2.5">
+          <dl className="grid w-full grid-cols-2 gap-1.5 px-1">
             <SubscriptionStat
               hallId={showSubscription ? hall.id : null}
               ended={hall.systemLocked}
@@ -426,6 +426,7 @@ function OwnerHallCard({
               }
             />
             <StatTile
+              className="col-span-2"
               icon={<ShekelIcon />}
               label={t("owner.hallsPage.priceFrom")}
               value={
@@ -437,7 +438,7 @@ function OwnerHallCard({
             />
           </dl>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-2 gap-1.5 px-1">
             <HallAction
               href={locked ? undefined : ownerHallPath(hall.id)}
               label={t("owner.hallsPage.editData")}
@@ -460,7 +461,7 @@ function OwnerHallCard({
               label={t("owner.hallsPage.viewHall")}
               icon={<ArrowIcon />}
               primary
-              className="sm:ms-auto"
+              className={locked ? "col-span-2" : ""}
             />
           </div>
 
@@ -576,6 +577,7 @@ function StatTile({
   valueClass = "text-[var(--wesal-text)]",
   tone = "default",
   testId,
+  className = "",
 }: {
   icon: ReactNode;
   label: string;
@@ -583,6 +585,7 @@ function StatTile({
   valueClass?: string;
   tone?: "default" | "success" | "danger";
   testId?: string;
+  className?: string;
 }) {
   const shellClass =
     tone === "success"
@@ -604,11 +607,11 @@ function StatTile({
         : "text-[var(--wesal-muted)]";
 
   return (
-    <div className={`inline-flex w-fit max-w-full items-center gap-2 rounded-xl px-3 py-2 ${shellClass}`}>
+    <div className={`flex min-h-0 w-full min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 text-center ${shellClass} ${className}`}>
       <span className={iconClass}>{icon}</span>
       <div className="min-w-0">
-        <p className={`whitespace-nowrap text-[11px] leading-tight ${labelClass}`}>{label}</p>
-        <p className={`whitespace-nowrap text-sm font-extrabold leading-tight ${valueClass}`} data-testid={testId}>
+        <p className={`text-[0.65rem] leading-tight ${labelClass}`}>{label}</p>
+        <p className={`text-xs font-extrabold leading-tight ${valueClass}`} data-testid={testId}>
           {value}
         </p>
       </div>
@@ -629,7 +632,7 @@ function HallAction({
   primary?: boolean;
   className?: string;
 }) {
-  const classes = `inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-bold ${
+  const classes = `inline-flex min-h-8 w-full min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-1 text-center text-[0.68rem] font-bold ${
     primary
       ? "bg-[var(--wesal-maroon)] text-white"
       : "bg-[#f7eee9] text-[var(--wesal-maroon-dark)]"
@@ -803,7 +806,7 @@ function FilterChip({
   return (
     <button
       type="button"
-      className={`rounded-full px-2.5 py-1.5 text-[11px] font-bold ${
+      className={`inline-flex min-h-8 w-full min-w-0 items-center justify-center truncate rounded-full px-1.5 py-1 text-center text-[0.68rem] font-bold leading-tight sm:min-h-0 sm:w-auto sm:px-2.5 sm:py-1.5 sm:text-[11px] ${
         active
           ? "bg-[var(--wesal-maroon)] text-white"
           : "border border-[var(--wesal-border)] bg-white text-[var(--wesal-text)]"

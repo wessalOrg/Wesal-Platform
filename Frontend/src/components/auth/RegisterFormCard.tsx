@@ -411,7 +411,7 @@ export default function RegisterFormCard({
 
       {!googleRegistrationToken ? (
         <>
-      <form onSubmit={(event) => void onSubmit(event)} className="space-y-3" noValidate>
+      <form onSubmit={(event) => void onSubmit(event)} className="space-y-2.5 sm:space-y-3" noValidate>
         <input type="hidden" name="accountType" value={accountType ?? ""} readOnly />
         <RegisterField
           label={t("auth.register.form.fullName")}
@@ -495,7 +495,7 @@ export default function RegisterFormCard({
         ) : null}
       </form>
 
-      <div className="my-4 flex items-center gap-3 text-xs text-[var(--wesal-muted)]"><span className="h-px flex-1 bg-[var(--wesal-border)]" />{t("auth.google.or")}<span className="h-px flex-1 bg-[var(--wesal-border)]" /></div>
+      <div className="my-3 flex items-center gap-3 text-xs text-[var(--wesal-muted)] sm:my-4"><span className="h-px flex-1 bg-[var(--wesal-border)]" />{t("auth.google.or")}<span className="h-px flex-1 bg-[var(--wesal-border)]" /></div>
       <GoogleAuthButton onCredential={(credential) => void onGoogleCredential(credential)} disabled={pending} />
         </>
       ) : (
@@ -561,7 +561,7 @@ function RegisterField({
           autoComplete={autoComplete}
           maxLength={maxLength}
           aria-invalid={error ? true : undefined}
-          className={`wesal-register-field-input w-full rounded-lg border px-3 py-2.5 text-[0.9rem] outline-none transition focus:border-[var(--wesal-maroon)] ${
+          className={`wesal-register-field-input w-full rounded-lg border px-3 py-2 text-[0.85rem] outline-none transition focus:border-[var(--wesal-maroon)] sm:py-2.5 sm:text-[0.9rem] ${
             trailing ? "pe-9" : ""
           } ${error ? "wesal-register-field-input--error" : "border-[var(--wesal-border)]"}`}
         />
