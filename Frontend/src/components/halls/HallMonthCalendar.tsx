@@ -233,7 +233,7 @@ export default function HallMonthCalendar({
           {showTodayButton ? (
             <button
               type="button"
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-[0.78rem] font-semibold text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white px-3 text-[0.78rem] font-semibold text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
               onClick={goToToday}
               data-testid="hall-cal-today"
             >
@@ -244,7 +244,7 @@ export default function HallMonthCalendar({
           <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
             <button
               type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
               onClick={() => shiftMonth(-1)}
               aria-label={t("halls.booking.prevMonth")}
             >
@@ -255,7 +255,7 @@ export default function HallMonthCalendar({
             </p>
             <button
               type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
               onClick={() => shiftMonth(1)}
               aria-label={t("halls.booking.nextMonth")}
             >
@@ -351,7 +351,7 @@ export default function HallMonthCalendar({
                 selected
                   ? "hall-cal-day--selected rounded-full bg-[var(--wesal-maroon)] text-white shadow-[0_6px_14px_rgba(193,123,127,0.35)]"
                   : ownerBooked
-                    ? "rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
+                    ? "rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
                     : isClosed
                       ? allowAnyDay
                         ? "rounded-full bg-[#e8e1dc] text-[#6d625c] hover:bg-[#ddd4ce]"
@@ -360,7 +360,7 @@ export default function HallMonthCalendar({
                       ? "hall-cal-day--partial rounded-full"
                       : cell.status === "available"
                         ? ownerLegend
-                          ? "rounded-full border border-[#d7ebe0] bg-white text-[var(--wesal-text)] hover:bg-[#f4fbf7]"
+                          ? "rounded-full border-0 bg-[#f4fbf7] text-[var(--wesal-text)] hover:bg-[#eaf7f0]"
                           : "rounded-full bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
                         : "cursor-default rounded-full text-[#c5bbb4]",
               ].join(" ")}

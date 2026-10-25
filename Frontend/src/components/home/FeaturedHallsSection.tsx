@@ -111,7 +111,7 @@ export default function FeaturedHallsSection() {
             <div className="max-w-xl">
               <h2
                 id="featured-halls-heading"
-                className="text-2xl font-extrabold text-[var(--wesal-maroon)] sm:text-3xl"
+                className="wesal-section-heading text-2xl font-extrabold text-[var(--wesal-maroon)] sm:text-3xl"
               >
                 {t("home.providers.title")}
               </h2>
@@ -150,7 +150,7 @@ export default function FeaturedHallsSection() {
 
           {showsHalls && status === "error" ? (
             <div
-              className="mt-6 rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-3 text-center sm:text-start"
+              className="mt-6 rounded-2xl border-0 bg-white px-4 py-3 text-center shadow-[0_8px_20px_rgba(90,55,45,0.05)] sm:text-start"
               data-testid="featured-halls-api-fallback"
               role="status"
             >
@@ -256,7 +256,7 @@ function ServicePlaceCard({
 
   return (
     <article
-      className="hall-card overflow-hidden rounded-2xl bg-white shadow-[0_10px_28px_rgba(90,55,45,0.08)] ring-1 ring-black/[0.04]"
+      className="hall-card overflow-hidden rounded-2xl border-0 bg-white shadow-[0_10px_28px_rgba(90,55,45,0.08)]"
       style={{ animationDelay: `${index * 90}ms` }}
       data-testid={`service-place-${placeId}`}
     >
@@ -282,7 +282,7 @@ function ServicePlaceCard({
 function ProviderCardSkeleton() {
   return (
     <div
-      className="overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)]"
+      className="overflow-hidden rounded-2xl border-0 bg-[var(--wesal-pink-soft)]"
       aria-hidden="true"
     >
       <div className="aspect-[4/3] animate-pulse bg-[var(--wesal-pink)]" />

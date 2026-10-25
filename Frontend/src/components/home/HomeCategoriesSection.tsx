@@ -125,7 +125,7 @@ export default function HomeCategoriesSection() {
                   className="group block rounded-[1.75rem] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--wesal-maroon)]"
                   data-testid={`home-category-${category.id}`}
                 >
-                  <div className="relative aspect-square overflow-hidden rounded-[1.35rem] shadow-[0_12px_28px_rgba(90,55,45,0.12)] transition-transform duration-300 group-hover:-translate-y-1">
+                  <div className="home-category-card relative aspect-square overflow-hidden rounded-[1.35rem] shadow-[0_12px_28px_rgba(90,55,45,0.12)] transition-transform duration-300 group-hover:-translate-y-1">
                     <Image
                       src={category.image}
                       alt=""
@@ -137,25 +137,35 @@ export default function HomeCategoriesSection() {
                     />
 
                     <div
-                      className="absolute inset-x-0 bottom-0"
+                      className="home-category-panel absolute inset-x-0 bottom-0"
                       style={{ height: PANEL_H }}
                     >
-                      {/* White panel: flat on the icon side, rounded corner on the bottom line. */}
+                      {/* Solid base so rounded card corners never flash a light seam */}
+                      <div
+                        className="home-category-panel-base absolute inset-x-0 bottom-0"
+                        style={{
+                          height: PANEL_H - PLATEAU_Y + 2,
+                          background: "var(--home-category-panel, var(--wesal-white))",
+                        }}
+                        aria-hidden="true"
+                      />
+                      {/* Panel: flat on the icon side, rounded corner on the bottom line. */}
                       <svg
-                        className={`absolute inset-0 h-full w-full ${rtl ? "" : "-scale-x-100"}`}
+                        className={`home-category-panel-svg absolute inset-0 h-full w-full ${rtl ? "" : "-scale-x-100"}`}
                         viewBox={`0 0 300 ${PANEL_H}`}
                         preserveAspectRatio="none"
                         aria-hidden="true"
                       >
                         <path
-                          d={`M0,${PANEL_H} C0,${PANEL_H - KAPPA * (PANEL_H - PLATEAU_Y)} ${CORNER_W * (1 - KAPPA)},${PLATEAU_Y} ${CORNER_W},${PLATEAU_Y} L300,${PLATEAU_Y} L300,${PANEL_H} Z`}
-                          fill="#fff"
+                          className="home-category-panel-fill"
+                          d={`M-1,${PANEL_H + 1} C-1,${PANEL_H - KAPPA * (PANEL_H - PLATEAU_Y)} ${CORNER_W * (1 - KAPPA)},${PLATEAU_Y} ${CORNER_W},${PLATEAU_Y} L301,${PLATEAU_Y} L301,${PANEL_H + 1} Z`}
+                          fill="var(--home-category-panel, var(--wesal-white))"
                         />
                       </svg>
 
                       {/* Icon bubble rising above the panel */}
                       <span
-                        className="absolute flex items-center justify-center rounded-full bg-white text-[var(--wesal-maroon)] [&_svg]:h-7 [&_svg]:w-7 [&_svg]:stroke-[1.4]"
+                        className="home-category-bubble absolute flex items-center justify-center rounded-full bg-[var(--wesal-white)] text-[var(--wesal-maroon)] shadow-[0_4px_14px_rgba(90,55,45,0.12)] [&_svg]:h-7 [&_svg]:w-7 [&_svg]:stroke-[1.4]"
                         style={{
                           width: BUBBLE,
                           height: BUBBLE,
@@ -168,36 +178,36 @@ export default function HomeCategoriesSection() {
                       </span>
                       {/* Soft joins between the bubble and the flat edge */}
                       <span
-                        className="pointer-events-none absolute"
+                        className="home-category-fillet pointer-events-none absolute"
                         style={{
                           width: FILLET,
                           height: FILLET,
                           top: PLATEAU_Y - FILLET,
                           [side]: BUBBLE_INSET - FILLET,
-                          background: `radial-gradient(circle at ${rtl ? "100%" : "0%"} 0%, transparent ${FILLET - 0.5}px, #fff ${FILLET}px)`,
+                          background: `radial-gradient(circle at ${rtl ? "100%" : "0%"} 0%, transparent ${FILLET - 0.5}px, var(--home-category-panel, var(--wesal-white)) ${FILLET}px)`,
                         }}
                         aria-hidden="true"
                       />
                       <span
-                        className="pointer-events-none absolute"
+                        className="home-category-fillet pointer-events-none absolute"
                         style={{
                           width: FILLET,
                           height: FILLET,
                           top: PLATEAU_Y - FILLET,
                           [side]: BUBBLE_INSET + BUBBLE,
-                          background: `radial-gradient(circle at ${rtl ? "0%" : "100%"} 0%, transparent ${FILLET - 0.5}px, #fff ${FILLET}px)`,
+                          background: `radial-gradient(circle at ${rtl ? "0%" : "100%"} 0%, transparent ${FILLET - 0.5}px, var(--home-category-panel, var(--wesal-white)) ${FILLET}px)`,
                         }}
                         aria-hidden="true"
                       />
 
                       <div className="absolute inset-x-0 bottom-0 px-5 pb-3 text-center">
-                        <h3 className="text-base font-extrabold leading-snug text-[var(--wesal-maroon-dark)]">
+                        <h3 className="home-category-title text-base font-extrabold leading-snug text-[var(--wesal-maroon-dark)]">
                           {t(category.titleKey)}
                         </h3>
-                        <p className="mt-0.5 text-[0.8rem] font-bold leading-snug text-[var(--wesal-text)]">
+                        <p className="home-category-subtitle mt-0.5 text-[0.8rem] font-bold leading-snug text-[var(--wesal-text)]">
                           {t(category.subtitleKey)}
                         </p>
-                        <p className="mt-0.5 text-[0.75rem] font-semibold leading-snug text-[var(--wesal-text)]">
+                        <p className="home-category-hint mt-0.5 text-[0.75rem] font-bold leading-snug text-[var(--wesal-text)]">
                           {t(category.hintKey)}
                         </p>
                       </div>

@@ -31,34 +31,34 @@ export default function OwnerBookingInsightsCards() {
       data-testid="owner-booking-insights"
     >
       <section
-        className="rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-4 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-5"
+        className="rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
         data-testid="owner-booking-insights-weekdays"
       >
-        <header className="mb-4 flex items-center gap-2">
+        <header className="mb-2.5 flex items-center gap-2">
           <span className="inline-flex shrink-0 text-[var(--wesal-maroon)]" aria-hidden="true">
             <CalendarIcon />
           </span>
-          <h2 className="text-[0.9rem] font-extrabold text-[var(--wesal-text)]">
+          <h2 className="text-[0.82rem] font-extrabold text-[var(--wesal-text)]">
             {t("owner.insights.topWeekdaysTitle")}
           </h2>
         </header>
 
-        <ul className="space-y-3">
+        <ul className="space-y-2">
           {WEEKDAY_SHARES.map((day) => (
             <li
               key={day.key}
-              className="grid grid-cols-[4.25rem_minmax(0,1fr)_2.4rem] items-center gap-2.5"
+              className="grid grid-cols-[3.75rem_minmax(0,1fr)_2.2rem] items-center gap-2"
             >
-              <span className="truncate text-[0.78rem] font-bold text-[var(--wesal-text)]">
+              <span className="truncate text-[0.72rem] font-bold text-[var(--wesal-text)]">
                 {t(`owner.insights.weekday.${day.key}`)}
               </span>
-              <span className="h-2.5 overflow-hidden rounded-full bg-[#ece8e6]">
+              <span className="h-2 overflow-hidden rounded-full bg-[#ece8e6]">
                 <span
                   className="block h-full rounded-full bg-[#c17b7f]"
                   style={{ width: `${day.percent}%` }}
                 />
               </span>
-              <span className="text-end text-[0.78rem] font-extrabold tabular-nums text-[var(--wesal-text)]">
+              <span className="text-end text-[0.72rem] font-extrabold tabular-nums text-[var(--wesal-text)]">
                 {day.percent}%
               </span>
             </li>
@@ -67,25 +67,25 @@ export default function OwnerBookingInsightsCards() {
       </section>
 
       <section
-        className="rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-4 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-5"
+        className="rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
         data-testid="owner-booking-insights-hours"
       >
-        <header className="mb-4 flex items-center gap-2">
+        <header className="mb-2.5 flex items-center gap-2">
           <span
-            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
             aria-hidden="true"
           >
             <ClockIcon />
           </span>
-          <h2 className="text-[0.9rem] font-extrabold text-[var(--wesal-text)]">
+          <h2 className="text-[0.82rem] font-extrabold text-[var(--wesal-text)]">
             {t("owner.insights.hoursDistributionTitle")}
           </h2>
         </header>
 
-        <div className="flex w-full items-center justify-between gap-4 sm:gap-6">
-          <div className="relative h-[9.5rem] w-[9.5rem] shrink-0 sm:h-[10.5rem] sm:w-[10.5rem]">
+        <div className="flex w-full items-center justify-between gap-3 sm:gap-4">
+          <div className="relative h-[7.5rem] w-[7.5rem] shrink-0 sm:h-[8.25rem] sm:w-[8.25rem]">
             <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
-              <circle cx="60" cy="60" r="42" fill="none" stroke="#f3eeec" strokeWidth="16" />
+              <circle cx="60" cy="60" r="42" fill="none" stroke="var(--wesal-border)" strokeWidth="16" />
               {donutArcs(HOUR_SEGMENTS).map((arc) => (
                 <circle
                   key={arc.key}

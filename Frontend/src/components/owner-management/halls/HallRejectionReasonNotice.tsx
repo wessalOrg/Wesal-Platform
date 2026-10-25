@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useHallRejectionReason } from "@/hooks/useHallRejectionReason";
@@ -56,7 +56,7 @@ export default function HallRejectionReasonNotice({
         </p>
         <Link
           href={ownerAdminMessagesPath(hallId)}
-          className="mt-1.5 inline-flex min-h-7 items-center rounded-lg border border-[#f1c0bb] bg-white px-2.5 text-[11px] font-semibold text-[#b42318] hover:bg-[#fff7f6]"
+          className="mt-1.5 inline-flex min-h-7 items-center rounded-lg border border-[#f1c0bb] bg-white px-2.5 text-[11px] font-semibold text-[#b42318] hover:bg-[var(--wesal-pink-soft)]"
         >
           {t("owner.hallRejection.contact")}
         </Link>

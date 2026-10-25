@@ -34,7 +34,7 @@ export default function OccasionServicesSection() {
           <div className="mx-auto max-w-2xl text-center">
             <h2
               id="occasion-services-heading"
-              className="text-2xl font-extrabold text-[var(--wesal-maroon)] sm:text-3xl"
+              className="wesal-section-heading text-2xl font-extrabold text-[var(--wesal-maroon)] sm:text-3xl"
             >
               {t("home.services.title")}
             </h2>
@@ -55,7 +55,7 @@ export default function OccasionServicesSection() {
               >
                 <article
                   dir={cardsFromLeft ? "rtl" : undefined}
-                  className="overflow-hidden rounded-2xl border border-white/80 bg-white shadow-[0_12px_30px_rgba(90,55,45,0.06)]"
+                  className="overflow-hidden rounded-2xl border-0 bg-[var(--wesal-white)] shadow-[0_12px_30px_rgba(90,55,45,0.06)]"
                 >
                   <div className="relative aspect-[16/10] overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -81,7 +81,7 @@ export default function OccasionServicesSection() {
                     </p>
                     <span
                       aria-hidden="true"
-                      className="occasion-service-chevron inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-muted)]"
+                      className="occasion-service-chevron inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-0 bg-[var(--wesal-pink-soft)] text-[var(--wesal-muted)]"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                         <path

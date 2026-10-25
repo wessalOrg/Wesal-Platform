@@ -116,7 +116,7 @@ export default function HallActionCard({
           alt=""
           width={36}
           height={36}
-          className="size-9 shrink-0 mix-blend-multiply"
+          className="hall-raster-icon size-9 shrink-0 mix-blend-multiply"
         />
         <span>{t("halls.details.bookingSummary")}</span>
       </h2>

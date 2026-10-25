@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo } from "next/font/google";
+import localFont from "next/font/local";
 import { AiAssistantProvider } from "@/components/assistant/AiAssistantProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import HallOwnerAudioAlerts from "@/components/halls/notifications/HallOwnerAudioAlerts";
@@ -26,12 +26,16 @@ const DEV_CURSOR_REF_GUARD =
   "(function(){function s(n){if(!n||n.nodeType!==1)return;if(n.hasAttribute('data-cursor-ref'))n.removeAttribute('data-cursor-ref');}function t(n){if(!n||n.nodeType!==1)return;s(n);var a=n.querySelectorAll('[data-cursor-ref]');for(var i=0;i<a.length;i++)a[i].removeAttribute('data-cursor-ref');}t(document.documentElement);var o=new MutationObserver(function(rs){for(var i=0;i<rs.length;i++){var r=rs[i];if(r.type==='attributes')s(r.target);var ns=r.addedNodes;for(var j=0;j<ns.length;j++)t(ns[j]);}});o.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['data-cursor-ref']});function stop(){t(document.documentElement);o.disconnect();}if(document.readyState==='complete')setTimeout(stop,1500);else window.addEventListener('load',function(){setTimeout(stop,1500);});})();";
 
 /**
- * Cairo is bundled at build time via next/font (self-hosted), so runtime
- * never waits on Google Fonts. Fallbacks stay in --font-wesal-sans.
+ * DIN Next LT Arabic (self-hosted). Only Regular is available locally;
+ * heavier weights reuse the same file so UI bold styles stay on this face.
  */
-const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
+const wesalSans = localFont({
+  src: [
+    { path: "../fonts/DINNextLTArabic-Regular.ttf", weight: "400", style: "normal" },
+    { path: "../fonts/DINNextLTArabic-Regular.ttf", weight: "500", style: "normal" },
+    { path: "../fonts/DINNextLTArabic-Regular.ttf", weight: "600", style: "normal" },
+    { path: "../fonts/DINNextLTArabic-Regular.ttf", weight: "700", style: "normal" },
+  ],
   display: "swap",
   variable: "--font-wesal-sans",
   fallback: ["Segoe UI", "Tahoma", "sans-serif"],
@@ -88,7 +92,7 @@ export default function RootLayout({
     <html
       lang="ar"
       dir="rtl"
-      className={`${cairo.variable} font-wesal-sans antialiased`}
+      className={`${wesalSans.variable} font-wesal-sans antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -106,7 +110,7 @@ export default function RootLayout({
         />
         <meta name="apple-mobile-web-app-title" content="وصال" />
       </head>
-      <body className={`${cairo.className} min-h-svh overflow-x-hidden font-sans`}>
+      <body className={`${wesalSans.className} min-h-svh overflow-x-hidden font-sans`}>
         <PwaRegister />
         <AuthProvider>
           <AudioPermissionProvider>

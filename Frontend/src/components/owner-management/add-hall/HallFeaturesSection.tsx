@@ -75,7 +75,7 @@ export default function HallFeaturesSection({
                       className={`flex min-w-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
                         selected
                           ? "border-[var(--wesal-maroon)] bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
-                          : "border-[var(--wesal-border)] bg-white text-[var(--wesal-text)] hover:border-[var(--wesal-maroon)]/40"
+                          : "border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white text-[var(--wesal-text)] hover:border-[var(--wesal-maroon)]/40"
                       } disabled:cursor-not-allowed disabled:opacity-60`}
                       onClick={() => toggleFeature(feature)}
                     >
@@ -83,7 +83,7 @@ export default function HallFeaturesSection({
                         className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                           selected
                             ? "border-[var(--wesal-maroon)] bg-[var(--wesal-maroon)] text-white"
-                            : "border-[var(--wesal-border)] bg-white"
+                            : "border-[color-mix(in_srgb,var(--wesal-maroon)_22%,var(--wesal-border))] bg-white"
                         }`}
                         aria-hidden="true"
                       >

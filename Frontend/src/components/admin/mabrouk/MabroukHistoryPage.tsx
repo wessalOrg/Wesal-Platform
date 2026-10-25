@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/i18n";
@@ -99,7 +99,7 @@ export default function MabroukHistoryPage() {
                 </button>
               </div>
               <div className="mt-2 px-1.5 md:px-0">
-                <details className="rounded-xl bg-[#fcfbf9]">
+                <details className="rounded-xl bg-[var(--wesal-cream)]">
                   <summary className="flex min-h-10 w-full cursor-pointer items-center justify-center px-3 text-sm font-bold text-[var(--wesal-maroon-dark)] md:inline-flex md:w-auto md:justify-start">
                     {t("admin.mabrouk.history.viewVersion")}
                   </summary>

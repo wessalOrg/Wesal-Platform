@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -275,7 +275,7 @@ function GapDetail({
       <h4 className="mt-5 text-xs font-bold text-[var(--wesal-text)]">{t("admin.mabrouk.gaps.samples")}</h4>
       <ul className="mt-2 space-y-2">
         {gap.sampleQuestions.map((sample, index) => (
-          <li key={index} className="rounded-xl bg-[#fcfbf9] px-3 py-2 text-sm leading-6 text-[var(--wesal-muted)]" dir="auto">{sample}</li>
+          <li key={index} className="rounded-xl bg-[var(--wesal-cream)] px-3 py-2 text-sm leading-6 text-[var(--wesal-muted)]" dir="auto">{sample}</li>
         ))}
       </ul>
       {gap.status === "New" || gap.status === "Reviewed" ? (

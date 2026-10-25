@@ -124,7 +124,7 @@ export default function HallMediaSection({
             </button>
             {preview ? (
               <span className="inline-flex min-w-0 items-center gap-2">
-                <span className="relative inline-flex h-14 w-20 shrink-0 overflow-hidden rounded-lg border border-[var(--wesal-border)] bg-white/50">
+                <span className="relative inline-flex h-14 w-20 shrink-0 overflow-hidden rounded-lg border-0 bg-white/50">
                   {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
                   <img
                     src={preview.url}
@@ -142,7 +142,7 @@ export default function HallMediaSection({
                 </button>
               </span>
             ) : currentCoverUrl ? (
-              <span className="relative inline-flex h-14 w-20 shrink-0 overflow-hidden rounded-lg border border-[var(--wesal-border)] bg-white/50">
+              <span className="relative inline-flex h-14 w-20 shrink-0 overflow-hidden rounded-lg border-0 bg-white/50">
                 <HallImage
                   src={currentCoverUrl}
                   alt=""

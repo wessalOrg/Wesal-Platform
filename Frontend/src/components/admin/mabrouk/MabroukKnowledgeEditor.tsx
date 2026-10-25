@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { useT } from "@/i18n";
@@ -224,7 +224,7 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
         </header>
 
         <div className="space-y-5 p-4 sm:p-6">
-          <section className="rounded-2xl border border-[var(--wesal-border)] bg-[#fcfbf9] p-4">
+          <section className="rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-cream)] p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.editor.aiButton")}</h3>

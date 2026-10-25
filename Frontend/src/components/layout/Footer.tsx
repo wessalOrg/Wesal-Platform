@@ -28,17 +28,17 @@ const SUPPORT_LINKS = [
 ] as const;
 
 const sectionTitleClass =
-  "mb-3 inline-block w-full border-b-2 border-rose-300/50 pb-1 text-base font-bold text-[var(--wesal-maroon)] md:text-lg lg:mb-0 lg:border-b-0 lg:pb-0 lg:text-xs lg:font-extrabold";
+  "footer-section-title mb-2 inline-block w-full border-b-2 border-rose-300/50 pb-0.5 text-sm font-bold text-[var(--wesal-maroon-dark)] md:text-base lg:mb-0 lg:border-b-0 lg:pb-0 lg:text-xs lg:font-bold";
 
 const linkListClass =
-  "flex flex-col items-center gap-2.5 text-center text-sm leading-6 text-[var(--wesal-muted)] lg:mt-2.5 lg:items-start lg:gap-1.5 lg:text-start lg:text-sm";
+  "footer-link-list flex flex-col items-center gap-1.5 text-center text-xs leading-5 text-[var(--wesal-muted)] lg:mt-1.5 lg:items-start lg:gap-1 lg:text-start lg:text-xs";
 
 export default function Footer() {
   const t = useT();
   const addHall = useAddHallCta();
 
   return (
-    <footer className="wesal-footer relative isolate overflow-hidden border-t border-[var(--wesal-border)] pb-2 lg:pb-0">
+    <footer className="wesal-footer relative isolate overflow-hidden border-t-0 pb-1.5 lg:pb-0">
       <div className="footer-marble" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -50,15 +50,15 @@ export default function Footer() {
         <div className="footer-marble-wash" />
       </div>
 
-      <div className="container-wesal relative z-10 py-7 sm:py-8">
-        <div className="grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-5">
+      <div className="container-wesal relative z-10 py-4 sm:py-5">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-3.5">
           <div className="col-span-2 flex flex-col items-center text-center md:items-start md:text-start md:-ms-7 lg:col-span-1 lg:-ms-20">
-            <WesalBrandLockup logoClassName="h-8 w-auto" nameClassName="text-base" />
-            <p className="mt-2.5 max-w-xs text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm sm:leading-7">
+            <WesalBrandLockup logoClassName="h-7 w-auto" nameClassName="text-sm" />
+            <p className="footer-copy mt-1.5 max-w-xs text-[0.7rem] leading-5 text-[var(--wesal-muted)] sm:text-xs sm:leading-5">
               {t("brand.tagline")}
             </p>
 
-            <div className="mt-3.5 flex items-center justify-center gap-1.5 md:justify-start">
+            <div className="mt-2.5 flex items-center justify-center gap-1 md:justify-start">
               <SocialLink href="https://www.facebook.com" label={t("footer.facebook")}>
                 <FacebookIcon />
               </SocialLink>
@@ -87,7 +87,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div className="flex flex-col gap-2.5 px-2 ps-5 text-center lg:gap-4 lg:px-0 lg:text-start">
+          <div className="flex flex-col gap-2 px-2 ps-5 text-center lg:gap-2.5 lg:px-0 lg:text-start">
             <div>
               <h3 className={sectionTitleClass}>{t("footer.account")}</h3>
               <ul className={linkListClass}>
@@ -136,10 +136,10 @@ export default function Footer() {
 
           <div
             id="contact"
-            className="col-span-2 mt-1 scroll-mt-20 pt-2 text-center lg:col-span-1 lg:mt-0 lg:pt-0 lg:text-start"
+            className="col-span-2 mt-1 scroll-mt-20 pt-2 text-start lg:col-span-1 lg:mt-0 lg:pt-0"
           >
-            <h3 className={`${sectionTitleClass} mx-auto text-center`}>{t("footer.contact")}</h3>
-            <ul className={`${linkListClass} mx-3 gap-2.5 text-center lg:mx-0 lg:gap-2 lg:text-start`}>
+            <h3 className={`${sectionTitleClass} text-start`}>{t("footer.contact")}</h3>
+            <ul className={`${linkListClass} mx-0 items-start gap-2.5 text-start lg:gap-2`}>
               <li>
                 <ContactRow icon={<PinIcon />}>
                   <span>{t("footer.location")}</span>
@@ -175,9 +175,9 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="container-wesal relative z-10 mb-0 pb-2 pt-1">
-        <div className="mb-2 h-px w-full bg-[#e6d5c8]" />
-        <div className="wesal-footer-legal flex flex-nowrap items-center justify-between gap-2 text-[11px] text-[var(--wesal-muted)] sm:gap-3 sm:text-xs">
+      <div className="container-wesal relative z-10 mb-0 pb-1.5 pt-0.5">
+        <div className="footer-divider mb-1.5 h-px w-full bg-[var(--wesal-border)]" />
+        <div className="wesal-footer-legal flex flex-nowrap items-center justify-between gap-2 text-[10px] text-[var(--wesal-muted)] sm:gap-2.5 sm:text-[11px]">
           <p className="min-w-0 shrink whitespace-nowrap">
             © {new Date().getFullYear()} {t("brand.name")} — {t("footer.rights")}
           </p>
@@ -199,7 +199,7 @@ function ContactRow({
   children: ReactNode;
 }) {
   return (
-    <span className="mx-auto flex w-full items-center justify-center gap-2 lg:mx-0 lg:justify-start">
+    <span className="flex w-full items-center justify-start gap-2">
       <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[var(--wesal-maroon)]">
         {icon}
       </span>
@@ -223,7 +223,7 @@ function SocialLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--wesal-border)] bg-[var(--wesal-footer)] text-[var(--wesal-maroon)] transition-colors hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
+      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--wesal-border)] bg-[var(--wesal-footer)] text-[var(--wesal-maroon)] transition-colors hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
     >
       {children}
     </a>

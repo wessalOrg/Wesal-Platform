@@ -115,7 +115,7 @@ export default function HallYouTubeEmbed({
     <>
       {variant === "poster" ? (
         <section
-          className="overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-5"
+          className="overflow-hidden rounded-2xl border-0 bg-white p-4 sm:p-5"
           data-testid="hall-youtube"
         >
           <p className="mb-2 text-xs font-semibold text-[var(--wesal-muted)]">
@@ -125,7 +125,7 @@ export default function HallYouTubeEmbed({
             type="button"
             onClick={openModal}
             aria-label={t("halls.details.youtubeWatch")}
-            className="group relative block aspect-video w-full overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-black"
+            className="group relative block aspect-video w-full overflow-hidden rounded-xl border-0 bg-black"
             data-testid="hall-youtube-open"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- remote YouTube poster */}

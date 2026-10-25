@@ -7,13 +7,14 @@
   --wesal-maroon-soft: #d49a9d;
   /* Logo mark + وصال word — same as site maroon */
   --wesal-brand-ink: var(--wesal-maroon);
+  --home-category-panel: var(--wesal-white);
   --wesal-pink: #f5e8e4;
   --wesal-pink-soft: #fcf9f7;
   --wesal-cream: #fcfbf9;
   --wesal-footer: #f6f1ec;
   --wesal-text: #3d342e;
   --wesal-muted: #8a7a70;
-  --wesal-border: #eee6de;
+  --wesal-border: #e8dfd8;
   --wesal-white: #ffffff;
   --wesal-mauve: #c17b7f;
   --wesal-nude: #d9a99a;
@@ -22,11 +23,79 @@
   --wesal-ivory: #ffffff;
   --background: var(--wesal-cream);
   --foreground: var(--wesal-text);
-  /* --font-wesal-sans is set by next/font (Cairo) on <html>; system stack is the fallback */
+  /* --font-wesal-sans is set by next/font (DIN Next LT Arabic) on <html>; system stack is the fallback */
 }
 
 .font-wesal-sans {
   font-family: var(--font-wesal-sans, "Segoe UI", Tahoma, sans-serif);
+}
+
+/* DIN Next LT Arabic reads a bit small — bump root size */
+html {
+  font-size: 112.5%; /* 18px when browser default is 16px */
+}
+
+/* Regular file only — clamp extrabold to bold */
+.font-extrabold {
+  font-weight: 700;
+}
+
+/* Headings: bold + slightly larger for DIN Next (keeps Tailwind text-* sizes) */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 700 !important;
+  letter-spacing: 0.015em;
+  /* DIN Next Regular has no true bold — stroke makes section titles read bold */
+  -webkit-text-stroke: 0.55px currentColor;
+  paint-order: stroke fill;
+}
+
+/* Common section-title patterns across home / halls / dashboards */
+.wesal-section-heading,
+.hall-section-title,
+.how-heading,
+.benefits-heading,
+.seeker-home-section-title,
+.admin-ops-section-title,
+.footer-section-title,
+.seeker-settings-section-title,
+.owner-halls-section-title,
+[class*="section-title"] {
+  font-weight: 700 !important;
+  -webkit-text-stroke: 0.55px currentColor;
+  paint-order: stroke fill;
+}
+
+/* Default sizes only when no Tailwind text-* / dashboard section title */
+h1:not([class*="text-"]):not(.seeker-welcome-title) {
+  font-size: 1.85rem;
+  line-height: 1.25;
+}
+
+h2:not([class*="text-"]):not(.seeker-home-section-title):not(.admin-ops-section-title):not(.seeker-settings-section-title):not(.owner-halls-section-title) {
+  font-size: 1.55rem;
+  line-height: 1.3;
+}
+
+h3:not([class*="text-"]) {
+  font-size: 1.28rem;
+  line-height: 1.35;
+}
+
+h4:not([class*="text-"]) {
+  font-size: 1.12rem;
+  line-height: 1.4;
+}
+
+/* Nudge headings that already have a text-* size — skip dashboard section titles */
+h1[class*="text-"]:not(.seeker-welcome-title),
+h2[class*="text-"]:not(.seeker-home-section-title):not(.admin-ops-section-title),
+h3[class*="text-"]:not(.home-category-title) {
+  zoom: 1.07;
 }
 
 @theme inline {
@@ -45,11 +114,107 @@ body {
   background:
     radial-gradient(ellipse 70% 40% at 100% 0%, rgba(193, 123, 127, 0.06), transparent 55%),
     radial-gradient(ellipse 50% 35% at 0% 100%, rgba(196, 160, 92, 0.05), transparent 55%),
-    linear-gradient(180deg, #ffffff 0%, var(--wesal-cream) 55%, #f8f3ee 100%);
+    linear-gradient(180deg, var(--wesal-white) 0%, var(--wesal-cream) 55%, #f8f3ee 100%);
   color: var(--foreground);
   font-family: var(--font-wesal-sans, "Segoe UI", Tahoma, sans-serif);
 }
 
+/* ── Dark theme ─────────────────────────────────────────── */
+/* Decorative / ink textures — re-tint for dark surfaces */
+/* Content photos (halls, galleries) — soft dim, keep natural color */
+/* Avatars stay natural */
+/* Brand mark — keep Wesal maroon in dark (not white invert) */
+/* Brand word next to logo — force visible bold with DIN Next Regular */
+.wesal-brand-lockup-name {
+  font-weight: 700 !important;
+  -webkit-text-stroke: 0.45px currentColor;
+  paint-order: stroke fill;
+}
+
+.hero-copy-eyebrow {
+  font-weight: 700 !important;
+  -webkit-text-stroke: 0.45px currentColor;
+  paint-order: stroke fill;
+}
+
+/* Home category card titles — strong visible bold with DIN Next Regular */
+h3.home-category-title,
+.home-category-title,
+.home-category-subtitle {
+  font-weight: 700 !important;
+  -webkit-text-stroke: 0.7px currentColor;
+  paint-order: stroke fill;
+  zoom: 1;
+}
+
+h3.home-category-title,
+.home-category-title {
+  font-size: 1.05rem !important;
+  line-height: 1.35 !important;
+  color: var(--wesal-maroon-dark) !important;
+}
+
+/* Section headings that need visible bold with DIN Next Regular */
+.wesal-section-heading,
+.hall-details-name,
+.hall-details-tab {
+  font-weight: 700 !important;
+  -webkit-text-stroke: 0.55px currentColor;
+  paint-order: stroke fill;
+  zoom: 1;
+}
+
+.hall-details-tab {
+  -webkit-text-stroke: 0.4px currentColor;
+}
+
+/* Desktop + mobile navbar links — clear gray, not near-black */
+.wesal-navbar-links a,
+.wesal-navbar-mobile-links a {
+  font-weight: 700 !important;
+  color: #8a7a70 !important;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
+}
+
+.wesal-navbar-links a:hover,
+.wesal-navbar-mobile-links a:hover,
+.wesal-navbar-links a.text-\[var\(--wesal-maroon\)\],
+.wesal-navbar-links a[class*="underline"] {
+  color: var(--wesal-maroon) !important;
+}
+
+/* White variant still inverts for dark surfaces that need a light mark */
+/* ── Icons: always visible in dark mode ── */
+/* JPG “icons” that used multiply on cream — keep visible on dark cards */
+/* Pin / meta icons that inherit muted color */
+.theme-switch-trigger--icon {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
+}
+
+/* Hard-coded light surfaces → dark tokens */
+/* Forms, panels, dialogs, menus */
+/* Soft status chips keep readable contrast on dark */
+/* Hero — dark satin panel + softer pearl overlays */
+/* Home category cards — dark plate + readable icon bubble */
+/* Fillets show photo through transparent corner → light triangles in dark */
+/* Hall catalog cards — readable tags + book CTA on dark */
+/* Book now CTA — visible bold with DIN Next Regular */
+.hall-card-book,
+[data-testid="hall-book-button"],
+[data-testid="hall-card-book-now"] {
+  font-weight: 800 !important;
+  -webkit-text-stroke: 0.4px currentColor;
+  paint-order: stroke fill;
+}
+
+/* Scrollbars */
 html.wesal-scroll-locked,
 body.wesal-scroll-locked {
   overflow: hidden !important;
@@ -113,7 +278,9 @@ h6 {
   background: var(--wesal-maroon);
   padding-inline: 1.15rem;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
   color: #fff;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset;
   transition:
@@ -143,10 +310,12 @@ h6 {
   border-radius: 0.75rem;
   cursor: pointer;
   border: 1.5px solid var(--wesal-maroon);
-  background: #fff;
+  background: var(--wesal-white);
   padding-inline: 1.15rem;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
   color: var(--wesal-maroon);
   transition:
     transform 200ms ease,
@@ -237,11 +406,11 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .wesal-brand-lockup {
-  color: var(--wesal-maroon);
+  color: var(--wesal-brand-ink);
 }
 
 .wesal-brand-lockup:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 45%, white);
+  outline: 2px solid color-mix(in srgb, var(--wesal-brand-ink) 45%, var(--wesal-white));
   outline-offset: 3px;
   border-radius: 0.5rem;
 }
@@ -493,7 +662,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   background:
     radial-gradient(ellipse 90% 70% at 70% 40%, rgba(217, 169, 154, 0.1), transparent 55%),
     radial-gradient(ellipse 70% 60% at 20% 70%, rgba(196, 160, 92, 0.08), transparent 50%),
-    radial-gradient(ellipse at top, #ffffff 0%, #fcfbf9 48%, #f6f1ec 100%);
+    radial-gradient(ellipse at top, var(--wesal-white) 0%, var(--wesal-cream) 48%, var(--wesal-footer) 100%);
 }
 
 .hero-stage::before,
@@ -547,7 +716,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 /* Bridal satin ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â lighter off-white */
 .hero-satin {
-  background-color: #fcfbf9;
+  background-color: var(--wesal-cream);
   background-image:
     radial-gradient(
       ellipse 90% 80% at 40% 45%,
@@ -567,11 +736,11 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     ),
     linear-gradient(
       150deg,
-      #ffffff 0%,
-      #fcfbf9 30%,
-      #f7f0ea 55%,
-      #fcfaf7 78%,
-      #f8f4ef 100%
+      var(--wesal-white) 0%,
+      var(--wesal-cream) 30%,
+      var(--wesal-pink-soft) 55%,
+      var(--wesal-cream) 78%,
+      var(--wesal-footer) 100%
     );
 }
 
@@ -672,6 +841,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     );
 }
 
+/* Hero photo — soft dim in dark mode to match the site */
 .hero-kosha-glow {
   pointer-events: none;
   position: absolute;
@@ -1259,7 +1429,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .how-section {
-  background: #fcfaf8;
+  background: var(--wesal-cream);
 }
 
 .how-section-bg {
@@ -1293,6 +1463,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     radial-gradient(ellipse 55% 45% at 50% 8%, rgba(255, 255, 255, 0.35), transparent 70%);
 }
 
+/* How-it-works — let marble show through in dark */
 .how-sheen {
   position: absolute;
   inset: 0;
@@ -1365,7 +1536,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .how-card:hover {
   transform: translateY(-10px) scale(1.015);
-  border-color: rgba(196, 160, 92, 0.45);
+  border-color: transparent;
   box-shadow: 0 22px 44px rgba(90, 55, 45, 0.14);
 }
 
@@ -1373,12 +1544,14 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   pointer-events: none;
   position: absolute;
   inset: -40% auto -40% -30%;
-  width: 40%;
+  z-index: 2;
+  width: 42%;
   background: linear-gradient(
     90deg,
     transparent,
     rgba(255, 255, 255, 0.55),
-    rgba(226, 201, 138, 0.22),
+    rgba(226, 201, 138, 0.35),
+    rgba(212, 160, 163, 0.22),
     transparent
   );
   opacity: 0;
@@ -1387,6 +1560,18 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .how-card:hover .how-card-shine {
   opacity: 1;
   animation: how-card-shine 0.9s ease-out;
+}
+
+.how-card:active .how-card-shine,
+.how-card.is-flashing .how-card-shine {
+  opacity: 1;
+  animation: how-card-shine 0.7s ease-out;
+}
+
+.how-card:active {
+  transform: translateY(-4px) scale(0.99);
+  border-color: transparent;
+  box-shadow: 0 18px 40px rgba(90, 55, 45, 0.16);
 }
 
 .how-card-icon {
@@ -1626,7 +1811,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .owner-mac-screen {
   overflow: hidden;
   border-radius: 0.18rem;
-  background: #fff;
+  background: var(--wesal-white);
   aspect-ratio: 16 / 10.2;
 }
 
@@ -1683,7 +1868,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .owner-iphone-shell {
   position: relative;
   border-radius: 1.55rem;
-  background: linear-gradient(160deg, #ffffff 0%, #f3f2f0 55%, #e7e5e1 100%);
+  background: linear-gradient(160deg, var(--wesal-white) 0%, var(--wesal-pink) 55%, var(--wesal-border) 100%);
   padding: 0.38rem;
   box-shadow:
     0 22px 40px rgba(40, 30, 22, 0.28),
@@ -1706,7 +1891,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .owner-iphone-screen {
   overflow: hidden;
   border-radius: 1.22rem;
-  background: #fff;
+  background: var(--wesal-white);
   aspect-ratio: 9 / 17.4;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
@@ -1715,8 +1900,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .dash {
   display: flex;
   height: 100%;
-  background: #f3f1ef;
-  color: #2f2a26;
+  background: var(--wesal-pink);
+  color: var(--wesal-text);
   font-size: 0.52rem;
   direction: rtl;
 }
@@ -1788,7 +1973,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   margin: 0;
   font-size: 0.62rem;
   font-weight: 800;
-  color: #2f2a26;
+  color: var(--wesal-text);
   line-height: 1.2;
 }
 
@@ -1804,7 +1989,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   justify-content: center;
   min-height: 2rem;
   border-radius: 0.42rem;
-  background: #fff;
+  background: var(--wesal-white);
   padding: 0.3rem 0.34rem;
   box-shadow: 0 1px 3px rgba(40, 30, 22, 0.05);
   border: 1px solid rgba(40, 30, 22, 0.04);
@@ -1812,7 +1997,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .dash-card span {
   display: block;
-  color: #8a827a;
+  color: var(--wesal-muted);
   font-size: 0.36rem;
   line-height: 1.25;
   white-space: nowrap;
@@ -1825,7 +2010,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   margin-top: 0.16rem;
   font-size: 0.58rem;
   line-height: 1.1;
-  color: #2f2a26;
+  color: var(--wesal-text);
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
@@ -1845,7 +2030,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   flex-direction: column;
   min-height: 0;
   border-radius: 0.45rem;
-  background: #fff;
+  background: var(--wesal-white);
   padding: 0.35rem 0.4rem;
   box-shadow: 0 1px 3px rgba(40, 30, 22, 0.05);
   border: 1px solid rgba(40, 30, 22, 0.04);
@@ -1855,7 +2040,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   margin: 0 0 0.28rem;
   font-size: 0.44rem;
   font-weight: 700;
-  color: #3d342e;
+  color: var(--wesal-text);
   line-height: 1.3;
 }
 
@@ -1888,7 +2073,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   gap: 0.35rem;
   border-top: 1px solid #f0ece8;
   padding: 0.28rem 0;
-  color: #6f6861;
+  color: var(--wesal-muted);
   font-size: 0.42rem;
   line-height: 1.2;
 }
@@ -1910,13 +2095,13 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #3d342e;
+  color: var(--wesal-text);
   font-weight: 700;
   font-size: 0.42rem;
 }
 
 .dash-row-text small {
-  color: #9a9188;
+  color: var(--wesal-muted);
   font-size: 0.34rem;
   white-space: nowrap;
   overflow: hidden;
@@ -1952,7 +2137,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 /* Phone app UI */
 .pui {
   height: 100%;
-  background: #fff;
+  background: var(--wesal-white);
   display: flex;
   flex-direction: column;
 }
@@ -1965,7 +2150,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .pui-brand {
   font-size: 0.62rem;
   font-weight: 800;
-  color: #2f2a26;
+  color: var(--wesal-text);
 }
 
 .pui-hero {
@@ -1992,7 +2177,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   font-size: 0.58rem;
   font-weight: 800;
   line-height: 1.3;
-  color: #2f2a26;
+  color: var(--wesal-text);
 }
 
 .pui-title span {
@@ -2019,13 +2204,13 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   width: 1.05rem;
   height: 1.05rem;
   border-radius: 9999px;
-  background: #f3f0ec;
+  background: var(--wesal-pink);
   border: 1px solid #ebe6e0;
 }
 
 .pui-ico span {
   font-size: 0.36rem;
-  color: #6f6861;
+  color: var(--wesal-muted);
 }
 
 .pui-serv {
@@ -2033,7 +2218,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   margin-bottom: 0.15rem;
   font-size: 0.48rem;
   font-weight: 700;
-  color: #2f2a26;
+  color: var(--wesal-text);
 }
 
 .pui ul {
@@ -2046,7 +2231,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   padding: 0.18rem 0;
   border-top: 1px solid #f0ece7;
   font-size: 0.42rem;
-  color: #6f6861;
+  color: var(--wesal-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2069,10 +2254,18 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   }
 }
 
-
 /* Footer static silk background */
 .wesal-footer {
-  background: #f2e6e2;
+  background: var(--wesal-pink);
+}
+
+/* Section titles — heavier so they read clearly with DIN Next Regular */
+.wesal-footer .footer-section-title,
+.wesal-footer h3 {
+  font-weight: 700 !important;
+  color: var(--wesal-maroon-dark) !important;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
 }
 
 .footer-marble {
@@ -2174,7 +2367,6 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   }
 }
 
-
 .reveal {
   opacity: 0;
   transform: translateY(24px);
@@ -2212,7 +2404,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   background:
     radial-gradient(ellipse 48% 42% at 0% 0%, rgba(193, 123, 127, 0.28), transparent 68%),
     radial-gradient(ellipse 40% 36% at 100% 100%, rgba(196, 160, 92, 0.22), transparent 70%),
-    linear-gradient(165deg, #f8e4df 0%, #fbf3ef 48%, #f3ddd8 100%);
+    linear-gradient(165deg, var(--wesal-pink) 0%, var(--wesal-pink-soft) 48%, var(--wesal-cream) 100%);
 }
 
 .occasion-services-bg {
@@ -2332,7 +2524,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .occasion-story {
-  background: #fffaf4;
+  background: var(--wesal-pink-soft);
   overflow: hidden;
 }
 
@@ -2364,6 +2556,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   height: auto;
 }
 
+/* Story collage — transparent PNG plate; soft tone only (no white box) */
 @media (min-width: 640px) {
   .story-layout {
     padding-inline: 2rem;
@@ -2422,7 +2615,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .story-stat-card {
   border-radius: 1.25rem;
-  background: #fff;
+  background: var(--wesal-white);
   padding: 1.05rem 0.7rem;
   text-align: center;
   box-shadow: 0 10px 28px rgba(120, 80, 70, 0.07);
@@ -2449,7 +2642,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .consult-section {
-  background: #fbf6f1;
+  background: var(--wesal-pink-soft);
 }
 
 .consult-layout {
@@ -2461,7 +2654,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .consult-form,
 .consult-aside {
   border-radius: 1.75rem;
-  background: #fff;
+  background: var(--wesal-white);
   padding: 1.25rem;
   box-shadow: 0 18px 40px rgba(120, 80, 70, 0.08);
 }
@@ -2476,7 +2669,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   width: 100%;
   border-radius: 0.9rem;
   border: 1px solid var(--wesal-border);
-  background: #fff;
+  background: var(--wesal-white);
   padding: 0.8rem 0.95rem;
   color: var(--wesal-text);
   outline: none;
@@ -2514,7 +2707,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   width: 18.5rem;
   border-radius: 1.15rem;
   border: 1px solid var(--wesal-border);
-  background: #fff;
+  background: var(--wesal-white);
   padding: 0.85rem;
   box-shadow: 0 18px 40px rgba(120, 80, 70, 0.14);
 }
@@ -2626,7 +2819,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   inset-inline: 0;
   border-radius: 0.9rem;
   border: 1px solid var(--wesal-border);
-  background: #fff;
+  background: var(--wesal-white);
   padding: 0.35rem;
   box-shadow: 0 18px 40px rgba(120, 80, 70, 0.14);
 }
@@ -2731,12 +2924,12 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   flex: none;
   place-items: center;
   border-radius: 999px;
-  background: #f6efe4;
+  background: var(--wesal-pink);
   color: #c4a05c;
 }
 
 .consult-point-icon--rose {
-  background: #f8e8e6;
+  background: var(--wesal-pink);
   color: #c17b7f;
 }
 
@@ -2849,7 +3042,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .wesal-navbar-mobile--overlay {
-  background-color: #fcfbf9;
+  background-color: var(--wesal-cream);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -2906,7 +3099,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .wesal-navbar-mobile {
   position: relative;
   isolation: isolate;
-  background-color: #fcfbf9;
+  background-color: var(--wesal-cream);
   backdrop-filter: blur(12px);
 }
 
@@ -2932,6 +3125,96 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .wesal-navbar .btn-outline,
 .wesal-navbar .btn-primary {
   max-width: 100%;
+  font-weight: 800 !important;
+  -webkit-text-stroke: 0.4px currentColor;
+  paint-order: stroke fill;
+}
+
+/* Compact guest/auth tools in the top navbar */
+.wesal-navbar .theme-switch-trigger--icon {
+  width: 2.25rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+}
+
+.wesal-navbar .theme-switch-trigger--icon .theme-switch-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.wesal-navbar .lang-switch-trigger:not(.wesal-navbar-mobile-lang) {
+  min-height: 2.25rem;
+  gap: 0.35rem;
+  border-radius: 0.7rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.wesal-navbar .lang-switch-trigger:not(.wesal-navbar-mobile-lang) > span {
+  gap: 0.35rem;
+}
+
+.wesal-navbar .lang-switch-trigger:not(.wesal-navbar-mobile-lang) .lang-switch-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.wesal-navbar .wesal-navbar-notify-btn {
+  height: 2.25rem;
+  width: 2.25rem;
+  min-height: 2.25rem;
+  min-width: 2.25rem;
+}
+
+.wesal-navbar .wesal-navbar-notify-btn svg,
+.wesal-navbar .seeker-dash-notify-bell svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.wesal-navbar .seeker-notify-badge {
+  top: 0.22rem;
+  inset-inline-end: 0.22rem;
+  min-width: 0.95rem;
+  height: 0.95rem;
+  font-size: 0.55rem;
+  padding-inline: 0.18rem;
+  box-shadow: 0 0 0 1.5px var(--wesal-white, #fff);
+}
+
+.wesal-navbar [data-testid="navbar-authenticated"] {
+  gap: 0.45rem;
+}
+
+.wesal-navbar .wesal-account-chip {
+  gap: 0.4rem;
+  padding: 0.1rem;
+}
+
+.wesal-navbar .wesal-account-avatar {
+  height: 2.25rem;
+  width: 2.25rem;
+  font-size: 0.68rem;
+  border-width: 1.5px;
+}
+
+.wesal-navbar .wesal-account-chip-name {
+  max-width: min(10.5rem, 42vw);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+@media (min-width: 1024px) {
+  .wesal-navbar .wesal-account-chip-name {
+    max-width: 12rem;
+    font-size: 0.78rem;
+  }
+}
+
+.wesal-navbar .wesal-account-chip:hover .wesal-account-avatar,
+.wesal-navbar .wesal-account-chip[aria-expanded="true"] .wesal-account-avatar {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--wesal-maroon) 12%, transparent);
 }
 
 .wesal-account-avatar {
@@ -2942,7 +3225,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   justify-content: center;
   overflow: hidden;
   border-radius: 999px;
-  border: 2px solid color-mix(in srgb, var(--wesal-maroon) 35%, white);
+  border: 2px solid color-mix(in srgb, var(--wesal-maroon) 35%, var(--wesal-white));
   background: var(--wesal-pink);
   color: var(--wesal-maroon);
   font-size: 0.8rem;
@@ -2965,7 +3248,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .wesal-account-avatar:hover,
 .wesal-account-avatar[aria-expanded="true"] {
-  background: color-mix(in srgb, var(--wesal-pink) 80%, white);
+  background: color-mix(in srgb, var(--wesal-pink) 80%, var(--wesal-white));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--wesal-maroon) 12%, transparent);
 }
 
@@ -2985,12 +3268,12 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .wesal-account-chip:hover .wesal-account-avatar,
 .wesal-account-chip[aria-expanded="true"] .wesal-account-avatar {
-  background: color-mix(in srgb, var(--wesal-pink) 80%, white);
+  background: color-mix(in srgb, var(--wesal-pink) 80%, var(--wesal-white));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--wesal-maroon) 12%, transparent);
 }
 
 .wesal-account-chip:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 45%, white);
+  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 45%, var(--wesal-white));
   outline-offset: 2px;
 }
 
@@ -3015,8 +3298,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .wesal-account-menu {
   overflow: hidden;
   border-radius: 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, white);
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, var(--wesal-white));
+  background: var(--wesal-white);
   box-shadow:
     0 16px 36px rgba(60, 35, 30, 0.12),
     0 4px 12px rgba(60, 35, 30, 0.05);
@@ -3029,7 +3312,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   align-items: center;
   gap: 0.75rem;
   padding: 0.95rem 1rem 0.85rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--wesal-border) 75%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--wesal-border) 75%, var(--wesal-white));
 }
 
 .wesal-account-menu-head-avatar {
@@ -3041,8 +3324,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   justify-content: center;
   overflow: hidden;
   border-radius: 999px;
-  border: 1.5px solid color-mix(in srgb, var(--wesal-border) 80%, white);
-  background: color-mix(in srgb, var(--wesal-pink) 70%, white);
+  border: 1.5px solid color-mix(in srgb, var(--wesal-border) 80%, var(--wesal-white));
+  background: color-mix(in srgb, var(--wesal-pink) 70%, var(--wesal-white));
   color: var(--wesal-maroon);
   font-size: 0.8rem;
   font-weight: 800;
@@ -3105,7 +3388,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .wesal-account-menu-item:hover,
 .wesal-account-menu-item:focus-visible {
-  background: color-mix(in srgb, var(--wesal-pink) 72%, white);
+  background: color-mix(in srgb, var(--wesal-pink) 72%, var(--wesal-white));
   outline: none;
 }
 
@@ -3159,7 +3442,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .wesal-account-menu-footer {
-  border-top: 1px solid color-mix(in srgb, var(--wesal-border) 75%, white);
+  border-top: 1px solid color-mix(in srgb, var(--wesal-border) 75%, var(--wesal-white));
   padding: 0.55rem;
 }
 
@@ -3198,7 +3481,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .wesal-navbar-mobile .wesal-account-menu {
   box-shadow: none;
-  background: #fff;
+  background: var(--wesal-white);
 }
 
 .wesal-navbar-mobile .wesal-account-menu-head {
@@ -3355,6 +3638,11 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   animation: hall-lightbox-panel-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.appointment-saved-art {
+  display: block;
+  filter: none;
+}
+
 @keyframes hall-lightbox-in {
   from {
     opacity: 0;
@@ -3410,8 +3698,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .owner-mgmt-sidebar {
   border-radius: 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, white);
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, var(--wesal-white));
+  background: var(--wesal-white);
   padding: 1rem 0.85rem;
   box-shadow: 0 8px 22px rgba(90, 55, 45, 0.045);
   min-width: 0;
@@ -3428,7 +3716,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     width: min(18rem, 88vw);
     max-width: 18rem;
     border-radius: 0;
-    border-inline-end: 1px solid color-mix(in srgb, var(--wesal-border) 82%, white);
+    border-inline-end: 1px solid color-mix(in srgb, var(--wesal-border) 82%, var(--wesal-white));
     padding-top: 1.15rem;
     overflow-y: auto;
     overscroll-contain: contain;
@@ -3490,10 +3778,12 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .owner-mgmt-sidebar-brand {
   margin: 0 0 0.85rem;
   padding: 0 0.55rem 0.75rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--wesal-border) 80%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--wesal-border) 80%, var(--wesal-white));
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 800 !important;
   color: var(--wesal-maroon);
+  -webkit-text-stroke: 0.5px currentColor;
+  paint-order: stroke fill;
 }
 
 .owner-mgmt-sidebar-list {
@@ -3522,17 +3812,17 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .owner-mgmt-sidebar-link:hover {
-  background: color-mix(in srgb, var(--wesal-pink-soft) 88%, white);
+  background: color-mix(in srgb, var(--wesal-pink-soft) 88%, var(--wesal-white));
   color: var(--wesal-maroon);
 }
 
 .owner-mgmt-sidebar-link:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
 .owner-mgmt-sidebar-link--active {
-  background: color-mix(in srgb, var(--wesal-pink) 70%, white);
+  background: color-mix(in srgb, var(--wesal-pink) 70%, var(--wesal-white));
   color: var(--wesal-maroon);
 }
 
@@ -3611,8 +3901,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   min-height: 2.75rem;
   width: 100%;
   border-radius: 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, white);
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, var(--wesal-white));
+  background: var(--wesal-white);
   padding: 0.55rem 0.9rem;
   font-size: 0.9rem;
   font-weight: 700;
@@ -3621,7 +3911,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .owner-mgmt-menu-trigger:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
@@ -3811,7 +4101,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   min-width: 0;
   flex: 1 1 auto;
   border-radius: 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, white);
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, var(--wesal-white));
   padding: 0.55rem 0.9rem;
   font-size: 0.88rem;
   font-weight: 700;
@@ -3831,18 +4121,18 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .owner-hall-section-nav-link:hover {
-  background: color-mix(in srgb, var(--wesal-pink-soft) 88%, white);
+  background: color-mix(in srgb, var(--wesal-pink-soft) 88%, var(--wesal-white));
   color: var(--wesal-maroon);
 }
 
 .owner-hall-section-nav-link:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
 .owner-hall-section-nav-link--active {
-  border-color: color-mix(in srgb, var(--wesal-maroon) 35%, white);
-  background: color-mix(in srgb, var(--wesal-pink) 70%, white);
+  border-color: color-mix(in srgb, var(--wesal-maroon) 35%, var(--wesal-white));
+  background: color-mix(in srgb, var(--wesal-pink) 70%, var(--wesal-white));
   color: var(--wesal-maroon);
 }
 
@@ -4067,7 +4357,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   min-width: 0;
   margin-top: 0.85rem;
   padding-top: 0.85rem;
-  border-top: 1px solid color-mix(in srgb, var(--wesal-border) 80%, white);
+  border-top: 1px solid color-mix(in srgb, var(--wesal-border) 80%, var(--wesal-white));
 }
 
 .owner-halls-section-header {
@@ -4144,26 +4434,28 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .owner-hall-sidebar-item:hover {
-  background: color-mix(in srgb, var(--wesal-pink-soft) 88%, white);
+  background: color-mix(in srgb, var(--wesal-pink-soft) 88%, var(--wesal-white));
   color: var(--wesal-maroon);
 }
 
 .owner-hall-sidebar-item:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
 .owner-hall-sidebar-item--active {
-  background: color-mix(in srgb, var(--wesal-pink) 70%, white);
+  background: color-mix(in srgb, var(--wesal-pink) 70%, var(--wesal-white));
   color: var(--wesal-maroon);
 }
 
 .owner-hall-sidebar-item-name {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 0.86rem;
+  font-size: 0.95rem;
   font-weight: 700;
   line-height: 1.35;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -4202,7 +4494,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .owner-hall-status-badge--unknown {
   color: var(--wesal-muted);
-  background: color-mix(in srgb, var(--wesal-border) 55%, white);
+  background: color-mix(in srgb, var(--wesal-border) 55%, var(--wesal-white));
 }
 
 .owner-halls-skeleton {
@@ -4219,9 +4511,9 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   border-radius: 0.75rem;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--wesal-border) 55%, white) 0%,
-    color-mix(in srgb, var(--wesal-pink-soft) 70%, white) 50%,
-    color-mix(in srgb, var(--wesal-border) 55%, white) 100%
+    color-mix(in srgb, var(--wesal-border) 55%, var(--wesal-white)) 0%,
+    color-mix(in srgb, var(--wesal-pink-soft) 70%, var(--wesal-white)) 50%,
+    color-mix(in srgb, var(--wesal-border) 55%, var(--wesal-white)) 100%
   );
   background-size: 200% 100%;
   animation: owner-halls-shimmer 1.2s ease-in-out infinite;
@@ -4265,8 +4557,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   min-height: 2.5rem;
   width: 100%;
   border-radius: 0.75rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, white);
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, var(--wesal-white));
+  background: var(--wesal-white);
   padding: 0.45rem 0.75rem;
   font-size: 0.82rem;
   font-weight: 700;
@@ -4280,12 +4572,45 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .owner-halls-retry:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
 .hall-details-page {
   width: 100%;
+}
+
+/* Soft boxes on hall details — no dark outlines (keep info box + amenity outlines light) */
+.hall-details-page .hall-hero-gallery,
+.hall-details-page .hall-quick-info-card,
+.hall-details-page .hall-section-card,
+.hall-details-page [data-testid="hall-details-overview"],
+.hall-details-page [data-testid="hall-youtube"],
+.hall-details-page [data-testid="hall-youtube-open"],
+.hall-details-page .hall-reviews-card,
+.hall-details-page .hall-inline-booking,
+.hall-details-page .hall-action-card {
+  border-color: transparent !important;
+  border-width: 0 !important;
+}
+
+.hall-details-tablist {
+  gap: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--wesal-border) 42%, transparent);
+}
+
+.hall-details-tab {
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.hall-details-tab + .hall-details-tab {
+  border-inline-start: 1px solid color-mix(in srgb, var(--wesal-border) 38%, transparent);
+}
+
+.hall-details-tab.is-active {
+  border-bottom-color: var(--wesal-maroon);
+  color: var(--wesal-maroon);
 }
 
 .hall-details-booking-row {
@@ -4407,8 +4732,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   gap: 0.65rem;
   min-width: 0;
   border-radius: 1.35rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 70%, white);
-  background: #fff;
+  border: 0;
+  background: var(--wesal-white);
   padding: 0.85rem 1rem;
   box-shadow: 0 8px 20px rgba(90, 55, 45, 0.04);
 }
@@ -4421,7 +4746,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--wesal-pink) 78%, white);
+  background: color-mix(in srgb, var(--wesal-pink) 78%, var(--wesal-white));
   color: var(--wesal-maroon);
 }
 
@@ -4437,8 +4762,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .hall-section-card {
   border-radius: 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 82%, white);
-  background: #fff;
+  border: 0;
+  background: var(--wesal-white);
   padding: 1.1rem 1rem;
   box-shadow: 0 8px 22px rgba(90, 55, 45, 0.045);
 }
@@ -4452,8 +4777,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .hall-amenities-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
 }
 
 @media (min-width: 640px) {
@@ -4464,7 +4789,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 @media (min-width: 1024px) {
   .hall-amenities-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -4476,49 +4801,57 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   gap: 0.65rem;
   min-width: 0;
   text-align: start;
-  border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 80%, white);
-  background: #fff;
+  border-radius: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 48%, transparent);
+  background: var(--wesal-white);
   padding: 0.7rem 0.85rem;
+  box-shadow: none;
   animation: hall-amenity-in 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .hall-amenity-icon {
   display: inline-flex;
-  height: 2.15rem;
-  width: 2.15rem;
+  height: 2rem;
+  width: 2rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   border: none;
   color: var(--wesal-maroon);
-  background: color-mix(in srgb, var(--wesal-pink) 70%, white);
+  background: color-mix(in srgb, var(--wesal-pink) 78%, var(--wesal-white));
   transition:
     transform 180ms ease,
     background-color 180ms ease,
     box-shadow 180ms ease;
 }
 
+.hall-amenity-icon svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
 .hall-amenity-label {
   max-width: none;
-  font-size: 0.85rem;
-  font-weight: 700;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
   line-height: 1.35;
   color: var(--wesal-text);
 }
 
 @media (min-width: 640px) {
   .hall-amenity-label {
-    font-size: 0.9rem;
+    font-size: 0.84rem;
   }
 }
 
 @media (hover: hover) and (pointer: fine) {
   .hall-amenity-item:hover .hall-amenity-icon {
     transform: translateY(-2px) scale(1.05);
-    background: color-mix(in srgb, var(--wesal-pink) 68%, white);
-    border-color: color-mix(in srgb, var(--wesal-maroon) 45%, white);
+    background: color-mix(in srgb, var(--wesal-pink) 68%, var(--wesal-white));
+    border-color: color-mix(in srgb, var(--wesal-maroon) 45%, var(--wesal-white));
     box-shadow: 0 8px 16px rgba(193, 123, 127, 0.16);
   }
 }
@@ -4573,7 +4906,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   margin-inline-end: auto;
   padding: 0.85rem 1rem;
   border-radius: 1rem;
-  background: #fbf6f3;
+  background: var(--wesal-pink-soft);
+  border: 1px solid transparent;
 }
 
 .hall-reviews-score,
@@ -4597,14 +4931,14 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   margin: 0.35rem 0 0;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #7d746f;
+  color: var(--wesal-muted);
 }
 
 .hall-reviews-divider {
   width: 1px;
   align-self: stretch;
   min-height: 3.25rem;
-  background: #e6dbd6;
+  background: var(--wesal-border);
 }
 
 .hall-comments-list {
@@ -4620,7 +4954,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 @media (hover: hover) and (pointer: fine) {
   .hall-comments-list > li:hover {
-    background: color-mix(in srgb, var(--wesal-pink-soft) 70%, white);
+    background: color-mix(in srgb, var(--wesal-pink-soft) 70%, var(--wesal-white));
   }
 }
 
@@ -4652,7 +4986,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   align-items: center;
   justify-content: center;
   border-radius: 0.7rem;
-  background: #fff;
+  background: var(--wesal-white);
   color: var(--wesal-maroon);
   box-shadow: 0 1px 2px rgba(160, 90, 90, 0.06);
 }
@@ -4672,7 +5006,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .hall-cal-day--partial {
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 80%, white);
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 80%, var(--wesal-white));
   background: transparent;
 }
 
@@ -4695,7 +5029,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: #fff;
+  background: var(--wesal-white);
   color: var(--wesal-text);
   font-size: 0.8rem;
   font-weight: 700;
@@ -4730,7 +5064,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 /* Registration - account type selection (US-REG-01) */
 .wesal-register-screen {
-  background-color: #fcf9f7;
+  background-color: var(--wesal-pink-soft);
   font-family: var(--font-wesal-sans);
   -webkit-font-smoothing: subpixel-antialiased;
 }
@@ -4744,7 +5078,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .wesal-auth-minimal-header .wesal-brand-lockup {
-  color: var(--wesal-maroon);
+  color: var(--wesal-brand-ink);
 }
 
 .wesal-register-field-input {
@@ -5087,8 +5421,6 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-
-
 @media (prefers-reduced-motion: reduce) {
   .wesal-register-bg,
   .wesal-register-card,
@@ -5134,7 +5466,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   --seeker-gold-soft: #e2c98a;
   --seeker-text: #3d342e;
   --seeker-muted: #8a7a70;
-  --seeker-border: #eee6de;
+  --seeker-border: var(--wesal-border);
   --seeker-white: #ffffff;
   --seeker-sidebar-w: 16.5rem;
   --seeker-topbar-h: 4.65rem;
@@ -5150,7 +5482,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   overflow-y: auto;
   color: var(--seeker-text);
   background:
-    radial-gradient(ellipse 90% 55% at 100% -10%, color-mix(in srgb, var(--seeker-pink) 88%, white), transparent 62%),
+    radial-gradient(ellipse 90% 55% at 100% -10%, color-mix(in srgb, var(--seeker-pink) 88%, var(--wesal-white)), transparent 62%),
     radial-gradient(ellipse 55% 40% at 0% 100%, color-mix(in srgb, var(--seeker-cream) 92%, #f0e4d8), transparent 70%),
     linear-gradient(165deg, var(--seeker-pink-soft) 0%, var(--seeker-cream) 48%, #f7f0ea 100%);
 }
@@ -5206,7 +5538,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   min-height: 100%;
   height: 100%;
   background: var(--seeker-white);
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 85%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 85%, var(--wesal-white));
   box-shadow: 0 12px 32px rgba(90, 55, 45, 0.06);
 }
 
@@ -5224,7 +5556,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     height: 100svh;
     max-height: 100svh;
     border-radius: 0;
-    border-inline-start: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+    border-inline-start: 1px solid color-mix(in srgb, var(--seeker-border) 80%, var(--wesal-white));
     padding: 1rem 0.85rem 0.65rem;
     overflow: hidden;
     overscroll-behavior: contain;
@@ -5238,7 +5570,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   [dir="ltr"] .seeker-dash-sidebar {
     right: 0;
     left: auto;
-    border-inline-start: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+    border-inline-start: 1px solid color-mix(in srgb, var(--seeker-border) 80%, var(--wesal-white));
     border-inline-end: 0;
     transform: translateX(105%);
     box-shadow: -12px 0 40px rgba(40, 25, 20, 0.18);
@@ -5284,7 +5616,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     border-radius: 0;
     border-block: 0;
     border-inline-start: 0;
-    border-inline-end: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
+    border-inline-end: 1px solid color-mix(in srgb, var(--seeker-border) 88%, var(--wesal-white));
     padding: 1.1rem 0.9rem 0.35rem;
     overflow: hidden;
     overscroll-behavior: contain;
@@ -5303,7 +5635,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     right: auto;
     left: 0;
     border-inline-start: 0;
-    border-inline-end: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
+    border-inline-end: 1px solid color-mix(in srgb, var(--seeker-border) 88%, var(--wesal-white));
   }
 
   .seeker-dash-main {
@@ -5337,23 +5669,27 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   gap: 0.75rem;
   min-width: 0;
   padding: 0.15rem 0.45rem 1rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 82%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 82%, var(--wesal-white));
 }
 
 .seeker-dash-sidebar-brand-name {
   margin: 0;
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 800 !important;
   line-height: 1.3;
   color: var(--seeker-maroon);
   overflow-wrap: anywhere;
+  -webkit-text-stroke: 0.5px currentColor;
+  paint-order: stroke fill;
 }
 
 .seeker-dash-sidebar-brand-sub {
   margin: 0.15rem 0 0;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700 !important;
   color: var(--seeker-muted);
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
 }
 
 .seeker-dash-sidebar-nav {
@@ -5383,7 +5719,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   position: sticky;
   bottom: 0;
   z-index: 3;
-  border-top: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
+  border-top: 1px solid color-mix(in srgb, var(--seeker-border) 88%, var(--wesal-white));
   padding: 0.55rem 0 max(0.2rem, env(safe-area-inset-bottom, 0px));
   background: var(--seeker-white);
 }
@@ -5418,7 +5754,9 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   padding: 0.8rem 0.9rem;
   color: var(--seeker-text);
   font-size: 0.95rem;
-  font-weight: 650;
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
   text-align: start;
   text-decoration: none;
   cursor: pointer;
@@ -5430,7 +5768,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .seeker-dash-sidebar-link:hover {
-  background: color-mix(in srgb, var(--seeker-pink) 72%, white);
+  background: color-mix(in srgb, var(--seeker-pink) 72%, var(--wesal-white));
   color: var(--seeker-maroon-dark);
   transform: translateX(-3px);
 }
@@ -5440,7 +5778,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .seeker-dash-sidebar-link:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
@@ -5479,7 +5817,9 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   box-shadow: none !important;
   padding: 0.65rem 0.85rem;
   font-size: 0.9rem;
-  font-weight: 650;
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
   text-align: start;
   text-decoration: none;
   cursor: pointer;
@@ -5499,14 +5839,14 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .seeker-dash-sidebar-browse:hover,
 .seeker-dash-sidebar-logout:hover {
-  background: color-mix(in srgb, var(--seeker-pink) 68%, white) !important;
+  background: color-mix(in srgb, var(--seeker-pink) 68%, var(--wesal-white)) !important;
   color: var(--seeker-maroon-dark);
   transform: none;
 }
 
 .seeker-dash-sidebar-browse:focus-visible,
 .seeker-dash-sidebar-logout:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
@@ -5559,7 +5899,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   gap: 0.55rem;
   min-height: var(--seeker-topbar-h);
   padding: 0.55rem clamp(0.75rem, 2.2vw, 1.6rem);
-  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 88%, var(--wesal-white));
   background: color-mix(in srgb, var(--seeker-white) 96%, var(--seeker-pink-soft));
 }
 
@@ -5600,22 +5940,26 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .seeker-dash-topbar-title {
   margin: 0;
   font-size: clamp(0.98rem, 1.5vw, 1.12rem);
-  font-weight: 800;
+  font-weight: 800 !important;
   color: var(--seeker-maroon-dark);
   line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  -webkit-text-stroke: 0.5px currentColor;
+  paint-order: stroke fill;
 }
 
 .seeker-dash-topbar-sub {
   margin: 0.1rem 0 0;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700 !important;
   color: var(--seeker-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
 }
 
 .admin-dash-topbar-actions {
@@ -5683,7 +6027,8 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   }
 
   .admin-dash-topbar-tools .seeker-dash-notify,
-  .admin-dash-topbar-tools .seeker-dash-lang.lang-switch-trigger {
+  .admin-dash-topbar-tools .seeker-dash-lang.lang-switch-trigger,
+  .admin-dash-topbar-tools .seeker-dash-lang.theme-switch-trigger {
     height: 2.25rem;
     width: 2.25rem;
     min-height: 2.25rem;
@@ -5734,7 +6079,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   }
 
   .seeker-home-section-title {
-    margin-bottom: 0.65rem;
+    margin-bottom: 0.5rem;
     font-size: 0.95rem;
   }
 
@@ -5952,18 +6297,19 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .seeker-dash-notify,
-.seeker-dash-lang.lang-switch-trigger {
+.seeker-dash-lang.lang-switch-trigger,
+.seeker-dash-lang.theme-switch-trigger {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 2.75rem;
-  width: 2.75rem;
-  min-height: 2.75rem;
-  min-width: 2.75rem;
+  height: 2.25rem;
+  width: 2.25rem;
+  min-height: 2.25rem;
+  min-width: 2.25rem;
   padding: 0;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 85%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 85%, var(--wesal-white));
   background: var(--seeker-white);
   color: var(--seeker-maroon);
   text-decoration: none;
@@ -5977,29 +6323,39 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 @media (min-width: 640px) {
   .seeker-dash-notify,
-  .seeker-dash-lang.lang-switch-trigger {
-    height: 3.15rem;
-    width: 3.15rem;
-    min-height: 3.15rem;
-    min-width: 3.15rem;
+  .seeker-dash-lang.lang-switch-trigger,
+  .seeker-dash-lang.theme-switch-trigger {
+    height: 2.45rem;
+    width: 2.45rem;
+    min-height: 2.45rem;
+    min-width: 2.45rem;
   }
 }
 
 .seeker-dash-lang.lang-switch-trigger:hover,
-.seeker-dash-lang.lang-switch-trigger:focus-visible {
+.seeker-dash-lang.lang-switch-trigger:focus-visible,
+.seeker-dash-lang.theme-switch-trigger:hover,
+.seeker-dash-lang.theme-switch-trigger:focus-visible {
   background: var(--seeker-pink);
   color: var(--seeker-maroon-dark);
   transform: translateY(-1px);
 }
 
-.seeker-dash-lang.lang-switch-trigger:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, white);
+.seeker-dash-lang.lang-switch-trigger:focus-visible,
+.seeker-dash-lang.theme-switch-trigger:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
-.seeker-dash-lang .lang-switch-icon {
-  width: 1.35rem;
-  height: 1.35rem;
+.seeker-dash-lang .lang-switch-icon,
+.seeker-dash-lang .theme-switch-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.seeker-dash-notify .seeker-dash-notify-bell svg {
+  width: 0.95rem;
+  height: 0.95rem;
 }
 
 .seeker-dash-notify:hover {
@@ -6009,7 +6365,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .seeker-dash-notify:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
@@ -6028,7 +6384,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   height: 2.65rem;
   width: 2.65rem;
   min-height: 2.65rem;
-  border-color: color-mix(in srgb, var(--wesal-border) 90%, white);
+  border-color: color-mix(in srgb, var(--wesal-border) 90%, var(--wesal-white));
   background: color-mix(in srgb, var(--wesal-white) 92%, var(--wesal-pink-soft));
   color: var(--wesal-maroon-dark);
   box-shadow: none;
@@ -6092,7 +6448,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   overflow: hidden;
   isolation: isolate;
   opacity: 1;
-  border: 1px solid color-mix(in srgb, var(--wesal-border, #eee6de) 80%, white);
+  border: 1px solid color-mix(in srgb, var(--wesal-border, #eee6de) 80%, var(--wesal-white));
   border-radius: 1.2rem;
   background-color: #ffffff;
   background-image: none;
@@ -6128,11 +6484,11 @@ html[dir="rtl"] .seeker-notify-panel {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 1rem 1.05rem 0.85rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--wesal-border, #eee6de) 85%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--wesal-border, #eee6de) 85%, var(--wesal-white));
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--wesal-pink, #f5e8e4) 55%, white) 0%,
+      color-mix(in srgb, var(--wesal-pink, #f5e8e4) 55%, var(--wesal-white)) 0%,
       #fcf9f7 100%
     );
 }
@@ -6161,14 +6517,14 @@ html[dir="rtl"] .seeker-notify-panel {
   justify-content: center;
   border: 0;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 40%, white);
+  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 40%, var(--wesal-white));
   color: var(--wesal-maroon-dark, #a86267);
   cursor: pointer;
   transition: background-color 140ms ease, color 140ms ease;
 }
 
 .seeker-notify-panel-close:hover {
-  background: color-mix(in srgb, var(--wesal-maroon, #c17b7f) 16%, white);
+  background: color-mix(in srgb, var(--wesal-maroon, #c17b7f) 16%, var(--wesal-white));
   color: var(--wesal-maroon-dark, #a86267);
 }
 
@@ -6201,7 +6557,7 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-notify-item:hover {
-  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 62%, white);
+  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 62%, var(--wesal-white));
 }
 
 .seeker-notify-item-icon {
@@ -6212,8 +6568,8 @@ html[dir="rtl"] .seeker-notify-panel {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--wesal-maroon, #c17b7f) 18%, white);
-  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 70%, white);
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon, #c17b7f) 18%, var(--wesal-white));
+  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 70%, var(--wesal-white));
   color: var(--wesal-maroon-dark, #a86267);
 }
 
@@ -6244,7 +6600,7 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .wesal-notify-item--unread {
-  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 38%, white);
+  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 38%, var(--wesal-white));
 }
 
 .wesal-notify-item-action {
@@ -6256,19 +6612,19 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .wesal-notify-tone--success {
-  border-color: color-mix(in srgb, #1f8f5f 22%, white) !important;
-  background: color-mix(in srgb, #1f8f5f 12%, white) !important;
+  border-color: color-mix(in srgb, #1f8f5f 22%, var(--wesal-white)) !important;
+  background: color-mix(in srgb, #1f8f5f 12%, var(--wesal-white)) !important;
   color: #1f8f5f !important;
 }
 
 .wesal-notify-tone--danger {
-  border-color: color-mix(in srgb, #c04545 22%, white) !important;
-  background: color-mix(in srgb, #c04545 12%, white) !important;
+  border-color: color-mix(in srgb, #c04545 22%, var(--wesal-white)) !important;
+  background: color-mix(in srgb, #c04545 12%, var(--wesal-white)) !important;
   color: #b42318 !important;
 }
 
 .wesal-notify-tone--info {
-  border-color: color-mix(in srgb, #c9a227 28%, white) !important;
+  border-color: color-mix(in srgb, #c9a227 28%, var(--wesal-white)) !important;
   background: color-mix(in srgb, #1d4ed8 8%, #fff8e8) !important;
   color: #1d4ed8 !important;
 }
@@ -6284,8 +6640,8 @@ html[dir="rtl"] .seeker-notify-panel {
   align-items: flex-start;
   gap: 0.75rem;
   border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 80%, white);
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 80%, var(--wesal-white));
+  background: var(--wesal-white);
   padding: 0.9rem 1rem;
   box-shadow: 0 16px 40px rgba(90, 55, 45, 0.16);
   animation: wesal-toast-in 220ms ease;
@@ -6302,15 +6658,15 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .wesal-notify-toast--success {
-  border-color: color-mix(in srgb, #1f8f5f 28%, white);
+  border-color: color-mix(in srgb, #1f8f5f 28%, var(--wesal-white));
 }
 
 .wesal-notify-toast--danger {
-  border-color: color-mix(in srgb, #c04545 28%, white);
+  border-color: color-mix(in srgb, #c04545 28%, var(--wesal-white));
 }
 
 .wesal-notify-toast--info {
-  border-color: color-mix(in srgb, #c9a227 36%, white);
+  border-color: color-mix(in srgb, #c9a227 36%, var(--wesal-white));
 }
 
 .wesal-notify-toast-icon {
@@ -6371,13 +6727,11 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-notify-panel-foot {
-  border-top: 1px solid color-mix(in srgb, var(--wesal-border, #eee6de) 85%, white);
+  border-top: 1px solid color-mix(in srgb, var(--wesal-border, #eee6de) 85%, var(--wesal-white));
   padding: 0.7rem 0.85rem 0.85rem;
   background:
-    linear-gradient(
-      180deg,
-      #ffffff 0%,
-      color-mix(in srgb, var(--wesal-pink-soft, #fcf9f7) 80%, white) 100%
+    linear-gradient(180deg, var(--wesal-white) 0%,
+      color-mix(in srgb, var(--wesal-pink-soft, #fcf9f7) 80%, var(--wesal-white)) 100%
     );
 }
 
@@ -6387,8 +6741,8 @@ html[dir="rtl"] .seeker-notify-panel {
   justify-content: center;
   min-height: 2.55rem;
   border-radius: 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-maroon, #c17b7f) 22%, white);
-  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 45%, white);
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon, #c17b7f) 22%, var(--wesal-white));
+  background: color-mix(in srgb, var(--wesal-pink, #f5e8e4) 45%, var(--wesal-white));
   color: var(--wesal-maroon-dark, #a86267);
   font-size: 0.88rem;
   font-weight: 750;
@@ -6432,7 +6786,7 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-notifications-feed-item:hover {
-  background: color-mix(in srgb, var(--seeker-pink) 48%, white);
+  background: color-mix(in srgb, var(--seeker-pink) 48%, var(--wesal-white));
 }
 
 .seeker-notifications-feed-time {
@@ -6454,7 +6808,7 @@ html[dir="rtl"] .seeker-notify-panel {
   grid-template-columns: minmax(0, 1fr);
   min-height: min(28rem, calc(100svh - 8.5rem));
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 88%, var(--wesal-white));
   border-radius: 1.35rem;
   background: color-mix(in srgb, var(--seeker-white) 94%, transparent);
   box-shadow: 0 12px 28px rgba(90, 55, 45, 0.05);
@@ -6483,14 +6837,14 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-messages-list {
   border-inline-end: 0;
-  background: color-mix(in srgb, var(--seeker-pink-soft) 70%, white);
+  background: color-mix(in srgb, var(--seeker-pink-soft) 70%, var(--wesal-white));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
 @media (min-width: 900px) {
   .seeker-messages-list {
-    border-inline-end: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
+    border-inline-end: 1px solid color-mix(in srgb, var(--seeker-border) 88%, var(--wesal-white));
   }
 
   .seeker-messages-list--hidden-mobile {
@@ -6568,12 +6922,12 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .owner-chat-workspace.seeker-messages-workspace {
-  background: #fff;
+  background: var(--wesal-white);
   min-height: min(40rem, calc(100svh - 8.5rem));
 }
 
 .owner-chat-workspace .seeker-messages-list {
-  background: #fff;
+  background: var(--wesal-white);
 }
 
 @media (min-width: 900px) {
@@ -6633,7 +6987,7 @@ html[dir="rtl"] .seeker-notify-panel {
   gap: 0.25rem;
   border: 1px solid #e6e1da;
   border-radius: 999px;
-  background: #fff;
+  background: var(--wesal-white);
   padding: 0.38rem 0.7rem;
   color: #5c6573;
   font-size: 0.72rem;
@@ -6670,7 +7024,7 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .owner-chat-search input::placeholder {
-  color: #9a9188;
+  color: var(--wesal-muted);
 }
 
 .owner-chat-rows {
@@ -6762,9 +7116,9 @@ html[dir="rtl"] .seeker-notify-panel {
   align-items: center;
   gap: 0.4rem;
   margin-top: 0.1rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-maroon, #c17b7f) 18%, white);
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon, #c17b7f) 18%, var(--wesal-white));
   border-radius: 999px;
-  background: color-mix(in srgb, var(--wesal-maroon, #c17b7f) 7%, white);
+  background: color-mix(in srgb, var(--wesal-maroon, #c17b7f) 7%, var(--wesal-white));
   padding: 0.22rem 0.55rem 0.22rem 0.28rem;
   box-shadow: none;
 }
@@ -6777,7 +7131,7 @@ html[dir="rtl"] .seeker-notify-panel {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--wesal-maroon, #c17b7f) 16%, white);
+  background: color-mix(in srgb, var(--wesal-maroon, #c17b7f) 16%, var(--wesal-white));
   color: var(--wesal-maroon-dark, #a86267);
   font-size: 0.58rem;
   font-weight: 800;
@@ -6835,12 +7189,12 @@ html[dir="rtl"] .seeker-notify-panel {
   border-end-end-radius: 0.35rem;
   border-end-start-radius: 1.05rem;
   border: 1px solid #eee8e2;
-  background: #fff;
+  background: var(--wesal-white);
 }
 
 .owner-chat-composer {
   border-color: #f0ebe6;
-  background: #fff;
+  background: var(--wesal-white);
 }
 
 .owner-chat-attach {
@@ -6917,10 +7271,10 @@ html[dir="rtl"] .seeker-notify-panel {
   display: grid;
   gap: 0;
   min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--seeker-maroon) 34%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-maroon) 34%, var(--wesal-white));
   border-radius: 1.55rem;
   background:
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--seeker-maroon) 16%, white), transparent 34%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--seeker-maroon) 16%, var(--wesal-white)), transparent 34%),
     linear-gradient(165deg, var(--seeker-pink) 0%, #fff 46%, var(--seeker-pink-soft) 100%);
   box-shadow: 0 16px 36px rgba(122, 62, 68, 0.08);
   padding: 1.55rem clamp(1.15rem, 2.8vw, 2rem) 1.45rem;
@@ -6947,7 +7301,7 @@ html[dir="rtl"] .seeker-notify-panel {
   justify-content: center;
   overflow: hidden;
   border-radius: 999px;
-  border: 3px solid color-mix(in srgb, var(--seeker-maroon) 28%, white);
+  border: 3px solid color-mix(in srgb, var(--seeker-maroon) 28%, var(--wesal-white));
   background: var(--seeker-pink);
   color: var(--seeker-maroon);
   font-size: 1.55rem;
@@ -7016,7 +7370,7 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-profile-card-pencil:hover {
-  background: color-mix(in srgb, var(--seeker-pink) 70%, white);
+  background: color-mix(in srgb, var(--seeker-pink) 70%, var(--wesal-white));
 }
 
 .seeker-profile-card-member {
@@ -7038,7 +7392,7 @@ html[dir="rtl"] .seeker-notify-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
-  border-top: 1px solid color-mix(in srgb, var(--seeker-maroon) 22%, white);
+  border-top: 1px solid color-mix(in srgb, var(--seeker-maroon) 22%, var(--wesal-white));
   padding-top: 1.15rem;
 }
 
@@ -7055,7 +7409,7 @@ html[dir="rtl"] .seeker-notify-panel {
   min-width: 0;
   text-align: start;
   border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--seeker-maroon) 18%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-maroon) 18%, var(--wesal-white));
   background: color-mix(in srgb, white 78%, var(--seeker-pink));
   padding: 0.85rem 1rem;
 }
@@ -7092,13 +7446,13 @@ html[dir="rtl"] .seeker-notify-panel {
 .seeker-dash-userchip {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  max-width: 16.5rem;
-  min-height: 2.75rem;
+  gap: 0.4rem;
+  max-width: 14rem;
+  min-height: 2.25rem;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 85%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 85%, var(--wesal-white));
   background: var(--seeker-white);
-  padding: 0.25rem 0.55rem 0.25rem 0.3rem;
+  padding: 0.15rem 0.45rem 0.15rem 0.2rem;
   text-decoration: none;
   color: inherit;
   transition:
@@ -7109,53 +7463,53 @@ html[dir="rtl"] .seeker-notify-panel {
 
 @media (min-width: 640px) {
   .seeker-dash-userchip {
-    gap: 0.7rem;
-    min-height: 3.15rem;
-    padding: 0.3rem 0.9rem 0.3rem 0.35rem;
+    gap: 0.5rem;
+    min-height: 2.45rem;
+    padding: 0.2rem 0.65rem 0.2rem 0.25rem;
   }
 }
 
 [dir="ltr"] .seeker-dash-userchip {
-  padding: 0.25rem 0.3rem 0.25rem 0.55rem;
+  padding: 0.15rem 0.2rem 0.15rem 0.45rem;
 }
 
 @media (min-width: 640px) {
   [dir="ltr"] .seeker-dash-userchip {
-    padding: 0.3rem 0.35rem 0.3rem 0.9rem;
+    padding: 0.2rem 0.25rem 0.2rem 0.65rem;
   }
 }
 
 .seeker-dash-userchip:hover {
   background: var(--seeker-pink-soft);
-  border-color: color-mix(in srgb, var(--seeker-maroon) 28%, white);
+  border-color: color-mix(in srgb, var(--seeker-maroon) 28%, var(--wesal-white));
   transform: translateY(-1px);
 }
 
 .seeker-dash-userchip:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
 .seeker-dash-userchip-avatar {
   display: inline-flex;
-  height: 2.25rem;
-  width: 2.25rem;
+  height: 1.85rem;
+  width: 1.85rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border-radius: 999px;
   background: linear-gradient(145deg, var(--seeker-maroon), var(--seeker-maroon-soft));
-  font-size: 0.82rem;
+  font-size: 0.68rem;
   font-weight: 800;
   color: #fff;
 }
 
 @media (min-width: 640px) {
   .seeker-dash-userchip-avatar {
-    height: 2.55rem;
-    width: 2.55rem;
-    font-size: 0.88rem;
+    height: 2rem;
+    width: 2rem;
+    font-size: 0.72rem;
   }
 }
 
@@ -7173,7 +7527,7 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-dash-userchip-name {
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   font-weight: 750;
   color: var(--seeker-text);
   overflow: hidden;
@@ -7182,7 +7536,7 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-dash-userchip-role {
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--seeker-muted);
 }
@@ -7191,28 +7545,32 @@ html[dir="rtl"] .seeker-notify-panel {
   flex: 1 1 auto;
   min-width: 0;
   width: 100%;
-  padding: clamp(1rem, 2.4vw, 1.75rem) clamp(0.9rem, 2.2vw, 1.6rem) clamp(1.5rem, 3vw, 2.25rem);
+  padding: clamp(0.75rem, 1.8vw, 1.15rem) clamp(0.75rem, 1.8vw, 1.2rem) clamp(1.1rem, 2.4vw, 1.6rem);
 }
 
 /* Home */
 .seeker-home {
   display: flex;
   flex-direction: column;
-  gap: clamp(1.15rem, 2.2vw, 1.85rem);
+  gap: clamp(0.85rem, 1.6vw, 1.2rem);
   max-width: 68rem;
 }
 
+h2.seeker-home-section-title,
 .seeker-home-section-title {
-  margin: 0 0 1rem;
-  font-size: clamp(1.05rem, 1.6vw, 1.22rem);
-  font-weight: 800;
-  color: var(--seeker-text);
+  margin: 0 0 0.6rem;
+  font-size: clamp(0.95rem, 1.25vw, 1.05rem);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  color: var(--seeker-maroon-dark, #6a3036);
+  zoom: 1;
 }
 
 .seeker-home-section-title--inline {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   margin: 0;
   color: var(--seeker-maroon-dark);
 }
@@ -7220,68 +7578,45 @@ html[dir="rtl"] .seeker-notify-panel {
 /* Welcome hero */
 .seeker-welcome {
   display: grid;
-  gap: 1.25rem;
+  gap: 0.85rem;
   align-items: center;
   overflow: hidden;
-  border-radius: 1.55rem;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 78%, white);
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 78%, var(--wesal-white));
   background:
     radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--seeker-maroon) 18%, transparent), transparent 42%),
-    linear-gradient(125deg, color-mix(in srgb, var(--seeker-pink) 94%, white) 0%, #fff 52%, var(--seeker-cream) 100%);
-  padding: clamp(1.2rem, 2.6vw, 1.9rem);
-  box-shadow: 0 14px 36px rgba(90, 55, 45, 0.06);
+    linear-gradient(125deg, color-mix(in srgb, var(--seeker-pink) 94%, var(--wesal-white)) 0%, #fff 52%, var(--seeker-cream) 100%);
+  padding: clamp(0.85rem, 1.8vw, 1.2rem);
+  box-shadow: 0 10px 26px rgba(90, 55, 45, 0.05);
 }
 
 @media (min-width: 900px) {
   .seeker-welcome {
-    grid-template-columns: minmax(0, 1.35fr) minmax(12rem, 0.75fr);
-    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1.45fr) minmax(9rem, 0.55fr);
+    gap: 1rem;
   }
-}
-
-.seeker-welcome-contacts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem 1.35rem;
-  margin-top: 0.85rem;
-}
-
-.seeker-welcome-contact {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-  min-width: 0;
-  color: #6a3036;
-  font-size: 0.92rem;
-  font-weight: 700;
-}
-
-.seeker-welcome-contact-icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  color: var(--seeker-maroon);
 }
 
 .seeker-welcome-copy {
   min-width: 0;
 }
 
+h1.seeker-welcome-title,
 .seeker-welcome-title {
   margin: 0;
-  font-size: clamp(1.35rem, 2.5vw, 1.95rem);
-  font-weight: 850;
-  line-height: 1.4;
+  font-size: clamp(1.1rem, 1.8vw, 1.35rem);
+  font-weight: 700;
+  line-height: 1.35;
   color: var(--seeker-maroon-dark);
   overflow-wrap: anywhere;
+  zoom: 1;
 }
 
 .seeker-welcome-body {
-  margin: 0.65rem 0 0;
-  max-width: 36rem;
-  font-size: 0.94rem;
-  line-height: 1.8;
+  margin: 0.4rem 0 0;
+  max-width: 34rem;
+  font-size: 0.84rem;
+  line-height: 1.6;
   color: var(--seeker-muted);
 }
 
@@ -7289,18 +7624,18 @@ html[dir="rtl"] .seeker-notify-panel {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem 1.35rem;
-  margin-top: 0.85rem;
+  gap: 0.45rem 1rem;
+  margin-top: 0.55rem;
 }
 
 .seeker-welcome-contact {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   margin: 0;
   min-width: 0;
   color: #6a3036;
-  font-size: 0.92rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
@@ -7310,23 +7645,272 @@ html[dir="rtl"] .seeker-notify-panel {
   color: var(--seeker-maroon);
 }
 
+.seeker-welcome-contact-icon svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
 /* Compact ops header (admin queue / detail / subscriptions) */
 .seeker-welcome--compact {
   display: block;
-  padding: 1rem 1.15rem;
-  box-shadow: 0 8px 20px rgba(90, 55, 45, 0.04);
+  padding: 0.7rem 0.9rem;
+  box-shadow: 0 6px 16px rgba(90, 55, 45, 0.04);
 }
 
 .seeker-welcome--compact .seeker-welcome-title {
-  font-size: clamp(1.2rem, 2vw, 1.55rem);
-  font-weight: 800;
-  line-height: 1.35;
+  font-size: clamp(1.02rem, 1.6vw, 1.22rem);
+  font-weight: 700;
+  line-height: 1.3;
+  zoom: 1;
 }
 
 .seeker-welcome--compact .seeker-welcome-body {
-  margin-top: 0.4rem;
-  font-size: 0.9rem;
-  line-height: 1.65;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* Admin + owner dashboards — denser shell (same idea as seeker home) */
+[data-testid="admin-management"],
+[data-testid="hall-owner-management"] {
+  --seeker-topbar-h: 3.75rem;
+  --seeker-sidebar-w: 14.5rem;
+}
+
+@media (min-width: 1100px) {
+  [data-testid="admin-management"],
+  [data-testid="hall-owner-management"] {
+    --seeker-sidebar-w: 15.25rem;
+  }
+}
+
+[data-testid="admin-management"] .seeker-dash-content,
+[data-testid="hall-owner-management"] .seeker-dash-content {
+  padding: clamp(0.65rem, 1.5vw, 1rem) clamp(0.65rem, 1.5vw, 1.05rem) clamp(0.95rem, 2vw, 1.35rem);
+}
+
+[data-testid="admin-management"] .seeker-dash-topbar,
+[data-testid="hall-owner-management"] .seeker-dash-topbar {
+  gap: 0.45rem;
+  padding: 0.45rem clamp(0.65rem, 1.8vw, 1.15rem);
+}
+
+[data-testid="admin-management"] .seeker-dash-topbar-title,
+[data-testid="hall-owner-management"] .seeker-dash-topbar-title {
+  font-size: clamp(0.9rem, 1.3vw, 1.02rem);
+}
+
+[data-testid="admin-management"] .seeker-dash-sidebar-link,
+[data-testid="hall-owner-management"] .seeker-dash-sidebar-link,
+[data-testid="seeker-dashboard"] .seeker-dash-sidebar-link,
+[data-testid="admin-management"] .seeker-dash-sidebar-browse,
+[data-testid="hall-owner-management"] .seeker-dash-sidebar-browse,
+[data-testid="seeker-dashboard"] .seeker-dash-sidebar-browse,
+[data-testid="admin-management"] .seeker-dash-sidebar-logout,
+[data-testid="hall-owner-management"] .seeker-dash-sidebar-logout,
+[data-testid="seeker-dashboard"] .seeker-dash-sidebar-logout {
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
+  border-radius: 0.7rem;
+}
+
+[data-testid="hall-owner-management"] .owner-hall-sidebar-item-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
+}
+
+[data-testid="admin-management"] .seeker-dash-userchip,
+[data-testid="hall-owner-management"] .seeker-dash-userchip,
+[data-testid="seeker-dashboard"] .seeker-dash-userchip {
+  min-height: 2.25rem;
+  gap: 0.4rem;
+  padding: 0.15rem 0.5rem 0.15rem 0.2rem;
+}
+
+[data-testid="admin-management"] .seeker-dash-userchip-avatar,
+[data-testid="hall-owner-management"] .seeker-dash-userchip-avatar,
+[data-testid="seeker-dashboard"] .seeker-dash-userchip-avatar {
+  height: 1.75rem;
+  width: 1.75rem;
+  font-size: 0.65rem;
+}
+
+[data-testid="seeker-dashboard"] {
+  --seeker-topbar-h: 3.75rem;
+}
+
+[data-testid="seeker-dashboard"] .seeker-dash-topbar,
+[data-testid="hall-owner-management"] .seeker-dash-topbar-end {
+  gap: 0.4rem;
+}
+
+@media (min-width: 640px) {
+  [data-testid="seeker-dashboard"] .seeker-dash-topbar-end,
+  [data-testid="hall-owner-management"] .seeker-dash-topbar-end {
+    gap: 0.55rem;
+  }
+}
+
+[data-testid="admin-management"] .seeker-home,
+[data-testid="hall-owner-management"] .seeker-home {
+  gap: clamp(0.7rem, 1.4vw, 1rem);
+}
+
+[data-testid="admin-management"] .seeker-home.space-y-5 > :not([hidden]) ~ :not([hidden]),
+[data-testid="hall-owner-management"] .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.75rem;
+}
+
+[data-testid="admin-management"] .admin-ops-section,
+[data-testid="admin-management"] .seeker-pending-panel {
+  padding: 0.7rem 0.8rem 0.85rem;
+  border-radius: 0.95rem;
+}
+
+[data-testid="admin-management"] .admin-ops-section-title,
+[data-testid="admin-management"] .seeker-home-section-title,
+[data-testid="hall-owner-management"] .seeker-home-section-title,
+[data-testid="hall-owner-management"] [data-testid="owner-booking-insights"] h2,
+[data-testid="hall-owner-management"] [data-testid="owner-visitor-stats"] h2,
+[data-testid="hall-owner-management"] .owner-event-types-card h2 {
+  margin-bottom: 0.5rem;
+  font-size: 1rem !important;
+  font-weight: 700;
+  color: var(--seeker-maroon-dark, #6a3036) !important;
+  zoom: 1;
+}
+
+[data-testid="admin-management"] .seeker-home-booking-row,
+[data-testid="hall-owner-management"] .seeker-home-booking-row {
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.75rem;
+}
+
+[data-testid="admin-management"] .btn-primary.min-h-11,
+[data-testid="admin-management"] .btn-outline.min-h-11,
+[data-testid="admin-management"] .admin-ops-row-actions .btn-primary,
+[data-testid="admin-management"] .admin-ops-row-actions .btn-outline {
+  min-height: 2.25rem !important;
+  padding-inline: 0.85rem;
+  font-size: 0.82rem;
+}
+
+[data-testid="admin-management"] .admin-sub-card {
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.95rem;
+}
+
+[data-testid="admin-management"] .admin-sub-hall {
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.75rem;
+}
+
+[data-testid="hall-owner-management"] [data-testid="owner-booking-insights"] > section {
+  padding: 0.75rem 0.85rem !important;
+  border-radius: 1rem;
+}
+
+[data-testid="hall-owner-management"] [data-testid="owner-booking-insights"] header {
+  margin-bottom: 0.7rem !important;
+}
+
+[data-testid="hall-owner-management"] [data-testid="owner-booking-insights"] ul.space-y-3 > :not([hidden]) ~ :not([hidden]),
+[data-testid="hall-owner-management"] [data-testid="owner-booking-insights"] .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.45rem;
+}
+
+[data-testid="hall-owner-management"] [data-testid="owner-booking-insights-hours"] .relative.h-\[9\.5rem\] {
+  height: 7.5rem;
+  width: 7.5rem;
+}
+
+@media (min-width: 640px) {
+  [data-testid="hall-owner-management"] [data-testid="owner-booking-insights-hours"] .relative.sm\:h-\[10\.5rem\] {
+    height: 8.25rem;
+    width: 8.25rem;
+  }
+}
+
+[data-testid="hall-owner-management"] .owner-event-types-card {
+  padding: 0.75rem 0.85rem !important;
+  border-radius: 1rem;
+}
+
+[data-testid="hall-owner-management"] [data-testid="owner-visitor-stats"] {
+  padding: 0.7rem 0.8rem !important;
+  border-radius: 1rem;
+}
+
+[data-testid="hall-owner-management"] .owner-hall-card {
+  border-radius: 1.15rem;
+}
+
+/* Owner dashboard — soft brand borders (blush, not dark outlines) */
+[data-testid="hall-owner-management"] .seeker-settings-card,
+[data-testid="hall-owner-management"] .owner-hall-card,
+[data-testid="hall-owner-management"] .owner-add-hall-banner,
+[data-testid="hall-owner-management"] .owner-add-hall-photo-card,
+[data-testid="hall-owner-management"] .owner-hall-mgmt-panel.border,
+[data-testid="hall-owner-management"] .owner-event-types-card,
+[data-testid="hall-owner-management"] [data-testid="owner-visitor-stats"],
+[data-testid="hall-owner-management"] [data-testid="owner-bookings-calendar"] section,
+[data-testid="hall-owner-management"] [data-testid="owner-bookings-calendar"] .rounded-2xl {
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 18%, var(--wesal-border)) !important;
+}
+
+/* Layout wrappers (space-y stacks) must not get an outer frame around child cards */
+[data-testid="hall-owner-management"] .owner-hall-mgmt-panel:not(.border) {
+  border: 0 !important;
+}
+
+[data-testid="hall-owner-management"] .owner-hall-card:hover {
+  border-color: color-mix(in srgb, var(--wesal-maroon) 32%, var(--wesal-border)) !important;
+}
+
+[data-testid="hall-owner-management"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+[data-testid="hall-owner-management"] textarea,
+[data-testid="hall-owner-management"] select,
+[data-testid="hall-owner-management"] [role="combobox"],
+[data-testid="hall-owner-management"] [data-testid="hall-region-trigger"],
+[data-testid="hall-owner-management"] [data-testid="hall-address-trigger"] {
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 22%, var(--wesal-border)) !important;
+  background-color: var(--wesal-white);
+}
+
+[data-testid="hall-owner-management"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus-visible,
+[data-testid="hall-owner-management"] textarea:focus-visible,
+[data-testid="hall-owner-management"] select:focus-visible,
+[data-testid="hall-owner-management"] [role="combobox"]:focus-visible,
+[data-testid="hall-owner-management"] [data-testid="hall-region-trigger"]:focus-visible,
+[data-testid="hall-owner-management"] [data-testid="hall-address-trigger"]:focus-visible {
+  border-color: color-mix(in srgb, var(--wesal-maroon) 45%, var(--wesal-border)) !important;
+}
+
+[data-testid="hall-owner-management"] [data-testid="hall-region-list"],
+[data-testid="hall-owner-management"] [data-testid="hall-address-list"] {
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 22%, var(--wesal-border)) !important;
+}
+
+[data-testid="hall-owner-management"] .owner-hall-card .p-3,
+[data-testid="hall-owner-management"] .owner-hall-card .sm\:p-4 {
+  padding: 0.7rem 0.8rem;
+  gap: 0.55rem;
+}
+
+[data-testid="hall-owner-management"] .owner-add-hall-banner {
+  padding: 0.85rem 1rem !important;
+  border-radius: 1.15rem !important;
+}
+
+[data-testid="hall-owner-management"] .owner-add-hall-banner-icon {
+  height: 2.75rem !important;
+  width: 2.75rem !important;
 }
 
 .admin-ops-toolbar {
@@ -7394,17 +7978,20 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .admin-ops-section {
   border-radius: 1.35rem;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, var(--wesal-white));
   background: var(--seeker-white);
   padding: 1.15rem 1.2rem 1.3rem;
   box-shadow: 0 10px 24px rgba(90, 55, 45, 0.045);
 }
 
+h2.admin-ops-section-title,
 .admin-ops-section-title {
-  margin: 0 0 1rem;
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--seeker-maroon-dark);
+  margin: 0 0 0.7rem;
+  font-size: clamp(0.95rem, 1.25vw, 1.05rem);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--seeker-maroon-dark, #6a3036);
+  zoom: 1;
 }
 
 .admin-ops-section-title--center {
@@ -7419,7 +8006,7 @@ html[dir="rtl"] .seeker-notify-panel {
   padding: 0;
   overflow: hidden;
   border-radius: 0.95rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 75%, white);
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 75%, var(--wesal-white));
   background: var(--wesal-white);
 }
 
@@ -7443,7 +8030,7 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .admin-ops-fact:nth-child(even) {
-  background: color-mix(in srgb, var(--wesal-pink-soft) 92%, white);
+  background: color-mix(in srgb, var(--wesal-pink-soft) 92%, var(--wesal-white));
 }
 
 .admin-ops-fact:last-child {
@@ -7481,8 +8068,8 @@ html[dir="rtl"] .seeker-notify-panel {
   margin: 1.1rem 0 0;
   padding: 0.85rem 1rem;
   border-radius: 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-border) 78%, white);
-  background: color-mix(in srgb, var(--wesal-pink-soft) 88%, white);
+  border: 1px solid color-mix(in srgb, var(--wesal-border) 78%, var(--wesal-white));
+  background: color-mix(in srgb, var(--wesal-pink-soft) 88%, var(--wesal-white));
   font-size: 0.9rem;
   line-height: 1.75;
   color: var(--wesal-maroon-dark);
@@ -7522,7 +8109,7 @@ html[dir="rtl"] .seeker-notify-panel {
 .admin-ops-owner-head {
   margin: 0 0 0.65rem;
   padding-bottom: 0.55rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 85%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 85%, var(--wesal-white));
 }
 
 .admin-ops-owner-name {
@@ -7546,7 +8133,7 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .admin-sub-card {
   border-radius: 1.35rem;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, var(--wesal-white));
   background: var(--seeker-white);
   padding: 1.15rem 1.2rem 1.2rem;
   box-shadow: 0 10px 24px rgba(90, 55, 45, 0.045);
@@ -7555,7 +8142,7 @@ html[dir="rtl"] .seeker-notify-panel {
 .admin-sub-card-head {
   padding-bottom: 0.85rem;
   margin-bottom: 0.95rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 85%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 85%, var(--wesal-white));
 }
 
 .admin-sub-owner-name {
@@ -7587,7 +8174,7 @@ html[dir="rtl"] .seeker-notify-panel {
   flex-direction: column;
   gap: 0.9rem;
   border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 75%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 75%, var(--wesal-white));
   background: var(--seeker-pink-soft);
   padding: 1rem 1.05rem;
 }
@@ -7623,7 +8210,7 @@ html[dir="rtl"] .seeker-notify-panel {
   justify-content: flex-end;
   gap: 0.55rem;
   padding-top: 0.85rem;
-  border-top: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+  border-top: 1px solid color-mix(in srgb, var(--seeker-border) 80%, var(--wesal-white));
 }
 
 .admin-sub-hall-actions > * {
@@ -7650,21 +8237,21 @@ html[dir="rtl"] .seeker-notify-panel {
 .seeker-welcome-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.7rem;
-  margin-top: 1.15rem;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 .seeker-btn-primary,
 .seeker-btn-secondary {
   display: inline-flex;
-  min-height: 2.65rem;
+  min-height: 2.25rem;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  border-radius: 0.9rem;
-  padding: 0.55rem 1.2rem;
-  font-size: 0.9rem;
-  font-weight: 750;
+  gap: 0.35rem;
+  border-radius: 0.75rem;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 700;
   text-decoration: none;
   transition:
     transform 160ms ease,
@@ -7685,7 +8272,7 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-btn-secondary {
-  border: 1px solid color-mix(in srgb, var(--seeker-maroon) 35%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-maroon) 35%, var(--wesal-white));
   background: color-mix(in srgb, var(--seeker-white) 70%, transparent);
   color: var(--seeker-maroon-dark);
 }
@@ -7697,7 +8284,7 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-btn-primary:focus-visible,
 .seeker-btn-secondary:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
@@ -7714,7 +8301,7 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-welcome-stats > div {
   border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, var(--wesal-white));
   background: color-mix(in srgb, var(--seeker-white) 82%, transparent);
   padding: 0.75rem 0.8rem;
   text-align: center;
@@ -7739,7 +8326,7 @@ html[dir="rtl"] .seeker-notify-panel {
   position: relative;
   align-items: center;
   justify-content: center;
-  min-height: 14.5rem;
+  min-height: 10.5rem;
 }
 
 @media (min-width: 900px) {
@@ -7750,19 +8337,19 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-welcome-orb {
   display: flex;
-  height: 12rem;
-  width: 12rem;
+  height: 9.25rem;
+  width: 9.25rem;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border-radius: 999px;
-  border: 4px solid color-mix(in srgb, var(--seeker-maroon) 28%, white);
+  border: 3px solid color-mix(in srgb, var(--seeker-maroon) 28%, var(--wesal-white));
   background:
     radial-gradient(circle at 30% 28%, #fff 0%, transparent 42%),
-    linear-gradient(155deg, var(--seeker-pink) 0%, color-mix(in srgb, var(--seeker-maroon) 35%, white) 100%);
-  box-shadow: 0 18px 40px rgba(193, 123, 127, 0.22);
-  font-size: 2.15rem;
-  font-weight: 850;
+    linear-gradient(155deg, var(--seeker-pink) 0%, color-mix(in srgb, var(--seeker-maroon) 35%, var(--wesal-white)) 100%);
+  box-shadow: 0 14px 32px rgba(193, 123, 127, 0.2);
+  font-size: 1.75rem;
+  font-weight: 700;
   color: var(--seeker-maroon-dark);
 }
 
@@ -7825,7 +8412,7 @@ html[dir="rtl"] .seeker-notify-panel {
   align-items: flex-start;
   gap: 0.55rem;
   border-radius: 1.25rem;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 78%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 78%, var(--wesal-white));
   background: var(--seeker-white);
   padding: 1.15rem 1.05rem 1.05rem;
   text-decoration: none;
@@ -7842,28 +8429,28 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-quick-card:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
 .seeker-quick-card--rose {
-  background: linear-gradient(165deg, #fff 0%, color-mix(in srgb, var(--seeker-pink) 55%, white) 100%);
-  border-color: color-mix(in srgb, var(--seeker-maroon) 22%, white);
+  background: linear-gradient(165deg, #fff 0%, color-mix(in srgb, var(--seeker-pink) 55%, var(--wesal-white)) 100%);
+  border-color: color-mix(in srgb, var(--seeker-maroon) 22%, var(--wesal-white));
 }
 
 .seeker-quick-card--blush {
   background: linear-gradient(165deg, #fff 0%, #f8ebe6 100%);
-  border-color: color-mix(in srgb, #d9a99a 30%, white);
+  border-color: color-mix(in srgb, #d9a99a 30%, var(--wesal-white));
 }
 
 .seeker-quick-card--gold {
-  background: linear-gradient(165deg, #fff 0%, color-mix(in srgb, var(--seeker-gold-soft) 42%, white) 100%);
-  border-color: color-mix(in srgb, var(--seeker-gold) 28%, white);
+  background: linear-gradient(165deg, #fff 0%, color-mix(in srgb, var(--seeker-gold-soft) 42%, var(--wesal-white)) 100%);
+  border-color: color-mix(in srgb, var(--seeker-gold) 28%, var(--wesal-white));
 }
 
 .seeker-quick-card--cream {
   background: linear-gradient(165deg, #fff 0%, var(--seeker-cream) 100%);
-  border-color: color-mix(in srgb, var(--seeker-border) 70%, white);
+  border-color: color-mix(in srgb, var(--seeker-border) 70%, var(--wesal-white));
 }
 
 .seeker-quick-icon {
@@ -7873,13 +8460,13 @@ html[dir="rtl"] .seeker-notify-panel {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--seeker-pink) 70%, white);
+  background: color-mix(in srgb, var(--seeker-pink) 70%, var(--wesal-white));
   color: var(--seeker-maroon);
   margin-bottom: 0.15rem;
 }
 
 .seeker-quick-card--gold .seeker-quick-icon {
-  background: color-mix(in srgb, var(--seeker-gold-soft) 55%, white);
+  background: color-mix(in srgb, var(--seeker-gold-soft) 55%, var(--wesal-white));
   color: color-mix(in srgb, var(--seeker-gold) 70%, #6a5320);
 }
 
@@ -7933,7 +8520,7 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-summary-grid {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.55rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -7949,12 +8536,12 @@ html[dir="rtl"] .seeker-notify-panel {
 .seeker-summary-card {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  border-radius: 1.2rem;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+  gap: 0.2rem;
+  border-radius: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, var(--wesal-white));
   background: var(--seeker-white);
-  padding: 1.05rem 1rem 1.1rem;
-  box-shadow: 0 10px 24px rgba(90, 55, 45, 0.04);
+  padding: 0.7rem 0.75rem 0.75rem;
+  box-shadow: 0 8px 18px rgba(90, 55, 45, 0.04);
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
@@ -7962,28 +8549,33 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-summary-card:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--seeker-maroon) 18%, white);
-  box-shadow: 0 14px 28px rgba(90, 55, 45, 0.08);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--seeker-maroon) 18%, var(--wesal-white));
+  box-shadow: 0 10px 22px rgba(90, 55, 45, 0.07);
 }
 
 .seeker-summary-icon {
   display: inline-flex;
-  height: 2.15rem;
-  width: 2.15rem;
+  height: 1.7rem;
+  width: 1.7rem;
   align-items: center;
   justify-content: center;
-  border-radius: 0.75rem;
-  margin-bottom: 0.35rem;
+  border-radius: 0.55rem;
+  margin-bottom: 0.15rem;
+}
+
+.seeker-summary-icon svg {
+  width: 0.95rem;
+  height: 0.95rem;
 }
 
 .seeker-summary-icon--pending {
-  background: color-mix(in srgb, var(--seeker-gold-soft) 55%, white);
+  background: color-mix(in srgb, var(--seeker-gold-soft) 55%, var(--wesal-white));
   color: color-mix(in srgb, var(--seeker-gold) 75%, #5c4518);
 }
 
 .seeker-summary-icon--ok {
-  background: color-mix(in srgb, #c8d9b8 55%, white);
+  background: color-mix(in srgb, #c8d9b8 55%, var(--wesal-white));
   color: #5d7a45;
 }
 
@@ -7993,32 +8585,32 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-summary-icon--total {
-  background: color-mix(in srgb, var(--seeker-pink) 70%, white);
+  background: color-mix(in srgb, var(--seeker-pink) 70%, var(--wesal-white));
   color: var(--seeker-maroon);
 }
 
 .seeker-summary-value {
   margin: 0;
-  font-size: 1.45rem;
-  font-weight: 850;
+  font-size: 1.2rem;
+  font-weight: 700;
   color: var(--seeker-text);
   line-height: 1.2;
 }
 
 .seeker-summary-label {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   font-weight: 650;
   color: var(--seeker-muted);
 }
 
 /* Pending bookings panel */
 .seeker-pending-panel {
-  border-radius: 1.35rem;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+  border-radius: 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, var(--wesal-white));
   background: var(--seeker-white);
-  padding: 1.15rem 1.2rem 1.3rem;
-  box-shadow: 0 10px 24px rgba(90, 55, 45, 0.045);
+  padding: 0.85rem 0.95rem 1rem;
+  box-shadow: 0 8px 18px rgba(90, 55, 45, 0.04);
 }
 
 .seeker-pending-head {
@@ -8026,8 +8618,8 @@ html[dir="rtl"] .seeker-notify-panel {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.55rem 0.75rem;
-  margin-bottom: 0.95rem;
+  gap: 0.4rem 0.6rem;
+  margin-bottom: 0.65rem;
 }
 
 .seeker-pending-head > :first-child {
@@ -8039,18 +8631,18 @@ html[dir="rtl"] .seeker-notify-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.95rem;
-  border-radius: 1.05rem;
-  background: color-mix(in srgb, var(--seeker-pink-soft) 85%, white);
-  padding: 1.85rem 1.2rem;
+  gap: 0.7rem;
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--seeker-pink-soft) 85%, var(--wesal-white));
+  padding: 1.15rem 1rem;
   text-align: center;
 }
 
 .seeker-pending-empty p {
   margin: 0;
   max-width: 28rem;
-  font-size: 0.92rem;
-  line-height: 1.8;
+  font-size: 0.84rem;
+  line-height: 1.65;
   color: var(--seeker-muted);
 }
 
@@ -8090,11 +8682,11 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-home-soft-btn:hover {
   transform: translateY(-1px);
-  background: color-mix(in srgb, var(--seeker-pink) 70%, white);
+  background: color-mix(in srgb, var(--seeker-pink) 70%, var(--wesal-white));
 }
 
 .seeker-home-soft-btn:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, white);
+  outline: 2px solid color-mix(in srgb, var(--seeker-maroon) 55%, var(--wesal-white));
   outline-offset: 2px;
 }
 
@@ -8116,8 +8708,8 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-home-booking-row:hover {
-  background: color-mix(in srgb, var(--seeker-pink) 55%, white);
-  border-color: color-mix(in srgb, var(--seeker-maroon) 22%, white);
+  background: color-mix(in srgb, var(--seeker-pink) 55%, var(--wesal-white));
+  border-color: color-mix(in srgb, var(--seeker-maroon) 22%, var(--wesal-white));
 }
 
 /* Motion â€” keep seeker snappy: no entrance remount tax */
@@ -8244,7 +8836,7 @@ html[dir="rtl"] .seeker-notify-panel {
   margin-top: 0.15rem;
   padding: 0.7rem 0.8rem;
   border-radius: 1rem;
-  background: color-mix(in srgb, var(--seeker-pink) 62%, white);
+  background: color-mix(in srgb, var(--seeker-pink) 62%, var(--wesal-white));
 }
 
 .owner-identity-actions {
@@ -8256,7 +8848,7 @@ html[dir="rtl"] .seeker-notify-panel {
   align-items: center;
   gap: 0.45rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--seeker-maroon) 12%, white);
+  background: color-mix(in srgb, var(--seeker-maroon) 12%, var(--wesal-white));
   padding: 0.35rem 0.75rem;
   color: var(--seeker-maroon-dark);
   font-size: 0.75rem;
@@ -8283,7 +8875,7 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .owner-identity-hint {
   margin: 0;
-  border-top: 1px solid color-mix(in srgb, var(--seeker-maroon) 14%, white);
+  border-top: 1px solid color-mix(in srgb, var(--seeker-maroon) 14%, var(--wesal-white));
   padding-top: 0.7rem;
   font-size: 0.78rem;
   line-height: 1.7;
@@ -8342,11 +8934,15 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-settings-card {
   min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 88%, var(--wesal-white));
   border-radius: 1.35rem;
   background: color-mix(in srgb, var(--seeker-white) 94%, transparent);
   box-shadow: 0 12px 28px rgba(90, 55, 45, 0.05);
   padding: 1.2rem clamp(1rem, 2.4vw, 1.45rem) 1.35rem;
+}
+
+[data-testid="hall-owner-management"] .seeker-settings-card {
+  box-shadow: 0 10px 26px rgba(90, 55, 45, 0.05);
 }
 
 .seeker-settings-section-title {
@@ -8380,7 +8976,7 @@ html[dir="rtl"] .seeker-notify-panel {
   gap: 1rem;
   margin-top: 1rem;
   padding-bottom: 0.35rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 88%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 88%, var(--wesal-white));
   margin-bottom: 0.15rem;
 }
 
@@ -8392,7 +8988,7 @@ html[dir="rtl"] .seeker-notify-panel {
   width: 6.5rem;
   overflow: hidden;
   border-radius: 999px;
-  border: 3px solid color-mix(in srgb, var(--seeker-maroon) 35%, white);
+  border: 3px solid color-mix(in srgb, var(--seeker-maroon) 35%, var(--wesal-white));
   background: var(--seeker-pink);
   color: var(--seeker-maroon);
   font-size: 1.45rem;
@@ -8424,8 +9020,8 @@ html[dir="rtl"] .seeker-notify-panel {
 .profile-avatar-crop-panel {
   width: min(100%, 28rem);
   border-radius: 1.25rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-maroon, #c17b7f) 18%, white);
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon, #c17b7f) 18%, var(--wesal-white));
+  background: var(--wesal-white);
   padding: 1.15rem 1.2rem 1.25rem;
   box-shadow: 0 18px 48px rgba(90, 55, 45, 0.2);
 }
@@ -8495,7 +9091,7 @@ html[dir="rtl"] .seeker-notify-panel {
     transparent 10.4rem,
     rgba(20, 12, 10, 0.58) 10.45rem
   );
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--wesal-maroon, #c17b7f) 55%, white);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--wesal-maroon, #c17b7f) 55%, var(--wesal-white));
   border-radius: 1.1rem;
 }
 
@@ -8534,9 +9130,9 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-settings-success {
   margin: 0.85rem 0 0;
-  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, white);
+  border: 1px solid color-mix(in srgb, var(--seeker-border) 80%, var(--wesal-white));
   border-radius: 0.9rem;
-  background: color-mix(in srgb, var(--seeker-pink-soft) 90%, white);
+  background: color-mix(in srgb, var(--seeker-pink-soft) 90%, var(--wesal-white));
   padding: 0.7rem 0.85rem;
   color: var(--seeker-maroon-dark);
   font-size: 0.88rem;
@@ -8599,8 +9195,8 @@ html[dir="rtl"] .seeker-notify-panel {
   align-items: center;
   gap: 0.75rem;
   border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 22%, white);
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 22%, var(--wesal-white));
+  background: var(--wesal-white);
   padding: 0.85rem 1rem;
   box-shadow: 0 16px 40px rgba(90, 55, 45, 0.16);
   animation: wesal-toast-in 220ms ease;
@@ -8623,7 +9219,7 @@ html[dir="rtl"] .seeker-notify-panel {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: color-mix(in srgb, #1f8f5f 14%, white);
+  background: color-mix(in srgb, #1f8f5f 14%, var(--wesal-white));
   color: #1f8f5f;
 }
 
@@ -8750,13 +9346,13 @@ html[dir="rtl"] .seeker-notify-panel {
   padding: 0.25rem;
   border-radius: 1rem;
   border: 1px solid var(--wesal-border);
-  background: #fff;
+  background: var(--wesal-white);
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   scrollbar-gutter: auto;
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--wesal-maroon) 42%, white) transparent;
+  scrollbar-color: color-mix(in srgb, var(--wesal-maroon) 42%, var(--wesal-white)) transparent;
 }
 
 .mabrouk-studio-tab {
@@ -9052,7 +9648,7 @@ html[dir="rtl"] .seeker-notify-panel {
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 0;
-  border-inline-start: 1px solid color-mix(in srgb, var(--wesal-border) 70%, white);
+  border-inline-start: 1px solid color-mix(in srgb, var(--wesal-border) 70%, var(--wesal-white));
   box-shadow: -14px 0 40px rgba(40, 25, 20, 0.2);
   animation: wesal-notify-drawer-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -9072,7 +9668,8 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   line-height: 1.2;
 }
 
-.wesal-navbar-mobile-lang.lang-switch-trigger {
+.wesal-navbar-mobile-lang.lang-switch-trigger,
+.wesal-navbar-mobile-lang.theme-switch-trigger {
   width: 2.75rem;
   min-width: 2.75rem;
   height: 2.75rem;
@@ -9087,7 +9684,8 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   border-radius: 999px;
 }
 
-.wesal-navbar-mobile-lang.lang-switch-trigger:hover {
+.wesal-navbar-mobile-lang.lang-switch-trigger:hover,
+.wesal-navbar-mobile-lang.theme-switch-trigger:hover {
   transform: none;
 }
 

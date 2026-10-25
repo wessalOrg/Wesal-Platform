@@ -49,7 +49,7 @@ export default function HallFormActions({
   if (endCard) {
     return (
       <div className="owner-add-hall-actions flex h-full min-w-0">
-        <div className="flex h-full w-full min-w-0 flex-col gap-3 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_22px_rgba(90,55,45,0.05)] sm:p-5">
+        <div className="flex h-full w-full min-w-0 flex-col gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white p-4 shadow-[0_8px_22px_rgba(90,55,45,0.05)] sm:p-5">
           <div className="min-w-0 flex-1" aria-live="polite">
             <div className="flex items-center gap-2">
               <span

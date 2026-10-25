@@ -70,7 +70,7 @@ export default function HallHeroGallery({
     <>
       <section
         id="hall-photos"
-        className="hall-hero-gallery relative min-w-0 scroll-mt-28 overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink)]"
+        className="hall-hero-gallery relative min-w-0 scroll-mt-28 overflow-hidden rounded-2xl border-0 bg-[var(--wesal-pink)]"
         aria-label={t("halls.gallery.openFull", { name: hallName })}
         data-testid="hall-hero-gallery"
       >

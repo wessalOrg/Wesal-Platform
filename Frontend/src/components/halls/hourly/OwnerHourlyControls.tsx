@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import HallMonthCalendar from "@/components/halls/HallMonthCalendar";
@@ -117,8 +117,8 @@ export default function OwnerHourlyControls({
     <section
       className={
         embedded
-          ? "flex min-w-0 flex-col rounded-2xl border border-[var(--wesal-border)] bg-[#faf7f5] p-3.5 sm:p-4"
-          : "flex min-w-0 flex-col rounded-[1.35rem] border border-[var(--wesal-border)] bg-white p-4 shadow-[0_10px_28px_rgba(90,55,45,0.06)] sm:p-5"
+          ? "flex min-w-0 flex-col rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-[var(--wesal-pink-soft)] p-3.5 sm:p-4"
+          : "flex min-w-0 flex-col rounded-[1.35rem] border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white p-4 shadow-[0_10px_28px_rgba(90,55,45,0.06)] sm:p-5"
       }
       data-testid="owner-hourly-controls"
       aria-labelledby="hall-hourly-settings-heading"
@@ -148,7 +148,7 @@ export default function OwnerHourlyControls({
         role="switch"
         aria-checked={showBooked}
         disabled={busy || controlsLocked}
-        className="mt-3 flex w-full items-start gap-3 rounded-xl border border-[var(--wesal-border)] bg-[#faf6f4] px-3 py-2.5 text-start"
+        className="mt-3 flex w-full items-start gap-3 rounded-xl border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-[#faf6f4] px-3 py-2.5 text-start"
         data-testid="owner-show-booked-toggle"
         onClick={() => {
           void persistVisibility(!showBooked);
@@ -176,7 +176,7 @@ export default function OwnerHourlyControls({
         </span>
       </button>
 
-      <div className="mt-3 min-w-0 flex-1 rounded-xl border border-[var(--wesal-border)] bg-[#f7f4f2] p-3">
+      <div className="mt-3 min-w-0 flex-1 rounded-xl border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-[#f7f4f2] p-3">
         <HallMonthCalendar
           dayStatuses={dayStatuses}
           selectedDateIso={date || null}

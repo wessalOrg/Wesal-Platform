@@ -5,7 +5,7 @@ export default function HallNotificationEmptyState() {
 
   return (
     <div
-      className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-8 text-center sm:min-h-56 sm:px-6"
+      className="flex min-h-48 flex-col items-center justify-center rounded-2xl bg-[var(--wesal-pink-soft)] px-4 py-8 text-center sm:min-h-56 sm:px-6"
       data-testid="hall-notifications-empty"
       role="status"
     >

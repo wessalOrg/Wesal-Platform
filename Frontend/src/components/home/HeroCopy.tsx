@@ -43,11 +43,6 @@ export default function HeroCopy({ titleId, intro }: HeroCopyProps) {
         <span className="hero-copy-line block md:whitespace-nowrap">{t("home.hero.heading")}</span>
       </h1>
 
-      <div
-        className="hero-copy-divider mx-auto mt-3 h-px max-w-[10rem] bg-gradient-to-l from-transparent via-[var(--wesal-gold)] to-transparent"
-        aria-hidden="true"
-      />
-
       <div className="hero-copy-tagline mt-5 flex items-center gap-3">
         <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-maroon)]/70" />
         <p
@@ -59,7 +54,7 @@ export default function HeroCopy({ titleId, intro }: HeroCopyProps) {
         <span className="hero-copy-rule h-px flex-1 bg-[var(--wesal-maroon)]/70" />
       </div>
 
-      <p className="hero-copy-desc mt-3.5 text-sm leading-7 text-black sm:mt-5 sm:text-[0.95rem] sm:leading-8">
+      <p className="hero-copy-desc mt-3.5 text-sm leading-7 text-[var(--wesal-text)] sm:mt-5 sm:text-[0.95rem] sm:leading-8">
         {t("home.hero.description")}
       </p>
 

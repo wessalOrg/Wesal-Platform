@@ -60,16 +60,16 @@ export default async function HeroSection() {
               x2="100%"
               y2="100%"
             >
-              <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="22%" stopColor="#FCFBF9" />
-              <stop offset="48%" stopColor="#F7F0EA" />
-              <stop offset="72%" stopColor="#FCFAF7" />
-              <stop offset="100%" stopColor="#F8F4EF" />
+              <stop offset="0%" stopColor="var(--wesal-white)" />
+              <stop offset="22%" stopColor="var(--wesal-cream)" />
+              <stop offset="48%" stopColor="var(--wesal-pink-soft)" />
+              <stop offset="72%" stopColor="var(--wesal-cream)" />
+              <stop offset="100%" stopColor="var(--wesal-footer)" />
             </linearGradient>
             <radialGradient id={`${goldId}-pearl`} cx="36%" cy="46%" r="58%">
-              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.98" />
-              <stop offset="40%" stopColor="#FFFFFF" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#EDE4DA" stopOpacity="0.18" />
+              <stop className="hero-svg-pearl-0" offset="0%" stopColor="var(--wesal-white)" stopOpacity="0.98" />
+              <stop className="hero-svg-pearl-1" offset="40%" stopColor="var(--wesal-white)" stopOpacity="0.6" />
+              <stop className="hero-svg-pearl-2" offset="100%" stopColor="var(--wesal-pink)" stopOpacity="0.18" />
             </radialGradient>
             <linearGradient
               id={`${goldId}-edge`}
@@ -78,15 +78,15 @@ export default async function HeroSection() {
               x2="58%"
               y2="100%"
             >
-              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.12" />
-              <stop offset="40%" stopColor="#FCFBF9" stopOpacity="0.5" />
-              <stop offset="75%" stopColor="#F8F4EF" stopOpacity="0.88" />
-              <stop offset="100%" stopColor="#F8F4EF" stopOpacity="0.95" />
+              <stop className="hero-svg-edge-0" offset="0%" stopColor="var(--wesal-white)" stopOpacity="0.12" />
+              <stop className="hero-svg-edge-1" offset="40%" stopColor="var(--wesal-cream)" stopOpacity="0.5" />
+              <stop className="hero-svg-edge-2" offset="75%" stopColor="var(--wesal-footer)" stopOpacity="0.88" />
+              <stop className="hero-svg-edge-3" offset="100%" stopColor="var(--wesal-footer)" stopOpacity="0.95" />
             </linearGradient>
             <linearGradient id={goldId} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#E2C98A" />
-              <stop offset="45%" stopColor="#C4A05C" />
-              <stop offset="100%" stopColor="#E8D4A0" />
+              <stop offset="0%" stopColor="var(--wesal-gold-soft)" />
+              <stop offset="45%" stopColor="var(--wesal-gold)" />
+              <stop offset="100%" stopColor="var(--wesal-gold-soft)" />
             </linearGradient>
           </defs>
 
@@ -156,8 +156,8 @@ export default async function HeroSection() {
           >
             <defs>
               <linearGradient id="wesal-hero-mcream" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FCFBF9" />
-                <stop offset="100%" stopColor="#F8F4EF" />
+                <stop offset="0%" stopColor="var(--wesal-cream)" />
+                <stop offset="100%" stopColor="var(--wesal-footer)" />
               </linearGradient>
             </defs>
             <path d={CREAM_MOBILE} fill="url(#wesal-hero-mcream)" />
@@ -165,7 +165,7 @@ export default async function HeroSection() {
               className="hero-gold-line-mobile"
               d={EDGE_MOBILE}
               fill="none"
-              stroke="#C4A05C"
+              stroke="var(--wesal-gold)"
               strokeWidth="1.4"
               strokeLinecap="round"
               vectorEffect="non-scaling-stroke"

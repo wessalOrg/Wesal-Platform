@@ -293,28 +293,28 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                   router.push(buildHallDetailsPath(viewHall.id));
                 }}
               >
-                <h1 className="text-lg font-extrabold leading-8 break-words text-[var(--wesal-maroon)] underline-offset-4 hover:underline sm:text-[1.65rem]">
+                <h1 className="hall-details-name text-lg font-extrabold leading-8 break-words text-[var(--wesal-maroon)] underline-offset-4 hover:underline sm:text-[1.65rem]">
                   {viewHall.name}
                 </h1>
               </button>
               <div className="mt-5 flex w-full flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <button
                   type="button"
-                  className="inline-flex !h-10 w-full items-center rounded-full bg-[var(--wesal-maroon)] py-0.5 pe-1 ps-0.5 text-start text-white transition-colors hover:bg-[var(--wesal-maroon-dark)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)] sm:!w-52"
+                  className="hall-popup-details-cta inline-flex !h-10 w-full items-center rounded-full bg-[var(--wesal-brand-ink)] py-0.5 pe-1 ps-0.5 text-start text-white transition-colors hover:bg-[var(--wesal-maroon-dark)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-brand-ink)] sm:!w-52"
                   data-testid="hall-popup-details-cta"
                   onClick={() => {
                     onClose?.();
                     router.push(buildHallDetailsPath(viewHall.id));
                   }}
                 >
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)] ring-2 ring-white">
+                  <span className="hall-popup-details-cta-chip grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-brand-ink)] ring-2 ring-white">
                     <DetailsIcon />
                   </span>
                   <span className="min-w-0 flex-1 px-2 text-center text-xs font-extrabold leading-tight">
                     {t("halls.popup.clickForDetails")}
                   </span>
                   <span
-                    className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]"
+                    className="hall-popup-details-cta-chip grid size-5 shrink-0 place-items-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-brand-ink)]"
                     aria-hidden="true"
                   >
                     <ChevronIcon />

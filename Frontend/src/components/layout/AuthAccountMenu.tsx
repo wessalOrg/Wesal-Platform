@@ -131,7 +131,7 @@ export default function AuthAccountMenu({
   return (
     <div
       ref={rootRef}
-      className={`relative flex min-w-0 items-center gap-2.5 ${stacked ? "w-full flex-col items-stretch" : ""}`}
+      className={`relative flex min-w-0 items-center gap-1.5 ${stacked ? "w-full flex-col items-stretch gap-2.5" : ""}`}
       data-testid="navbar-authenticated"
     >
       <button

@@ -91,8 +91,14 @@ export default function HallQuickInfo({ hall }: HallQuickInfoProps) {
     >
       {items.map((item) => (
         <li key={item.id} className="hall-quick-info-card">
-          <div className="min-w-0">
-            <p className="text-[0.7rem] font-semibold text-[var(--wesal-muted)] sm:text-xs">
+          <span className="hall-quick-info-icon" aria-hidden="true">
+            {item.icon}
+          </span>
+          <div className="min-w-0 flex-1 text-start">
+            <p
+              className="text-[0.7rem] font-bold text-[var(--wesal-text)] sm:text-xs"
+              style={{ WebkitTextStroke: "0.35px currentColor" }}
+            >
               {item.label}
             </p>
             <p
@@ -105,9 +111,6 @@ export default function HallQuickInfo({ hall }: HallQuickInfoProps) {
               {item.value}
             </p>
           </div>
-          <span className="hall-quick-info-icon" aria-hidden="true">
-            {item.icon}
-          </span>
         </li>
       ))}
     </ul>

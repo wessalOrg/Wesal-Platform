@@ -1,0 +1,35 @@
+---
+description: Demo login + dark mode stay local only — never push to GitHub
+alwaysApply: true
+---
+
+# Local-only: demo login & dark mode
+
+## Never push to GitHub / origin
+
+These are **local development only**. Do not `git add`, commit, or push them:
+
+### Demo login (admin / seeker / hall owner)
+- `Frontend/src/lib/demo-auth.ts`
+- Demo buttons / `onDemoLogin` / `applyDemo*Session` wiring in `LoginFormCard.tsx`
+- i18n keys only used for demo stub labels if they were added solely for demo
+- Requires `NEXT_PUBLIC_DEMO_MODE=true` in **`.env.local` only** (already gitignored). Never set this in production, Netlify, or committed env files.
+
+### Dark mode
+- `Frontend/src/lib/theme.ts`
+- `Frontend/src/components/layout/ThemeProvider.tsx`
+- `Frontend/src/components/layout/ThemeSwitcher.tsx`
+- `ThemeProvider` / `THEME_BOOT_SCRIPT` wiring in `layout.tsx`
+- `ThemeSwitcher` usage in Navbar / dashboard shells
+- `useTheme` usage (e.g. AppointmentSavedModal)
+- Dark-theme CSS blocks (`html[data-theme="dark"]`, dark assets like `*-mabrouk-dark.*`)
+
+## When committing or opening a PR
+
+1. Leave the files above untracked / unstaged.
+2. If a tracked file mixes UI polish with demo or dark-mode hunks, **stage only the non-demo / non-dark changes** (or strip those hunks before commit).
+3. Never enable `NEXT_PUBLIC_DEMO_MODE` on remote CI or hosting.
+
+## Keep working locally
+
+Demo login and dark mode must **keep working on this machine**. Do not delete them; just do not publish them.

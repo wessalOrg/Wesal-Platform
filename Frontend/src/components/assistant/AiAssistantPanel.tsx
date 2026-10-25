@@ -651,7 +651,7 @@ export default function AiAssistantPanel({
       // and not announced, so the animation cannot get between the user and the app.
       inert={isExiting}
       onAnimationEnd={handleAnimationEnd}
-      className="wesal-ai-panel wesal-ai-panel--anchored fixed z-[105] flex min-w-0 flex-col overflow-hidden rounded-3xl border border-[var(--wesal-border)] bg-white shadow-[0_24px_60px_rgba(60,35,30,0.22)] outline-none"
+      className="wesal-ai-panel wesal-ai-panel--anchored fixed z-[105] flex min-w-0 flex-col overflow-hidden rounded-3xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] shadow-[0_24px_60px_rgba(60,35,30,0.22)] outline-none"
       data-size={isExpanded ? "expanded" : "compact"}
     >
       <div
@@ -669,7 +669,7 @@ export default function AiAssistantPanel({
         <div className="min-w-0 flex-1">
           <h2
             id={`${id}-title`}
-            className={`font-extrabold tracking-wide text-[var(--wesal-maroon-dark)] ${
+            className={`wesal-ai-panel-title font-extrabold tracking-wide text-[var(--wesal-maroon-dark)] ${
               isExpanded
                 ? "text-lg sm:text-xl"
                 : "truncate text-base"

@@ -71,7 +71,7 @@ export default function CatalogHallCard({
 
   return (
     <article
-      className="hall-card group overflow-hidden rounded-2xl bg-white shadow-[0_10px_28px_rgba(90,55,45,0.08)] ring-1 ring-black/[0.04] transition-[box-shadow] duration-200 hover:shadow-[0_16px_36px_rgba(90,55,45,0.12)]"
+      className="hall-card group overflow-hidden rounded-2xl border-0 bg-[var(--wesal-white)] shadow-[0_10px_28px_rgba(90,55,45,0.08)] transition-[box-shadow] duration-200 hover:shadow-[0_16px_36px_rgba(90,55,45,0.12)]"
       style={{ animationDelay: `${index * 90}ms` }}
       data-testid={`hall-card-${hall.id}`}
     >
@@ -150,13 +150,13 @@ export default function CatalogHallCard({
 
         <div className="flex items-end justify-between gap-3 pt-1">
           <div className="flex min-w-0 flex-wrap gap-2">
-            <span className="rounded-full bg-[#f3eeea] px-2.5 py-1 text-xs font-medium text-[var(--wesal-text)]">
+            <span className="hall-card-tag rounded-full bg-[var(--wesal-pink)] px-2.5 py-1 text-xs font-medium text-[var(--wesal-maroon-dark)]">
               {openTag ? t("halls.catalog.open") : t("halls.catalog.closed")}
             </span>
             {extraTags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-[#f3eeea] px-2.5 py-1 text-xs font-medium text-[var(--wesal-text)]"
+                className="hall-card-tag rounded-full bg-[var(--wesal-pink)] px-2.5 py-1 text-xs font-medium text-[var(--wesal-maroon-dark)]"
               >
                 {tag}
               </span>
@@ -165,7 +165,7 @@ export default function CatalogHallCard({
           {showBookButton && bookHref && !hallUnavailable ? (
             <Link
               href={bookHref}
-              className="btn-primary !min-h-9 shrink-0 !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b]"
+              className="hall-card-book btn-primary !min-h-9 shrink-0 !rounded-lg !px-3 !text-xs !font-bold"
               data-testid="hall-card-book-now"
               onClick={(event) => event.stopPropagation()}
             >
@@ -175,7 +175,7 @@ export default function CatalogHallCard({
           {showBookButton && hallUnavailable ? (
             <button
               type="button"
-              className="btn-primary !min-h-9 shrink-0 !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] !opacity-50"
+              className="hall-card-book btn-primary !min-h-9 shrink-0 !rounded-lg !px-3 !text-xs !font-bold !opacity-50"
               disabled
               aria-disabled="true"
             >

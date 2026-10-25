@@ -72,12 +72,25 @@ export default function HowItWorksSection() {
           {STEPS.map((step, index) => (
             <article
               key={step.titleKey}
-              className="how-card group relative flex flex-col overflow-hidden rounded-[1.6rem] border border-white/80 bg-white px-5 py-7 text-center shadow-[0_16px_36px_rgba(120,70,70,0.08)]"
+              className="how-card group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.6rem] border-0 bg-[var(--wesal-white)] px-5 py-7 text-center shadow-[0_16px_36px_rgba(120,70,70,0.08)]"
               style={{ animationDelay: `${140 + index * 120}ms` }}
+              tabIndex={0}
+              onPointerDown={(event) => {
+                const card = event.currentTarget;
+                card.classList.remove("is-flashing");
+                void card.offsetWidth;
+                card.classList.add("is-flashing");
+              }}
+              onAnimationEnd={(event) => {
+                if (event.animationName.includes("how-card-shine")) {
+                  event.currentTarget.classList.remove("is-flashing");
+                }
+              }}
             >
+              <span className="how-card-shine" aria-hidden="true" />
               <div className="flex w-full">
                 <div
-                  className="how-card-icon ms-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#f6f0e8] text-[#c4a05c]"
+                  className="how-card-icon ms-auto flex h-11 w-11 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-gold)]"
                   style={{ animationDelay: `${280 + index * 120}ms` }}
                 >
                   <StepIcon type={step.icon} />

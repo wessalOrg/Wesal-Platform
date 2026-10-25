@@ -45,11 +45,11 @@ export default function AskMabroukAboutHallButton({
         onClick={() => launcher.openWithContext({ id: hallId, name })}
         className={`relative inline-flex w-max max-w-full flex-col items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)] disabled:cursor-not-allowed ${className}`}
       >
-        <span className="relative z-10 mb-1 max-w-[11rem] rounded-2xl bg-white px-3 py-1.5 text-center text-xs font-bold leading-5 text-[var(--wesal-maroon)] shadow-[0_8px_18px_rgba(193,123,127,0.18)]">
+        <span className="ask-mabrouk-edge-prompt relative z-10 mb-1 max-w-[11rem] rounded-2xl bg-[var(--wesal-white)] px-3 py-1.5 text-center text-xs font-bold leading-5 text-[var(--wesal-maroon)] shadow-[0_8px_18px_rgba(193,123,127,0.18)]">
           {t("assistant.hallButton.prompt")}
-          <span className="absolute -bottom-1 start-5 size-2.5 rotate-45 bg-white" aria-hidden="true" />
+          <span className="ask-mabrouk-edge-tail absolute -bottom-1 start-5 size-2.5 rotate-45 bg-[var(--wesal-white)]" aria-hidden="true" />
         </span>
-        <span className="wesal-mabrouk-ask-avatar relative z-20 -mb-5 h-14 w-14 overflow-hidden rounded-full bg-[#f7e4e0] ring-2 ring-white shadow-[0_6px_14px_rgba(80,20,40,0.16)]">
+        <span className="wesal-mabrouk-ask-avatar relative z-20 -mb-5 h-14 w-14 overflow-hidden rounded-full bg-[var(--wesal-pink)] ring-2 ring-[var(--wesal-white)] shadow-[0_6px_14px_rgba(80,20,40,0.16)]">
           {/* Decorative; the button already names Mabrouk. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -82,7 +82,7 @@ export default function AskMabroukAboutHallButton({
         variant === "block" ? "w-full" : "w-auto"
       } ${className}`}
     >
-      <span className="wesal-mabrouk-ask-avatar relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-[#f7e4e0] ring-2 ring-white shadow-[0_4px_10px_rgba(80,20,40,0.16)]">
+      <span className="wesal-mabrouk-ask-avatar relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-[var(--wesal-pink)] ring-2 ring-[var(--wesal-white)] shadow-[0_4px_10px_rgba(80,20,40,0.16)]">
         {/* Decorative; the button already names Mabrouk. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
