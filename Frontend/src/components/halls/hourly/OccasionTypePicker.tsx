@@ -176,7 +176,7 @@ export default function OccasionTypePicker({
           id={listId}
           role="listbox"
           aria-label={t("halls.hourly.eventType")}
-          className="occasion-type-menu absolute inset-x-0 z-20 mt-1.5 max-h-72 overflow-auto rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] py-1 shadow-[0_16px_40px_rgba(40,25,20,0.18)]"
+          className="occasion-type-menu relative z-20 mt-1.5 rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] py-1 shadow-[0_16px_40px_rgba(40,25,20,0.18)]"
           data-testid="hourly-event-type-list"
         >
           {OCCASION_TYPE_KEYS.map((key, index) => {
@@ -193,7 +193,7 @@ export default function OccasionTypePicker({
                     setOpen(false);
                   }}
                   className={[
-                    "flex w-full items-center gap-3 px-3.5 py-3 text-start text-sm transition",
+                    "flex w-full items-center gap-3 px-3.5 py-2.5 text-start text-sm transition sm:py-3",
                     active
                       ? "bg-[var(--wesal-pink-soft)] font-bold text-[var(--wesal-maroon)]"
                       : "font-semibold text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]/70",

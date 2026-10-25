@@ -55,7 +55,7 @@ export default function HourlyBookingNameDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="hourly-name-title"
-        className="hourly-name-dialog absolute inset-x-4 top-1/2 mx-auto w-full max-w-md -translate-y-1/2 rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] p-5 shadow-[0_24px_60px_rgba(60,35,30,0.22)]"
+        className="hourly-name-dialog absolute inset-x-4 top-1/2 mx-auto max-h-[min(92vh,44rem)] w-full max-w-md -translate-y-1/2 overflow-y-auto rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] p-5 shadow-[0_24px_60px_rgba(60,35,30,0.22)]"
       >
         <h3 id="hourly-name-title" className="text-base font-bold text-[var(--wesal-text)]">
           {t("halls.hourly.confirmTitle")}
