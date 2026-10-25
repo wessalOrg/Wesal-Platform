@@ -208,7 +208,7 @@ export default function OccasionTypePicker({
                   <span className="min-w-0 flex-1">
                     <span className="block leading-4">{t(occasionTypeI18nKey(key))}</span>
                     <span
-                      className={`mt-px block truncate text-[0.65rem] font-normal leading-3.5 ${
+                      className={`mt-px block text-[0.65rem] font-normal leading-snug ${
                         active ? "text-[var(--wesal-maroon)]/70" : "text-[var(--wesal-muted)]"
                       }`}
                     >
