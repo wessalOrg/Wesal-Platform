@@ -265,14 +265,6 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
         className="hall-details-info-box relative space-y-6 rounded-[1.75rem] border border-[color-mix(in_srgb,var(--wesal-border)_42%,transparent)] bg-white p-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)] sm:space-y-7 sm:p-7 lg:p-8"
         data-testid="hall-details-info"
       >
-        <div className="pointer-events-auto absolute end-4 top-4 z-10 hidden max-w-[12.5rem] sm:block lg:end-6 lg:top-5">
-          <AskMabroukAboutHallButton
-            hallId={viewHall.id}
-            hallName={viewHall.name}
-            className="!w-full"
-          />
-        </div>
-
         <HallDetailsHeader
           key={`${viewHall.id}-tabs`}
           hall={viewHall}
@@ -280,27 +272,30 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
           part="tabs"
         />
 
-        <div className="sm:hidden">
-          <AskMabroukAboutHallButton
-            hallId={viewHall.id}
-            hallName={viewHall.name}
-            className="w-full"
-          />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+          {detailedAddress ? (
+            <section
+              id="hall-address"
+              className="min-w-0 flex-1 scroll-mt-28"
+              data-testid="hall-full-description"
+            >
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-[var(--wesal-text)] sm:text-base">
+                <PinIcon />
+                {t("halls.details.tabs.address")}
+              </h2>
+              <p className="mt-1.5 text-sm leading-6 text-[var(--wesal-muted)]">{detailedAddress}</p>
+            </section>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
+          <div className="w-full shrink-0 sm:max-w-[13.5rem]">
+            <AskMabroukAboutHallButton
+              hallId={viewHall.id}
+              hallName={viewHall.name}
+              className="w-full"
+            />
+          </div>
         </div>
-
-        {detailedAddress ? (
-          <section
-            id="hall-address"
-            className="scroll-mt-28"
-            data-testid="hall-full-description"
-          >
-            <h2 className="flex items-center gap-1.5 text-sm font-bold text-[var(--wesal-text)] sm:text-base">
-              <PinIcon />
-              {t("halls.details.tabs.address")}
-            </h2>
-            <p className="mt-1.5 text-sm leading-6 text-[var(--wesal-muted)]">{detailedAddress}</p>
-          </section>
-        ) : null}
 
         {featureLabels.length > 0 ? (
           <div id="hall-details-features" className="scroll-mt-28" data-testid="hall-features">
