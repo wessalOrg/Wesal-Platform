@@ -45,15 +45,15 @@ export default function RegisterAccountTypeScreen({
   }
   return (
     <div
-      className="wesal-register-card w-full rounded-[1.4rem] border border-white/70 bg-white/[0.97] p-5 shadow-[0_24px_60px_rgba(60,35,30,0.18)] sm:p-6 lg:p-7"
+      className="wesal-register-card w-full rounded-xl border border-white/70 bg-white/[0.97] p-4 shadow-[0_14px_36px_rgba(60,35,30,0.14)] sm:p-5"
       data-testid="register-account-type-screen"
     >
       <div className="flex flex-col items-center text-center">
-        <WesalLogo className="h-9 w-auto sm:h-10" variant="brand" />
-        <h2 className="mt-3 text-base font-bold text-[var(--wesal-maroon-dark)] sm:text-lg">
+        <WesalLogo className="h-6 w-auto sm:h-7" variant="brand" />
+        <h2 className="mt-1.5 text-base font-bold text-[var(--wesal-maroon-dark)] sm:text-lg">
           {t("auth.register.title")}
         </h2>
-        <p className="mt-1.5 max-w-[20rem] text-xs font-normal leading-4 text-[#525252] sm:max-w-[22rem] sm:text-[0.8rem] sm:leading-[1.15rem]">
+        <p className="mt-1 max-w-[20rem] text-xs font-normal leading-5 text-[#525252] sm:text-sm">
           {t("auth.register.subtitle")}
         </p>
       </div>
@@ -61,7 +61,7 @@ export default function RegisterAccountTypeScreen({
       <div
         role="radiogroup"
         aria-labelledby={`${groupId}-label`}
-        className="wesal-register-type-toggle mt-6"
+        className="wesal-register-type-toggle mt-3.5"
       >
         <span id={`${groupId}-label`} className="sr-only">
           {t("auth.register.form.accountTypeLabel")}
@@ -90,7 +90,7 @@ export default function RegisterAccountTypeScreen({
                 setAccountTypeError(null);
                 storeAccountType(option);
               }}
-              className={`wesal-register-type-segment flex flex-1 items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-[0.82rem] font-semibold sm:px-3 sm:text-sm ${
+              className={`wesal-register-type-segment flex flex-1 items-center justify-center gap-1.5 rounded-md px-1.5 py-2 text-xs font-semibold sm:px-2.5 sm:text-[0.82rem] ${
                 isSelected ? "wesal-register-type-segment--active" : ""
               }`}
             >
@@ -113,7 +113,7 @@ export default function RegisterAccountTypeScreen({
         </p>
       ) : null}
 
-      <div className="mt-4 border-t border-[var(--wesal-border)]/80 pt-4">
+      <div className="mt-3 border-t border-[var(--wesal-border)]/80 pt-3">
         <RegisterFormCard
           accountType={selected}
           onRequireAccountType={() => {

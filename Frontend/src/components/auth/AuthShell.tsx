@@ -47,8 +47,8 @@ export default function AuthShell({ children, testId = "auth-shell" }: AuthShell
 
       <AuthMinimalHeader />
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-3.5rem)] w-full max-w-[92rem] flex-col items-center justify-center px-3.5 pb-8 pt-4 sm:min-h-[calc(100svh-4rem)] sm:px-6 sm:pt-6 lg:px-6 lg:pb-10 xl:px-10">
-        <section className="w-full max-w-[32rem] xl:max-w-[34rem]">{children}</section>
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-3.5rem)] w-full max-w-[92rem] flex-col items-center justify-center px-3.5 pb-5 pt-3 sm:min-h-[calc(100svh-4rem)] sm:px-6 sm:pt-4 lg:px-6 lg:pb-6 xl:px-10">
+        <section className="w-full max-w-[28rem] sm:max-w-[30rem]">{children}</section>
       </div>
     </div>
   );
