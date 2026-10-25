@@ -30,9 +30,9 @@
   font-family: var(--font-wesal-sans, "Segoe UI", Tahoma, sans-serif);
 }
 
-/* DIN Next LT Arabic reads small — bump root so rem/Tailwind scale up */
+/* DIN Next LT Arabic reads a bit small — modest root bump (125% was too large) */
 html {
-  font-size: 125%; /* 20px when browser default is 16px */
+  font-size: 112.5%; /* 18px when browser default is 16px */
 }
 
 /* Regular file only — clamp extrabold to bold */
