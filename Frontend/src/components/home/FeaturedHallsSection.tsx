@@ -101,136 +101,138 @@ export default function FeaturedHallsSection() {
 
   return (
     <section
-      className="bg-[var(--wesal-cream)] py-12 sm:py-16"
+      className="bg-[var(--wesal-cream)] py-11 sm:py-14"
       aria-labelledby="featured-halls-heading"
       data-testid="featured-halls-section"
     >
       <Reveal>
         <div className="container-wesal">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-xl">
-              <h2
-                id="featured-halls-heading"
-                className="wesal-section-heading text-2xl font-extrabold text-[var(--wesal-maroon)] sm:text-3xl"
+          <div className="mx-auto max-w-[60rem]">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-xl">
+                <h2
+                  id="featured-halls-heading"
+                  className="wesal-section-heading text-[1.35rem] font-extrabold text-[var(--wesal-maroon)] sm:text-[1.7rem]"
+                >
+                  {t("home.providers.title")}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[var(--wesal-muted)] sm:text-[0.95rem]">
+                  {t("home.providers.subtitle")}
+                </p>
+              </div>
+
+              <div
+                className="flex flex-wrap gap-2"
+                role="tablist"
+                aria-label={t("home.providers.filterAria")}
               >
-                {t("home.providers.title")}
-              </h2>
-              <p className="mt-2 text-sm leading-7 text-[var(--wesal-muted)] sm:text-base">
-                {t("home.providers.subtitle")}
-              </p>
+                {FILTERS.map((id) => {
+                  const active = id === filter;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      data-testid={`provider-filter-${id}`}
+                      onClick={() => setFilter(id)}
+                      className={`cursor-pointer rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+                        active
+                          ? "bg-[var(--wesal-maroon)] text-white"
+                          : "bg-white text-[var(--wesal-muted)] shadow-[0_6px_16px_rgba(90,55,45,0.06)]"
+                      }`}
+                    >
+                      {t(`home.providers.filter.${id}`)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label={t("home.providers.filterAria")}
-            >
-              {FILTERS.map((id) => {
-                const active = id === filter;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    data-testid={`provider-filter-${id}`}
-                    onClick={() => setFilter(id)}
-                    className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition ${
-                      active
-                        ? "bg-[var(--wesal-maroon)] text-white"
-                        : "bg-white text-[var(--wesal-muted)] shadow-[0_6px_16px_rgba(90,55,45,0.06)]"
-                    }`}
-                  >
-                    {t(`home.providers.filter.${id}`)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {showsHalls && status === "error" ? (
-            <div
-              className="mt-6 rounded-2xl border-0 bg-white px-4 py-3 text-center shadow-[0_8px_20px_rgba(90,55,45,0.05)] sm:text-start"
-              data-testid="featured-halls-api-fallback"
-              role="status"
-            >
-              <p className="text-sm text-[var(--wesal-text)]">
-                {errorMessage
-                  ? `${t("home.featured.offline")} (${errorMessage})`
-                  : t("home.featured.offline")}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  hasLoadedRef.current = false;
-                  setStatus("loading");
-                  setReloadKey((key) => key + 1);
-                }}
-                className="btn-outline mt-3"
-                data-testid="featured-halls-retry"
+            {showsHalls && status === "error" ? (
+              <div
+                className="mt-5 rounded-2xl border-0 bg-white px-4 py-3 text-center shadow-[0_8px_20px_rgba(90,55,45,0.05)] sm:text-start"
+                data-testid="featured-halls-api-fallback"
+                role="status"
               >
-                {t("common.retry")}
-              </button>
+                <p className="text-sm text-[var(--wesal-text)]">
+                  {errorMessage
+                    ? `${t("home.featured.offline")} (${errorMessage})`
+                    : t("home.featured.offline")}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    hasLoadedRef.current = false;
+                    setStatus("loading");
+                    setReloadKey((key) => key + 1);
+                  }}
+                  className="btn-outline mt-3"
+                  data-testid="featured-halls-retry"
+                >
+                  {t("common.retry")}
+                </button>
+              </div>
+            ) : null}
+
+            {showsHalls && isRefreshing ? (
+              <p className="mt-3 text-xs font-semibold text-[var(--wesal-muted)]" role="status">
+                {t("home.featured.refreshing")}
+              </p>
+            ) : null}
+
+            {showsHalls && status === "loading" ? (
+              <div
+                className="mt-7 grid gap-[1.15rem] sm:grid-cols-2 lg:grid-cols-3 lg:gap-5"
+                data-testid="featured-halls-loading"
+                aria-busy="true"
+              >
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <ProviderCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : null}
+
+            {showsHalls && status !== "loading" && halls.length === 0 && visiblePlaces.length === 0 ? (
+              <p className="mt-6 text-center text-sm text-[var(--wesal-muted)]" role="status">
+                {t("home.featured.empty")}
+              </p>
+            ) : null}
+
+            {(showsHalls && status !== "loading" && previewHalls.length > 0) || previewPlaces.length > 0 ? (
+              <div
+                className={`mt-7 grid gap-[1.15rem] sm:grid-cols-2 lg:grid-cols-3 lg:gap-5${
+                  showsHalls && isRefreshing ? " pointer-events-none opacity-60" : ""
+                }`}
+                role="tabpanel"
+                data-testid="featured-halls-grid"
+                aria-busy={(showsHalls && isRefreshing) || undefined}
+              >
+                {previewHalls.map((hall, index) => (
+                  <CatalogHallCard
+                    key={hall.id}
+                    hall={hall}
+                    index={index}
+                    showBookButton
+                    onOpen={() => setOpenHallId(hall.id)}
+                  />
+                ))}
+                {previewPlaces.map((place, index) => (
+                  <ServicePlaceCard key={place.id} placeId={place.id} image={place.image} index={index} />
+                ))}
+              </div>
+            ) : null}
+
+            <div className="mt-7 flex justify-center">
+              <Link
+                href="/halls"
+                className="inline-flex items-center gap-2.5 rounded-full border border-[var(--wesal-gold)] bg-white px-5 py-2.5 text-sm font-semibold text-[var(--wesal-gold)] transition-colors hover:bg-[var(--wesal-gold)] hover:text-white"
+                data-testid="browse-more-halls"
+              >
+                {t("home.providers.browseHalls")}
+                <ChevronIcon />
+              </Link>
             </div>
-          ) : null}
-
-          {showsHalls && isRefreshing ? (
-            <p className="mt-4 text-xs font-semibold text-[var(--wesal-muted)]" role="status">
-              {t("home.featured.refreshing")}
-            </p>
-          ) : null}
-
-          {showsHalls && status === "loading" ? (
-            <div
-              className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
-              data-testid="featured-halls-loading"
-              aria-busy="true"
-            >
-              {Array.from({ length: 3 }).map((_, index) => (
-                <ProviderCardSkeleton key={index} />
-              ))}
-            </div>
-          ) : null}
-
-          {showsHalls && status !== "loading" && halls.length === 0 && visiblePlaces.length === 0 ? (
-            <p className="mt-8 text-center text-sm text-[var(--wesal-muted)]" role="status">
-              {t("home.featured.empty")}
-            </p>
-          ) : null}
-
-          {(showsHalls && status !== "loading" && previewHalls.length > 0) || previewPlaces.length > 0 ? (
-            <div
-              className={`mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3${
-                showsHalls && isRefreshing ? " pointer-events-none opacity-60" : ""
-              }`}
-              role="tabpanel"
-              data-testid="featured-halls-grid"
-              aria-busy={(showsHalls && isRefreshing) || undefined}
-            >
-              {previewHalls.map((hall, index) => (
-                <CatalogHallCard
-                  key={hall.id}
-                  hall={hall}
-                  index={index}
-                  showBookButton
-                  onOpen={() => setOpenHallId(hall.id)}
-                />
-              ))}
-              {previewPlaces.map((place, index) => (
-                <ServicePlaceCard key={place.id} placeId={place.id} image={place.image} index={index} />
-              ))}
-            </div>
-          ) : null}
-
-          <div className="mt-8 flex justify-center">
-            <Link
-              href="/halls"
-              className="inline-flex items-center gap-3 rounded-full border border-[var(--wesal-gold)] bg-white px-6 py-2.5 text-sm font-semibold text-[var(--wesal-gold)] transition-colors hover:bg-[var(--wesal-gold)] hover:text-white"
-              data-testid="browse-more-halls"
-            >
-              {t("home.providers.browseHalls")}
-              <ChevronIcon />
-            </Link>
           </div>
         </div>
       </Reveal>
@@ -256,7 +258,7 @@ function ServicePlaceCard({
 
   return (
     <article
-      className="hall-card overflow-hidden rounded-2xl border-0 bg-white shadow-[0_10px_28px_rgba(90,55,45,0.08)]"
+      className="hall-card overflow-hidden rounded-[0.95rem] border-0 bg-white shadow-[0_9px_24px_rgba(90,55,45,0.075)]"
       style={{ animationDelay: `${index * 90}ms` }}
       data-testid={`service-place-${placeId}`}
     >
@@ -264,10 +266,10 @@ function ServicePlaceCard({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={image} alt={name} className="h-full w-full object-cover" />
       </div>
-      <div className="space-y-2.5 p-4">
-        <h3 className="text-base font-bold leading-snug text-[var(--wesal-maroon)]">{name}</h3>
-        <p className="text-sm text-[var(--wesal-muted)]">{t(`home.providers.place.${placeId}.area`)}</p>
-        <p className="text-sm text-[var(--wesal-text)]">{t(`home.providers.place.${placeId}.note`)}</p>
+      <div className="space-y-2 p-3.5 sm:p-4">
+        <h3 className="text-[0.95rem] font-bold leading-snug text-[var(--wesal-maroon)] sm:text-base">{name}</h3>
+        <p className="text-[0.8rem] text-[var(--wesal-muted)] sm:text-sm">{t(`home.providers.place.${placeId}.area`)}</p>
+        <p className="text-[0.8rem] text-[var(--wesal-text)] sm:text-sm">{t(`home.providers.place.${placeId}.note`)}</p>
         <Link
           href="#consult"
           className="btn-primary !min-h-9 inline-flex !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b]"

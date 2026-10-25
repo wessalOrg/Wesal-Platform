@@ -63,11 +63,14 @@ export default function GoogleAuthButton({
           if (response.credential) credentialHandler.current(response.credential);
         },
       });
+      const width = Math.min(400, Math.max(280, Math.floor(buttonHost.clientWidth || 320)));
       window.google.accounts.id.renderButton(buttonHost, {
-        type: "icon",
+        type: "standard",
         theme: "outline",
         size: "large",
-        shape: "circle",
+        shape: "pill",
+        text: "continue_with",
+        width: String(width),
         locale: "ar",
       });
       renderedHost.current = buttonHost;
@@ -94,13 +97,13 @@ export default function GoogleAuthButton({
         onError={() => setRenderFailed(true)}
       />
       <div
-        className={`flex min-h-10 w-full items-center justify-center ${
+        className={`flex min-h-11 w-full items-center justify-center ${
           disabled ? "pointer-events-none opacity-60" : ""
         }`}
       >
         <div
           ref={setButtonHost}
-          className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full"
+          className="flex w-full max-w-full items-center justify-center overflow-hidden [&_iframe]:!w-full"
           data-testid="google-auth-button-host"
           aria-label={t("auth.google.continueAria")}
         />

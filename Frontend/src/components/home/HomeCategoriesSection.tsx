@@ -111,21 +111,21 @@ export default function HomeCategoriesSection() {
 
   return (
     <section
-      className="bg-[var(--wesal-cream)] py-12 sm:py-16"
+      className="bg-[var(--wesal-cream)] py-11 sm:py-14"
       aria-label={t("home.categories.aria")}
       data-testid="home-categories-section"
     >
       <Reveal>
         <div className="container-wesal">
-          <ul className="mx-auto grid max-w-5xl gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+          <ul className="mx-auto grid max-w-[60rem] gap-[1.15rem] sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
             {CATEGORIES.map((category) => (
               <li key={category.id}>
                 <Link
                   href={category.href}
-                  className="group block rounded-[1.75rem] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--wesal-maroon)]"
+                  className="group block rounded-[1.6rem] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--wesal-maroon)]"
                   data-testid={`home-category-${category.id}`}
                 >
-                  <div className="home-category-card relative aspect-square overflow-hidden rounded-[1.35rem] shadow-[0_12px_28px_rgba(90,55,45,0.12)] transition-transform duration-300 group-hover:-translate-y-1">
+                  <div className="home-category-card relative aspect-square overflow-hidden rounded-[1.28rem] shadow-[0_11px_26px_rgba(90,55,45,0.11)] transition-transform duration-300 group-hover:-translate-y-1">
                     <Image
                       src={category.image}
                       alt=""

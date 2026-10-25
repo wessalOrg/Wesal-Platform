@@ -65,7 +65,7 @@ export default function ConsultSection() {
   return (
     <section
       id="consult"
-      className="consult-section relative scroll-mt-20 py-10 sm:py-14"
+      className="consult-section relative scroll-mt-20 py-11 sm:py-14"
       aria-labelledby="consult-heading"
     >
       <h2 id="consult-heading" className="sr-only">
@@ -73,7 +73,7 @@ export default function ConsultSection() {
       </h2>
       <div className="container-wesal">
         <Reveal>
-          <div className="consult-layout">
+          <div className="consult-layout mx-auto max-w-[60rem]">
             <form className="consult-form" onSubmit={onSubmit} noValidate>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
