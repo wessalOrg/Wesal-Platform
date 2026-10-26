@@ -85,7 +85,7 @@ export default function StorySection() {
         <div className="story-layout">
           <div className="story-photo">
             <Image
-              src="/home/story-collage.jpg"
+              src="/home/story-collage.webp"
               alt={t("home.story.imageAlt")}
               width={920}
               height={864}
