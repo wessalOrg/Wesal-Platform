@@ -18,9 +18,9 @@ const HallDetailsView = dynamic(
 const PAGE_SIZE = 6;
 const SEARCH_PAGE_SIZE = 50;
 const PAGE_BTN_CLASS =
-  "flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-[var(--wesal-gold)]/60 bg-[var(--wesal-maroon)]/25 text-sm font-bold text-[var(--wesal-maroon)] shadow-[0_8px_22px_rgba(193,123,127,0.18)] transition hover:border-[var(--wesal-gold)] hover:bg-[var(--wesal-maroon)] hover:text-white disabled:cursor-not-allowed disabled:border-[var(--wesal-gold)]/25 disabled:bg-white/40 disabled:text-[var(--wesal-maroon)]/35 disabled:shadow-none";
+  "flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-[var(--wesal-gold)]/60 bg-[var(--wesal-maroon)]/25 text-xs font-bold text-[var(--wesal-maroon)] shadow-[0_6px_16px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-gold)] hover:bg-[var(--wesal-maroon)] hover:text-white disabled:cursor-not-allowed disabled:border-[var(--wesal-gold)]/25 disabled:bg-white/40 disabled:text-[var(--wesal-maroon)]/35 disabled:shadow-none sm:h-10 sm:w-10 sm:text-sm";
 const PAGE_NUM_ACTIVE_CLASS =
-  "flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-[var(--wesal-maroon)] bg-[var(--wesal-maroon)] text-sm font-bold text-white shadow-[0_8px_22px_rgba(193,123,127,0.22)]";
+  "flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-[var(--wesal-maroon)] bg-[var(--wesal-maroon)] text-xs font-bold text-white shadow-[0_6px_16px_rgba(193,123,127,0.2)] sm:h-10 sm:w-10 sm:text-sm";
 
 function getPageItems(pageCount: number, current: number): (number | "ellipsis")[] {
   if (pageCount <= 7) {
@@ -140,7 +140,7 @@ export default function HallsCatalogView() {
   };
 
   return (
-    <div className="container-wesal py-8 sm:py-10" data-testid="halls-catalog">
+    <div className="container-wesal py-5 sm:py-7" data-testid="halls-catalog">
       <HallsFilterBar
         region={filters.region}
         address={filters.address}
@@ -153,8 +153,8 @@ export default function HallsCatalogView() {
         onReset={resetFilters}
       />
 
-      <div className="mt-8 flex flex-wrap items-center justify-end gap-4 sm:mt-10">
-        <p className="inline-flex items-center gap-2 text-sm font-medium text-[var(--wesal-maroon)]">
+      <div className="mt-5 flex flex-wrap items-center justify-end gap-3 sm:mt-6">
+        <p className="inline-flex items-center gap-2 text-xs font-medium text-[var(--wesal-maroon)] sm:text-sm">
           {status === "loading" || isRefreshing ? (
             <>
               <Spinner />
@@ -203,21 +203,21 @@ export default function HallsCatalogView() {
 
       {status === "loading" ? (
         <div
-          className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-4 grid gap-3.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
           data-testid="halls-catalog-loading"
           aria-busy="true"
         >
           {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}
-              className="overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)]"
+              className="overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)]"
               aria-hidden="true"
             >
-              <div className="aspect-[4/3] animate-pulse bg-[var(--wesal-pink)]" />
-              <div className="space-y-3 p-4">
-                <div className="h-4 w-2/3 animate-pulse rounded bg-[rgba(193,123,127,0.18)]" />
-                <div className="h-3 w-1/2 animate-pulse rounded bg-[rgba(193,123,127,0.12)]" />
-                <div className="h-3 w-3/5 animate-pulse rounded bg-[rgba(193,123,127,0.12)]" />
+              <div className="aspect-[3/2] animate-pulse bg-[var(--wesal-pink)]" />
+              <div className="space-y-2 p-3">
+                <div className="h-3.5 w-2/3 animate-pulse rounded bg-[rgba(193,123,127,0.18)]" />
+                <div className="h-2.5 w-1/2 animate-pulse rounded bg-[rgba(193,123,127,0.12)]" />
+                <div className="h-2.5 w-3/5 animate-pulse rounded bg-[rgba(193,123,127,0.12)]" />
               </div>
             </div>
           ))}
@@ -227,7 +227,7 @@ export default function HallsCatalogView() {
       {status === "ready" && visible.length > 0 ? (
         <div
           ref={gridRef}
-          className={`mt-6 grid scroll-mt-24 gap-5 sm:grid-cols-2 lg:grid-cols-3 ${
+          className={`mt-4 grid scroll-mt-24 gap-3.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 ${
             isRefreshing ? "pointer-events-none opacity-60" : ""
           }`}
           aria-busy={isRefreshing}
@@ -238,6 +238,7 @@ export default function HallsCatalogView() {
               hall={hall}
               index={safePage * PAGE_SIZE + index}
               showBookButton
+              compact
               onOpen={() => setOpenHallId(hall.id)}
             />
           ))}
@@ -246,7 +247,7 @@ export default function HallsCatalogView() {
 
       {status === "ready" && visible.length === 0 ? (
         <div
-          className="mt-10 rounded-2xl border border-[var(--wesal-border)] bg-white px-6 py-10 text-center"
+          className="mt-7 rounded-xl border border-[var(--wesal-border)] bg-white px-5 py-8 text-center"
           data-testid="halls-search-empty"
         >
           <p className="font-semibold text-[var(--wesal-text)]">
@@ -273,7 +274,7 @@ export default function HallsCatalogView() {
 
       {status === "ready" && pageCount > 1 ? (
         <nav
-          className="mt-10 flex items-center justify-center gap-2 pb-4 sm:gap-3"
+          className="mt-7 flex items-center justify-center gap-1.5 pb-3 sm:mt-8 sm:gap-2"
           aria-label={t("halls.catalog.pagination")}
         >
           <button
@@ -290,7 +291,7 @@ export default function HallsCatalogView() {
             item === "ellipsis" ? (
               <span
                 key={`ellipsis-${index}`}
-                className="flex h-12 w-8 items-center justify-center text-[var(--wesal-maroon)]"
+                className="flex h-9 w-7 items-center justify-center text-[var(--wesal-maroon)] sm:h-10"
                 aria-hidden="true"
               >
                 …

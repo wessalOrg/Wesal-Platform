@@ -17,7 +17,7 @@ export default function HallsPage() {
       <main className="min-h-[60svh] bg-[var(--wesal-cream)]">
         <Suspense
           fallback={
-            <div className="container-wesal py-10 text-sm text-[var(--wesal-muted)]">
+            <div className="container-wesal py-6 text-sm text-[var(--wesal-muted)]">
               {translate("halls.catalog.loading", "ar")}
             </div>
           }
