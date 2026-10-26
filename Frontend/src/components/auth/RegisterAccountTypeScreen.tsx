@@ -90,7 +90,7 @@ export default function RegisterAccountTypeScreen({
                 setAccountTypeError(null);
                 storeAccountType(option);
               }}
-              className={`wesal-register-type-segment flex flex-1 items-center justify-center gap-1.5 rounded-md px-1.5 py-2 text-xs font-semibold sm:px-2.5 sm:text-[0.82rem] ${
+              className={`wesal-register-type-segment wesal-text-bold flex flex-1 items-center justify-center gap-1.5 rounded-md px-1.5 py-2 text-xs sm:px-2.5 sm:text-[0.82rem] ${
                 isSelected ? "wesal-register-type-segment--active" : ""
               }`}
             >

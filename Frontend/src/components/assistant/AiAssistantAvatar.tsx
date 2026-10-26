@@ -4,8 +4,8 @@ type AiAssistantAvatarProps = {
 };
 
 const SRC = {
-  bust: "/assistant/wesal-ai-groom.png",
-  full: "/assistant/wesal-ai-groom-full.png?v=2",
+  bust: "/assistant/wesal-ai-groom.jpg?v=5",
+  full: "/assistant/wesal-ai-groom-full.jpg?v=5",
 } as const;
 
 /** Illustrated Wesal AI host — a drawn mascot, not a photo cutout. */

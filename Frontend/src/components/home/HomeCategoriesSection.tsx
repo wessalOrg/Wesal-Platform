@@ -130,9 +130,8 @@ export default function HomeCategoriesSection() {
                       src={category.image}
                       alt=""
                       fill
-                      sizes="(min-width: 1024px) 40vw, 100vw"
-                      quality={80}
-                      unoptimized={category.id === "planners"}
+                      sizes="(min-width: 1024px) 20vw, (min-width: 640px) 40vw, 90vw"
+                      quality={75}
                       className="object-cover object-center"
                     />
 

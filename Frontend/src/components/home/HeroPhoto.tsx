@@ -16,8 +16,8 @@ export default function HeroPhoto({ showAlt = false }: { showAlt?: boolean }) {
           alt={showAlt ? t("home.hero.imageAlt") : ""}
           fill
           priority
-          unoptimized
           sizes="(min-width: 768px) 90rem, 100vw"
+          quality={75}
           className="hero-photo"
         />
       </div>

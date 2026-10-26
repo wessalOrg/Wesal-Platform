@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useT } from "@/i18n";
 
 const SUMMARY_SELECTOR = "[data-testid='hall-action-card']";
-const MABROUK_ART = "/assistant/appointment-saved-mabrouk.png?v=3";
+const MABROUK_ART = "/assistant/appointment-saved-mabrouk.jpg?v=5";
 
 type AppointmentSavedModalProps = {
   open: boolean;

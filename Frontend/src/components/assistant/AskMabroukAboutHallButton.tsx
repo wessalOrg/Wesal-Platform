@@ -45,7 +45,7 @@ export default function AskMabroukAboutHallButton({
         onClick={() => launcher.openWithContext({ id: hallId, name })}
         className={`relative inline-flex w-max max-w-full flex-col items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)] disabled:cursor-not-allowed ${className}`}
       >
-        <span className="ask-mabrouk-edge-prompt relative z-10 mb-1 max-w-[11rem] rounded-2xl bg-[var(--wesal-white)] px-3 py-1.5 text-center text-xs font-bold leading-5 text-[var(--wesal-maroon)] shadow-[0_8px_18px_rgba(193,123,127,0.18)]">
+        <span className="ask-mabrouk-edge-prompt wesal-text-bold relative z-10 mb-1 max-w-[11rem] rounded-2xl bg-[var(--wesal-white)] px-3 py-1.5 text-center text-xs leading-5 text-[var(--wesal-maroon)] shadow-[0_8px_18px_rgba(193,123,127,0.18)]">
           {t("assistant.hallButton.prompt")}
           <span className="ask-mabrouk-edge-tail absolute -bottom-1 start-5 size-2.5 rotate-45 bg-[var(--wesal-white)]" aria-hidden="true" />
         </span>
@@ -61,7 +61,7 @@ export default function AskMabroukAboutHallButton({
         </span>
         <span className="wesal-mabrouk-ask inline-flex items-center gap-2 rounded-full bg-[var(--wesal-maroon)] py-1.5 pe-1.5 ps-3 text-white transition-colors hover:bg-[var(--wesal-maroon-dark)]">
           <ChatIcon />
-          <span className="text-sm font-extrabold">{t("assistant.hallButton.title")}</span>
+          <span className="wesal-text-bold text-sm">{t("assistant.hallButton.title")}</span>
           <span className="wesal-mabrouk-ask-chevron grid size-7 place-items-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]" aria-hidden="true">
             <ChevronIcon />
           </span>
@@ -93,10 +93,10 @@ export default function AskMabroukAboutHallButton({
         />
       </span>
       <span className="min-w-0 flex-1 px-1 text-center">
-        <span className="block text-xs font-extrabold leading-tight text-white">
+        <span className="wesal-text-bold block text-xs leading-tight text-white">
           {t("assistant.hallButton.title")}
         </span>
-        <span className="mt-px block text-[0.6rem] font-semibold leading-tight text-white/80">
+        <span className="wesal-text-bold mt-px block text-[0.6rem] leading-tight text-white/90">
           {t("assistant.hallButton.subtitle")}
         </span>
       </span>

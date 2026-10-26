@@ -111,7 +111,7 @@ export default function HallDetailsHeader({
       {showMeta ? (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-[var(--wesal-text)] sm:w-auto">
+            <p className="wesal-text-bold flex w-full flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[var(--wesal-text)] sm:w-auto">
               <StarIcon />
               {rating ? (
                 <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5">

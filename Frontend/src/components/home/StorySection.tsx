@@ -85,12 +85,13 @@ export default function StorySection() {
         <div className="story-layout">
           <div className="story-photo">
             <Image
-              src="/home/story-collage.png?v=4"
+              src="/home/story-collage.jpg?v=5"
               alt={t("home.story.imageAlt")}
               width={920}
               height={864}
               className="story-collage-img"
-              unoptimized
+              sizes="(min-width: 1024px) 30rem, 70vw"
+              quality={80}
             />
           </div>
           <div className="story-copy" dir={lang === "ar" ? "rtl" : "ltr"}>

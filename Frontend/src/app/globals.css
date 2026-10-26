@@ -164,6 +164,13 @@ h3.home-category-title,
   zoom: 1;
 }
 
+/* Inline UI labels/CTAs that must read bold with DIN Next Regular */
+.wesal-text-bold {
+  font-weight: 800 !important;
+  -webkit-text-stroke: 0.4px currentColor;
+  paint-order: stroke fill;
+}
+
 .hall-details-tab {
   -webkit-text-stroke: 0.4px currentColor;
 }
@@ -5362,7 +5369,9 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 
 .wesal-register-type-segment {
   color: #4a3d36;
-  font-weight: 600;
+  font-weight: 800;
+  -webkit-text-stroke: 0.35px currentColor;
+  paint-order: stroke fill;
   background: transparent;
   border: none;
   cursor: pointer;

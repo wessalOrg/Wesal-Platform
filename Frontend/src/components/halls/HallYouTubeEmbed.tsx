@@ -149,14 +149,14 @@ export default function HallYouTubeEmbed({
         <button
           type="button"
           onClick={openModal}
-          className="group inline-flex items-center gap-2 text-base font-semibold text-[var(--wesal-text)]"
+          className="group inline-flex items-center gap-2 text-base text-[var(--wesal-text)]"
           data-testid="hall-youtube-link"
           aria-haspopup="dialog"
         >
           <YouTubeIcon />
           <span>
-            <span className="font-bold text-[#241c18]">{t("halls.details.youtubeLead")}</span>{" "}
-            <span className="font-bold text-[var(--wesal-maroon)] underline decoration-[var(--wesal-maroon)]/40 underline-offset-4 transition duration-200 group-hover:text-[var(--wesal-maroon-dark)] group-hover:decoration-[var(--wesal-maroon-dark)]">
+            <span className="wesal-text-bold text-[#241c18]">{t("halls.details.youtubeLead")}</span>{" "}
+            <span className="wesal-text-bold text-[var(--wesal-maroon)] underline decoration-[var(--wesal-maroon)]/40 underline-offset-4 transition duration-200 group-hover:text-[var(--wesal-maroon-dark)] group-hover:decoration-[var(--wesal-maroon-dark)]">
               {t("halls.details.youtubeHere")}
             </span>
           </span>

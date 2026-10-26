@@ -129,7 +129,7 @@ export default function GoogleAuthButton({
       >
         {/* Same footprint as login submit (rounded-xl / min-h-10). */}
         <div
-          className="pointer-events-none flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-3 text-sm font-bold text-[var(--wesal-maroon-dark)]"
+          className="pointer-events-none flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-3 text-sm font-extrabold text-[var(--wesal-maroon-dark)] [-webkit-text-stroke:0.35px_currentColor] [paint-order:stroke_fill]"
           aria-hidden="true"
         >
           <GoogleMark />

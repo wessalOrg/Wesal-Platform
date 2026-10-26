@@ -342,12 +342,12 @@ export default function LoginFormCard({
       <div className="my-3 flex items-center gap-3 text-xs text-[var(--wesal-muted)]"><span className="h-px flex-1 bg-[var(--wesal-border)]" />{t("auth.google.or")}<span className="h-px flex-1 bg-[var(--wesal-border)]" /></div>
       <GoogleAuthButton onCredential={(credential) => void onGoogleCredential(credential)} disabled={pending} />
 
-      <p className="mt-3 text-center text-xs text-[var(--wesal-muted)] sm:text-sm">
+      <p className="mt-3 text-center text-xs font-extrabold text-[var(--wesal-muted)] [-webkit-text-stroke:0.35px_currentColor] [paint-order:stroke_fill] sm:text-sm">
         {t("auth.login.noAccount")}{" "}
         <Link
           href={registerHref}
           onClick={markAuthNavigation}
-          className="font-semibold text-[var(--wesal-maroon)] underline-offset-2 hover:underline"
+          className="font-extrabold text-[var(--wesal-maroon)] underline-offset-2 hover:underline [-webkit-text-stroke:0.35px_currentColor] [paint-order:stroke_fill]"
         >
           {t("auth.login.registerLink")}
         </Link>

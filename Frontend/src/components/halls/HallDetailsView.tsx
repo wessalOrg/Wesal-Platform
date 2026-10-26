@@ -310,7 +310,7 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
                   <span className="hall-popup-details-cta-chip grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-brand-ink)] ring-2 ring-white">
                     <DetailsIcon />
                   </span>
-                  <span className="min-w-0 flex-1 px-2 text-center text-xs font-extrabold leading-tight">
+                  <span className="wesal-text-bold min-w-0 flex-1 px-2 text-center text-xs leading-tight">
                     {t("halls.popup.clickForDetails")}
                   </span>
                   <span

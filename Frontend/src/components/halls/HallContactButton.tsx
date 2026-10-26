@@ -15,7 +15,7 @@ const CONTACT_PAGE_CLASS =
   "btn-primary min-h-11 h-full w-full gap-2 whitespace-nowrap";
 
 const CONTACT_COMPACT_CLASS =
-  "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_22%,white)] bg-[color-mix(in_srgb,var(--wesal-pink)_72%,white)] px-3.5 text-xs font-bold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink)]";
+  "wesal-text-bold inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_22%,white)] bg-[color-mix(in_srgb,var(--wesal-pink)_72%,white)] px-3.5 text-xs text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink)]";
 
 type HallContactButtonProps = {
   hallId: string;
