@@ -85,7 +85,7 @@ export default function StorySection() {
         <div className="story-layout">
           <div className="story-photo">
             <Image
-              src="/home/story-collage.jpg?v=5"
+              src="/home/story-collage.jpg"
               alt={t("home.story.imageAlt")}
               width={920}
               height={864}

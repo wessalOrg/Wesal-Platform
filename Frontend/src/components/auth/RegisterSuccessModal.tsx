@@ -93,7 +93,7 @@ export default function RegisterSuccessModal({ open, loginHref }: RegisterSucces
           aria-hidden="true"
         >
           <Image
-            src="/auth/register-success-groom.jpg?v=5"
+            src="/auth/register-success-groom.jpg"
             alt=""
             width={160}
             height={160}
