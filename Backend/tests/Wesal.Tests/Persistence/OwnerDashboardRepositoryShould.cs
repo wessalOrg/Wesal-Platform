@@ -450,6 +450,36 @@ public class OwnerDashboardRepositoryShould
             item => Assert.Equal(new DateOnly(2027, 7, 2), item.RequestedDate));
     }
 
+    [Fact]
+    public async Task GetBookingsForInsights_FiltersByOwnerHallAndCreationRange_AndLoadsSlotsAndOccasion()
+    {
+        await using var context = CreateContext();
+        var ownerId = Guid.NewGuid().ToString();
+        var hall = new Hall { Id = Guid.NewGuid(), Name = "My Hall", OwnerId = ownerId };
+        var otherHall = new Hall { Id = Guid.NewGuid(), Name = "Other Hall", OwnerId = Guid.NewGuid().ToString() };
+        context.Halls.AddRange(hall, otherHall);
+        var booking = CreateBooking(hall.Id, "user", new DateOnly(2027, 6, 4), new TimeOnly(18, 0));
+        booking.NameOnBooking = "Guest · Weddings - 0591234567";
+        booking.CreatedAt = new DateTimeOffset(2027, 6, 10, 0, 0, 0, TimeSpan.Zero);
+        var other = CreateBooking(otherHall.Id, "user", new DateOnly(2027, 6, 4), new TimeOnly(18, 0));
+        other.CreatedAt = booking.CreatedAt;
+        context.Bookings.AddRange(booking, other);
+        await context.SaveChangesAsync();
+        var repository = new OwnerDashboardRepository(context);
+
+        var rows = await repository.GetBookingsForInsightsAsync(null, ownerId,
+            new DateTimeOffset(2027, 6, 1, 0, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2027, 7, 1, 0, 0, 0, TimeSpan.Zero));
+        var foreignHall = await repository.GetBookingsForInsightsAsync(otherHall.Id, ownerId,
+            new DateTimeOffset(2027, 6, 1, 0, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2027, 7, 1, 0, 0, 0, TimeSpan.Zero));
+
+        var result = Assert.Single(rows!);
+        Assert.Equal("Guest · Weddings - 0591234567", result.NameOnBooking);
+        Assert.Single(result.Slots);
+        Assert.Null(foreignHall);
+    }
+
     private static Booking CreateBooking(
         Guid hallId,
         string requesterUserId,

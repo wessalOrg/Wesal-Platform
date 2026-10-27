@@ -263,6 +263,26 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Booking>?> GetBookingsForInsightsAsync(Guid? hallId, string ownerId,
+        DateTimeOffset fromInclusive, DateTimeOffset toExclusive, CancellationToken cancellationToken = default)
+    {
+        var halls = _context.Halls.AsNoTracking().Where(hall => hall.OwnerId == ownerId && !hall.IsDeleted);
+        if (hallId.HasValue)
+        {
+            if (!await halls.AnyAsync(hall => hall.Id == hallId.Value, cancellationToken)) return null;
+            halls = halls.Where(hall => hall.Id == hallId.Value);
+        }
+        var hallIds = halls.Select(hall => hall.Id);
+        return await _context.Bookings.AsNoTracking()
+            .Where(BookingActivity.Active)
+            .Include(booking => booking.Slots)
+            .Include(booking => booking.ExternalDetails)
+            .Where(booking => hallIds.Contains(booking.HallId)
+                && booking.CreatedAt >= fromInclusive && booking.CreatedAt < toExclusive)
+            .OrderBy(booking => booking.Date).ThenBy(booking => booking.CreatedAt).ThenBy(booking => booking.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     private IQueryable<Hall> OwnedHallsQuery(string ownerId)
         => _context.Halls
             .AsNoTracking()

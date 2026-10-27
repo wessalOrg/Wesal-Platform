@@ -1,35 +1,21 @@
 "use client";
 
 import { useT } from "@/i18n";
+import type { OwnerVisitorStats, OwnerVisitorStatsLoadStatus } from "@/types/owner-visitor-stats";
 
-/** Frontend-only demo data for the owner home insight cards. */
-const WEEKDAY_SHARES = [
-  { key: "friday" as const, percent: 32 },
-  { key: "saturday" as const, percent: 26 },
-  { key: "thursday" as const, percent: 18 },
-  { key: "sunday" as const, percent: 12 },
-  { key: "monday" as const, percent: 8 },
-  { key: "tuesday" as const, percent: 5 },
-  { key: "wednesday" as const, percent: 4 },
-];
+const HOUR_COLORS: Record<string, string> = { evening: "#c17b7f", afternoon: "#8fbf8f", morning: "#f0d7a0", other: "#d7dde3" };
 
-const HOUR_SEGMENTS = [
-  { key: "evening" as const, percent: 40, color: "#c17b7f" },
-  { key: "afternoon" as const, percent: 35, color: "#8fbf8f" },
-  { key: "morning" as const, percent: 20, color: "#f0d7a0" },
-  { key: "other" as const, percent: 5, color: "#d7dde3" },
-];
-
-const TOTAL_BOOKED_HOURS = 64;
-
-export default function OwnerBookingInsightsCards() {
+export default function OwnerBookingInsightsCards({ status, stats, onRetry }: { status: OwnerVisitorStatsLoadStatus; stats: OwnerVisitorStats | null; onRetry: () => void }) {
   const t = useT();
+  const weekdays = [...(stats?.bookingsByWeekday ?? [])].filter((day) => day.count > 0).sort((a, b) => b.count - a.count);
+  const hourSegments = (stats?.bookedHoursByPeriod ?? []).filter((item) => item.count > 0).map((item) => ({ ...item, color: HOUR_COLORS[item.key] ?? HOUR_COLORS.other }));
 
   return (
     <div
       className="grid grid-cols-1 gap-3 sm:grid-cols-2"
       data-testid="owner-booking-insights"
     >
+      {status === "error" ? <div className="col-span-full flex items-center justify-between gap-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800" role="alert"><span>{t("owner.insights.loadError")}</span><button className="btn-outline" onClick={onRetry}>{t("common.retry")}</button></div> : null}
       <section
         className="rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
         data-testid="owner-booking-insights-weekdays"
@@ -44,7 +30,7 @@ export default function OwnerBookingInsightsCards() {
         </header>
 
         <ul className="space-y-2">
-          {WEEKDAY_SHARES.map((day) => (
+          {status === "loading" || status === "idle" ? <li className="h-20 animate-pulse rounded-xl bg-[#f3eeec]" /> : weekdays.length === 0 ? <li className="text-sm text-[var(--wesal-muted)]">{t("owner.insights.noBookingData")}</li> : weekdays.map((day) => (
             <li
               key={day.key}
               className="grid grid-cols-[3.75rem_minmax(0,1fr)_2.2rem] items-center gap-2"
@@ -55,11 +41,11 @@ export default function OwnerBookingInsightsCards() {
               <span className="h-2 overflow-hidden rounded-full bg-[#ece8e6]">
                 <span
                   className="block h-full rounded-full bg-[#c17b7f]"
-                  style={{ width: `${day.percent}%` }}
+                  style={{ width: `${day.percentage}%` }}
                 />
               </span>
               <span className="text-end text-[0.72rem] font-extrabold tabular-nums text-[var(--wesal-text)]">
-                {day.percent}%
+                {day.percentage}%
               </span>
             </li>
           ))}
@@ -86,7 +72,7 @@ export default function OwnerBookingInsightsCards() {
           <div className="relative h-[7.5rem] w-[7.5rem] shrink-0 sm:h-[8.25rem] sm:w-[8.25rem]">
             <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
               <circle cx="60" cy="60" r="42" fill="none" stroke="var(--wesal-border)" strokeWidth="16" />
-              {donutArcs(HOUR_SEGMENTS).map((arc) => (
+              {donutArcs(hourSegments.map((item) => ({ key: item.key, percent: item.percentage, color: item.color }))).map((arc) => (
                 <circle
                   key={arc.key}
                   cx="60"
@@ -103,7 +89,7 @@ export default function OwnerBookingInsightsCards() {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <p className="text-3xl font-extrabold leading-none text-[var(--wesal-text)]">
-                {TOTAL_BOOKED_HOURS}
+                {status === "ready" ? stats?.totalBookedHoursThisMonth ?? 0 : "—"}
               </p>
               <p className="mt-1 text-[0.75rem] font-bold text-[var(--wesal-muted)]">
                 {t("owner.insights.hoursUnit")}
@@ -112,7 +98,7 @@ export default function OwnerBookingInsightsCards() {
           </div>
 
           <ul className="min-w-0 flex-1 space-y-3">
-            {HOUR_SEGMENTS.map((segment) => (
+            {status === "loading" || status === "idle" ? <li className="h-16 animate-pulse rounded-xl bg-[#f3eeec]" /> : hourSegments.length === 0 ? <li className="text-sm text-[var(--wesal-muted)]">{t("owner.insights.noBookingData")}</li> : hourSegments.map((segment) => (
               <li key={segment.key} className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2">
                   <span
@@ -125,7 +111,7 @@ export default function OwnerBookingInsightsCards() {
                   </span>
                 </span>
                 <span className="shrink-0 text-[0.85rem] font-extrabold tabular-nums text-[var(--wesal-text)]">
-                  {segment.percent}%
+                  {segment.percentage}%
                 </span>
               </li>
             ))}

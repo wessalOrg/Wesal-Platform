@@ -7,46 +7,47 @@ import type {
   OwnerVisitorStatsLoadStatus,
 } from "@/types/owner-visitor-stats";
 
-export function useOwnerVisitorStats(enabled: boolean) {
-  const [status, setStatus] = useState<OwnerVisitorStatsLoadStatus>(
-    enabled ? "loading" : "idle",
-  );
-  const [stats, setStats] = useState<OwnerVisitorStats | null>(null);
+export function useOwnerVisitorStats(enabled: boolean, hallId?: string | null) {
+  const [snapshot, setSnapshot] = useState<{
+    requestKey: string;
+    status: OwnerVisitorStatsLoadStatus;
+    stats: OwnerVisitorStats | null;
+  } | null>(null);
   const [retryTick, setRetryTick] = useState(0);
+  const requestKey = `${hallId ?? "all"}:${retryTick}`;
 
   const reload = useCallback(() => {
     setRetryTick((tick) => tick + 1);
   }, []);
 
   useEffect(() => {
-    if (!enabled) {
-      setStatus("idle");
-      setStats(null);
-      return;
-    }
+    if (!enabled) return;
 
     const controller = new AbortController();
     let cancelled = false;
-    setStatus("loading");
 
-    void fetchOwnerVisitorStats(controller.signal)
+    void fetchOwnerVisitorStats(hallId, controller.signal)
       .then((next) => {
         if (cancelled) return;
-        setStats(next);
-        setStatus("ready");
+        setSnapshot({ requestKey, stats: next, status: "ready" });
       })
       .catch((err: unknown) => {
         if (cancelled || controller.signal.aborted) return;
         void err;
-        setStats(null);
-        setStatus("error");
+        setSnapshot({ requestKey, stats: null, status: "error" });
       });
 
     return () => {
       cancelled = true;
       controller.abort();
     };
-  }, [enabled, retryTick]);
+  }, [enabled, hallId, requestKey]);
 
-  return { status, stats, reload, isLoading: status === "loading" };
+  const isCurrent = snapshot?.requestKey === requestKey;
+  const currentSnapshot = isCurrent ? snapshot : null;
+  const status: OwnerVisitorStatsLoadStatus = !enabled
+    ? "idle"
+    : currentSnapshot?.status ?? "loading";
+
+  return { status, stats: currentSnapshot?.stats ?? null, reload, isLoading: status === "loading" };
 }

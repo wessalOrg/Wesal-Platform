@@ -1309,6 +1309,8 @@ const ar: MessageCatalog = {
   "owner.insights.topWeekdaysTitle": "أكثر أيام الأسبوع حجزاً",
   "owner.insights.hoursDistributionTitle": "توزيع الساعات المحجوزة",
   "owner.insights.hoursUnit": "ساعة",
+  "owner.insights.noBookingData": "لا توجد حجوزات نشطة خلال هذا الشهر.",
+  "owner.insights.loadError": "تعذر تحميل إحصائيات الحجوزات.",
   "owner.insights.weekday.friday": "الجمعة",
   "owner.insights.weekday.saturday": "السبت",
   "owner.insights.weekday.thursday": "الخميس",

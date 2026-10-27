@@ -9,6 +9,13 @@ export type OwnerVisitorStats = {
   conversionRatePreviousMonth: number;
   thisMonthPeriodLabel: string | null;
   previousMonthPeriodLabel: string | null;
+  totalActiveBookingsThisMonth: number;
+  totalBookedHoursThisMonth: number;
+  bookingsByWeekday: OwnerVisitorInsightBreakdown[];
+  bookedHoursByPeriod: OwnerVisitorInsightBreakdown[];
+  bookingsByOccasionType: OwnerVisitorInsightBreakdown[];
 };
+
+export type OwnerVisitorInsightBreakdown = { key: string; count: number; percentage: number };
 
 export type OwnerVisitorStatsLoadStatus = "idle" | "loading" | "ready" | "error";

@@ -251,6 +251,9 @@ public class SessionServiceShould
 
         public Task<IReadOnlyList<Booking>?> GetActiveBookingsInRangeAsync(Guid hallId, string ownerId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Booking>?>(null);
+
+        public Task<IReadOnlyList<Booking>?> GetBookingsForInsightsAsync(Guid? hallId, string ownerId, DateTimeOffset fromInclusive, DateTimeOffset toExclusive, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Booking>?>([]);
     }
 
     private sealed class FakeCurrentUserService : ICurrentUserService

@@ -35,8 +35,8 @@ export default function OwnerDashboardHome() {
   const hallsState = useHallOwnerHalls();
   const { startAddHall, isInitiating } = useAddHallInitiation();
   const avatarUrl = useProfileAvatarUrl([profileState.profile?.id]);
-  const visitorStats = useOwnerVisitorStats(profileState.authReady && Boolean(profileState.profile));
   const [insightsHallId, setInsightsHallId] = useState<string | null>(null);
+  const visitorStats = useOwnerVisitorStats(profileState.authReady && Boolean(profileState.profile), insightsHallId);
 
   const insightHallOptions = useMemo(
     () =>
@@ -260,9 +260,9 @@ export default function OwnerDashboardHome() {
           selectedHallId={insightsHallId}
           onSelect={setInsightsHallId}
         />
-        <OwnerBookingInsightsCards />
+        <OwnerBookingInsightsCards status={visitorStats.status} stats={visitorStats.stats} onRetry={visitorStats.reload} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-stretch">
-          <OwnerEventTypesCard />
+          <OwnerEventTypesCard status={visitorStats.status} items={visitorStats.stats?.bookingsByOccasionType ?? []} onRetry={visitorStats.reload} />
           <OwnerVisitorStatsCard
             status={visitorStats.status}
             stats={visitorStats.stats}

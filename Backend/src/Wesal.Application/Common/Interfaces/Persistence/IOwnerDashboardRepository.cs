@@ -105,4 +105,7 @@ public interface IOwnerDashboardRepository
         DateOnly fromDate,
         DateOnly toDate,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Booking>?> GetBookingsForInsightsAsync(Guid? hallId, string ownerId,
+        DateTimeOffset fromInclusive, DateTimeOffset toExclusive, CancellationToken cancellationToken = default);
 }

@@ -18,5 +18,5 @@ public interface IOwnerVisitorStatsService
     /// Aggregates visits, favorites, booking requests, and conversion rates for the
     /// authenticated owner's non-deleted halls.
     /// </summary>
-    Task<OwnerVisitorStatsDto> GetVisitorStatsAsync(CancellationToken cancellationToken = default);
+    Task<OwnerVisitorStatsDto> GetVisitorStatsAsync(Guid? hallId = null, CancellationToken cancellationToken = default);
 }

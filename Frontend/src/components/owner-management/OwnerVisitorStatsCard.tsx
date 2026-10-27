@@ -62,6 +62,7 @@ export default function OwnerVisitorStatsCard({
       aria-labelledby="owner-visitor-stats-heading"
       data-testid="owner-visitor-stats"
       data-load-status={status}
+      data-scope={scopeLabel ? "hall" : "all-halls"}
     >
       <header className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2">
