@@ -28,18 +28,18 @@ export default function OwnerInsightsHallFilter({
       className="rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white px-3 py-2.5 shadow-[0_6px_18px_rgba(90,55,45,0.04)] sm:px-4"
       data-testid="owner-insights-hall-filter"
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <div className="min-w-0">
-          <p className="text-[0.78rem] font-extrabold text-[var(--wesal-maroon)]">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-[9.5rem] shrink-0 sm:min-w-[11.5rem] sm:max-w-[14rem]">
+          <p className="wesal-text-bold text-[0.88rem] font-extrabold leading-snug text-[var(--wesal-maroon)] sm:text-[0.95rem]">
             {t("owner.insights.hallFilterTitle")}
           </p>
-          <p className="mt-0.5 text-[0.65rem] font-medium text-[var(--wesal-muted)]">
+          <p className="mt-0.5 text-[0.68rem] font-semibold leading-snug text-[var(--wesal-muted)] sm:text-[0.72rem]">
             {t("owner.insights.hallFilterHint")}
           </p>
         </div>
 
         <div
-          className="flex max-w-full gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="tablist"
           aria-label={t("owner.insights.hallFilterTitle")}
         >
