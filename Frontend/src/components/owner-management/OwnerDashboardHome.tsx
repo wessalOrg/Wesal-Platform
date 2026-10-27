@@ -142,12 +142,12 @@ export default function OwnerDashboardHome() {
             </div>
           ) : null}
           <div className="seeker-welcome-actions">
-            <Link href={OWNER_HALLS_PATH} className="seeker-btn-primary" prefetch>
+            <Link href={OWNER_HALLS_PATH} className="seeker-btn-primary wesal-text-bold" prefetch>
               {t("owner.cta.halls")}
             </Link>
             <button
               type="button"
-              className="seeker-btn-secondary"
+              className="seeker-btn-secondary wesal-text-bold"
               disabled={isInitiating}
               aria-busy={isInitiating || undefined}
               data-testid="owner-home-add-hall"

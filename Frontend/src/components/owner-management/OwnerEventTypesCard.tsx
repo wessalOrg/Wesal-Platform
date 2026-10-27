@@ -72,26 +72,24 @@ export default function OwnerEventTypesCard({ status, items, onRetry }: { status
           {status === "loading" || status === "idle" ? <li className="h-20 animate-pulse rounded-xl bg-[#f3eeec]" /> : segments.map((segment) => (
             <li
               key={segment.key}
-              className="flex w-full max-w-[15rem] items-center justify-between gap-3"
+              className="flex w-full items-center gap-2"
             >
-              <span className="flex min-w-0 items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{
-                    backgroundColor: OCCASION_TYPE_COLORS[segment.key],
-                    opacity: total > 0 && segment.count === 0 ? 0.4 : 1,
-                  }}
-                  aria-hidden="true"
-                />
-                <span
-                  className={`truncate text-[0.78rem] font-bold ${
-                    total > 0 && segment.count === 0
-                      ? "text-[var(--wesal-muted)]"
-                      : "text-[var(--wesal-text)]"
-                  }`}
-                >
-                  {t(occasionTypeI18nKey(segment.key))}
-                </span>
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{
+                  backgroundColor: OCCASION_TYPE_COLORS[segment.key],
+                  opacity: total > 0 && segment.count === 0 ? 0.4 : 1,
+                }}
+                aria-hidden="true"
+              />
+              <span
+                className={`min-w-0 truncate text-[0.78rem] font-bold ${
+                  total > 0 && segment.count === 0
+                    ? "text-[var(--wesal-muted)]"
+                    : "text-[var(--wesal-text)]"
+                }`}
+              >
+                {t(occasionTypeI18nKey(segment.key))}
               </span>
               <span
                 className={`shrink-0 text-[0.82rem] font-extrabold tabular-nums ${

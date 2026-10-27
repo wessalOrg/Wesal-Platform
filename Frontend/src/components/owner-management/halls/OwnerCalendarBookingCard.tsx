@@ -142,7 +142,7 @@ export default function OwnerCalendarBookingCard({
         {showChat ? (
           <button
             type="button"
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border-0 bg-[#faf6f2] px-3 text-sm font-bold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
+            className="wesal-text-bold inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border-0 bg-[#faf6f2] px-3 text-sm font-extrabold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
             disabled={messagingSeeker}
             aria-busy={messagingSeeker || undefined}
             data-testid={`owner-calendar-booking-contact-${booking.id}`}

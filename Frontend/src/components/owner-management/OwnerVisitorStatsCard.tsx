@@ -72,14 +72,14 @@ export default function OwnerVisitorStatsCard({
           >
             <ChartIcon />
           </span>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h2
               id="owner-visitor-stats-heading"
-              className="truncate text-[0.82rem] font-extrabold leading-4 text-[#c17b7f]"
+              className="wesal-text-bold text-[0.95rem] font-extrabold leading-snug text-[#c17b7f] sm:text-[1.02rem]"
             >
               {t("owner.visitorStats.title")}
             </h2>
-            <p className="mt-0.5 truncate text-[0.62rem] font-medium leading-3 text-[var(--wesal-muted)]">
+            <p className="mt-0.5 text-[0.68rem] font-medium leading-snug text-[var(--wesal-muted)]">
               {scopeLabel ?? t("owner.visitorStats.subtitle")}
             </p>
           </div>
