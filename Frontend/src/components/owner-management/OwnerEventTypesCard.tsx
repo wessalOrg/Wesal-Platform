@@ -41,7 +41,7 @@ export default function OwnerEventTypesCard({ status, items, onRetry }: { status
         </h2>
       </header>
 
-      <div className="flex min-h-0 w-full flex-1 items-center justify-between gap-3 sm:gap-4">
+      <div className="flex min-h-0 w-full flex-1 items-center justify-start gap-3 sm:gap-4">
         <div className="relative aspect-square h-[9.5rem] w-[9.5rem] shrink-0 sm:h-[10.5rem] sm:w-[10.5rem]">
           <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
             <circle cx="60" cy="60" r="42" fill="none" stroke="var(--wesal-border)" strokeWidth="16" />
@@ -68,40 +68,41 @@ export default function OwnerEventTypesCard({ status, items, onRetry }: { status
           </div>
         </div>
 
-        <ul className="flex min-w-0 shrink-0 flex-col justify-center gap-1.5 sm:gap-2">
-          {status === "loading" || status === "idle" ? <li className="h-20 w-40 animate-pulse rounded-xl bg-[#f3eeec]" /> : segments.map((segment) => (
-            <li
-              key={segment.key}
-              className="flex items-center gap-2"
-            >
-              <span
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{
-                  backgroundColor: OCCASION_TYPE_COLORS[segment.key],
-                  opacity: total > 0 && segment.count === 0 ? 0.4 : 1,
-                }}
-                aria-hidden="true"
-              />
-              <span
-                className={`whitespace-nowrap text-[0.78rem] font-bold ${
-                  total > 0 && segment.count === 0
-                    ? "text-[var(--wesal-muted)]"
-                    : "text-[var(--wesal-text)]"
-                }`}
-              >
-                {t(occasionTypeI18nKey(segment.key))}
-              </span>
-              <span
-                className={`shrink-0 text-[0.82rem] font-extrabold tabular-nums ${
-                  total > 0 && segment.count === 0
-                    ? "text-[var(--wesal-muted)]"
-                    : "text-[var(--wesal-text)]"
-                }`}
-              >
-                {total > 0 ? `${segment.percentage}%` : "—"}
-              </span>
-            </li>
-          ))}
+        <ul className="me-1 grid shrink-0 grid-cols-[auto_minmax(6.75rem,max-content)_2.75rem] items-center gap-x-2.5 gap-y-1.5 sm:gap-y-2">
+          {status === "loading" || status === "idle" ? (
+            <li className="col-span-3 h-20 animate-pulse rounded-xl bg-[#f3eeec]" />
+          ) : (
+            segments.map((segment) => (
+              <li key={segment.key} className="contents">
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{
+                    backgroundColor: OCCASION_TYPE_COLORS[segment.key],
+                    opacity: total > 0 && segment.count === 0 ? 0.4 : 1,
+                  }}
+                  aria-hidden="true"
+                />
+                <span
+                  className={`whitespace-nowrap text-[0.78rem] font-bold ${
+                    total > 0 && segment.count === 0
+                      ? "text-[var(--wesal-muted)]"
+                      : "text-[var(--wesal-text)]"
+                  }`}
+                >
+                  {t(occasionTypeI18nKey(segment.key))}
+                </span>
+                <span
+                  className={`text-end text-[0.82rem] font-extrabold tabular-nums ${
+                    total > 0 && segment.count === 0
+                      ? "text-[var(--wesal-muted)]"
+                      : "text-[var(--wesal-text)]"
+                  }`}
+                >
+                  {total > 0 ? `${segment.percentage}%` : "—"}
+                </span>
+              </li>
+            ))
+          )}
         </ul>
       </div>
     </section>
