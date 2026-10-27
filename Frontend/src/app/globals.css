@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 :root {
   /* Soft light off-white + blush + gold from hall */
@@ -7034,11 +7034,18 @@ html[dir="rtl"] .seeker-notify-panel {
 .owner-chat-search input {
   min-width: 0;
   flex: 1;
-  border: 0;
-  background: transparent;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--wesal-text);
   font-size: 0.82rem;
   outline: none;
+}
+
+[data-testid="hall-owner-management"] .owner-chat-search input {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .owner-chat-search input::placeholder {
@@ -9806,5 +9813,933 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
   }
+}
+
+/* ===== Local-only dark mode (do not push) ===== */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --wesal-maroon: #d4a0a3;
+  --wesal-maroon-dark: #e0b4b6;
+  --wesal-maroon-soft: #b87a7e;
+  /* Keep lockup mark + وصال word in classic brand maroon */
+  --wesal-brand-ink: #c17b7f;
+  --wesal-pink: #3a2c2a;
+  --wesal-pink-soft: #2a2220;
+  --wesal-cream: #1c1816;
+  --wesal-footer: #161312;
+  --wesal-text: #f0e8e2;
+  --wesal-muted: #b5a59a;
+  --wesal-border: #3d342e;
+  --wesal-white: #25201d;
+  --wesal-mauve: #d4a0a3;
+  --wesal-nude: #c49a8c;
+  --wesal-gold: #d4b87a;
+  --wesal-gold-soft: #b89a5c;
+  --wesal-ivory: #2a2420;
+  --background: var(--wesal-cream);
+  --foreground: var(--wesal-text);
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse 70% 40% at 100% 0%, rgba(212, 160, 163, 0.1), transparent 55%),
+    radial-gradient(ellipse 50% 35% at 0% 100%, rgba(212, 184, 122, 0.07), transparent 55%),
+    linear-gradient(180deg, #221c1a 0%, var(--wesal-cream) 55%, #161312 100%);
+}
+
+html[data-theme="dark"] .seeker-app {
+  --seeker-maroon: #d4a0a3;
+  --seeker-maroon-dark: #e0b4b6;
+  --seeker-maroon-soft: #b87a7e;
+  --seeker-pink: #3a2c2a;
+  --seeker-pink-soft: #2a2220;
+  --seeker-cream: #1c1816;
+  --seeker-gold: #d4b87a;
+  --seeker-gold-soft: #b89a5c;
+  --seeker-text: #f0e8e2;
+  --seeker-muted: #b5a59a;
+  --seeker-border: #3d342e;
+  --seeker-white: #25201d;
+  background:
+    radial-gradient(ellipse 90% 55% at 100% -10%, color-mix(in srgb, var(--seeker-pink) 70%, #1c1816), transparent 62%),
+    radial-gradient(ellipse 55% 40% at 0% 100%, color-mix(in srgb, var(--seeker-cream) 80%, #2a2220), transparent 70%),
+    linear-gradient(165deg, var(--seeker-pink-soft) 0%, var(--seeker-cream) 48%, #161312 100%);
+}
+
+html[data-theme="dark"] .hero-ink-bg,
+html[data-theme="dark"] .hero-floral,
+html[data-theme="dark"] .wesal-navbar-mobile-ink-img,
+html[data-theme="dark"] img[src*="dream-ink"],
+html[data-theme="dark"] img[src*="ink"],
+html[data-theme="dark"] img[src*="floral"],
+html[data-theme="dark"] img[src*="marble"]:not(.how-marble) {
+  mix-blend-mode: soft-light;
+  opacity: 0.42;
+  filter: brightness(0.85) saturate(0.9) contrast(1.05);
+}
+
+html[data-theme="dark"] img:not([src*="dream-ink"]):not([src*="ink"]):not([src*="floral"]):not([src*="marble"]):not([src*="logo"]):not([src*="icon"]):not([src*="party-popper"]):not([src*="mabrouk"]):not([src*="story-collage"]):not(.story-collage-img),
+html[data-theme="dark"] .hall-card img,
+html[data-theme="dark"] [data-testid*="hall"] img:not([src*="icon"]):not([src*="mabrouk"]) {
+  filter: brightness(0.82) contrast(1.05) saturate(0.95);
+}
+
+html[data-theme="dark"] .seeker-dash-userchip-avatar img,
+html[data-theme="dark"] [class*="avatar"] img,
+html[data-theme="dark"] img[alt*="avatar" i],
+html[data-theme="dark"] img[class*="avatar"] {
+  filter: none;
+}
+
+html[data-theme="dark"] .wesal-logo-img--brand {
+  filter: none;
+  opacity: 1;
+}
+
+html[data-theme="dark"] .wesal-brand-lockup {
+  color: var(--wesal-brand-ink);
+}
+
+html[data-theme="dark"] .wesal-navbar-links a,
+html[data-theme="dark"] .wesal-navbar-mobile-links a {
+  color: #b8a89e !important;
+}
+
+html[data-theme="dark"] .wesal-navbar-links a:hover,
+html[data-theme="dark"] .wesal-navbar-mobile-links a:hover,
+html[data-theme="dark"] .wesal-navbar-links a[class*="underline"] {
+  color: var(--wesal-maroon) !important;
+}
+
+html[data-theme="dark"] .wesal-logo-img--white {
+  filter: brightness(0) invert(1);
+}
+
+html[data-theme="dark"] img[src*="/icons/"],
+html[data-theme="dark"] img[src*="icon"],
+html[data-theme="dark"] img[src*="party-popper"] {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .hall-raster-icon {
+  mix-blend-mode: normal !important;
+  filter: brightness(0.92) contrast(1.05) !important;
+  opacity: 1 !important;
+  border-radius: 0.55rem;
+}
+
+html[data-theme="dark"] .hall-amenity-icon,
+html[data-theme="dark"] .benefit-icon,
+html[data-theme="dark"] .consult-point-icon,
+html[data-theme="dark"] .consult-point-icon--rose,
+html[data-theme="dark"] .how-card-icon,
+html[data-theme="dark"] .hall-quick-info-icon,
+html[data-theme="dark"] .seeker-quick-icon,
+html[data-theme="dark"] .seeker-summary-icon,
+html[data-theme="dark"] .seeker-welcome-contact-icon,
+html[data-theme="dark"] .seeker-notify-item-icon,
+html[data-theme="dark"] .seeker-profile-card-member-icon,
+html[data-theme="dark"] .wesal-notify-toast-icon,
+html[data-theme="dark"] .wesal-account-menu-icon,
+html[data-theme="dark"] .wesal-register-type-icon,
+html[data-theme="dark"] .wesal-register-success-icon,
+html[data-theme="dark"] .owner-add-hall-banner-icon,
+html[data-theme="dark"] .owner-mgmt-menu-trigger-icon {
+  color: var(--wesal-maroon) !important;
+  background: color-mix(in srgb, var(--wesal-maroon) 20%, var(--wesal-cream)) !important;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 32%, transparent);
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .seeker-dash-sidebar-icon,
+html[data-theme="dark"] .owner-mgmt-sidebar-icon {
+  color: var(--seeker-maroon, var(--wesal-maroon)) !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .seeker-dash-sidebar-link--active .seeker-dash-sidebar-icon {
+  color: #fff !important;
+}
+
+html[data-theme="dark"] button svg,
+html[data-theme="dark"] a svg,
+html[data-theme="dark"] [role="button"] svg,
+html[data-theme="dark"] [class*="icon"] svg,
+html[data-theme="dark"] .wesal-gold-star {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+html[data-theme="dark"] .wesal-gold-star path {
+  fill: var(--wesal-gold);
+  stroke: var(--wesal-gold-soft);
+}
+
+html[data-theme="dark"] .hall-card svg,
+html[data-theme="dark"] .hall-meta-share-icon,
+html[data-theme="dark"] .hall-section-title svg,
+html[data-theme="dark"] .hall-reviews-heading svg {
+  color: var(--wesal-maroon);
+  opacity: 1;
+}
+
+html[data-theme="dark"] .bg-white,
+html[data-theme="dark"] .bg-\[\#fff\],
+html[data-theme="dark"] .bg-\[\#ffffff\],
+html[data-theme="dark"] .bg-\[\#fcfbf9\],
+html[data-theme="dark"] .bg-\[\#fcf9f7\],
+html[data-theme="dark"] .bg-\[\#faf7f5\],
+html[data-theme="dark"] .bg-\[\#fcfaf8\],
+html[data-theme="dark"] .bg-\[\#fbf6f1\],
+html[data-theme="dark"] .bg-\[\#fffaf4\],
+html[data-theme="dark"] .bg-\[\#f5e8e4\],
+html[data-theme="dark"] .bg-\[\#f6f1ec\] {
+  background-color: var(--wesal-white) !important;
+}
+
+html[data-theme="dark"] .bg-white\/80,
+html[data-theme="dark"] .bg-white\/70,
+html[data-theme="dark"] .bg-white\/90 {
+  background-color: color-mix(in srgb, var(--wesal-white) 85%, transparent) !important;
+}
+
+html[data-theme="dark"] .bg-\[\#fff4e5\],
+html[data-theme="dark"] .bg-\[\#fff1e8\],
+html[data-theme="dark"] .bg-\[\#fff1f0\],
+html[data-theme="dark"] .bg-\[\#e7f6ec\],
+html[data-theme="dark"] .bg-\[\#eaf0f6\],
+html[data-theme="dark"] .bg-\[\#f7ebe4\] {
+  background-color: color-mix(in srgb, var(--wesal-pink) 88%, #000) !important;
+}
+
+html[data-theme="dark"] .wesal-navbar-bg {
+  background:
+    radial-gradient(ellipse 80% 120% at 12% 0%, rgba(212, 184, 122, 0.12), transparent 55%),
+    radial-gradient(ellipse 70% 100% at 88% 100%, rgba(212, 160, 163, 0.1), transparent 50%),
+    linear-gradient(
+      105deg,
+      rgba(28, 24, 22, 0.96) 0%,
+      rgba(37, 32, 29, 0.94) 42%,
+      rgba(28, 24, 22, 0.96) 100%
+    ) !important;
+  border-color: var(--wesal-border);
+}
+
+html[data-theme="dark"] .wesal-navbar-mobile,
+html[data-theme="dark"] .wesal-navbar-mobile--overlay {
+  background-color: var(--wesal-cream) !important;
+  border-color: var(--wesal-border);
+}
+
+html[data-theme="dark"] .seeker-dash-sidebar,
+html[data-theme="dark"] .seeker-dash-topbar {
+  background-color: var(--wesal-white);
+  border-color: var(--wesal-border);
+  color: var(--wesal-text);
+}
+
+html[data-theme="dark"] .wesal-navbar--overlay .wesal-navbar-bg {
+  background: linear-gradient(
+    180deg,
+    rgba(28, 24, 22, 0.88) 0%,
+    rgba(28, 24, 22, 0.62) 55%,
+    rgba(28, 24, 22, 0.28) 100%
+  ) !important;
+}
+
+html[data-theme="dark"] .wesal-navbar-bg::after {
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(212, 184, 122, 0.12),
+    transparent
+  );
+}
+
+html[data-theme="dark"] .text-\[\#3d342e\],
+html[data-theme="dark"] .text-\[\#2d1c18\],
+html[data-theme="dark"] .text-\[\#2f2a26\],
+html[data-theme="dark"] .text-\[\#1a1a1a\] {
+  color: var(--wesal-text) !important;
+}
+
+html[data-theme="dark"] .text-\[\#8a7a70\],
+html[data-theme="dark"] .text-\[\#8a827a\],
+html[data-theme="dark"] .text-\[\#6f6861\],
+html[data-theme="dark"] .text-\[\#9a9188\],
+html[data-theme="dark"] .text-\[\#8f6f2e\] {
+  color: var(--wesal-muted) !important;
+}
+
+html[data-theme="dark"] .border-\[\#eee6de\],
+html[data-theme="dark"] .border-\[\#f0e8e0\],
+html[data-theme="dark"] .border-\[\#f0c9c7\],
+html[data-theme="dark"] .border-white,
+html[data-theme="dark"] .border-white\/60,
+html[data-theme="dark"] .border-white\/80 {
+  border-color: var(--wesal-border) !important;
+}
+
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select,
+html[data-theme="dark"] .wesal-account-menu,
+html[data-theme="dark"] [role="menu"],
+html[data-theme="dark"] [role="listbox"],
+html[data-theme="dark"] [role="alertdialog"],
+html[data-theme="dark"] .hall-notification-card,
+html[data-theme="dark"] .owner-chat-hall-chip,
+html[data-theme="dark"] .wesal-messages-inbox-panel,
+html[data-theme="dark"] .seeker-notify-panel,
+html[data-theme="dark"] .wesal-register-success-modal {
+  background-color: var(--wesal-white);
+  color: var(--wesal-text);
+  border-color: var(--wesal-border);
+}
+
+html[data-theme="dark"] footer:not(.wesal-footer) {
+  background-color: var(--wesal-footer);
+  color: var(--wesal-text);
+  border-color: var(--wesal-border);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: color-mix(in srgb, var(--wesal-muted) 80%, transparent);
+}
+
+html[data-theme="dark"] option {
+  background-color: var(--wesal-white);
+  color: var(--wesal-text);
+}
+
+html[data-theme="dark"] .text-\[\#059669\],
+html[data-theme="dark"] .text-\[\#2f6b45\] {
+  color: #6ee7a8 !important;
+}
+
+html[data-theme="dark"] .text-\[\#b42318\],
+html[data-theme="dark"] .text-\[\#c0392b\] {
+  color: #f0a8a0 !important;
+}
+
+html[data-theme="dark"] .text-\[\#b86a0a\],
+html[data-theme="dark"] .text-\[\#c06a3a\],
+html[data-theme="dark"] .text-\[\#e0a800\] {
+  color: #f0c878 !important;
+}
+
+html[data-theme="dark"] .text-\[\#5a6f86\] {
+  color: #a8c0d8 !important;
+}
+
+html[data-theme="dark"] .hero-satin {
+  background-color: var(--wesal-cream);
+  background-image:
+    radial-gradient(
+      ellipse 90% 80% at 40% 45%,
+      color-mix(in srgb, var(--wesal-white) 35%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 55% 50% at 70% 80%,
+      rgba(212, 160, 163, 0.12),
+      transparent 70%
+    ),
+    linear-gradient(
+      150deg,
+      var(--wesal-white) 0%,
+      var(--wesal-cream) 40%,
+      var(--wesal-footer) 100%
+    );
+}
+
+html[data-theme="dark"] .hero-stage {
+  background:
+    radial-gradient(ellipse 90% 70% at 70% 40%, rgba(212, 160, 163, 0.08), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 20% 70%, rgba(212, 184, 122, 0.06), transparent 50%),
+    radial-gradient(ellipse at top, var(--wesal-white) 0%, var(--wesal-cream) 48%, var(--wesal-footer) 100%);
+}
+
+html[data-theme="dark"] .hero-svg-pearl-0 {
+  stop-opacity: 0.22;
+}
+
+html[data-theme="dark"] .hero-svg-pearl-1 {
+  stop-opacity: 0.1;
+}
+
+html[data-theme="dark"] .hero-svg-pearl-2 {
+  stop-opacity: 0.08;
+}
+
+html[data-theme="dark"] .hero-svg-edge-0 {
+  stop-opacity: 0.05;
+}
+
+html[data-theme="dark"] .hero-svg-edge-1 {
+  stop-opacity: 0.35;
+}
+
+html[data-theme="dark"] .hero-svg-edge-2,
+html[data-theme="dark"] .hero-svg-edge-3 {
+  stop-opacity: 0.92;
+}
+
+html[data-theme="dark"] .hero-cream-decor .hero-ink-bg {
+  opacity: 0.34;
+  mix-blend-mode: soft-light;
+  filter: brightness(0.75) saturate(0.85);
+}
+
+html[data-theme="dark"] .hero-copy-desc {
+  color: var(--wesal-text);
+}
+
+html[data-theme="dark"] {
+  --home-category-panel: #241c1b;
+}
+
+html[data-theme="dark"] .home-category-card {
+  background: var(--wesal-cream);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55);
+  border: 0 !important;
+  outline: 0 !important;
+}
+
+html[data-theme="dark"] .home-category-panel-fill {
+  fill: var(--home-category-panel);
+  stroke: var(--home-category-panel);
+  stroke-width: 2;
+  paint-order: stroke fill;
+}
+
+html[data-theme="dark"] .home-category-panel-svg {
+  filter: none;
+}
+
+html[data-theme="dark"] .home-category-fillet {
+  display: none !important;
+}
+
+html[data-theme="dark"] .home-category-bubble {
+  background: var(--wesal-brand-ink) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+  border: 1px solid color-mix(in srgb, var(--wesal-brand-ink) 65%, #1c1816);
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] [data-testid="home-categories-section"] h3 {
+  color: var(--wesal-brand-ink);
+}
+
+html[data-theme="dark"] [data-testid="home-categories-section"] p {
+  color: var(--wesal-muted);
+}
+
+html[data-theme="dark"] .hall-card-tag {
+  background: color-mix(in srgb, var(--wesal-pink) 88%, #000);
+  color: var(--wesal-text);
+  border: 1px solid var(--wesal-border);
+}
+
+html[data-theme="dark"] .hall-card-book {
+  background: var(--wesal-maroon) !important;
+  color: #1c1816 !important;
+}
+
+html[data-theme="dark"] .hall-card-book:hover {
+  background: var(--wesal-maroon-dark) !important;
+}
+
+html[data-theme="dark"] .seeker-notify-panel-foot {
+  background: linear-gradient(
+    180deg,
+    var(--wesal-white) 0%,
+    var(--wesal-pink-soft) 100%
+  );
+}
+
+html[data-theme="dark"] .seeker-dash-content,
+html[data-theme="dark"] .owner-mgmt-main,
+html[data-theme="dark"] .admin-dash-content {
+  color: var(--wesal-text);
+}
+
+html[data-theme="dark"] .shadow-\[0_8px_20px_rgba\(90\,55\,45\,0\.06\)\],
+html[data-theme="dark"] .shadow-\[0_6px_18px_rgba\(90\,55\,45\,0\.05\)\],
+html[data-theme="dark"] .shadow-\[0_10px_28px_rgba\(90\,55\,45\,0\.05\)\] {
+  --tw-shadow-color: rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .wesal-navbar {
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+html[data-theme="dark"] .hall-popup-details-cta {
+  background: #8a454b;
+  color: #fff;
+}
+
+html[data-theme="dark"] .hall-popup-details-cta:hover {
+  background: #7a3c42;
+}
+
+html[data-theme="dark"] .hall-popup-details-cta-chip {
+  background: color-mix(in srgb, #1c1816 55%, #8a454b);
+  color: #f0d6d8;
+}
+
+html[data-theme="dark"] .hall-popup-details-cta-chip.ring-2 {
+  --tw-ring-color: rgba(255, 255, 255, 0.85);
+}
+
+html[data-theme="dark"] .btn-primary {
+  background: var(--wesal-brand-ink);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+}
+
+html[data-theme="dark"] .btn-primary:hover {
+  background: color-mix(in srgb, var(--wesal-brand-ink) 88%, #fff);
+  box-shadow: 0 10px 22px rgba(193, 123, 127, 0.28);
+  filter: none;
+}
+
+html[data-theme="dark"] .btn-outline {
+  background: transparent;
+  color: var(--wesal-brand-ink);
+  border: 1.5px solid var(--wesal-brand-ink);
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .btn-outline:hover {
+  background: var(--wesal-brand-ink);
+  border-color: var(--wesal-brand-ink);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(193, 123, 127, 0.28);
+}
+
+html[data-theme="dark"] ::selection {
+  background: color-mix(in srgb, var(--wesal-maroon) 45%, transparent);
+  color: var(--wesal-text);
+}
+
+html[data-theme="dark"] hr,
+html[data-theme="dark"] .divide-\[\#eee6de\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--wesal-border);
+}
+
+html[data-theme="dark"] * {
+  scrollbar-color: var(--wesal-gold) transparent;
+}
+
+html[data-theme="dark"] .hero-photo {
+  filter: brightness(0.72) contrast(1.06) saturate(0.92);
+}
+
+html[data-theme="dark"] .hero-photo-grade {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(28, 22, 20, 0.45) 0%,
+      rgba(28, 22, 20, 0.12) 18%,
+      transparent 36%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(20, 14, 12, 0.22) 0%,
+      transparent 28%,
+      transparent 70%,
+      rgba(18, 12, 10, 0.35) 100%
+    ),
+    radial-gradient(
+      ellipse 70% 65% at 70% 45%,
+      transparent 40%,
+      rgba(20, 14, 12, 0.28) 100%
+    );
+}
+
+html[data-theme="dark"] .hero-photo-grade--mobile {
+  background:
+    radial-gradient(
+      ellipse 70% 60% at 50% 40%,
+      transparent 30%,
+      rgba(18, 12, 10, 0.42) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(28, 22, 20, 0.35) 0%,
+      transparent 40%
+    );
+}
+
+html[data-theme="dark"] .how-section {
+  background: #1c1715;
+}
+
+html[data-theme="dark"] .how-marble {
+  opacity: 0.72;
+  mix-blend-mode: soft-light;
+  filter: brightness(0.88) contrast(1.18) saturate(1.1);
+}
+
+html[data-theme="dark"] .how-marble-wash {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(28, 24, 22, 0.22) 0%,
+      rgba(28, 24, 22, 0.08) 45%,
+      rgba(22, 19, 18, 0.26) 100%
+    ),
+    radial-gradient(ellipse 55% 45% at 50% 8%, rgba(212, 160, 163, 0.18), transparent 70%);
+}
+
+html[data-theme="dark"] .how-glint {
+  opacity: 1;
+  box-shadow: 0 0 18px rgba(226, 201, 138, 0.9);
+}
+
+html[data-theme="dark"] .how-sheen::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 184, 122, 0.12),
+    rgba(212, 160, 163, 0.08),
+    transparent
+  );
+}
+
+html[data-theme="dark"] .how-card {
+  background: color-mix(in srgb, var(--wesal-white) 78%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: transparent;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .how-card:hover {
+  border-color: transparent;
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.38);
+}
+
+html[data-theme="dark"] .how-card-icon {
+  background: color-mix(in srgb, var(--wesal-pink) 80%, #000);
+  color: var(--wesal-gold);
+  border: 1px solid color-mix(in srgb, var(--wesal-gold) 35%, transparent);
+}
+
+html[data-theme="dark"] .how-card:active,
+html[data-theme="dark"] .how-card.is-flashing {
+  border-color: transparent;
+  box-shadow:
+    0 0 28px rgba(212, 160, 163, 0.22),
+    0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .how-card-shine {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 248, 235, 0.45),
+    rgba(226, 201, 138, 0.5),
+    rgba(212, 160, 163, 0.28),
+    transparent
+  );
+}
+
+html[data-theme="dark"] .wesal-footer {
+  background: #211a19 !important;
+  color: #f3ebe6;
+  border-color: rgba(212, 160, 163, 0.22);
+}
+
+html[data-theme="dark"] .footer-marble-img {
+  opacity: 0.78;
+  mix-blend-mode: soft-light;
+  filter: brightness(0.95) contrast(1.12) saturate(1.25);
+}
+
+html[data-theme="dark"] .footer-marble-wash {
+  background:
+    linear-gradient(
+      165deg,
+      rgba(193, 123, 127, 0.14) 0%,
+      rgba(33, 26, 25, 0.14) 40%,
+      rgba(33, 26, 25, 0.18) 70%,
+      rgba(193, 123, 127, 0.12) 100%
+    );
+}
+
+html[data-theme="dark"] .wesal-footer .footer-copy,
+html[data-theme="dark"] .wesal-footer .footer-link-list,
+html[data-theme="dark"] .wesal-footer .footer-link-list a,
+html[data-theme="dark"] .wesal-footer .wesal-footer-legal {
+  color: #f0e6df !important;
+}
+
+html[data-theme="dark"] .wesal-footer h3,
+html[data-theme="dark"] .wesal-footer .footer-section-title {
+  color: #f0c8ca !important;
+  border-color: rgba(232, 180, 183, 0.35) !important;
+  -webkit-text-stroke: 0.35px currentColor;
+}
+
+html[data-theme="dark"] .wesal-footer a:hover {
+  color: #f0c8ca !important;
+}
+
+html[data-theme="dark"] .wesal-footer .footer-divider {
+  background-color: rgba(232, 180, 183, 0.28) !important;
+}
+
+html[data-theme="dark"] .wesal-footer a[aria-label] {
+  background: rgba(45, 34, 32, 0.9);
+  border-color: rgba(232, 180, 183, 0.35);
+  color: #e8b4b7;
+}
+
+html[data-theme="dark"] .wesal-footer a[aria-label]:hover {
+  background: var(--wesal-maroon);
+  border-color: transparent;
+  color: #1c1413 !important;
+}
+
+html[data-theme="dark"] .occasion-services {
+  background:
+    radial-gradient(ellipse 48% 42% at 0% 0%, rgba(212, 160, 163, 0.14), transparent 68%),
+    radial-gradient(ellipse 40% 36% at 100% 100%, rgba(212, 184, 122, 0.1), transparent 70%),
+    linear-gradient(165deg, var(--wesal-pink) 0%, var(--wesal-cream) 48%, var(--wesal-footer) 100%);
+}
+
+html[data-theme="dark"] .occasion-orb--a {
+  background: radial-gradient(circle, rgba(212, 160, 163, 0.22) 0%, rgba(37, 32, 29, 0.35) 55%, transparent 72%);
+}
+
+html[data-theme="dark"] .occasion-orb--b {
+  background: radial-gradient(circle, rgba(212, 184, 122, 0.2) 0%, rgba(37, 32, 29, 0.28) 58%, transparent 74%);
+}
+
+html[data-theme="dark"] .occasion-orb--c {
+  background: radial-gradient(circle, rgba(212, 160, 163, 0.18) 0%, transparent 70%);
+}
+
+html[data-theme="dark"] .occasion-service-card article {
+  background: var(--wesal-white);
+  border-color: var(--wesal-border);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .occasion-service-card article > div:last-child {
+  background: var(--wesal-cream);
+  border-top: 1px solid var(--wesal-border);
+  color: var(--wesal-muted);
+}
+
+html[data-theme="dark"] .story-photo {
+  isolation: isolate;
+}
+
+html[data-theme="dark"] .story-photo img.story-collage-img,
+html[data-theme="dark"] .story-photo img[src*="story-collage"] {
+  mix-blend-mode: normal;
+  filter: brightness(0.88) contrast(1.04) saturate(0.96);
+  opacity: 1;
+}
+
+html[data-theme="dark"] .consult-photo {
+  filter: brightness(0.82) contrast(1.05) saturate(0.95);
+}
+
+html[data-theme="dark"] .appointment-saved-backdrop {
+  background: rgba(8, 6, 5, 0.72) !important;
+}
+
+html[data-theme="dark"] .appointment-saved-panel {
+  background: #241c1b !important;
+  border-color: color-mix(in srgb, #8a454b 45%, transparent);
+  color: var(--wesal-text);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="dark"] .appointment-saved-art-wrap {
+  background: #241c1b;
+  border-radius: 1.5rem;
+}
+
+html[data-theme="dark"] .appointment-saved-art {
+  mix-blend-mode: normal;
+  filter: none;
+  background: #241c1b;
+}
+
+html[data-theme="dark"] .appointment-saved-close,
+html[data-theme="dark"] .appointment-saved-check {
+  background: #8a454b !important;
+  color: #fff !important;
+}
+
+html[data-theme="dark"] .appointment-saved-close:hover {
+  background: #7a3c42 !important;
+}
+
+html[data-theme="dark"] .appointment-saved-panel h2 {
+  color: #c17b7f !important;
+}
+
+html[data-theme="dark"] .appointment-saved-body {
+  color: #cbb8ae !important;
+}
+
+html[data-theme="dark"] .appointment-saved-panel .btn-primary {
+  background: #8a454b;
+  color: #fff;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .appointment-saved-panel .btn-primary:hover {
+  background: #7a3c42;
+  filter: none;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .appointment-saved-panel .btn-outline {
+  background: transparent;
+  border: 1.5px solid #8a454b;
+  color: #e8c4c6;
+}
+
+html[data-theme="dark"] .appointment-saved-panel .btn-outline:hover {
+  background: #8a454b;
+  border-color: #8a454b;
+  color: #fff;
+}
+
+html[data-theme="dark"] .hourly-name-dialog {
+  background: #241c1b !important;
+  border-color: color-mix(in srgb, #8a454b 45%, transparent);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  color: var(--wesal-text);
+}
+
+html[data-theme="dark"] .hourly-name-dialog input,
+html[data-theme="dark"] .occasion-type-trigger,
+html[data-theme="dark"] .occasion-type-menu {
+  background: #2e2422 !important;
+  border-color: color-mix(in srgb, #8a454b 40%, transparent);
+  color: var(--wesal-text);
+}
+
+html[data-theme="dark"] .hourly-name-dialog input:focus,
+html[data-theme="dark"] .occasion-type-trigger:focus {
+  border-color: #8a454b !important;
+}
+
+html[data-theme="dark"] .hourly-name-dialog .btn-primary {
+  background: #8a454b;
+  color: #fff;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .hourly-name-dialog .btn-primary:hover {
+  background: #7a3c42;
+  filter: none;
+}
+
+html[data-theme="dark"] .hourly-name-dialog .btn-outline {
+  background: transparent;
+  border: 1.5px solid #8a454b;
+  color: #e8c4c6;
+}
+
+html[data-theme="dark"] .hourly-name-dialog .btn-outline:hover {
+  background: #8a454b;
+  border-color: #8a454b;
+  color: #fff;
+}
+
+html[data-theme="dark"] .hourly-name-dialog [role="alert"] {
+  background: color-mix(in srgb, #8a454b 18%, #241c1b) !important;
+  color: #f0d0d2 !important;
+  border: 1px solid color-mix(in srgb, #8a454b 45%, transparent);
+}
+
+html[data-theme="dark"] .occasion-type-menu button:hover,
+html[data-theme="dark"] .occasion-type-menu button[aria-selected="true"] {
+  background: #3a2a29 !important;
+}
+
+html[data-theme="dark"] .owner-event-types-card {
+  background: #241c1b !important;
+  border-color: rgba(212, 160, 163, 0.22);
+}
+
+html[data-theme="dark"] .hall-section-card,
+html[data-theme="dark"] .hall-reviews-card {
+  background: var(--wesal-white);
+  border-color: transparent;
+  border-width: 0;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .hall-reviews-summary {
+  background: color-mix(in srgb, var(--wesal-pink) 75%, #000);
+  border-color: var(--wesal-border);
+}
+
+html[data-theme="dark"] .hall-reviews-score-value {
+  color: #e8b4b7;
+}
+
+html[data-theme="dark"] .hall-reviews-out-of,
+html[data-theme="dark"] .hall-reviews-based {
+  color: #cbb8ae;
+}
+
+html[data-theme="dark"] .hall-reviews-heading {
+  color: #e8b4b7;
+}
+
+html[data-theme="dark"] .hall-reviews-heading-text::after {
+  background: #e8b4b7;
+}
+
+html[data-theme="dark"] .wesal-mabrouk-ask {
+  background: #3a2a29;
+  box-shadow:
+    0 0 0 1px rgba(232, 180, 183, 0.28),
+    0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .wesal-mabrouk-ask:hover {
+  background: #4a3533;
+}
+
+html[data-theme="dark"] .wesal-mabrouk-ask-chevron {
+  background: #2a2220;
+  color: #e8b4b7;
+  border: 1px solid rgba(232, 180, 183, 0.3);
+}
+
+html[data-theme="dark"] .wesal-mabrouk-ask-avatar {
+  background: #3a2c2a;
+  box-shadow:
+    0 0 0 2px rgba(232, 180, 183, 0.35),
+    0 6px 14px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .ask-mabrouk-edge-prompt {
+  background: #2f2523 !important;
+  color: #f0e6df !important;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .ask-mabrouk-edge-tail {
+  background: #2f2523 !important;
 }
 
