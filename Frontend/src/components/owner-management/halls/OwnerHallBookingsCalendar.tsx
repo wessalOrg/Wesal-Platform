@@ -200,7 +200,7 @@ function SelectedDayPanel({
   }
 
   return (
-    <section className="min-w-0 space-y-3" data-testid="owner-calendar-booked">
+    <div className="min-w-0 space-y-3" data-testid="owner-calendar-booked">
       <div className="rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white px-4 py-4 shadow-[0_10px_28px_rgba(90,55,45,0.05)]">
         <DayHeader
           heading={heading}
@@ -221,7 +221,7 @@ function SelectedDayPanel({
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   );
 }
 
