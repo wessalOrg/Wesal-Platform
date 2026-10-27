@@ -1,6 +1,7 @@
 "use client";
 
 import { useT } from "@/i18n";
+import Image from "next/image";
 import { OCCASION_TYPE_COLORS, OCCASION_TYPE_KEYS, occasionTypeI18nKey, type OccasionTypeKey } from "@/lib/occasion-types";
 import type { OwnerVisitorInsightBreakdown, OwnerVisitorStatsLoadStatus } from "@/types/owner-visitor-stats";
 
@@ -27,7 +28,7 @@ export default function OwnerEventTypesCard({ status, items, onRetry }: { status
     >
       {status === "error" ? <div className="m-auto flex flex-col items-center gap-2 text-center text-sm text-rose-800" role="alert"><span>{t("owner.insights.loadError")}</span><button className="btn-outline" onClick={onRetry}>{t("common.retry")}</button></div> : null}
       <header className="mb-3 flex items-center gap-2">
-        <img
+        <Image
           src="/icons/party-popper.png"
           alt=""
           width={22}
