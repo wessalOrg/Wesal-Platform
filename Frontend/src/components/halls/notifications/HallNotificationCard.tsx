@@ -153,7 +153,7 @@ export default function HallNotificationCard({
             <ClockIcon />
           </span>
           <div className="min-w-0 text-start">
-            <p className="truncate text-start text-[15px] font-extrabold leading-none text-[#2a221c]">
+            <p className="overflow-visible text-start text-[15px] font-extrabold leading-normal text-[#2a221c]">
               <StableClockRangeText label={whenLabel} />
             </p>
             {relativeLabel ? (

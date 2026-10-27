@@ -47,7 +47,12 @@ export default function OwnerCalendarBookingCard({
           content: (
             <span className="inline-flex min-w-0 items-center gap-1">
               <span className="shrink-0">{t("owner.calendar.detail.timeLabel")}</span>
-              <StableClockRangeText label={booking.timeLabel} className={booking.source === "ExternalManual" ? "font-bold" : "truncate font-bold"} />
+              <StableClockRangeText
+                label={booking.timeLabel}
+                className={`overflow-visible leading-normal ${
+                  booking.source === "ExternalManual" ? "font-bold" : "font-bold"
+                }`}
+              />
             </span>
           ),
         }

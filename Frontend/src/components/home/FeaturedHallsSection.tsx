@@ -271,7 +271,7 @@ function ServicePlaceCard({
         <p className="text-[0.8rem] text-[var(--wesal-muted)] sm:text-sm">{t(`home.providers.place.${placeId}.area`)}</p>
         <p className="text-[0.8rem] text-[var(--wesal-text)] sm:text-sm">{t(`home.providers.place.${placeId}.note`)}</p>
         <Link
-          href="#consult"
+          href="/help"
           className="btn-primary !min-h-9 inline-flex !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b]"
         >
           {t("home.providers.inquire")}

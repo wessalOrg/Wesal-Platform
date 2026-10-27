@@ -163,11 +163,11 @@ export default function OwnerVisitorStatsCard({
               >
                 <UsersIcon />
               </span>
-              <div className="min-w-0">
-                <p className="truncate text-[0.68rem] font-extrabold leading-3 text-[var(--wesal-text)]">
+              <div className="min-w-0 flex-1">
+                <p className="wesal-text-bold text-[0.72rem] font-extrabold leading-snug text-[var(--wesal-text)] sm:text-[0.78rem]">
                   {t("owner.visitorStats.conversionTitle")}
                 </p>
-                <p className="mt-0.5 truncate text-[0.55rem] font-medium leading-3 text-[var(--wesal-muted)]">
+                <p className="mt-0.5 text-[0.58rem] font-medium leading-snug text-[var(--wesal-muted)]">
                   {t("owner.visitorStats.conversionSubtitle")}
                 </p>
               </div>

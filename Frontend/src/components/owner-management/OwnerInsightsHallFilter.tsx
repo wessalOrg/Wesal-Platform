@@ -39,7 +39,7 @@ export default function OwnerInsightsHallFilter({
         </div>
 
         <div
-          className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex min-w-0 gap-1.5 overflow-x-auto pb-0.5 sm:ms-auto sm:max-w-none sm:justify-end [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="tablist"
           aria-label={t("owner.insights.hallFilterTitle")}
         >
@@ -84,8 +84,8 @@ function FilterChip({
       onClick={onClick}
       className={`inline-flex max-w-[11rem] shrink-0 items-center truncate rounded-full border px-3 py-1.5 text-[0.72rem] font-bold transition ${
         active
-          ? "border-[#c17b7f] bg-[#c17b7f] text-white shadow-[0_6px_14px_rgba(193,123,127,0.28)]"
-          : "border-[rgba(168,98,103,0.22)] bg-[var(--wesal-pink-soft)] text-[var(--wesal-text)] hover:border-[#c17b7f] hover:bg-white"
+          ? "border-[#c17b7f] bg-[#c17b7f] text-white"
+          : "border-[rgba(168,98,103,0.22)] bg-white text-[var(--wesal-text)] hover:border-[#c17b7f] hover:bg-[var(--wesal-pink-soft)]"
       }`}
     >
       {label}

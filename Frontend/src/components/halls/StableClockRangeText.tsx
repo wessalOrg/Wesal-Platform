@@ -37,7 +37,7 @@ export default function StableClockRangeText({ label, className }: StableClockRa
               -
             </span>
           ) : null}
-          <span className="whitespace-nowrap">{part}</span>
+          <span className="whitespace-nowrap pe-0.5 leading-normal">{part}</span>
         </span>
       ))}
     </span>
