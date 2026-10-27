@@ -1,5 +1,6 @@
 import { HALL_OWNER_HALLS_PATH } from "@/lib/account-profile-path";
 import { SEEKER_BOOKINGS_PATH, conversationMessagePath } from "@/constants/seekerDashboardNav";
+import { ownerBookingsPath } from "@/lib/hall-owner-query-keys";
 import type {
   NotificationAudience,
   PlatformNotification,
@@ -22,9 +23,9 @@ export type ServerNotificationKindMapping = {
  * enum name, which arrives both on the SignalR hub event and on the REST inbox DTO's `type`
  * field, so a single map serves the realtime feed and the durable inbox.
  *
- * Kinds the client already derives from its own realtime feeds (owner booking requests /
- * cancellations, requester "sent", welcome) are intentionally absent so the list never
- * shows the same event twice.
+ * Kinds the client already derives from its own realtime feeds (cancellations, requester
+ * "sent", welcome) are intentionally absent. Owner booking requests are mapped here because
+ * they are now persisted in the server inbox and must survive offline delivery.
  */
 export const SERVER_NOTIFICATION_KIND_MAP: Record<string, ServerNotificationKindMapping> = {
   HallCreatedForOwner: { type: "hall_submitted", audience: "owner", tone: "success", target: "hall" },
@@ -46,6 +47,13 @@ export const SERVER_NOTIFICATION_KIND_MAP: Record<string, ServerNotificationKind
     audience: "seeker",
     tone: "success",
     target: "conversation",
+  },
+  BookingRequestCreatedForOwner: {
+    type: "booking_submitted",
+    audience: "owner",
+    tone: "info",
+    target: "booking",
+    actionUrl: (id) => ownerBookingsPath(id),
   },
   BookingRejectedForRequester: {
     type: "booking_rejected",

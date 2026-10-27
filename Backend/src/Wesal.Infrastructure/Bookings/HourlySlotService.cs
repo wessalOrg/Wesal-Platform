@@ -29,6 +29,7 @@ public class HourlySlotService : IHourlySlotService
     private readonly ICurrentUserService _currentUser;
     private readonly IOwnerBookingRequestNotifier _ownerRequestNotifier;
     private readonly INotificationDispatcher _notificationDispatcher;
+    private readonly INotificationInboxService? _notificationInbox;
 
     public HourlySlotService(
         IHallRepository hallRepository,
@@ -36,7 +37,8 @@ public class HourlySlotService : IHourlySlotService
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IOwnerBookingRequestNotifier ownerRequestNotifier,
-        INotificationDispatcher notificationDispatcher)
+        INotificationDispatcher notificationDispatcher,
+        INotificationInboxService? notificationInbox = null)
     {
         _hallRepository = hallRepository;
         _bookingRepository = bookingRepository;
@@ -44,6 +46,7 @@ public class HourlySlotService : IHourlySlotService
         _currentUser = currentUser;
         _ownerRequestNotifier = ownerRequestNotifier;
         _notificationDispatcher = notificationDispatcher;
+        _notificationInbox = notificationInbox;
     }
 
     public async Task<HallHourlyCatalogDto> GetHourlyCatalogAsync(
@@ -347,16 +350,6 @@ public class HourlySlotService : IHourlySlotService
                 },
                 cancellationToken);
 
-            // WESAL-TASK-13 (Edit 13): the data-only dashboard event above stays exactly as it
-            // was, so the owner's existing request list keeps working untouched. This adds the
-            // fully localized, actionable notification beside it, worded and routed per
-            // product spec and rendered in the OWNER's own language.
-            await _notificationDispatcher.DispatchAsync(
-                NotificationKind.BookingRequestCreatedForOwner,
-                hall.OwnerId,
-                BookingNotificationValues.ForBooking(booking, ResolveRequesterName(booking)),
-                booking.Id.ToString(),
-                cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -364,6 +357,39 @@ public class HourlySlotService : IHourlySlotService
         }
         catch (Exception)
         {
+        }
+
+        // Persist the actionable notification so it appears in the owner's inbox even
+        // when they are offline. The inbox service then attempts the realtime push.
+        try
+        {
+            var values = BookingNotificationValues.ForBooking(booking, ResolveRequesterName(booking));
+            if (_notificationInbox is not null)
+            {
+                await _notificationInbox.CreateForUserAsync(
+                    hall.OwnerId,
+                    NotificationKind.BookingRequestCreatedForOwner,
+                    values,
+                    booking.Id.ToString(),
+                    cancellationToken);
+            }
+            else
+            {
+                await _notificationDispatcher.DispatchAsync(
+                    NotificationKind.BookingRequestCreatedForOwner,
+                    hall.OwnerId,
+                    values,
+                    booking.Id.ToString(),
+                    cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // Notification issues never undo an already-created booking.
         }
     }
 
