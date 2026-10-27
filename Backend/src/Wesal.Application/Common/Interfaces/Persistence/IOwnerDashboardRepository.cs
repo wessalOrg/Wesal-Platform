@@ -106,6 +106,11 @@ public interface IOwnerDashboardRepository
         DateOnly toDate,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns paid online bookings whose deposit confirmation falls in the requested range,
+    /// plus confirmed manually entered bookings created in that range. Pending and approved
+    /// but unpaid online requests are excluded from owner booking insights.
+    /// </summary>
     Task<IReadOnlyList<Booking>?> GetBookingsForInsightsAsync(Guid? hallId, string ownerId,
         DateTimeOffset fromInclusive, DateTimeOffset toExclusive, CancellationToken cancellationToken = default);
 }

@@ -43,12 +43,13 @@ public sealed class OwnerVisitorStatsServiceShould : IDisposable
         Assert.Equal(2, stats.VisitsThisMonth);
         Assert.Equal(1, stats.VisitsPreviousMonth);
         Assert.Equal(1, stats.FavoritesThisMonth);
-        Assert.Equal(3, stats.BookingRequestsThisMonth); // Rejected requests still count as submitted requests.
-        Assert.Equal(150d, stats.ConversionRateThisMonth); // Request count is not a unique-viewer conversion.
+        Assert.Equal(4, stats.BookingRequestsThisMonth); // Submitted requests count by request date, even before deposit confirmation.
+        Assert.Equal(200d, stats.ConversionRateThisMonth); // Request count is not a unique-viewer conversion.
         Assert.Equal(3, stats.TotalActiveBookingsThisMonth);
         Assert.Equal(4, stats.TotalBookedHoursThisMonth);
         Assert.Equal(1, Assert.Single(stats.BookingsByWeekday, item => item.Key == "friday").Count);
         Assert.Equal(1, Assert.Single(stats.BookingsByWeekday, item => item.Key == "saturday").Count);
+        Assert.Equal(1, Assert.Single(stats.BookingsByWeekday, item => item.Key == "monday").Count);
         Assert.Equal(2, Assert.Single(stats.BookedHoursByPeriod, item => item.Key == "evening").Count);
         Assert.Equal(1, Assert.Single(stats.BookedHoursByPeriod, item => item.Key == "morning").Count);
         Assert.Equal(1, Assert.Single(stats.BookedHoursByPeriod, item => item.Key == "afternoon").Count);
@@ -70,7 +71,7 @@ public sealed class OwnerVisitorStatsServiceShould : IDisposable
 
         Assert.Equal(2, stats.VisitsThisMonth);
         Assert.Equal(1, stats.FavoritesThisMonth);
-        Assert.Equal(3, stats.BookingRequestsThisMonth);
+        Assert.Equal(4, stats.BookingRequestsThisMonth);
         Assert.Equal(3, stats.TotalActiveBookingsThisMonth);
         Assert.Contains(stats.BookingsByOccasionType, item => item.Key == "social");
     }
@@ -115,7 +116,11 @@ public sealed class OwnerVisitorStatsServiceShould : IDisposable
         _db.Bookings.AddRange(
             CreateBooking(hallId, requesterId, new DateOnly(2026, 10, 16), new TimeOnly(18, 0), "Guest · Weddings - 0591234567", BookingStatus.Pending, createdAt),
             CreateBooking(hallId, requesterId, new DateOnly(2026, 10, 17), new TimeOnly(8, 0), "Guest · Family occasions - 0591234567", BookingStatus.Accepted, createdAt, new TimeOnly(14, 0)),
-            CreateBooking(hallId, requesterId, new DateOnly(2026, 10, 18), new TimeOnly(12, 0), "Guest · Weddings - 0591234567", BookingStatus.Rejected, createdAt));
+            CreateBooking(hallId, requesterId, new DateOnly(2026, 10, 18), new TimeOnly(12, 0), "Guest · Weddings - 0591234567", BookingStatus.Rejected, createdAt),
+            CreateBooking(hallId, requesterId, new DateOnly(2026, 10, 23), new TimeOnly(18, 0), "Guest · Weddings - 0591234567", BookingStatus.Accepted, createdAt,
+                depositPaymentConfirmedAt: createdAt.AddMinutes(1)),
+            CreateBooking(hallId, requesterId, new DateOnly(2026, 10, 24), new TimeOnly(8, 0), "Guest · Family occasions - 0591234567", BookingStatus.Accepted, createdAt.AddMonths(-1),
+                new TimeOnly(14, 0), createdAt.AddMinutes(2)));
         _db.Bookings.Add(new Booking
         {
             HallId = hallId, Source = BookingSource.ExternalManual, Date = new DateOnly(2026, 10, 19),
@@ -127,12 +132,14 @@ public sealed class OwnerVisitorStatsServiceShould : IDisposable
     }
 
     private static Booking CreateBooking(Guid hallId, string requesterId, DateOnly date, TimeOnly firstSlot,
-        string occasion, BookingStatus status, DateTimeOffset createdAt, TimeOnly? secondSlot = null)
+        string occasion, BookingStatus status, DateTimeOffset createdAt, TimeOnly? secondSlot = null,
+        DateTimeOffset? depositPaymentConfirmedAt = null)
     {
         var booking = new Booking
         {
             HallId = hallId, RequesterUserId = requesterId, Date = date, NameOnBooking = occasion,
-            Status = status, CreatedAt = createdAt,
+            Status = status, CreatedAt = createdAt, DepositAmount = depositPaymentConfirmedAt.HasValue ? 50m : null,
+            DepositPaymentConfirmedAt = depositPaymentConfirmedAt,
             Slots = [new BookingSlot { StartTime = firstSlot, EndTime = firstSlot.AddHours(1) }]
         };
         if (secondSlot.HasValue) booking.Slots.Add(new BookingSlot { StartTime = secondSlot.Value, EndTime = secondSlot.Value.AddHours(1) });

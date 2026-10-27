@@ -451,19 +451,25 @@ public class OwnerDashboardRepositoryShould
     }
 
     [Fact]
-    public async Task GetBookingsForInsights_FiltersByOwnerHallAndCreationRange_AndLoadsSlotsAndOccasion()
+    public async Task GetBookingsForInsights_FiltersByOwnerAndDepositConfirmationRange_AndExcludesUnpaidRequests()
     {
         await using var context = CreateContext();
         var ownerId = Guid.NewGuid().ToString();
         var hall = new Hall { Id = Guid.NewGuid(), Name = "My Hall", OwnerId = ownerId };
         var otherHall = new Hall { Id = Guid.NewGuid(), Name = "Other Hall", OwnerId = Guid.NewGuid().ToString() };
         context.Halls.AddRange(hall, otherHall);
-        var booking = CreateBooking(hall.Id, "user", new DateOnly(2027, 6, 4), new TimeOnly(18, 0));
-        booking.NameOnBooking = "Guest · Weddings - 0591234567";
-        booking.CreatedAt = new DateTimeOffset(2027, 6, 10, 0, 0, 0, TimeSpan.Zero);
+        var confirmed = CreateBooking(hall.Id, "user", new DateOnly(2027, 6, 4), new TimeOnly(18, 0),
+            BookingStatus.Accepted, 50m, new DateTimeOffset(2027, 6, 11, 0, 0, 0, TimeSpan.Zero));
+        var approvedButUnpaid = CreateBooking(hall.Id, "user", new DateOnly(2027, 6, 5), new TimeOnly(19, 0),
+            BookingStatus.Accepted, 50m);
+        var pending = CreateBooking(hall.Id, "user", new DateOnly(2027, 6, 6), new TimeOnly(20, 0));
+        confirmed.NameOnBooking = "Guest · Weddings - 0591234567";
+        confirmed.CreatedAt = new DateTimeOffset(2027, 5, 31, 0, 0, 0, TimeSpan.Zero);
         var other = CreateBooking(otherHall.Id, "user", new DateOnly(2027, 6, 4), new TimeOnly(18, 0));
-        other.CreatedAt = booking.CreatedAt;
-        context.Bookings.AddRange(booking, other);
+        other.CreatedAt = confirmed.CreatedAt;
+        approvedButUnpaid.CreatedAt = new DateTimeOffset(2027, 6, 10, 0, 0, 0, TimeSpan.Zero);
+        pending.CreatedAt = approvedButUnpaid.CreatedAt;
+        context.Bookings.AddRange(confirmed, approvedButUnpaid, pending, other);
         await context.SaveChangesAsync();
         var repository = new OwnerDashboardRepository(context);
 

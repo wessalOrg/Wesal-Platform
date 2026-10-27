@@ -274,11 +274,18 @@ public sealed class OwnerDashboardRepository : IOwnerDashboardRepository
         }
         var hallIds = halls.Select(hall => hall.Id);
         return await _context.Bookings.AsNoTracking()
-            .Where(BookingActivity.Active)
             .Include(booking => booking.Slots)
             .Include(booking => booking.ExternalDetails)
             .Where(booking => hallIds.Contains(booking.HallId)
-                && booking.CreatedAt >= fromInclusive && booking.CreatedAt < toExclusive)
+                && ((booking.Source == BookingSource.Online
+                        && booking.Status == BookingStatus.Accepted
+                        && booking.DepositPaymentConfirmedAt.HasValue
+                        && booking.DepositPaymentConfirmedAt.Value >= fromInclusive
+                        && booking.DepositPaymentConfirmedAt.Value < toExclusive)
+                    || (booking.Source == BookingSource.ExternalManual
+                        && booking.Status == BookingStatus.Confirmed
+                        && booking.CreatedAt >= fromInclusive
+                        && booking.CreatedAt < toExclusive)))
             .OrderBy(booking => booking.Date).ThenBy(booking => booking.CreatedAt).ThenBy(booking => booking.Id)
             .ToListAsync(cancellationToken);
     }
