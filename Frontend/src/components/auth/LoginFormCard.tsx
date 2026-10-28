@@ -314,7 +314,7 @@ export default function LoginFormCard({
               type="checkbox"
               checked={rememberMe}
               onChange={(event) => setRememberMe(event.target.checked)}
-              className="h-4 w-4 accent-[var(--wesal-maroon)]"
+              className="h-3.5 w-3.5 accent-[var(--wesal-maroon)]"
               data-testid="login-remember-me"
             />
             <span>{t("auth.login.form.rememberMe")}</span>
@@ -347,7 +347,7 @@ export default function LoginFormCard({
         <Link
           href={registerHref}
           onClick={markAuthNavigation}
-          className="font-semibold text-[var(--wesal-maroon)] underline-offset-2 hover:underline"
+          className="font-extrabold text-[var(--wesal-maroon)] underline-offset-2 hover:underline [-webkit-text-stroke:0.35px_currentColor] [paint-order:stroke_fill]"
         >
           {t("auth.login.registerLink")}
         </Link>

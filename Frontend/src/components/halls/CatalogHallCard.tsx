@@ -24,6 +24,8 @@ type CatalogHallCardProps = {
   onOpen?: () => void;
   showBookButton?: boolean;
   index?: number;
+  /** Denser card for the halls catalog page. */
+  compact?: boolean;
 };
 
 export default function CatalogHallCard({
@@ -31,6 +33,7 @@ export default function CatalogHallCard({
   onOpen,
   showBookButton = false,
   index = 0,
+  compact = false,
 }: CatalogHallCardProps) {
   const t = useT();
   const lang = useUiLang();
@@ -71,11 +74,19 @@ export default function CatalogHallCard({
 
   return (
     <article
-      className="hall-card group overflow-hidden rounded-2xl bg-white shadow-[0_10px_28px_rgba(90,55,45,0.08)] ring-1 ring-black/[0.04] transition-[box-shadow] duration-200 hover:shadow-[0_16px_36px_rgba(90,55,45,0.12)]"
+      className={`hall-card group overflow-hidden border-0 bg-[var(--wesal-white)] transition-[box-shadow] duration-200 ${
+        compact
+          ? "rounded-xl shadow-[0_8px_20px_rgba(90,55,45,0.07)] hover:shadow-[0_12px_28px_rgba(90,55,45,0.11)]"
+          : "rounded-2xl shadow-[0_10px_28px_rgba(90,55,45,0.08)] hover:shadow-[0_16px_36px_rgba(90,55,45,0.12)]"
+      }`}
       style={{ animationDelay: `${index * 90}ms` }}
       data-testid={`hall-card-${hall.id}`}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-[var(--wesal-pink)]">
+      <div
+        className={`relative overflow-hidden bg-[var(--wesal-pink)] ${
+          compact ? "aspect-[3/2]" : "aspect-[4/3]"
+        }`}
+      >
         <button
           type="button"
           onClick={openPopupOrDetails}
@@ -93,35 +104,57 @@ export default function CatalogHallCard({
         {hallUnavailable ? (
           <HallLockedBadge
             variant="public"
-            className="absolute start-3 top-3 z-10"
+            className={`absolute z-10 ${compact ? "start-2.5 top-2.5" : "start-3 top-3"}`}
           />
         ) : null}
         {priceLabel ? (
-          <span className="hall-price-badge absolute bottom-3 start-3 z-10">
+          <span
+            className={`hall-price-badge absolute z-10 ${
+              compact
+                ? "bottom-2 start-2 !px-2.5 !py-1 !text-[0.7rem]"
+                : "bottom-3 start-3"
+            }`}
+          >
             {formatPriceLabel(priceLabel)}
           </span>
         ) : null}
       </div>
 
-      <div className="space-y-3 p-4">
+      <div className={compact ? "space-y-2 p-3" : "space-y-3 p-4"}>
         <button
           type="button"
           onClick={openPopupOrDetails}
-          className="block w-full cursor-pointer space-y-2.5 text-start"
+          className={`block w-full cursor-pointer text-start ${
+            compact ? "space-y-1.5" : "space-y-2.5"
+          }`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="text-base font-bold leading-snug text-[var(--wesal-maroon)]">
+          <div className={`flex items-start justify-between ${compact ? "gap-2" : "gap-3"}`}>
+            <h3
+              className={`font-bold leading-snug text-[var(--wesal-maroon)] ${
+                compact ? "text-sm" : "text-base"
+              }`}
+            >
               {name}
             </h3>
             {hall.rating != null ? (
-              <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[var(--wesal-text)]">
+              <span
+                className={`inline-flex shrink-0 items-center gap-1 font-semibold text-[var(--wesal-text)] ${
+                  compact ? "text-xs" : "text-sm"
+                }`}
+              >
                 {Number(hall.rating).toFixed(1)}
-                <GoldStar size={14} />
+                <GoldStar size={compact ? 12 : 14} />
               </span>
             ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-[var(--wesal-muted)]">
+          <div
+            className={`flex flex-wrap items-center text-[var(--wesal-muted)] ${
+              compact
+                ? "gap-x-3 gap-y-1 text-xs"
+                : "gap-x-4 gap-y-1.5 text-sm"
+            }`}
+          >
             <span className="inline-flex items-center gap-1.5">
               <PinIcon />
               {location}
@@ -148,15 +181,21 @@ export default function CatalogHallCard({
           )}
         </button>
 
-        <div className="flex items-end justify-between gap-3 pt-1">
-          <div className="flex min-w-0 flex-wrap gap-2">
-            <span className="rounded-full bg-[#f3eeea] px-2.5 py-1 text-xs font-medium text-[var(--wesal-text)]">
+        <div className={`flex items-end justify-between gap-2 ${compact ? "pt-0.5" : "pt-1"}`}>
+          <div className={`flex min-w-0 flex-wrap ${compact ? "gap-1.5" : "gap-2"}`}>
+            <span
+              className={`hall-card-tag rounded-full bg-[var(--wesal-pink)] font-medium text-[var(--wesal-maroon-dark)] ${
+                compact ? "px-2 py-0.5 text-[0.68rem]" : "px-2.5 py-1 text-xs"
+              }`}
+            >
               {openTag ? t("halls.catalog.open") : t("halls.catalog.closed")}
             </span>
             {extraTags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-[#f3eeea] px-2.5 py-1 text-xs font-medium text-[var(--wesal-text)]"
+                className={`hall-card-tag rounded-full bg-[var(--wesal-pink)] font-medium text-[var(--wesal-maroon-dark)] ${
+                  compact ? "px-2 py-0.5 text-[0.68rem]" : "px-2.5 py-1 text-xs"
+                }`}
               >
                 {tag}
               </span>
@@ -165,7 +204,11 @@ export default function CatalogHallCard({
           {showBookButton && bookHref && !hallUnavailable ? (
             <Link
               href={bookHref}
-              className="btn-primary !min-h-9 shrink-0 !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b]"
+              className={`hall-card-book btn-primary shrink-0 !rounded-lg !font-bold ${
+                compact
+                  ? "!min-h-8 !px-2.5 !text-[0.7rem]"
+                  : "!min-h-9 !px-3 !text-xs"
+              }`}
               data-testid="hall-card-book-now"
               onClick={(event) => event.stopPropagation()}
             >
@@ -175,7 +218,11 @@ export default function CatalogHallCard({
           {showBookButton && hallUnavailable ? (
             <button
               type="button"
-              className="btn-primary !min-h-9 shrink-0 !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] !opacity-50"
+              className={`hall-card-book btn-primary shrink-0 !rounded-lg !font-bold !opacity-50 ${
+                compact
+                  ? "!min-h-8 !px-2.5 !text-[0.7rem]"
+                  : "!min-h-9 !px-3 !text-xs"
+              }`}
               disabled
               aria-disabled="true"
             >

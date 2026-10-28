@@ -503,7 +503,7 @@ const ar: MessageCatalog = {
     "الخادم يستغرق وقتاً للإقلاع. انتظر قليلاً ثم حاول مرة أخرى — المشكلة ليست في الإنترنت.",
   "auth.login.form.error.generic": "تعذر تسجيل الدخول. يرجى التحقق من البيانات ثم المحاولة مرة أخرى.",
   "auth.google.or": "أو",
-  "auth.google.continueAria": "المواصلة باستخدام Google",
+  "auth.google.continueAria": "المتابعة باستخدام Google",
   "auth.google.notRegistered": "هذا الحساب غير موجود في وصال. أنشئ حسابًا أولًا من صفحة التسجيل.",
   "auth.google.namePrompt": "أدخل اسمك لإكمال إنشاء الحساب",
   "auth.google.finishRegistration": "إنشاء الحساب عبر Google",

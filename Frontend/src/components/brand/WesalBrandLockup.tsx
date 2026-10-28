@@ -26,7 +26,7 @@ export default function WesalBrandLockup({
   return (
     <Link
       href={href}
-      className={`wesal-brand-lockup inline-flex min-w-0 shrink-0 items-center gap-2 text-[var(--wesal-maroon)] ${className}`.trim()}
+      className={`wesal-brand-lockup inline-flex min-w-0 shrink-0 items-center gap-2 text-[var(--wesal-brand-ink)] ${className}`.trim()}
       aria-label={name}
       data-testid="wesal-brand-lockup"
     >
@@ -35,7 +35,7 @@ export default function WesalBrandLockup({
         variant="brand"
         title={name}
       />
-      <span className={`truncate font-bold text-current ${nameClassName}`}>
+      <span className={`wesal-brand-lockup-name truncate font-bold text-current ${nameClassName}`}>
         {name}
       </span>
     </Link>

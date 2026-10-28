@@ -53,7 +53,7 @@ export default function CatalogFilterSelect({
 
   return (
     <div ref={rootRef} className="relative min-w-0">
-      <span id={`${id}-label`} className="mb-1.5 block text-sm font-semibold text-[var(--wesal-text)]">
+      <span id={`${id}-label`} className="mb-1 block text-xs font-semibold text-[var(--wesal-text)] sm:text-sm">
         {label}
       </span>
       <button
@@ -66,7 +66,7 @@ export default function CatalogFilterSelect({
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         data-testid={testId}
-        className="flex h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-start text-sm outline-none transition focus:border-[var(--wesal-maroon)] disabled:cursor-not-allowed disabled:bg-[var(--wesal-pink-soft)]"
+        className="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-[var(--wesal-border)] bg-white px-3 text-start text-sm outline-none transition focus:border-[var(--wesal-maroon)] disabled:cursor-not-allowed disabled:bg-[var(--wesal-pink-soft)]"
         onClick={() => {
           if (!disabled) setOpen((current) => !current);
         }}

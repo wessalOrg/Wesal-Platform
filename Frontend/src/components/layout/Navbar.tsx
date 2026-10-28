@@ -124,7 +124,7 @@ export default function Navbar({
           <WesalBrandLockup />
 
           <nav
-            className="hidden min-w-0 flex-1 items-center justify-center gap-0 text-[12.5px] font-medium text-[var(--wesal-text)] lg:flex xl:gap-0.5 xl:text-sm"
+            className="wesal-navbar-links hidden min-w-0 flex-1 items-center justify-center gap-0 text-[12.5px] font-bold text-[var(--wesal-muted)] lg:flex xl:gap-0.5 xl:text-sm"
             aria-label={t("nav.main")}
           >
             {NAV_HREFS.map((link) => {
@@ -146,9 +146,9 @@ export default function Navbar({
             })}
           </nav>
 
-          <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:gap-3">
+          <div className="flex min-w-0 items-center gap-1 sm:gap-1.5 lg:gap-2">
             <PwaInstallButton />
-            <div ref={notify.rootRef} className="hidden shrink-0 items-center gap-1.5 sm:gap-2 lg:flex">
+            <div ref={notify.rootRef} className="hidden shrink-0 items-center gap-1 sm:gap-1.5 lg:flex">
               <LanguageSwitcher />
               {authenticated ? (
                 <NavbarNotificationsButton
@@ -161,14 +161,14 @@ export default function Navbar({
               {authenticated ? <NavbarMessagesButton /> : null}
             </div>
             {status === "loading" ? (
-              <span className="h-10 w-28 shrink-0 animate-pulse rounded-xl bg-[var(--wesal-pink)] sm:w-40" />
+              <span className="h-9 w-28 shrink-0 animate-pulse rounded-lg bg-[var(--wesal-pink)] sm:w-36" />
             ) : authenticated ? (
               <AuthAccountMenu
                 loggingOut={isLoggingOut}
                 onLogout={() => void logout()}
               />
             ) : (
-              <div className="hidden min-w-0 items-center gap-2 lg:flex lg:gap-3">
+              <div className="hidden min-w-0 items-center gap-2 lg:flex">
                 <GuestActions
                   login={t("nav.login")}
                   register={t("nav.register")}
@@ -178,7 +178,7 @@ export default function Navbar({
 
             <button
               type="button"
-              className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)] lg:hidden"
+              className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-border)] text-sm text-[var(--wesal-maroon)] lg:hidden"
               aria-expanded={open}
               aria-controls="mobile-nav"
               aria-label={t("nav.menu")}
@@ -248,7 +248,7 @@ export default function Navbar({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="flex min-h-11 w-full items-center justify-center py-2.5 text-center text-sm font-medium text-[var(--wesal-text)]"
+                  className="flex min-h-11 w-full items-center justify-center py-2.5 text-center text-sm font-bold text-[var(--wesal-text)]"
                   onClick={() => {
                     setHash(navHash(link.href));
                     setOpen(false);
@@ -327,7 +327,7 @@ function GuestActions({
       <Link
         href="/login"
         prefetch
-        className={`btn-outline whitespace-nowrap ${stacked ? "min-h-[3.15rem] w-full text-base" : "min-h-11 shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
+        className={`btn-outline whitespace-nowrap font-extrabold ${stacked ? "min-h-[3.15rem] w-full text-base" : "!min-h-9 shrink-0 !rounded-lg !px-3 !text-xs lg:!px-3.5 lg:!text-[13px]"}`}
         onClick={goAuth}
       >
         {login}
@@ -335,7 +335,7 @@ function GuestActions({
       <Link
         href="/register"
         prefetch
-        className={`btn-primary whitespace-nowrap ${stacked ? "min-h-[3.15rem] w-full text-base" : "min-h-11 shrink-0 px-3 text-xs lg:px-[1.15rem] lg:text-sm"}`}
+        className={`btn-primary whitespace-nowrap font-extrabold ${stacked ? "min-h-[3.15rem] w-full text-base" : "!min-h-9 shrink-0 !rounded-lg !px-3 !text-xs lg:!px-3.5 lg:!text-[13px]"}`}
         onClick={goAuth}
       >
         {register}

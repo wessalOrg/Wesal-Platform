@@ -107,7 +107,7 @@ export default function HallManagementPhotosSection({
                 return (
                   <li
                     key={`existing-${photo.id}`}
-                    className="owner-add-hall-photo-card min-w-0 max-w-full overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)]"
+                    className="owner-add-hall-photo-card min-w-0 max-w-full overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-[var(--wesal-pink-soft)]"
                   >
                     <div className="aspect-[4/3] w-full min-w-0 overflow-hidden bg-white/40">
                       <HallImage
@@ -149,7 +149,7 @@ export default function HallManagementPhotosSection({
               {newPreviews.map((preview, index) => (
                 <li
                   key={preview.key}
-                  className="owner-add-hall-photo-card min-w-0 max-w-full overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)]"
+                  className="owner-add-hall-photo-card min-w-0 max-w-full overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-[var(--wesal-pink-soft)]"
                 >
                   <div className="aspect-[4/3] w-full min-w-0 overflow-hidden bg-white/40">
                     {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
@@ -181,7 +181,7 @@ export default function HallManagementPhotosSection({
           ) : (
             <p
               id="hall-mgmt-photos"
-              className="rounded-xl border border-dashed border-[var(--wesal-border)] bg-white/50 px-3 py-4 text-sm text-[var(--wesal-muted)]"
+              className="rounded-xl border-0 bg-white/50 px-3 py-4 text-sm text-[var(--wesal-muted)]"
               aria-invalid={photosError ? true : undefined}
             >
               {t("owner.management.hallEdit.photosEmpty")}

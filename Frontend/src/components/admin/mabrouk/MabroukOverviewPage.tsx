@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -138,7 +138,7 @@ export default function MabroukOverviewPage() {
 
 function SourceCard({ title, body }: { title: string; body: string }) {
   return (
-    <article className="rounded-xl border border-[var(--wesal-border)] bg-[#fcfbf9] px-3.5 py-3.5 sm:p-4">
+    <article className="rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-cream)] px-3.5 py-3.5 sm:p-4">
       <h3 className="text-sm font-bold text-[var(--wesal-text)]">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-[var(--wesal-muted)]">{body}</p>
     </article>

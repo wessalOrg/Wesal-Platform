@@ -36,7 +36,7 @@ export default function HowItWorksSection() {
   return (
     <section
       id="how-it-works"
-      className="how-section relative isolate scroll-mt-20 overflow-hidden py-16 sm:py-20"
+      className="how-section relative isolate scroll-mt-20 overflow-hidden py-11 sm:py-14"
     >
       <div className="how-section-bg" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -56,44 +56,59 @@ export default function HowItWorksSection() {
 
       <Reveal>
       <div className="container-wesal relative z-10">
-        <div className="how-heading mx-auto max-w-2xl text-center">
-          <p className="how-eyebrow mb-3 text-sm font-semibold tracking-wide text-[var(--wesal-gold)]">
-            {t("home.how.eyebrow")}
-          </p>
-          <h2 className="text-2xl font-extrabold leading-snug text-[var(--wesal-maroon)] sm:text-3xl">
-            {t("home.how.title")}
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-8 text-[var(--wesal-text)]/80 sm:text-base">
-            {t("home.how.subtitle")}
-          </p>
-        </div>
+        <div className="mx-auto max-w-[60rem]">
+          <div className="how-heading mx-auto max-w-xl text-center">
+            <p className="how-eyebrow mb-2 text-xs font-semibold tracking-wide text-[var(--wesal-gold)] sm:text-sm">
+              {t("home.how.eyebrow")}
+            </p>
+            <h2 className="text-[1.35rem] font-extrabold leading-snug text-[var(--wesal-maroon)] sm:text-[1.7rem]">
+              {t("home.how.title")}
+            </h2>
+            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[var(--wesal-text)]/80 sm:text-[0.95rem]">
+              {t("home.how.subtitle")}
+            </p>
+          </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
-          {STEPS.map((step, index) => (
-            <article
-              key={step.titleKey}
-              className="how-card group relative flex flex-col overflow-hidden rounded-[1.6rem] border border-white/80 bg-white px-5 py-7 text-center shadow-[0_16px_36px_rgba(120,70,70,0.08)]"
-              style={{ animationDelay: `${140 + index * 120}ms` }}
-            >
-              <div className="flex w-full">
-                <div
-                  className="how-card-icon ms-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#f6f0e8] text-[#c4a05c]"
-                  style={{ animationDelay: `${280 + index * 120}ms` }}
-                >
-                  <StepIcon type={step.icon} />
+          <div className="mt-8 grid gap-[1.15rem] sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
+            {STEPS.map((step, index) => (
+              <article
+                key={step.titleKey}
+                className="how-card group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.2rem] border-0 bg-[var(--wesal-white)] px-4 py-5 text-center shadow-[0_12px_28px_rgba(120,70,70,0.08)]"
+                style={{ animationDelay: `${140 + index * 120}ms` }}
+                tabIndex={0}
+                onPointerDown={(event) => {
+                  const card = event.currentTarget;
+                  card.classList.remove("is-flashing");
+                  void card.offsetWidth;
+                  card.classList.add("is-flashing");
+                }}
+                onAnimationEnd={(event) => {
+                  if (event.animationName.includes("how-card-shine")) {
+                    event.currentTarget.classList.remove("is-flashing");
+                  }
+                }}
+              >
+                <span className="how-card-shine" aria-hidden="true" />
+                <div className="flex w-full">
+                  <div
+                    className="how-card-icon ms-auto flex h-10 w-10 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-gold)]"
+                    style={{ animationDelay: `${280 + index * 120}ms` }}
+                  >
+                    <StepIcon type={step.icon} />
+                  </div>
                 </div>
-              </div>
-              <h3 className="mt-5 text-lg font-extrabold text-[var(--wesal-text)]">
-                {t(step.titleKey)}
-              </h3>
-              <p className="mt-3 flex-1 text-sm leading-7 text-[var(--wesal-muted)]">
-                {t(step.descKey)}
-              </p>
-              <p className="mt-5 text-xs font-semibold text-[var(--wesal-gold)]">
-                {t(step.noteKey)}
-              </p>
-            </article>
-          ))}
+                <h3 className="mt-4 text-base font-extrabold text-[var(--wesal-text)]">
+                  {t(step.titleKey)}
+                </h3>
+                <p className="mt-2 flex-1 text-xs leading-6 text-[var(--wesal-muted)] sm:text-sm">
+                  {t(step.descKey)}
+                </p>
+                <p className="mt-4 text-xs font-semibold text-[var(--wesal-gold)]">
+                  {t(step.noteKey)}
+                </p>
+              </article>
+            ))}
+          </div>
         </div>
       </div>
       </Reveal>

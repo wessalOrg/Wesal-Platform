@@ -204,60 +204,21 @@ export default function HallOwnerProfileSection() {
         <section className="seeker-settings-card owner-settings-profile" data-testid="owner-settings-profile">
           <h2 className="seeker-settings-section-title">{t("seeker.settings.profile.title")}</h2>
 
-          <div className="seeker-settings-avatar-row [direction:ltr]" data-testid="owner-settings-avatar">
-            <div className="seeker-settings-avatar ms-auto" aria-hidden="true">
-              {avatarDraft ? (
-                // eslint-disable-next-line @next/next/no-img-element -- local data URL preview
-                <img src={avatarDraft} alt="" className="seeker-settings-avatar-img" />
-              ) : (
-                <span>{initials(draft.fullName || profile.fullName)}</span>
-              )}
-            </div>
-
-            <div className="seeker-settings-avatar-actions order-first !m-0">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="sr-only"
-                data-testid="owner-settings-avatar-input"
-                onChange={(event) => {
-                  void onPickAvatar(event.target.files?.[0] ?? null);
-                }}
-              />
-              <button
-                type="button"
-                className="btn-primary min-h-11"
-                disabled={avatarBusy}
-                data-testid="owner-settings-avatar-pick"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {avatarBusy ? t("seeker.settings.avatar.uploading") : t("seeker.settings.avatar.change")}
-              </button>
-              {avatarDraft ? (
-                <button
-                  type="button"
-                  className="btn-outline min-h-11"
-                  disabled={avatarBusy}
-                  data-testid="owner-settings-avatar-remove"
-                  onClick={onRemoveAvatar}
-                >
-                  {t("seeker.settings.avatar.remove")}
-                </button>
-              ) : null}
-            </div>
-          </div>
-
-          {avatarError ? (
-            <p role="alert" className="seeker-settings-alert" data-testid="owner-settings-avatar-error">
-              {resolveMessage(t, avatarError)}
-            </p>
-          ) : null}
-          {avatarDirty && !avatarError ? (
-            <p role="status" className="seeker-settings-section-lead" data-testid="owner-settings-avatar-pending">
-              {t("seeker.settings.avatar.pendingSave")}
-            </p>
-          ) : null}
+          <ProfileAvatarField
+            draftUrl={avatarDraft}
+            initialsLabel={initials(draft.fullName || profile.fullName)}
+            busy={avatarBusy}
+            testIdPrefix="owner-settings"
+            errorKey={avatarError}
+            showPendingHint={avatarDirty}
+            onBusyChange={setAvatarBusy}
+            onError={setAvatarError}
+            onDraftChange={(dataUrl) => {
+              setAvatarDraft(dataUrl);
+              setAvatarError(null);
+              setProfileSuccess(false);
+            }}
+          />
 
           <form
             className="seeker-settings-form"

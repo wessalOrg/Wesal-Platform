@@ -1,10 +1,14 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/home/HeroSection";
-import HomeCategoriesSection from "@/components/home/HomeCategoriesSection";
-import FeaturedHallsSection from "@/components/home/FeaturedHallsSection";
 import dynamic from "next/dynamic";
 
+const HomeCategoriesSection = dynamic(
+  () => import("@/components/home/HomeCategoriesSection"),
+);
+const FeaturedHallsSection = dynamic(
+  () => import("@/components/home/FeaturedHallsSection"),
+);
 const OccasionServicesSection = dynamic(
   () => import("@/components/home/OccasionServicesSection"),
 );

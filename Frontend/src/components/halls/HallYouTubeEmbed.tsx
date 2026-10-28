@@ -115,7 +115,7 @@ export default function HallYouTubeEmbed({
     <>
       {variant === "poster" ? (
         <section
-          className="overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-5"
+          className="overflow-hidden rounded-2xl border-0 bg-white p-4 sm:p-5"
           data-testid="hall-youtube"
         >
           <p className="mb-2 text-xs font-semibold text-[var(--wesal-muted)]">
@@ -125,7 +125,7 @@ export default function HallYouTubeEmbed({
             type="button"
             onClick={openModal}
             aria-label={t("halls.details.youtubeWatch")}
-            className="group relative block aspect-video w-full overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-black"
+            className="group relative block aspect-video w-full overflow-hidden rounded-xl border-0 bg-black"
             data-testid="hall-youtube-open"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- remote YouTube poster */}
@@ -149,14 +149,14 @@ export default function HallYouTubeEmbed({
         <button
           type="button"
           onClick={openModal}
-          className="group inline-flex items-center gap-2 text-base font-semibold text-[var(--wesal-text)]"
+          className="group inline-flex items-center gap-2 text-base text-[var(--wesal-text)]"
           data-testid="hall-youtube-link"
           aria-haspopup="dialog"
         >
           <YouTubeIcon />
           <span>
-            <span className="font-bold text-[#241c18]">{t("halls.details.youtubeLead")}</span>{" "}
-            <span className="font-bold text-[var(--wesal-maroon)] underline decoration-[var(--wesal-maroon)]/40 underline-offset-4 transition duration-200 group-hover:text-[var(--wesal-maroon-dark)] group-hover:decoration-[var(--wesal-maroon-dark)]">
+            <span className="wesal-text-bold text-[#241c18]">{t("halls.details.youtubeLead")}</span>{" "}
+            <span className="wesal-text-bold text-[var(--wesal-maroon)] underline decoration-[var(--wesal-maroon)]/40 underline-offset-4 transition duration-200 group-hover:text-[var(--wesal-maroon-dark)] group-hover:decoration-[var(--wesal-maroon-dark)]">
               {t("halls.details.youtubeHere")}
             </span>
           </span>

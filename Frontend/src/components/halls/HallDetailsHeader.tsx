@@ -102,7 +102,7 @@ export default function HallDetailsHeader({
           <p className="text-sm font-bold text-[var(--wesal-maroon)]">
             {t("halls.details.pageKicker")}
           </p>
-          <h1 className="mt-1.5 ps-8 text-2xl font-extrabold text-[var(--wesal-text)] sm:ps-12 sm:text-3xl">
+          <h1 className="hall-details-name mt-1.5 ps-8 text-2xl font-extrabold text-[var(--wesal-text)] sm:ps-12 sm:text-3xl">
             {hall.name}
           </h1>
         </div>
@@ -111,7 +111,7 @@ export default function HallDetailsHeader({
       {showMeta ? (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-[var(--wesal-text)] sm:w-auto">
+            <p className="wesal-text-bold flex w-full flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[var(--wesal-text)] sm:w-auto">
               <StarIcon />
               {rating ? (
                 <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5">
@@ -140,7 +140,7 @@ export default function HallDetailsHeader({
               type="button"
               onClick={toggleSaved}
               aria-pressed={saved}
-              className="hall-meta-action inline-flex items-center gap-2 text-sm font-semibold text-[var(--wesal-muted)]"
+              className="hall-meta-action inline-flex flex-row-reverse items-center gap-2 text-sm font-semibold text-[var(--wesal-muted)]"
             >
               <HeartIcon filled={saved} />
               {saved ? t("halls.details.saved") : t("halls.details.save")}
@@ -148,7 +148,7 @@ export default function HallDetailsHeader({
             <button
               type="button"
               onClick={() => void share()}
-              className="hall-meta-action inline-flex items-center gap-2 text-sm font-semibold text-[var(--wesal-muted)]"
+              className="hall-meta-action inline-flex flex-row-reverse items-center gap-2 text-sm font-semibold text-[var(--wesal-muted)]"
             >
               <ShareIcon bump={shareBump} />
               {copied ? t("halls.details.shareCopied") : t("halls.details.share")}
@@ -159,7 +159,7 @@ export default function HallDetailsHeader({
 
       {showTabs && sections.length > 0 ? (
         <div
-          className="flex items-end gap-1 overflow-x-auto overflow-y-hidden border-b border-[var(--wesal-border)] [scrollbar-width:none] sm:justify-between [&::-webkit-scrollbar]:hidden"
+          className="hall-details-tablist flex items-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] sm:justify-between [&::-webkit-scrollbar]:hidden"
           role="tablist"
         >
           {sections.map((section) => {
@@ -170,10 +170,10 @@ export default function HallDetailsHeader({
                 type="button"
                 role="tab"
                 onClick={() => openSection(section.id)}
-                className={`-mb-px shrink-0 border-b-2 px-3 pb-3 pt-1 text-center text-sm font-bold whitespace-nowrap sm:min-w-0 sm:flex-1 sm:px-2 ${
+                className={`hall-details-tab relative -mb-px shrink-0 px-3 pb-2.5 pt-1 text-center text-xs font-bold whitespace-nowrap sm:min-w-0 sm:flex-1 sm:px-2 sm:text-[13px] ${
                   selected
-                    ? "border-[var(--wesal-maroon)] text-[var(--wesal-maroon)]"
-                    : "border-transparent text-[var(--wesal-muted)] hover:text-[var(--wesal-text)]"
+                    ? "is-active text-[var(--wesal-maroon)]"
+                    : "text-[var(--wesal-muted)] hover:text-[var(--wesal-text)]"
                 }`}
                 aria-selected={selected}
               >

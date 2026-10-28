@@ -53,7 +53,7 @@ export default function AdminPendingHallsView() {
                     <MessageHallOwnerButton hallId={hall.hallId} hallName={hall.name} />
                     <Link
                       href={adminHallSubmissionPath(hall.hallId)}
-                      className="btn-primary min-h-11 px-4 sm:min-h-10"
+                      className="btn-primary !min-h-9 px-3.5 text-sm sm:!min-h-9"
                       prefetch
                     >
                       {t("admin.halls.queue.open")}

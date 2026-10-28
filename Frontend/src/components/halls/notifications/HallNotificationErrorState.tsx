@@ -14,7 +14,7 @@ export default function HallNotificationErrorState({
 
   return (
     <div
-      className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-6 text-center sm:min-h-52 sm:px-6"
+      className="flex min-h-48 flex-col items-center justify-center rounded-2xl bg-[var(--wesal-pink-soft)] px-4 py-6 text-center sm:min-h-52 sm:px-6"
       role="alert"
       data-testid="hall-notifications-error"
     >

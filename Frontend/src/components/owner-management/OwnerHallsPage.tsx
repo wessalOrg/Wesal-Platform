@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -204,14 +204,14 @@ export default function OwnerHallsPage() {
 
       {halls.length > 0 ? (
         <>
-          <div className="flex flex-col gap-3 rounded-[24px] border border-[var(--wesal-border)] bg-white p-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 rounded-[24px] border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white p-3 shadow-[0_8px_22px_rgba(90,55,45,0.05)] sm:flex-row sm:items-center">
             <label className="relative min-w-0 flex-1">
               <span className="sr-only">{t("owner.hallsPage.search")}</span>
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t("owner.hallsPage.search")}
-                className="h-9 w-full rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-3 text-xs text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
+                className="h-9 w-full rounded-xl border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white px-3 text-xs text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)] focus:ring-2 focus:ring-[var(--wesal-maroon)]/20"
               />
             </label>
             <div className="grid w-full grid-cols-2 gap-1.5 px-1 sm:flex sm:w-auto sm:flex-wrap sm:justify-end sm:gap-2 sm:px-0">
@@ -256,7 +256,7 @@ export default function OwnerHallsPage() {
           )}
 
           <div className="flex justify-center">
-            <section className="owner-add-hall-banner relative w-full max-w-3xl overflow-hidden rounded-[26px] border border-[#edd9d1] bg-[linear-gradient(135deg,#fffdfb_0%,#faf1ec_45%,#f6e8e1_100%)] px-4 py-5 shadow-[0_14px_34px_rgba(120,70,60,0.1)] sm:px-6">
+            <section className="owner-add-hall-banner relative w-full max-w-3xl overflow-hidden rounded-[1.15rem] border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,#edd9d1)] bg-[linear-gradient(135deg,#fffdfb_0%,#faf1ec_45%,#f6e8e1_100%)] px-3.5 py-3.5 shadow-[0_10px_26px_rgba(120,70,60,0.08)] sm:px-5 sm:py-4">
               <div className="pointer-events-none absolute inset-0" aria-hidden="true">
                 <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(226,201,138,0.75),transparent)]" />
                 <div className="owner-add-hall-banner-blob absolute -start-10 -top-12 h-36 w-44 rounded-full bg-[radial-gradient(circle,rgba(193,123,127,0.22),transparent_68%)] blur-[1px]" />
@@ -363,15 +363,15 @@ function OwnerHallCard({
 
   return (
     <li
-      className="owner-hall-card overflow-hidden rounded-[28px] border border-[var(--wesal-border)] bg-white"
+      className="owner-hall-card overflow-hidden rounded-[1.15rem] border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white shadow-[0_8px_22px_rgba(90,55,45,0.05)]"
       style={{ animationDelay: `${Math.min(index, 6) * 70}ms` }}
     >
       <div className="flex flex-col md:flex-row">
         <HallCardPhotos images={photos} emptyLabel={t("owner.hallsPage.title")} />
-        <div className="flex min-w-0 flex-1 flex-col gap-3 p-3 sm:p-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 p-2.5 sm:p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h2 className="truncate text-base font-extrabold text-[var(--wesal-maroon-dark)]">{name}</h2>
+              <h2 className="truncate text-sm font-extrabold text-[var(--wesal-maroon-dark)]">{name}</h2>
               {location ? (
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--wesal-muted)]">
                   <PinIcon />
@@ -385,7 +385,7 @@ function OwnerHallCard({
                 {t(badgeKey)}
               </span>
               <span
-                className="inline-flex items-center gap-1 rounded-full bg-[#fff8e8] px-2 py-0.5 text-[11px] font-bold text-[var(--wesal-text)]"
+                className="inline-flex items-center gap-1 rounded-full bg-[var(--wesal-pink)] px-2 py-0.5 text-[11px] font-bold text-[var(--wesal-text)]"
                 aria-label={
                   details?.rating != null && Number.isFinite(details.rating)
                     ? t("halls.details.ratingAria", {
@@ -809,7 +809,7 @@ function FilterChip({
       className={`inline-flex min-h-8 w-full min-w-0 items-center justify-center truncate rounded-full px-1.5 py-1 text-center text-[0.68rem] font-bold leading-tight sm:min-h-0 sm:w-auto sm:px-2.5 sm:py-1.5 sm:text-[11px] ${
         active
           ? "bg-[var(--wesal-maroon)] text-white"
-          : "border border-[var(--wesal-border)] bg-white text-[var(--wesal-text)]"
+          : "border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white text-[var(--wesal-text)]"
       }`}
       aria-pressed={active}
       onClick={onClick}

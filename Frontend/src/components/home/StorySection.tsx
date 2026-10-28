@@ -85,28 +85,31 @@ export default function StorySection() {
         <div className="story-layout">
           <div className="story-photo">
             <Image
-              src="/home/story-collage.jpg"
+              src="/home/story-collage.webp"
               alt={t("home.story.imageAlt")}
               width={920}
               height={864}
+              className="story-collage-img"
+              sizes="(min-width: 1024px) 30rem, 70vw"
+              quality={80}
             />
           </div>
           <div className="story-copy" dir={lang === "ar" ? "rtl" : "ltr"}>
               <h2
                 id="occasion-story-heading"
-                className="whitespace-nowrap text-[1.45rem] font-extrabold text-[var(--wesal-maroon)] sm:text-5xl"
+                className="wesal-section-heading text-2xl font-extrabold leading-snug text-[var(--wesal-maroon)] sm:text-[1.85rem]"
               >
                 {t("home.story.title")}
               </h2>
-              <p className="mt-3.5 text-[0.92rem] leading-7 text-[var(--wesal-text)]/80 sm:mt-5 sm:text-lg sm:leading-9">
+              <p className="mt-3.5 text-[0.95rem] leading-7 text-[var(--wesal-text)]/80 sm:mt-4 sm:text-base sm:leading-8">
                 {t("home.story.body1")}
               </p>
-              <p className="mt-3 text-[0.92rem] leading-7 text-[var(--wesal-text)]/80 sm:mt-4 sm:text-lg sm:leading-9">
+              <p className="mt-3 text-[0.95rem] leading-7 text-[var(--wesal-text)]/80 sm:text-base sm:leading-8">
                 {t("home.story.body2")}
               </p>
               <ul
                 ref={statsRef}
-                className="mt-5 grid grid-cols-1 gap-2.5 sm:mt-8 sm:grid-cols-3 sm:gap-3"
+                className="mt-6 grid grid-cols-1 gap-2.5 sm:mt-7 sm:grid-cols-3 sm:gap-2.5"
                 dir={cardsFromLeft ? "ltr" : undefined}
               >
                 {STATS.map((stat, index) => (
@@ -120,7 +123,7 @@ export default function StorySection() {
                   >
                     <div className="story-stat-card">
                       <StoryStatValue target={stat.target} active={statsActive} />
-                      <p className="mt-1 text-sm leading-6 text-[var(--wesal-muted)]">
+                      <p className="story-stat-label">
                         {t(`home.story.${stat.id}.label`)}
                       </p>
                     </div>

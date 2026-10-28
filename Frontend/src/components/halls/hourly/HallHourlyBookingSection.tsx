@@ -53,7 +53,7 @@ export default function HallHourlyBookingSection({
           alt=""
           width={36}
           height={36}
-          className="size-9 shrink-0 mix-blend-multiply"
+          className="hall-raster-icon size-9 shrink-0 mix-blend-multiply"
         />
         <span>{t("halls.hourly.title")}</span>
       </h2>

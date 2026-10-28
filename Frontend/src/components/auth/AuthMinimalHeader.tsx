@@ -21,8 +21,8 @@ export default function AuthMinimalHeader() {
           className="absolute right-4 inline-flex max-w-[min(100%,14rem)] flex-row items-center gap-1.5 rounded-xl px-1.5 py-2 text-sm font-semibold text-[var(--wesal-maroon-dark)] transition hover:bg-white/40 sm:right-6 sm:max-w-none sm:gap-2 sm:px-2.5 lg:right-6 xl:right-10"
           data-testid="auth-back-home"
         >
-          <span className="truncate">{t("common.backHome")}</span>
           <BackHomeArrow />
+          <span className="truncate">{t("common.backHome")}</span>
         </Link>
       </div>
     </header>

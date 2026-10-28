@@ -37,6 +37,13 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Local-only: demo login + dark mode — never push to GitHub
+/src/lib/demo-auth.ts
+/src/lib/theme.ts
+/src/components/layout/ThemeProvider.tsx
+/src/components/layout/ThemeSwitcher.tsx
+/public/assistant/appointment-saved-mabrouk-dark.jpg
+
 # vercel
 .vercel
 

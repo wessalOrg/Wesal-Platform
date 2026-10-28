@@ -222,9 +222,7 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
     notes.length
       ? { id: "hall-notes", label: t("halls.details.tabs.notes") }
       : null,
-    !isOwnHall
-      ? { id: "hall-inquiry", label: t("halls.details.tabs.inquiry") }
-      : null,
+    { id: "hall-inquiry", label: t("halls.details.tabs.inquiry") },
   ].filter((section): section is { id: string; label: string } => section != null);
 
   if (unavailable) {
@@ -264,68 +262,78 @@ export default function HallDetailsPage({ hallId }: HallDetailsPageProps) {
       <HallDetailsOverview key={viewHall.id} hall={viewHall} />
 
       <section
-        className="space-y-6 rounded-[28px] border border-[var(--wesal-border)] bg-white p-4 shadow-[0_8px_22px_rgba(90,55,45,0.04)] sm:p-5"
+        className="hall-details-info-box relative space-y-6 rounded-[1.75rem] border border-[color-mix(in_srgb,var(--wesal-border)_42%,transparent)] bg-white p-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)] sm:space-y-7 sm:p-7 lg:p-8"
         data-testid="hall-details-info"
       >
-        <HallDetailsHeader key={`${viewHall.id}-tabs`} hall={viewHall} sections={sections} part="tabs" />
+        <HallDetailsHeader
+          key={`${viewHall.id}-tabs`}
+          hall={viewHall}
+          sections={sections}
+          part="tabs"
+        />
 
-        {detailedAddress ? (
-          <section
-            id="hall-address"
-            className="scroll-mt-28 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-            data-testid="hall-full-description"
-          >
-            <div className="min-w-0">
-              <h2 className="flex items-center gap-2 text-lg font-bold text-[var(--wesal-text)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+          {detailedAddress ? (
+            <section
+              id="hall-address"
+              className="min-w-0 flex-1 scroll-mt-28"
+              data-testid="hall-full-description"
+            >
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-[var(--wesal-text)] sm:text-base">
                 <PinIcon />
                 {t("halls.details.tabs.address")}
               </h2>
-              <p className="mt-3 text-sm leading-8 text-[var(--wesal-text)]">{detailedAddress}</p>
-            </div>
+              <p className="mt-1.5 text-sm leading-6 text-[var(--wesal-muted)]">{detailedAddress}</p>
+            </section>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
+          <div className="w-full shrink-0 sm:max-w-[13.5rem]">
             <AskMabroukAboutHallButton
               hallId={viewHall.id}
               hallName={viewHall.name}
-              className="w-full max-w-full shrink-0 sm:!w-[12.5rem]"
+              className="w-full"
             />
-          </section>
-        ) : null}
+          </div>
+        </div>
 
         {featureLabels.length > 0 ? (
           <div id="hall-details-features" className="scroll-mt-28" data-testid="hall-features">
-            <h2 className="text-lg font-bold text-[var(--wesal-text)]">
+            <h2 className="flex items-center gap-1.5 text-sm font-bold text-[var(--wesal-text)] sm:text-base">
+              <FeaturesIcon />
               {t("halls.details.tabs.features")}
             </h2>
             <HallAmenitiesGrid amenities={featureLabels} embedded />
           </div>
         ) : null}
 
-        {notes.length > 0 || !isOwnHall ? (
-          <div className="grid items-start gap-6 lg:grid-cols-2">
-            {notes.length > 0 ? (
-              <section id="hall-notes" className="scroll-mt-28">
-                <h2 className="flex items-center gap-2 text-lg font-bold text-[var(--wesal-text)]">
-                  <InfoIcon />
-                  {t("halls.details.tabs.notes")}
-                </h2>
-                <ul className="mt-3 list-disc space-y-2 ps-5 text-sm leading-7 text-[var(--wesal-text)]">
-                  {notes.map((note) => (
-                    <li key={note}>{note}</li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
+        <div
+          className={`grid items-start gap-6 ${
+            notes.length > 0 ? "lg:grid-cols-2 lg:gap-8" : ""
+          }`}
+        >
+          {notes.length > 0 ? (
+            <section id="hall-notes" className="scroll-mt-28">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-[var(--wesal-text)] sm:text-base">
+                <InfoIcon />
+                {t("halls.details.tabs.notes")}
+              </h2>
+              <ul className="mt-2 list-disc space-y-1.5 ps-5 text-sm leading-6 text-[var(--wesal-muted)]">
+                {notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
-            {!isOwnHall ? (
-              <HallInquiryActions
-                hallId={viewHall.id}
-                hallName={viewHall.name}
-                ownerPhone={viewHall.ownerPhone}
-                isOwnHall={isOwnHall}
-                isAvailable={!unavailable}
-              />
-            ) : null}
-          </div>
-        ) : null}
+          <HallInquiryActions
+            hallId={viewHall.id}
+            hallName={viewHall.name}
+            ownerPhone={viewHall.ownerPhone}
+            isOwnHall={isOwnHall}
+            isAvailable={!unavailable}
+          />
+        </div>
       </section>
 
       <div className="hall-details-body min-w-0 space-y-5 lg:space-y-6">
@@ -454,38 +462,18 @@ function HallInquiryActions({
 
   return (
     <section id="hall-inquiry" className="scroll-mt-28">
-      <h2 className="flex items-center gap-2 text-lg font-bold text-[var(--wesal-text)]">
+      <h2 className="flex items-center gap-1.5 text-sm font-bold text-[var(--wesal-text)] sm:text-base">
         <PhoneIcon />
         {t("halls.details.tabs.inquiry")}
       </h2>
-      <p className="mt-2 overflow-x-auto whitespace-nowrap text-xs leading-6 text-[var(--wesal-muted)] [scrollbar-width:none] sm:text-sm sm:leading-7 [&::-webkit-scrollbar]:hidden">
+      <p className="mt-1.5 overflow-x-auto whitespace-nowrap text-xs leading-5 text-[var(--wesal-muted)] [scrollbar-width:none] sm:leading-6 [&::-webkit-scrollbar]:hidden">
         {t("halls.details.inquiryHint")}
       </p>
       <div className="mt-3 flex w-full flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <HallContactButton
-          hallId={hallId}
-          isOwnHall={isOwnHall}
-          isAvailable={isAvailable}
-          variant="compact"
-          label={t("halls.details.inquiryMessages")}
-          className="w-full sm:w-auto"
-        />
-        {whatsappHref ? (
-          <a
-            href={whatsappHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={t("halls.details.inquiryWhatsAppAria")}
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1ebe5d] sm:w-auto"
-          >
-            <WhatsAppIcon />
-            {t("halls.details.inquiryWhatsApp")}
-          </a>
-        ) : null}
         {phone ? (
           <span
             dir="ltr"
-            className="inline-flex h-9 w-full items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-xs font-bold text-[var(--wesal-text)] transition hover:border-[var(--wesal-maroon)] hover:shadow-sm sm:w-auto"
+            className="wesal-text-bold inline-flex h-9 w-full items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-border)_55%,transparent)] bg-[#f7f4f2] text-xs text-[var(--wesal-text)] transition hover:border-[var(--wesal-maroon)] hover:shadow-sm sm:w-auto"
           >
             <a
               href={`tel:${phone.replace(/[^\d+]/g, "")}`}
@@ -500,12 +488,32 @@ function HallInquiryActions({
               aria-label={phoneCopied ? t("halls.details.phoneCopied") : t("halls.details.copyPhone")}
               title={phoneCopied ? t("halls.details.phoneCopied") : t("halls.details.copyPhone")}
               data-testid="hall-phone-copy"
-              className="inline-flex h-full items-center rounded-e-full border-s border-[var(--wesal-border)] px-2.5 text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+              className="inline-flex h-full items-center rounded-e-full border-s border-[color-mix(in_srgb,var(--wesal-border)_55%,transparent)] px-2.5 text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
             >
               {phoneCopied ? <CheckIcon /> : <CopyIcon />}
             </button>
           </span>
         ) : null}
+        {whatsappHref ? (
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t("halls.details.inquiryWhatsAppAria")}
+            className="wesal-text-bold inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-xs text-white shadow-sm transition hover:bg-[#1ebe5d] sm:w-auto"
+          >
+            <WhatsAppIcon />
+            {t("halls.details.inquiryWhatsApp")}
+          </a>
+        ) : null}
+        <HallContactButton
+          hallId={hallId}
+          isOwnHall={isOwnHall}
+          isAvailable={isAvailable}
+          variant="compact"
+          label={t("halls.details.inquiryMessages")}
+          className="w-full sm:w-auto"
+        />
       </div>
     </section>
   );
@@ -571,6 +579,32 @@ function hallNotes(otherFeatures: string | null | undefined, priceNote: string):
     if (trimmed && !notes.includes(trimmed)) notes.push(trimmed);
   }
   return notes;
+}
+
+function FeaturesIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      className="size-5 text-[var(--wesal-maroon)]"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 3.5 13.4 8.6 18.5 10 13.4 11.4 12 16.5 10.6 11.4 5.5 10 10.6 8.6 12 3.5Z"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18.2 14.2 18.9 16.5 21.2 17.2 18.9 17.9 18.2 20.2 17.5 17.9 15.2 17.2 17.5 16.5 18.2 14.2Z"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.2 14.8 6.7 16.4 8.3 16.9 6.7 17.4 6.2 19 5.7 17.4 4.1 16.9 5.7 16.4 6.2 14.8Z"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 function InfoIcon() {

@@ -58,9 +58,8 @@ function AiAssistantFab({
   const label = open ? t("assistant.fab.close") : t("assistant.fab.open");
   const name = t("assistant.title");
   const [greetIndex, setGreetIndex] = useState(0);
-  const [dock, setDock] = useState<"left" | "right">(() =>
-    typeof document !== "undefined" && document.documentElement.dir === "rtl" ? "left" : "right",
-  );
+  // Stable SSR default — real dock is measured after mount to avoid hydration mismatch.
+  const [dock, setDock] = useState<"left" | "right">("right");
 
   useEffect(() => {
     const el = buttonRef?.current;

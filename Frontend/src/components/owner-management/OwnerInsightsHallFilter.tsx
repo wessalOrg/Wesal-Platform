@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useT } from "@/i18n";
 
@@ -85,7 +85,7 @@ function FilterChip({
       className={`inline-flex max-w-[11rem] shrink-0 items-center truncate rounded-full border px-3 py-1.5 text-[0.72rem] font-bold transition ${
         active
           ? "border-[#c17b7f] bg-[#c17b7f] text-white shadow-[0_6px_14px_rgba(193,123,127,0.28)]"
-          : "border-[rgba(168,98,103,0.22)] bg-[#faf7f5] text-[var(--wesal-text)] hover:border-[#c17b7f] hover:bg-white"
+          : "border-[rgba(168,98,103,0.22)] bg-[var(--wesal-pink-soft)] text-[var(--wesal-text)] hover:border-[#c17b7f] hover:bg-white"
       }`}
     >
       {label}

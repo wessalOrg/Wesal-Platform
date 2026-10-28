@@ -5,11 +5,11 @@ import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { useT } from "@/i18n";
 import IosInstallInstructions from "@/components/pwa/IosInstallInstructions";
 
-function DownloadIcon() {
+function DownloadIcon({ size = 22 }: { size?: number }) {
   return (
     <svg
-      width="22"
-      height="22"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"
@@ -51,7 +51,7 @@ export default function PwaInstallButton({
   const label = t("pwa.installApp");
   const buttonClass =
     variant === "compact"
-      ? `inline-flex h-10 w-10 shrink-0 items-center justify-center bg-transparent text-[var(--wesal-maroon)] transition hover:text-[var(--wesal-maroon-dark)] ${className}`.trim()
+      ? `inline-flex h-9 w-9 shrink-0 items-center justify-center bg-transparent text-[var(--wesal-maroon)] transition hover:text-[var(--wesal-maroon-dark)] ${className}`.trim()
       : `btn-primary inline-flex w-full items-center justify-center gap-1.5 ${className}`.trim();
 
   return (
@@ -69,7 +69,7 @@ export default function PwaInstallButton({
         title={label}
         className={buttonClass}
       >
-        <DownloadIcon />
+        <DownloadIcon size={variant === "compact" ? 18 : 22} />
         {variant === "full" ? <span>{label}</span> : null}
       </button>
       {showIosHelp ? (

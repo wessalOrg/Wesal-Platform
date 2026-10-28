@@ -84,7 +84,7 @@ export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewP
         <p className="mt-1 text-sm text-[var(--wesal-muted)]">{t("owner.hallsPage.viewOnlyNote")}</p>
       </div>
 
-      <section className="overflow-hidden rounded-[28px] border border-[var(--wesal-border)] bg-white">
+      <section className="overflow-hidden rounded-[28px] border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white shadow-[0_8px_22px_rgba(90,55,45,0.05)]">
         {photos.length > 0 ? (
           <div className="grid gap-2 p-3 sm:grid-cols-2">
             {photos.map((url) => (
@@ -99,7 +99,7 @@ export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewP
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-[var(--wesal-border)] bg-white p-5">
+      <section className="rounded-[28px] border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white p-5 shadow-[0_8px_22px_rgba(90,55,45,0.05)]">
         <h2 className="text-lg font-extrabold text-[var(--wesal-text)]">
           {t("owner.management.addHall.sections.basic")}
         </h2>
@@ -114,7 +114,7 @@ export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewP
         </dl>
       </section>
 
-      <section className="rounded-[28px] border border-[var(--wesal-border)] bg-white p-5">
+      <section className="rounded-[28px] border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white p-5 shadow-[0_8px_22px_rgba(90,55,45,0.05)]">
         <h2 className="text-lg font-extrabold text-[var(--wesal-text)]">
           {t("owner.management.addHall.sections.location")}
         </h2>
@@ -128,7 +128,7 @@ export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewP
         </dl>
       </section>
 
-      <section className="rounded-[28px] border border-[var(--wesal-border)] bg-white p-5">
+      <section className="rounded-[28px] border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white p-5 shadow-[0_8px_22px_rgba(90,55,45,0.05)]">
         <h2 className="text-lg font-extrabold text-[var(--wesal-text)]">
           {t("owner.management.addHall.sections.features")}
         </h2>

@@ -483,7 +483,7 @@ export default function RegisterFormCard({
           type="submit"
           disabled={!canSubmit}
           aria-busy={pending || undefined}
-          className="btn-primary wesal-auth-submit mt-1 w-full !min-h-11 !rounded-xl !text-[0.95rem]"
+          className="btn-primary wesal-auth-submit mt-0.5 w-full !min-h-10 !rounded-xl !text-sm"
           data-testid="register-submit"
         >
           {pending ? t("auth.register.form.submitting") : t("auth.register.form.submit")}

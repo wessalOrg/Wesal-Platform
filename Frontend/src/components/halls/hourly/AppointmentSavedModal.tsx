@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useT } from "@/i18n";
 
 const SUMMARY_SELECTOR = "[data-testid='hall-action-card']";
+const MABROUK_ART = "/assistant/appointment-saved-mabrouk.jpg?v=5";
 
 type AppointmentSavedModalProps = {
   open: boolean;
@@ -12,7 +13,6 @@ type AppointmentSavedModalProps = {
 
 export default function AppointmentSavedModal({ open, onClose }: AppointmentSavedModalProps) {
   const t = useT();
-
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;
@@ -51,38 +51,41 @@ export default function AppointmentSavedModal({ open, onClose }: AppointmentSave
         role="dialog"
         aria-modal="true"
         aria-labelledby="appointment-saved-title"
-        className="appointment-saved-panel absolute inset-x-4 top-1/2 mx-auto w-auto max-w-[26rem] -translate-y-1/2 rounded-[28px] bg-white px-5 pb-5 pt-4 shadow-[0_24px_60px_rgba(60,35,30,0.22)] sm:px-6 sm:pb-6"
+        className="appointment-saved-panel absolute inset-x-4 top-1/2 mx-auto w-auto max-w-[26rem] -translate-y-1/2 rounded-[28px] border border-[var(--wesal-border)] bg-[var(--wesal-white)] px-5 pb-5 pt-4 shadow-[0_24px_60px_rgba(60,35,30,0.22)] sm:px-6 sm:pb-6"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label={t("common.close")}
-          className="absolute left-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#f6e4e6] text-[var(--wesal-maroon)] transition hover:bg-[#efd4d7]"
+          className="appointment-saved-close absolute left-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink-soft)]"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
             <path d="M7 7l10 10M17 7 7 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
         </button>
 
-        <img
-          src="/assistant/appointment-saved-mabrouk.jpg"
-          alt=""
-          width={512}
-          height={512}
-          aria-hidden="true"
-          className="mx-auto mt-1 h-56 w-full max-w-[19rem] object-contain"
-        />
+        <div className="appointment-saved-art-wrap mx-auto mt-1 flex h-56 w-full max-w-[19rem] items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- transparent success illustration */}
+          <img
+            src={MABROUK_ART}
+            alt=""
+            width={512}
+            height={512}
+            aria-hidden="true"
+            className="appointment-saved-art h-full w-full object-contain"
+          />
+        </div>
 
         <h2
           id="appointment-saved-title"
           className="mt-1 flex items-center justify-center gap-2 text-center text-[1.65rem] font-extrabold leading-tight text-[var(--wesal-maroon)]"
         >
           <span>{t("halls.hourly.savedTitle")}</span>
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#f6e4e6] text-sm">
+          <span className="appointment-saved-check inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-sm text-[var(--wesal-maroon)]">
             ✓
           </span>
         </h2>
-        <p className="mx-auto mt-3 max-w-sm text-center text-sm leading-7 text-[#7a736e]">
+        <p className="appointment-saved-body mx-auto mt-3 max-w-sm text-center text-sm leading-7 text-[var(--wesal-muted)]">
           {t("halls.hourly.savedBody")}
         </p>
 

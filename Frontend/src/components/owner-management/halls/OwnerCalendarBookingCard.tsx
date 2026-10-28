@@ -56,7 +56,7 @@ export default function OwnerCalendarBookingCard({
 
   return (
     <article
-      className="overflow-hidden rounded-2xl border border-[rgba(166,99,99,0.45)] bg-white p-3.5 shadow-[0_8px_22px_rgba(90,55,45,0.05)] sm:p-4"
+      className="overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white p-3.5 shadow-[0_8px_22px_rgba(90,55,45,0.05)] sm:p-4"
       data-testid="owner-calendar-booking-card"
       data-booking-id={booking.id}
     >
@@ -142,7 +142,7 @@ export default function OwnerCalendarBookingCard({
         {showChat ? (
           <button
             type="button"
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[rgba(166,99,99,0.35)] bg-[#faf6f2] px-3 text-sm font-bold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border-0 bg-[#faf6f2] px-3 text-sm font-bold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
             disabled={messagingSeeker}
             aria-busy={messagingSeeker || undefined}
             data-testid={`owner-calendar-booking-contact-${booking.id}`}

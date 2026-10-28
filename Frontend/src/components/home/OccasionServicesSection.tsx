@@ -21,7 +21,7 @@ export default function OccasionServicesSection() {
   return (
     <section
       id="occasion-services"
-      className="occasion-services relative scroll-mt-20 py-16 sm:py-20"
+      className="occasion-services relative scroll-mt-20 py-11 sm:py-14"
       aria-labelledby="occasion-services-heading"
     >
       <div className="occasion-services-bg" aria-hidden="true">
@@ -31,73 +31,75 @@ export default function OccasionServicesSection() {
       </div>
       <Reveal>
         <div className="container-wesal relative z-10">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2
-              id="occasion-services-heading"
-              className="text-2xl font-extrabold text-[var(--wesal-maroon)] sm:text-3xl"
-            >
-              {t("home.services.title")}
-            </h2>
-            <p className="mt-3 text-sm leading-7 text-[var(--wesal-muted)] sm:text-base">
-              {t("home.services.subtitle")}
-            </p>
-          </div>
-
-          <ul
-            dir={cardsFromLeft ? "ltr" : undefined}
-            className="mt-10 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6"
-          >
-            {SERVICES.map((service, index) => (
-              <li
-                key={service.id}
-                className="occasion-service-card"
-                style={{ animationDelay: `${80 + index * 90}ms` }}
+          <div className="mx-auto max-w-[60rem]">
+            <div className="mx-auto max-w-xl text-center">
+              <h2
+                id="occasion-services-heading"
+                className="wesal-section-heading text-[1.35rem] font-extrabold text-[var(--wesal-maroon)] sm:text-[1.7rem]"
               >
-                <article
-                  dir={cardsFromLeft ? "rtl" : undefined}
-                  className="overflow-hidden rounded-2xl border border-white/80 bg-white shadow-[0_12px_30px_rgba(90,55,45,0.06)]"
+                {t("home.services.title")}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--wesal-muted)] sm:text-[0.95rem]">
+                {t("home.services.subtitle")}
+              </p>
+            </div>
+
+            <ul
+              dir={cardsFromLeft ? "ltr" : undefined}
+              className="mt-8 grid list-none grid-cols-1 gap-[1.15rem] p-0 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5"
+            >
+              {SERVICES.map((service, index) => (
+                <li
+                  key={service.id}
+                  className="occasion-service-card"
+                  style={{ animationDelay: `${80 + index * 90}ms` }}
                 >
-                  <div className="relative aspect-[16/10] overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={service.image}
-                      alt=""
-                      className="occasion-service-photo h-full w-full object-cover"
-                      decoding="async"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 px-4 pb-4 text-white">
-                      <h3 className="text-base font-extrabold leading-7 sm:text-lg">
-                        {t(`home.services.${service.id}.title`)}
-                      </h3>
-                      <p className="mt-0.5 text-xs leading-6 text-white/85">
-                        {t(`home.services.${service.id}.meta`)}
-                      </p>
+                  <article
+                    dir={cardsFromLeft ? "rtl" : undefined}
+                    className="overflow-hidden rounded-[0.95rem] border-0 bg-[var(--wesal-white)] shadow-[0_11px_26px_rgba(90,55,45,0.06)]"
+                  >
+                    <div className="relative aspect-[16/10] overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={service.image}
+                        alt=""
+                        className="occasion-service-photo h-full w-full object-cover"
+                        decoding="async"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 px-3.5 pb-3.5 text-white">
+                        <h3 className="text-[0.95rem] font-extrabold leading-6 sm:text-base">
+                          {t(`home.services.${service.id}.title`)}
+                        </h3>
+                        <p className="mt-0.5 text-[0.75rem] leading-5 text-white/85 sm:text-xs">
+                          {t(`home.services.${service.id}.meta`)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-                    <p className="min-w-0 text-xs leading-6 text-[var(--wesal-muted)] sm:text-[0.8rem]">
-                      {t(`home.services.${service.id}.desc`)}
-                    </p>
-                    <span
-                      aria-hidden="true"
-                      className="occasion-service-chevron inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-muted)]"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <path
-                          d="M14 6l-6 6 6 6"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                </article>
-              </li>
-            ))}
-          </ul>
+                    <div className="flex items-center justify-between gap-3 px-3.5 py-3 sm:py-3.5">
+                      <p className="min-w-0 text-[0.75rem] leading-5 text-[var(--wesal-muted)] sm:text-xs">
+                        {t(`home.services.${service.id}.desc`)}
+                      </p>
+                      <span
+                        aria-hidden="true"
+                        className="occasion-service-chevron inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-0 bg-[var(--wesal-pink-soft)] text-[var(--wesal-muted)] sm:h-7 sm:w-7"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                          <path
+                            d="M14 6l-6 6 6 6"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    </div>
+                  </article>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </Reveal>
     </section>

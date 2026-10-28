@@ -67,7 +67,7 @@ export default function AudioControlToggle({ variant = "icon" }: AudioControlTog
     return (
       <button
         type="button"
-        className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)] ${
+        className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)] ${
           audio.soundOn
             ? "bg-[var(--wesal-pink)] text-[var(--wesal-maroon)]"
             : "text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink)]/70"
@@ -79,7 +79,7 @@ export default function AudioControlToggle({ variant = "icon" }: AudioControlTog
         data-state={state}
         onClick={onToggle}
       >
-        <SpeakerIcon on={audio.soundOn} />
+        <SpeakerIcon on={audio.soundOn} className="h-4 w-4" />
       </button>
     );
   }

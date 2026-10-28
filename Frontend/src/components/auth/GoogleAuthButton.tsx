@@ -12,12 +12,38 @@ declare global {
           initialize: (options: {
             client_id: string;
             callback: (response: { credential?: string }) => void;
+            auto_select?: boolean;
+            cancel_on_tap_outside?: boolean;
           }) => void;
           renderButton: (element: HTMLElement, options: Record<string, string>) => void;
+          disableAutoSelect?: () => void;
         };
       };
     };
   }
+}
+
+function GoogleMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+    </svg>
+  );
 }
 
 export default function GoogleAuthButton({
@@ -34,6 +60,7 @@ export default function GoogleAuthButton({
   const credentialHandler = useRef(onCredential);
   const renderedHost = useRef<HTMLDivElement | null>(null);
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+  const label = t("auth.google.continueAria");
 
   useEffect(() => {
     credentialHandler.current = onCredential;
@@ -42,9 +69,6 @@ export default function GoogleAuthButton({
   useEffect(() => {
     if (!loaded || !clientId || renderedHost.current === buttonHost) return;
 
-    // A cached GIS script may not trigger onLoad after this component remounts.
-    // Give the SDK a short window to become available, then show an error instead
-    // of leaving an empty space if Google could not initialize the button.
     const timeout = window.setTimeout(() => {
       if (renderedHost.current !== buttonHost) setRenderFailed(true);
     }, 8000);
@@ -59,15 +83,21 @@ export default function GoogleAuthButton({
     try {
       window.google.accounts.id.initialize({
         client_id: clientId,
+        auto_select: false,
         callback: (response) => {
           if (response.credential) credentialHandler.current(response.credential);
         },
       });
+      window.google.accounts.id.disableAutoSelect?.();
+
+      const width = Math.max(240, Math.floor(buttonHost.getBoundingClientRect().width || 280));
       window.google.accounts.id.renderButton(buttonHost, {
-        type: "icon",
+        type: "standard",
         theme: "outline",
         size: "large",
-        shape: "circle",
+        shape: "rectangular",
+        text: "continue_with",
+        width: String(width),
         locale: "ar",
       });
       renderedHost.current = buttonHost;
@@ -94,15 +124,23 @@ export default function GoogleAuthButton({
         onError={() => setRenderFailed(true)}
       />
       <div
-        className={`flex min-h-10 w-full items-center justify-center ${
-          disabled ? "pointer-events-none opacity-60" : ""
-        }`}
+        className={`relative w-full ${disabled ? "pointer-events-none opacity-60" : ""}`}
+        data-testid="google-auth-button"
       >
+        {/* Same footprint as login submit (rounded-xl / min-h-10). */}
+        <div
+          className="pointer-events-none flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-3 text-sm font-extrabold text-[var(--wesal-maroon-dark)] [-webkit-text-stroke:0.35px_currentColor] [paint-order:stroke_fill]"
+          aria-hidden="true"
+        >
+          <GoogleMark />
+          <span>{label}</span>
+        </div>
+
         <div
           ref={setButtonHost}
-          className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full"
+          className="absolute inset-0 z-10 overflow-hidden opacity-[0.02] [&_div]:!h-full [&_div]:!w-full [&_iframe]:!h-full [&_iframe]:!min-h-full [&_iframe]:!w-full"
           data-testid="google-auth-button-host"
-          aria-label={t("auth.google.continueAria")}
+          aria-label={label}
         />
       </div>
       {renderFailed ? (

@@ -9,8 +9,8 @@ export function GoldStar({ size = 16 }: { size?: number }) {
     >
       <path
         d="M12 3.6l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.9 7.2 18.5l.9-5.4L4.2 9.3l5.4-.8L12 3.6Z"
-        fill="#C4A05C"
-        stroke="#B08A48"
+        fill="var(--wesal-gold)"
+        stroke="var(--wesal-gold-soft)"
         strokeWidth="0.6"
       />
     </svg>

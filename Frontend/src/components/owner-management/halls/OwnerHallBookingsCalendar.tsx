@@ -77,7 +77,7 @@ export default function OwnerHallBookingsCalendar({
       data-hall-id={hallId}
     >
       <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
-        <section className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_10px_28px_rgba(90,55,45,0.05)] sm:p-5">
+        <section className="rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white p-4 shadow-[0_10px_28px_rgba(90,55,45,0.05)] sm:p-5">
           <HallMonthCalendar
             dayStatuses={dayStatuses}
             selectedDateIso={activeDate}
@@ -150,7 +150,7 @@ function SelectedDayPanel({
   if (!selectedDate) {
     return (
       <p
-        className="flex min-h-40 flex-col justify-center rounded-2xl border border-dashed border-[var(--wesal-border)] bg-white px-4 py-6 text-sm leading-7 text-[var(--wesal-muted)] shadow-[0_10px_28px_rgba(90,55,45,0.04)]"
+        className="flex min-h-40 flex-col justify-center rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white px-4 py-6 text-sm leading-7 text-[var(--wesal-muted)] shadow-[0_10px_28px_rgba(90,55,45,0.04)]"
         data-testid="owner-calendar-idle"
       >
         {t("owner.calendar.pickDay")}
@@ -163,7 +163,7 @@ function SelectedDayPanel({
   if (load.status === "loading" || load.status === "idle") {
     return (
       <section
-        className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)]"
+        className="rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white px-4 py-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)]"
         aria-busy="true"
         aria-live="polite"
         data-testid="owner-calendar-loading"
@@ -186,7 +186,7 @@ function SelectedDayPanel({
   if (cards.length === 0) {
     return (
       <section
-        className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)]"
+        className="rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white px-4 py-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)]"
         role="status"
         aria-live="polite"
         data-testid="owner-calendar-empty"
@@ -201,7 +201,7 @@ function SelectedDayPanel({
 
   return (
     <section className="min-w-0 space-y-3" data-testid="owner-calendar-booked">
-      <div className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-4 shadow-[0_10px_28px_rgba(90,55,45,0.05)]">
+      <div className="rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white px-4 py-4 shadow-[0_10px_28px_rgba(90,55,45,0.05)]">
         <DayHeader
           heading={heading}
           countLabel={t("owner.calendar.dayCount", { count: cards.length })}
@@ -255,7 +255,7 @@ function UpcomingBookingsRail({
 
   return (
     <section
-      className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-[0_10px_28px_rgba(90,55,45,0.05)] sm:p-5"
+      className="rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white p-4 shadow-[0_10px_28px_rgba(90,55,45,0.05)] sm:p-5"
       data-testid="owner-calendar-upcoming"
     >
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -277,7 +277,7 @@ function UpcomingBookingsRail({
           <li key={`upcoming-${item.id}`} className="min-w-[15.5rem] shrink-0">
             <button
               type="button"
-              className="flex w-full items-center gap-3 rounded-2xl border border-[var(--wesal-border)] bg-[#faf8f6] p-2.5 text-start transition hover:bg-[var(--wesal-pink-soft)]"
+              className="flex w-full items-center gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-[#faf8f6] p-2.5 text-start transition hover:bg-[var(--wesal-pink-soft)]"
               onClick={() => onPickDate(item.date)}
             >
               <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#efe8e2]">
@@ -315,7 +315,7 @@ function CalendarDayError({
 
   return (
     <section
-      className="rounded-2xl border border-[var(--wesal-border)] bg-white px-4 py-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)]"
+      className="rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white px-4 py-5 shadow-[0_10px_28px_rgba(90,55,45,0.05)]"
       role="alert"
       data-testid="owner-calendar-error"
     >

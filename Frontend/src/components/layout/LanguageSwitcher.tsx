@@ -29,9 +29,9 @@ export default function LanguageSwitcher({
   return (
     <button
       type="button"
-      className={`lang-switch-trigger inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-medium text-[#8f6f2e] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--wesal-pink-soft)] hover:text-[var(--wesal-gold)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wesal-gold)]/35 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 ${
-        compact ? "w-full justify-between px-4 py-2.5" : ""
-      } ${iconOnly ? "lang-switch-trigger--icon" : ""} ${className}`}
+      className={`lang-switch-trigger inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-medium text-[var(--wesal-gold)] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--wesal-pink-soft)] hover:text-[var(--wesal-gold)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wesal-gold)]/35 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 ${
+        iconOnly ? "lang-switch-trigger--icon" : compact ? "" : "min-h-11"
+      } ${compact ? "w-full justify-between px-4 py-2.5" : ""} ${className}`}
       aria-label={ariaLabel}
       title={ariaLabel}
       data-testid="language-toggle"

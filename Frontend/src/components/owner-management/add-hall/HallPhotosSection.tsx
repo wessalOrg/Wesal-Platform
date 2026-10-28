@@ -91,7 +91,7 @@ export default function HallPhotosSection({
               {previews.map((preview, index) => (
                 <li
                   key={preview.key}
-                  className="owner-add-hall-photo-card min-w-0 max-w-full overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)]"
+                  className="owner-add-hall-photo-card min-w-0 max-w-full overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-[var(--wesal-pink-soft)]"
                 >
                   <div className="aspect-[4/3] w-full min-w-0 overflow-hidden bg-white/50">
                     {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}

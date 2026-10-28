@@ -25,14 +25,16 @@ export default function OwnerEventTypesCard() {
   }, []);
 
   const { total, segments } = occasionTypeBreakdown(counts);
-  const visible = segments.filter((s) => total === 0 || s.count > 0);
+  // Chart arcs: only slices with bookings (or equal placeholder slices when empty).
   const chartSegments =
     total > 0
-      ? visible.map((s) => ({
-          key: s.key,
-          percent: s.percent,
-          color: OCCASION_TYPE_COLORS[s.key],
-        }))
+      ? segments
+          .filter((s) => s.count > 0)
+          .map((s) => ({
+            key: s.key,
+            percent: s.percent,
+            color: OCCASION_TYPE_COLORS[s.key],
+          }))
       : segments.map((s) => ({
           key: s.key,
           percent: Math.round(100 / segments.length),
@@ -41,7 +43,7 @@ export default function OwnerEventTypesCard() {
 
   return (
     <section
-      className="owner-event-types-card flex h-full flex-col rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-3.5 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-4"
+      className="owner-event-types-card flex h-full flex-col rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
       data-testid="owner-event-types-card"
     >
       <header className="mb-3 flex items-center gap-2">
@@ -58,8 +60,8 @@ export default function OwnerEventTypesCard() {
         </h2>
       </header>
 
-      <div className="flex min-h-0 w-full flex-1 items-center gap-3 sm:gap-4">
-        <div className="relative aspect-square h-full max-h-[11.5rem] w-auto min-w-[8.5rem] shrink-0 sm:min-w-[9.5rem]">
+      <div className="flex min-h-0 w-full flex-1 items-center justify-start gap-3 sm:gap-4">
+        <div className="relative aspect-square h-[9.5rem] w-[9.5rem] shrink-0 sm:h-[10.5rem] sm:w-[10.5rem]">
           <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
             <circle cx="60" cy="60" r="42" fill="none" stroke="var(--wesal-border)" strokeWidth="16" />
             {donutArcs(chartSegments).map((arc) => (
@@ -85,20 +87,38 @@ export default function OwnerEventTypesCard() {
           </div>
         </div>
 
-        <ul className="flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-2 sm:gap-2.5">
-          {(total > 0 ? visible : segments).map((segment) => (
-            <li key={segment.key} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <ul className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 sm:gap-2">
+          {segments.map((segment) => (
+            <li
+              key={segment.key}
+              className="flex w-full max-w-[15rem] items-center justify-between gap-3"
+            >
               <span className="flex min-w-0 items-center gap-2">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: OCCASION_TYPE_COLORS[segment.key] }}
+                  style={{
+                    backgroundColor: OCCASION_TYPE_COLORS[segment.key],
+                    opacity: total > 0 && segment.count === 0 ? 0.4 : 1,
+                  }}
                   aria-hidden="true"
                 />
-                <span className="truncate text-[0.78rem] font-bold text-[var(--wesal-text)]">
+                <span
+                  className={`truncate text-[0.78rem] font-bold ${
+                    total > 0 && segment.count === 0
+                      ? "text-[var(--wesal-muted)]"
+                      : "text-[var(--wesal-text)]"
+                  }`}
+                >
                   {t(occasionTypeI18nKey(segment.key))}
                 </span>
               </span>
-              <span className="shrink-0 text-end text-[0.82rem] font-extrabold tabular-nums text-[var(--wesal-text)]">
+              <span
+                className={`shrink-0 text-[0.82rem] font-extrabold tabular-nums ${
+                  total > 0 && segment.count === 0
+                    ? "text-[var(--wesal-muted)]"
+                    : "text-[var(--wesal-text)]"
+                }`}
+              >
                 {total > 0 ? `${segment.percent}%` : "—"}
               </span>
             </li>

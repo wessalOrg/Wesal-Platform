@@ -5,7 +5,7 @@ import { useT } from "@/i18n";
 import { REGION_OPTIONS, type HallRegion } from "@/types/hall";
 
 const FIELD_CLASS =
-  "h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm text-start text-[var(--wesal-text)] outline-none transition focus:border-[var(--wesal-maroon)] disabled:cursor-not-allowed disabled:bg-[var(--wesal-pink-soft)] disabled:text-[var(--wesal-muted)]";
+  "h-10 w-full rounded-lg border border-[var(--wesal-border)] bg-white px-3 text-sm text-start text-[var(--wesal-text)] outline-none transition focus:border-[var(--wesal-maroon)] disabled:cursor-not-allowed disabled:bg-[var(--wesal-pink-soft)] disabled:text-[var(--wesal-muted)]";
 
 type HallsFilterBarProps = {
   region: HallRegion;
@@ -47,7 +47,7 @@ export default function HallsFilterBar({
 
   return (
     <form
-      className="rounded-xl border border-[var(--wesal-border)] bg-white p-3 shadow-[0_8px_24px_rgba(90,55,45,0.06)] sm:p-4"
+      className="rounded-xl border border-[var(--wesal-border)] bg-white p-2.5 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
       onSubmit={(event) => event.preventDefault()}
       role="search"
       aria-label={t("halls.catalog.searchAria")}
@@ -82,7 +82,7 @@ export default function HallsFilterBar({
         />
 
         <label className="min-w-0 sm:col-span-2 lg:col-span-1">
-          <span className="mb-1.5 block text-sm font-semibold text-[var(--wesal-text)]">
+          <span className="mb-1 block text-xs font-semibold text-[var(--wesal-text)] sm:text-sm">
             {t("halls.catalog.detailedAddress")}
           </span>
           <input
