@@ -170,7 +170,7 @@ export default function HallDetailsHeader({
                 type="button"
                 role="tab"
                 onClick={() => openSection(section.id)}
-                className={`hall-details-tab relative -mb-px shrink-0 px-3 pb-2.5 pt-1 text-center text-xs font-bold whitespace-nowrap sm:min-w-0 sm:flex-1 sm:px-2 sm:text-[13px] ${
+                className={`hall-details-tab relative -mb-px shrink-0 px-3 pb-2.5 pt-1 text-center text-sm font-bold whitespace-nowrap sm:min-w-0 sm:flex-1 sm:px-2 sm:text-[15px] ${
                   selected
                     ? "is-active text-[var(--wesal-maroon)]"
                     : "text-[var(--wesal-muted)] hover:text-[var(--wesal-text)]"

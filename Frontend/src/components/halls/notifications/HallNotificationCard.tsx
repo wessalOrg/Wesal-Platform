@@ -153,7 +153,7 @@ export default function HallNotificationCard({
             <ClockIcon />
           </span>
           <div className="min-w-0 text-start">
-            <p className="truncate text-start text-[15px] font-extrabold leading-none text-[#2a221c]">
+            <p className="overflow-visible text-start text-[15px] font-extrabold leading-normal text-[#2a221c]">
               <StableClockRangeText label={whenLabel} />
             </p>
             {relativeLabel ? (
@@ -242,7 +242,7 @@ export default function HallNotificationCard({
           {showChat ? (
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--wesal-pink)] px-3 py-1.5 text-[0.68rem] font-bold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
+              className="wesal-text-bold inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--wesal-pink)] px-3 py-1.5 text-[0.72rem] font-extrabold text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
               disabled={messagingSeeker}
               aria-busy={messagingSeeker || undefined}
               data-testid={`hall-notification-chat-seeker-${notification.id}`}

@@ -15,7 +15,6 @@ import {
   slotStartsBetween,
 } from "@/lib/hourly-slots";
 import { useT } from "@/i18n";
-import { recordOccasionType } from "@/lib/occasion-type-stats";
 import {
   isOccasionTypeKey,
   occasionTypeI18nKey,
@@ -278,7 +277,6 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
         eventTypeLabel,
       });
       if (result.bookingId) {
-        recordOccasionType(eventType);
         rememberUserBookings([
           {
             bookingId: result.bookingId,

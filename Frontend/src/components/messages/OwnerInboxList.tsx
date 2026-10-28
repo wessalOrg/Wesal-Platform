@@ -105,6 +105,7 @@ export default function OwnerInboxList({
           value={query}
           placeholder={t("owner.messages.search")}
           data-testid="owner-chat-search"
+          className="!border-0 !bg-transparent !shadow-none"
           onChange={(event) => setQuery(event.target.value)}
         />
       </label>

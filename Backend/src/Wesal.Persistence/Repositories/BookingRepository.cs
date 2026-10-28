@@ -711,6 +711,7 @@ public sealed class BookingRepository : IBookingRepository
             .AsNoTracking()
             .CountAsync(
                 booking => hallIds.Contains(booking.HallId)
+                    && booking.Source == BookingSource.Online
                     && booking.CreatedAt >= fromInclusive
                     && booking.CreatedAt < toExclusive,
                 cancellationToken);

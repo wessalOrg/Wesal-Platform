@@ -1317,6 +1317,8 @@ const en: MessageCatalog = {
   "owner.insights.topWeekdaysTitle": "Most booked weekdays",
   "owner.insights.hoursDistributionTitle": "Booked hours distribution",
   "owner.insights.hoursUnit": "hours",
+  "owner.insights.noBookingData": "No active bookings this month.",
+  "owner.insights.loadError": "Booking insights could not be loaded.",
   "owner.insights.weekday.friday": "Friday",
   "owner.insights.weekday.saturday": "Saturday",
   "owner.insights.weekday.thursday": "Thursday",

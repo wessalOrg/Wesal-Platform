@@ -84,7 +84,7 @@ export default function HallOwnerHallNotificationsView({
         <div className="space-y-5 sm:space-y-6">
           <div className="min-w-0 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:p-6">
             <div className="mb-4 min-w-0">
-              <h3 className="break-words text-base font-extrabold text-[var(--wesal-maroon)]">
+              <h3 className="wesal-text-bold break-words text-lg font-extrabold text-[var(--wesal-maroon)] sm:text-xl">
                 {t("owner.management.notifications.title")}
               </h3>
             </div>

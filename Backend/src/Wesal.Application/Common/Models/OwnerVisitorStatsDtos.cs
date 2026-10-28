@@ -29,4 +29,21 @@ public sealed class OwnerVisitorStatsDto
 
     /// <summary>Human-readable label for the previous calendar month.</summary>
     public string? PreviousMonthPeriodLabel { get; init; }
+
+    public int TotalActiveBookingsThisMonth { get; init; }
+
+    public int TotalBookedHoursThisMonth { get; init; }
+
+    public IReadOnlyList<OwnerDashboardInsightBreakdownDto> BookingsByWeekday { get; init; } = [];
+
+    public IReadOnlyList<OwnerDashboardInsightBreakdownDto> BookedHoursByPeriod { get; init; } = [];
+
+    public IReadOnlyList<OwnerDashboardInsightBreakdownDto> BookingsByOccasionType { get; init; } = [];
+}
+
+public sealed class OwnerDashboardInsightBreakdownDto
+{
+    public string Key { get; init; } = string.Empty;
+    public int Count { get; init; }
+    public double Percentage { get; init; }
 }

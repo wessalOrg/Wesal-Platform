@@ -1,4 +1,4 @@
-import type { OwnerVisitorStats } from "@/types/owner-visitor-stats";
+import type { OwnerVisitorInsightBreakdown, OwnerVisitorStats } from "@/types/owner-visitor-stats";
 
 function asNumber(value: unknown): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -9,6 +9,17 @@ function asOptionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed || null;
+}
+
+function asBreakdown(value: unknown): OwnerVisitorInsightBreakdown[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const row = entry as Record<string, unknown>;
+    const key = row.key ?? row.Key;
+    if (typeof key !== "string") return [];
+    return [{ key, count: asNumber(row.count ?? row.Count), percentage: asNumber(row.percentage ?? row.Percentage) }];
+  });
 }
 
 /** Map API camelCase / PascalCase payload to the UI model. */
@@ -37,6 +48,11 @@ export function mapOwnerVisitorStats(raw: unknown): OwnerVisitorStats {
     previousMonthPeriodLabel: asOptionalString(
       row.previousMonthPeriodLabel ?? row.PreviousMonthPeriodLabel,
     ),
+    totalActiveBookingsThisMonth: asNumber(row.totalActiveBookingsThisMonth ?? row.TotalActiveBookingsThisMonth),
+    totalBookedHoursThisMonth: asNumber(row.totalBookedHoursThisMonth ?? row.TotalBookedHoursThisMonth),
+    bookingsByWeekday: asBreakdown(row.bookingsByWeekday ?? row.BookingsByWeekday),
+    bookedHoursByPeriod: asBreakdown(row.bookedHoursByPeriod ?? row.BookedHoursByPeriod),
+    bookingsByOccasionType: asBreakdown(row.bookingsByOccasionType ?? row.BookingsByOccasionType),
   };
 }
 

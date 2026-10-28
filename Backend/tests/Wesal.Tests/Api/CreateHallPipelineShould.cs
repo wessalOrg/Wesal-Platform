@@ -562,7 +562,7 @@ public sealed class CreateHallPipelineShould : IAsyncDisposable
         public Task RecordHallPageViewAsync(Guid hallId, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
-        public Task<OwnerVisitorStatsDto> GetVisitorStatsAsync(CancellationToken cancellationToken = default)
+        public Task<OwnerVisitorStatsDto> GetVisitorStatsAsync(Guid? hallId = null, CancellationToken cancellationToken = default)
             => Task.FromResult(new OwnerVisitorStatsDto());
     }
 }

@@ -86,9 +86,9 @@ public class OwnerController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OwnerVisitorStatsDto>> GetVisitorStats(CancellationToken cancellationToken)
+    public async Task<ActionResult<OwnerVisitorStatsDto>> GetVisitorStats([FromQuery] Guid? hallId, CancellationToken cancellationToken)
     {
-        var stats = await _ownerVisitorStatsService.GetVisitorStatsAsync(cancellationToken);
+        var stats = await _ownerVisitorStatsService.GetVisitorStatsAsync(hallId, cancellationToken);
         return Ok(stats);
     }
 

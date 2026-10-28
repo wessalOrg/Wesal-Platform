@@ -69,7 +69,7 @@ export default function HallNotificationList({
           <section key={section.id} className="min-w-0" aria-labelledby={headingId} data-group={section.id}>
             <h3
               id={headingId}
-              className="mb-2 text-[0.72rem] font-bold tracking-wide text-[var(--wesal-muted)]"
+              className="wesal-text-bold mb-2.5 text-[0.92rem] font-extrabold tracking-wide text-[var(--wesal-maroon-dark)] sm:text-[1rem]"
             >
               {section.title}
             </h3>

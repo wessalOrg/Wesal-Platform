@@ -1,53 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useT } from "@/i18n";
-import {
-  occasionTypeBreakdown,
-  getOccasionTypeCounts,
-  type OccasionTypeCounts,
-} from "@/lib/occasion-type-stats";
-import { OCCASION_TYPE_COLORS, occasionTypeI18nKey } from "@/lib/occasion-types";
+import Image from "next/image";
+import { OCCASION_TYPE_COLORS, OCCASION_TYPE_KEYS, occasionTypeI18nKey, type OccasionTypeKey } from "@/lib/occasion-types";
+import type { OwnerVisitorInsightBreakdown, OwnerVisitorStatsLoadStatus } from "@/types/owner-visitor-stats";
 
-export default function OwnerEventTypesCard() {
+export default function OwnerEventTypesCard({ status, items, onRetry }: { status: OwnerVisitorStatsLoadStatus; items: OwnerVisitorInsightBreakdown[]; onRetry: () => void }) {
   const t = useT();
-  const [counts, setCounts] = useState<OccasionTypeCounts>(() => getOccasionTypeCounts());
-
-  useEffect(() => {
-    const refresh = () => setCounts(getOccasionTypeCounts());
-    refresh();
-    window.addEventListener("storage", refresh);
-    window.addEventListener("wesal:occasion-type-stats", refresh);
-    return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener("wesal:occasion-type-stats", refresh);
+  const counts = new Map(items.map((item) => [item.key, item]));
+  const segments = OCCASION_TYPE_KEYS.map((key) => {
+    const item = counts.get(key);
+    return {
+      key: key as OccasionTypeKey,
+      count: item?.count ?? 0,
+      percentage: item?.percentage ?? 0,
     };
-  }, []);
-
-  const { total, segments } = occasionTypeBreakdown(counts);
-  // Chart arcs: only slices with bookings (or equal placeholder slices when empty).
-  const chartSegments =
-    total > 0
-      ? segments
-          .filter((s) => s.count > 0)
-          .map((s) => ({
-            key: s.key,
-            percent: s.percent,
-            color: OCCASION_TYPE_COLORS[s.key],
-          }))
-      : segments.map((s) => ({
-          key: s.key,
-          percent: Math.round(100 / segments.length),
-          color: OCCASION_TYPE_COLORS[s.key],
-        }));
+  });
+  const total = segments.reduce((sum, item) => sum + item.count, 0);
+  const chartSegments = segments
+    .filter((item) => item.count > 0)
+    .map((item) => ({ key: item.key, percent: item.percentage, color: OCCASION_TYPE_COLORS[item.key] }));
 
   return (
     <section
       className="owner-event-types-card flex h-full flex-col rounded-2xl border border-[rgba(168,98,103,0.14)] bg-white p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
       data-testid="owner-event-types-card"
     >
+      {status === "error" ? <div className="m-auto flex flex-col items-center gap-2 text-center text-sm text-rose-800" role="alert"><span>{t("owner.insights.loadError")}</span><button className="btn-outline" onClick={onRetry}>{t("common.retry")}</button></div> : null}
       <header className="mb-3 flex items-center gap-2">
-        <img
+        <Image
           src="/icons/party-popper.png"
           alt=""
           width={22}
@@ -75,25 +56,24 @@ export default function OwnerEventTypesCard() {
                 strokeDasharray={`${arc.length} ${arc.gap}`}
                 strokeDashoffset={arc.offset}
                 strokeLinecap="butt"
-                style={{ stroke: arc.color, opacity: total === 0 ? 0.35 : 1 }}
+                style={{ stroke: arc.color }}
               />
             ))}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-3xl font-extrabold leading-none text-[var(--wesal-text)]">{total}</p>
+          <p className="text-3xl font-extrabold leading-none text-[var(--wesal-text)]">{status === "ready" ? total : "—"}</p>
             <p className="mt-1 text-[0.75rem] font-bold text-[var(--wesal-muted)]">
               {t("owner.insights.bookingsUnit")}
             </p>
           </div>
         </div>
 
-        <ul className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 sm:gap-2">
-          {segments.map((segment) => (
-            <li
-              key={segment.key}
-              className="flex w-full max-w-[15rem] items-center justify-between gap-3"
-            >
-              <span className="flex min-w-0 items-center gap-2">
+        <ul className="me-1 grid shrink-0 grid-cols-[auto_minmax(6.75rem,max-content)_2.75rem] items-center gap-x-2.5 gap-y-1.5 sm:gap-y-2">
+          {status === "loading" || status === "idle" ? (
+            <li className="col-span-3 h-20 animate-pulse rounded-xl bg-[#f3eeec]" />
+          ) : (
+            segments.map((segment) => (
+              <li key={segment.key} className="contents">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{
@@ -103,7 +83,7 @@ export default function OwnerEventTypesCard() {
                   aria-hidden="true"
                 />
                 <span
-                  className={`truncate text-[0.78rem] font-bold ${
+                  className={`whitespace-nowrap text-[0.78rem] font-bold ${
                     total > 0 && segment.count === 0
                       ? "text-[var(--wesal-muted)]"
                       : "text-[var(--wesal-text)]"
@@ -111,18 +91,18 @@ export default function OwnerEventTypesCard() {
                 >
                   {t(occasionTypeI18nKey(segment.key))}
                 </span>
-              </span>
-              <span
-                className={`shrink-0 text-[0.82rem] font-extrabold tabular-nums ${
-                  total > 0 && segment.count === 0
-                    ? "text-[var(--wesal-muted)]"
-                    : "text-[var(--wesal-text)]"
-                }`}
-              >
-                {total > 0 ? `${segment.percent}%` : "—"}
-              </span>
-            </li>
-          ))}
+                <span
+                  className={`text-end text-[0.82rem] font-extrabold tabular-nums ${
+                    total > 0 && segment.count === 0
+                      ? "text-[var(--wesal-muted)]"
+                      : "text-[var(--wesal-text)]"
+                  }`}
+                >
+                  {total > 0 ? `${segment.percentage}%` : "—"}
+                </span>
+              </li>
+            ))
+          )}
         </ul>
       </div>
     </section>

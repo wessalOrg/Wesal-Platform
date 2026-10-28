@@ -30,10 +30,6 @@ import {
   notifySeekerWelcome,
   pushPlatformNotification,
 } from "@/lib/platform-notifications-store";
-import {
-  ownerBookingsPath,
-  ownerHallNotificationsPath,
-} from "@/lib/hall-owner-query-keys";
 import { subscribeOwnerBookingRequestEvents } from "@/services/booking-notification-realtime";
 import { subscribePlatformNotificationRealtime } from "@/services/platform-notification-realtime";
 import { loadRememberedBookings } from "@/lib/user-bookings-store";
@@ -261,29 +257,9 @@ export default function NotificationEventsBridge() {
         return;
       }
 
-      const hallName = event.hallName?.trim() || t("common.hall");
-      const userName = event.requesterName?.trim() || t("common.user");
-      const date = event.date ? formatBookingDateLabel(event.date, locale()) : "";
-      const period = event.timeRange || event.period || t("halls.period.generic");
-      pushPlatformNotification({
-        type: "booking_submitted",
-        audience: "owner",
-        titleKey: "notify.ownerBookingRequest.title",
-        bodyKey: "notify.ownerBookingRequest.body",
-        actionLabelKey: "notify.ownerBookingRequest.action",
-        params: { hallName, userName, date, period },
-        action_url: event.hallId
-          ? ownerHallNotificationsPath(event.hallId, event.id)
-          : ownerBookingsPath(event.id),
-        metadata: {
-          hall_id: event.hallId || undefined,
-          booking_id: event.id,
-          hall_name: hallName,
-          user_name: userName,
-          date: event.date,
-          period: event.timeRange || event.period,
-        },
-      });
+      // The platform notifications hub now delivers this same event from its durable
+      // inbox record. Keep the owner dashboard hub for request-list refreshes and audio,
+      // without creating a duplicate local notification.
     });
     return () => {
       window.removeEventListener(BOOKING_SUBMITTED_EVENT, onSubmitted);

@@ -7122,11 +7122,18 @@ html[dir="rtl"] .seeker-notify-panel {
 .owner-chat-search input {
   min-width: 0;
   flex: 1;
-  border: 0;
-  background: transparent;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--wesal-text);
   font-size: 0.82rem;
   outline: none;
+}
+
+[data-testid="hall-owner-management"] .owner-chat-search input {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .owner-chat-search input::placeholder {

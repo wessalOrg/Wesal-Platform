@@ -47,7 +47,12 @@ export default function OwnerCalendarBookingCard({
           content: (
             <span className="inline-flex min-w-0 items-center gap-1">
               <span className="shrink-0">{t("owner.calendar.detail.timeLabel")}</span>
-              <StableClockRangeText label={booking.timeLabel} className={booking.source === "ExternalManual" ? "font-bold" : "truncate font-bold"} />
+              <StableClockRangeText
+                label={booking.timeLabel}
+                className={`overflow-visible leading-normal ${
+                  booking.source === "ExternalManual" ? "font-bold" : "font-bold"
+                }`}
+              />
             </span>
           ),
         }
@@ -142,7 +147,7 @@ export default function OwnerCalendarBookingCard({
         {showChat ? (
           <button
             type="button"
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border-0 bg-[#faf6f2] px-3 text-sm font-bold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
+            className="wesal-text-bold inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border-0 bg-[#faf6f2] px-3 text-sm font-extrabold text-[var(--wesal-text)] transition hover:bg-[var(--wesal-pink-soft)] disabled:opacity-60"
             disabled={messagingSeeker}
             aria-busy={messagingSeeker || undefined}
             data-testid={`owner-calendar-booking-contact-${booking.id}`}

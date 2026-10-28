@@ -35,8 +35,8 @@ export default function OwnerDashboardHome() {
   const hallsState = useHallOwnerHalls();
   const { startAddHall, isInitiating } = useAddHallInitiation();
   const avatarUrl = useProfileAvatarUrl([profileState.profile?.id]);
-  const visitorStats = useOwnerVisitorStats(profileState.authReady && Boolean(profileState.profile));
   const [insightsHallId, setInsightsHallId] = useState<string | null>(null);
+  const visitorStats = useOwnerVisitorStats(profileState.authReady && Boolean(profileState.profile), insightsHallId);
 
   const insightHallOptions = useMemo(
     () =>
@@ -142,12 +142,12 @@ export default function OwnerDashboardHome() {
             </div>
           ) : null}
           <div className="seeker-welcome-actions px-1.5 md:px-0">
-            <Link href={OWNER_HALLS_PATH} className="seeker-btn-primary flex-1 justify-center text-center md:flex-none" prefetch>
+            <Link href={OWNER_HALLS_PATH} className="seeker-btn-primary wesal-text-bold flex-1 justify-center text-center md:flex-none" prefetch>
               {t("owner.cta.halls")}
             </Link>
             <button
               type="button"
-              className="seeker-btn-secondary flex-1 justify-center text-center md:flex-none"
+              className="seeker-btn-secondary wesal-text-bold flex-1 justify-center text-center md:flex-none"
               disabled={isInitiating}
               aria-busy={isInitiating || undefined}
               data-testid="owner-home-add-hall"
@@ -260,9 +260,9 @@ export default function OwnerDashboardHome() {
           selectedHallId={insightsHallId}
           onSelect={setInsightsHallId}
         />
-        <OwnerBookingInsightsCards />
+        <OwnerBookingInsightsCards status={visitorStats.status} stats={visitorStats.stats} onRetry={visitorStats.reload} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-stretch">
-          <OwnerEventTypesCard />
+          <OwnerEventTypesCard status={visitorStats.status} items={visitorStats.stats?.bookingsByOccasionType ?? []} onRetry={visitorStats.reload} />
           <OwnerVisitorStatsCard
             status={visitorStats.status}
             stats={visitorStats.stats}

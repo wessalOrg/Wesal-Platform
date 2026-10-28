@@ -55,9 +55,14 @@ public sealed class NotificationInboxService : INotificationInboxService
 
     public async Task CreatePendingReviewNotificationAsync(string userId, bool isPhotographer, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(userId)) throw new ValidationException("A notification recipient is required.");
         var kind = isPhotographer ? NotificationKind.PhotographerPendingReview : NotificationKind.CoordinatorPendingReview;
-        var content = await _notificationService.BuildAsync(kind, userId, cancellationToken: cancellationToken);
+        await CreateForUserAsync(userId, kind, cancellationToken: cancellationToken);
+    }
+
+    public async Task CreateForUserAsync(string userId, NotificationKind kind, IReadOnlyDictionary<string, string?>? values = null, string? targetId = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) throw new ValidationException("A notification recipient is required.");
+        var content = await _notificationService.BuildAsync(kind, userId, values, targetId, cancellationToken);
         var now = _clock.GetUtcNow();
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
@@ -70,7 +75,7 @@ public sealed class NotificationInboxService : INotificationInboxService
             }, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
-        await _dispatcher.DispatchAsync(kind, userId, cancellationToken: cancellationToken);
+        await _dispatcher.DispatchAsync(kind, userId, values, targetId, cancellationToken);
     }
 
     private string RequireUserId()
