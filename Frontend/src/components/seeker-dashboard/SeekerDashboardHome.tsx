@@ -94,11 +94,11 @@ export default function SeekerDashboardHome() {
               ) : null}
             </div>
           ) : null}
-          <div className="seeker-welcome-actions">
-            <Link href={SEEKER_BOOKINGS_PATH} className="seeker-btn-primary" prefetch>
+          <div className="seeker-welcome-actions px-1.5 md:px-0">
+            <Link href={SEEKER_BOOKINGS_PATH} className="seeker-btn-primary flex-1 justify-center text-center md:flex-none" prefetch>
               {t("seeker.cta.bookings")}
             </Link>
-            <Link href="/halls" className="seeker-btn-secondary" prefetch>
+            <Link href="/halls" className="seeker-btn-secondary flex-1 justify-center text-center md:flex-none" prefetch>
               {t("seeker.cta.explore")}
               <ArrowIcon />
             </Link>

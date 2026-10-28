@@ -110,45 +110,43 @@ export default function HallOwnerManagementShell({
       />
 
       <div className="seeker-dash-main">
-        <header className="seeker-dash-topbar">
-          <div className="seeker-dash-topbar-start">
-            <div className="md:hidden">
+        <header className="seeker-dash-topbar dash-topbar">
+          <p className="seeker-dash-topbar-title">{t("owner.appTitle")}</p>
+          <div className="dash-topbar-actions">
+            <div className="seeker-dash-topbar-end dash-topbar-tools">
+              <LanguageSwitcher iconOnly className="seeker-dash-lang" />
+              <span className="dash-topbar-audio">
+                <AudioControlToggle variant="nav" />
+              </span>
+              <OwnerBookingNotificationsPopover />
+              <Link href={OWNER_ACCOUNT_PATH} className="seeker-dash-userchip" prefetch>
+                <span className="seeker-dash-userchip-avatar" aria-hidden="true">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- local data URL
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      className="seeker-dash-userchip-avatar-img"
+                    />
+                  ) : (
+                    initials(displayName)
+                  )}
+                </span>
+                <span className="seeker-dash-userchip-meta">
+                  <span className="seeker-dash-userchip-name">{displayName}</span>
+                  <span className="seeker-dash-userchip-role">{t("owner.role")}</span>
+                </span>
+              </Link>
+            </div>
+            <div className="dash-topbar-menu md:hidden">
               <MobileSidebarTrigger
+                compact
                 isSidebarOpen={isSidebarOpen}
                 sidebarId={SIDEBAR_ID}
                 onOpen={openSidebar}
                 onClose={closeSidebar}
               />
             </div>
-            <div className="min-w-0">
-              <p className="seeker-dash-topbar-title">{t("owner.appTitle")}</p>
-            </div>
-          </div>
-
-          <div className="seeker-dash-topbar-end">
-            <LanguageSwitcher iconOnly className="seeker-dash-lang" />
-            <span className="hidden min-[400px]:inline-flex">
-              <AudioControlToggle variant="nav" />
-            </span>
-            <OwnerBookingNotificationsPopover />
-            <Link href={OWNER_ACCOUNT_PATH} className="seeker-dash-userchip" prefetch>
-              <span className="seeker-dash-userchip-avatar" aria-hidden="true">
-                {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- local data URL
-                  <img
-                    src={avatarUrl}
-                    alt=""
-                    className="seeker-dash-userchip-avatar-img"
-                  />
-                ) : (
-                  initials(displayName)
-                )}
-              </span>
-              <span className="seeker-dash-userchip-meta">
-                <span className="seeker-dash-userchip-name">{displayName}</span>
-                <span className="seeker-dash-userchip-role">{t("owner.role")}</span>
-              </span>
-            </Link>
           </div>
         </header>
 

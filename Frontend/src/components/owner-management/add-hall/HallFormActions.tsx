@@ -142,14 +142,14 @@ export default function HallFormActions({
         ) : null}
       </div>
 
-      <div className="flex justify-center">
+      <div className="w-full">
         <button
           type="submit"
           form={formId}
           disabled={disabled}
           aria-busy={isSubmitting || undefined}
           data-testid={submitTestId}
-          className="btn-primary inline-flex min-h-12 items-center justify-center px-8"
+          className="btn-primary inline-flex min-h-11 w-full items-center justify-center sm:w-auto"
         >
           {isSubmitting
             ? (savingLabel ?? t("owner.management.addHall.actions.saving"))

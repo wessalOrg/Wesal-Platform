@@ -28,17 +28,17 @@ const SUPPORT_LINKS = [
 ] as const;
 
 const sectionTitleClass =
-  "footer-section-title mb-2 inline-block w-full border-b-2 border-rose-300/50 pb-0.5 text-end text-sm font-bold text-[var(--wesal-maroon-dark)] md:text-base lg:mb-2 lg:border-b-0 lg:pb-0 lg:text-start lg:text-sm";
+  "mb-1.5 inline-block w-full border-b-2 border-rose-300/50 pb-0.5 text-[0.78rem] font-bold text-[var(--wesal-maroon)] sm:mb-2 sm:text-sm md:text-base lg:mb-0 lg:border-b-0 lg:pb-0 lg:text-xs lg:font-extrabold";
 
 const linkListClass =
-  "footer-link-list flex flex-col items-end gap-1.5 text-end text-xs leading-5 text-[var(--wesal-muted)] lg:items-start lg:gap-1.5 lg:text-start lg:text-sm";
+  "flex flex-col items-center gap-1 text-center text-[0.72rem] leading-5 text-[var(--wesal-muted)] sm:gap-1.5 sm:text-sm sm:leading-6 lg:mt-2.5 lg:items-start lg:gap-1.5 lg:text-start lg:text-sm";
 
 export default function Footer() {
   const t = useT();
   const addHall = useAddHallCta();
 
   return (
-    <footer className="wesal-footer relative isolate overflow-hidden border-t-0 pb-1.5 lg:pb-0">
+    <footer className="wesal-footer relative isolate overflow-hidden border-t border-[var(--wesal-border)] pb-2 lg:pb-0">
       <div className="footer-marble" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -50,37 +50,35 @@ export default function Footer() {
         <div className="footer-marble-wash" />
       </div>
 
-      <div className="container-wesal relative z-10 py-4 sm:py-5 lg:py-6">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-5 lg:flex lg:items-start lg:justify-between lg:gap-0">
-          <div className="sm:col-span-2 lg:col-span-1 lg:w-[15.5rem] lg:shrink-0">
-            <div className="flex flex-col items-start text-start">
-              <WesalBrandLockup logoClassName="h-7 w-auto" nameClassName="text-sm lg:text-base" />
-              <p className="footer-copy mt-1.5 text-[0.7rem] leading-5 text-[var(--wesal-muted)] sm:text-xs sm:leading-5 lg:mt-2 lg:text-sm lg:leading-6">
-                {t("brand.tagline")}
-              </p>
+      <div className="container-wesal relative z-10 py-4 sm:py-6 lg:py-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4 lg:gap-5">
+          <div className="col-span-2 flex flex-col items-center text-center md:items-start md:text-start md:-ms-7 lg:col-span-1 lg:-ms-20">
+            <WesalBrandLockup logoClassName="h-7 w-auto sm:h-8" nameClassName="text-sm sm:text-base" />
+            <p className="mt-1.5 max-w-xs text-[0.7rem] leading-5 text-[var(--wesal-muted)] sm:mt-2.5 sm:text-sm sm:leading-7">
+              {t("brand.tagline")}
+            </p>
 
-              <div className="mt-2.5 flex items-center justify-start gap-1.5 lg:mt-3">
-                <SocialLink href="https://www.facebook.com" label={t("footer.facebook")}>
-                  <FacebookIcon />
-                </SocialLink>
-                <SocialLink href="https://www.instagram.com/wesal_gaza/" label={t("footer.instagram")}>
-                  <InstagramIcon />
-                </SocialLink>
-                <SocialLink href="https://wa.me/970595988398" label={t("footer.whatsapp")}>
-                  <WhatsAppIcon />
-                </SocialLink>
-              </div>
+            <div className="mt-2.5 flex items-center justify-center gap-1.5 sm:mt-3.5 md:justify-start">
+              <SocialLink href="https://www.facebook.com" label={t("footer.facebook")}>
+                <FacebookIcon />
+              </SocialLink>
+              <SocialLink href="https://www.instagram.com/wesal_gaza/" label={t("footer.instagram")}>
+                <InstagramIcon />
+              </SocialLink>
+              <SocialLink href="https://wa.me/970595988398" label={t("footer.whatsapp")}>
+                <WhatsAppIcon />
+              </SocialLink>
             </div>
           </div>
 
-          <div className="text-end lg:w-[9.5rem] lg:shrink-0 lg:text-start">
+          <div className="px-1 text-center sm:px-2 lg:px-0 lg:text-start">
             <h3 className={sectionTitleClass}>{t("footer.quickLinks")}</h3>
             <ul className={linkListClass}>
               {QUICK_LINKS.map((item) => (
                 <li key={item.href + item.labelKey}>
                   <Link
                     href={item.href}
-                    className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                    className="block py-px transition-colors hover:text-[var(--wesal-maroon)] sm:py-0.5"
                   >
                     {t(item.labelKey)}
                   </Link>
@@ -89,7 +87,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div className="flex flex-col gap-4 text-end lg:w-[9.5rem] lg:shrink-0 lg:gap-5 lg:text-start">
+          <div className="flex flex-col gap-2 px-1 text-center sm:gap-2.5 sm:px-2 lg:gap-4 lg:px-0 lg:text-start">
             <div>
               <h3 className={sectionTitleClass}>{t("footer.account")}</h3>
               <ul className={linkListClass}>
@@ -97,7 +95,7 @@ export default function Footer() {
                   <li key={item.href + item.labelKey}>
                     <Link
                       href={item.href}
-                      className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                      className="block py-px transition-colors hover:text-[var(--wesal-maroon)] sm:py-0.5"
                     >
                       {t(item.labelKey)}
                     </Link>
@@ -106,7 +104,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href={addHall.href}
-                    className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                    className="block py-px transition-colors hover:text-[var(--wesal-maroon)] sm:py-0.5"
                     aria-disabled={!addHall.isReady || undefined}
                     data-testid="footer-add-hall-cta"
                     onClick={addHall.guardClick}
@@ -126,7 +124,7 @@ export default function Footer() {
                   <li key={item.href + item.labelKey}>
                     <Link
                       href={item.href}
-                      className="block py-0.5 transition-colors hover:text-[var(--wesal-maroon)]"
+                      className="block py-px transition-colors hover:text-[var(--wesal-maroon)] sm:py-0.5"
                     >
                       {t(item.labelKey)}
                     </Link>
@@ -138,10 +136,10 @@ export default function Footer() {
 
           <div
             id="contact"
-            className="scroll-mt-20 text-end sm:col-span-2 lg:w-[15.5rem] lg:shrink-0 lg:text-start"
+            className="col-span-2 mt-0.5 scroll-mt-20 pt-1 text-center lg:col-span-1 lg:mt-0 lg:pt-0 lg:text-start"
           >
-            <h3 className={sectionTitleClass}>{t("footer.contact")}</h3>
-            <ul className={`${linkListClass} gap-2.5 lg:gap-2.5`}>
+            <h3 className={`${sectionTitleClass} mx-auto text-center`}>{t("footer.contact")}</h3>
+            <ul className={`${linkListClass} mx-1 gap-1.5 text-center sm:mx-3 sm:gap-2.5 lg:mx-0 lg:gap-2 lg:text-start`}>
               <li>
                 <ContactRow icon={<PinIcon />}>
                   <span>{t("footer.location")}</span>
@@ -153,9 +151,7 @@ export default function Footer() {
                   className="transition-colors hover:text-[var(--wesal-maroon)]"
                 >
                   <ContactRow icon={<MailIcon />}>
-                    <span dir="ltr" className="break-all">
-                      wesalplatform.gaza@gmail.com
-                    </span>
+                    <span dir="ltr">wesalplatform.gaza@gmail.com</span>
                   </ContactRow>
                 </a>
               </li>
@@ -179,15 +175,15 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="container-wesal relative z-10 mb-0 pb-1.5 pt-0.5 lg:pb-2">
-        <div className="footer-divider mb-1.5 h-px w-full bg-[var(--wesal-border)] lg:mb-2" />
-        <div className="wesal-footer-legal flex flex-col items-end gap-1.5 text-end text-[10px] text-[var(--wesal-muted)] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 sm:text-start sm:text-[11px] lg:text-xs">
-          <p className="min-w-0">
+      <div className="container-wesal relative z-10 mb-0 pb-2 pt-1">
+        <div className="mb-2 h-px w-full bg-[#e6d5c8]" />
+        <div className="wesal-footer-legal flex flex-nowrap items-center justify-between gap-2 text-[11px] text-[var(--wesal-muted)] sm:gap-3 sm:text-xs">
+          <p className="min-w-0 shrink whitespace-nowrap">
             © {new Date().getFullYear()} {t("brand.name")} — {t("footer.rights")}
           </p>
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:justify-start sm:gap-3">
-            <span>{t("footer.privacy")}</span>
-            <span>{t("footer.terms")}</span>
+          <div className="flex shrink-0 flex-nowrap items-center gap-2 sm:gap-3">
+            <span className="whitespace-nowrap">{t("footer.privacy")}</span>
+            <span className="whitespace-nowrap">{t("footer.terms")}</span>
           </div>
         </div>
       </div>
@@ -203,7 +199,7 @@ function ContactRow({
   children: ReactNode;
 }) {
   return (
-    <span className="flex w-full items-center justify-end gap-2 lg:justify-start">
+    <span className="mx-auto flex w-full items-center justify-center gap-1.5 lg:mx-0 lg:justify-start">
       <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[var(--wesal-maroon)]">
         {icon}
       </span>
@@ -227,7 +223,7 @@ function SocialLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--wesal-border)] bg-[var(--wesal-footer)] text-[var(--wesal-maroon)] transition-colors hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
+      className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--wesal-border)] bg-[var(--wesal-footer)] text-[var(--wesal-maroon)] transition-colors hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white sm:h-8 sm:w-8"
     >
       {children}
     </a>

@@ -116,10 +116,35 @@ export default function SeekerDashboardShell({
       />
 
       <div className="seeker-dash-main">
-        <header className="seeker-dash-topbar">
-          <div className="seeker-dash-topbar-start">
-            <div className="md:hidden">
+        <header className="seeker-dash-topbar dash-topbar">
+          <p className="seeker-dash-topbar-title">{t("seeker.appTitle")}</p>
+          <div className="dash-topbar-actions">
+            <div className="seeker-dash-topbar-end dash-topbar-tools">
+              <LanguageSwitcher iconOnly className="seeker-dash-lang" />
+              <SeekerNotificationsPopover />
+              <Link
+                href={SEEKER_ACCOUNT_PATH}
+                className="seeker-dash-userchip"
+                prefetch
+                data-testid="seeker-dashboard-profile-chip"
+              >
+                <span className="seeker-dash-userchip-avatar" aria-hidden="true">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- local data URL
+                    <img src={avatarUrl} alt="" className="seeker-dash-userchip-avatar-img" />
+                  ) : (
+                    initials(displayName)
+                  )}
+                </span>
+                <span className="seeker-dash-userchip-meta">
+                  <span className="seeker-dash-userchip-name">{displayName}</span>
+                  <span className="seeker-dash-userchip-role">{t("seeker.role")}</span>
+                </span>
+              </Link>
+            </div>
+            <div className="dash-topbar-menu md:hidden">
               <MobileSidebarTrigger
+                compact
                 isSidebarOpen={isSidebarOpen}
                 sidebarId={SIDEBAR_ID}
                 onOpen={openSidebar}
@@ -128,33 +153,6 @@ export default function SeekerDashboardShell({
                 closeLabelKey="seeker.closeMenu"
               />
             </div>
-            <div className="min-w-0">
-              <p className="seeker-dash-topbar-title">{t("seeker.appTitle")}</p>
-            </div>
-          </div>
-
-          <div className="seeker-dash-topbar-end">
-            <LanguageSwitcher iconOnly className="seeker-dash-lang" />
-            <SeekerNotificationsPopover />
-            <Link
-              href={SEEKER_ACCOUNT_PATH}
-              className="seeker-dash-userchip"
-              prefetch
-              data-testid="seeker-dashboard-profile-chip"
-            >
-              <span className="seeker-dash-userchip-avatar" aria-hidden="true">
-                {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- local data URL
-                  <img src={avatarUrl} alt="" className="seeker-dash-userchip-avatar-img" />
-                ) : (
-                  initials(displayName)
-                )}
-              </span>
-              <span className="seeker-dash-userchip-meta">
-                <span className="seeker-dash-userchip-name">{displayName}</span>
-                <span className="seeker-dash-userchip-role">{t("seeker.role")}</span>
-              </span>
-            </Link>
           </div>
         </header>
 

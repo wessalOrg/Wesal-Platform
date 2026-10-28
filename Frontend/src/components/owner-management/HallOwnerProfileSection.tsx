@@ -198,13 +198,11 @@ export default function HallOwnerProfileSection() {
 
       <header className="seeker-settings-header">
         <h1 className="seeker-settings-title">{t("owner.nav.settings")}</h1>
-        <p className="seeker-settings-lead">{t("profile.subtitle")}</p>
       </header>
 
       <div className="seeker-settings-split owner-settings-layout">
         <section className="seeker-settings-card owner-settings-profile" data-testid="owner-settings-profile">
           <h2 className="seeker-settings-section-title">{t("seeker.settings.profile.title")}</h2>
-          <p className="seeker-settings-section-lead">{t("seeker.settings.profile.subtitle")}</p>
 
           <ProfileAvatarField
             draftUrl={avatarDraft}
@@ -276,10 +274,10 @@ export default function HallOwnerProfileSection() {
               />
             </div>
 
-            <div className="seeker-settings-actions">
+            <div className="seeker-settings-actions seeker-settings-actions--full">
               <button
                 type="submit"
-                className="btn-primary min-h-11"
+                className="btn-primary min-h-11 w-full justify-center text-center"
                 disabled={profileState.saving || !dirty}
                 aria-busy={profileState.saving || undefined}
                 data-testid="owner-profile-save"
@@ -374,10 +372,10 @@ export default function HallOwnerProfileSection() {
               />
             </div>
 
-            <div className="seeker-settings-actions">
+            <div className="seeker-settings-actions seeker-settings-actions--full">
               <button
                 type="submit"
-                className="btn-primary min-h-11"
+                className="btn-primary min-h-11 w-full justify-center text-center"
                 disabled={
                   passwordSaving ||
                   !passwordDraft.currentPassword ||

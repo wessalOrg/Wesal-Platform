@@ -58,10 +58,10 @@ export default function OwnerBookingsCalendarPage() {
           <p className="seeker-welcome-body">{t("owner.calendar.pageSubtitle")}</p>
         </div>
         {selectedHall ? (
-          <div className="flex items-center justify-start sm:justify-end">
+          <div className="w-full px-1">
             <button
               type="button"
-              className="btn-primary inline-flex min-h-11 shrink-0 items-center justify-center gap-2 px-4"
+              className="btn-primary inline-flex min-h-9 w-full items-center justify-center gap-2 px-3 text-center text-[0.72rem] sm:min-h-11 sm:text-sm"
               data-testid="owner-calendar-add-booking"
               onClick={() => setAddOpen(true)}
             >

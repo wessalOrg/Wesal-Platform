@@ -136,11 +136,11 @@ export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewP
           {details.description.trim() || "—"}
         </p>
         {details.features.length > 0 ? (
-          <ul className="mt-4 flex flex-wrap gap-2">
+          <ul className="mt-4 grid grid-cols-2 gap-2">
             {details.features.map((feature) => (
               <li
                 key={feature}
-                className="rounded-full bg-[#f7eee9] px-3 py-1 text-sm font-semibold text-[var(--wesal-maroon-dark)]"
+                className="flex min-h-8 items-center justify-center rounded-full bg-[#f7eee9] px-3 py-1 text-center text-sm font-semibold text-[var(--wesal-maroon-dark)] last:odd:col-span-2"
               >
                 {feature}
               </li>
