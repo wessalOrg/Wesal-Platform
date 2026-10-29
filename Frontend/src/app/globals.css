@@ -9931,10 +9931,21 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
 
 /* Phone: admin + seeker + owner share the same card scale. */
 @media (max-width: 767.98px) {
+  /*
+   * One shared type bump for admin / seeker / owner — via root rem so layout
+   * reflows (zoom was clipping / hiding controls and labels).
+   */
+  html:has([data-testid="admin-management"]),
+  html:has([data-testid="seeker-dashboard"]),
+  html:has([data-testid="hall-owner-management"]) {
+    font-size: 122%;
+  }
+
   [data-testid="admin-management"] .seeker-dash-content,
   [data-testid="seeker-dashboard"] .seeker-dash-content,
   [data-testid="hall-owner-management"] .seeker-dash-content {
     padding: 0.55rem 0.65rem 1rem;
+    overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-dash-content > *,
@@ -9964,13 +9975,14 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
     gap: 0.45rem;
     padding: 0.65rem 0.75rem;
     border-radius: 0.9rem;
+    overflow: visible;
   }
 
   [data-testid="admin-management"] .seeker-welcome-title,
   [data-testid="seeker-dashboard"] .seeker-welcome-title,
   [data-testid="hall-owner-management"] .seeker-welcome-title,
   [data-testid="admin-management"] .seeker-welcome--compact .seeker-welcome-title {
-    font-size: 0.98rem;
+    font-size: 1.05rem;
   }
 
   [data-testid="admin-management"] .seeker-welcome-body,
@@ -9978,8 +9990,8 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="hall-owner-management"] .seeker-welcome-body,
   [data-testid="admin-management"] .seeker-welcome--compact .seeker-welcome-body {
     margin-top: 0.2rem;
-    font-size: 0.75rem;
-    line-height: 1.45;
+    font-size: 0.82rem;
+    line-height: 1.5;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-grid,
@@ -9989,20 +10001,23 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
 
   [data-testid="seeker-dashboard"] .seeker-summary-card,
   [data-testid="hall-owner-management"] .seeker-summary-card {
-    gap: 0.15rem;
-    padding: 0.6rem 0.7rem 0.7rem;
+    gap: 0.2rem;
+    padding: 0.65rem 0.75rem 0.75rem;
     border-radius: 0.85rem;
     overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-value,
   [data-testid="hall-owner-management"] .seeker-summary-value {
-    font-size: 1.12rem;
+    font-size: 1.2rem;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-label,
   [data-testid="hall-owner-management"] .seeker-summary-label {
-    font-size: 0.7rem;
+    font-size: 0.78rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
     overflow-wrap: anywhere;
   }
 
@@ -10016,28 +10031,32 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="hall-owner-management"] .seeker-profile-card,
   [data-testid="seeker-dashboard"] .seeker-quick-card,
   [data-testid="hall-owner-management"] .seeker-quick-card {
-    padding: 0.6rem 0.7rem 0.7rem;
+    padding: 0.65rem 0.75rem 0.75rem;
     border-radius: 0.85rem;
+    overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-quick-card,
   [data-testid="hall-owner-management"] .seeker-quick-card {
     min-height: 0;
-    gap: 0.35rem;
+    gap: 0.4rem;
   }
 
   [data-testid="seeker-dashboard"] .seeker-quick-title,
   [data-testid="hall-owner-management"] .seeker-quick-title,
   [data-testid="seeker-dashboard"] .seeker-settings-section-title,
-  [data-testid="hall-owner-management"] .seeker-settings-section-title {
-    font-size: 0.88rem;
+  [data-testid="hall-owner-management"] .seeker-settings-section-title,
+  [data-testid="admin-management"] .seeker-settings-section-title,
+  [data-testid="admin-management"] .admin-ops-section-title {
+    font-size: 0.98rem;
   }
 
   [data-testid="admin-management"] .seeker-home-booking-row,
   [data-testid="seeker-dashboard"] .seeker-home-booking-row,
   [data-testid="hall-owner-management"] .seeker-home-booking-row {
-    padding: 0.5rem 0.6rem;
+    padding: 0.55rem 0.65rem;
     border-radius: 0.7rem;
+    overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-settings-form,
@@ -10064,22 +10083,25 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
 
   [data-testid="hall-owner-management"] .owner-hall-card .flex-1 {
     gap: 0.55rem;
-    padding: 0.6rem 0.7rem;
+    padding: 0.65rem 0.75rem;
     overflow: visible;
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card h2 {
-    font-size: 0.92rem;
+    font-size: 1.02rem;
+    overflow: visible;
+    white-space: normal;
   }
 
   [data-testid="hall-owner-management"] .owner-add-hall-banner {
     padding: 0.65rem 0.75rem;
+    overflow: visible;
   }
 
   [data-testid="hall-owner-management"] [data-testid="owner-booking-insights"] > section,
   [data-testid="hall-owner-management"] [data-testid="owner-event-types-card"],
   [data-testid="hall-owner-management"] [data-testid="owner-visitor-stats"] {
-    padding: 0.6rem 0.7rem 0.7rem;
+    padding: 0.65rem 0.75rem 0.75rem;
     border-radius: 0.85rem;
     overflow: visible;
   }
@@ -10099,6 +10121,24 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="hall-owner-management"] [data-testid="owner-event-types-card"] ul span.whitespace-nowrap {
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  /* Keep action / chip labels readable after the type bump */
+  [data-testid="admin-management"] .seeker-dash-content .btn-outline,
+  [data-testid="admin-management"] .seeker-dash-content .btn-primary,
+  [data-testid="seeker-dashboard"] .seeker-dash-content .btn-outline,
+  [data-testid="seeker-dashboard"] .seeker-dash-content .btn-primary,
+  [data-testid="hall-owner-management"] .seeker-dash-content .btn-outline,
+  [data-testid="hall-owner-management"] .seeker-dash-content .btn-primary,
+  [data-testid="seeker-dashboard"] .seeker-dash-content .seeker-btn-primary,
+  [data-testid="seeker-dashboard"] .seeker-dash-content .seeker-btn-secondary,
+  [data-testid="hall-owner-management"] .seeker-dash-content .seeker-btn-primary,
+  [data-testid="hall-owner-management"] .seeker-dash-content .seeker-btn-secondary {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    text-align: center;
+    justify-content: center;
   }
 }
 

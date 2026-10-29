@@ -88,10 +88,10 @@ export default function AdminAccountPage() {
           }}
         />
 
-        <div className="mt-4 flex justify-end">
+        <div className="seeker-settings-actions seeker-settings-actions--full mt-4">
           <button
             type="button"
-            className="btn-primary min-h-11"
+            className="btn-primary min-h-11 w-full justify-center text-center"
             disabled={!avatarDirty || avatarBusy}
             data-testid="admin-settings-avatar-save"
             onClick={onSave}
