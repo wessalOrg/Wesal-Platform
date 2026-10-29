@@ -28,10 +28,10 @@ const SUPPORT_LINKS = [
 ] as const;
 
 const sectionTitleClass =
-  "mb-1.5 inline-block w-full border-b-2 border-rose-300/50 pb-0.5 text-[0.78rem] font-bold text-[var(--wesal-maroon)] sm:mb-2 sm:text-sm md:text-base lg:mb-0 lg:border-b-0 lg:pb-0 lg:text-xs lg:font-extrabold";
+  "mb-1.5 inline-block w-full border-b-2 border-rose-300/50 pb-0.5 text-[0.88rem] font-bold text-[var(--wesal-maroon)] sm:mb-2 sm:text-sm md:text-base lg:mb-0 lg:border-b-0 lg:pb-0 lg:text-xs lg:font-extrabold";
 
 const linkListClass =
-  "flex flex-col items-center gap-1 text-center text-[0.72rem] leading-5 text-[var(--wesal-muted)] sm:gap-1.5 sm:text-sm sm:leading-6 lg:mt-2.5 lg:items-start lg:gap-1.5 lg:text-start lg:text-sm";
+  "flex flex-col items-center gap-1 text-center text-[0.82rem] leading-5 text-[var(--wesal-muted)] sm:gap-1.5 sm:text-sm sm:leading-6 lg:mt-2.5 lg:items-start lg:gap-1.5 lg:text-start lg:text-sm";
 
 export default function Footer() {
   const t = useT();
@@ -53,8 +53,8 @@ export default function Footer() {
       <div className="container-wesal relative z-10 flex flex-1 flex-col justify-center py-4 sm:py-6 lg:flex-none lg:py-8">
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4 lg:gap-5">
           <div className="col-span-2 flex flex-col items-center text-center md:items-start md:text-start md:-ms-7 lg:col-span-1 lg:-ms-20">
-            <WesalBrandLockup logoClassName="h-7 w-auto sm:h-8" nameClassName="text-sm sm:text-base" />
-            <p className="mt-1.5 max-w-xs text-[0.7rem] leading-5 text-[var(--wesal-muted)] sm:mt-2.5 sm:text-sm sm:leading-7">
+            <WesalBrandLockup logoClassName="h-7 w-auto sm:h-8" nameClassName="text-[0.95rem] sm:text-base" />
+            <p className="mt-1.5 max-w-xs text-[0.8rem] leading-5 text-[var(--wesal-muted)] sm:mt-2.5 sm:text-sm sm:leading-7">
               {t("brand.tagline")}
             </p>
 
@@ -177,7 +177,7 @@ export default function Footer() {
 
       <div className="container-wesal relative z-10 mb-0 pb-2 pt-1">
         <div className="mb-2 h-px w-full bg-[#e6d5c8]" />
-        <div className="wesal-footer-legal flex flex-nowrap items-center justify-between gap-2 text-[11px] text-[var(--wesal-muted)] sm:gap-3 sm:text-xs">
+        <div className="wesal-footer-legal flex flex-nowrap items-center justify-between gap-2 text-[12px] text-[var(--wesal-muted)] sm:gap-3 sm:text-xs">
           <p className="min-w-0 shrink whitespace-nowrap">
             © {new Date().getFullYear()} {t("brand.name")} — {t("footer.rights")}
           </p>

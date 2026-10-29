@@ -252,9 +252,9 @@ function FilterSelect({
 }
 
 const actionBtnClass =
-  "btn-outline box-border min-h-10 w-full min-w-0 justify-center px-2 text-[0.8rem] md:min-h-9";
+  "btn-outline box-border min-h-10 w-full min-w-0 justify-center px-2 text-center text-[0.8rem] last:odd:col-span-2 md:min-h-9";
 const actionPrimaryBtnClass =
-  "btn-primary box-border min-h-10 w-full min-w-0 justify-center px-2 text-[0.8rem] md:min-h-9";
+  "btn-primary box-border min-h-10 w-full min-w-0 justify-center px-2 text-center text-[0.8rem] last:odd:col-span-2 md:min-h-9";
 
 function KnowledgeCard({
   article, onEdit, onPreview, onHistory, onPublish, onArchive, onOverride, onDuplicate, onReview, t,
@@ -308,10 +308,8 @@ function KnowledgeCard({
             {article.publicationStatus !== "Archived" ? (
               <button type="button" className={actionBtnClass} onClick={onArchive}>{t("admin.mabrouk.knowledge.archive")}</button>
             ) : null}
-            <div className="col-span-2 grid grid-cols-2 gap-2">
-              <button type="button" className={actionBtnClass} onClick={onDuplicate}>{t("admin.mabrouk.knowledge.duplicate")}</button>
-              <button type="button" className={actionBtnClass} onClick={onHistory}>{t("admin.mabrouk.knowledge.history")}</button>
-            </div>
+            <button type="button" className={actionBtnClass} onClick={onDuplicate}>{t("admin.mabrouk.knowledge.duplicate")}</button>
+            <button type="button" className={actionBtnClass} onClick={onHistory}>{t("admin.mabrouk.knowledge.history")}</button>
           </>
         )}
       </div>
