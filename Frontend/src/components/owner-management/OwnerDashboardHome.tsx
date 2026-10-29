@@ -304,7 +304,7 @@ export default function OwnerDashboardHome() {
                   prefetch
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="min-w-0 flex-1 truncate font-semibold text-[var(--wesal-text)]">
+                    <p className="min-w-0 flex-1 break-words font-semibold text-[var(--wesal-text)]">
                       {localizeHallName(hall.id, hall.name, lang)}
                     </p>
                     <HallApprovalStatusBadge status={hall.status} />
@@ -326,7 +326,7 @@ export default function OwnerDashboardHome() {
                   prefetch
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="min-w-0 flex-1 truncate font-semibold text-[var(--wesal-text)]">
+                    <p className="min-w-0 flex-1 break-words font-semibold text-[var(--wesal-text)]">
                       {localizeHallName(hall.id, hall.name, lang)}
                     </p>
                     <HallApprovalStatusBadge status={hall.status} />

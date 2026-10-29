@@ -319,7 +319,7 @@ function KnowledgeCard({
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex min-h-7 w-full min-w-0 items-center justify-center truncate rounded-full bg-[var(--wesal-pink-soft)] px-1.5 py-1 text-center text-[0.62rem] font-bold leading-4 whitespace-nowrap text-[var(--wesal-maroon-dark)]">
+    <span className="inline-flex min-h-7 w-full min-w-0 items-center justify-center rounded-full bg-[var(--wesal-pink-soft)] px-1.5 py-1 text-center text-[0.62rem] font-bold leading-4 whitespace-normal break-words text-[var(--wesal-maroon-dark)]">
       {children}
     </span>
   );

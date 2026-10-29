@@ -139,8 +139,8 @@ function FavoriteHallCard({
           <span className="h-[4.5rem] w-[5.5rem] shrink-0 rounded-xl bg-[var(--wesal-pink-soft)]" aria-hidden="true" />
         )}
         <span className="min-w-0 text-start">
-          <span className="block truncate text-base font-bold text-[var(--wesal-text)]">{name}</span>
-          <span className="mt-1 block truncate text-sm text-[var(--wesal-muted)]">{location}</span>
+          <span className="block break-words text-base font-bold text-[var(--wesal-text)]">{name}</span>
+          <span className="mt-1 block break-words text-sm text-[var(--wesal-muted)]">{location}</span>
           <span className="mt-1 block text-sm text-[var(--wesal-maroon)]">
             {capacity}
             {price ? ` · ${price}` : ""}

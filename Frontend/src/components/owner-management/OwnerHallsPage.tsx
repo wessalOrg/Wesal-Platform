@@ -371,11 +371,11 @@ function OwnerHallCard({
         <div className="flex min-w-0 flex-1 flex-col gap-2 p-2.5 sm:p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h2 className="truncate text-sm font-extrabold text-[var(--wesal-maroon-dark)]">{name}</h2>
+              <h2 className="break-words text-sm font-extrabold text-[var(--wesal-maroon-dark)]">{name}</h2>
               {location ? (
-                <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--wesal-muted)]">
+                <p className="mt-0.5 flex items-start gap-1 text-xs text-[var(--wesal-muted)]">
                   <PinIcon />
-                  <span className="truncate">{location}</span>
+                  <span className="min-w-0 break-words">{location}</span>
                 </p>
               ) : null}
             </div>
@@ -806,7 +806,7 @@ function FilterChip({
   return (
     <button
       type="button"
-      className={`inline-flex min-h-8 w-full min-w-0 items-center justify-center truncate rounded-full px-1.5 py-1 text-center text-[0.68rem] font-bold leading-tight sm:min-h-0 sm:w-auto sm:px-2.5 sm:py-1.5 sm:text-[11px] ${
+      className={`inline-flex min-h-8 w-full min-w-0 items-center justify-center whitespace-normal break-words rounded-full px-1.5 py-1 text-center text-[0.68rem] font-bold leading-tight sm:min-h-0 sm:w-auto sm:px-2.5 sm:py-1.5 sm:text-[11px] ${
         active
           ? "bg-[var(--wesal-maroon)] text-white"
           : "border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-white text-[var(--wesal-text)]"
