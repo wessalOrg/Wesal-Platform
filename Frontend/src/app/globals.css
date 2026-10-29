@@ -9929,22 +9929,16 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   }
 }
 
-/* Phone: admin + seeker + owner share the same card scale. */
+/* Phone: dashboards follow landing type; cards a touch larger than landing (~0.8/0.9). */
 @media (max-width: 767.98px) {
   /*
-   * Cards a touch larger than landing (~0.8/0.9); type one step smaller than 116%.
-   * Keep labels wrapping so words never clip away.
+   * Use the same root type as the landing page (no dashboard-only rem bump).
+   * Card padding sits just above landing hall/occasion cards; copy must wrap, not clip.
    */
-  html:has([data-testid="admin-management"]),
-  html:has([data-testid="seeker-dashboard"]),
-  html:has([data-testid="hall-owner-management"]) {
-    font-size: 112.5%;
-  }
-
   [data-testid="admin-management"] .seeker-dash-content,
   [data-testid="seeker-dashboard"] .seeker-dash-content,
   [data-testid="hall-owner-management"] .seeker-dash-content {
-    padding: 0.5rem 0.6rem 0.95rem;
+    padding: 0.55rem 0.7rem 1rem;
     overflow: visible;
   }
 
@@ -9959,11 +9953,11 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="seeker-dashboard"] .seeker-home,
   [data-testid="hall-owner-management"] .seeker-home,
   [data-testid="hall-owner-management"] [data-testid="owner-halls-page"] {
-    gap: 0.55rem;
+    gap: 0.65rem;
   }
 
   [data-testid="hall-owner-management"] [data-testid="owner-halls-page"].space-y-5 > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 0.55rem;
+    margin-top: 0.65rem;
   }
 
   [data-testid="admin-management"] .seeker-welcome,
@@ -9972,9 +9966,9 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="admin-management"] .seeker-welcome--compact,
   [data-testid="seeker-dashboard"] .seeker-welcome--compact,
   [data-testid="hall-owner-management"] .seeker-welcome--compact {
-    gap: 0.3rem;
-    padding: 0.62rem 0.78rem;
-    border-radius: 0.9rem;
+    gap: 0.35rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.95rem;
     overflow: visible;
   }
 
@@ -9982,39 +9976,39 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="seeker-dashboard"] .seeker-welcome-title,
   [data-testid="hall-owner-management"] .seeker-welcome-title,
   [data-testid="admin-management"] .seeker-welcome--compact .seeker-welcome-title {
-    font-size: 0.92rem;
+    font-size: 1rem;
   }
 
   [data-testid="admin-management"] .seeker-welcome-body,
   [data-testid="seeker-dashboard"] .seeker-welcome-body,
   [data-testid="hall-owner-management"] .seeker-welcome-body,
   [data-testid="admin-management"] .seeker-welcome--compact .seeker-welcome-body {
-    margin-top: 0.12rem;
-    font-size: 0.72rem;
-    line-height: 1.5;
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    line-height: 1.55;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-grid,
   [data-testid="hall-owner-management"] .seeker-summary-grid {
-    gap: 0.4rem;
+    gap: 0.5rem;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-card,
   [data-testid="hall-owner-management"] .seeker-summary-card {
-    gap: 0.12rem;
-    padding: 0.62rem 0.78rem 0.72rem;
-    border-radius: 0.9rem;
+    gap: 0.15rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.95rem;
     overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-value,
   [data-testid="hall-owner-management"] .seeker-summary-value {
-    font-size: 1.05rem;
+    font-size: 1.2rem;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-label,
   [data-testid="hall-owner-management"] .seeker-summary-label {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     white-space: normal;
     overflow: visible;
     text-overflow: unset;
@@ -10037,15 +10031,15 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="admin-management"] .seeker-dash-content section.rounded-2xl,
   [data-testid="admin-management"] .seeker-dash-content aside.rounded-2xl,
   [data-testid="admin-management"] .seeker-dash-content div.rounded-2xl.border.bg-white {
-    padding: 0.62rem 0.78rem 0.72rem;
-    border-radius: 0.9rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.95rem;
     overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-quick-card,
   [data-testid="hall-owner-management"] .seeker-quick-card {
     min-height: 0;
-    gap: 0.3rem;
+    gap: 0.4rem;
   }
 
   [data-testid="seeker-dashboard"] .seeker-quick-title,
@@ -10061,26 +10055,26 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="seeker-dashboard"] .seeker-settings-title,
   [data-testid="hall-owner-management"] .seeker-settings-title,
   [data-testid="admin-management"] .seeker-settings-title {
-    font-size: 0.84rem;
+    font-size: 0.95rem;
   }
 
   [data-testid="admin-management"] .seeker-home-booking-row,
   [data-testid="seeker-dashboard"] .seeker-home-booking-row,
   [data-testid="hall-owner-management"] .seeker-home-booking-row {
-    padding: 0.45rem 0.6rem;
-    border-radius: 0.7rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 0.8rem;
     overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-settings-form,
   [data-testid="hall-owner-management"] .seeker-settings-form {
-    gap: 0.65rem;
-    margin-top: 0.65rem;
+    gap: 0.7rem;
+    margin-top: 0.7rem;
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card,
   [data-testid="hall-owner-management"] .owner-add-hall-banner {
-    border-radius: 0.9rem;
+    border-radius: 0.95rem;
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card {
@@ -10088,37 +10082,37 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card .relative.min-h-44 {
-    min-height: 8.75rem;
+    min-height: 9.5rem;
     aspect-ratio: auto;
     overflow: hidden;
-    border-radius: 0.9rem 0.9rem 0 0;
+    border-radius: 0.95rem 0.95rem 0 0;
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card .flex-1,
   [data-testid="hall-owner-management"] .owner-hall-card .p-3,
   [data-testid="hall-owner-management"] .owner-hall-card .sm\:p-4 {
-    gap: 0.4rem;
-    padding: 0.62rem 0.78rem;
+    gap: 0.45rem;
+    padding: 0.9rem 1rem;
     overflow: visible;
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card h2 {
-    font-size: 0.88rem;
+    font-size: 0.98rem;
     overflow: visible;
     white-space: normal;
     overflow-wrap: anywhere;
   }
 
   [data-testid="hall-owner-management"] .owner-add-hall-banner {
-    padding: 0.62rem 0.78rem;
+    padding: 0.9rem 1rem;
     overflow: visible;
   }
 
   [data-testid="hall-owner-management"] [data-testid="owner-booking-insights"] > section,
   [data-testid="hall-owner-management"] [data-testid="owner-event-types-card"],
   [data-testid="hall-owner-management"] [data-testid="owner-visitor-stats"] {
-    padding: 0.62rem 0.78rem 0.72rem;
-    border-radius: 0.9rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.95rem;
     overflow: visible;
   }
 
