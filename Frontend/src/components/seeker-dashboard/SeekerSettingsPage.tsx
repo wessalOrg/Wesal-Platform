@@ -418,10 +418,10 @@ export default function SeekerSettingsPage() {
               />
             </div>
 
-            <div className="seeker-settings-actions">
+            <div className="seeker-settings-actions seeker-settings-actions--full">
               <button
                 type="submit"
-                className="btn-primary min-h-11"
+                className="btn-primary min-h-11 w-full justify-center text-center"
                 disabled={
                   passwordSaving ||
                   !passwordDraft.currentPassword ||

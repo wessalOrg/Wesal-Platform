@@ -38,7 +38,7 @@ export default function Footer() {
   const addHall = useAddHallCta();
 
   return (
-    <footer className="wesal-footer relative isolate overflow-hidden border-t border-[var(--wesal-border)] pb-2 lg:pb-0">
+    <footer className="wesal-footer relative isolate flex min-h-[100svh] flex-col overflow-hidden border-t border-[var(--wesal-border)] pb-2 lg:min-h-0 lg:pb-0">
       <div className="footer-marble" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -50,7 +50,7 @@ export default function Footer() {
         <div className="footer-marble-wash" />
       </div>
 
-      <div className="container-wesal relative z-10 py-4 sm:py-6 lg:py-8">
+      <div className="container-wesal relative z-10 flex flex-1 flex-col justify-center py-4 sm:py-6 lg:flex-none lg:py-8">
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4 lg:gap-5">
           <div className="col-span-2 flex flex-col items-center text-center md:items-start md:text-start md:-ms-7 lg:col-span-1 lg:-ms-20">
             <WesalBrandLockup logoClassName="h-7 w-auto sm:h-8" nameClassName="text-sm sm:text-base" />

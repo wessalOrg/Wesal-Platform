@@ -68,12 +68,10 @@ export default function AdminAccountPage() {
 
       <header className="seeker-settings-header">
         <h1 className="seeker-settings-title">{t("admin.account.title")}</h1>
-        <p className="seeker-settings-lead">{t("admin.account.subtitle")}</p>
       </header>
 
       <section className="seeker-settings-card" data-testid="admin-account-avatar-card">
         <h2 className="seeker-settings-section-title">{t("seeker.settings.avatar.title")}</h2>
-        <p className="seeker-settings-section-lead">{t("seeker.settings.avatar.subtitle")}</p>
 
         <ProfileAvatarField
           draftUrl={avatarDraft}

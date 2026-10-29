@@ -58,7 +58,7 @@ export default function OwnerVisitorStatsCard({
 
   return (
     <section
-      className="h-full overflow-hidden rounded-2xl border border-[rgba(168,98,103,0.12)] bg-[#fdf8f8] p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:p-3.5"
+      className="h-full overflow-visible rounded-2xl border border-[rgba(168,98,103,0.12)] bg-[#fdf8f8] p-3 shadow-[0_6px_18px_rgba(90,55,45,0.05)] sm:overflow-hidden sm:p-3.5"
       aria-labelledby="owner-visitor-stats-heading"
       data-testid="owner-visitor-stats"
       data-load-status={status}

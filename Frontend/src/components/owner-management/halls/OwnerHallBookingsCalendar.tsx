@@ -272,9 +272,9 @@ function UpcomingBookingsRail({
           </span>
         </Link>
       </div>
-      <ul className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">
+      <ul className="flex flex-col gap-2.5">
         {items.map((item) => (
-          <li key={`upcoming-${item.id}`} className="min-w-[15.5rem] shrink-0">
+          <li key={`upcoming-${item.id}`} className="min-w-0">
             <button
               type="button"
               className="flex w-full items-center gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_18%,var(--wesal-border))] bg-[#faf8f6] p-2.5 text-start transition hover:bg-[var(--wesal-pink-soft)]"
@@ -293,8 +293,16 @@ function UpcomingBookingsRail({
                   {item.timeLabel}
                 </p>
               </div>
-              <span className="text-[var(--wesal-maroon)] rtl:rotate-180" aria-hidden="true">
-                ‹
+              <span className="text-[var(--wesal-maroon)]" aria-hidden="true">
+                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none">
+                  <path
+                    d="M4.5 7.5 10 13l5.5-5.5"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </span>
             </button>
           </li>
@@ -338,9 +346,9 @@ function CalendarDayError({
 
 function HeaderChevron() {
   return (
-    <svg viewBox="0 0 20 20" className="h-5 w-5 rtl:rotate-180" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" aria-hidden="true">
       <path
-        d="M7.5 4.5 13 10l-5.5 5.5"
+        d="M4.5 7.5 10 13l5.5-5.5"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"
