@@ -228,12 +228,57 @@ export default function HallMonthCalendar({
                 ? "justify-center"
                 : "w-full justify-between"
           }`}
-          dir={ownerLegend && !showTodayButton ? undefined : "ltr"}
+          dir={showTodayButton ? undefined : ownerLegend ? undefined : "ltr"}
         >
+          {showTodayButton ? (
+            <div className="flex min-w-0 items-center gap-1.5" dir="ltr">
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+                onClick={() => shiftMonth(-1)}
+                aria-label={t("halls.booking.prevMonth")}
+              >
+                <MonthChevron direction="prev" />
+              </button>
+              <p className="min-w-0 whitespace-nowrap text-center text-sm font-bold text-[var(--wesal-text)] sm:text-base">
+                {monthLabel(cursor.year, cursor.month, locale)}
+              </p>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+                onClick={() => shiftMonth(1)}
+                aria-label={t("halls.booking.nextMonth")}
+              >
+                <MonthChevron direction="next" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+                onClick={() => shiftMonth(-1)}
+                aria-label={t("halls.booking.prevMonth")}
+              >
+                <MonthChevron direction="prev" />
+              </button>
+              <p className="min-w-0 text-center text-sm font-bold text-[var(--wesal-text)] sm:text-base">
+                {monthLabel(cursor.year, cursor.month, locale)}
+              </p>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+                onClick={() => shiftMonth(1)}
+                aria-label={t("halls.booking.nextMonth")}
+              >
+                <MonthChevron direction="next" />
+              </button>
+            </div>
+          )}
           {showTodayButton ? (
             <button
               type="button"
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white px-3 text-[0.78rem] font-semibold text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
+              className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white px-3 text-[0.78rem] font-semibold text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
               onClick={goToToday}
               data-testid="hall-cal-today"
             >
@@ -241,28 +286,6 @@ export default function HallMonthCalendar({
               {t("owner.calendar.today")}
             </button>
           ) : null}
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-            <button
-              type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
-              onClick={() => shiftMonth(-1)}
-              aria-label={t("halls.booking.prevMonth")}
-            >
-              <MonthChevron direction="prev" />
-            </button>
-            <p className="min-w-0 text-center text-sm font-bold text-[var(--wesal-text)] sm:text-base">
-              {monthLabel(cursor.year, cursor.month, locale)}
-            </p>
-            <button
-              type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
-              onClick={() => shiftMonth(1)}
-              aria-label={t("halls.booking.nextMonth")}
-            >
-              <MonthChevron direction="next" />
-            </button>
-          </div>
-          {showTodayButton ? <span className="invisible min-h-9 min-w-[5.5rem]" aria-hidden="true" /> : null}
         </div>
 
         {hideLegend ? null : (

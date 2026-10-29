@@ -9929,8 +9929,9 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   }
 }
 
-/* Phone: owner + seeker cards match the compact landing/admin card scale. */
+/* Phone: admin + seeker + owner share the same card scale. */
 @media (max-width: 767.98px) {
+  [data-testid="admin-management"] .seeker-dash-content,
   [data-testid="seeker-dashboard"] .seeker-dash-content,
   [data-testid="hall-owner-management"] .seeker-dash-content {
     padding: 0.55rem 0.65rem 1rem;
@@ -9939,10 +9940,11 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="seeker-dashboard"] .seeker-dash-content > *,
   [data-testid="hall-owner-management"] .seeker-dash-content > * {
     width: 100%;
-    max-width: 22.5rem;
-    margin-inline: auto;
+    max-width: none;
+    margin-inline: 0;
   }
 
+  [data-testid="admin-management"] .seeker-home,
   [data-testid="seeker-dashboard"] .seeker-home,
   [data-testid="hall-owner-management"] .seeker-home,
   [data-testid="hall-owner-management"] [data-testid="owner-halls-page"] {
@@ -9953,8 +9955,10 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
     margin-top: 0.65rem;
   }
 
+  [data-testid="admin-management"] .seeker-welcome,
   [data-testid="seeker-dashboard"] .seeker-welcome,
   [data-testid="hall-owner-management"] .seeker-welcome,
+  [data-testid="admin-management"] .seeker-welcome--compact,
   [data-testid="seeker-dashboard"] .seeker-welcome--compact,
   [data-testid="hall-owner-management"] .seeker-welcome--compact {
     gap: 0.45rem;
@@ -9962,13 +9966,17 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
     border-radius: 0.9rem;
   }
 
+  [data-testid="admin-management"] .seeker-welcome-title,
   [data-testid="seeker-dashboard"] .seeker-welcome-title,
-  [data-testid="hall-owner-management"] .seeker-welcome-title {
+  [data-testid="hall-owner-management"] .seeker-welcome-title,
+  [data-testid="admin-management"] .seeker-welcome--compact .seeker-welcome-title {
     font-size: 0.98rem;
   }
 
+  [data-testid="admin-management"] .seeker-welcome-body,
   [data-testid="seeker-dashboard"] .seeker-welcome-body,
-  [data-testid="hall-owner-management"] .seeker-welcome-body {
+  [data-testid="hall-owner-management"] .seeker-welcome-body,
+  [data-testid="admin-management"] .seeker-welcome--compact .seeker-welcome-body {
     margin-top: 0.2rem;
     font-size: 0.75rem;
     line-height: 1.45;
@@ -9976,32 +9984,38 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
 
   [data-testid="seeker-dashboard"] .seeker-summary-grid,
   [data-testid="hall-owner-management"] .seeker-summary-grid {
-    gap: 0.4rem;
+    gap: 0.5rem;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-card,
   [data-testid="hall-owner-management"] .seeker-summary-card {
-    gap: 0.12rem;
-    padding: 0.5rem 0.55rem 0.55rem;
-    border-radius: 0.8rem;
+    gap: 0.15rem;
+    padding: 0.6rem 0.7rem 0.7rem;
+    border-radius: 0.85rem;
+    overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-value,
   [data-testid="hall-owner-management"] .seeker-summary-value {
-    font-size: 1.05rem;
+    font-size: 1.12rem;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-label,
   [data-testid="hall-owner-management"] .seeker-summary-label {
-    font-size: 0.68rem;
+    font-size: 0.7rem;
+    overflow-wrap: anywhere;
   }
 
+  [data-testid="admin-management"] .seeker-pending-panel,
   [data-testid="seeker-dashboard"] .seeker-pending-panel,
   [data-testid="hall-owner-management"] .seeker-pending-panel,
+  [data-testid="admin-management"] .admin-ops-section,
   [data-testid="seeker-dashboard"] .seeker-settings-card,
   [data-testid="hall-owner-management"] .seeker-settings-card,
   [data-testid="seeker-dashboard"] .seeker-profile-card,
-  [data-testid="hall-owner-management"] .seeker-profile-card {
+  [data-testid="hall-owner-management"] .seeker-profile-card,
+  [data-testid="seeker-dashboard"] .seeker-quick-card,
+  [data-testid="hall-owner-management"] .seeker-quick-card {
     padding: 0.6rem 0.7rem 0.7rem;
     border-radius: 0.85rem;
   }
@@ -10009,8 +10023,6 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="seeker-dashboard"] .seeker-quick-card,
   [data-testid="hall-owner-management"] .seeker-quick-card {
     min-height: 0;
-    padding: 0.6rem 0.7rem;
-    border-radius: 0.85rem;
     gap: 0.35rem;
   }
 
@@ -10021,10 +10033,17 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
     font-size: 0.88rem;
   }
 
+  [data-testid="admin-management"] .seeker-home-booking-row,
   [data-testid="seeker-dashboard"] .seeker-home-booking-row,
   [data-testid="hall-owner-management"] .seeker-home-booking-row {
     padding: 0.5rem 0.6rem;
     border-radius: 0.7rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-settings-form,
+  [data-testid="hall-owner-management"] .seeker-settings-form {
+    gap: 0.7rem;
+    margin-top: 0.7rem;
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card,
@@ -10032,14 +10051,21 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
     border-radius: 0.85rem;
   }
 
+  [data-testid="hall-owner-management"] .owner-hall-card {
+    overflow: visible;
+  }
+
   [data-testid="hall-owner-management"] .owner-hall-card .relative.min-h-44 {
-    min-height: 0;
-    aspect-ratio: 4 / 3;
+    min-height: 10rem;
+    aspect-ratio: auto;
+    overflow: hidden;
+    border-radius: 0.85rem 0.85rem 0 0;
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card .flex-1 {
     gap: 0.55rem;
     padding: 0.6rem 0.7rem;
+    overflow: visible;
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card h2 {
@@ -10047,13 +10073,32 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   }
 
   [data-testid="hall-owner-management"] .owner-add-hall-banner {
-    padding: 0.7rem 0.75rem;
+    padding: 0.65rem 0.75rem;
   }
 
-  [data-testid="seeker-dashboard"] .seeker-settings-form,
-  [data-testid="hall-owner-management"] .seeker-settings-form {
-    gap: 0.7rem;
-    margin-top: 0.7rem;
+  [data-testid="hall-owner-management"] [data-testid="owner-booking-insights"] > section,
+  [data-testid="hall-owner-management"] [data-testid="owner-event-types-card"],
+  [data-testid="hall-owner-management"] [data-testid="owner-visitor-stats"] {
+    padding: 0.6rem 0.7rem 0.7rem;
+    border-radius: 0.85rem;
+    overflow: visible;
+  }
+
+  [data-testid="hall-owner-management"] [data-testid="owner-event-types-card"] .flex.min-h-0 {
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+
+  [data-testid="hall-owner-management"] [data-testid="owner-event-types-card"] ul {
+    width: 100%;
+    min-width: 0;
+    margin-inline: 0;
+    grid-template-columns: auto minmax(0, 1fr) 2.75rem;
+  }
+
+  [data-testid="hall-owner-management"] [data-testid="owner-event-types-card"] ul span.whitespace-nowrap {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 

@@ -308,8 +308,10 @@ function KnowledgeCard({
             {article.publicationStatus !== "Archived" ? (
               <button type="button" className={actionBtnClass} onClick={onArchive}>{t("admin.mabrouk.knowledge.archive")}</button>
             ) : null}
-            <button type="button" className={actionBtnClass} onClick={onDuplicate}>{t("admin.mabrouk.knowledge.duplicate")}</button>
-            <button type="button" className={actionBtnClass + " col-span-2 text-center"} onClick={onHistory}>{t("admin.mabrouk.knowledge.history")}</button>
+            <div className="col-span-2 grid grid-cols-2 gap-2">
+              <button type="button" className={actionBtnClass} onClick={onDuplicate}>{t("admin.mabrouk.knowledge.duplicate")}</button>
+              <button type="button" className={actionBtnClass} onClick={onHistory}>{t("admin.mabrouk.knowledge.history")}</button>
+            </div>
           </>
         )}
       </div>

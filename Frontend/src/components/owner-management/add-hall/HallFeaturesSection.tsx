@@ -72,13 +72,14 @@ export default function HallFeaturesSection({
                       role="checkbox"
                       aria-checked={selected}
                       disabled={disabled}
-                      className={`flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-center text-xs font-medium transition ${
+                      className={`flex min-w-0 w-full items-center justify-between gap-1.5 rounded-lg border px-2.5 py-1.5 text-start text-xs font-medium transition ${
                         selected
                           ? "border-[var(--wesal-maroon)] bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
                           : "border-[color-mix(in_srgb,var(--wesal-maroon)_16%,var(--wesal-border))] bg-white text-[var(--wesal-text)] hover:border-[var(--wesal-maroon)]/40"
                       } disabled:cursor-not-allowed disabled:opacity-60`}
                       onClick={() => toggleFeature(feature)}
                     >
+                      <span className="min-w-0 flex-1 truncate text-start">{feature}</span>
                       <span
                         className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                           selected
@@ -103,7 +104,6 @@ export default function HallFeaturesSection({
                           </svg>
                         ) : null}
                       </span>
-                      <span className="truncate">{feature}</span>
                     </button>
                   );
                 })}
