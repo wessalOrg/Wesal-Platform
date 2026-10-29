@@ -9932,13 +9932,12 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
 /* Phone: admin + seeker + owner share the same card scale. */
 @media (max-width: 767.98px) {
   /*
-   * One shared type bump for admin / seeker / owner — via root rem so layout
-   * reflows (zoom was clipping / hiding controls and labels).
+   * Mild shared type bump for admin / seeker / owner (was 122% — too large).
    */
   html:has([data-testid="admin-management"]),
   html:has([data-testid="seeker-dashboard"]),
   html:has([data-testid="hall-owner-management"]) {
-    font-size: 122%;
+    font-size: 116%;
   }
 
   [data-testid="admin-management"] .seeker-dash-content,
