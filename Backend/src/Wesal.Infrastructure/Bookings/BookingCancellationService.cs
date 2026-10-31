@@ -2,7 +2,7 @@ using System.Globalization;
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
-using Wesal.Domain.Constants;
+using Wesal.Domain.Common;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
@@ -194,9 +194,9 @@ public sealed class BookingCancellationService : IBookingCancellationService
             throw new UnauthorizedException("You must be logged in to cancel a booking request.");
         }
 
-        if (!_currentUser.Roles.Contains(ApplicationRoles.RegisteredUser, StringComparer.OrdinalIgnoreCase))
+        if (!HallBookingAccess.IsSeeker(_currentUser.Roles))
         {
-            throw new ForbiddenException("Only the regular user who submitted the booking request can cancel it.");
+            throw new ForbiddenException(HallBookingAccess.CancellationRoleRequiredMessage);
         }
     }
 

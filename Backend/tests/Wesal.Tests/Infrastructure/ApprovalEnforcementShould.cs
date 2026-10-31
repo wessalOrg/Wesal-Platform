@@ -148,6 +148,7 @@ public class ApprovalEnforcementShould : IDisposable
     [Theory]
     [InlineData(AccountApprovalStatus.Pending)]
     [InlineData(AccountApprovalStatus.Rejected)]
+    [InlineData(AccountApprovalStatus.NeedsChanges)]
     public async Task UnapprovedPhotographer_CannotCreateComment(AccountApprovalStatus status)
     {
         var user = await CreateUserAsync($"c-photo-{status}@example.com", status,
@@ -166,6 +167,7 @@ public class ApprovalEnforcementShould : IDisposable
     [Theory]
     [InlineData(AccountApprovalStatus.Pending)]
     [InlineData(AccountApprovalStatus.Rejected)]
+    [InlineData(AccountApprovalStatus.NeedsChanges)]
     public async Task UnapprovedCoordinator_CannotCreateComment(AccountApprovalStatus status)
     {
         var user = await CreateUserAsync($"c-coord-{status}@example.com", status,
@@ -193,6 +195,21 @@ public class ApprovalEnforcementShould : IDisposable
             new CreateCommentRequest { HallId = hall.Id, Content = "Approved content" });
 
         Assert.Equal("Approved content", result.Content);
+    }
+
+    [Theory]
+    [InlineData(ApplicationRoles.EventCoordinator)]
+    [InlineData(ApplicationRoles.Photographer)]
+    public async Task ApprovedProfessionalRoleWithoutRegisteredUser_CanCreateComment(string role)
+    {
+        var user = await CreateUserAsync($"c-professional-{role}@example.com", AccountApprovalStatus.Approved, role);
+        var hall = AddHall("owner-1");
+        var actor = CreateActor(user, role);
+
+        var result = await actor.CreateCommentService().CreateCommentAsync(
+            new CreateCommentRequest { HallId = hall.Id, Content = "Approved professional content" });
+
+        Assert.Equal("Approved professional content", result.Content);
     }
 
     [Fact]
@@ -277,6 +294,7 @@ public class ApprovalEnforcementShould : IDisposable
     [Theory]
     [InlineData(AccountApprovalStatus.Pending)]
     [InlineData(AccountApprovalStatus.Rejected)]
+    [InlineData(AccountApprovalStatus.NeedsChanges)]
     public async Task UnapprovedPhotographer_CannotRate(AccountApprovalStatus status)
     {
         var user = await CreateUserAsync($"r-photo-{status}@example.com", status,
@@ -295,6 +313,7 @@ public class ApprovalEnforcementShould : IDisposable
     [Theory]
     [InlineData(AccountApprovalStatus.Pending)]
     [InlineData(AccountApprovalStatus.Rejected)]
+    [InlineData(AccountApprovalStatus.NeedsChanges)]
     public async Task UnapprovedCoordinator_CannotRate(AccountApprovalStatus status)
     {
         var user = await CreateUserAsync($"r-coord-{status}@example.com", status,
@@ -317,6 +336,22 @@ public class ApprovalEnforcementShould : IDisposable
             ApplicationRoles.RegisteredUser, ApplicationRoles.Photographer);
         var hall = AddHall("owner-1");
         var actor = CreateActor(user, ApplicationRoles.RegisteredUser, ApplicationRoles.Photographer);
+
+        var result = await actor.CreateRatingService().CreateRatingAsync(
+            new CreateRatingRequest { HallId = hall.Id, Value = 4 });
+
+        Assert.Equal(4, result.Value);
+        Assert.Single(_context.Ratings);
+    }
+
+    [Theory]
+    [InlineData(ApplicationRoles.EventCoordinator)]
+    [InlineData(ApplicationRoles.Photographer)]
+    public async Task ApprovedProfessionalRoleWithoutRegisteredUser_CanRate(string role)
+    {
+        var user = await CreateUserAsync($"r-professional-{role}@example.com", AccountApprovalStatus.Approved, role);
+        var hall = AddHall("owner-1");
+        var actor = CreateActor(user, role);
 
         var result = await actor.CreateRatingService().CreateRatingAsync(
             new CreateRatingRequest { HallId = hall.Id, Value = 4 });

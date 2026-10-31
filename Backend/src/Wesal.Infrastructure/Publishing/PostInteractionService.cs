@@ -20,6 +20,7 @@ public sealed class PostInteractionService(
     IUserNotificationWriter notificationWriter,
     INotificationDispatcher dispatcher,
     IDateTime clock,
+    IAccountApprovalGuard approvalGuard,
     IAccountLockService? accountLocks = null) : IPostInteractionService
 {
     private static readonly Regex Markup = new("<[^>]*>", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -27,6 +28,7 @@ public sealed class PostInteractionService(
     public async Task<PostCommentDto> CreateCommentAsync(Guid postId, CreatePostCommentRequest request, CancellationToken cancellationToken = default)
     {
         var actorId = RequireUser();
+        await approvalGuard.EnsureCanPublishAsync(cancellationToken);
         if (accountLocks is not null) await accountLocks.EnsureUnlockedAsync(actorId, cancellationToken);
         var text = Sanitize(request.Text);
         var post = await posts.GetPublicPostAsync(postId, cancellationToken) ?? throw new NotFoundException("Post", postId);
@@ -51,6 +53,7 @@ public sealed class PostInteractionService(
     public async Task<PostCommentDto> ReplyAsync(Guid postId, Guid commentId, CreatePostCommentRequest request, CancellationToken cancellationToken = default)
     {
         var actorId = RequireUser();
+        await approvalGuard.EnsureCanPublishAsync(cancellationToken);
         if (accountLocks is not null) await accountLocks.EnsureUnlockedAsync(actorId, cancellationToken);
         var text = Sanitize(request.Text);
         var repliedTo = await posts.GetCommentAsync(commentId, tracking: false, cancellationToken)
@@ -118,6 +121,7 @@ public sealed class PostInteractionService(
     public async Task DeleteCommentAsync(Guid postId, Guid commentId, CancellationToken cancellationToken = default)
     {
         var actorId = RequireUser();
+        await approvalGuard.EnsureCanPublishAsync(cancellationToken);
         var row = await posts.GetCommentAsync(commentId, tracking: true, cancellationToken)
             ?? throw new NotFoundException("Comment", commentId);
         if (row.PostId != postId) throw new NotFoundException("Comment", commentId);

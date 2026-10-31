@@ -1,6 +1,7 @@
 using Wesal.Application.Common.Interfaces;
 using Wesal.Application.Common.Interfaces.Persistence;
 using Wesal.Application.Common.Models;
+using Wesal.Domain.Common;
 using Wesal.Domain.Constants;
 using Wesal.Domain.Entities;
 using Wesal.Domain.Enums;
@@ -171,9 +172,9 @@ public sealed class RatingService : IRatingService
             throw new ForbiddenException("Administrators cannot rate halls.");
         }
 
-        if (!_currentUser.Roles.Contains(ApplicationRoles.RegisteredUser, StringComparer.OrdinalIgnoreCase))
+        if (!HallBookingAccess.IsSeeker(_currentUser.Roles))
         {
-            throw new ForbiddenException("Only registered users can rate halls.");
+            throw new ForbiddenException("Only registered users, coordinators, and photographers can rate halls.");
         }
     }
 }

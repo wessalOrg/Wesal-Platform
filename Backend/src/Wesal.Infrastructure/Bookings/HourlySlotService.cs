@@ -459,9 +459,13 @@ public class HourlySlotService : IHourlySlotService
             throw new ForbiddenException("Hall owners cannot book halls.");
         }
 
-        if (!_currentUser.Roles.Contains(ApplicationRoles.RegisteredUser, StringComparer.OrdinalIgnoreCase))
+        // WESAL specification §4.2: Event Coordinators and Photographers browse and
+        // book halls exactly like ordinary Hall Seekers, whatever their account
+        // approval status. Approval gates publishing only, so it is deliberately not
+        // consulted here.
+        if (!HallBookingAccess.IsSeeker(_currentUser.Roles))
         {
-            throw new ForbiddenException("Only regular users can submit booking requests.");
+            throw new ForbiddenException(HallBookingAccess.SeekerRoleRequiredMessage);
         }
 
         return _currentUser.UserId;

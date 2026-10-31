@@ -110,6 +110,7 @@ public class AccountApprovalGuardShould : IDisposable
     [Theory]
     [InlineData(AccountApprovalStatus.Pending)]
     [InlineData(AccountApprovalStatus.Rejected)]
+    [InlineData(AccountApprovalStatus.NeedsChanges)]
     public async Task UnapprovedCoordinator_CannotPublish(AccountApprovalStatus status)
     {
         var user = await CreateUserAsync($"coord-{status}@example.com", status, ApplicationRoles.EventCoordinator);
@@ -122,6 +123,7 @@ public class AccountApprovalGuardShould : IDisposable
     [Theory]
     [InlineData(AccountApprovalStatus.Pending)]
     [InlineData(AccountApprovalStatus.Rejected)]
+    [InlineData(AccountApprovalStatus.NeedsChanges)]
     public async Task UnapprovedPhotographer_CannotPublish(AccountApprovalStatus status)
     {
         var user = await CreateUserAsync($"photo-{status}@example.com", status, ApplicationRoles.Photographer);
@@ -146,6 +148,7 @@ public class AccountApprovalGuardShould : IDisposable
     [Theory]
     [InlineData(AccountApprovalStatus.Pending)]
     [InlineData(AccountApprovalStatus.Rejected)]
+    [InlineData(AccountApprovalStatus.NeedsChanges)]
     public async Task OrdinaryRegisteredUser_PassesRegardlessOfStatus(AccountApprovalStatus status)
     {
         var user = await CreateUserAsync($"plain-{status}@example.com", status, ApplicationRoles.RegisteredUser);
@@ -216,6 +219,7 @@ public class AccountApprovalGuardShould : IDisposable
     [Theory]
     [InlineData(AccountApprovalStatus.Pending)]
     [InlineData(AccountApprovalStatus.Rejected)]
+    [InlineData(AccountApprovalStatus.NeedsChanges)]
     public async Task UnapprovedTargetUser_CannotPublish(AccountApprovalStatus status)
     {
         var user = await CreateUserAsync($"target-{status}@example.com", status, ApplicationRoles.Photographer);

@@ -95,6 +95,31 @@ public sealed class PublishingServiceShould : IDisposable
         Assert.Empty(_files.Keys);
     }
 
+    [Theory]
+    [InlineData(ApplicationRoles.EventCoordinator)]
+    [InlineData(ApplicationRoles.Photographer)]
+    public async Task ApprovalGrantedAfterPendingStatus_AllowsPostsAndOffersWithoutRoleChanges(string role)
+    {
+        var user = await CreateUserAsync(role, AccountApprovalStatus.Pending);
+        var guard = new AccountApprovalGuard(_current, _users);
+        await Assert.ThrowsAsync<ForbiddenException>(() => guard.EnsureCanPublishAsync());
+
+        user.ApprovalStatus = AccountApprovalStatus.Approved;
+        Assert.True((await _users.UpdateAsync(user)).Succeeded);
+        await guard.EnsureCanPublishAsync();
+
+        _current.Set(user, role);
+        var postId = await CreatePostService().CreateAsync(new CreatePostRequest { Content = "Now approved" });
+        Assert.Equal("Now approved", (await CreatePostService().GetPublicAsync(postId)).Content);
+
+        var offerId = await CreateOfferService().CreateAsync(new CreateProfessionalOfferRequest
+        {
+            Content = "Now approved offer", OldPrice = 100, OfferPrice = 75,
+            StartsAt = Now, EndsAt = Now.AddDays(1)
+        });
+        Assert.Equal(offerId, Assert.Single((await CreateOfferService().ListOwnAsync(1, 10)).Items).Id);
+    }
+
     [Fact]
     public async Task EditPostImmediatelyAndPersistNotificationAtomicallyWhileCleaningFiles()
     {

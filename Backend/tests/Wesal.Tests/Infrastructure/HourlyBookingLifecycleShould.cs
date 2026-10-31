@@ -10,6 +10,7 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Infrastructure.Bookings;
 using Wesal.Infrastructure.Identity;
+using Wesal.Infrastructure.Halls;
 using Wesal.Infrastructure.OwnerDashboard;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
@@ -46,17 +47,26 @@ public class HourlyBookingLifecycleShould : IDisposable
         var roleManager = _provider.GetRequiredService<RoleManager<ApplicationRole>>();
         roleManager.CreateAsync(new ApplicationRole(ApplicationRoles.HallOwner)).GetAwaiter().GetResult();
         roleManager.CreateAsync(new ApplicationRole(ApplicationRoles.RegisteredUser)).GetAwaiter().GetResult();
+        roleManager.CreateAsync(new ApplicationRole(ApplicationRoles.EventCoordinator)).GetAwaiter().GetResult();
+        roleManager.CreateAsync(new ApplicationRole(ApplicationRoles.Photographer)).GetAwaiter().GetResult();
+        roleManager.CreateAsync(new ApplicationRole(ApplicationRoles.Admin)).GetAwaiter().GetResult();
         _userManager = _provider.GetRequiredService<UserManager<ApplicationUser>>();
     }
 
-    private async Task<ApplicationUser> CreateUserAsync(string email, string phone, string role)
+    private async Task<ApplicationUser> CreateUserAsync(
+        string email,
+        string phone,
+        string role,
+        AccountApprovalStatus approvalStatus = AccountApprovalStatus.Approved)
     {
         var user = new ApplicationUser
         {
             FullName = "Test User",
             Email = email,
             UserName = email,
-            PhoneNumber = phone
+            PhoneNumber = phone,
+            ApprovalStatus = approvalStatus,
+            IsSetupComplete = true
         };
         var result = await _userManager.CreateAsync(user, "Password123!");
         if (!result.Succeeded)
@@ -215,6 +225,235 @@ public class HourlyBookingLifecycleShould : IDisposable
                new FakeCurrentUser("seeker-1", true, ApplicationRoles.RegisteredUser),
                new RecordingOwnerBookingRequestNotifier(),
                new RecordingNotificationDispatcher());
+
+    private HourlySlotService SeekerAs(ICurrentUserService currentUser)
+        => new(
+            new HallRepository(_context),
+            BookingRepo(),
+            UnitOfWork(),
+            currentUser,
+            new RecordingOwnerBookingRequestNotifier(),
+            new RecordingNotificationDispatcher());
+
+    private UserBookingsService Bookings(ICurrentUserService currentUser)
+        => new(BookingRepo(), currentUser);
+
+    private static string UniqueEmail(string prefix) => $"{prefix}-{Guid.NewGuid():N}@example.com";
+
+    private static string UniquePhone() => $"+9705{Random.Shared.Next(10000000, 99999999)}";
+
+    private static HourlyBookingRequestDto BookingRequest(
+        Guid hallId,
+        DateOnly date,
+        TimeOnly slotStart,
+        string name = "Professional Requester")
+        => new()
+        {
+            HallId = hallId,
+            Date = date,
+            SlotStarts = [slotStart],
+            NameOnBooking = name,
+            RequesterName = name
+        };
+
+    /// <summary>
+    /// WESAL specification §4.2: a professional account browses and books halls exactly
+    /// like a Hall Seeker, whatever its approval status. Approval only gates publishing,
+    /// so Pending, Rejected, and Needs Changes must all reach the same booking flow.
+    /// </summary>
+    [Theory]
+    [InlineData(ApplicationRoles.EventCoordinator, AccountApprovalStatus.Pending)]
+    [InlineData(ApplicationRoles.EventCoordinator, AccountApprovalStatus.Rejected)]
+    [InlineData(ApplicationRoles.EventCoordinator, AccountApprovalStatus.NeedsChanges)]
+    [InlineData(ApplicationRoles.Photographer, AccountApprovalStatus.Pending)]
+    [InlineData(ApplicationRoles.Photographer, AccountApprovalStatus.Rejected)]
+    [InlineData(ApplicationRoles.Photographer, AccountApprovalStatus.NeedsChanges)]
+    public async Task ProfessionalAccount_BrowsesBooksAndCancelsExactlyLikeASeeker(
+        string role,
+        AccountApprovalStatus approvalStatus)
+    {
+        var owner = await CreateUserAsync(UniqueEmail("owner"), UniquePhone(), ApplicationRoles.HallOwner);
+        var professional = await CreateUserAsync(
+            UniqueEmail("pro"), UniquePhone(), role, approvalStatus);
+        var hall = AddHall(owner.Id);
+        var date = Tomorrow();
+        var slot = new TimeOnly(10, 0);
+        var user = new FakeCurrentUser(professional.Id, true, role);
+        var service = SeekerAs(user);
+
+        // Browse: hall availability and the day calendar are readable regardless of status.
+        var details = await new HallDetailsService(
+            new HallRepository(_context), user, new FixedDateTime(DateTimeOffset.UtcNow), service,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<HallDetailsService>.Instance)
+            .GetHallDetailsAsync(hall.Id);
+        Assert.Equal(hall.Id, details.HallId);
+
+        var catalog = await service.GetHourlyCatalogAsync(hall.Id, date);
+        Assert.True(catalog.DayOpen);
+        Assert.Contains(catalog.Slots, s => s.StartTime == slot && s.IsSelectable);
+
+        var calendar = await service.GetAvailabilityCalendarAsync(hall.Id, date, date.AddDays(1));
+        Assert.Contains(calendar.Days, d => d.Date == date && d.IsOpen);
+
+        // Book: the request enters the normal lifecycle as Pending and holds its hour.
+        var result = await service.CreateHourlyBookingAsync(BookingRequest(hall.Id, date, slot));
+        Assert.Equal(BookingStatus.Pending, result.Status);
+        Assert.Equal(slot, Assert.Single(result.SlotStarts));
+        Assert.Equal(HallSlotStatus.Reserved, await SlotStatusAsync(hall, date, slot));
+
+        // Own bookings / own booking details are visible only to the requester.
+        var mine = await Bookings(user).GetMyBookingsAsync();
+        var own = Assert.Single(mine, b => b.BookingId == result.BookingId);
+        Assert.Equal(hall.Id, own.HallId);
+        Assert.Equal(date, own.Date);
+        Assert.Equal(slot, Assert.Single(own.SlotStarts));
+
+        // Cancel: the requester can call off their own unconfirmed request.
+        var cancelled = await Cancellation(user).CancelBookingAsync(hall.Id, result.BookingId);
+        Assert.Equal(BookingStatus.Cancelled, cancelled.Status);
+        Assert.Equal(HallSlotStatus.Available, await SlotStatusAsync(hall, date, slot));
+
+        // Booking never mutates the account's approval state.
+        var persisted = await _userManager.FindByIdAsync(professional.Id);
+        Assert.Equal(approvalStatus, persisted!.ApprovalStatus);
+    }
+
+    [Theory]
+    [InlineData(ApplicationRoles.EventCoordinator, AccountApprovalStatus.Pending)]
+    [InlineData(ApplicationRoles.EventCoordinator, AccountApprovalStatus.Rejected)]
+    [InlineData(ApplicationRoles.Photographer, AccountApprovalStatus.Pending)]
+    [InlineData(ApplicationRoles.Photographer, AccountApprovalStatus.Rejected)]
+    [InlineData(ApplicationRoles.Photographer, AccountApprovalStatus.NeedsChanges)]
+    public async Task ProfessionalRoleAlone_CanSubmitBooking(string role, AccountApprovalStatus approvalStatus)
+    {
+        var owner = await CreateUserAsync(UniqueEmail("role-owner"), UniquePhone(), ApplicationRoles.HallOwner);
+        var professional = await CreateUserAsync(UniqueEmail("role-only"), UniquePhone(), role, approvalStatus);
+        var hall = AddHall(owner.Id);
+
+        var result = await SeekerAs(new FakeCurrentUser(professional.Id, true, role))
+            .CreateHourlyBookingAsync(BookingRequest(hall.Id, Tomorrow(), new TimeOnly(10, 0)));
+
+        Assert.Equal(BookingStatus.Pending, result.Status);
+        Assert.Equal(approvalStatus, (await _userManager.FindByIdAsync(professional.Id))!.ApprovalStatus);
+    }
+
+    /// <summary>
+    /// The wider seeker role must not weaken the booking integrity rules: a blocked day
+    /// stays unbookable for coordinators and photographers.
+    /// </summary>
+    [Theory]
+    [InlineData(ApplicationRoles.EventCoordinator, AccountApprovalStatus.Pending)]
+    [InlineData(ApplicationRoles.Photographer, AccountApprovalStatus.NeedsChanges)]
+    public async Task ProfessionalAccount_StillCannotBookABlockedDay(
+        string role,
+        AccountApprovalStatus approvalStatus)
+    {
+        var owner = await CreateUserAsync(UniqueEmail("blocked-owner"), UniquePhone(), ApplicationRoles.HallOwner);
+        var professional = await CreateUserAsync(
+            UniqueEmail("blocked-pro"), UniquePhone(), role, approvalStatus);
+        var hall = AddHall(owner.Id, showBookedSlots: true);
+        var date = Tomorrow();
+        _context.HallDayAvailabilities.Add(new HallDayAvailability
+        {
+            HallId = hall.Id,
+            Date = date,
+            IsOpen = false
+        });
+        await _context.SaveChangesAsync();
+
+        var service = SeekerAs(new FakeCurrentUser(professional.Id, true, role));
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(() =>
+            service.CreateHourlyBookingAsync(BookingRequest(hall.Id, date, new TimeOnly(10, 0))));
+
+        Assert.Contains("blocked", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await _context.Bookings.Where(b => b.HallId == hall.Id).ToListAsync());
+        Assert.Empty(await _context.HallSlotAvailabilities.Where(s => s.HallId == hall.Id).ToListAsync());
+    }
+
+    /// <summary>
+    /// A held hour stays protected when the second requester is a professional account:
+    /// the new seeker roles do not bypass double-booking prevention.
+    /// </summary>
+    [Theory]
+    [InlineData(ApplicationRoles.EventCoordinator, AccountApprovalStatus.Pending)]
+    [InlineData(ApplicationRoles.Photographer, AccountApprovalStatus.Rejected)]
+    public async Task ProfessionalAccount_StillCannotDoubleBookAHeldHour(
+        string role,
+        AccountApprovalStatus approvalStatus)
+    {
+        var owner = await CreateUserAsync(UniqueEmail("double-owner"), UniquePhone(), ApplicationRoles.HallOwner);
+        var first = await CreateUserAsync(UniqueEmail("double-first"), UniquePhone(), role, approvalStatus);
+        var second = await CreateUserAsync(UniqueEmail("double-second"), UniquePhone(), role, approvalStatus);
+        var hall = AddHall(owner.Id);
+        var date = Tomorrow();
+        var slot = new TimeOnly(10, 0);
+
+        var firstService = SeekerAs(new FakeCurrentUser(first.Id, true, role));
+        await firstService.CreateHourlyBookingAsync(BookingRequest(hall.Id, date, slot, "First"));
+
+        var secondService = SeekerAs(new FakeCurrentUser(second.Id, true, role));
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            secondService.CreateHourlyBookingAsync(BookingRequest(hall.Id, date, slot, "Second")));
+
+        Assert.Single(await _context.Bookings.Where(b => b.HallId == hall.Id).ToListAsync());
+        Assert.Equal(HallSlotStatus.Reserved, await SlotStatusAsync(hall, date, slot));
+    }
+
+    /// <summary>
+    /// Booking ownership is unchanged: a professional account can neither see nor cancel
+    /// another user's private booking request.
+    /// </summary>
+    [Theory]
+    [InlineData(ApplicationRoles.EventCoordinator, AccountApprovalStatus.Pending)]
+    [InlineData(ApplicationRoles.Photographer, AccountApprovalStatus.NeedsChanges)]
+    public async Task ProfessionalAccount_CannotReadOrCancelAnotherUsersBooking(
+        string role,
+        AccountApprovalStatus approvalStatus)
+    {
+        var owner = await CreateUserAsync(UniqueEmail("private-owner"), UniquePhone(), ApplicationRoles.HallOwner);
+        var requester = await CreateUserAsync(UniqueEmail("private-requester"), UniquePhone(), role, approvalStatus);
+        var stranger = await CreateUserAsync(UniqueEmail("private-stranger"), UniquePhone(), role, approvalStatus);
+        var hall = AddHall(owner.Id);
+        var date = Tomorrow();
+        var slot = new TimeOnly(10, 0);
+
+        var requesterService = SeekerAs(new FakeCurrentUser(requester.Id, true, role));
+        var booking = await requesterService.CreateHourlyBookingAsync(BookingRequest(hall.Id, date, slot));
+
+        var strangerUser = new FakeCurrentUser(stranger.Id, true, role);
+        var strangerBookings = await Bookings(strangerUser).GetMyBookingsAsync();
+        Assert.DoesNotContain(strangerBookings, b => b.BookingId == booking.BookingId);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            Cancellation(strangerUser).CancelBookingAsync(hall.Id, booking.BookingId));
+
+        var persisted = await _context.Bookings.AsNoTracking().SingleAsync(b => b.Id == booking.BookingId);
+        Assert.Equal(BookingStatus.Pending, persisted.Status);
+        Assert.Equal(HallSlotStatus.Reserved, await SlotStatusAsync(hall, date, slot));
+    }
+
+    /// <summary>
+    /// Widening the seeker roles must not admit Hall Owners or Admins to the seeker
+    /// booking flow; their historical restrictions remain.
+    /// </summary>
+    [Theory]
+    [InlineData(ApplicationRoles.Admin)]
+    [InlineData(ApplicationRoles.HallOwner)]
+    public async Task AdminAndHallOwner_StillCannotSubmitBookingRequests(string role)
+    {
+        var owner = await CreateUserAsync(UniqueEmail("non-seeker-owner"), UniquePhone(), ApplicationRoles.HallOwner);
+        var caller = await CreateUserAsync(UniqueEmail("non-seeker"), UniquePhone(), role);
+        var hall = AddHall(owner.Id);
+        var date = Tomorrow();
+
+        var service = SeekerAs(new FakeCurrentUser(caller.Id, true, role));
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.CreateHourlyBookingAsync(BookingRequest(hall.Id, date, new TimeOnly(10, 0))));
+
+        Assert.Empty(await _context.Bookings.Where(b => b.HallId == hall.Id).ToListAsync());
+    }
 
 
     [Fact]
@@ -628,6 +867,11 @@ public class HourlyBookingLifecycleShould : IDisposable
         public string? Email => "test@example.com";
         public bool IsAuthenticated { get; }
         public IReadOnlyList<string> Roles => _roles;
+    }
+
+    private sealed class FixedDateTime(DateTimeOffset now) : IDateTime
+    {
+        public DateTimeOffset Now { get; } = now;
     }
 
     public void Dispose()

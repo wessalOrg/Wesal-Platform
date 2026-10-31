@@ -13,6 +13,7 @@ using Wesal.Domain.Enums;
 using Wesal.Domain.Exceptions;
 using Wesal.Domain.Notifications;
 using Wesal.Infrastructure.Identity;
+using Wesal.Infrastructure.Authorization;
 using Wesal.Infrastructure.Publishing;
 using Wesal.Persistence.Data;
 using Wesal.Persistence.Repositories;
@@ -112,6 +113,22 @@ public sealed class PostInteractionServiceShould
         Assert.Equal(NotificationActionTarget.Post, notification.ActionTarget);
         Assert.Equal(post.Id.ToString(), notification.TargetId);
         Assert.Single(test.Dispatcher.Dispatches);
+    }
+
+    [Fact]
+    public async Task PendingProfessional_CannotCommentOnPosts()
+    {
+        await using var test = await TestHarness.CreateAsync();
+        var owner = await test.CreateUserAsync("owner", ApplicationRoles.EventCoordinator);
+        var commenter = await test.CreateUserAsync("pending-photo", ApplicationRoles.Photographer, AccountApprovalStatus.Pending);
+        var post = await test.CreatePostAsync(owner);
+        test.CurrentUser.UserId = commenter.Id;
+        test.CurrentUser.SetRoles(ApplicationRoles.Photographer);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            test.Service.CreateCommentAsync(post.Id, new CreatePostCommentRequest { Text = "Blocked" }));
+
+        Assert.Empty(test.Context.PostComments);
     }
 
     [Fact]
@@ -466,12 +483,12 @@ public sealed class PostInteractionServiceShould
             Context = provider.GetRequiredService<ApplicationDbContext>();
             _users = provider.GetRequiredService<UserManager<ApplicationUser>>();
             Service = new PostInteractionService(new PostInteractionRepository(Context), CurrentUser, new UnitOfWork(Context), _users, Notifications,
-                new UserNotificationWriter(Context), Dispatcher, Clock);
+                new UserNotificationWriter(Context), Dispatcher, Clock, approvalGuard: new AccountApprovalGuard(CurrentUser, _users));
         }
 
         public IPostInteractionService CreateService(IUserNotificationWriter notificationWriter)
             => new PostInteractionService(new PostInteractionRepository(Context), CurrentUser, new UnitOfWork(Context), _users,
-                Notifications, notificationWriter, Dispatcher, Clock);
+                Notifications, notificationWriter, Dispatcher, Clock, approvalGuard: new AccountApprovalGuard(CurrentUser, _users));
 
         public static async Task<TestHarness> CreateAsync()
         {
@@ -521,7 +538,9 @@ public sealed class PostInteractionServiceShould
         public string? UserName => UserId;
         public string? Email => null;
         public bool IsAuthenticated => UserId is not null;
-        public IReadOnlyList<string> Roles => [];
+        private IReadOnlyList<string> _roles = [];
+        public IReadOnlyList<string> Roles => _roles;
+        public void SetRoles(params string[] roles) => _roles = roles;
     }
 
     private sealed class TestClock : IDateTime { public DateTimeOffset Now { get; set; } = new(2026, 10, 19, 12, 0, 0, TimeSpan.Zero); }
