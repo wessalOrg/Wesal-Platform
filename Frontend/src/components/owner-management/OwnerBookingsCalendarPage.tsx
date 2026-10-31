@@ -7,6 +7,7 @@ import OwnerAddBookingModal from "@/components/owner-management/halls/OwnerAddBo
 import OwnerHallBookingsCalendar from "@/components/owner-management/halls/OwnerHallBookingsCalendar";
 import SuccessToast from "@/components/ui/SuccessToast";
 import { useAddHallInitiation } from "@/hooks/useAddHallInitiation";
+import AnchoredPanel from "@/components/ui/AnchoredPanel";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useT } from "@/i18n";
 import { HALL_OWNER_CALENDAR_PATH } from "@/lib/account-profile-path";
@@ -191,6 +192,8 @@ function OwnerCalendarHallPicker({
 }) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const selected = halls.find((hall) => hall.id === selectedId) ?? halls[0];
   const selectedLabel = selected
@@ -200,7 +203,9 @@ function OwnerCalendarHallPicker({
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -219,6 +224,7 @@ function OwnerCalendarHallPicker({
         {label}
       </span>
       <button
+        ref={triggerRef}
         type="button"
         className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm font-semibold text-[var(--wesal-text)] shadow-[0_4px_12px_rgba(90,55,45,0.04)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
         aria-haspopup="listbox"
@@ -231,40 +237,43 @@ function OwnerCalendarHallPicker({
         <span className="min-w-0 truncate">{selectedLabel}</span>
         <ChevronIcon open={open} />
       </button>
-      {open ? (
-        <ul
-          id={listId}
-          role="listbox"
-          aria-labelledby={`${listId}-label`}
-          className="absolute z-20 mt-1.5 max-h-64 w-full overflow-auto rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_32px_rgba(90,55,45,0.12)]"
-          data-testid="owner-calendar-hall-menu"
-        >
-          {halls.map((hall) => {
-            const active = hall.id === selectedId;
-            const name = localizeHallName(hall.id, hall.name, lang);
-            return (
-              <li key={hall.id} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  className={`flex min-h-10 w-full items-center px-3 text-start text-sm font-semibold transition ${
-                    active
-                      ? "bg-[var(--wesal-maroon)] text-white"
-                      : "bg-white text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
-                  }`}
-                  onClick={() => {
-                    onSelect(hall.id);
-                    setOpen(false);
-                  }}
-                >
-                  {name}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      <AnchoredPanel
+        as="ul"
+        open={open}
+        anchorRef={triggerRef}
+        panelRef={panelRef}
+        options={{ width: "anchor", estimateHeight: 280 }}
+        id={listId}
+        role="listbox"
+        aria-labelledby={`${listId}-label`}
+        className="m-0 list-none rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_32px_rgba(90,55,45,0.12)]"
+        data-testid="owner-calendar-hall-menu"
+      >
+        {halls.map((hall) => {
+          const active = hall.id === selectedId;
+          const name = localizeHallName(hall.id, hall.name, lang);
+          return (
+            <li key={hall.id} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={active}
+                className={`flex min-h-10 w-full items-center px-3 text-start text-sm font-semibold transition ${
+                  active
+                    ? "bg-[var(--wesal-maroon)] text-white"
+                    : "bg-white text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
+                }`}
+                onClick={() => {
+                  onSelect(hall.id);
+                  setOpen(false);
+                }}
+              >
+                {name}
+              </button>
+            </li>
+          );
+        })}
+      </AnchoredPanel>
     </div>
   );
 }

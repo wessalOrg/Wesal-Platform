@@ -76,7 +76,7 @@ h1:not([class*="text-"]):not(.seeker-welcome-title) {
   line-height: 1.25;
 }
 
-h2:not([class*="text-"]):not(.seeker-home-section-title):not(.admin-ops-section-title):not(.seeker-settings-section-title):not(.owner-halls-section-title) {
+h2:not([class*="text-"]):not(.seeker-home-section-title):not(.admin-ops-section-title):not(.seeker-settings-section-title):not(.owner-halls-section-title):not(.admin-sub-owner-name):not(.admin-ops-owner-name) {
   font-size: 1.55rem;
   line-height: 1.3;
 }
@@ -272,6 +272,209 @@ h6 {
   .container-wesal {
     padding-inline: 2rem;
   }
+}
+
+/* Native controls: brand maroon instead of browser blue */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"],
+input[type="number"],
+input[type="range"],
+select {
+  accent-color: #c17b7f;
+  accent-color: var(--wesal-maroon);
+  color-scheme: light;
+}
+
+/* Custom checkbox — guaranteed maroon (accent-color alone is inconsistent) */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  inline-size: 1.05rem;
+  block-size: 1.05rem;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1.5px solid var(--wesal-maroon);
+  border-radius: 0.28rem;
+  background: var(--wesal-white);
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  vertical-align: middle;
+  accent-color: var(--wesal-maroon);
+  color-scheme: light;
+}
+
+input[type="checkbox"]::before {
+  content: "";
+  inline-size: 0.62rem;
+  block-size: 0.62rem;
+  transform: scale(0);
+  transition: transform 120ms ease;
+  box-shadow: inset 1em 1em #fff;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+input[type="checkbox"]:checked {
+  background: var(--wesal-maroon);
+  border-color: var(--wesal-maroon);
+}
+
+input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 45%, transparent);
+  outline-offset: 2px;
+}
+
+/* Custom radio — guaranteed maroon */
+input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  inline-size: 1.05rem;
+  block-size: 1.05rem;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1.5px solid var(--wesal-maroon);
+  border-radius: 999px;
+  background: var(--wesal-white);
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  vertical-align: middle;
+  accent-color: var(--wesal-maroon);
+  color-scheme: light;
+}
+
+input[type="radio"]::before {
+  content: "";
+  inline-size: 0.45rem;
+  block-size: 0.45rem;
+  border-radius: 999px;
+  transform: scale(0);
+  transition: transform 120ms ease;
+  background: var(--wesal-maroon);
+}
+
+input[type="radio"]:checked {
+  border-color: var(--wesal-maroon);
+}
+
+input[type="radio"]:checked::before {
+  transform: scale(1);
+}
+
+input[type="radio"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 45%, transparent);
+  outline-offset: 2px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.85;
+  filter: invert(42%) sepia(18%) saturate(920%) hue-rotate(314deg) brightness(92%) contrast(88%);
+}
+
+select:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="time"]:focus,
+input[type="month"]:focus,
+input[type="week"]:focus,
+input[type="number"]:focus {
+  border-color: var(--wesal-maroon);
+  outline: 2px solid color-mix(in srgb, var(--wesal-maroon) 35%, transparent);
+  outline-offset: 1px;
+}
+
+/* Native <select> fallback (prefer WesalSelect in UI) */
+select {
+  color: var(--wesal-text);
+}
+
+option {
+  background-color: var(--wesal-white);
+  color: var(--wesal-text);
+}
+
+option:checked,
+option:hover {
+  background-color: var(--wesal-maroon) !important;
+  color: #fff !important;
+}
+
+@supports (appearance: base-select) {
+  select {
+    appearance: base-select;
+  }
+
+  select::picker(select) {
+    appearance: base-select;
+    border: 1px solid var(--wesal-border);
+    border-radius: 0.75rem;
+    background: var(--wesal-white);
+    box-shadow: 0 14px 36px rgba(90, 55, 45, 0.14);
+    padding: 0.25rem;
+  }
+
+  select option {
+    border-radius: 0.5rem;
+    padding: 0.55rem 0.75rem;
+  }
+
+  select option:checked {
+    background-color: var(--wesal-maroon);
+    color: #fff;
+  }
+
+  select option::checkmark {
+    color: #fff;
+  }
+
+  select::picker-icon {
+    color: var(--wesal-maroon);
+  }
+}
+
+/* Fit compact selects (e.g. verification) to their option text */
+select.w-fit {
+  field-sizing: content;
+}
+
+/* Branded date field inside admin editor modal */
+[data-testid="mabrouk-knowledge-editor"] .consult-date {
+  width: 100%;
+}
+
+[data-testid="mabrouk-knowledge-editor"] .consult-date-trigger {
+  min-height: 2.75rem;
+  width: 100%;
+  border-radius: 0.75rem;
+  padding-inline: 0.75rem;
+  font-size: 0.875rem;
+}
+
+[data-testid="mabrouk-knowledge-editor"] .consult-date-panel {
+  z-index: 310;
+}
+
+[data-testid="mabrouk-knowledge-editor"] .consult-date-actions button:hover {
+  color: var(--wesal-maroon-dark);
+  text-decoration: underline;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--wesal-maroon) 28%, white);
+  color: var(--wesal-maroon-dark);
 }
 
 /* Buttons ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â soft rounded (match navbar design) */
@@ -2707,11 +2910,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .consult-date-panel {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 0.45rem);
-  inset-inline-start: 0;
-  width: 18.5rem;
+  /* position/size applied via useAnchoredPanelStyle (fixed to trigger) */
   border-radius: 1.15rem;
   border: 1px solid var(--wesal-border);
   background: var(--wesal-white);
@@ -2820,10 +3019,7 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 }
 
 .consult-city-panel {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 0.35rem);
-  inset-inline: 0;
+  /* position/size applied via useAnchoredPanelStyle (fixed to trigger) */
   border-radius: 0.9rem;
   border: 1px solid var(--wesal-border);
   background: var(--wesal-white);
@@ -6317,8 +6513,12 @@ button.btn-primary.wesal-auth-submit:disabled:active {
     margin-bottom: 0.45rem;
   }
 
-  [data-testid="admin-management"] .admin-sub-owner-name {
+  [data-testid="admin-management"] .admin-sub-owner-name,
+  [data-testid="admin-management"] h2.admin-sub-owner-name,
+  [data-testid="admin-management"] .admin-ops-owner-name,
+  [data-testid="admin-management"] h2.admin-ops-owner-name {
     font-size: 0.9rem;
+    -webkit-text-stroke: 0;
   }
 
   [data-testid="admin-management"] .admin-sub-halls {
@@ -8225,11 +8425,15 @@ h2.admin-ops-section-title,
   border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 85%, var(--wesal-white));
 }
 
+h2.admin-ops-owner-name,
 .admin-ops-owner-name {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 750;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
   color: var(--seeker-maroon-dark);
+  -webkit-text-stroke: 0;
+  letter-spacing: normal;
 }
 
 .admin-ops-owner-meta {
@@ -8250,6 +8454,7 @@ h2.admin-ops-section-title,
   background: var(--seeker-white);
   padding: 1.15rem 1.2rem 1.2rem;
   box-shadow: 0 10px 24px rgba(90, 55, 45, 0.045);
+  overflow: visible;
 }
 
 .admin-sub-card-head {
@@ -8258,11 +8463,19 @@ h2.admin-ops-section-title,
   border-bottom: 1px solid color-mix(in srgb, var(--seeker-border) 85%, var(--wesal-white));
 }
 
+h2.admin-sub-owner-name,
 .admin-sub-owner-name {
   margin: 0;
-  font-size: 1.02rem;
-  font-weight: 800;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
   color: var(--seeker-maroon-dark);
+  -webkit-text-stroke: 0;
+  letter-spacing: normal;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .admin-sub-owner-meta {
@@ -8270,7 +8483,10 @@ h2.admin-ops-section-title,
   font-size: 0.86rem;
   line-height: 1.5;
   color: var(--seeker-muted);
+  overflow: visible;
+  white-space: normal;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .admin-sub-halls {
@@ -8307,6 +8523,10 @@ h2.admin-ops-section-title,
   font-weight: 750;
   line-height: 1.45;
   color: var(--wesal-text);
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .admin-sub-hall-meta {
@@ -8314,6 +8534,9 @@ h2.admin-ops-section-title,
   font-size: 0.86rem;
   line-height: 1.7;
   color: var(--wesal-muted);
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .admin-sub-hall-actions {
@@ -9627,7 +9850,7 @@ h2.admin-ops-section-title,
     font-size: 15.5px;
   }
 
-  /* Landing: match hall/provider cards to category card width */
+  /* Landing cards: ~90% viewport width, centered, not edge-stuck */
   main .occasion-service-card,
   main .how-card,
   main .join-card,
@@ -9636,13 +9859,16 @@ h2.admin-ops-section-title,
   [data-testid="featured-halls-section"] .hall-card,
   [data-testid="halls-catalog"] .hall-card,
   [data-testid="halls-catalog-loading"] > div {
+    width: 90%;
     max-width: 22.5rem;
-    width: 100%;
     margin-inline: auto;
   }
 
   [data-testid="featured-halls-section"] .container-wesal,
-  [data-testid="halls-catalog"] {
+  [data-testid="halls-catalog"],
+  .occasion-services .container-wesal,
+  .how-section .container-wesal,
+  .join-section .container-wesal {
     padding-inline: 1rem;
   }
 
@@ -9651,16 +9877,25 @@ h2.admin-ops-section-title,
   }
 
   [data-testid="halls-catalog"] .mt-6.grid,
-  [data-testid="halls-catalog-loading"] {
-    gap: 0.85rem;
+  [data-testid="halls-catalog-loading"],
+  [data-testid="featured-halls-section"] .grid {
+    gap: 0.75rem;
   }
 
-  [data-testid="halls-catalog"] .hall-card > div:last-child {
-    padding: 0.75rem 0.84rem;
+  [data-testid="halls-catalog"] .hall-card > div:last-child,
+  [data-testid="featured-halls-section"] .hall-card > div:last-child {
+    padding: 0.65rem 0.75rem;
+    gap: 0.35rem;
   }
 
-  [data-testid="halls-catalog"] .hall-card h3 {
-    font-size: 0.92rem;
+  [data-testid="halls-catalog"] .hall-card h3,
+  [data-testid="featured-halls-section"] .hall-card h3 {
+    font-size: 0.88rem;
+  }
+
+  [data-testid="halls-catalog"] .hall-card p,
+  [data-testid="featured-halls-section"] .hall-card p {
+    font-size: 0.78rem;
   }
 
   .story-layout {
@@ -9693,11 +9928,28 @@ h2.admin-ops-section-title,
   }
 
   main .occasion-service-card article > div:last-child {
-    padding: 0.75rem 0.84rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  main .occasion-service-card h3,
+  main .how-card h3,
+  main .join-card h3 {
+    font-size: 0.9rem;
+  }
+
+  main .occasion-service-card p,
+  main .how-card p,
+  main .join-card p {
+    font-size: 0.78rem;
+    line-height: 1.5;
   }
 
   main .how-card {
-    padding: 1.07rem 0.93rem 1.17rem;
+    padding: 0.95rem 0.85rem 1.05rem;
+  }
+
+  main .join-card {
+    padding: 0.95rem 0.85rem;
   }
 
   .occasion-services,
@@ -9930,21 +10182,22 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   }
 }
 
-/* Phone: dashboards follow landing type; cards a touch larger than landing (~0.8/0.9). */
+/* Phone: shared elegant card scale across landing + admin/seeker/owner. */
 @media (max-width: 767.98px) {
   /*
-   * Type follows the shared mobile root (15.5px on phones). Card paddings are
-   * compensated so cards stay visually the same; copy must wrap, not clip.
+   * Stack cards ≈90% wide with side breathing room; grid cells keep their track.
+   * Padding/type slightly tighter; copy must wrap, never clip.
    */
   [data-testid="admin-management"] .seeker-dash-content,
   [data-testid="seeker-dashboard"] .seeker-dash-content,
   [data-testid="hall-owner-management"] .seeker-dash-content {
-    padding: 0.5rem 0.65rem 0.95rem;
+    padding: 0.55rem 0.5rem 1rem;
     overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-dash-content > *,
-  [data-testid="hall-owner-management"] .seeker-dash-content > * {
+  [data-testid="hall-owner-management"] .seeker-dash-content > *,
+  [data-testid="admin-management"] .seeker-dash-content > * {
     width: 100%;
     max-width: none;
     margin-inline: 0;
@@ -9954,11 +10207,47 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="seeker-dashboard"] .seeker-home,
   [data-testid="hall-owner-management"] .seeker-home,
   [data-testid="hall-owner-management"] [data-testid="owner-halls-page"] {
-    gap: 0.65rem;
+    gap: 0.6rem;
   }
 
   [data-testid="hall-owner-management"] [data-testid="owner-halls-page"].space-y-5 > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 0.65rem;
+    margin-top: 0.6rem;
+  }
+
+  /* Full-width stack cards: 90% + centered */
+  [data-testid="admin-management"] .seeker-welcome,
+  [data-testid="seeker-dashboard"] .seeker-welcome,
+  [data-testid="hall-owner-management"] .seeker-welcome,
+  [data-testid="admin-management"] .seeker-welcome--compact,
+  [data-testid="seeker-dashboard"] .seeker-welcome--compact,
+  [data-testid="hall-owner-management"] .seeker-welcome--compact,
+  [data-testid="admin-management"] .seeker-pending-panel,
+  [data-testid="seeker-dashboard"] .seeker-pending-panel,
+  [data-testid="hall-owner-management"] .seeker-pending-panel,
+  [data-testid="admin-management"] .admin-ops-section,
+  [data-testid="admin-management"] .admin-sub-card,
+  [data-testid="seeker-dashboard"] .seeker-settings-card,
+  [data-testid="hall-owner-management"] .seeker-settings-card,
+  [data-testid="seeker-dashboard"] .seeker-profile-card,
+  [data-testid="hall-owner-management"] .seeker-profile-card,
+  [data-testid="hall-owner-management"] .owner-hall-card,
+  [data-testid="hall-owner-management"] .owner-add-hall-banner,
+  [data-testid="hall-owner-management"] [data-testid="owner-booking-insights"] > section,
+  [data-testid="hall-owner-management"] [data-testid="owner-event-types-card"],
+  [data-testid="hall-owner-management"] [data-testid="owner-visitor-stats"],
+  [data-testid="admin-management"] .seeker-dash-content article.rounded-2xl,
+  [data-testid="admin-management"] .seeker-dash-content article.rounded-xl,
+  [data-testid="admin-management"] .seeker-dash-content section.rounded-2xl,
+  [data-testid="admin-management"] .seeker-dash-content aside.rounded-2xl,
+  [data-testid="admin-management"] .seeker-dash-content div.rounded-2xl.border.bg-white,
+  [data-testid="seeker-dashboard"] .seeker-dash-content article.rounded-2xl,
+  [data-testid="seeker-dashboard"] .seeker-dash-content section.rounded-2xl,
+  [data-testid="hall-owner-management"] .seeker-dash-content article.rounded-2xl,
+  [data-testid="hall-owner-management"] .seeker-dash-content section.rounded-2xl {
+    width: 90%;
+    max-width: 28rem;
+    margin-inline: auto;
+    box-sizing: border-box;
   }
 
   [data-testid="admin-management"] .seeker-welcome,
@@ -9967,8 +10256,8 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="admin-management"] .seeker-welcome--compact,
   [data-testid="seeker-dashboard"] .seeker-welcome--compact,
   [data-testid="hall-owner-management"] .seeker-welcome--compact {
-    gap: 0.35rem;
-    padding: 0.84rem 0.93rem;
+    gap: 0.3rem;
+    padding: 0.72rem 0.8rem;
     border-radius: 0.95rem;
     overflow: visible;
   }
@@ -9977,39 +10266,42 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="seeker-dashboard"] .seeker-welcome-title,
   [data-testid="hall-owner-management"] .seeker-welcome-title,
   [data-testid="admin-management"] .seeker-welcome--compact .seeker-welcome-title {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   [data-testid="admin-management"] .seeker-welcome-body,
   [data-testid="seeker-dashboard"] .seeker-welcome-body,
   [data-testid="hall-owner-management"] .seeker-welcome-body,
   [data-testid="admin-management"] .seeker-welcome--compact .seeker-welcome-body {
-    margin-top: 0.2rem;
-    font-size: 0.78rem;
-    line-height: 1.55;
+    margin-top: 0.15rem;
+    font-size: 0.74rem;
+    line-height: 1.5;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-grid,
   [data-testid="hall-owner-management"] .seeker-summary-grid {
-    gap: 0.5rem;
+    width: 90%;
+    max-width: 28rem;
+    margin-inline: auto;
+    gap: 0.45rem;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-card,
   [data-testid="hall-owner-management"] .seeker-summary-card {
-    gap: 0.15rem;
-    padding: 0.84rem 0.93rem;
-    border-radius: 0.95rem;
+    gap: 0.12rem;
+    padding: 0.65rem 0.7rem;
+    border-radius: 0.9rem;
     overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-value,
   [data-testid="hall-owner-management"] .seeker-summary-value {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
   }
 
   [data-testid="seeker-dashboard"] .seeker-summary-label,
   [data-testid="hall-owner-management"] .seeker-summary-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     white-space: normal;
     overflow: visible;
     text-overflow: unset;
@@ -10032,15 +10324,23 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="admin-management"] .seeker-dash-content section.rounded-2xl,
   [data-testid="admin-management"] .seeker-dash-content aside.rounded-2xl,
   [data-testid="admin-management"] .seeker-dash-content div.rounded-2xl.border.bg-white {
-    padding: 0.84rem 0.93rem;
+    padding: 0.72rem 0.8rem;
     border-radius: 0.95rem;
     overflow: visible;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-quick-grid,
+  [data-testid="hall-owner-management"] .seeker-quick-grid {
+    width: 90%;
+    max-width: 28rem;
+    margin-inline: auto;
   }
 
   [data-testid="seeker-dashboard"] .seeker-quick-card,
   [data-testid="hall-owner-management"] .seeker-quick-card {
     min-height: 0;
-    gap: 0.4rem;
+    gap: 0.3rem;
+    padding: 0.65rem 0.7rem;
   }
 
   [data-testid="seeker-dashboard"] .seeker-quick-title,
@@ -10056,21 +10356,31 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="seeker-dashboard"] .seeker-settings-title,
   [data-testid="hall-owner-management"] .seeker-settings-title,
   [data-testid="admin-management"] .seeker-settings-title {
-    font-size: 0.95rem;
+    font-size: 0.88rem;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-quick-body,
+  [data-testid="hall-owner-management"] .seeker-quick-body,
+  [data-testid="seeker-dashboard"] .seeker-settings-card p,
+  [data-testid="hall-owner-management"] .seeker-settings-card p,
+  [data-testid="admin-management"] .admin-ops-section p,
+  [data-testid="admin-management"] .admin-sub-card p {
+    font-size: 0.78rem;
+    line-height: 1.5;
   }
 
   [data-testid="admin-management"] .seeker-home-booking-row,
   [data-testid="seeker-dashboard"] .seeker-home-booking-row,
   [data-testid="hall-owner-management"] .seeker-home-booking-row {
-    padding: 0.55rem 0.7rem;
-    border-radius: 0.8rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.75rem;
     overflow: visible;
   }
 
   [data-testid="seeker-dashboard"] .seeker-settings-form,
   [data-testid="hall-owner-management"] .seeker-settings-form {
-    gap: 0.7rem;
-    margin-top: 0.7rem;
+    gap: 0.6rem;
+    margin-top: 0.6rem;
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card,
@@ -10083,7 +10393,7 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card .relative.min-h-44 {
-    min-height: 9.5rem;
+    min-height: 9rem;
     aspect-ratio: auto;
     overflow: hidden;
     border-radius: 0.95rem 0.95rem 0 0;
@@ -10092,27 +10402,27 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="hall-owner-management"] .owner-hall-card .flex-1,
   [data-testid="hall-owner-management"] .owner-hall-card .p-3,
   [data-testid="hall-owner-management"] .owner-hall-card .sm\:p-4 {
-    gap: 0.45rem;
-    padding: 0.84rem 0.93rem;
+    gap: 0.4rem;
+    padding: 0.7rem 0.78rem;
     overflow: visible;
   }
 
   [data-testid="hall-owner-management"] .owner-hall-card h2 {
-    font-size: 0.98rem;
+    font-size: 0.9rem;
     overflow: visible;
     white-space: normal;
     overflow-wrap: anywhere;
   }
 
   [data-testid="hall-owner-management"] .owner-add-hall-banner {
-    padding: 0.84rem 0.93rem;
+    padding: 0.72rem 0.8rem;
     overflow: visible;
   }
 
   [data-testid="hall-owner-management"] [data-testid="owner-booking-insights"] > section,
   [data-testid="hall-owner-management"] [data-testid="owner-event-types-card"],
   [data-testid="hall-owner-management"] [data-testid="owner-visitor-stats"] {
-    padding: 0.84rem 0.93rem;
+    padding: 0.72rem 0.8rem;
     border-radius: 0.95rem;
     overflow: visible;
   }
@@ -10132,6 +10442,35 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
   [data-testid="hall-owner-management"] [data-testid="owner-event-types-card"] ul span.whitespace-nowrap {
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  /* Favorites / list cards + hall notifications: same 90% stack */
+  [data-testid="seeker-dashboard"] [data-testid="seeker-favorites-empty"],
+  [data-testid="seeker-dashboard"] ul > li.rounded-2xl,
+  [data-testid="seeker-dashboard"] .seeker-dash-content > ul,
+  [data-testid="hall-owner-management"] [data-testid="owner-halls-list"],
+  [data-testid="admin-management"] .admin-sub-list {
+    width: 90%;
+    max-width: 28rem;
+    margin-inline: auto;
+  }
+
+  [data-testid="seeker-dashboard"] ul > li.rounded-2xl,
+  [data-testid="seeker-dashboard"] [data-testid="seeker-favorites-empty"] {
+    padding: 0.7rem 0.78rem;
+  }
+
+  /* Auth form cards already sit in a max-width shell — tighten padding/type only */
+  [data-auth-shell] section > *,
+  [data-testid="auth-shell"] section > * {
+    box-sizing: border-box;
+  }
+
+  [data-auth-shell] .rounded-2xl,
+  [data-auth-shell] .rounded-3xl,
+  [data-testid="login-form"],
+  [data-testid="register-form"] {
+    padding-block: 0.85rem;
   }
 
   /* Show full copy without growing cards or type — unwrap clip utilities only */

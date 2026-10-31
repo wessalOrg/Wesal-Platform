@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import AnchoredPanel from "@/components/ui/AnchoredPanel";
 import { useT } from "@/i18n";
 import { formatBookingDateLong, localTodayIso, parseDateIso } from "@/lib/booking-date";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
@@ -542,13 +543,17 @@ function SiteSelect({
 }) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value) ?? options[0];
 
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -564,6 +569,7 @@ function SiteSelect({
   return (
     <div className="relative" ref={rootRef}>
       <button
+        ref={triggerRef}
         type="button"
         className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-[var(--wesal-border)] bg-white pe-3 ps-3 text-start text-sm font-semibold text-[var(--wesal-text)] outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
         aria-haspopup="listbox"
@@ -578,38 +584,41 @@ function SiteSelect({
         <span className="min-w-0 flex-1 truncate">{selected?.label ?? ""}</span>
         <SelectChevron open={open} />
       </button>
-      {open ? (
-        <ul
-          id={listId}
-          role="listbox"
-          className="absolute z-30 mt-1.5 max-h-56 w-full overflow-auto rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_32px_rgba(90,55,45,0.14)]"
-          data-testid={`${testId}-menu`}
-        >
-          {options.map((option) => {
-            const active = option.value === value;
-            return (
-              <li key={option.value} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  className={`flex min-h-10 w-full items-center px-3 text-start text-sm font-semibold transition ${
-                    active
-                      ? "bg-[var(--wesal-maroon)] text-white"
-                      : "bg-white text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
-                  }`}
-                  onClick={() => {
-                    onChange(option.value);
-                    setOpen(false);
-                  }}
-                >
-                  {option.label}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      <AnchoredPanel
+        as="ul"
+        open={open}
+        anchorRef={triggerRef}
+        panelRef={panelRef}
+        options={{ width: "anchor", estimateHeight: 240 }}
+        id={listId}
+        role="listbox"
+        className="m-0 list-none rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_32px_rgba(90,55,45,0.14)]"
+        data-testid={`${testId}-menu`}
+      >
+        {options.map((option) => {
+          const active = option.value === value;
+          return (
+            <li key={option.value} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={active}
+                className={`flex min-h-10 w-full items-center px-3 text-start text-sm font-semibold transition ${
+                  active
+                    ? "bg-[var(--wesal-maroon)] text-white"
+                    : "bg-white text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
+                }`}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            </li>
+          );
+        })}
+      </AnchoredPanel>
     </div>
   );
 }
@@ -648,6 +657,8 @@ function SiteDatePicker({
 }) {
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const selected = parseDateIso(value);
   const today = localTodayIso();
@@ -667,7 +678,9 @@ function SiteDatePicker({
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -722,6 +735,7 @@ function SiteDatePicker({
   return (
     <div className="relative" ref={rootRef}>
       <button
+        ref={triggerRef}
         type="button"
         className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-[var(--wesal-border)] bg-white pe-3 ps-3 text-start text-sm font-semibold text-[var(--wesal-text)] outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wesal-maroon)]"
         aria-haspopup="dialog"
@@ -738,94 +752,96 @@ function SiteDatePicker({
         <SelectChevron open={open} />
       </button>
 
-      {open ? (
-        <div
-          className="absolute z-40 mt-1.5 w-[min(100%,19rem)] rounded-2xl border border-[var(--wesal-border)] bg-white p-3 shadow-[0_16px_40px_rgba(90,55,45,0.16)]"
-          data-testid={`${testId}-calendar`}
-        >
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-sm font-bold text-[var(--wesal-text)]">{monthLabel}</p>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)]"
-                aria-label={t("halls.booking.prevMonth")}
-                onClick={() => shiftMonth(-1)}
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)]"
-                aria-label={t("halls.booking.nextMonth")}
-                onClick={() => shiftMonth(1)}
-              >
-                ›
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1 text-center text-[0.68rem] font-semibold text-[var(--wesal-muted)]">
-            {weekdays.map((label, index) => (
-              <div key={`${label}-${index}`} className="py-1">
-                {label}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-1 grid grid-cols-7 gap-1">
-            {cells.map((cell) => {
-              if (!cell.iso || cell.dayNum == null) {
-                return <div key={cell.key} className="min-h-9" />;
-              }
-              const isSelected = cell.iso === selected;
-              const isToday = cell.iso === today;
-              return (
-                <button
-                  key={cell.key}
-                  type="button"
-                  className={`inline-flex min-h-9 items-center justify-center rounded-lg text-sm font-semibold transition ${
-                    isSelected
-                      ? "bg-[var(--wesal-maroon)] text-white shadow-[0_6px_14px_rgba(193,123,127,0.35)]"
-                      : isToday
-                        ? "bg-[var(--wesal-pink)] text-[var(--wesal-maroon-dark)]"
-                        : "text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
-                  }`}
-                  onClick={() => {
-                    onChange(cell.iso!);
-                    setOpen(false);
-                  }}
-                >
-                  {cell.dayNum}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--wesal-border)] pt-2">
+      <AnchoredPanel
+        open={open}
+        anchorRef={triggerRef}
+        panelRef={panelRef}
+        options={{ width: "anchor", estimateHeight: 340 }}
+        className="rounded-2xl border border-[var(--wesal-border)] bg-white p-3 shadow-[0_16px_40px_rgba(90,55,45,0.16)]"
+        data-testid={`${testId}-calendar`}
+      >
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-sm font-bold text-[var(--wesal-text)]">{monthLabel}</p>
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              className="text-[0.78rem] font-bold text-[var(--wesal-maroon)] hover:underline"
-              onClick={() => {
-                onChange(today);
-                setOpen(false);
-              }}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)]"
+              aria-label={t("halls.booking.prevMonth")}
+              onClick={() => shiftMonth(-1)}
             >
-              {t("owner.calendar.today")}
+              ‹
             </button>
             <button
               type="button"
-              className="text-[0.78rem] font-bold text-[var(--wesal-muted)] hover:text-[var(--wesal-maroon)] hover:underline"
-              onClick={() => {
-                onChange("");
-                setOpen(false);
-              }}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--wesal-maroon)] hover:bg-[var(--wesal-pink-soft)]"
+              aria-label={t("halls.booking.nextMonth")}
+              onClick={() => shiftMonth(1)}
             >
-              {t("home.consult.dateClear")}
+              ›
             </button>
           </div>
         </div>
-      ) : null}
+
+        <div className="grid grid-cols-7 gap-1 text-center text-[0.68rem] font-semibold text-[var(--wesal-muted)]">
+          {weekdays.map((label, index) => (
+            <div key={`${label}-${index}`} className="py-1">
+              {label}
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-1 grid grid-cols-7 gap-1">
+          {cells.map((cell) => {
+            if (!cell.iso || cell.dayNum == null) {
+              return <div key={cell.key} className="min-h-9" />;
+            }
+            const isSelected = cell.iso === selected;
+            const isToday = cell.iso === today;
+            return (
+              <button
+                key={cell.key}
+                type="button"
+                className={`inline-flex min-h-9 items-center justify-center rounded-lg text-sm font-semibold transition ${
+                  isSelected
+                    ? "bg-[var(--wesal-maroon)] text-white shadow-[0_6px_14px_rgba(193,123,127,0.35)]"
+                    : isToday
+                      ? "bg-[var(--wesal-pink)] text-[var(--wesal-maroon-dark)]"
+                      : "text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
+                }`}
+                onClick={() => {
+                  onChange(cell.iso!);
+                  setOpen(false);
+                }}
+              >
+                {cell.dayNum}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--wesal-border)] pt-2">
+          <button
+            type="button"
+            className="text-[0.78rem] font-bold text-[var(--wesal-maroon)] hover:underline"
+            onClick={() => {
+              onChange(today);
+              setOpen(false);
+            }}
+          >
+            {t("owner.calendar.today")}
+          </button>
+          <button
+            type="button"
+            className="text-[0.78rem] font-bold text-[var(--wesal-muted)] hover:text-[var(--wesal-maroon)] hover:underline"
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+          >
+            {t("home.consult.dateClear")}
+          </button>
+        </div>
+      </AnchoredPanel>
     </div>
   );
 }

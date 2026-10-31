@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import { useMemo, useState } from "react";
+import ConsultDateField from "@/components/home/ConsultDateField";
+import WesalSelect from "@/components/ui/WesalSelect";
 import { useT } from "@/i18n";
 import { ApiError } from "@/lib/api-error";
 import { adminMabroukService } from "@/services/admin-mabrouk";
@@ -225,14 +227,21 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
 
         <div className="space-y-5 p-4 sm:p-6">
           <section className="rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-cream)] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.editor.aiButton")}</h3>
-                <p className="mt-1 text-xs leading-5 text-[var(--wesal-muted)]">{t("admin.mabrouk.editor.aiDisclaimer")}</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="min-w-0 text-sm font-bold text-[var(--wesal-maroon-dark)]">
+                  {t("admin.mabrouk.editor.aiButton")}
+                </h3>
+                <button
+                  type="button"
+                  className="btn-outline h-9 min-h-9 shrink-0 px-3 text-[0.8rem]"
+                  disabled={busy || form.aiInput.trim().length < 5}
+                  onClick={() => void createAiSuggestion()}
+                >
+                  ✨ {t("admin.mabrouk.editor.aiButton")}
+                </button>
               </div>
-              <button type="button" className="btn-outline" disabled={busy || form.aiInput.trim().length < 5} onClick={() => void createAiSuggestion()}>
-                ✨ {t("admin.mabrouk.editor.aiButton")}
-              </button>
+              <p className="text-xs leading-5 text-[var(--wesal-muted)]">{t("admin.mabrouk.editor.aiDisclaimer")}</p>
             </div>
             <textarea
               className="mt-3 min-h-20 w-full resize-y rounded-xl border border-[var(--wesal-border)] bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-[var(--wesal-maroon)]"
@@ -261,10 +270,16 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
               <input className={inputClass} type="number" min={0} max={100} value={form.priority} onChange={(event) => setField("priority", Number(event.target.value))} />
             </Field>
             <Field label={t("admin.mabrouk.editor.verification")}>
-              <select className={inputClass} value={form.verificationStatus} onChange={(event) => setField("verificationStatus", event.target.value as VerificationStatus)}>
-                <option value="Verified">{t("admin.mabrouk.editor.verified")}</option>
-                <option value="NeedsVerification">{t("admin.mabrouk.editor.needsVerification")}</option>
-              </select>
+              <WesalSelect
+                value={form.verificationStatus}
+                onChange={(value) => setField("verificationStatus", value as VerificationStatus)}
+                options={[
+                  { value: "Verified", label: t("admin.mabrouk.editor.verified") },
+                  { value: "NeedsVerification", label: t("admin.mabrouk.editor.needsVerification") },
+                ]}
+                triggerClassName={selectClass + " flex cursor-pointer items-center justify-between gap-2 text-start"}
+                testId="mabrouk-verification-select"
+              />
               {form.verificationStatus !== "Verified" ? (
                 <p className="text-xs font-semibold leading-5 text-amber-800" data-testid="mabrouk-verification-warning">
                   {t("admin.mabrouk.editor.verificationWarning")}
@@ -282,13 +297,13 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
               <p className="text-xs leading-5 text-[var(--wesal-muted)]">{t("admin.mabrouk.editor.aliasHint")}</p>
             </Field>
             <Field label={t("admin.mabrouk.editor.effectiveFrom")}>
-              <input className={inputClass} type="date" value={form.effectiveFrom} onChange={(event) => setField("effectiveFrom", event.target.value)} />
+              <ConsultDateField value={form.effectiveFrom} onChange={(value) => setField("effectiveFrom", value)} />
             </Field>
             <Field label={t("admin.mabrouk.editor.effectiveUntil")}>
-              <input className={inputClass} type="date" value={form.effectiveUntil} onChange={(event) => setField("effectiveUntil", event.target.value)} />
+              <ConsultDateField value={form.effectiveUntil} onChange={(value) => setField("effectiveUntil", value)} />
             </Field>
             <Field label={t("admin.mabrouk.editor.reviewAt")}>
-              <input className={inputClass} type="date" value={form.reviewAt} onChange={(event) => setField("reviewAt", event.target.value)} />
+              <ConsultDateField value={form.reviewAt} onChange={(value) => setField("reviewAt", value)} />
             </Field>
             {form.overridesBuiltInKey ? (
               <Field label={t("admin.mabrouk.knowledge.builtInBadge")}>
@@ -317,11 +332,11 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
             </section>
           ) : null}
 
-          <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--wesal-border)] pt-4">
-            <button type="button" className="btn-outline" disabled={busy} onClick={onClose}>{t("admin.mabrouk.action.cancel")}</button>
-            <button type="button" className="btn-outline" disabled={busy} onClick={() => void previewDraft()}>{t("admin.mabrouk.knowledge.preview")}</button>
-            <button type="button" className="btn-outline" disabled={busy} onClick={() => void saveDraft()}>{t("admin.mabrouk.editor.saveDraft")}</button>
-            <button type="button" className="btn-primary" disabled={busy || !editingId && !form.key} onClick={() => void publish()}>
+          <footer className="grid grid-cols-2 gap-x-2 gap-y-2 border-t border-[var(--wesal-border)] px-1 pt-4">
+            <button type="button" className="btn-outline w-full justify-center" disabled={busy} onClick={onClose}>{t("admin.mabrouk.action.cancel")}</button>
+            <button type="button" className="btn-outline w-full justify-center" disabled={busy} onClick={() => void previewDraft()}>{t("admin.mabrouk.knowledge.preview")}</button>
+            <button type="button" className="btn-outline w-full justify-center" disabled={busy} onClick={() => void saveDraft()}>{t("admin.mabrouk.editor.saveDraft")}</button>
+            <button type="button" className="btn-primary w-full justify-center" disabled={busy || !editingId && !form.key} onClick={() => void publish()}>
               {t("admin.mabrouk.editor.publish")}
             </button>
           </footer>
@@ -332,13 +347,15 @@ export default function MabroukKnowledgeEditor({ article, onClose, onSaved }: Pr
 }
 
 const inputClass = "min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]";
+const selectClass =
+  "min-h-11 w-fit max-w-full min-w-[12.5rem] rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]";
 const textareaClass = "min-h-28 w-full resize-y rounded-xl border border-[var(--wesal-border)] bg-white px-3 py-2 text-sm leading-6 text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]";
 
 function Field({ label, className = "", children }: { label: string; className?: string; children: React.ReactNode }) {
   return (
-    <label className={"block space-y-1.5 " + className}>
+    <div className={"block space-y-1.5 " + className}>
       <span className="text-xs font-bold text-[var(--wesal-text)]">{label}</span>
       {children}
-    </label>
+    </div>
   );
 }

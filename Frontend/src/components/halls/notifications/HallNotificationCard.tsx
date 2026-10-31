@@ -228,8 +228,8 @@ export default function HallNotificationCard({
 
         <Divider />
 
-        {/* Status + chat */}
-        <div className="flex shrink-0 flex-col items-center justify-center gap-2 border-t border-[var(--wesal-border)] pt-3 lg:w-[11.5rem] lg:border-t-0 lg:px-3.5 lg:py-3.5">
+        {/* Status + chat — same centered row */}
+        <div className="flex shrink-0 flex-row flex-wrap items-center justify-center gap-2 border-t border-[var(--wesal-border)] pt-3 lg:w-[14rem] lg:border-t-0 lg:px-3.5 lg:py-3.5">
           {depositBadge ? (
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.68rem] font-bold ${depositBadge.className}`}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import WesalSelect from "@/components/ui/WesalSelect";
 import { useT } from "@/i18n";
 import { adminMabroukService } from "@/services/admin-mabrouk";
 import type { KnowledgeArticle, SimulatorResult } from "@/types/mabrouk-knowledge";
@@ -94,13 +95,17 @@ export default function MabroukSimulatorPage({ initialQuestion = "" }: { initial
           )}
 
           {testDraft ? (
-            <select className="min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm sm:max-w-xl"
-              value={draftId} onChange={(event) => setDraftId(event.target.value)} required>
-              <option value="">{pageLoading ? t("admin.mabrouk.loading") : t("admin.mabrouk.simulator.chooseDraft")}</option>
-              {drafts.map((article) => (
-                <option key={article.id} value={article.id}>{article.title} · {article.key}</option>
-              ))}
-            </select>
+            <WesalSelect
+              className="sm:max-w-xl"
+              value={draftId}
+              onChange={setDraftId}
+              placeholder={pageLoading ? t("admin.mabrouk.loading") : t("admin.mabrouk.simulator.chooseDraft")}
+              options={drafts.map((article) => ({
+                value: article.id,
+                label: `${article.title} · ${article.key}`,
+              }))}
+              testId="mabrouk-simulator-draft"
+            />
           ) : null}
         </div>
         <div className="w-full px-1.5">
