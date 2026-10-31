@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import AnchoredPanel from "@/components/ui/AnchoredPanel";
 import { useT } from "@/i18n";
 import { toHoursAfterFrom } from "@/lib/hourly-slots";
 
@@ -46,12 +47,16 @@ type HourMenuProps = {
 function HourMenu({ testId, value, hours, placeholder, disabled = false, onChange }: HourMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const listId = useId();
 
   useEffect(() => {
     if (!open) return;
     const onPointer = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -69,6 +74,7 @@ function HourMenu({ testId, value, hours, placeholder, disabled = false, onChang
   return (
     <div ref={rootRef} className="relative mt-1.5">
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         aria-haspopup="listbox"
@@ -97,8 +103,13 @@ function HourMenu({ testId, value, hours, placeholder, disabled = false, onChang
           />
         </svg>
       </button>
-      {open ? (
-        <div className="absolute bottom-full z-30 mb-1 flex w-full flex-col-reverse overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-white shadow-lg">
+      <AnchoredPanel
+        open={open && !disabled}
+        anchorRef={triggerRef}
+        panelRef={panelRef}
+        options={{ width: "anchor", estimateHeight: 300, preferUp: true }}
+        className="flex flex-col-reverse overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-white shadow-lg"
+      >
           <div className="bg-[var(--wesal-maroon)] px-3 py-2 text-center text-sm font-bold text-white">
             {placeholder}
           </div>
@@ -137,8 +148,7 @@ function HourMenu({ testId, value, hours, placeholder, disabled = false, onChang
               );
             })}
           </ul>
-        </div>
-      ) : null}
+      </AnchoredPanel>
     </div>
   );
 }

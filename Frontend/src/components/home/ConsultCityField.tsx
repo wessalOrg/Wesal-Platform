@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import AnchoredPanel from "@/components/ui/AnchoredPanel";
 
 type CityOption = {
   id: string;
@@ -23,7 +24,8 @@ export default function ConsultCityField({
   const listId = useId();
   const valueId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const selectedIndex = Math.max(
     0,
     options.findIndex((option) => option.id === value),
@@ -34,10 +36,12 @@ export default function ConsultCityField({
 
   useEffect(() => {
     if (!open) return;
-    listRef.current?.focus();
+    panelRef.current?.focus?.();
 
     function onPointer(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     }
 
     document.addEventListener("mousedown", onPointer);
@@ -49,7 +53,7 @@ export default function ConsultCityField({
     setOpen(false);
   }
 
-  function onListKey(event: KeyboardEvent<HTMLDivElement>) {
+  function onListKey(event: KeyboardEvent<HTMLElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setCursor((index) => Math.min(options.length - 1, index + 1));
@@ -77,12 +81,15 @@ export default function ConsultCityField({
       className="consult-city"
       ref={rootRef}
       onBlur={(event) => {
-        if (!(event.relatedTarget instanceof Node) || !rootRef.current?.contains(event.relatedTarget)) {
-          setOpen(false);
+        const next = event.relatedTarget;
+        if (next instanceof Node) {
+          if (rootRef.current?.contains(next) || panelRef.current?.contains(next)) return;
         }
+        setOpen(false);
       }}
     >
       <button
+        ref={triggerRef}
         type="button"
         className="consult-input consult-city-trigger"
         aria-haspopup="listbox"
@@ -113,37 +120,38 @@ export default function ConsultCityField({
           />
         </svg>
       </button>
-      {open ? (
-        <div
-          id={listId}
-          ref={listRef}
-          role="listbox"
-          tabIndex={-1}
-          aria-labelledby={labelId}
-          className="consult-city-panel"
-          onKeyDown={onListKey}
-        >
-          {options.map((option, index) => (
-            <button
-              key={option.id}
-              type="button"
-              role="option"
-              aria-selected={option.id === value}
-              className={[
-                "consult-city-option",
-                option.id === value ? "is-selected" : "",
-                index === cursor ? "is-active" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onMouseEnter={() => setCursor(index)}
-              onClick={() => choose(option.id)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <AnchoredPanel
+        open={open}
+        anchorRef={triggerRef}
+        panelRef={panelRef}
+        options={{ width: "anchor", estimateHeight: 260 }}
+        id={listId}
+        role="listbox"
+        tabIndex={-1}
+        aria-labelledby={labelId}
+        className="consult-city-panel"
+        onKeyDown={onListKey}
+      >
+        {options.map((option, index) => (
+          <button
+            key={option.id}
+            type="button"
+            role="option"
+            aria-selected={option.id === value}
+            className={[
+              "consult-city-option",
+              option.id === value ? "is-selected" : "",
+              index === cursor ? "is-active" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            onMouseEnter={() => setCursor(index)}
+            onClick={() => choose(option.id)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </AnchoredPanel>
     </div>
   );
 }

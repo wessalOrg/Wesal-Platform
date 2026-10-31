@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import AnchoredPanel from "@/components/ui/AnchoredPanel";
 import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
 import { useT } from "@/i18n";
 
@@ -32,6 +33,8 @@ export default function HallAddressSelect({
   const t = useT();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -48,9 +51,9 @@ export default function HallAddressSelect({
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -73,6 +76,7 @@ export default function HallAddressSelect({
   return (
     <div ref={rootRef} className="relative min-w-0">
       <button
+        ref={triggerRef}
         id={id}
         type="button"
         role="combobox"
@@ -102,65 +106,67 @@ export default function HallAddressSelect({
         <ChevronIcon open={open} />
       </button>
 
-      {open ? (
-        <div
-          id={listId}
-          role="listbox"
-          aria-labelledby={id}
-          data-testid="hall-address-list"
-          className="absolute inset-inline-start-0 z-40 mt-2 w-full min-w-0 overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_36px_rgba(90,55,45,0.12)]"
-        >
-          <div className="border-b border-[var(--wesal-border)] px-2.5 py-2">
-            <input
-              ref={searchRef}
-              type="search"
-              value={query}
-              aria-label={t("owner.management.addHall.fields.addressSearch")}
-              placeholder={t("owner.management.addHall.fields.addressSearch")}
-              autoComplete="off"
-              onChange={(event) => setQuery(event.target.value)}
-              className="box-border min-h-10 w-full min-w-0 rounded-lg border border-[var(--wesal-border)] bg-white px-3 py-2 text-sm outline-none transition focus-visible:border-[var(--wesal-maroon)] focus-visible:ring-2 focus-visible:ring-[var(--wesal-maroon)]/20"
-            />
-          </div>
-
-          <ul className="max-h-56 min-w-0 overflow-auto py-1">
-            {filtered.length === 0 ? (
-              <li className="px-3.5 py-2.5 text-sm text-[var(--wesal-muted)]">
-                {query.trim() ? emptyHint : placeholder}
-              </li>
-            ) : (
-              filtered.map((address) => {
-                const selected = value === address;
-                return (
-                  <li key={address}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={selected}
-                      className={`flex w-full items-center px-3.5 py-2.5 text-start text-sm transition ${
-                        selected
-                          ? "bg-[var(--wesal-maroon)] font-semibold text-white"
-                          : "text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
-                      }`}
-                      onClick={() => {
-                        onChange(address);
-                        setOpen(false);
-                      }}
-                    >
-                      {address}
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-          <p className="sr-only" role="status">
-            {t("owner.management.addHall.fields.addressCount", {
-              count: filtered.length,
-            })}
-          </p>
+      <AnchoredPanel
+        open={open && !disabled}
+        anchorRef={triggerRef}
+        panelRef={panelRef}
+        options={{ width: "anchor", estimateHeight: 340 }}
+        id={listId}
+        role="listbox"
+        aria-labelledby={id}
+        data-testid="hall-address-list"
+        className="min-w-0 overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_36px_rgba(90,55,45,0.12)]"
+      >
+        <div className="border-b border-[var(--wesal-border)] px-2.5 py-2">
+          <input
+            ref={searchRef}
+            type="search"
+            value={query}
+            aria-label={t("owner.management.addHall.fields.addressSearch")}
+            placeholder={t("owner.management.addHall.fields.addressSearch")}
+            autoComplete="off"
+            onChange={(event) => setQuery(event.target.value)}
+            className="box-border min-h-10 w-full min-w-0 rounded-lg border border-[var(--wesal-border)] bg-white px-3 py-2 text-sm outline-none transition focus-visible:border-[var(--wesal-maroon)] focus-visible:ring-2 focus-visible:ring-[var(--wesal-maroon)]/20"
+          />
         </div>
-      ) : null}
+
+        <ul className="max-h-56 min-w-0 overflow-auto py-1">
+          {filtered.length === 0 ? (
+            <li className="px-3.5 py-2.5 text-sm text-[var(--wesal-muted)]">
+              {query.trim() ? emptyHint : placeholder}
+            </li>
+          ) : (
+            filtered.map((address) => {
+              const selected = value === address;
+              return (
+                <li key={address}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    className={`flex w-full items-center px-3.5 py-2.5 text-start text-sm transition ${
+                      selected
+                        ? "bg-[var(--wesal-maroon)] font-semibold text-white"
+                        : "text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
+                    }`}
+                    onClick={() => {
+                      onChange(address);
+                      setOpen(false);
+                    }}
+                  >
+                    {address}
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+        <p className="sr-only" role="status">
+          {t("owner.management.addHall.fields.addressCount", {
+            count: filtered.length,
+          })}
+        </p>
+      </AnchoredPanel>
     </div>
   );
 }

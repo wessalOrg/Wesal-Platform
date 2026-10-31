@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type RefObject } from "react";
 import { usePathname } from "next/navigation";
 
 /**
  * Open/close state for popovers and menus: closes on route change,
  * outside pointer, and Escape.
  */
-export function useDismissibleOverlay() {
+export function useDismissibleOverlay(
+  extraContains?: Array<RefObject<HTMLElement | null>>,
+) {
   const pathname = usePathname();
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -24,9 +26,10 @@ export function useDismissibleOverlay() {
     if (!open) return;
 
     const onPointerDown = (event: PointerEvent) => {
-      const root = rootRef.current;
       const target = event.target as Node | null;
-      if (root && target && root.contains(target)) return;
+      if (!target) return;
+      if (rootRef.current?.contains(target)) return;
+      if (extraContains?.some((ref) => ref.current?.contains(target))) return;
       if (
         target instanceof Element &&
         target.closest("[data-testid='account-notifications-panel']")
@@ -45,7 +48,7 @@ export function useDismissibleOverlay() {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, extraContains]);
 
   return { open, setOpen, close, toggle, rootRef, panelId };
 }

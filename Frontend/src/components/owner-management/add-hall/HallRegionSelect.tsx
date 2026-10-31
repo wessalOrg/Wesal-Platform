@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import AnchoredPanel from "@/components/ui/AnchoredPanel";
 import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
 import {
   HALL_REGION_LABEL_KEYS,
@@ -32,6 +33,8 @@ export default function HallRegionSelect({
   const t = useT();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
 
   const placeholder = t("owner.management.addHall.fields.regionPlaceholder");
@@ -42,9 +45,9 @@ export default function HallRegionSelect({
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -60,6 +63,7 @@ export default function HallRegionSelect({
   return (
     <div ref={rootRef} className="owner-add-hall-region-select relative min-w-0">
       <button
+        ref={triggerRef}
         id={id}
         type="button"
         role="combobox"
@@ -87,57 +91,60 @@ export default function HallRegionSelect({
         <ChevronIcon open={open} />
       </button>
 
-      {open ? (
-        <ul
-          id={listId}
-          role="listbox"
-          aria-labelledby={id}
-          data-testid="hall-region-list"
-          className="absolute inset-inline-start-0 z-40 mt-2 w-full overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_36px_rgba(90,55,45,0.12)]"
-        >
-          <li>
-            <button
-              type="button"
-              role="option"
-              aria-selected={!value}
-              className={`flex w-full items-center px-3.5 py-2.5 text-start text-sm transition ${
-                !value
-                  ? "bg-[var(--wesal-maroon)] font-semibold text-white"
-                  : "text-[var(--wesal-muted)] hover:bg-[var(--wesal-pink-soft)]"
-              }`}
-              onClick={() => {
-                onChange("");
-                setOpen(false);
-              }}
-            >
-              {placeholder}
-            </button>
-          </li>
-          {HALL_REGIONS.map((region) => {
-            const selected = value === region;
-            return (
-              <li key={region}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  className={`flex w-full items-center px-3.5 py-2.5 text-start text-sm transition ${
-                    selected
-                      ? "bg-[var(--wesal-maroon)] font-semibold text-white"
-                      : "text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
-                  }`}
-                  onClick={() => {
-                    if (isHallRegion(region)) onChange(region);
-                    setOpen(false);
-                  }}
-                >
-                  {t(HALL_REGION_LABEL_KEYS[region])}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      <AnchoredPanel
+        as="ul"
+        open={open && !disabled}
+        anchorRef={triggerRef}
+        panelRef={panelRef}
+        options={{ width: "anchor", estimateHeight: 320 }}
+        id={listId}
+        role="listbox"
+        aria-labelledby={id}
+        data-testid="hall-region-list"
+        className="m-0 list-none overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_36px_rgba(90,55,45,0.12)]"
+      >
+        <li>
+          <button
+            type="button"
+            role="option"
+            aria-selected={!value}
+            className={`flex w-full items-center px-3.5 py-2.5 text-start text-sm transition ${
+              !value
+                ? "bg-[var(--wesal-maroon)] font-semibold text-white"
+                : "text-[var(--wesal-muted)] hover:bg-[var(--wesal-pink-soft)]"
+            }`}
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+          >
+            {placeholder}
+          </button>
+        </li>
+        {HALL_REGIONS.map((region) => {
+          const selected = value === region;
+          return (
+            <li key={region}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={selected}
+                className={`flex w-full items-center px-3.5 py-2.5 text-start text-sm transition ${
+                  selected
+                    ? "bg-[var(--wesal-maroon)] font-semibold text-white"
+                    : "text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
+                }`}
+                onClick={() => {
+                  if (isHallRegion(region)) onChange(region);
+                  setOpen(false);
+                }}
+              >
+                {t(HALL_REGION_LABEL_KEYS[region])}
+              </button>
+            </li>
+          );
+        })}
+      </AnchoredPanel>
     </div>
   );
 }

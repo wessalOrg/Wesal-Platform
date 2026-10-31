@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import WesalSelect from "@/components/ui/WesalSelect";
 import { useT } from "@/i18n";
 import { ADMIN_MABROUK_PATH } from "@/lib/account-profile-path";
 import { adminMabroukService } from "@/services/admin-mabrouk";
@@ -289,11 +290,18 @@ function GapDetail({
             </p>
           ) : null}
           <div className="flex gap-2">
-            <select className="min-h-10 min-w-0 flex-1 rounded-xl border border-[var(--wesal-border)] bg-white px-2 text-xs"
-              value={linkArticleId} onChange={(event) => setLinkArticleId(event.target.value)}>
-              <option value="">{t("admin.mabrouk.gaps.selectArticle")}</option>
-              {articles.map((article) => <option key={article.id} value={article.id}>{article.title}</option>)}
-            </select>
+            <WesalSelect
+              className="min-w-0 flex-1"
+              value={linkArticleId}
+              onChange={setLinkArticleId}
+              placeholder={t("admin.mabrouk.gaps.selectArticle")}
+              options={articles.map((article) => ({
+                value: article.id,
+                label: article.title,
+              }))}
+              triggerClassName="flex min-h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-[var(--wesal-border)] bg-white px-2 text-start text-xs text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
+              testId="mabrouk-gap-link-article"
+            />
             <button type="button" className="btn-outline shrink-0 px-3" disabled={busy || !linkArticleId} onClick={onLink}>{t("admin.mabrouk.gaps.linkArticle")}</button>
           </div>
           <div className="flex gap-2">

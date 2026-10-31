@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import AnchoredPanel from "@/components/ui/AnchoredPanel";
 import { useT } from "@/i18n";
 import {
   OCCASION_TYPE_KEYS,
@@ -114,6 +115,8 @@ export default function OccasionTypePicker({
   const t = useT();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const selected = OCCASION_TYPE_KEYS.includes(value as OccasionTypeKey)
     ? (value as OccasionTypeKey)
@@ -122,7 +125,9 @@ export default function OccasionTypePicker({
   useEffect(() => {
     if (!open) return;
     const onDoc = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -138,6 +143,7 @@ export default function OccasionTypePicker({
   return (
     <div ref={rootRef} className="relative mt-1.5">
       <button
+        ref={triggerRef}
         id={id}
         type="button"
         disabled={disabled}
@@ -172,55 +178,58 @@ export default function OccasionTypePicker({
         </svg>
       </button>
 
-      {open ? (
-        <ul
-          id={listId}
-          role="listbox"
-          aria-label={t("halls.hourly.eventType")}
-          className="occasion-type-menu relative z-20 mt-1.5 max-h-[14.5rem] overflow-y-auto rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] py-0.5 shadow-[0_16px_40px_rgba(40,25,20,0.18)]"
-          data-testid="hourly-event-type-list"
-        >
-          {OCCASION_TYPE_KEYS.map((key, index) => {
-            const active = selected === key;
-            return (
-              <li key={key} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  disabled={disabled}
-                  onClick={() => {
-                    onChange(key);
-                    setOpen(false);
-                  }}
-                  className={[
-                    "flex w-full items-center gap-2.5 px-3 py-1.5 text-start text-[0.8125rem] transition",
-                    active
-                      ? "bg-[var(--wesal-pink-soft)] font-bold text-[var(--wesal-maroon)]"
-                      : "font-semibold text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]/70",
-                    index > 0 ? "border-t border-[var(--wesal-border)]/70" : "",
-                  ].join(" ")}
-                  data-testid={`hourly-event-type-${key}`}
-                >
-                  <span className={active ? "text-[var(--wesal-maroon)]" : "text-[var(--wesal-muted)]"}>
-                    <OccasionIcon type={key} />
+      <AnchoredPanel
+        as="ul"
+        open={open}
+        anchorRef={triggerRef}
+        panelRef={panelRef}
+        options={{ width: "anchor", estimateHeight: 260 }}
+        id={listId}
+        role="listbox"
+        aria-label={t("halls.hourly.eventType")}
+        className="occasion-type-menu m-0 list-none rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-white)] py-0.5 shadow-[0_16px_40px_rgba(40,25,20,0.18)]"
+        data-testid="hourly-event-type-list"
+      >
+        {OCCASION_TYPE_KEYS.map((key, index) => {
+          const active = selected === key;
+          return (
+            <li key={key} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={active}
+                disabled={disabled}
+                onClick={() => {
+                  onChange(key);
+                  setOpen(false);
+                }}
+                className={[
+                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-start text-[0.8125rem] transition",
+                  active
+                    ? "bg-[var(--wesal-maroon)] font-bold text-white"
+                    : "font-semibold text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]/70",
+                  index > 0 ? "border-t border-[var(--wesal-border)]/70" : "",
+                ].join(" ")}
+                data-testid={`hourly-event-type-${key}`}
+              >
+                <span className={active ? "text-white" : "text-[var(--wesal-muted)]"}>
+                  <OccasionIcon type={key} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block leading-4">{t(occasionTypeI18nKey(key))}</span>
+                  <span
+                    className={`mt-px block text-[0.65rem] font-normal leading-snug ${
+                      active ? "text-white/80" : "text-[var(--wesal-muted)]"
+                    }`}
+                  >
+                    {t(occasionTypeExamplesI18nKey(key))}
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block leading-4">{t(occasionTypeI18nKey(key))}</span>
-                    <span
-                      className={`mt-px block text-[0.65rem] font-normal leading-snug ${
-                        active ? "text-[var(--wesal-maroon)]/70" : "text-[var(--wesal-muted)]"
-                      }`}
-                    >
-                      {t(occasionTypeExamplesI18nKey(key))}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </AnchoredPanel>
     </div>
   );
 }

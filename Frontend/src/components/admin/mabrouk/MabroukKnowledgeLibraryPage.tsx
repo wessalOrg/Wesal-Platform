@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useT } from "@/i18n";
 import MabroukKnowledgeEditor from "@/components/admin/mabrouk/MabroukKnowledgeEditor";
+import WesalSelect from "@/components/ui/WesalSelect";
+import { useT } from "@/i18n";
 import { ADMIN_MABROUK_PATH } from "@/lib/account-profile-path";
 import { adminMabroukService } from "@/services/admin-mabrouk";
 import type { KnowledgeArticle } from "@/types/mabrouk-knowledge";
@@ -160,33 +161,58 @@ export default function MabroukKnowledgeLibraryPage() {
       >
         <input className="min-h-11 rounded-xl border border-[var(--wesal-border)] px-3 text-center text-sm outline-none focus:border-[var(--wesal-maroon)] sm:col-span-2 sm:text-start xl:col-span-2"
           placeholder={t("admin.mabrouk.knowledge.search")} value={search} onChange={(event) => setSearch(event.target.value)} />
-        <FilterSelect label={t("admin.mabrouk.knowledge.source")} value={source} onChange={setSource}>
-          <option value="">{t("admin.mabrouk.knowledge.allSources")}</option>
-          <option value="dynamic">{t("admin.mabrouk.knowledge.dynamic")}</option>
-          <option value="builtin">{t("admin.mabrouk.knowledge.builtInBadge")}</option>
-        </FilterSelect>
-        <FilterSelect label={t("admin.mabrouk.knowledge.publication")} value={publication} onChange={setPublication}>
-          <option value="">{t("admin.mabrouk.knowledge.all")}</option>
-          <option value="Draft">{t("admin.mabrouk.status.Draft")}</option>
-          <option value="Published">{t("admin.mabrouk.status.Published")}</option>
-          <option value="Archived">{t("admin.mabrouk.status.Archived")}</option>
-        </FilterSelect>
-        <FilterSelect label={t("admin.mabrouk.knowledge.verification")} value={verification} onChange={setVerification}>
-          <option value="">{t("admin.mabrouk.knowledge.all")}</option>
-          <option value="Verified">{t("admin.mabrouk.editor.verified")}</option>
-          <option value="NeedsVerification">{t("admin.mabrouk.editor.needsVerification")}</option>
-        </FilterSelect>
-        <FilterSelect label={t("admin.mabrouk.knowledge.category")} value={category} onChange={setCategory}>
-          <option value="">{t("admin.mabrouk.knowledge.all")}</option>
-          {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-        </FilterSelect>
-        <FilterSelect label={t("admin.mabrouk.knowledge.review")} value={review} onChange={setReview}>
-          <option value="">{t("admin.mabrouk.knowledge.all")}</option>
-          <option value="current">{t("admin.mabrouk.knowledge.current")}</option>
-          <option value="review-due">{t("admin.mabrouk.knowledge.reviewDue")}</option>
-          <option value="expiring">{t("admin.mabrouk.knowledge.expiring")}</option>
-          <option value="expired">{t("admin.mabrouk.knowledge.expired")}</option>
-        </FilterSelect>
+        <FilterSelect
+          label={t("admin.mabrouk.knowledge.source")}
+          value={source}
+          onChange={setSource}
+          options={[
+            { value: "", label: t("admin.mabrouk.knowledge.allSources") },
+            { value: "dynamic", label: t("admin.mabrouk.knowledge.dynamic") },
+            { value: "builtin", label: t("admin.mabrouk.knowledge.builtInBadge") },
+          ]}
+        />
+        <FilterSelect
+          label={t("admin.mabrouk.knowledge.publication")}
+          value={publication}
+          onChange={setPublication}
+          options={[
+            { value: "", label: t("admin.mabrouk.knowledge.all") },
+            { value: "Draft", label: t("admin.mabrouk.status.Draft") },
+            { value: "Published", label: t("admin.mabrouk.status.Published") },
+            { value: "Archived", label: t("admin.mabrouk.status.Archived") },
+          ]}
+        />
+        <FilterSelect
+          label={t("admin.mabrouk.knowledge.verification")}
+          value={verification}
+          onChange={setVerification}
+          options={[
+            { value: "", label: t("admin.mabrouk.knowledge.all") },
+            { value: "Verified", label: t("admin.mabrouk.editor.verified") },
+            { value: "NeedsVerification", label: t("admin.mabrouk.editor.needsVerification") },
+          ]}
+        />
+        <FilterSelect
+          label={t("admin.mabrouk.knowledge.category")}
+          value={category}
+          onChange={setCategory}
+          options={[
+            { value: "", label: t("admin.mabrouk.knowledge.all") },
+            ...categories.map((item) => ({ value: item, label: item })),
+          ]}
+        />
+        <FilterSelect
+          label={t("admin.mabrouk.knowledge.review")}
+          value={review}
+          onChange={setReview}
+          options={[
+            { value: "", label: t("admin.mabrouk.knowledge.all") },
+            { value: "current", label: t("admin.mabrouk.knowledge.current") },
+            { value: "review-due", label: t("admin.mabrouk.knowledge.reviewDue") },
+            { value: "expiring", label: t("admin.mabrouk.knowledge.expiring") },
+            { value: "expired", label: t("admin.mabrouk.knowledge.expired") },
+          ]}
+        />
         <button type="submit" className="btn-outline min-h-11 w-full justify-center">{t("admin.mabrouk.knowledge.applyFilters")}</button>
       </form>
 
@@ -233,21 +259,25 @@ export default function MabroukKnowledgeLibraryPage() {
 }
 
 function FilterSelect({
-  label, value, onChange, children,
+  label,
+  value,
+  onChange,
+  options,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  children: React.ReactNode;
+  options: Array<{ value: string; label: string }>;
 }) {
   return (
-    <label className="block min-w-0">
-      <span className="sr-only">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}
-        className="mabrouk-library-filter min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-2.5 text-center text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]">
-        {children}
-      </select>
-    </label>
+    <WesalSelect
+      label={label}
+      labelHidden
+      value={value}
+      onChange={onChange}
+      options={options}
+      triggerClassName="mabrouk-library-filter flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-[var(--wesal-border)] bg-white px-2.5 text-center text-sm text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
+    />
   );
 }
 

@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
+import WesalSelect from "@/components/ui/WesalSelect";
 import { useT } from "@/i18n";
 import { adminMabroukService } from "@/services/admin-mabrouk";
 import type { KnowledgeArticle, KnowledgeRevision } from "@/types/mabrouk-knowledge";
@@ -68,13 +69,17 @@ export default function MabroukHistoryPage() {
         <h2 className="text-lg font-bold text-[var(--wesal-maroon-dark)]">{t("admin.mabrouk.history.title")}</h2>
       </section>
       {error ? <p className="rounded-xl bg-[var(--wesal-pink-soft)] px-4 py-3 text-sm text-[var(--wesal-maroon-dark)]" role="alert">{t("admin.mabrouk.error")}</p> : null}
-      <label className="block max-w-2xl space-y-1.5">
-        <span className="text-xs font-bold text-[var(--wesal-text)]">{t("admin.mabrouk.editor.title")}</span>
-        <select className="min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm"
-          value={articleId} onChange={(event) => setArticleId(event.target.value)}>
-          {articles.map((article) => <option key={article.id} value={article.id}>{article.title} · {article.key}</option>)}
-        </select>
-      </label>
+      <WesalSelect
+        className="max-w-2xl"
+        label={t("admin.mabrouk.editor.title")}
+        value={articleId}
+        onChange={setArticleId}
+        options={articles.map((article) => ({
+          value: article.id,
+          label: `${article.title} · ${article.key}`,
+        }))}
+        testId="mabrouk-history-article"
+      />
       {revisions.length === 0 ? <div className="seeker-pending-empty">{t("admin.mabrouk.empty")}</div> : (
         <section className="space-y-3">
           {revisions.map((revision) => (

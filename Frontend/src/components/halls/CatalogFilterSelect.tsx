@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import AnchoredPanel from "@/components/ui/AnchoredPanel";
 
 export type CatalogFilterOption = {
   value: string;
@@ -30,6 +31,8 @@ export default function CatalogFilterSelect({
 }: CatalogFilterSelectProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
   const display = selected?.label || placeholder || "";
@@ -38,7 +41,9 @@ export default function CatalogFilterSelect({
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -57,6 +62,7 @@ export default function CatalogFilterSelect({
         {label}
       </span>
       <button
+        ref={triggerRef}
         id={id}
         type="button"
         role="combobox"
@@ -83,39 +89,42 @@ export default function CatalogFilterSelect({
         <ChevronIcon open={open} />
       </button>
 
-      {open && !disabled ? (
-        <ul
-          id={listId}
-          role="listbox"
-          aria-labelledby={`${id}-label`}
-          data-testid={`${testId}-list`}
-          className="absolute inset-x-0 z-40 mt-2 max-h-64 overflow-y-auto rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_36px_rgba(90,55,45,0.14)]"
-        >
-          {options.map((option) => {
-            const isSelected = option.value === value;
-            return (
-              <li key={option.value || "empty"}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={isSelected}
-                  className={`flex w-full items-center px-3.5 py-2.5 text-start text-sm transition ${
-                    isSelected
-                      ? "bg-[var(--wesal-maroon)] font-semibold text-white"
-                      : "text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
-                  }`}
-                  onClick={() => {
-                    onChange(option.value);
-                    setOpen(false);
-                  }}
-                >
-                  {option.label}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      <AnchoredPanel
+        as="ul"
+        open={open && !disabled}
+        anchorRef={triggerRef}
+        panelRef={panelRef}
+        options={{ width: "anchor", estimateHeight: 280 }}
+        id={listId}
+        role="listbox"
+        aria-labelledby={`${id}-label`}
+        data-testid={`${testId}-list`}
+        className="m-0 list-none rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_36px_rgba(90,55,45,0.14)]"
+      >
+        {options.map((option) => {
+          const isSelected = option.value === value;
+          return (
+            <li key={option.value || "empty"}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                className={`flex w-full items-center px-3.5 py-2.5 text-start text-sm transition ${
+                  isSelected
+                    ? "bg-[var(--wesal-maroon)] font-semibold text-white"
+                    : "text-[var(--wesal-text)] hover:bg-[var(--wesal-pink-soft)]"
+                }`}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            </li>
+          );
+        })}
+      </AnchoredPanel>
     </div>
   );
 }

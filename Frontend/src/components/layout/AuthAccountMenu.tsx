@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type MouseEvent, type ReactNode } from "react";
+import { useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import AudioControlToggle from "@/components/halls/notifications/AudioControlToggle";
+import AnchoredPanel from "@/components/ui/AnchoredPanel";
 import { useDismissibleOverlay } from "@/hooks/useDismissibleOverlay";
 import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
@@ -45,8 +46,11 @@ export default function AuthAccountMenu({
 }: AuthAccountMenuProps) {
   const t = useT();
   const pathname = usePathname();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const extraContains = useMemo(() => [panelRef], []);
   const { open, setOpen, close, toggle, rootRef, panelId: menuId } =
-    useDismissibleOverlay();
+    useDismissibleOverlay(extraContains);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const identity = useUserIdentity();
   const showAudio = identity.isHallOwner;
@@ -68,18 +72,8 @@ export default function AuthAccountMenu({
     onNavigate?.();
   };
 
-  const menu = (
-    <div
-      id={menuId}
-      role="menu"
-      aria-label={menuLabel}
-      className={`wesal-account-menu ${
-        stacked
-          ? "relative mt-2 w-full"
-          : "absolute end-0 top-[calc(100%+0.55rem)] z-50 w-[min(18.5rem,calc(100vw-1.25rem))]"
-      }`}
-      data-testid="navbar-account-menu"
-    >
+  const menuBody = (
+    <>
       <div className="wesal-account-menu-head" role="none">
         <span className="wesal-account-menu-head-avatar" aria-hidden="true">
           {avatarUrl ? (
@@ -125,7 +119,7 @@ export default function AuthAccountMenu({
           <span>{logoutLabel}</span>
         </button>
       </div>
-    </div>
+    </>
   );
 
   return (
@@ -135,6 +129,7 @@ export default function AuthAccountMenu({
       data-testid="navbar-authenticated"
     >
       <button
+        ref={triggerRef}
         type="button"
         className={`wesal-account-chip ${stacked ? "w-full" : ""}`}
         aria-label={menuLabel}
@@ -157,7 +152,33 @@ export default function AuthAccountMenu({
         </span>
       </button>
 
-      {open ? menu : null}
+      {stacked && open ? (
+        <div
+          id={menuId}
+          role="menu"
+          aria-label={menuLabel}
+          className="wesal-account-menu relative mt-2 w-full"
+          data-testid="navbar-account-menu"
+        >
+          {menuBody}
+        </div>
+      ) : null}
+
+      {!stacked ? (
+        <AnchoredPanel
+          open={open}
+          anchorRef={triggerRef}
+          panelRef={panelRef}
+          options={{ width: 18.5 * 16, estimateHeight: 280, align: "end" }}
+          id={menuId}
+          role="menu"
+          aria-label={menuLabel}
+          className="wesal-account-menu"
+          data-testid="navbar-account-menu"
+        >
+          {menuBody}
+        </AnchoredPanel>
+      ) : null}
 
       <LogoutConfirmDialog
         open={confirmLogout}

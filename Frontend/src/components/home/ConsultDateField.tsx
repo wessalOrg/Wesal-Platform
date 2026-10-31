@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import AnchoredPanel from "@/components/ui/AnchoredPanel";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 
@@ -34,6 +35,8 @@ export default function ConsultDateField({ value, onChange }: ConsultDateFieldPr
   const lang = useUiLang();
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const selected = parseIso(value);
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(() => selected ?? new Date());
@@ -48,7 +51,9 @@ export default function ConsultDateField({ value, onChange }: ConsultDateFieldPr
     if (!open) return;
 
     function onPointer(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     }
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(false);
@@ -85,6 +90,7 @@ export default function ConsultDateField({ value, onChange }: ConsultDateFieldPr
   return (
     <div className="consult-date" ref={rootRef}>
       <button
+        ref={triggerRef}
         type="button"
         className="consult-input consult-date-trigger"
         aria-expanded={open}
@@ -98,80 +104,86 @@ export default function ConsultDateField({ value, onChange }: ConsultDateFieldPr
           {shown}
         </span>
       </button>
-      {open ? (
-        <div id={panelId} className="consult-date-panel" dir="ltr">
-          <div className="consult-date-head">
-            <button
-              type="button"
-              className="consult-date-nav"
-              aria-label={t("home.consult.datePrev")}
-              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-            >
-              ‹
-            </button>
-            <p className="consult-date-month">{monthLabel}</p>
-            <button
-              type="button"
-              className="consult-date-nav"
-              aria-label={t("home.consult.dateNext")}
-              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-            >
-              ›
-            </button>
-          </div>
-          <div className="consult-date-grid">
-            {weekdays.map((label, index) => (
-              <span key={`${label}-${index}`} className="consult-date-weekday">
-                {label}
-              </span>
-            ))}
-            {cells.map((day, index) => {
-              if (!day) return <span key={`empty-${index}`} />;
-              const date = new Date(cursor.getFullYear(), cursor.getMonth(), day);
-              const isSelected = selected ? sameDay(date, selected) : false;
-              const isToday = sameDay(date, new Date());
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  className={[
-                    "consult-date-day",
-                    isSelected ? "is-selected" : "",
-                    isToday ? "is-today" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={() => pick(day)}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-          <div className="consult-date-actions">
-            <button
-              type="button"
-              onClick={() => {
-                onChange("");
-                setOpen(false);
-              }}
-            >
-              {t("home.consult.dateClear")}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const today = new Date();
-                setCursor(today);
-                onChange(toIso(today));
-                setOpen(false);
-              }}
-            >
-              {t("home.consult.dateToday")}
-            </button>
-          </div>
+      <AnchoredPanel
+        open={open}
+        anchorRef={triggerRef}
+        panelRef={panelRef}
+        options={{ width: "anchor", estimateHeight: 340 }}
+        id={panelId}
+        className="consult-date-panel"
+        dir="ltr"
+      >
+        <div className="consult-date-head">
+          <button
+            type="button"
+            className="consult-date-nav"
+            aria-label={t("home.consult.datePrev")}
+            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+          >
+            ‹
+          </button>
+          <p className="consult-date-month">{monthLabel}</p>
+          <button
+            type="button"
+            className="consult-date-nav"
+            aria-label={t("home.consult.dateNext")}
+            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+          >
+            ›
+          </button>
         </div>
-      ) : null}
+        <div className="consult-date-grid">
+          {weekdays.map((label, index) => (
+            <span key={`${label}-${index}`} className="consult-date-weekday">
+              {label}
+            </span>
+          ))}
+          {cells.map((day, index) => {
+            if (!day) return <span key={`empty-${index}`} />;
+            const date = new Date(cursor.getFullYear(), cursor.getMonth(), day);
+            const isSelected = selected ? sameDay(date, selected) : false;
+            const isToday = sameDay(date, new Date());
+            return (
+              <button
+                key={day}
+                type="button"
+                className={[
+                  "consult-date-day",
+                  isSelected ? "is-selected" : "",
+                  isToday ? "is-today" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => pick(day)}
+              >
+                {day}
+              </button>
+            );
+          })}
+        </div>
+        <div className="consult-date-actions">
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+          >
+            {t("home.consult.dateClear")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const today = new Date();
+              setCursor(today);
+              onChange(toIso(today));
+              setOpen(false);
+            }}
+          >
+            {t("home.consult.dateToday")}
+          </button>
+        </div>
+      </AnchoredPanel>
     </div>
   );
 }
