@@ -11,8 +11,10 @@ import {
   isSeekerNavActive,
   type SeekerDashboardNavId,
 } from "@/constants/seekerDashboardNav";
+import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useT } from "@/i18n";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
+import { professionalRoleLabelKey } from "@/lib/professional-role-label";
 import UnreadBadge from "@/components/ui/UnreadBadge";
 
 type SeekerSidebarProps = {
@@ -30,9 +32,11 @@ export default function SeekerSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { logout, isLoggingOut } = useAuth();
+  const { role } = useAccountAccess();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const { count: unreadCount, ready: unreadReady } = useUnreadCount();
   const messagesUnread = unreadReady ? unreadCount : 0;
+  const roleLabel = t(professionalRoleLabelKey(role));
 
   return (
     <>
@@ -46,7 +50,7 @@ export default function SeekerSidebar({
           <WesalLogo className="h-11 w-auto" variant="brand" />
           <div className="min-w-0">
             <p className="seeker-dash-sidebar-brand-name">{t("brand.name")}</p>
-            <p className="seeker-dash-sidebar-brand-sub">{t("seeker.role")}</p>
+            <p className="seeker-dash-sidebar-brand-sub">{roleLabel}</p>
           </div>
         </div>
 

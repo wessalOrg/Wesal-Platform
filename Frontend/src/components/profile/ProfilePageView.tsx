@@ -2,20 +2,18 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import PendingProfessionalAccountPanel from "@/components/auth/pending-account/PendingProfessionalAccountPanel";
+import ProfessionalDashboardHome from "@/components/professionals/ProfessionalDashboardHome";
 import SeekerDashboardHome from "@/components/seeker-dashboard/SeekerDashboardHome.lazy";
 import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAccess";
-import { useT } from "@/i18n";
-import { isEventCoordinatorRole, isPhotographerRole } from "@/lib/account-role";
 import {
   COORDINATOR_SETUP_PATH,
   PHOTOGRAPHER_SETUP_PATH,
 } from "@/lib/account-profile-path";
+import { isEventCoordinatorRole } from "@/lib/account-role";
 import { markAuthNavigation } from "@/lib/auth-nav";
 
-/** Default seeker landing — pending professionals see the approval shell. */
+/** Seeker home — professionals get a role/status dashboard instead. */
 export default function ProfilePageView() {
-  const t = useT();
   const router = useRouter();
   const access = useProfessionalAccountAccess();
 
@@ -49,19 +47,7 @@ export default function ProfilePageView() {
       );
     }
 
-    if (access.showPendingProfile) {
-      const roleLabel = isPhotographerRole(access.role)
-        ? t("auth.pendingAccount.rolePhotographer")
-        : t("auth.pendingAccount.roleCoordinator");
-      return (
-        <PendingProfessionalAccountPanel
-          phase={access.phase}
-          roleLabel={roleLabel}
-          role={access.role}
-          canResubmitSetup={access.canResubmitSetup}
-        />
-      );
-    }
+    return <ProfessionalDashboardHome />;
   }
 
   return <SeekerDashboardHome />;

@@ -17,6 +17,7 @@ import {
   SEEKER_DASHBOARD_NAV,
 } from "@/constants/seekerDashboardNav";
 import { useT } from "@/i18n";
+import { professionalRoleLabelKey } from "@/lib/professional-role-label";
 
 const SIDEBAR_ID = "seeker-dash-sidebar";
 const EXTRA_PREFETCH = ["/"] as const;
@@ -93,6 +94,7 @@ export default function SeekerDashboardShell({
     profileStore?.profile?.fullName ||
     identity.displayName ||
     t("seeker.guestName");
+  const roleLabel = t(professionalRoleLabelKey(identity.role));
 
   return (
     <div
@@ -138,7 +140,7 @@ export default function SeekerDashboardShell({
                 </span>
                 <span className="seeker-dash-userchip-meta">
                   <span className="seeker-dash-userchip-name">{displayName}</span>
-                  <span className="seeker-dash-userchip-role">{t("seeker.role")}</span>
+                  <span className="seeker-dash-userchip-role">{roleLabel}</span>
                 </span>
               </Link>
             </div>
