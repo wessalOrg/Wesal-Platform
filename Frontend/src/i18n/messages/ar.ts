@@ -778,6 +778,8 @@ const ar: MessageCatalog = {
   "pro.dash.stats.posts": "منشورات",
   "pro.dash.whyRejected": "لماذا تم رفض حسابي؟ راجِع ملاحظات الإدارة أعلاه.",
   "pro.dash.whyNeedsChanges": "لماذا يحتاج طلبك إلى تعديل؟ راجِع ملاحظات الإدارة أعلاه.",
+  "pro.dash.notesUnavailable":
+    "لم تتوفر ملاحظات الإدارة بعد. افتح محادثة الإدارة للاطلاع على التفاصيل.",
   "auth.register.haveAccount": "لديك حساب بالفعل؟",
   "auth.register.loginLink": "سجّل الدخول",
   "auth.register.backToType": "العودة لاختيار نوع الحساب",

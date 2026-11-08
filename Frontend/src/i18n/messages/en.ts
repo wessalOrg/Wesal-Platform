@@ -784,6 +784,8 @@ const en: MessageCatalog = {
   "pro.dash.stats.posts": "Posts",
   "pro.dash.whyRejected": "Why was my account rejected? Review the admin notes above.",
   "pro.dash.whyNeedsChanges": "Why does my request need changes? Review the admin notes above.",
+  "pro.dash.notesUnavailable":
+    "Admin notes are not available yet. Open the admin conversation for details.",
   "auth.register.haveAccount": "Already have an account?",
   "auth.register.loginLink": "Log in",
   "auth.register.backToType": "Back to account type",

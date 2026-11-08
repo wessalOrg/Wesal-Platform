@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAccess";
+import { useProfessionalReviewNotes } from "@/hooks/useProfessionalReviewNotes";
 import { useT } from "@/i18n";
 import {
   COORDINATOR_SETUP_PATH,
@@ -13,12 +14,7 @@ import {
 } from "@/lib/account-profile-path";
 import { isPhotographerRole } from "@/lib/account-role";
 import { ApiError } from "@/lib/api-error";
-import { professionalReviewNotesBody } from "@/lib/professional-review-notes";
 import { professionalRoleLabelKey } from "@/lib/professional-role-label";
-import {
-  readPlatformNotificationsSnapshot,
-  subscribePlatformNotifications,
-} from "@/lib/platform-notifications-store";
 import { contactAdminAccount, conversationErrorMessage } from "@/services/conversations";
 import type { ProfessionalAccountPhase } from "@/types/account-approval";
 import "./professional-dashboard.css";
@@ -44,15 +40,9 @@ export default function ProfessionalDashboardHome() {
   const [contactPending, setContactPending] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
 
-  useSyncExternalStore(
-    subscribePlatformNotifications,
-    readPlatformNotificationsSnapshot,
-    () => "",
-  );
-
   const phase = access.phase;
+  const { notes: adminNotes, loading: notesLoading } = useProfessionalReviewNotes(phase);
   const roleLabel = t(professionalRoleLabelKey(access.role));
-  const adminNotes = professionalReviewNotesBody(phase);
   const canPublish = access.canPublish;
   const profileId = access.profile?.id?.trim() || access.userId?.trim() || "";
   const publicProfileHref = profileId ? professionalProfilePath(profileId) : "/profile";
@@ -193,14 +183,24 @@ export default function ProfessionalDashboardHome() {
         onContactAdmin={() => void onContactAdmin()}
       />
 
-      {(phase === "needs_changes" || phase === "rejected") && adminNotes ? (
+      {phase === "needs_changes" || phase === "rejected" ? (
         <aside className="pro-dash-notes" data-testid="pro-dash-admin-notes">
           <p className="pro-dash-notes-label">
             {phase === "needs_changes"
               ? t("auth.pendingAccount.notesLabelNeedsChanges")
               : t("auth.pendingAccount.notesLabelRejected")}
           </p>
-          <p className="pro-dash-notes-body">{adminNotes}</p>
+          {adminNotes ? (
+            <p className="pro-dash-notes-body">{adminNotes}</p>
+          ) : notesLoading ? (
+            <p className="pro-dash-notes-body text-[var(--wesal-muted)]" aria-busy="true">
+              {t("common.loading")}
+            </p>
+          ) : (
+            <p className="pro-dash-notes-body text-[var(--wesal-muted)]">
+              {t("pro.dash.notesUnavailable")}
+            </p>
+          )}
         </aside>
       ) : null}
 

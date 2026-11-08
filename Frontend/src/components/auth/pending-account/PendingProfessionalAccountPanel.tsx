@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import WesalLogo from "@/components/brand/WesalLogo";
 import { useT } from "@/i18n";
 import {
@@ -12,11 +12,7 @@ import {
 } from "@/lib/account-profile-path";
 import { ApiError } from "@/lib/api-error";
 import { isPhotographerRole } from "@/lib/account-role";
-import { professionalReviewNotesBody } from "@/lib/professional-review-notes";
-import {
-  readPlatformNotificationsSnapshot,
-  subscribePlatformNotifications,
-} from "@/lib/platform-notifications-store";
+import { useProfessionalReviewNotes } from "@/hooks/useProfessionalReviewNotes";
 import { contactAdminAccount, conversationErrorMessage } from "@/services/conversations";
 import type { ProfessionalAccountPhase } from "@/types/account-approval";
 import type { WesalRole } from "@/types/session";
@@ -41,14 +37,7 @@ export default function PendingProfessionalAccountPanel({
   const router = useRouter();
   const [contactPending, setContactPending] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
-
-  // Re-render when the inbox changes so rejection / needs-changes notes stay fresh.
-  useSyncExternalStore(
-    subscribePlatformNotifications,
-    readPlatformNotificationsSnapshot,
-    () => "",
-  );
-  const adminNotes = professionalReviewNotesBody(phase);
+  const { notes: adminNotes, loading: notesLoading } = useProfessionalReviewNotes(phase);
 
   const isRejected = phase === "rejected";
   const isNeedsChanges = phase === "needs_changes";
@@ -137,15 +126,25 @@ export default function PendingProfessionalAccountPanel({
         </span>
       </div>
 
-      {showCorrection && adminNotes ? (
+      {showCorrection ? (
         <div
           className="mt-3 w-full rounded-2xl border border-[color-mix(in_srgb,#b42318_22%,#ead9d4)] bg-[#fff8f6] px-4 py-3.5 text-start"
           data-testid="pending-account-admin-notes"
         >
           <p className="text-xs font-bold text-[var(--wesal-text)]">{notesLabel}</p>
-          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-7 text-[var(--wesal-text)]">
-            {adminNotes}
-          </p>
+          {adminNotes ? (
+            <p className="mt-1.5 whitespace-pre-wrap text-sm leading-7 text-[var(--wesal-text)]">
+              {adminNotes}
+            </p>
+          ) : notesLoading ? (
+            <p className="mt-1.5 text-sm leading-7 text-[var(--wesal-muted)]" aria-busy="true">
+              {t("common.loading")}
+            </p>
+          ) : (
+            <p className="mt-1.5 text-sm leading-7 text-[var(--wesal-muted)]">
+              {t("pro.dash.notesUnavailable")}
+            </p>
+          )}
         </div>
       ) : null}
 
