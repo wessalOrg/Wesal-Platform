@@ -1,5 +1,10 @@
 /** Backend account types accepted by POST /auth/register (US-REG-01). */
-export const ACCOUNT_TYPES = ["RegularUser", "HallOwner"] as const;
+export const ACCOUNT_TYPES = [
+  "RegularUser",
+  "HallOwner",
+  "EventCoordinator",
+  "Photographer",
+] as const;
 
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
@@ -9,7 +14,19 @@ export const DEFAULT_ACCOUNT_TYPE: AccountType = "RegularUser";
 const STORAGE_KEY = "wesal_register_account_type";
 
 export function isAccountType(value: unknown): value is AccountType {
-  return value === "RegularUser" || value === "HallOwner";
+  return (
+    value === "RegularUser" ||
+    value === "HallOwner" ||
+    value === "EventCoordinator" ||
+    value === "Photographer"
+  );
+}
+
+/** True when registration must continue to a role-specific setup step. */
+export function accountTypeRequiresRoleSetup(
+  accountType: string | null | undefined,
+): boolean {
+  return accountType === "EventCoordinator" || accountType === "Photographer";
 }
 
 /** Maps marketing links like ?type=owner to the API account type. */
@@ -20,14 +37,28 @@ export function accountTypeFromQueryType(type?: string | null): AccountType | nu
   if (normalized === "user" || normalized === "regularuser" || normalized === "regular") {
     return "RegularUser";
   }
+  if (
+    normalized === "coordinator" ||
+    normalized === "eventcoordinator" ||
+    normalized === "eventplanner" ||
+    normalized === "planner"
+  ) {
+    return "EventCoordinator";
+  }
+  if (normalized === "photographer" || normalized === "photo") {
+    return "Photographer";
+  }
   return null;
 }
 
 export function parseAccountType(value?: string | null): AccountType | null {
   if (!value) return null;
   if (isAccountType(value)) return value;
-  if (value.toLowerCase() === "regularuser") return "RegularUser";
-  if (value.toLowerCase() === "hallowner") return "HallOwner";
+  const lower = value.toLowerCase();
+  if (lower === "regularuser") return "RegularUser";
+  if (lower === "hallowner") return "HallOwner";
+  if (lower === "eventcoordinator") return "EventCoordinator";
+  if (lower === "photographer") return "Photographer";
   return accountTypeFromQueryType(value);
 }
 
@@ -73,4 +104,3 @@ export function resolveInitialAccountType(params: {
     DEFAULT_ACCOUNT_TYPE
   );
 }
-

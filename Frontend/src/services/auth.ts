@@ -16,6 +16,9 @@ export type RegisterPayload = {
   accountType: string;
 };
 
+/** Backend AccountApprovalStatus (numeric enum). */
+export type AccountApprovalStatus = "Approved" | "Pending" | "Rejected" | "NeedsChanges" | number;
+
 export type RegisterResult = {
   id: string;
   fullName: string;
@@ -23,13 +26,50 @@ export type RegisterResult = {
   accountType: string;
   role: string;
   token: string;
+  isSetupComplete?: boolean;
+  approvalStatus?: AccountApprovalStatus;
 };
 
+type RegisterResultDto = RegisterResult & {
+  userId?: string;
+  Id?: string;
+  UserId?: string;
+  FullName?: string;
+  Email?: string;
+  AccountType?: string;
+  Role?: string;
+  Token?: string;
+  IsSetupComplete?: boolean;
+  ApprovalStatus?: AccountApprovalStatus;
+};
+
+function asText(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function mapRegisterResult(data: RegisterResultDto): RegisterResult {
+  return {
+    id: asText(data.id || data.Id || data.userId || data.UserId),
+    fullName: asText(data.fullName || data.FullName),
+    email: asText(data.email || data.Email),
+    accountType: asText(data.accountType || data.AccountType),
+    role: asText(data.role || data.Role),
+    token: asText(data.token || data.Token),
+    isSetupComplete:
+      typeof data.isSetupComplete === "boolean"
+        ? data.isSetupComplete
+        : typeof data.IsSetupComplete === "boolean"
+          ? data.IsSetupComplete
+          : undefined,
+    approvalStatus: data.approvalStatus ?? data.ApprovalStatus,
+  };
+}
+
 export async function registerAccount(payload: RegisterPayload): Promise<RegisterResult> {
-  const { data } = await api.post<RegisterResult>("/auth/register", payload, {
+  const { data } = await api.post<RegisterResultDto>("/auth/register", payload, {
     timeout: AUTH_REQUEST_TIMEOUT_MS,
   });
-  return data;
+  return mapRegisterResult(data);
 }
 
 export type LoginPayload = {
@@ -75,10 +115,6 @@ type LoginResultDto = LoginResult & {
   FullName?: string;
   Id?: string;
 };
-
-function asText(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
 
 function mapLoginResult(data: LoginResultDto): LoginResult {
   return {

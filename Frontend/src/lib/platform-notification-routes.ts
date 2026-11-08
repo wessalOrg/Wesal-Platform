@@ -1,6 +1,7 @@
 import {
   ADMIN_MANAGEMENT_PATH,
   HALL_OWNER_HALLS_PATH,
+  REGULAR_MESSAGES_PATH,
   adminHallSubmissionPath,
 } from "@/lib/account-profile-path";
 import {
@@ -74,6 +75,11 @@ export function resolveNotificationActionUrl(
       return ownerAdminMessagesPath(hallId || null);
     case "hall_review_request":
       return hallId ? adminHallSubmissionPath(hallId) : ADMIN_MANAGEMENT_PATH;
+    case "registration_rejected":
+    case "registration_needs_changes":
+      return conversationId
+        ? `${REGULAR_MESSAGES_PATH}?conversation_id=${encodeURIComponent(conversationId)}`
+        : REGULAR_MESSAGES_PATH;
     default:
       return "/notifications";
   }

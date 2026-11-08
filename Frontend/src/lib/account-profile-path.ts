@@ -1,6 +1,21 @@
-import { isAdminRole, isHallOwnerRole } from "@/lib/account-role";
+import {
+  isAdminRole,
+  isEventCoordinatorRole,
+  isHallOwnerRole,
+  isPhotographerRole,
+} from "@/lib/account-role";
 import { resolveAuthRedirect } from "@/lib/auth-storage";
 import type { WesalRole } from "@/types/session";
+
+/** Event Coordinator role-specific setup (after standard registration). */
+export const COORDINATOR_SETUP_PATH = "/register/coordinator-setup";
+
+/**
+ * Photographer role-specific setup route.
+ * Full Photographer Setup UI is Task 3 — this path must exist so registration
+ * never silently redirects photographers to coordinator setup or a generic success page.
+ */
+export const PHOTOGRAPHER_SETUP_PATH = "/register/photographer-setup";
 
 /** Regular User profile portal. */
 export const REGULAR_PROFILE_PATH = "/profile";
@@ -53,8 +68,57 @@ export const ADMIN_MESSAGES_PATH = "/admin/messages";
 /** Admin Help Center queue (questions submitted from `/help`). */
 export const ADMIN_HELP_QUESTIONS_PATH = "/admin/help-questions";
 
+/** Admin Event Coordinator registration requests (Task 6). */
+export const ADMIN_COORDINATORS_PATH = "/admin/coordinators";
+
+/** Admin Photographer registration requests (Task 7). */
+export const ADMIN_PHOTOGRAPHERS_PATH = "/admin/photographers";
+
+/** Public professional profile (Task 8) — coordinator or photographer by userId. */
+export const PROFESSIONALS_PATH = "/professionals";
+
+export function professionalProfilePath(userId: string): string {
+  return `${PROFESSIONALS_PATH}/${encodeURIComponent(userId.trim())}`;
+}
+
 export function adminHallSubmissionPath(hallId: string): string {
   return `${ADMIN_MANAGEMENT_PATH}/halls/${encodeURIComponent(hallId)}`;
+}
+
+export function adminCoordinatorRequestPath(userId: string): string {
+  return `${ADMIN_COORDINATORS_PATH}/${encodeURIComponent(userId)}`;
+}
+
+export function adminPhotographerRequestPath(userId: string): string {
+  return `${ADMIN_PHOTOGRAPHERS_PATH}/${encodeURIComponent(userId)}`;
+}
+
+/** Deep-link Admin messages to a resolved Admin↔account conversation. */
+export function adminAccountMessagesPath(
+  conversationId: string,
+  displayName?: string | null,
+): string {
+  const params = new URLSearchParams();
+  params.set("conversation_id", conversationId.trim());
+  const name = displayName?.trim();
+  if (name) params.set("peer", name);
+  return `${ADMIN_MESSAGES_PATH}?${params.toString()}`;
+}
+
+/** Deep-link Admin messages to a resolved Admin↔coordinator conversation. */
+export function adminCoordinatorMessagesPath(
+  conversationId: string,
+  displayName?: string | null,
+): string {
+  return adminAccountMessagesPath(conversationId, displayName);
+}
+
+/** Deep-link Admin messages to a resolved Admin↔photographer conversation. */
+export function adminPhotographerMessagesPath(
+  conversationId: string,
+  displayName?: string | null,
+): string {
+  return adminAccountMessagesPath(conversationId, displayName);
 }
 
 /**
@@ -108,7 +172,29 @@ export function resolveLoginDestination(
     if (requested.startsWith("/halls/")) return requested;
     return HALL_OWNER_MANAGEMENT_PATH;
   }
+  // Professionals land on /profile; that page routes incomplete setup → setup
+  // and shows the pending-approval shell when review is still open.
+  if (isEventCoordinatorRole(role) || isPhotographerRole(role)) {
+    const requested = resolveAuthRedirect(redirectParam, actionParam);
+    if (requested.startsWith("/halls/")) return requested;
+    if (requested.startsWith(REGULAR_PROFILE_PATH)) return requested;
+    return REGULAR_PROFILE_PATH;
+  }
   return resolveAuthRedirect(redirectParam, actionParam);
+}
+
+/** Post-register destination for roles that require setup before they are complete. */
+export function resolveRoleSetupPath(
+  accountTypeOrRole: string | null | undefined,
+): string | null {
+  const value = (accountTypeOrRole ?? "").trim().toLowerCase();
+  if (value === "eventcoordinator" || value === "coordinator") {
+    return COORDINATOR_SETUP_PATH;
+  }
+  if (value === "photographer") {
+    return PHOTOGRAPHER_SETUP_PATH;
+  }
+  return null;
 }
 
 export function isHallOwnerManagementPath(pathname: string): boolean {

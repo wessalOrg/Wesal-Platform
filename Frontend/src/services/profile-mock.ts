@@ -34,6 +34,9 @@ function readStore(): UserProfile | null {
       phoneNumber: parsed.phoneNumber,
       concurrencyStamp: stamp,
       isIdentityDocumentUploaded: Boolean(parsed.isIdentityDocumentUploaded),
+      isSetupComplete:
+        typeof parsed.isSetupComplete === "boolean" ? parsed.isSetupComplete : true,
+      approvalStatus: parsed.approvalStatus ?? "Approved",
       createdAt: parsed.createdAt ?? null,
     };
   } catch {
@@ -53,6 +56,8 @@ function seedProfile(displayName: string | null): UserProfile {
     phoneNumber: "",
     concurrencyStamp: "1",
     isIdentityDocumentUploaded: false,
+    isSetupComplete: true,
+    approvalStatus: "Approved",
   };
 }
 

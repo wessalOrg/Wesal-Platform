@@ -36,6 +36,7 @@ export default function AuthShell({ children, testId = "auth-shell" }: AuthShell
       className="wesal-register-screen relative min-h-svh overflow-hidden font-sans subpixel-antialiased"
       data-auth-shell
       data-testid={testId}
+      suppressHydrationWarning
     >
       <div
         key={pathname}
@@ -48,7 +49,16 @@ export default function AuthShell({ children, testId = "auth-shell" }: AuthShell
       <AuthMinimalHeader />
 
       <div className="relative z-10 mx-auto flex min-h-[calc(100svh-3.5rem)] w-full max-w-[92rem] flex-col items-center justify-center px-4 pb-6 pt-3 sm:min-h-[calc(100svh-4rem)] sm:px-6 sm:pb-8 sm:pt-6 lg:px-6 lg:pb-10 xl:px-10">
-        <section className="w-full max-w-[22.5rem] sm:max-w-[28rem] lg:max-w-[32rem] xl:max-w-[34rem]">{children}</section>
+        <section
+          className={`w-full ${
+            pathname.includes("/register/coordinator-setup") ||
+            pathname.includes("/register/photographer-setup")
+              ? "max-w-[32rem] sm:max-w-[36rem]"
+              : "max-w-[22.5rem] sm:max-w-[28rem] lg:max-w-[32rem] xl:max-w-[34rem]"
+          }`}
+        >
+          {children}
+        </section>
       </div>
     </div>
   );

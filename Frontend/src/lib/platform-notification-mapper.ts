@@ -1,4 +1,4 @@
-import { HALL_OWNER_HALLS_PATH } from "@/lib/account-profile-path";
+import { HALL_OWNER_HALLS_PATH, REGULAR_MESSAGES_PATH } from "@/lib/account-profile-path";
 import { SEEKER_BOOKINGS_PATH, conversationMessagePath } from "@/constants/seekerDashboardNav";
 import { ownerBookingsPath } from "@/lib/hall-owner-query-keys";
 import type {
@@ -8,6 +8,13 @@ import type {
   PlatformNotificationTone,
   PlatformNotificationType,
 } from "@/types/platform-notification";
+
+/** Deep-link professionals (and seekers) into the Admin/support thread. */
+function professionalAdminConversationUrl(conversationId: string | null): string {
+  const id = conversationId?.trim();
+  if (!id) return REGULAR_MESSAGES_PATH;
+  return `${REGULAR_MESSAGES_PATH}?conversation_id=${encodeURIComponent(id)}`;
+}
 
 export type ServerNotificationKindMapping = {
   type: PlatformNotificationType;
@@ -85,6 +92,28 @@ export const SERVER_NOTIFICATION_KIND_MAP: Record<string, ServerNotificationKind
     audience: "owner",
     tone: "danger",
     actionUrl: () => HALL_OWNER_HALLS_PATH,
+  },
+  // Task 5 — registration rejection / photographer request-changes (body carries reason/notes).
+  CoordinatorRejectedForCoordinator: {
+    type: "registration_rejected",
+    audience: "seeker",
+    tone: "danger",
+    target: "conversation",
+    actionUrl: professionalAdminConversationUrl,
+  },
+  PhotographerRejectedForPhotographer: {
+    type: "registration_rejected",
+    audience: "seeker",
+    tone: "danger",
+    target: "conversation",
+    actionUrl: professionalAdminConversationUrl,
+  },
+  PhotographerNeedsChangesForPhotographer: {
+    type: "registration_needs_changes",
+    audience: "seeker",
+    tone: "info",
+    target: "conversation",
+    actionUrl: professionalAdminConversationUrl,
   },
 };
 

@@ -12,10 +12,12 @@ import {
   mapRegisterApiFieldErrors,
 } from "@/lib/api-error";
 import {
+  accountTypeRequiresRoleSetup,
   clearStoredAccountType,
   readStoredAccountType,
   type AccountType,
 } from "@/lib/account-type";
+import { resolveRoleSetupPath } from "@/lib/account-profile-path";
 import {
   getRegisterPasswordIssue,
   REGISTER_LIMITS,
@@ -277,11 +279,45 @@ export default function RegisterFormCard({
         accountType: resolvedAccountType,
       });
 
+      clearStoredAccountType();
+
+      const setupPath =
+        resolveRoleSetupPath(result.accountType) ??
+        resolveRoleSetupPath(result.role) ??
+        (accountTypeRequiresRoleSetup(resolvedAccountType)
+          ? resolveRoleSetupPath(resolvedAccountType)
+          : null);
+
+      if (setupPath) {
+        if (!result.token) {
+          setFormError(t("auth.register.form.error.generic"));
+          return;
+        }
+        setAccessToken(result.token);
+        setStoredAuth({
+          token: result.token,
+          user: {
+            id: result.id,
+            name: result.fullName,
+            email: result.email,
+            role: result.role,
+            accountType: result.accountType,
+          },
+        });
+        applyLocalSession({
+          isAuthenticated: true,
+          role: result.role || null,
+          userName: result.fullName || null,
+        });
+        void refreshSession();
+        navigateAfterAuth(router, setupPath);
+        return;
+      }
+
       if (!isHallOwnerAccountType(resolvedAccountType) && !isHallOwnerAccountType(result.accountType)) {
         notifySeekerWelcome(result.id);
       }
 
-      clearStoredAccountType();
       setSuccess(true);
     } catch (error) {
       if (!(error instanceof ApiError)) {
@@ -342,13 +378,36 @@ export default function RegisterFormCard({
     if (!googleRegistrationToken || !fullName.trim() || pending) return;
     setPending(true); setFormError(null);
     try {
-      const result = await googleRegister({ registrationToken: googleRegistrationToken, fullName: fullName.trim(), accountType: accountType ?? "RegularUser" });
+      const resolvedType = accountType ?? "RegularUser";
+      const result = await googleRegister({
+        registrationToken: googleRegistrationToken,
+        fullName: fullName.trim(),
+        accountType: resolvedType,
+      });
       if (!result.user?.token) throw new Error("Google registration did not return a session");
       setAccessToken(result.user.token);
-      setStoredAuth({ token: result.user.token, user: { id: result.user.id, name: result.user.fullName, email: result.user.email, role: result.user.role } });
-      applyLocalSession({ isAuthenticated: true, role: result.user.role || null, userName: result.user.fullName || null });
-      void refreshSession(); clearBookingHallContext();
-      navigateAfterAuth(router, resolveAuthRedirect());
+      setStoredAuth({
+        token: result.user.token,
+        user: {
+          id: result.user.id,
+          name: result.user.fullName,
+          email: result.user.email,
+          role: result.user.role,
+          accountType: result.user.accountType,
+        },
+      });
+      applyLocalSession({
+        isAuthenticated: true,
+        role: result.user.role || null,
+        userName: result.user.fullName || null,
+      });
+      void refreshSession();
+      clearBookingHallContext();
+      const setupPath =
+        resolveRoleSetupPath(result.user.accountType) ??
+        resolveRoleSetupPath(result.user.role) ??
+        (accountTypeRequiresRoleSetup(resolvedType) ? resolveRoleSetupPath(resolvedType) : null);
+      navigateAfterAuth(router, setupPath ?? resolveAuthRedirect());
     } catch (error) {
       setFormError(error instanceof ApiError && error.status === 409 ? t("auth.register.form.error.emailDuplicate") : t("auth.google.error"));
     } finally { setPending(false); }

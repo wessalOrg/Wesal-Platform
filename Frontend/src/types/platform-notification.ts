@@ -10,7 +10,11 @@ export type PlatformNotificationType =
   | "hall_approved"
   | "hall_rejected"
   | "hall_review_request"
-  | "subscription";
+  | "subscription"
+  /** Coordinator/Photographer registration rejected — opens Admin conversation. */
+  | "registration_rejected"
+  /** Photographer NeedsChanges — opens Admin conversation. */
+  | "registration_needs_changes";
 
 export type PlatformNotificationTone = "success" | "danger" | "info";
 

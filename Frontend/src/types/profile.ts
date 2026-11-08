@@ -9,6 +9,16 @@ export type UserProfile = {
   concurrencyStamp: string;
   /** True when the Hall Owner has uploaded an identity document (US-OWNER-30). */
   isIdentityDocumentUploaded: boolean;
+  /**
+   * Role-setup completion from GET /profile (`IsSetupComplete`).
+   * Null when the payload omits the field.
+   */
+  isSetupComplete: boolean | null;
+  /**
+   * Account approval from GET /profile (`ApprovalStatus` string).
+   * Null when omitted or unrecognized — treat as fail-closed for publish.
+   */
+  approvalStatus: string | null;
   /** Present only when the profile payload includes a join/created timestamp. */
   createdAt?: string | null;
 };

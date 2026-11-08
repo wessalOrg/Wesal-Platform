@@ -51,7 +51,12 @@ function defaultTone(type: PlatformNotificationType): PlatformNotificationTone {
   ) {
     return "success";
   }
-  if (type === "booking_rejected" || type === "hall_rejected" || type === "booking_cancelled") {
+  if (
+    type === "booking_rejected" ||
+    type === "hall_rejected" ||
+    type === "booking_cancelled" ||
+    type === "registration_rejected"
+  ) {
     return "danger";
   }
   return "info";

@@ -30,6 +30,9 @@ export function mapProfileDto(data: unknown): UserProfile {
   const createdAt =
     asText(dto.createdAt ?? dto.CreatedAt ?? dto.joinedAt ?? dto.JoinedAt) || null;
 
+  const setupRaw = dto.isSetupComplete ?? dto.IsSetupComplete;
+  const approvalRaw = dto.approvalStatus ?? dto.ApprovalStatus;
+
   return {
     id: asText(dto.id ?? dto.Id ?? dto.userId ?? dto.UserId) || "self",
     fullName: asText(dto.fullName ?? dto.FullName ?? dto.name ?? dto.Name),
@@ -39,6 +42,11 @@ export function mapProfileDto(data: unknown): UserProfile {
     isIdentityDocumentUploaded: Boolean(
       dto.isIdentityDocumentUploaded ?? dto.IsIdentityDocumentUploaded,
     ),
+    isSetupComplete: typeof setupRaw === "boolean" ? setupRaw : null,
+    approvalStatus:
+      approvalRaw === null || approvalRaw === undefined
+        ? null
+        : String(approvalRaw).trim() || null,
     createdAt,
   };
 }

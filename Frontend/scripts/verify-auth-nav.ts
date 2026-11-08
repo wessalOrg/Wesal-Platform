@@ -67,6 +67,12 @@ function testResolveLoginDestination() {
   assert.equal(resolveLoginDestination("HallOwner", "/halls/h1?intent=contact", "contact"), "/halls/h1?intent=contact");
   assert.equal(resolveLoginDestination("RegisteredUser"), "/");
   assert.equal(resolveLoginDestination("RegisteredUser", "/profile"), "/profile");
+  assert.equal(resolveLoginDestination("EventCoordinator"), "/profile");
+  assert.equal(resolveLoginDestination("Photographer"), "/profile");
+  assert.equal(
+    resolveLoginDestination("EventCoordinator", "/halls/h1"),
+    "/halls/h1",
+  );
   console.log("ok  resolveLoginDestination");
 }
 

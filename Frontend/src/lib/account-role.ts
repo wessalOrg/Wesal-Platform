@@ -13,6 +13,15 @@ export function isAdminRole(role: WesalRole | null | undefined): boolean {
   return normalizeRole(role) === "admin";
 }
 
+export function isEventCoordinatorRole(role: WesalRole | null | undefined): boolean {
+  const normalized = normalizeRole(role);
+  return normalized === "eventcoordinator" || normalized === "coordinator";
+}
+
+export function isPhotographerRole(role: WesalRole | null | undefined): boolean {
+  return normalizeRole(role) === "photographer";
+}
+
 export function isHallOwnerAccountType(
   accountType: string | null | undefined,
 ): boolean {

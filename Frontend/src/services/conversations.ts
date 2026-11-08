@@ -88,6 +88,42 @@ export async function createHallConversation(hallId: string): Promise<Conversati
 }
 
 /**
+ * Customer ↔ approved professional thread
+ * (`POST /professionals/{providerUserId}/conversations`, ConversationKind.CustomerProvider).
+ * Idempotent — reuses an existing pair when present. Not AdminAccount.
+ */
+export async function createProfessionalConversation(
+  providerUserId: string,
+): Promise<ConversationThread> {
+  if (conversationsUseMock()) {
+    return {
+      conversationId: `demo-professional-${providerUserId}`,
+      hallId: "",
+      hallName: t("professionals.contact.threadFallback"),
+      initiatorUserId: "",
+      ownerUserId: providerUserId,
+      createdAt: new Date().toISOString(),
+      isExisting: true,
+    };
+  }
+  try {
+    const { data } = await api.post<ConversationResponse>(
+      `/professionals/${encodeURIComponent(providerUserId)}/conversations`,
+      undefined,
+      { timeout: 8000 },
+    );
+    const thread = mapResponse(data, "");
+    if (!thread.conversationId) {
+      throw new ApiError(t("errors.conversation.create"), 500);
+    }
+    return thread;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(t("errors.conversation.create"), 0);
+  }
+}
+
+/**
  * Hall owner "Contact Admin": resolves (and creates when missing) the owner ↔ Admin thread
  * for one of the owner's halls. Idempotent on the backend.
  */
@@ -101,6 +137,35 @@ export async function contactAdminForHall(hallId: string): Promise<ConversationT
     { timeout: 8000 },
   );
   const thread = mapResponse(data, hallId);
+  if (!thread.conversationId) {
+    throw new ApiError(t("errors.conversation.create"), 500);
+  }
+  return thread;
+}
+
+/**
+ * EventCoordinator / Photographer ↔ Admin account thread
+ * (`POST /conversations/contact-admin-account`, ConversationKind.AdminAccount).
+ * Idempotent on the backend — reuses an existing AdminAccount conversation.
+ */
+export async function contactAdminAccount(): Promise<ConversationThread> {
+  if (conversationsUseMock()) {
+    return {
+      conversationId: "demo-admin-account",
+      hallId: "",
+      hallName: "Admin",
+      initiatorUserId: "",
+      ownerUserId: "",
+      createdAt: new Date().toISOString(),
+      isExisting: true,
+    };
+  }
+  const { data } = await api.post<ConversationResponse>(
+    "/conversations/contact-admin-account",
+    undefined,
+    { timeout: 8000 },
+  );
+  const thread = mapResponse(data, "");
   if (!thread.conversationId) {
     throw new ApiError(t("errors.conversation.create"), 500);
   }
