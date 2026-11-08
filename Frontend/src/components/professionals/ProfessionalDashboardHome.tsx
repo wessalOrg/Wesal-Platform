@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
@@ -25,7 +24,6 @@ import type { ProfessionalAccountPhase } from "@/types/account-approval";
 import "./professional-dashboard.css";
 
 const RESUBMIT_QUERY = "mode=edit";
-const BANNER_IMAGE = "/auth/register-success-groom.jpg";
 
 type FeatureCard = {
   id: string;
@@ -337,9 +335,6 @@ function StatusBanner({
             </button>
           </div>
         ) : null}
-      </div>
-      <div className="pro-dash-banner-visual" aria-hidden="true">
-        <Image src={BANNER_IMAGE} alt="" width={220} height={220} priority />
       </div>
     </section>
   );

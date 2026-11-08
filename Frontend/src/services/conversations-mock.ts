@@ -215,6 +215,7 @@ export async function mockCreateHallConversation(hallId: string): Promise<{
   if (!INBOX.some((row) => row.conversationId === conversationId)) {
     INBOX.unshift({
       conversationId,
+      kind: "HallBooking",
       hallId,
       hallName,
       otherParticipantId: `owner-${hallId}`,

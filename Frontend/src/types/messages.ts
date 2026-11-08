@@ -16,8 +16,13 @@ export type MessageDelivery = "sent" | "pending" | "failed";
 /** Derived from message content — chat API is text-only. */
 export type ChatMessageKind = "TEXT" | "IMAGE";
 
+/** Mirrors backend ConversationKind (string or numeric from API). */
+export type ConversationKind = "HallBooking" | "AdminAccount" | "CustomerProvider";
+
 export type ConversationSummary = {
   conversationId: string;
+  /** Present when inbox payload includes ConversationKind (AdminAccount, etc.). */
+  kind?: ConversationKind | null;
   hallId: string;
   hallName: string;
   otherParticipantId: string;

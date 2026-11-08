@@ -308,22 +308,30 @@ export default function MessagesInboxPanel() {
 
   if (!isOpen) return null;
 
+  const peerIsAdmin = selected
+    ? isOwnerAdminConversation(selected, conversations)
+    : false;
   const threadTitle = selected
-    ? isHallOwner
+    ? peerIsAdmin || isHallOwner
       ? ownerConversationTitle(selected, lang, conversations)
       : conversationPreviewTitle(selected, lang)
     : thread
       ? conversationHallLabel(thread, lang)
       : t("messages.title");
-  const threadSubtitle = selected
-    ? conversationPreviewSubtitle(selected, lang)
-    : thread && conversationHallLabel(thread, lang) !== threadTitle
-      ? conversationHallLabel(thread, lang)
-      : null;
-  const threadBadge = conversationPeerRoleLabel({
-    viewerIsHallOwner: isHallOwner,
-    viewerIsAdmin: isAdmin,
-  });
+  const threadSubtitle = peerIsAdmin
+    ? null
+    : selected
+      ? conversationPreviewSubtitle(selected, lang)
+      : thread && conversationHallLabel(thread, lang) !== threadTitle
+        ? conversationHallLabel(thread, lang)
+        : null;
+  const threadBadge = peerIsAdmin
+    ? t("owner.messages.admin")
+    : conversationPeerRoleLabel({
+        viewerIsHallOwner: isHallOwner,
+        viewerIsAdmin: isAdmin,
+        peerIsAdmin: false,
+      });
 
   const iconBtnClass =
     "inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--wesal-maroon)]/45 bg-white text-[var(--wesal-maroon)] shadow-[0_4px_12px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white";

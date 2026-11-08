@@ -26,6 +26,7 @@ export function isOwnerAdminConversation(
   item: ConversationSummary,
   _allItems: ConversationSummary[] = [],
 ): boolean {
+  if (item.kind === "AdminAccount") return true;
   if (PLATFORM_PARTICIPANT_ID.test(participantKey(item))) return true;
   // Only the counterparty's own name. A booking receipt or a seeker message must not
   // be relabeled "إدارة وصال" because the latest preview happens to mention the platform.

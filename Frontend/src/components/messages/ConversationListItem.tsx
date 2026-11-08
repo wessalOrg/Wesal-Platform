@@ -30,15 +30,19 @@ export default function ConversationListItem({
   const t = useT();
   const lang = useUiLang();
   const { isHallOwner, isAdmin } = useAccountAccess();
-  const title = isHallOwner
-    ? ownerConversationTitle(conversation, lang)
-    : conversationPreviewTitle(conversation, lang);
-  const hall = conversationHallLabel(conversation, lang);
-  const role = conversationPeerRoleLabel({
-    viewerIsHallOwner: isHallOwner,
-    viewerIsAdmin: isAdmin,
-    peerIsAdmin: isHallOwner && isOwnerAdminConversation(conversation),
-  });
+  const peerIsAdmin = isOwnerAdminConversation(conversation);
+  const title =
+    peerIsAdmin || isHallOwner
+      ? ownerConversationTitle(conversation, lang)
+      : conversationPreviewTitle(conversation, lang);
+  const hall = peerIsAdmin ? "" : conversationHallLabel(conversation, lang);
+  const role = peerIsAdmin
+    ? t("owner.messages.admin")
+    : conversationPeerRoleLabel({
+        viewerIsHallOwner: isHallOwner,
+        viewerIsAdmin: isAdmin,
+        peerIsAdmin: false,
+      });
   const preview = conversationListPreview(
     conversation.lastMessagePreview,
     Boolean(conversation.lastMessageHasAttachment),

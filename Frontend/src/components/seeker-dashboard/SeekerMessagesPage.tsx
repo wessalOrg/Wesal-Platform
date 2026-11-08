@@ -17,6 +17,7 @@ import { useContactAdmin } from "@/hooks/useContactAdmin";
 import { conversationErrorMessage, contactAdminForHall } from "@/services/conversations";
 import { useT } from "@/i18n";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
+import { isProfessionalPublisherRole } from "@/lib/account-permissions";
 import {
   conversationHallLabel,
   conversationPeerRoleLabel,
@@ -31,7 +32,8 @@ export default function SeekerMessagesPage() {
   const lang = useUiLang();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { isHallOwner, isAdmin } = useAccountAccess();
+  const { isHallOwner, isAdmin, role } = useAccountAccess();
+  const isProfessional = isProfessionalPublisherRole(role);
   const focusHallId = searchParams.get("hallId")?.trim() || null;
   const focusConversationId = searchParams.get("conversation_id")?.trim() || null;
   const promptAttach = searchParams.get("attach") === "1";
@@ -112,35 +114,39 @@ export default function SeekerMessagesPage() {
 
   const selected = conversations.find((item) => item.conversationId === selectedId) ?? null;
   const showThread = Boolean(selectedId);
+  const peerIsAdmin = selected
+    ? isOwnerAdminConversation(selected, conversations)
+    : ownerContactAdmin;
   const threadTitle = selected
-    ? isHallOwner
+    ? peerIsAdmin || isHallOwner
       ? ownerConversationTitle(selected, lang, conversations)
       : conversationPreviewTitle(selected, lang)
     : thread
       ? conversationHallLabel(thread, lang)
       : t("messages.title");
-  const threadSubtitle = selected
-    ? conversationPreviewSubtitle(selected, lang)
-    : thread && conversationHallLabel(thread, lang) !== threadTitle
-      ? conversationHallLabel(thread, lang)
-      : null;
-  const peerIsAdmin = selected
-    ? isOwnerAdminConversation(selected, conversations)
-    : ownerContactAdmin;
-  const threadBadge = isHallOwner
-    ? peerIsAdmin
-      ? t("owner.messages.admin")
-      : t("owner.messages.seekerRole")
-    : conversationPeerRoleLabel({
-        viewerIsHallOwner: isHallOwner,
-        viewerIsAdmin: isAdmin,
-        peerIsAdmin,
-      });
-  const hallName = selected
-    ? conversationHallLabel(selected, lang)
-    : thread
-      ? conversationHallLabel(thread, lang)
-      : "";
+  const threadSubtitle = peerIsAdmin
+    ? null
+    : selected
+      ? conversationPreviewSubtitle(selected, lang)
+      : thread && conversationHallLabel(thread, lang) !== threadTitle
+        ? conversationHallLabel(thread, lang)
+        : null;
+  const threadBadge = peerIsAdmin
+    ? t("owner.messages.admin")
+    : isHallOwner
+      ? t("owner.messages.seekerRole")
+      : conversationPeerRoleLabel({
+          viewerIsHallOwner: isHallOwner,
+          viewerIsAdmin: isAdmin,
+          peerIsAdmin: false,
+        });
+  const hallName = peerIsAdmin
+    ? ""
+    : selected
+      ? conversationHallLabel(selected, lang)
+      : thread
+        ? conversationHallLabel(thread, lang)
+        : "";
   const hallId = selected?.hallId ?? thread?.hallId ?? "";
 
   return (
@@ -149,7 +155,9 @@ export default function SeekerMessagesPage() {
       {isHallOwner ? null : (
         <header className="seeker-settings-header">
           <h1 className="seeker-settings-title">{t("seeker.nav.messages")}</h1>
-          <p className="seeker-settings-lead">{t("seeker.messages.subtitle")}</p>
+          {isProfessional ? null : (
+            <p className="seeker-settings-lead">{t("seeker.messages.subtitle")}</p>
+          )}
         </header>
       )}
 

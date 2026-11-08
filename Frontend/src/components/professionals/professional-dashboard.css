@@ -24,7 +24,6 @@
 
 @media (min-width: 768px) {
   .pro-dash-banner {
-    grid-template-columns: minmax(0, 1fr) auto;
     padding: 1.35rem 1.5rem;
   }
 }
@@ -84,24 +83,6 @@
   flex-wrap: wrap;
   gap: 0.55rem;
   margin-top: 0.35rem;
-}
-
-.pro-dash-banner-visual {
-  justify-self: end;
-  width: min(9.5rem, 34vw);
-  aspect-ratio: 1;
-  border-radius: 1.1rem;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--wesal-pink) 45%, white);
-  box-shadow: 0 10px 24px rgba(90, 45, 40, 0.12);
-}
-
-.pro-dash-banner-visual img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
 }
 
 .pro-dash-notes {

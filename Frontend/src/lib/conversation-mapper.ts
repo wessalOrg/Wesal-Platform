@@ -1,10 +1,29 @@
 import { t } from "@/i18n";
-import type { ConversationSummary, MessageThread, ThreadMessage } from "@/types/messages";
+import type {
+  ConversationKind,
+  ConversationSummary,
+  MessageThread,
+  ThreadMessage,
+} from "@/types/messages";
 
 function asText(value: unknown): string {
   if (typeof value === "string") return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return "";
+}
+
+function mapConversationKind(value: unknown): ConversationKind | null {
+  if (typeof value === "number") {
+    if (value === 0) return "HallBooking";
+    if (value === 1) return "AdminAccount";
+    if (value === 2) return "CustomerProvider";
+    return null;
+  }
+  const text = asText(value).toLowerCase();
+  if (text === "hallbooking" || text === "0") return "HallBooking";
+  if (text === "adminaccount" || text === "1") return "AdminAccount";
+  if (text === "customerprovider" || text === "2") return "CustomerProvider";
+  return null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -33,10 +52,17 @@ export function mapInboxItemDto(data: unknown): ConversationSummary | null {
   if (!dto) return null;
   const conversationId = asText(dto.conversationId ?? dto.ConversationId ?? dto.id ?? dto.Id);
   if (!conversationId) return null;
+  const hallId = asText(dto.hallId ?? dto.HallId);
+  const kind = mapConversationKind(dto.kind ?? dto.Kind);
+  const hallNameRaw = asText(dto.hallName ?? dto.HallName);
   return {
     conversationId,
-    hallId: asText(dto.hallId ?? dto.HallId),
-    hallName: asText(dto.hallName ?? dto.HallName) || t("common.hall"),
+    kind,
+    hallId,
+    // Keep empty for hall-less AdminAccount threads so UI can label them as Wesal Admin.
+    hallName:
+      hallNameRaw ||
+      (kind === "AdminAccount" || !hallId ? "" : t("common.hall")),
     otherParticipantId: asText(dto.otherParticipantId ?? dto.OtherParticipantId),
     otherParticipantName:
       asText(dto.otherParticipantName ?? dto.OtherParticipantName) || t("common.user"),
