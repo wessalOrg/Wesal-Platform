@@ -1,0 +1,396 @@
+/* Admin Coordinator Requests — list + detail (design mockup) */
+
+.admin-coord-card {
+  border-radius: 1.35rem;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 10%, white);
+  background: #fff;
+  box-shadow: 0 14px 36px rgba(88, 40, 48, 0.06);
+}
+
+.admin-coord-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 1rem 1rem 0.75rem;
+}
+
+.admin-coord-select,
+.admin-coord-search {
+  min-height: 2.55rem;
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 16%, white);
+  background: color-mix(in srgb, var(--wesal-pink) 28%, white);
+  color: var(--wesal-text);
+  padding: 0.45rem 0.85rem;
+  font-size: 0.875rem;
+}
+
+.admin-coord-select {
+  min-width: 9.5rem;
+}
+
+.admin-coord-search {
+  flex: 1 1 14rem;
+  min-width: 12rem;
+}
+
+.admin-coord-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  padding: 0 0.35rem 0.85rem;
+}
+
+.admin-coord-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 44rem;
+}
+
+.admin-coord-table th {
+  padding: 0.7rem 0.9rem;
+  text-align: start;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--wesal-muted);
+  border-bottom: 1px solid color-mix(in srgb, var(--wesal-maroon) 10%, white);
+  white-space: nowrap;
+}
+
+.admin-coord-table td {
+  padding: 0.95rem 0.9rem;
+  text-align: start;
+  vertical-align: middle;
+  border-bottom: 1px solid color-mix(in srgb, var(--wesal-maroon) 7%, white);
+  font-size: 0.9rem;
+  color: var(--wesal-text);
+}
+
+.admin-coord-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-coord-person {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.admin-coord-avatar {
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wesal-pink) 55%, white);
+  color: var(--wesal-maroon);
+  font-size: 0.95rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.admin-coord-person-name {
+  font-weight: 700;
+  color: var(--wesal-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-coord-person-meta {
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  color: var(--wesal-muted);
+}
+
+.admin-coord-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.7rem;
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-coord-badge--pending {
+  background: #fff3cd;
+  color: #8a6d1d;
+}
+
+.admin-coord-badge--approved {
+  background: #e4f6e8;
+  color: #1f7a3a;
+}
+
+.admin-coord-badge--rejected {
+  background: #fde8e8;
+  color: #b42318;
+}
+
+.admin-coord-badge--needs {
+  background: #efe8ff;
+  color: #5b3ea6;
+}
+
+.admin-coord-details-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.2rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 28%, white);
+  background: #fff;
+  color: var(--wesal-maroon);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.admin-coord-details-btn:hover {
+  background: color-mix(in srgb, var(--wesal-pink) 45%, white);
+}
+
+.admin-coord-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 1rem 1.1rem;
+}
+
+.admin-coord-page-btn {
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 14%, white);
+  background: #fff;
+  color: var(--wesal-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.admin-coord-page-btn--active {
+  background: var(--wesal-maroon);
+  border-color: var(--wesal-maroon);
+  color: #fff;
+}
+
+.admin-coord-page-btn:disabled {
+  opacity: 0.45;
+}
+
+/* Detail */
+
+.admin-coord-detail-card {
+  padding: 1.15rem 1.15rem 1.35rem;
+}
+
+.admin-coord-detail-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.admin-coord-detail-identity {
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.admin-coord-detail-avatar {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--wesal-pink) 60%, white);
+  color: var(--wesal-maroon);
+  font-size: 1.25rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.admin-coord-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.admin-coord-reject-btn {
+  border-color: color-mix(in srgb, #b42318 45%, white) !important;
+  color: #b42318 !important;
+}
+
+.admin-coord-reject-hint {
+  width: 100%;
+  text-align: end;
+  font-size: 0.72rem;
+  color: var(--wesal-muted);
+  margin-top: -0.15rem;
+}
+
+.admin-coord-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1.15rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--wesal-maroon) 9%, white);
+}
+
+.admin-coord-tab {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--wesal-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-coord-tab--active {
+  background: color-mix(in srgb, var(--wesal-maroon) 12%, white);
+  color: var(--wesal-maroon);
+  border-color: color-mix(in srgb, var(--wesal-maroon) 18%, white);
+}
+
+.admin-coord-detail-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 900px) {
+  .admin-coord-detail-grid {
+    grid-template-columns: minmax(14rem, 0.9fr) minmax(0, 1.4fr);
+    align-items: start;
+  }
+}
+
+.admin-coord-info-panel,
+.admin-coord-gallery-panel,
+.admin-coord-identity-panel {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 9%, white);
+  background: color-mix(in srgb, var(--wesal-pink) 18%, white);
+  padding: 0.95rem;
+}
+
+.admin-coord-info-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--wesal-maroon);
+  margin-bottom: 0.75rem;
+}
+
+.admin-coord-info-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.admin-coord-info-row dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--wesal-muted);
+}
+
+.admin-coord-info-row dd {
+  margin-top: 0.15rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--wesal-text);
+  word-break: break-word;
+}
+
+.admin-coord-docs-stack {
+  display: grid;
+  gap: 0.85rem;
+}
+
+@media (min-width: 700px) {
+  .admin-coord-docs-stack--gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Photographer detail — actions column (mockup) */
+
+.admin-photo-detail-layout {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 980px) {
+  .admin-photo-detail-layout {
+    grid-template-columns: minmax(0, 1.55fr) minmax(16rem, 0.7fr);
+    align-items: start;
+  }
+}
+
+.admin-photo-actions-panel {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 10%, white);
+  background: #fff;
+  padding: 0.95rem;
+  display: grid;
+  gap: 0.85rem;
+  box-shadow: 0 10px 28px rgba(88, 40, 48, 0.05);
+}
+
+.admin-photo-approve-btn {
+  background: #2f8f4e !important;
+  border-color: #2f8f4e !important;
+  color: #fff !important;
+}
+
+.admin-photo-approve-btn:disabled {
+  opacity: 0.65;
+}
+
+.admin-photo-changes-btn {
+  border-color: color-mix(in srgb, #b8860b 40%, white) !important;
+  color: #8a6d1d !important;
+  background: #fff8e8 !important;
+}
+
+.admin-photo-action-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.admin-photo-action-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--wesal-muted);
+}
+
+.admin-photo-sensitive {
+  margin-top: 0.55rem;
+  border-radius: 0.85rem;
+  border: 1px dashed color-mix(in srgb, var(--wesal-maroon) 25%, white);
+  background: color-mix(in srgb, var(--wesal-pink) 22%, white);
+  padding: 0.7rem 0.8rem;
+  font-size: 0.75rem;
+  color: var(--wesal-muted);
+}
+
+.admin-coord-range {
+  margin-inline-start: auto;
+  font-size: 0.78rem;
+  color: var(--wesal-muted);
+  padding-inline: 0.35rem;
+}

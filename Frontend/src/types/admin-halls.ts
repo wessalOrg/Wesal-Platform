@@ -71,6 +71,8 @@ export type AdminOwnerMessageTarget = {
   hallId: string;
   hallName: string;
   ownerName?: string | null;
+  /** When set (e.g. Admin↔coordinator), load/send by conversation id instead of hall. */
+  conversationId?: string | null;
 };
 
 /** PUT /admin/halls/{hallId}/reject (US-ADMIN-03). */

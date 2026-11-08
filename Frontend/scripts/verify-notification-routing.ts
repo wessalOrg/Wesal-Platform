@@ -86,5 +86,21 @@ assert.equal(
   resolveNotificationActionUrl("welcome", {}, "/custom"),
   "/custom",
 );
+assert.equal(
+  resolveNotificationActionUrl("registration_rejected", {
+    conversation_id: "admin-thread-1",
+  }),
+  "/profile/messages?conversation_id=admin-thread-1",
+);
+assert.equal(
+  resolveNotificationActionUrl("registration_needs_changes", {
+    conversation_id: "admin-thread-2",
+  }),
+  "/profile/messages?conversation_id=admin-thread-2",
+);
+assert.equal(
+  resolveNotificationActionUrl("registration_rejected"),
+  "/profile/messages",
+);
 
 console.log("verify-notification-routing: ok");

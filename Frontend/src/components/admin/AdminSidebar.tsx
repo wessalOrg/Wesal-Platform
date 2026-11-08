@@ -8,10 +8,12 @@ import LogoutConfirmDialog from "@/components/auth/LogoutConfirmDialog";
 import WesalLogo from "@/components/brand/WesalLogo";
 import {
   ADMIN_ACCOUNT_PATH,
+  ADMIN_COORDINATORS_PATH,
   ADMIN_HELP_QUESTIONS_PATH,
   ADMIN_MANAGEMENT_PATH,
   ADMIN_MABROUK_PATH,
   ADMIN_MESSAGES_PATH,
+  ADMIN_PHOTOGRAPHERS_PATH,
   ADMIN_REJECTED_HALLS_PATH,
   ADMIN_SUBSCRIPTIONS_PATH,
 } from "@/lib/account-profile-path";
@@ -47,6 +49,12 @@ export default function AdminSidebar({
   const rejectedActive =
     pathname === ADMIN_REJECTED_HALLS_PATH ||
     pathname.startsWith(`${ADMIN_REJECTED_HALLS_PATH}/`);
+  const coordinatorsActive =
+    pathname === ADMIN_COORDINATORS_PATH ||
+    pathname.startsWith(`${ADMIN_COORDINATORS_PATH}/`);
+  const photographersActive =
+    pathname === ADMIN_PHOTOGRAPHERS_PATH ||
+    pathname.startsWith(`${ADMIN_PHOTOGRAPHERS_PATH}/`);
   const subscriptionsActive =
     pathname === ADMIN_SUBSCRIPTIONS_PATH || pathname.startsWith(`${ADMIN_SUBSCRIPTIONS_PATH}/`);
   const messagesActive =
@@ -181,6 +189,42 @@ export default function AdminSidebar({
             </li>
             <li>
               <Link
+                href={ADMIN_COORDINATORS_PATH}
+                prefetch
+                className={`seeker-dash-sidebar-link${
+                  coordinatorsActive ? " seeker-dash-sidebar-link--active" : ""
+                }`}
+                aria-current={coordinatorsActive ? "page" : undefined}
+                data-testid="admin-nav-coordinators"
+                onClick={onNavigate}
+                onMouseEnter={() => router.prefetch(ADMIN_COORDINATORS_PATH)}
+              >
+                <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+                  <CoordinatorsIcon />
+                </span>
+                <span>{t("admin.nav.coordinators")}</span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href={ADMIN_PHOTOGRAPHERS_PATH}
+                prefetch
+                className={`seeker-dash-sidebar-link${
+                  photographersActive ? " seeker-dash-sidebar-link--active" : ""
+                }`}
+                aria-current={photographersActive ? "page" : undefined}
+                data-testid="admin-nav-photographers"
+                onClick={onNavigate}
+                onMouseEnter={() => router.prefetch(ADMIN_PHOTOGRAPHERS_PATH)}
+              >
+                <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+                  <PhotographersIcon />
+                </span>
+                <span>{t("admin.nav.photographers")}</span>
+              </Link>
+            </li>
+            <li>
+              <Link
                 href={ADMIN_SUBSCRIPTIONS_PATH}
                 prefetch
                 className={`seeker-dash-sidebar-link${
@@ -309,6 +353,38 @@ export default function AdminSidebar({
         }}
       />
     </>
+  );
+}
+
+function CoordinatorsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <path
+        d="M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM15.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M3.5 19c.6-2.6 2.7-4 5-4s4.4 1.4 5 4M10.5 19c.6-2.6 2.7-4 5-4s4.4 1.4 5 4"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function PhotographersIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <path
+        d="M4.5 8.5h3.2l1.3-2h6l1.3 2H19.5A1.5 1.5 0 0 1 21 10v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18v-8a1.5 1.5 0 0 1 1.5-1.5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="14" r="3.2" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
   );
 }
 

@@ -6,7 +6,11 @@ import { useThreadDeliverySync } from "@/hooks/useThreadDeliverySync";
 import { toAdminOwnerMessageError } from "@/lib/admin-owner-message-errors";
 import { localsStillOpen, mergeServerMessages, upsertThreadMessage } from "@/lib/thread-messages";
 import { sendAdminHallMessage } from "@/services/admin-halls";
-import { fetchConversationThread, fetchInboxConversations } from "@/services/conversations";
+import {
+  fetchConversationThread,
+  fetchInboxConversations,
+  sendConversationMessage,
+} from "@/services/conversations";
 import type { AdminOwnerMessageTarget } from "@/types/admin-halls";
 import type { MessageThread, ThreadMessage, ThreadStatus } from "@/types/messages";
 
@@ -30,9 +34,13 @@ export function useAdminOwnerThread(
   target: AdminOwnerMessageTarget | null,
   sessionKey: string | null,
 ) {
-  const hallId = target?.hallId ?? null;
+  const hallId = target?.hallId?.trim() || null;
+  const focusConversationId = target?.conversationId?.trim() || null;
   const [retryTick, setRetryTick] = useState(0);
-  const requestKey = sessionKey && hallId ? `${sessionKey}:${hallId}:${retryTick}` : null;
+  const requestKey =
+    sessionKey && (hallId || focusConversationId)
+      ? `${sessionKey}:${hallId ?? ""}:${focusConversationId ?? ""}:${retryTick}`
+      : null;
   const [seenKey, setSeenKey] = useState<string | null>(null);
   const [status, setStatus] = useState<ThreadStatus>("idle");
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -43,14 +51,18 @@ export function useAdminOwnerThread(
   const localsRef = useRef<Record<string, ThreadMessage[]>>({});
   const sendingRef = useRef<Set<string>>(new Set());
   const hallIdRef = useRef(hallId);
+  const conversationIdRef = useRef(conversationId);
   useEffect(() => {
     hallIdRef.current = hallId;
+  });
+  useEffect(() => {
+    conversationIdRef.current = conversationId;
   });
 
   if (requestKey !== seenKey) {
     setSeenKey(requestKey);
     setStatus(requestKey ? "loading" : "idle");
-    setConversationId(null);
+    setConversationId(focusConversationId);
     setThread(null);
     setErrorKey(null);
     setDeliveryPending(false);
@@ -63,12 +75,38 @@ export function useAdminOwnerThread(
   }, [sessionKey]);
 
   useEffect(() => {
-    if (!hallId || !sessionKey || !target || requestKey === null) return;
+    if (!sessionKey || !target || requestKey === null) return;
     const scoped = target;
 
     let cancelled = false;
     void (async () => {
       try {
+        if (focusConversationId && !hallId) {
+          setConversationId(focusConversationId);
+          const data = await fetchConversationThread(focusConversationId);
+          if (cancelled) return;
+          const merged = mergeServerMessages(
+            data.messages,
+            localsRef.current[focusConversationId] ?? [],
+          );
+          localsRef.current[focusConversationId] = localsStillOpen(merged);
+          setThread({
+            ...data,
+            hallId: data.hallId || scoped.hallId,
+            hallName: data.hallName || scoped.hallName || scoped.ownerName || "",
+            messages: merged,
+          });
+          setStatus(merged.length === 0 ? "empty" : "ready");
+          return;
+        }
+
+        if (!hallId) {
+          setConversationId(null);
+          setThread(emptyThread(scoped));
+          setStatus("empty");
+          return;
+        }
+
         const inbox = await fetchInboxConversations();
         if (cancelled) return;
         const match =
@@ -97,8 +135,8 @@ export function useAdminOwnerThread(
         setStatus(merged.length === 0 ? "empty" : "ready");
       } catch {
         if (cancelled) return;
-        setConversationId(null);
-        setThread(emptyThread(scoped));
+        setConversationId(focusConversationId);
+        setThread(emptyThread(scoped, focusConversationId ?? ""));
         setStatus("empty");
       }
     })();
@@ -106,7 +144,7 @@ export function useAdminOwnerThread(
     return () => {
       cancelled = true;
     };
-  }, [hallId, requestKey, sessionKey, target]);
+  }, [focusConversationId, hallId, requestKey, sessionKey, target]);
 
   const applyIncoming = useCallback((incoming: ThreadMessage, forConversationId: string) => {
     if (!forConversationId) return;
@@ -142,7 +180,8 @@ export function useAdminOwnerThread(
   const send = useCallback(
     async (raw: string, currentUserId: string | null, senderName: string) => {
       const scopedHallId = hallIdRef.current;
-      if (!scopedHallId || !sessionKey || !target) return false;
+      const scopedConversationId = conversationIdRef.current;
+      if ((!scopedHallId && !scopedConversationId) || !sessionKey || !target) return false;
       const content = raw.trim();
       if (!content) return false;
 
@@ -156,11 +195,14 @@ export function useAdminOwnerThread(
         sentAt: new Date().toISOString(),
         delivery: "pending",
       };
-      const localKey = conversationId || scopedHallId;
+      const localKey = scopedConversationId || scopedHallId || "thread";
       localsRef.current[localKey] = upsertThreadMessage(localsRef.current[localKey] ?? [], pending);
       setThread((current) => {
         if (!current) {
-          return { ...emptyThread(target, conversationId ?? ""), messages: [pending] };
+          return {
+            ...emptyThread(target, scopedConversationId ?? ""),
+            messages: [pending],
+          };
         }
         return { ...current, messages: upsertThreadMessage(current.messages, pending) };
       });
@@ -170,22 +212,41 @@ export function useAdminOwnerThread(
       sendingRef.current.add(clientRequestId);
       setSending(true);
       try {
-        const saved = await sendAdminHallMessage(scopedHallId, content);
-        if (saved.deliveryPending || saved.ownerBlocked) {
-          setDeliveryPending(true);
+        if (scopedHallId) {
+          const saved = await sendAdminHallMessage(scopedHallId, content);
+          if (saved.deliveryPending || saved.ownerBlocked) {
+            setDeliveryPending(true);
+          }
+          setConversationId(saved.conversationId);
+          applyIncoming(
+            {
+              id: saved.messageId,
+              clientRequestId,
+              senderUserId: currentUserId ?? "",
+              senderName,
+              content: saved.content,
+              sentAt: saved.sentAt,
+              delivery: "sent",
+            },
+            saved.conversationId,
+          );
+          return true;
         }
-        setConversationId(saved.conversationId);
+
+        const saved = await sendConversationMessage(
+          scopedConversationId!,
+          content,
+          clientRequestId,
+        );
         applyIncoming(
           {
-            id: saved.messageId,
+            ...saved,
             clientRequestId,
-            senderUserId: currentUserId ?? "",
-            senderName,
-            content: saved.content,
-            sentAt: saved.sentAt,
+            senderUserId: saved.senderUserId || currentUserId || "",
+            senderName: saved.senderName || senderName,
             delivery: "sent",
           },
-          saved.conversationId,
+          scopedConversationId!,
         );
         return true;
       } catch (err) {

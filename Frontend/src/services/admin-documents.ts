@@ -137,3 +137,56 @@ export async function fetchAdminOwnerIdentityUrl(
     "admin.halls.details.identity.errors.loadFailed",
   );
 }
+
+const ADMIN_COORDINATOR_IDENTITY_PATH = (userId: string) =>
+  `/admin/coordinators/${encodeURIComponent(userId)}/identity-document`;
+
+const ADMIN_COORDINATOR_SHOP_PHOTO_PATH = (userId: string) =>
+  `/admin/coordinators/${encodeURIComponent(userId)}/shop-photo`;
+
+const ADMIN_COORDINATOR_WORK_PHOTO_PATH = (userId: string, index: 1 | 2) =>
+  `/admin/coordinators/${encodeURIComponent(userId)}/work-photos/${index}`;
+
+/** GET /api/v1/admin/coordinators/{userId}/identity-document */
+export async function fetchAdminCoordinatorIdentityUrl(
+  userId: string,
+): Promise<AdminSecureDocument | null> {
+  return fetchAdminDocument(
+    ADMIN_COORDINATOR_IDENTITY_PATH(userId),
+    "admin.coordinators.detail.docs.errors.loadFailed",
+  );
+}
+
+/** GET /api/v1/admin/coordinators/{userId}/shop-photo */
+export async function fetchAdminCoordinatorShopPhotoUrl(
+  userId: string,
+): Promise<AdminSecureDocument | null> {
+  return fetchAdminDocument(
+    ADMIN_COORDINATOR_SHOP_PHOTO_PATH(userId),
+    "admin.coordinators.detail.docs.errors.loadFailed",
+  );
+}
+
+/** GET /api/v1/admin/coordinators/{userId}/work-photos/{index} */
+export async function fetchAdminCoordinatorWorkPhotoUrl(
+  userId: string,
+  index: 1 | 2,
+): Promise<AdminSecureDocument | null> {
+  return fetchAdminDocument(
+    ADMIN_COORDINATOR_WORK_PHOTO_PATH(userId, index),
+    "admin.coordinators.detail.docs.errors.loadFailed",
+  );
+}
+
+const ADMIN_PHOTOGRAPHER_IDENTITY_PATH = (userId: string) =>
+  `/admin/photographers/${encodeURIComponent(userId)}/identity-document`;
+
+/** GET /api/v1/admin/photographers/{userId}/identity-document */
+export async function fetchAdminPhotographerIdentityUrl(
+  userId: string,
+): Promise<AdminSecureDocument | null> {
+  return fetchAdminDocument(
+    ADMIN_PHOTOGRAPHER_IDENTITY_PATH(userId),
+    "admin.photographers.detail.docs.errors.loadFailed",
+  );
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useAdminOwnerThread } from "@/hooks/useAdminOwnerThread";
 import { refreshUnreadCount } from "@/hooks/useUnreadCount";
@@ -24,8 +25,20 @@ import type {
 import type { AdminSubscriptionOwnerGroup } from "@/types/admin-halls";
 import type { ConversationSummary, InboxStatus } from "@/types/messages";
 
+function readFocusConversation(searchParams: URLSearchParams): {
+  conversationId: string | null;
+  peerName: string | null;
+} {
+  return {
+    conversationId: searchParams.get("conversation_id")?.trim() || null,
+    peerName: searchParams.get("peer")?.trim() || null,
+  };
+}
+
 export function useAdminMessages() {
   const t = useT();
+  const searchParams = useSearchParams();
+  const focus = readFocusConversation(searchParams);
   const { ready, authenticated, sessionKey, displayName, userId } = useAccountAccess();
   const ownerKey = ready && authenticated ? sessionKey : null;
   const currentUserId = userId || getCurrentUserId();
@@ -38,9 +51,10 @@ export function useAdminMessages() {
   const [subscriptionGroups, setSubscriptionGroups] = useState<AdminSubscriptionOwnerGroup[]>([]);
   const [filter, setFilter] = useState<AdminMessageFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [manualSelectedId, setManualSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [seenOwnerKey, setSeenOwnerKey] = useState<string | null>(ownerKey);
+  const [seenFocusId, setSeenFocusId] = useState<string | null>(focus.conversationId);
 
   if (ownerKey !== seenOwnerKey) {
     setSeenOwnerKey(ownerKey);
@@ -48,10 +62,15 @@ export function useAdminMessages() {
     setInboxError(null);
     setConversations([]);
     setSubscriptionGroups([]);
-    setSelectedId(null);
+    setManualSelectedId(null);
     setSearchQuery("");
     setFilter("all");
     setDraft("");
+  }
+
+  if (focus.conversationId !== seenFocusId) {
+    setSeenFocusId(focus.conversationId);
+    setManualSelectedId(null);
   }
 
   useEffect(() => {
@@ -116,10 +135,45 @@ export function useAdminMessages() {
     [items, filter, searchQuery],
   );
 
-  const selectedItem = useMemo(
-    () => items.find((item) => item.id === selectedId) ?? null,
-    [items, selectedId],
-  );
+  // Deep-link from Contact Coordinator (or similar): prefer inbox match, else keep the focus id.
+  const focusedSelectedId = useMemo(() => {
+    if (!focus.conversationId) return null;
+    if (inboxStatus !== "ready") return focus.conversationId;
+    const match = items.find(
+      (item) =>
+        item.conversationId === focus.conversationId ||
+        item.id === focus.conversationId,
+    );
+    return match?.id ?? focus.conversationId;
+  }, [focus.conversationId, inboxStatus, items]);
+
+  const selectedId = manualSelectedId ?? focusedSelectedId;
+
+  const selectedItem = useMemo(() => {
+    const found = items.find((item) => item.id === selectedId) ?? null;
+    if (found) return found;
+    if (
+      selectedId &&
+      focus.conversationId &&
+      selectedId === focus.conversationId
+    ) {
+      const peer =
+        focus.peerName || t("admin.coordinators.contact.threadFallback");
+      return {
+        id: focus.conversationId,
+        category: "conversation" as const,
+        hallId: "",
+        hallName: peer,
+        ownerName: peer,
+        conversationId: focus.conversationId,
+        preview: "",
+        lastMessageAt: null,
+        createdAt: new Date(0).toISOString(),
+        isUnread: false,
+      } satisfies AdminMessageItem;
+    }
+    return null;
+  }, [focus.conversationId, focus.peerName, items, selectedId, t]);
 
   const threadTarget = useMemo(() => {
     if (!selectedItem) return null;
@@ -127,6 +181,7 @@ export function useAdminMessages() {
       hallId: selectedItem.hallId,
       hallName: selectedItem.hallName,
       ownerName: selectedItem.ownerName || null,
+      conversationId: selectedItem.conversationId,
     };
   }, [selectedItem]);
 
@@ -153,7 +208,7 @@ export function useAdminMessages() {
   }, [threadState.conversationId, selectedItem?.conversationId, ownerKey, selectedId]);
 
   const selectItem = useCallback((item: AdminMessageItem | null) => {
-    setSelectedId(item?.id ?? null);
+    setManualSelectedId(item?.id ?? null);
     setDraft("");
   }, []);
 
@@ -173,6 +228,7 @@ export function useAdminMessages() {
               return [
                 {
                   conversationId,
+                  kind: selectedItem.hallId ? "HallBooking" : "AdminAccount",
                   hallId: selectedItem.hallId,
                   hallName: selectedItem.hallName,
                   otherParticipantId: "",
