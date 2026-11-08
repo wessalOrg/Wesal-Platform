@@ -89,8 +89,17 @@ async function main() {
   await check("coming-soon marketplace pages are real allowlisted routes", () => {
     // These pages can be opened when explicitly requested, while service-search
     // requests remain truthful Coming Soon responses in the backend policy.
+    // Registration setup routes (e.g. /register/photographer-setup) are auth
+    // flows, not marketplace pages, so they are excluded from this gate.
     const comingSoon = new Set(["/photographers", "/event-planners"]);
-    assert.ok(!pageRoutes().some((route) => !comingSoon.has(route) && /photo|media|vendor/i.test(route)));
+    assert.ok(
+      !pageRoutes().some(
+        (route) =>
+          !comingSoon.has(route) &&
+          !route.startsWith("/register/") &&
+          /photo|media|vendor/i.test(route),
+      ),
+    );
     assert.ok(ASSISTANT_STATIC_ROUTES.includes("/photographers"));
     assert.ok(ASSISTANT_STATIC_ROUTES.includes("/event-planners"));
     assert.equal(sanitizeAssistantHref("/photography"), null);
