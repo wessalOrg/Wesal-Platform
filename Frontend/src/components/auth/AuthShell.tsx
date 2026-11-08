@@ -54,7 +54,8 @@ export default function AuthShell({ children, testId = "auth-shell" }: AuthShell
             pathname.includes("/register/coordinator-setup") ||
             pathname.includes("/register/photographer-setup")
               ? "max-w-[32rem] sm:max-w-[36rem]"
-              : "max-w-[22.5rem] sm:max-w-[28rem] lg:max-w-[32rem] xl:max-w-[34rem]"
+              : // Keep phone/tablet widths; do not grow further on laptop/desktop.
+                "max-w-[22.5rem] sm:max-w-[28rem] lg:max-w-[26.5rem]"
           }`}
         >
           {children}
