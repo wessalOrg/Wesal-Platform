@@ -214,11 +214,10 @@ export async function fetchMyAdminAccountConversation(): Promise<ConversationSum
       isUnread: false,
     };
   } catch (error) {
-    if (error instanceof ApiError && (error.status === 404 || error.status === 204)) {
-      return null;
-    }
-    // Missing conversation often comes back as empty 200/404 variants — keep inbox usable.
-    if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+    if (!(error instanceof ApiError)) throw error;
+    const status = error.status;
+    // Missing conversation often comes back as 404/204/4xx — keep inbox usable.
+    if (status === 404 || status === 204 || (status != null && status >= 400 && status < 500)) {
       return null;
     }
     throw error;
