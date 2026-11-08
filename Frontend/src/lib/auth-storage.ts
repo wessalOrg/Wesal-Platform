@@ -118,6 +118,12 @@ export function buildContactLoginRedirectPath(hallId: string): string {
   return `/login?redirect=${encodeURIComponent(hallPath)}&intent=contact`;
 }
 
+/** Login redirect back to a public professional profile after contact intent. */
+export function buildProfessionalContactLoginRedirectPath(userId: string): string {
+  const path = `/professionals/${encodeURIComponent(userId.trim())}`;
+  return `/login?redirect=${encodeURIComponent(path)}&intent=contact`;
+}
+
 /** Persists hall context so booking can resume after registration/login. */
 export function saveBookingHallContext(hallId: string): void {
   if (typeof window === "undefined") return;

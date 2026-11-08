@@ -99,6 +99,9 @@ export function sanitizeAssistantHref(href: unknown): string | null {
   const hallMatch = /^\/halls\/([^/]+)$/.exec(path);
   if (hallMatch && GUID_RE.test(hallMatch[1] ?? "")) return path;
 
+  const professionalMatch = /^\/professionals\/([^/]+)$/.exec(path);
+  if (professionalMatch && (professionalMatch[1] ?? "").trim()) return path;
+
   return null;
 }
 
@@ -129,6 +132,11 @@ export function buildAssistantPageContext(
   const hallMatch = /^\/halls\/([^/]+)$/.exec(path);
   if (hallMatch) {
     return GUID_RE.test(hallMatch[1] ?? "") ? { pathname: path } : { pathname: "/halls/_" };
+  }
+
+  const professionalMatch = /^\/professionals\/([^/]+)$/.exec(path);
+  if (professionalMatch) {
+    return { pathname: "/professionals/_" };
   }
 
   for (const { pattern, redacted } of PRIVATE_DYNAMIC_ROUTES) {

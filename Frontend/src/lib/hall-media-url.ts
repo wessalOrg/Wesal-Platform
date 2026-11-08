@@ -84,10 +84,32 @@ export function apiUploadPath(url: string | null | undefined): string | null {
  * - Any other relative path is treated as a frontend-local asset (e.g.
  *   `public/halls/featured-*.webp` fallbacks) and returned as-is.
  */
+/**
+ * API-relative media under `/api/v1/...` (profile pictures, post/offer images).
+ * These are served by the API host with auth/visibility rules — never treat them
+ * as frontend-local public assets.
+ */
+export function apiV1MediaPath(url: string | null | undefined): string | null {
+  const value = url?.trim();
+  if (!value) return null;
+  if (value.toLowerCase().startsWith("/api/")) return value;
+  if (!/^https?:\/\//i.test(value)) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.pathname.toLowerCase().startsWith("/api/")
+      ? `${parsed.pathname}${parsed.search}`
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function resolveMediaUrl(url: string | null | undefined): string {
   const value = url?.trim();
   if (!value) return "";
   const uploadPath = apiUploadPath(value);
   if (uploadPath) return `${apiMediaOrigin()}${uploadPath}`;
+  const apiPath = apiV1MediaPath(value);
+  if (apiPath) return `${apiMediaOrigin()}${apiPath}`;
   return value;
 }
