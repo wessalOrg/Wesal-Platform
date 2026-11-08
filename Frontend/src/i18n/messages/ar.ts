@@ -733,6 +733,8 @@ const ar: MessageCatalog = {
   "auth.pendingAccount.viewAccount": "عرض حالة الحساب",
   "auth.pendingAccount.roleCoordinator": "منسق مناسبات",
   "auth.pendingAccount.rolePhotographer": "مصور",
+  "pro.dash.appTitle.coordinator": "لوحة منسق المناسبات",
+  "pro.dash.appTitle.photographer": "لوحة المصور",
   "pro.dash.banner.pending.title": "حالة الحساب: قيد المراجعة",
   "pro.dash.banner.pending.body":
     "تم استلام طلبك، والإدارة تقوم بمراجعته حالياً. سنقوم بإشعارك فور اتخاذ القرار.",
@@ -954,7 +956,7 @@ const ar: MessageCatalog = {
   "seeker.welcome": "مرحباً بك في وصال، {name}",
   "seeker.welcomeBack": "مرحباً بعودتك، {name}",
   "seeker.welcomeSubtitle": "كل ما يخص حسابك وتجربتك مع وصال، في مكان واحد.",
-  "seeker.role": "باحث عن قاعة",
+  "seeker.role": "اسم المستخدم",
   "seeker.guestName": "ضيف وصال",
   "seeker.myAccount": "حسابي",
   "seeker.quickActions": "إجراءات سريعة",

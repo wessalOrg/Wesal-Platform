@@ -17,7 +17,10 @@ import {
   SEEKER_DASHBOARD_NAV,
 } from "@/constants/seekerDashboardNav";
 import { useT } from "@/i18n";
-import { professionalRoleLabelKey } from "@/lib/professional-role-label";
+import {
+  professionalAppTitleKey,
+  professionalRoleLabelKey,
+} from "@/lib/professional-role-label";
 
 const SIDEBAR_ID = "seeker-dash-sidebar";
 const EXTRA_PREFETCH = ["/"] as const;
@@ -95,6 +98,7 @@ export default function SeekerDashboardShell({
     identity.displayName ||
     t("seeker.guestName");
   const roleLabel = t(professionalRoleLabelKey(identity.role));
+  const appTitle = t(professionalAppTitleKey(identity.role));
 
   return (
     <div
@@ -119,7 +123,7 @@ export default function SeekerDashboardShell({
 
       <div className="seeker-dash-main">
         <header className="seeker-dash-topbar dash-topbar">
-          <p className="seeker-dash-topbar-title">{t("seeker.appTitle")}</p>
+          <p className="seeker-dash-topbar-title">{appTitle}</p>
           <div className="dash-topbar-actions">
             <div className="seeker-dash-topbar-end dash-topbar-tools">
               <LanguageSwitcher iconOnly className="seeker-dash-lang" />

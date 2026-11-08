@@ -12,3 +12,12 @@ export function professionalRoleLabelKey(
   if (isEventCoordinatorRole(role)) return "auth.pendingAccount.roleCoordinator";
   return "seeker.role";
 }
+
+/** i18n key for the workspace topbar title (لوحة …). */
+export function professionalAppTitleKey(
+  role: WesalRole | null | undefined,
+): string {
+  if (isPhotographerRole(role)) return "pro.dash.appTitle.photographer";
+  if (isEventCoordinatorRole(role)) return "pro.dash.appTitle.coordinator";
+  return "seeker.appTitle";
+}

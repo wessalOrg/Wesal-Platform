@@ -739,6 +739,8 @@ const en: MessageCatalog = {
   "auth.pendingAccount.viewAccount": "View account status",
   "auth.pendingAccount.roleCoordinator": "Event coordinator",
   "auth.pendingAccount.rolePhotographer": "Photographer",
+  "pro.dash.appTitle.coordinator": "Event coordinator dashboard",
+  "pro.dash.appTitle.photographer": "Photographer dashboard",
   "pro.dash.banner.pending.title": "Account status: Under review",
   "pro.dash.banner.pending.body":
     "We received your request and the team is reviewing it. We’ll notify you as soon as a decision is made.",
@@ -961,7 +963,7 @@ const en: MessageCatalog = {
   "seeker.welcome": "Welcome to Wesal, {name}",
   "seeker.welcomeBack": "Welcome back, {name}",
   "seeker.welcomeSubtitle": "Everything about your account and Wesal experience, in one place.",
-  "seeker.role": "Hall seeker",
+  "seeker.role": "Username",
   "seeker.guestName": "Wesal guest",
   "seeker.myAccount": "My account",
   "seeker.quickActions": "Quick actions",
