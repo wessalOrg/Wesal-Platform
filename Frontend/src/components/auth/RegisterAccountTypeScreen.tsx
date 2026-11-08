@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import Link from "next/link";
 import RegisterFormCard from "@/components/auth/RegisterFormCard";
 import RoleSetupBasicDataForm from "@/components/auth/role-setup/RoleSetupBasicDataForm";
 import WesalLogo from "@/components/brand/WesalLogo";
@@ -12,6 +13,7 @@ import {
   storeAccountType,
   type AccountType,
 } from "@/lib/account-type";
+import { markAuthNavigation } from "@/lib/auth-nav";
 
 type RegisterAccountTypeScreenProps = {
   initialAccountType: AccountType;
@@ -244,6 +246,18 @@ export default function RegisterAccountTypeScreen({
         <span>{t("auth.register.continue")}</span>
         <span aria-hidden="true">←</span>
       </button>
+
+      <p className="mt-3.5 text-center text-xs text-[var(--wesal-muted)] sm:mt-4 sm:text-sm">
+        {t("auth.register.haveAccount")}{" "}
+        <Link
+          href={loginHref}
+          onClick={markAuthNavigation}
+          className="font-semibold text-[var(--wesal-maroon)] underline-offset-2 hover:underline"
+          data-testid="register-type-login-link"
+        >
+          {t("auth.register.loginLink")}
+        </Link>
+      </p>
     </div>
   );
 }
