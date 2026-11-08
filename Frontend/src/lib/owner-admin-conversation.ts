@@ -5,7 +5,7 @@ import { conversationTimeValue } from "@/lib/conversation-mapper";
 import type { ConversationSummary } from "@/types/messages";
 
 const ADMIN_NAME =
-  /^(الإدارة|ادارة|إدارة المنصة|إدارة وصال|Admin|Administrator|Wesal Admin|مشرف)(\b|$)/i;
+  /^(الإدارة|ادارة|إدارة المنصة|إدارة وصال|فريق وصال|Wesal Team|Admin|Administrator|Wesal Admin|مشرف)(\b|$)/i;
 
 const PLATFORM_PARTICIPANT_ID = /^(system|admin)$/i;
 

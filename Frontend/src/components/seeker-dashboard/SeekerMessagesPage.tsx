@@ -114,16 +114,21 @@ export default function SeekerMessagesPage() {
 
   const selected = conversations.find((item) => item.conversationId === selectedId) ?? null;
   const showThread = Boolean(selectedId);
+  const threadHasNoHall = Boolean(thread && !(thread.hallId ?? "").trim());
   const peerIsAdmin = selected
     ? isOwnerAdminConversation(selected, conversations)
-    : ownerContactAdmin;
-  const threadTitle = selected
-    ? peerIsAdmin || isHallOwner
-      ? ownerConversationTitle(selected, lang, conversations)
-      : conversationPreviewTitle(selected, lang)
-    : thread
-      ? conversationHallLabel(thread, lang)
-      : t("messages.title");
+    : ownerContactAdmin ||
+      (isProfessional && Boolean(focusConversationId || selectedId) && threadHasNoHall);
+  const adminLabel = t("owner.messages.admin");
+  const threadTitle = peerIsAdmin
+    ? adminLabel
+    : selected
+      ? isHallOwner
+        ? ownerConversationTitle(selected, lang, conversations)
+        : conversationPreviewTitle(selected, lang)
+      : thread
+        ? conversationHallLabel(thread, lang)
+        : t("messages.title");
   const threadSubtitle = peerIsAdmin
     ? null
     : selected
@@ -132,7 +137,7 @@ export default function SeekerMessagesPage() {
         ? conversationHallLabel(thread, lang)
         : null;
   const threadBadge = peerIsAdmin
-    ? t("owner.messages.admin")
+    ? adminLabel
     : isHallOwner
       ? t("owner.messages.seekerRole")
       : conversationPeerRoleLabel({

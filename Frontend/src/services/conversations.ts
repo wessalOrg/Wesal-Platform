@@ -63,7 +63,9 @@ function mapResponse(data: ConversationResponse | null | undefined, fallbackHall
   return {
     conversationId: String(dto.conversationId ?? dto.ConversationId ?? dto.id ?? dto.Id ?? ""),
     hallId: String(dto.hallId ?? dto.HallId ?? fallbackHallId),
-    hallName: (dto.hallName ?? dto.HallName)?.trim() || t("common.hall"),
+    hallName:
+      (dto.hallName ?? dto.HallName)?.trim() ||
+      (fallbackHallId ? t("common.hall") : ""),
     initiatorUserId: dto.initiatorUserId ?? dto.InitiatorUserId ?? "",
     ownerUserId: dto.ownerUserId ?? dto.OwnerUserId ?? "",
     createdAt: dto.createdAt ?? dto.CreatedAt ?? new Date().toISOString(),
@@ -153,7 +155,7 @@ export async function contactAdminAccount(): Promise<ConversationThread> {
     return {
       conversationId: "demo-admin-account",
       hallId: "",
-      hallName: "Admin",
+      hallName: "",
       initiatorUserId: "",
       ownerUserId: "",
       createdAt: new Date().toISOString(),
@@ -170,6 +172,57 @@ export async function contactAdminAccount(): Promise<ConversationThread> {
     throw new ApiError(t("errors.conversation.create"), 500);
   }
   return thread;
+}
+
+/**
+ * Professional ↔ Admin account thread summary (excluded from GET /conversations for non-admins).
+ * Returns null when the account has never opened contact-admin-account.
+ */
+export async function fetchMyAdminAccountConversation(): Promise<ConversationSummary | null> {
+  if (conversationsUseMock()) {
+    return {
+      conversationId: "demo-admin-account",
+      kind: "AdminAccount",
+      hallId: "",
+      hallName: "",
+      otherParticipantId: "admin",
+      otherParticipantName: t("owner.messages.admin"),
+      lastMessagePreview: "",
+      lastMessageAt: null,
+      messageCount: 0,
+      createdAt: new Date().toISOString(),
+      isUnread: false,
+    };
+  }
+  try {
+    const { data } = await api.get<ConversationResponse>("/conversations/admin-account", {
+      timeout: 8000,
+    });
+    const thread = mapResponse(data, "");
+    if (!thread.conversationId) return null;
+    return {
+      conversationId: thread.conversationId,
+      kind: "AdminAccount",
+      hallId: "",
+      hallName: "",
+      otherParticipantId: "admin",
+      otherParticipantName: t("owner.messages.admin"),
+      lastMessagePreview: "",
+      lastMessageAt: null,
+      messageCount: 0,
+      createdAt: thread.createdAt,
+      isUnread: false,
+    };
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 404 || error.status === 204)) {
+      return null;
+    }
+    // Missing conversation often comes back as empty 200/404 variants — keep inbox usable.
+    if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 function mapInboxItem(data: unknown): ConversationSummary | null {

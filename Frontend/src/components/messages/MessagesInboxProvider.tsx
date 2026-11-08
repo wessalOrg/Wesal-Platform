@@ -15,6 +15,7 @@ import { useConversationRealtime } from "@/hooks/useConversationRealtime";
 import { useConversationThread } from "@/hooks/useConversationThread";
 import { useInboxConversations } from "@/hooks/useInboxConversations";
 import { useOwnedHallAccess } from "@/hooks/useOwnedHallAccess";
+import { isProfessionalPublisherRole } from "@/lib/account-permissions";
 import { canAccessMessaging } from "@/lib/hall-access";
 import { useMessageDrafts } from "@/hooks/useMessageDrafts";
 import { useThreadDeliverySync } from "@/hooks/useThreadDeliverySync";
@@ -53,10 +54,12 @@ const MessagesInboxContext = createContext<MessagesInboxContextValue | null>(nul
 
 export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { ready, authenticated, sessionKey, userId, displayName, isHallOwner } = useAccountAccess();
+  const { ready, authenticated, sessionKey, userId, displayName, isHallOwner, role } =
+    useAccountAccess();
   const ownerKey = ready && authenticated ? sessionKey : null;
   const canUseMessaging = Boolean(ownerKey);
   const currentUserId = userId || getCurrentUserId();
+  const includeAdminAccount = isProfessionalPublisherRole(role);
 
   const [isOpen, setIsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -85,7 +88,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
     pathname.startsWith("/owner/messages/");
   const isMessagesRoute = pathname === "/messages" || pathname.startsWith("/messages/");
   const inboxActive = Boolean(sessionReady && ownerKey && (isOpen || isEmbeddedInbox || isMessagesRoute));
-  const inbox = useInboxConversations(ownerKey, inboxActive);
+  const inbox = useInboxConversations(ownerKey, inboxActive, includeAdminAccount);
   const selectedConversation =
     inbox.conversations.find((item) => item.conversationId === selectedId) ?? null;
   const { access: selectedHallAccess, flagsReady: selectedHallFlagsReady } = useOwnedHallAccess(

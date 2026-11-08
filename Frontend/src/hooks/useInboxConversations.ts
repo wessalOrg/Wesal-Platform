@@ -2,16 +2,63 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { conversationTimeValue } from "@/lib/conversation-mapper";
-import { conversationErrorMessage, fetchInboxConversations } from "@/services/conversations";
+import {
+  conversationErrorMessage,
+  fetchInboxConversations,
+  fetchMyAdminAccountConversation,
+} from "@/services/conversations";
 import type { ConversationSummary, InboxStatus } from "@/types/messages";
+
+function mergeAdminAccountRow(
+  items: ConversationSummary[],
+  adminRow: ConversationSummary | null,
+): ConversationSummary[] {
+  if (!adminRow) return items;
+  const withoutDup = items.filter(
+    (item) => item.conversationId !== adminRow.conversationId && item.kind !== "AdminAccount",
+  );
+  const existing = items.find((item) => item.conversationId === adminRow.conversationId);
+  const merged: ConversationSummary = existing
+    ? {
+        ...existing,
+        kind: "AdminAccount",
+        hallId: "",
+        hallName: "",
+        otherParticipantId: existing.otherParticipantId || "admin",
+        otherParticipantName: adminRow.otherParticipantName,
+      }
+    : adminRow;
+  return [merged, ...withoutDup].sort(
+    (left, right) =>
+      conversationTimeValue(right.lastMessageAt ?? right.createdAt) -
+      conversationTimeValue(left.lastMessageAt ?? left.createdAt),
+  );
+}
+
+async function loadInbox(includeAdminAccount: boolean): Promise<ConversationSummary[]> {
+  const items = await fetchInboxConversations();
+  if (!includeAdminAccount) return items;
+  try {
+    const adminRow = await fetchMyAdminAccountConversation();
+    return mergeAdminAccountRow(items, adminRow);
+  } catch {
+    return items;
+  }
+}
 
 /**
  * Inbox list for a single auth session. Closing the panel (`active=false`)
  * parks the data; logout (`ownerKey=null`) wipes it.
  */
-export function useInboxConversations(ownerKey: string | null, active: boolean) {
+export function useInboxConversations(
+  ownerKey: string | null,
+  active: boolean,
+  includeAdminAccount = false,
+) {
   const [retryTick, setRetryTick] = useState(0);
-  const resetKey = ownerKey ? `${ownerKey}:${retryTick}` : null;
+  const resetKey = ownerKey
+    ? `${ownerKey}:${includeAdminAccount ? "admin" : "plain"}:${retryTick}`
+    : null;
   const [seenKey, setSeenKey] = useState<string | null>(null);
   const [status, setStatus] = useState<InboxStatus>("idle");
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
@@ -28,7 +75,7 @@ export function useInboxConversations(ownerKey: string | null, active: boolean) 
     if (!ownerKey || !active) return;
 
     let cancelled = false;
-    void fetchInboxConversations()
+    void loadInbox(includeAdminAccount)
       .then((items) => {
         if (cancelled) return;
         setConversations(items);
@@ -44,18 +91,18 @@ export function useInboxConversations(ownerKey: string | null, active: boolean) 
     return () => {
       cancelled = true;
     };
-  }, [ownerKey, active, retryTick]);
+  }, [ownerKey, active, retryTick, includeAdminAccount]);
 
   const refresh = useCallback(() => {
     if (!ownerKey) return;
-    void fetchInboxConversations()
+    void loadInbox(includeAdminAccount)
       .then((items) => {
         setConversations(items);
         setStatus(items.length === 0 ? "empty" : "ready");
         setError(null);
       })
       .catch(() => undefined);
-  }, [ownerKey]);
+  }, [ownerKey, includeAdminAccount]);
 
   const markLocalRead = useCallback((conversationId: string) => {
     setConversations((current) =>

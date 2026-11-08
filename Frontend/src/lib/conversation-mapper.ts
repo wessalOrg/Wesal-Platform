@@ -122,11 +122,13 @@ export function mapThreadDto(data: unknown, fallbackConversationId: string): Mes
         .map(mapThreadMessageDto)
         .filter((item): item is ThreadMessage => Boolean(item))
     : [];
+  const hallId = asText(dto.hallId ?? dto.HallId);
+  const hallNameRaw = asText(dto.hallName ?? dto.HallName);
   return {
     conversationId:
       asText(dto.conversationId ?? dto.ConversationId) || fallbackConversationId,
-    hallId: asText(dto.hallId ?? dto.HallId),
-    hallName: asText(dto.hallName ?? dto.HallName) || t("common.hall"),
+    hallId,
+    hallName: hallNameRaw || (hallId ? t("common.hall") : ""),
     messages,
   };
 }
