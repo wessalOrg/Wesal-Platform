@@ -27,6 +27,7 @@ import {
   REGISTER_LIMITS,
 } from "@/lib/register-validation";
 import { registerAccount } from "@/services/auth";
+import "./role-setup.css";
 
 type FieldKey = "fullName" | "email" | "password" | "confirmPassword";
 type FieldErrors = Partial<Record<FieldKey, string>>;
@@ -237,7 +238,7 @@ export default function RoleSetupBasicDataForm({
 
   return (
     <div
-      className="wesal-role-setup-card w-full p-5 sm:p-6"
+      className="wesal-role-setup-card w-full rounded-[1.35rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(60,35,30,0.16)] sm:p-6"
       data-testid="role-setup-basic-data"
     >
       <div className="flex flex-col items-center text-center">

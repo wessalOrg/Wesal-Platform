@@ -13,6 +13,7 @@ import { useT } from "@/i18n";
 import { isEventCoordinatorRole } from "@/lib/account-role";
 import { REGULAR_PROFILE_PATH } from "@/lib/account-profile-path";
 import { markAuthNavigation } from "@/lib/auth-nav";
+import "@/components/auth/role-setup/role-setup.css";
 
 type CoordinatorSetupScreenProps = {
   /** Local/design preview without requiring an EventCoordinator session. */
@@ -98,7 +99,7 @@ export default function CoordinatorSetupScreen({
   if (!canView) {
     return (
       <div
-        className="wesal-role-setup-card w-full p-6 text-center text-sm text-[var(--wesal-muted)]"
+        className="wesal-role-setup-card w-full rounded-[1.35rem] border border-white/70 bg-white p-6 text-center text-sm text-[var(--wesal-muted)] shadow-[0_18px_48px_rgba(60,35,30,0.16)]"
         data-testid="coordinator-setup-loading"
       >
         {t("auth.coordinator.setup.loading")}
@@ -108,7 +109,7 @@ export default function CoordinatorSetupScreen({
 
   return (
     <div
-      className="wesal-role-setup-card w-full p-4 sm:p-5"
+      className="wesal-role-setup-card w-full rounded-[1.35rem] border border-white/70 bg-white p-4 shadow-[0_18px_48px_rgba(60,35,30,0.16)] sm:p-5"
       data-testid="coordinator-setup-screen"
       data-step={showPending ? "pending" : isResubmitFlow ? "resubmit" : "setup"}
     >

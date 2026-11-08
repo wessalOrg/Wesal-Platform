@@ -20,6 +20,7 @@ import {
 import { contactAdminAccount, conversationErrorMessage } from "@/services/conversations";
 import type { ProfessionalAccountPhase } from "@/types/account-approval";
 import type { WesalRole } from "@/types/session";
+import "@/components/auth/role-setup/role-setup.css";
 
 type PendingProfessionalAccountPanelProps = {
   phase: ProfessionalAccountPhase;
@@ -100,7 +101,7 @@ export default function PendingProfessionalAccountPanel({
 
   return (
     <section
-      className="wesal-role-setup-card mx-auto w-full max-w-[32rem] px-6 py-8 text-center sm:px-8 sm:py-9"
+      className="wesal-role-setup-card mx-auto w-full max-w-[32rem] rounded-[1.35rem] border border-white/70 bg-white px-6 py-8 text-center shadow-[0_18px_48px_rgba(60,35,30,0.16)] sm:px-8 sm:py-9"
       data-testid="pending-professional-account"
       data-phase={phase}
     >

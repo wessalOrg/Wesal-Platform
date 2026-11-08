@@ -1,0 +1,125 @@
+/* Role setup (coordinator / photographer) — ships with the setup components */
+
+.wesal-role-setup-card {
+  border-radius: 1.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(60, 35, 30, 0.16);
+}
+
+.wesal-role-setup-btn {
+  display: inline-flex;
+  min-height: 2.65rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.8rem;
+  font-size: 0.92rem;
+  background: linear-gradient(
+    135deg,
+    var(--wesal-maroon-dark) 0%,
+    var(--wesal-maroon) 48%,
+    var(--wesal-maroon-soft) 100%
+  );
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(168, 98, 103, 0.28);
+  transition:
+    transform 180ms ease,
+    filter 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.wesal-role-setup-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow: 0 14px 28px rgba(168, 98, 103, 0.34);
+}
+
+.wesal-role-setup-btn:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.wesal-role-setup-btn-outline {
+  display: inline-flex;
+  min-height: 2.65rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.8rem;
+  font-size: 0.92rem;
+  border: 1.5px solid var(--wesal-maroon);
+  background: #fff;
+  color: var(--wesal-maroon);
+  font-weight: 800;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.wesal-role-setup-btn-outline:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--wesal-pink) 55%, white);
+  transform: translateY(-1px);
+}
+
+.wesal-role-setup-input {
+  box-sizing: border-box;
+  min-height: 2.45rem;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--wesal-border);
+  background: #fff;
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--wesal-text);
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+/* Keep text clear of leading/trailing icons in RTL and LTR. */
+.wesal-role-setup-input--icon-start {
+  padding-inline-start: 2.45rem;
+}
+
+.wesal-role-setup-input--icon-end {
+  padding-inline-end: 2.45rem;
+}
+
+.wesal-role-setup-input::placeholder {
+  color: color-mix(in srgb, var(--wesal-muted) 82%, white);
+}
+
+.wesal-role-setup-input:focus-visible {
+  border-color: var(--wesal-maroon);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wesal-maroon) 18%, transparent);
+}
+
+.wesal-role-setup-input--error {
+  border-color: #c45b55;
+}
+
+.wesal-role-setup-upload {
+  border: 1.5px dashed color-mix(in srgb, var(--wesal-maroon) 32%, var(--wesal-border));
+  background: color-mix(in srgb, var(--wesal-pink) 42%, white);
+  border-radius: 1rem;
+}
+
+.wesal-role-setup-type-card {
+  border-radius: 1rem;
+  border: 1.5px solid var(--wesal-border);
+  background: #fff;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.wesal-role-setup-type-card--active {
+  border-color: var(--wesal-maroon);
+  background: color-mix(in srgb, var(--wesal-pink) 28%, white);
+  box-shadow: 0 8px 20px rgba(193, 123, 127, 0.14);
+}
