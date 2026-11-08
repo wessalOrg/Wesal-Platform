@@ -153,16 +153,16 @@ export default function RegisterAccountTypeScreen({
 
   return (
     <div
-      className="wesal-register-card w-full rounded-[1.15rem] border border-white/70 bg-white/[0.97] p-3.5 shadow-[0_24px_60px_rgba(60,35,30,0.18)] sm:rounded-[1.4rem] sm:p-6 lg:p-5"
+      className="wesal-register-card w-full rounded-[1.15rem] border border-white/70 bg-white/[0.97] p-3.5 shadow-[0_24px_60px_rgba(60,35,30,0.18)] sm:rounded-[1.4rem] sm:p-6 lg:p-6"
       data-testid="register-account-type-screen"
       data-step="type"
     >
       <div className="flex flex-col items-center text-center">
-        <WesalLogo className="h-7 w-auto sm:h-10 lg:h-8" variant="brand" />
-        <h2 className="wesal-text-bold mt-2 text-[0.95rem] font-extrabold text-[var(--wesal-maroon)] sm:mt-3 sm:text-lg lg:mt-2 lg:text-base">
+        <WesalLogo className="h-7 w-auto sm:h-10 lg:h-9" variant="brand" />
+        <h2 className="wesal-text-bold mt-2 text-[0.95rem] font-extrabold text-[var(--wesal-maroon)] sm:mt-3 sm:text-lg lg:mt-2.5 lg:text-[1.05rem]">
           {t("auth.register.welcome")}
         </h2>
-        <p className="mt-1 max-w-[20rem] text-[0.7rem] font-medium leading-4 text-[var(--wesal-muted)] sm:mt-1.5 sm:max-w-[22rem] sm:text-[0.8rem] sm:leading-[1.15rem] lg:mt-1 lg:text-[0.75rem]">
+        <p className="mt-1 max-w-[20rem] text-[0.7rem] font-medium leading-4 text-[var(--wesal-muted)] sm:mt-1.5 sm:max-w-[22rem] sm:text-[0.8rem] sm:leading-[1.15rem] lg:mt-1 lg:text-[0.78rem]">
           {t("auth.register.chooseTypeShort")}
         </p>
       </div>
@@ -170,7 +170,7 @@ export default function RegisterAccountTypeScreen({
       <div
         role="radiogroup"
         aria-labelledby={`${groupId}-label`}
-        className="mt-3.5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3 lg:mt-4 lg:gap-2.5"
+        className="mt-3.5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3 lg:mt-5 lg:gap-3"
       >
         <span id={`${groupId}-label`} className="sr-only">
           {t("auth.register.form.accountTypeLabel")}
@@ -190,7 +190,7 @@ export default function RegisterAccountTypeScreen({
                 setAccountTypeError(null);
                 storeAccountType(option.id);
               }}
-              className={`relative flex min-h-[9.5rem] flex-col items-center rounded-2xl border bg-white px-2.5 py-3 text-center transition sm:min-h-[10.25rem] sm:px-3 sm:py-3.5 lg:min-h-[8.75rem] lg:px-2.5 lg:py-3 ${
+              className={`relative flex min-h-[9.5rem] flex-col items-center rounded-2xl border bg-white px-2.5 py-3 text-center transition sm:min-h-[10.25rem] sm:px-3 sm:py-3.5 lg:min-h-[9.5rem] lg:px-3 lg:py-3.5 ${
                 isSelected
                   ? "border-[var(--wesal-maroon)] shadow-[0_10px_24px_rgba(193,123,127,0.18)]"
                   : "border-[var(--wesal-border)] hover:border-[color-mix(in_srgb,var(--wesal-maroon)_35%,var(--wesal-border))]"
@@ -208,16 +208,16 @@ export default function RegisterAccountTypeScreen({
               </span>
 
               <span
-                className="mt-1 inline-flex size-12 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)] sm:size-14 lg:size-12"
+                className="mt-1 inline-flex size-12 items-center justify-center rounded-full bg-[var(--wesal-pink)] text-[var(--wesal-maroon)] sm:size-14 lg:size-[3.25rem]"
                 aria-hidden="true"
               >
                 <RoleIcon id={option.id} />
               </span>
 
-              <span className="wesal-text-bold mt-2.5 text-[0.92rem] font-extrabold leading-snug text-[var(--wesal-maroon)] sm:text-base lg:mt-2 lg:text-[0.92rem]">
+              <span className="wesal-text-bold mt-2.5 text-[0.92rem] font-extrabold leading-snug text-[var(--wesal-maroon)] sm:text-base lg:mt-2.5 lg:text-[0.95rem]">
                 {t(option.titleKey)}
               </span>
-              <span className="mt-1 text-[0.72rem] font-medium leading-5 text-[var(--wesal-muted)] sm:text-xs lg:leading-4">
+              <span className="mt-1 text-[0.72rem] font-medium leading-5 text-[var(--wesal-muted)] sm:text-xs lg:leading-[1.15rem]">
                 {t(option.bodyKey)}
               </span>
             </button>
@@ -237,7 +237,7 @@ export default function RegisterAccountTypeScreen({
 
       <button
         type="button"
-        className="btn-primary wesal-text-bold mt-5 flex min-h-12 w-full flex-row items-center justify-center gap-2 !rounded-xl !text-base lg:mt-4 lg:min-h-11"
+        className="btn-primary wesal-text-bold mt-5 flex min-h-12 w-full flex-row items-center justify-center gap-2 !rounded-xl !text-base lg:mt-5 lg:min-h-11"
         data-testid="register-type-continue"
         onClick={onContinue}
       >
