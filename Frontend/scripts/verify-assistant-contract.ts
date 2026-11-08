@@ -91,12 +91,15 @@ async function main() {
     // requests remain truthful Coming Soon responses in the backend policy.
     // Registration setup routes (e.g. /register/photographer-setup) are auth
     // flows, not marketplace pages, so they are excluded from this gate.
+    // Admin review queues (e.g. /admin/photographers) are staff tools, not
+    // public marketplace pages — exclude /admin/ from this gate.
     const comingSoon = new Set(["/photographers", "/event-planners"]);
     assert.ok(
       !pageRoutes().some(
         (route) =>
           !comingSoon.has(route) &&
           !route.startsWith("/register/") &&
+          !route.startsWith("/admin/") &&
           /photo|media|vendor/i.test(route),
       ),
     );
