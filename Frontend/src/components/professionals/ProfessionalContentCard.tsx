@@ -112,7 +112,7 @@ export default function ProfessionalContentCard({
 
   return (
     <article
-      className="overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_12%,white)] bg-white shadow-[0_10px_28px_rgba(88,40,48,0.06)]"
+      className="overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--wesal-maroon)_12%,white)] bg-white shadow-[0_10px_28px_rgba(88,40,48,0.06)] sm:rounded-2xl"
       data-testid={`professional-${kind}-card`}
       data-offer-status={lifecycle ?? undefined}
     >
@@ -138,7 +138,7 @@ export default function ProfessionalContentCard({
           </span>
         ) : null}
       </div>
-      <div className="space-y-2 p-3.5 text-start">
+      <div className="space-y-1.5 p-3 text-start sm:space-y-2 sm:p-3.5">
         {caption ? (
           <p className="line-clamp-3 text-sm leading-6 text-[var(--wesal-text)]">
             {caption}

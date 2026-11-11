@@ -233,7 +233,7 @@ export default function ProfessionalPostForm({
 
   return (
     <section
-      className="rounded-3xl border border-[color-mix(in_srgb,var(--wesal-maroon)_14%,white)] bg-white p-4 shadow-[0_16px_36px_rgba(88,40,48,0.1)] sm:p-5"
+      className="min-w-0 rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_14%,white)] bg-white p-3.5 shadow-[0_16px_36px_rgba(88,40,48,0.1)] sm:rounded-3xl sm:p-5"
       role="dialog"
       aria-labelledby={titleId}
       data-testid="professional-post-form"

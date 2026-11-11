@@ -298,6 +298,7 @@ function StatusBanner({
 }) {
   const t = useT();
   const copy = bannerCopy(phase, t);
+  const statusLabel = bannerStatusLabel(phase, t);
 
   return (
     <section
@@ -305,37 +306,47 @@ function StatusBanner({
       data-testid="pro-dash-status-banner"
       aria-label={copy.title}
     >
-      <div className="pro-dash-banner-copy">
-        <p className="pro-dash-banner-kicker">
+      <div className="pro-dash-banner-glow" aria-hidden="true" />
+
+      <div className="pro-dash-banner-main">
+        <span className="pro-dash-banner-icon" aria-hidden="true">
+          <span className="pro-dash-banner-icon-ring" />
           <StatusGlyph phase={phase} />
-          <span>{roleLabel}</span>
-        </p>
-        <h1 className="pro-dash-banner-title">{copy.title}</h1>
-        <p className="pro-dash-banner-body">{copy.body}</p>
-        {phase !== "approved" ? (
-          <div className="pro-dash-banner-actions">
-            {canResubmit ? (
-              <Link href={editHref} className="pro-dash-card-cta" data-testid="pro-dash-edit">
-                {t("auth.pendingAccount.editResubmit")}
-              </Link>
-            ) : null}
-            <button
-              type="button"
-              className={
-                canResubmit ? "pro-dash-card-cta pro-dash-card-cta--ghost" : "pro-dash-card-cta"
-              }
-              disabled={contactPending}
-              aria-busy={contactPending || undefined}
-              data-testid="pro-dash-contact-admin"
-              onClick={onContactAdmin}
-            >
-              {contactPending
-                ? t("auth.pendingAccount.contactAdminOpening")
-                : t("auth.pendingAccount.contactAdmin")}
-            </button>
-          </div>
-        ) : null}
+        </span>
+
+        <div className="pro-dash-banner-copy">
+          <p className="pro-dash-banner-role">{roleLabel}</p>
+          <h1 className="pro-dash-banner-title">{copy.title}</h1>
+          <p className="pro-dash-banner-status">{statusLabel}</p>
+          <p className="pro-dash-banner-body">{copy.body}</p>
+        </div>
       </div>
+
+      {phase !== "approved" ? (
+        <div className="pro-dash-banner-actions">
+          {canResubmit ? (
+            <Link href={editHref} className="pro-dash-banner-cta" data-testid="pro-dash-edit">
+              {t("auth.pendingAccount.editResubmit")}
+            </Link>
+          ) : null}
+          <button
+            type="button"
+            className={
+              canResubmit
+                ? "pro-dash-banner-cta pro-dash-banner-cta--ghost"
+                : "pro-dash-banner-cta"
+            }
+            disabled={contactPending}
+            aria-busy={contactPending || undefined}
+            data-testid="pro-dash-contact-admin"
+            onClick={onContactAdmin}
+          >
+            {contactPending
+              ? t("auth.pendingAccount.contactAdminOpening")
+              : t("auth.pendingAccount.contactAdmin")}
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -365,6 +376,22 @@ function bannerCopy(
         title: t("pro.dash.banner.pending.title"),
         body: t("pro.dash.banner.pending.body"),
       };
+  }
+}
+
+function bannerStatusLabel(
+  phase: ProfessionalAccountPhase,
+  t: (key: string) => string,
+): string {
+  switch (phase) {
+    case "approved":
+      return t("pro.dash.badge.on");
+    case "rejected":
+      return t("auth.pendingAccount.statusRejected");
+    case "needs_changes":
+      return t("auth.pendingAccount.statusNeedsChanges");
+    default:
+      return t("auth.pendingAccount.statusPending");
   }
 }
 

@@ -254,7 +254,48 @@ export default function AdminPhotographerRequestsView() {
 
         {!loading && !errorKey && visibleItems.length > 0 ? (
           <>
-            <div className="admin-coord-table-wrap">
+            <ul
+              className="admin-coord-mobile-list"
+              data-testid="admin-photographer-requests-cards"
+            >
+              {visibleItems.map((row) => (
+                <li key={row.userId} className="admin-coord-mobile-card">
+                  <div className="admin-coord-person">
+                    <span className="admin-coord-avatar" aria-hidden="true">
+                      {initialLetter(row)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-1.5">
+                        <p className="admin-coord-person-name !whitespace-normal">
+                          {row.fullName || row.displayName || "—"}
+                        </p>
+                        <span className={statusBadgeClass(row.approvalStatus)}>
+                          {t(statusBadgeKey(row.approvalStatus))}
+                        </span>
+                      </div>
+                      <p className="admin-coord-person-meta" dir="ltr">
+                        {row.email || "—"}
+                      </p>
+                      <p className="admin-coord-person-meta">
+                        {t(photographerTypeKey(row.hasStudio))}
+                        {" · "}
+                        {formatSubmittedAt(row.submittedAt, locale)}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href={adminPhotographerRequestPath(row.userId)}
+                    className="admin-coord-details-btn admin-coord-details-btn--block"
+                    prefetch
+                  >
+                    <EyeIcon />
+                    {t("admin.photographers.queue.open")}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            <div className="admin-coord-table-wrap admin-coord-table-wrap--desktop">
               <table
                 className="admin-coord-table"
                 data-testid="admin-photographer-requests-list"

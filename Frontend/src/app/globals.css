@@ -10551,6 +10551,46 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
     height: auto;
     min-height: 2.25rem;
   }
+
+  /* Coordinator / photographer dashboard surfaces */
+  [data-testid="seeker-dashboard"] .pro-dash,
+  [data-testid="seeker-dashboard"] [data-testid="professional-offers-page"] {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  [data-testid="seeker-dashboard"] .pro-dash-banner,
+  [data-testid="seeker-dashboard"] .pro-dash-notes,
+  [data-testid="seeker-dashboard"] .pro-dash-foot {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  [data-testid="seeker-dashboard"] .pro-dash-grid,
+  [data-testid="seeker-dashboard"] .pro-dash-stats {
+    width: 100%;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-dash-topbar-title {
+    font-size: 0.92rem;
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-dash-sidebar {
+    width: min(100vw, 18.5rem);
+  }
+
+  [data-testid="seeker-dashboard"] .seeker-dash-sidebar-link,
+  [data-testid="seeker-dashboard"] .seeker-dash-sidebar-browse,
+  [data-testid="seeker-dashboard"] .seeker-dash-sidebar-logout {
+    min-height: 2.45rem;
+    font-size: 0.84rem;
+  }
 }
 
 @keyframes seeker-notify-panel-center-in {
@@ -10563,4 +10603,3 @@ html[dir="rtl"] .wesal-navbar-mobile--drawer {
     transform: translateX(-50%) translateY(0) scale(1);
   }
 }
-
