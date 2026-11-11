@@ -14,6 +14,7 @@ import {
   ADMIN_MABROUK_PATH,
   ADMIN_MESSAGES_PATH,
   ADMIN_PHOTOGRAPHERS_PATH,
+  ADMIN_POSTS_PATH,
   ADMIN_REJECTED_HALLS_PATH,
   ADMIN_SUBSCRIPTIONS_PATH,
 } from "@/lib/account-profile-path";
@@ -57,6 +58,8 @@ export default function AdminSidebar({
     pathname.startsWith(`${ADMIN_PHOTOGRAPHERS_PATH}/`);
   const subscriptionsActive =
     pathname === ADMIN_SUBSCRIPTIONS_PATH || pathname.startsWith(`${ADMIN_SUBSCRIPTIONS_PATH}/`);
+  const postsActive =
+    pathname === ADMIN_POSTS_PATH || pathname.startsWith(`${ADMIN_POSTS_PATH}/`);
   const messagesActive =
     pathname === ADMIN_MESSAGES_PATH || pathname.startsWith(`${ADMIN_MESSAGES_PATH}/`);
   const helpQuestionsActive =
@@ -243,6 +246,24 @@ export default function AdminSidebar({
             </li>
             <li>
               <Link
+                href={ADMIN_POSTS_PATH}
+                prefetch
+                className={`seeker-dash-sidebar-link${
+                  postsActive ? " seeker-dash-sidebar-link--active" : ""
+                }`}
+                aria-current={postsActive ? "page" : undefined}
+                data-testid="admin-nav-posts"
+                onClick={onNavigate}
+                onMouseEnter={() => router.prefetch(ADMIN_POSTS_PATH)}
+              >
+                <span className="seeker-dash-sidebar-icon" aria-hidden="true">
+                  <PostsIcon />
+                </span>
+                <span>{t("admin.nav.posts")}</span>
+              </Link>
+            </li>
+            <li>
+              <Link
                 href={ADMIN_MESSAGES_PATH}
                 prefetch
                 className={`seeker-dash-sidebar-link${
@@ -413,6 +434,20 @@ function SubscriptionsIcon() {
       <rect x="3.5" y="6" width="17" height="12" rx="2" stroke="currentColor" strokeWidth="1.7" />
       <path d="M3.5 10h17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
       <path d="M8 14h3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PostsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+      <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M8 9.5h8M8 12.5h8M8 15.5h5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

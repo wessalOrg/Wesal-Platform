@@ -6812,8 +6812,8 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-notify-panel-close {
   display: inline-flex;
-  height: 2rem;
-  width: 2rem;
+  height: 2.75rem;
+  width: 2.75rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
@@ -6929,6 +6929,12 @@ html[dir="rtl"] .seeker-notify-panel {
   border-color: color-mix(in srgb, #c9a227 28%, var(--wesal-white)) !important;
   background: color-mix(in srgb, #1d4ed8 8%, #fff8e8) !important;
   color: #1d4ed8 !important;
+}
+
+.wesal-notify-tone--warning {
+  border-color: color-mix(in srgb, #b47912 28%, var(--wesal-white)) !important;
+  background: color-mix(in srgb, #b47912 10%, #fff8e8) !important;
+  color: #b47912 !important;
 }
 
 .wesal-notify-toast {
@@ -7281,21 +7287,24 @@ html[dir="rtl"] .seeker-notify-panel {
   box-sizing: border-box;
   gap: 0.4rem;
   padding: 0.45rem 0.5rem 0.2rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .owner-chat-filter {
   display: inline-flex;
   flex: 1 1 0;
   min-width: 0;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
   border: 1px solid #e6e1da;
   border-radius: 999px;
   background: #fff;
-  padding: 0.38rem 0.45rem;
+  padding: 0.55rem 0.65rem;
   color: #5c6573;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 700;
   line-height: 1.3;
   text-align: center;

@@ -8,6 +8,12 @@ import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { IncomingRealtimeMessage } from "@/types/messages";
 
 type MessageHandler = (payload: IncomingRealtimeMessage) => void;
+export type UnreadCountsPayload = {
+  conversationId?: string | null;
+  unreadMessageCount?: number;
+  totalUnreadCount?: number;
+};
+type UnreadHandler = (payload: UnreadCountsPayload) => void;
 
 function usesMockRealtime(): boolean {
   if (!isDemoModeEnabled()) return false;
@@ -23,12 +29,53 @@ function mapRealtime(data: unknown): IncomingRealtimeMessage | null {
   return mapRealtimeMessageDto(data);
 }
 
+function mapUnreadCounts(data: unknown): UnreadCountsPayload | null {
+  if (!data || typeof data !== "object") return null;
+  const dto = data as Record<string, unknown>;
+  const conversationId =
+    typeof dto.conversationId === "string"
+      ? dto.conversationId
+      : typeof dto.ConversationId === "string"
+        ? dto.ConversationId
+        : null;
+  const unreadMessageCount =
+    typeof dto.unreadMessageCount === "number"
+      ? dto.unreadMessageCount
+      : typeof dto.UnreadMessageCount === "number"
+        ? dto.UnreadMessageCount
+        : typeof dto.unreadCount === "number"
+          ? dto.unreadCount
+          : typeof dto.UnreadCount === "number"
+            ? dto.UnreadCount
+            : undefined;
+  const totalUnreadCount =
+    typeof dto.totalUnreadCount === "number"
+      ? dto.totalUnreadCount
+      : typeof dto.TotalUnreadCount === "number"
+        ? dto.TotalUnreadCount
+        : undefined;
+  if (
+    conversationId == null &&
+    unreadMessageCount == null &&
+    totalUnreadCount == null
+  ) {
+    return null;
+  }
+  return { conversationId, unreadMessageCount, totalUnreadCount };
+}
+
 const handlersByConversation = new Map<string, Set<MessageHandler>>();
 const inboxHandlers = new Set<MessageHandler>();
+const unreadHandlers = new Set<UnreadHandler>();
+let openConversationId: string | null = null;
 
 function dispatchMessage(payload: IncomingRealtimeMessage) {
   handlersByConversation.get(payload.conversationId)?.forEach((handler) => handler(payload));
   inboxHandlers.forEach((handler) => handler(payload));
+}
+
+function dispatchUnread(payload: UnreadCountsPayload) {
+  unreadHandlers.forEach((handler) => handler(payload));
 }
 
 let connection: HubConnection | null = null;
@@ -44,9 +91,17 @@ function bindHubEvents(hub: HubConnection) {
     if (!payload) return;
     dispatchMessage(payload);
   });
+  hub.on("UnreadCountsUpdated", (raw: unknown) => {
+    const payload = mapUnreadCounts(raw);
+    if (!payload) return;
+    dispatchUnread(payload);
+  });
   hub.onreconnected(() => {
     for (const id of handlersByConversation.keys()) {
       void hub.invoke("JoinConversation", id).catch(() => undefined);
+    }
+    if (openConversationId) {
+      void hub.invoke("SetConversationOpen", openConversationId, true).catch(() => undefined);
     }
   });
 }
@@ -98,6 +153,57 @@ export function subscribeIncomingMessages(onMessage: MessageHandler): () => void
   return () => {
     inboxHandlers.delete(onMessage);
   };
+}
+
+/** Server-pushed unread totals / per-conversation counters. */
+export function subscribeUnreadCounts(onUpdate: UnreadHandler): () => void {
+  if (usesMockRealtime()) return () => undefined;
+  unreadHandlers.add(onUpdate);
+  void ensureHub().catch(() => undefined);
+  return () => {
+    unreadHandlers.delete(onUpdate);
+  };
+}
+
+/**
+ * Tell the hub which conversation the user is actively reading so it can
+ * suppress push alerts and keep unread counters accurate.
+ */
+export function setConversationOpen(conversationId: string | null): void {
+  const next = conversationId?.trim() || null;
+  const previous = openConversationId;
+  openConversationId = next;
+  if (usesMockRealtime()) return;
+
+  void (async () => {
+    try {
+      const hub = await ensureHub();
+      if (!hub) return;
+      if (previous && previous !== next) {
+        await hub.invoke("SetConversationOpen", previous, false).catch(() => undefined);
+      }
+      if (next) {
+        await hub.invoke("SetConversationOpen", next, true).catch(() => undefined);
+      }
+    } catch {
+      /* REST mark-read still works if the hub call fails. */
+    }
+  })();
+}
+
+/** Hub mark-read (alongside REST) so UnreadCountsUpdated stays in sync. */
+export function markConversationReadOnHub(conversationId: string): void {
+  const id = conversationId.trim();
+  if (!id || usesMockRealtime()) return;
+  void (async () => {
+    try {
+      const hub = await ensureHub();
+      if (!hub) return;
+      await hub.invoke("MarkConversationRead", id).catch(() => undefined);
+    } catch {
+      /* REST mark-read is the source of truth if hub invoke fails. */
+    }
+  })();
 }
 
 export function subscribeConversationMessages(

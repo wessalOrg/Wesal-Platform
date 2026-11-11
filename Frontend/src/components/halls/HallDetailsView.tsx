@@ -11,6 +11,7 @@ import HallCommentList from "@/components/halls/HallCommentList";
 import HallAddReviewCard from "@/components/halls/HallAddReviewCard";
 import HallLockedBadge from "@/components/halls/HallLockedBadge";
 import HallUnavailableDialog from "@/components/halls/HallUnavailableDialog";
+import HallActiveOfferBanner from "@/components/offers/HallActiveOfferBanner";
 import { DEMO_HALL_REVIEWS, findHallDetailsFallback } from "@/constants/hallDetailsFallback";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { useUiLang } from "@/components/layout/LanguageProvider";
@@ -356,6 +357,8 @@ export default function HallDetailsView({ hallId, onClose }: HallDetailsViewProp
               />
             ) : null}
           </div>
+
+          <HallActiveOfferBanner hallId={viewHall.id} className="mt-5" />
 
           <section className="mt-7">
             <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">

@@ -29,6 +29,16 @@ type ApiUserNotification = {
   /** `NotificationActionTarget` name. */
   actionTarget?: string | null;
   targetId?: string | null;
+  conversationId?: string | null;
+  ConversationId?: string | null;
+  senderName?: string | null;
+  SenderName?: string | null;
+  senderAvatarUrl?: string | null;
+  SenderAvatarUrl?: string | null;
+  messagePreview?: string | null;
+  MessagePreview?: string | null;
+  messageCount?: number | null;
+  MessageCount?: number | null;
 };
 
 type ApiPagedUserNotifications = {
@@ -45,6 +55,11 @@ function mapInboxItem(item: ApiUserNotification): PlatformNotification | null {
     body: item.body,
     targetId: item.targetId,
     actionTarget: item.actionTarget,
+    conversationId: item.conversationId ?? item.ConversationId,
+    senderName: item.senderName ?? item.SenderName,
+    senderAvatarUrl: item.senderAvatarUrl ?? item.SenderAvatarUrl,
+    messagePreview: item.messagePreview ?? item.MessagePreview,
+    messageCount: item.messageCount ?? item.MessageCount,
   });
   if (!mapped) return null;
 
@@ -92,4 +107,18 @@ export async function markServerNotificationRead(notificationId: string): Promis
 
 export async function markAllServerNotificationsRead(): Promise<void> {
   await api.put("/notifications/read-all", undefined, { timeout: 8000 });
+}
+
+/** GET /notifications/unread-count — authoritative badge total. */
+export async function fetchNotificationsUnreadCount(): Promise<number> {
+  const { data } = await api.get<unknown>("/notifications/unread-count", {
+    timeout: 8000,
+  });
+  if (typeof data === "number" && Number.isFinite(data)) return Math.max(0, data);
+  if (data && typeof data === "object") {
+    const root = data as { count?: unknown; Count?: unknown; unreadCount?: unknown; UnreadCount?: unknown };
+    const raw = root.count ?? root.Count ?? root.unreadCount ?? root.UnreadCount;
+    if (typeof raw === "number" && Number.isFinite(raw)) return Math.max(0, raw);
+  }
+  return 0;
 }

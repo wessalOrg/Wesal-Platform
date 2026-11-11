@@ -210,6 +210,18 @@ function NavIcon({ id }: { id: HallOwnerDashboardNavId }) {
       return <SettingsGearIcon />;
     case "halls":
       return <HallsNavIcon className="h-[1.35rem] w-[1.35rem]" />;
+    case "offers":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+          <path
+            d="M12.5 3.5 20.5 11.5a2.1 2.1 0 0 1 0 3L14.5 20.5a2.1 2.1 0 0 1-3 0L3.5 12.5V3.5h9Z"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinejoin="round"
+          />
+          <circle cx="8.2" cy="8.2" r="1.2" fill="currentColor" />
+        </svg>
+      );
     case "calendar":
       return (
         <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">

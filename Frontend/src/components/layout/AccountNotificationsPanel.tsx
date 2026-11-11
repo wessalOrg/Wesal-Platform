@@ -4,14 +4,13 @@ import Link from "next/link";
 import { useId, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import NotificationItem from "@/components/notifications/NotificationItem";
-import SeekerAcceptedBookingNotices from "@/components/bookings/SeekerAcceptedBookingNotices";
+import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { SEEKER_NOTIFICATIONS_PATH } from "@/constants/seekerDashboardNav";
 import { OWNER_NOTIFICATIONS_PATH } from "@/constants/hallOwnerManagementNav";
 import { useHallBookingRequests } from "@/hooks/useHallBookingRequests";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useNotifications } from "@/hooks/useNotifications";
-import { useUserBookings } from "@/hooks/useUserBookings";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { formatBookingDateLabel } from "@/lib/booking-date";
 import { bookingWhenLabels } from "@/lib/booking-when-label";
@@ -48,7 +47,35 @@ export default function AccountNotificationsPanel({
   if (identity.isHallOwner) {
     return <OwnerNotificationsBody panelId={panelId} onClose={onClose} />;
   }
-  return <SeekerNotificationsBody panelId={panelId} onClose={onClose} />;
+  return (
+    <NotificationsDropdown
+      audience="seeker"
+      panelId={panelId}
+      onClose={onClose}
+      viewAllHref={SEEKER_NOTIFICATIONS_PATH}
+      includeBookingNotices
+    />
+  );
+}
+
+function AdminNotificationsBody({
+  panelId,
+  onClose,
+}: {
+  panelId: string;
+  onClose: () => void;
+}) {
+  const t = useT();
+  return (
+    <NotificationsDropdown
+      audience="admin"
+      panelId={panelId}
+      onClose={onClose}
+      viewAllHref="/notifications"
+      subtitle={t("notify.admin.subtitle")}
+      includeBookingNotices={false}
+    />
+  );
 }
 
 function NotifyShell({
@@ -93,103 +120,6 @@ function NotifyShell({
       <ul className="seeker-notify-list">{children}</ul>
       {footer ? <div className="seeker-notify-panel-foot">{footer}</div> : null}
     </div>
-  );
-}
-
-function SeekerNotificationsBody({
-  panelId,
-  onClose,
-}: {
-  panelId: string;
-  onClose: () => void;
-}) {
-  const t = useT();
-  const { items, openNotification } = useNotifications("seeker");
-  const { bookings } = useUserBookings();
-  const acceptedCount = bookings.filter((item) => item.status === "Accepted").length;
-  const previewItems = items.slice(0, 5);
-
-  return (
-    <NotifyShell
-      panelId={panelId}
-      title={t("notifications.title")}
-      subtitle={t("nav.notificationsHint")}
-      onClose={onClose}
-      footer={
-        <Link
-          href={SEEKER_NOTIFICATIONS_PATH}
-          className="seeker-notify-view-all"
-          data-testid="account-notifications-view-all"
-          onClick={onClose}
-        >
-          {t("seeker.notifications.viewAll")}
-        </Link>
-      }
-    >
-      <SeekerAcceptedBookingNotices limit={5} onOpened={onClose} />
-      {previewItems.length === 0 && acceptedCount === 0 ? (
-        <li className="seeker-notify-empty">{t("notifications.empty")}</li>
-      ) : (
-        previewItems.map((item) => (
-          <li key={item.id}>
-            <NotificationItem
-              item={item}
-              onOpen={(next) => {
-                openNotification(next);
-                onClose();
-              }}
-            />
-          </li>
-        ))
-      )}
-    </NotifyShell>
-  );
-}
-
-function AdminNotificationsBody({
-  panelId,
-  onClose,
-}: {
-  panelId: string;
-  onClose: () => void;
-}) {
-  const t = useT();
-  const { items, openNotification } = useNotifications("admin");
-  const previewItems = items.slice(0, 5);
-
-  return (
-    <NotifyShell
-      panelId={panelId}
-      title={t("notifications.title")}
-      subtitle={t("notify.admin.subtitle")}
-      onClose={onClose}
-      footer={
-        <Link
-          href="/notifications"
-          className="seeker-notify-view-all"
-          data-testid="account-notifications-view-all"
-          onClick={onClose}
-        >
-          {t("seeker.notifications.viewAll")}
-        </Link>
-      }
-    >
-      {previewItems.length === 0 ? (
-        <li className="seeker-notify-empty">{t("notifications.empty")}</li>
-      ) : (
-        previewItems.map((item) => (
-          <li key={item.id}>
-            <NotificationItem
-              item={item}
-              onOpen={(next) => {
-                openNotification(next);
-                onClose();
-              }}
-            />
-          </li>
-        ))
-      )}
-    </NotifyShell>
   );
 }
 

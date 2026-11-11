@@ -107,10 +107,27 @@ export function useInboxConversations(
   const markLocalRead = useCallback((conversationId: string) => {
     setConversations((current) =>
       current.map((item) =>
-        item.conversationId === conversationId ? { ...item, isUnread: false } : item,
+        item.conversationId === conversationId
+          ? { ...item, isUnread: false, unreadMessageCount: 0 }
+          : item,
       ),
     );
   }, []);
+
+  const applyUnreadCount = useCallback(
+    (conversationId: string | null | undefined, unreadMessageCount: number) => {
+      if (!conversationId) return;
+      const count = Math.max(0, unreadMessageCount);
+      setConversations((current) =>
+        current.map((item) =>
+          item.conversationId === conversationId
+            ? { ...item, unreadMessageCount: count, isUnread: count > 0 }
+            : item,
+        ),
+      );
+    },
+    [],
+  );
 
   const applyPreview = useCallback((
     conversationId: string,
@@ -128,6 +145,9 @@ export function useInboxConversations(
               lastMessageHasAttachment: hasAttachment,
               lastMessageAt: at,
               isUnread: unread,
+              unreadMessageCount: unread
+                ? Math.max(1, (item.unreadMessageCount || 0) + 1)
+                : 0,
             }
           : item,
       );
@@ -147,6 +167,7 @@ export function useInboxConversations(
     retry: () => setRetryTick((n) => n + 1),
     refresh,
     applyPreview,
+    applyUnreadCount,
     markLocalRead,
   };
 }

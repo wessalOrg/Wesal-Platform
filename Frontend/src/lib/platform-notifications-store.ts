@@ -47,7 +47,10 @@ function defaultTone(type: PlatformNotificationType): PlatformNotificationTone {
     type === "booking_accepted" ||
     type === "hall_approved" ||
     type === "booking_submitted" ||
-    type === "hall_submitted"
+    type === "hall_submitted" ||
+    type === "account_approved" ||
+    type === "offer_published" ||
+    type === "account_unlocked"
   ) {
     return "success";
   }
@@ -55,9 +58,23 @@ function defaultTone(type: PlatformNotificationType): PlatformNotificationTone {
     type === "booking_rejected" ||
     type === "hall_rejected" ||
     type === "booking_cancelled" ||
-    type === "registration_rejected"
+    type === "registration_rejected" ||
+    type === "account_rejected" ||
+    type === "post_deleted" ||
+    type === "offer_deleted" ||
+    type === "publishing_restricted" ||
+    type === "account_locked"
   ) {
     return "danger";
+  }
+  if (
+    type === "account_needs_edit" ||
+    type === "registration_needs_changes" ||
+    type === "offer_edits_saved" ||
+    type === "offer_ending_soon" ||
+    type === "post_edits_saved"
+  ) {
+    return "warning";
   }
   return "info";
 }
@@ -121,7 +138,10 @@ function mapStored(value: unknown): PlatformNotification | null {
     metadata,
     is_read: Boolean(item.is_read),
     created_at: String(item.created_at ?? new Date().toISOString()),
-    tone: item.tone === "success" || item.tone === "danger" ? item.tone : "info",
+    tone:
+      item.tone === "success" || item.tone === "danger" || item.tone === "warning"
+        ? item.tone
+        : "info",
     titleKey: String(item.titleKey ?? ""),
     bodyKey: String(item.bodyKey ?? ""),
     actionLabelKey: item.actionLabelKey,

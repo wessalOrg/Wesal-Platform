@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import PublishingRestrictionBanner from "@/components/moderation/PublishingRestrictionBanner";
+import { useAccountPublishingLock } from "@/hooks/useAccountPublishingLock";
 import { useSeekerProfile } from "@/hooks/useSeekerProfile";
 import { SEEKER_BOOKINGS_PATH } from "@/constants/seekerDashboardNav";
 import { useT } from "@/i18n";
@@ -13,6 +15,7 @@ export default function SeekerDashboardHome() {
   const t = useT();
   const lang = useUiLang();
   const profileState = useSeekerProfile();
+  const publishingLock = useAccountPublishingLock();
   const bookingsState = profileState.bookings;
   const { display } = profileState;
 
@@ -68,6 +71,12 @@ export default function SeekerDashboardHome() {
 
   return (
     <div className="seeker-home" data-testid="seeker-dashboard-home">
+      {publishingLock.isLocked ? (
+        <PublishingRestrictionBanner
+          lockedUntil={publishingLock.lockedUntil}
+          className="mb-4"
+        />
+      ) : null}
       <section className="seeker-welcome">
         <div className="seeker-welcome-copy">
           <h1 className="seeker-welcome-title">

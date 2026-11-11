@@ -13,6 +13,7 @@ import {
 } from "@/constants/seekerDashboardNav";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useT } from "@/i18n";
+import { isProfessionalRole } from "@/lib/account-role";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { professionalRoleLabelKey } from "@/lib/professional-role-label";
 import UnreadBadge from "@/components/ui/UnreadBadge";
@@ -37,6 +38,13 @@ export default function SeekerSidebar({
   const { count: unreadCount, ready: unreadReady } = useUnreadCount();
   const messagesUnread = unreadReady ? unreadCount : 0;
   const roleLabel = t(professionalRoleLabelKey(role));
+  const showProfessionalOffers = isProfessionalRole(role);
+  const navItems = SEEKER_DASHBOARD_NAV.filter((item) => {
+    if ("professionalOnly" in item && item.professionalOnly) {
+      return showProfessionalOffers;
+    }
+    return true;
+  });
 
   return (
     <>
@@ -56,7 +64,7 @@ export default function SeekerSidebar({
 
         <nav className="seeker-dash-sidebar-nav">
           <ul className="seeker-dash-sidebar-list seeker-dash-sidebar-list--static">
-            {SEEKER_DASHBOARD_NAV.map((item) => {
+            {navItems.map((item) => {
               const active = isSeekerNavActive(pathname, item.href, item.match);
               return (
                 <li key={item.id}>
@@ -166,6 +174,29 @@ function NavIcon({ id }: { id: SeekerDashboardNavId }) {
             stroke="currentColor"
             strokeWidth="1.7"
             strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "offers":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+          <path
+            d="M12.5 3.5 20.5 11.5a2.1 2.1 0 0 1 0 3L14.5 20.5a2.1 2.1 0 0 1-3 0L3.5 12.5V3.5h9Z"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinejoin="round"
+          />
+          <circle cx="8.2" cy="8.2" r="1.2" fill="currentColor" />
+        </svg>
+      );
+    case "statistics":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+          <path
+            d="M5 19V10M12 19V5M19 19v-7"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
           />
         </svg>
       );

@@ -3,21 +3,30 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import MabroukFigure from "@/components/brand/MabroukFigure";
+import AdminChatBanner from "@/components/messages/AdminChatBanner";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
 import OwnerConfirmPaymentBar from "@/components/messages/OwnerConfirmPaymentBar";
 import OwnerInboxList, { OwnerChatHallCard } from "@/components/messages/OwnerInboxList";
+import ProfessionalInboxList from "@/components/messages/ProfessionalInboxList";
+import ProductInquiryCard from "@/components/offers/ProductInquiryCard";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { SEEKER_MESSAGES_PATH } from "@/constants/seekerDashboardNav";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAdminChat } from "@/hooks/useAdminChat";
 import { useContactAdmin } from "@/hooks/useContactAdmin";
-import { conversationErrorMessage, contactAdminForHall } from "@/services/conversations";
+import {
+  contactAdminAccount,
+  contactAdminForHall,
+  conversationErrorMessage,
+} from "@/services/conversations";
 import { useT } from "@/i18n";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
-import { isProfessionalPublisherRole } from "@/lib/account-permissions";
+import { isAdminAccountConversation } from "@/lib/admin-account-conversation";
+import { findThreadContextCard } from "@/lib/conversation-mapper";
 import {
   conversationHallLabel,
   conversationPeerRoleLabel,
@@ -32,13 +41,16 @@ export default function SeekerMessagesPage() {
   const lang = useUiLang();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { isHallOwner, isAdmin, role } = useAccountAccess();
-  const isProfessional = isProfessionalPublisherRole(role);
+  const { isHallOwner, isAdmin, isProfessional } = useAccountAccess();
   const focusHallId = searchParams.get("hallId")?.trim() || null;
   const focusConversationId = searchParams.get("conversation_id")?.trim() || null;
   const promptAttach = searchParams.get("attach") === "1";
   const ownerContactAdmin =
     pathname.startsWith("/owner/messages") && searchParams.get("contact") === "admin";
+  const professionalContactAdmin =
+    isProfessional && searchParams.get("contact") === "admin";
+  const [contactingProAdmin, setContactingProAdmin] = useState(false);
+  const [proAdminError, setProAdminError] = useState<string | null>(null);
   const {
     selectedId,
     canUseMessaging,
@@ -114,45 +126,79 @@ export default function SeekerMessagesPage() {
 
   const selected = conversations.find((item) => item.conversationId === selectedId) ?? null;
   const showThread = Boolean(selectedId);
+  const adminAccountThread = selected
+    ? isAdminAccountConversation(selected)
+    : professionalContactAdmin;
+  const inquiryContext = findThreadContextCard(thread?.messages);
   const threadHasNoHall = Boolean(thread && !(thread.hallId ?? "").trim());
   const peerIsAdmin = selected
-    ? isOwnerAdminConversation(selected, conversations)
+    ? isOwnerAdminConversation(selected, conversations) || isAdminAccountConversation(selected)
     : ownerContactAdmin ||
+      professionalContactAdmin ||
       (isProfessional && Boolean(focusConversationId || selectedId) && threadHasNoHall);
-  const adminLabel = t("owner.messages.admin");
-  const threadTitle = peerIsAdmin
-    ? adminLabel
-    : selected
-      ? isHallOwner
-        ? ownerConversationTitle(selected, lang, conversations)
+  const threadTitle = selected
+    ? isHallOwner
+      ? ownerConversationTitle(selected, lang, conversations)
+      : adminAccountThread || peerIsAdmin
+        ? t("messages.adminChat.title")
         : conversationPreviewTitle(selected, lang)
-      : thread
-        ? conversationHallLabel(thread, lang)
-        : t("messages.title");
-  const threadSubtitle = peerIsAdmin
-    ? null
-    : selected
-      ? conversationPreviewSubtitle(selected, lang)
-      : thread && conversationHallLabel(thread, lang) !== threadTitle
-        ? conversationHallLabel(thread, lang)
-        : null;
-  const threadBadge = peerIsAdmin
-    ? adminLabel
-    : isHallOwner
-      ? t("owner.messages.seekerRole")
-      : conversationPeerRoleLabel({
-          viewerIsHallOwner: isHallOwner,
-          viewerIsAdmin: isAdmin,
-          peerIsAdmin: false,
-        });
-  const hallName = peerIsAdmin
-    ? ""
-    : selected
-      ? conversationHallLabel(selected, lang)
-      : thread
-        ? conversationHallLabel(thread, lang)
-        : "";
+    : thread
+      ? conversationHallLabel(thread, lang)
+      : t("messages.title");
+  const threadSubtitle =
+    adminAccountThread || peerIsAdmin
+      ? null
+      : selected
+        ? conversationPreviewSubtitle(selected, lang)
+        : thread && conversationHallLabel(thread, lang) !== threadTitle
+          ? conversationHallLabel(thread, lang)
+          : null;
+  const threadBadge = isHallOwner
+    ? peerIsAdmin
+      ? t("owner.messages.admin")
+      : t("owner.messages.seekerRole")
+    : conversationPeerRoleLabel({
+        viewerIsHallOwner: isHallOwner,
+        viewerIsAdmin: isAdmin,
+        peerIsAdmin,
+        peerIsCustomer: isProfessional && selected?.kind === "CustomerProvider",
+      });
+  const hallName =
+    peerIsAdmin || adminAccountThread
+      ? ""
+      : selected
+        ? conversationHallLabel(selected, lang)
+        : thread
+          ? conversationHallLabel(thread, lang)
+          : "";
   const hallId = selected?.hallId ?? thread?.hallId ?? "";
+
+  const openProfessionalAdmin = () => {
+    const existing = conversations.find((item) => isAdminAccountConversation(item));
+    if (existing) {
+      selectConversation(existing.conversationId);
+      return;
+    }
+    setContactingProAdmin(true);
+    setProAdminError(null);
+    void contactAdminAccount()
+      .then((created) => {
+        retryInbox();
+        selectConversation(created.conversationId);
+      })
+      .catch((err) => {
+        setProAdminError(conversationErrorMessage(err, "start"));
+      })
+      .finally(() => {
+        setContactingProAdmin(false);
+      });
+  };
+
+  useEffect(() => {
+    if (!professionalContactAdmin) return;
+    openProfessionalAdmin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot deep link
+  }, [professionalContactAdmin]);
 
   return (
     <MessagesErrorBoundary>
@@ -191,6 +237,19 @@ export default function SeekerMessagesPage() {
                 onSelect={selectConversation}
                 onRetry={retryInbox}
               />
+            ) : isProfessional ? (
+              <ProfessionalInboxList
+                status={inboxStatus}
+                conversations={conversations}
+                selectedId={selectedId}
+                error={inboxError}
+                focusAdmin={professionalContactAdmin}
+                onSelect={selectConversation}
+                onRetry={retryInbox}
+                onContactAdmin={openProfessionalAdmin}
+                contactingAdmin={contactingProAdmin}
+                contactAdminError={proAdminError}
+              />
             ) : (
               <ConversationList
                 status={inboxStatus}
@@ -214,14 +273,38 @@ export default function SeekerMessagesPage() {
                 thread={thread}
                 error={threadError}
                 title={threadTitle}
-                subtitle={threadSubtitle}
+                subtitle={
+                  inquiryContext?.contextPostId
+                    ? t("messages.linkedPost.subtitle")
+                    : threadSubtitle
+                }
                 badge={showThread ? threadBadge : null}
                 appearance={isHallOwner ? "owner" : "default"}
                 context={
-                  isHallOwner && hallName ? (
-                    <OwnerChatHallCard hallId={hallId} hallName={hallName} />
-                  ) : null
+                  <>
+                    {adminAccountThread ? <AdminChatBanner className="mb-2" /> : null}
+                    {inquiryContext ? (
+                      <div className="space-y-2">
+                        {inquiryContext.contextPostId ? (
+                          <Link
+                            href={`/posts/${encodeURIComponent(inquiryContext.contextPostId)}`}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-[var(--wesal-maroon)]"
+                          >
+                            ← {t("messages.linkedPost.back")}
+                          </Link>
+                        ) : null}
+                        <ProductInquiryCard
+                          context={inquiryContext}
+                          variant={inquiryContext.contextPostId ? "panel" : "inline"}
+                        />
+                      </div>
+                    ) : null}
+                    {isHallOwner && hallName ? (
+                      <OwnerChatHallCard hallId={hallId} hallName={hallName} />
+                    ) : null}
+                  </>
                 }
+                peerDisplayName={adminAccountThread ? t("messages.adminChat.title") : null}
                 currentUserId={currentUserId}
                 onRetryLoad={retryThread}
                 onRetrySend={retrySend}
@@ -285,7 +368,16 @@ export default function SeekerMessagesPage() {
                 )}
               </div>
             ) : (
-              <div className="seeker-messages-placeholder" data-testid="seeker-messages-placeholder">
+              <div
+                className="seeker-messages-placeholder flex flex-col items-center gap-3 px-4 text-center"
+                data-testid="seeker-messages-placeholder"
+              >
+                <MabroukFigure
+                  pose="messageEmpty"
+                  size="md"
+                  rounded="2xl"
+                  className="!h-32 !w-36 bg-transparent sm:!h-36 sm:!w-40"
+                />
                 <p>{t("seeker.messages.pickConversation")}</p>
               </div>
             )}

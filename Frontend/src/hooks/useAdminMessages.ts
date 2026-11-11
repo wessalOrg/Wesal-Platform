@@ -236,6 +236,7 @@ export function useAdminMessages() {
                   lastMessagePreview: preview,
                   lastMessageAt: at,
                   messageCount: 1,
+                  unreadMessageCount: 0,
                   createdAt: at,
                   isUnread: false,
                 },

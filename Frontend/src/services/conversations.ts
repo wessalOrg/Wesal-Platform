@@ -1,6 +1,9 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
+import { isProfessionalRole, resolveSessionRole } from "@/lib/account-role";
+import { getStoredAuth } from "@/lib/auth-storage";
 import { getAccessToken } from "@/lib/auth-token";
+import { conversationTimeValue, mapInboxItemDto, mapSendMessageDto, mapThreadDto, unwrapConversationList } from "@/lib/conversation-mapper";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { t } from "@/i18n";
 import {
@@ -12,12 +15,6 @@ import {
   mockSendMessage,
   mockUnreadConversationCount,
 } from "@/services/conversations-mock";
-import {
-  mapInboxItemDto,
-  mapSendMessageDto,
-  mapThreadDto,
-  unwrapConversationList,
-} from "@/lib/conversation-mapper";
 import type { ConversationSummary, MessageThread, ThreadMessage } from "@/types/messages";
 
 export type { ConversationSummary, MessageThread, ThreadMessage };
@@ -37,6 +34,8 @@ export type ConversationThread = {
   ownerUserId: string;
   createdAt: string;
   isExisting: boolean;
+  contextPostId: string | null;
+  contextOfferId: string | null;
 };
 
 type ConversationResponse = {
@@ -56,13 +55,20 @@ type ConversationResponse = {
   CreatedAt?: string;
   isExisting?: boolean;
   IsExisting?: boolean;
+  contextPostId?: string | null;
+  ContextPostId?: string | null;
+  contextOfferId?: string | null;
+  ContextOfferId?: string | null;
 };
 
-function mapResponse(data: ConversationResponse | null | undefined, fallbackHallId: string): ConversationThread {
+function mapResponse(
+  data: ConversationResponse | null | undefined,
+  fallbackHallId = "",
+): ConversationThread {
   const dto = data ?? {};
   return {
     conversationId: String(dto.conversationId ?? dto.ConversationId ?? dto.id ?? dto.Id ?? ""),
-    hallId: String(dto.hallId ?? dto.HallId ?? fallbackHallId),
+    hallId: String(dto.hallId ?? dto.HallId ?? fallbackHallId ?? ""),
     hallName:
       (dto.hallName ?? dto.HallName)?.trim() ||
       (fallbackHallId ? t("common.hall") : ""),
@@ -70,6 +76,8 @@ function mapResponse(data: ConversationResponse | null | undefined, fallbackHall
     ownerUserId: dto.ownerUserId ?? dto.OwnerUserId ?? "",
     createdAt: dto.createdAt ?? dto.CreatedAt ?? new Date().toISOString(),
     isExisting: Boolean(dto.isExisting ?? dto.IsExisting),
+    contextPostId: String(dto.contextPostId ?? dto.ContextPostId ?? "").trim() || null,
+    contextOfferId: String(dto.contextOfferId ?? dto.ContextOfferId ?? "").trim() || null,
   };
 }
 
@@ -106,6 +114,8 @@ export async function createProfessionalConversation(
       ownerUserId: providerUserId,
       createdAt: new Date().toISOString(),
       isExisting: true,
+      contextPostId: null,
+      contextOfferId: null,
     };
   }
   try {
@@ -160,6 +170,8 @@ export async function contactAdminAccount(): Promise<ConversationThread> {
       ownerUserId: "",
       createdAt: new Date().toISOString(),
       isExisting: true,
+      contextPostId: null,
+      contextOfferId: null,
     };
   }
   const { data } = await api.post<ConversationResponse>(
@@ -168,6 +180,22 @@ export async function contactAdminAccount(): Promise<ConversationThread> {
     { timeout: 8000 },
   );
   const thread = mapResponse(data, "");
+  if (!thread.conversationId) {
+    throw new ApiError(t("errors.conversation.create"), 500);
+  }
+  return thread;
+}
+
+/** POST /posts/{postId}/conversation — inquiry tied to a post. */
+export async function startConversationFromPost(
+  postId: string,
+): Promise<ConversationThread> {
+  const { data } = await api.post<ConversationResponse>(
+    `/posts/${encodeURIComponent(postId)}/conversation`,
+    undefined,
+    { timeout: 8000 },
+  );
+  const thread = mapResponse(data);
   if (!thread.conversationId) {
     throw new ApiError(t("errors.conversation.create"), 500);
   }
@@ -190,6 +218,7 @@ export async function fetchMyAdminAccountConversation(): Promise<ConversationSum
       lastMessagePreview: "",
       lastMessageAt: null,
       messageCount: 0,
+      unreadMessageCount: 0,
       createdAt: new Date().toISOString(),
       isUnread: false,
     };
@@ -210,6 +239,7 @@ export async function fetchMyAdminAccountConversation(): Promise<ConversationSum
       lastMessagePreview: "",
       lastMessageAt: null,
       messageCount: 0,
+      unreadMessageCount: 0,
       createdAt: thread.createdAt,
       isUnread: false,
     };
@@ -224,12 +254,112 @@ export async function fetchMyAdminAccountConversation(): Promise<ConversationSum
   }
 }
 
+/** POST /offers/{offerId}/conversation — inquiry tied to an offer. */
+export async function startConversationFromOffer(
+  offerId: string,
+): Promise<ConversationThread> {
+  const { data } = await api.post<ConversationResponse>(
+    `/offers/${encodeURIComponent(offerId)}/conversation`,
+    undefined,
+    { timeout: 8000 },
+  );
+  const thread = mapResponse(data);
+  if (!thread.conversationId) {
+    throw new ApiError(t("errors.conversation.create"), 500);
+  }
+  return thread;
+}
+
 function mapInboxItem(data: unknown): ConversationSummary | null {
   return mapInboxItemDto(data);
 }
 
+function currentUserIsProfessional(): boolean {
+  const stored = getStoredAuth()?.user;
+  return isProfessionalRole(
+    resolveSessionRole(null, stored?.role, stored?.accountType),
+  );
+}
+
+function readUnreadCountPayload(data: unknown): number {
+  const root =
+    data && typeof data === "object"
+      ? (data as { unreadCount?: unknown; UnreadCount?: unknown })
+      : null;
+  const count = root?.unreadCount ?? root?.UnreadCount;
+  return typeof count === "number" ? Math.max(0, count) : 0;
+}
+
+/** Customer chats for coordinators / photographers. */
+export async function fetchProfessionalConversations(): Promise<ConversationSummary[]> {
+  if (conversationsUseMock()) return mockFetchInbox();
+  const { data } = await api.get<unknown>("/professional/conversations", {
+    params: { page: 1, pageSize: 100 },
+    timeout: 8000,
+  });
+  return unwrapConversationList(data)
+    .map(mapInboxItem)
+    .filter((item): item is ConversationSummary => Boolean(item))
+    .map((item) =>
+      item.kind ? item : { ...item, kind: "CustomerProvider" as const },
+    );
+}
+
+/** Professional ↔ admin account thread (may 404 when not created yet). */
+export async function fetchAdminAccountConversation(): Promise<ConversationSummary | null> {
+  if (conversationsUseMock()) return null;
+  try {
+    const { data } = await api.get<unknown>("/conversations/admin-account", { timeout: 8000 });
+    const mapped = mapInboxItem(data);
+    if (!mapped) return null;
+    return { ...mapped, kind: mapped.kind ?? "AdminAccount" };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+export async function fetchProfessionalUnreadCount(): Promise<number> {
+  if (conversationsUseMock()) return mockUnreadConversationCount();
+  const { data } = await api.get<unknown>("/professional/conversations/unread-count", {
+    timeout: 8000,
+  });
+  return readUnreadCountPayload(data);
+}
+
+export async function fetchAdminAccountUnreadCount(): Promise<number> {
+  if (conversationsUseMock()) return 0;
+  try {
+    const { data } = await api.get<unknown>("/conversations/admin-account/unread-count", {
+      timeout: 8000,
+    });
+    return readUnreadCountPayload(data);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return 0;
+    throw err;
+  }
+}
+
+async function fetchProfessionalInboxMerged(): Promise<ConversationSummary[]> {
+  const [customers, admin] = await Promise.all([
+    fetchProfessionalConversations(),
+    fetchAdminAccountConversation().catch(() => null),
+  ]);
+  const merged = admin
+    ? [admin, ...customers.filter((item) => item.conversationId !== admin.conversationId)]
+    : customers;
+  return [...merged].sort(
+    (left, right) =>
+      conversationTimeValue(right.lastMessageAt ?? right.createdAt) -
+      conversationTimeValue(left.lastMessageAt ?? left.createdAt),
+  );
+}
+
 export async function fetchInboxConversations(): Promise<ConversationSummary[]> {
   if (conversationsUseMock()) return mockFetchInbox();
+  if (currentUserIsProfessional()) {
+    return fetchProfessionalInboxMerged();
+  }
   const { data } = await api.get<unknown>("/conversations", { timeout: 8000 });
   return unwrapConversationList(data)
     .map(mapInboxItem)
@@ -319,10 +449,15 @@ export type ConversationErrorScope = "start" | "inbox" | "thread" | "send";
 
 export async function fetchUnreadConversationCount(): Promise<number> {
   if (conversationsUseMock()) return mockUnreadConversationCount();
+  if (currentUserIsProfessional()) {
+    const [professional, admin] = await Promise.all([
+      fetchProfessionalUnreadCount(),
+      fetchAdminAccountUnreadCount().catch(() => 0),
+    ]);
+    return professional + admin;
+  }
   const { data } = await api.get<unknown>("/conversations/unread-count", { timeout: 8000 });
-  const root = data && typeof data === "object" ? (data as { unreadCount?: unknown; UnreadCount?: unknown }) : null;
-  const count = root?.unreadCount ?? root?.UnreadCount;
-  return typeof count === "number" ? count : 0;
+  return readUnreadCountPayload(data);
 }
 
 export async function markConversationAsRead(conversationId: string): Promise<void> {

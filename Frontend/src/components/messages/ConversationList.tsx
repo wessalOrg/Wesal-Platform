@@ -1,5 +1,6 @@
 "use client";
 
+import MabroukFigure from "@/components/brand/MabroukFigure";
 import ConversationListItem from "@/components/messages/ConversationListItem";
 import { useT } from "@/i18n";
 import type { ConversationSummary, InboxStatus } from "@/types/messages";
@@ -49,7 +50,13 @@ export default function ConversationList({
 
   if (status === "empty") {
     return (
-      <div className="px-5 py-10 text-center" data-testid="inbox-list-empty">
+      <div className="flex flex-col items-center px-5 py-10 text-center" data-testid="inbox-list-empty">
+        <MabroukFigure
+          pose="messageEmpty"
+          size="md"
+          rounded="2xl"
+          className="mb-4 !h-32 !w-36 bg-transparent sm:!h-36 sm:!w-40"
+        />
         <p className="text-sm font-semibold text-[var(--wesal-maroon)]">{t("messages.empty")}</p>
         <p className="mt-2 text-xs leading-6 text-[var(--wesal-muted)]">{t("messages.emptyHint")}</p>
       </div>

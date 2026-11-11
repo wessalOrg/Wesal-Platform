@@ -11,7 +11,9 @@ import {
   conversationPeerRoleLabel,
   conversationPreviewTitle,
 } from "@/lib/conversation-display";
+import { isAdminAccountConversation } from "@/lib/admin-account-conversation";
 import { isOwnerAdminConversation, ownerConversationTitle } from "@/lib/owner-admin-conversation";
+import { formatUnreadCount } from "@/lib/unread-badge";
 import type { ConversationSummary } from "@/types/messages";
 
 type ConversationListItemProps = {
@@ -29,50 +31,73 @@ export default function ConversationListItem({
 }: ConversationListItemProps) {
   const t = useT();
   const lang = useUiLang();
-  const { isHallOwner, isAdmin } = useAccountAccess();
+  const { isHallOwner, isAdmin, isProfessional } = useAccountAccess();
+  const adminThread = isAdminAccountConversation(conversation);
   const peerIsAdmin = isOwnerAdminConversation(conversation);
   const title =
-    peerIsAdmin || isHallOwner
+    isHallOwner || peerIsAdmin
       ? ownerConversationTitle(conversation, lang)
-      : conversationPreviewTitle(conversation, lang);
-  const hall = peerIsAdmin ? "" : conversationHallLabel(conversation, lang);
+      : adminThread
+        ? t("messages.adminChat.title")
+        : conversationPreviewTitle(conversation, lang);
+  const hall = peerIsAdmin || adminThread ? "" : conversationHallLabel(conversation, lang);
   const role = peerIsAdmin
     ? t("owner.messages.admin")
     : conversationPeerRoleLabel({
         viewerIsHallOwner: isHallOwner,
         viewerIsAdmin: isAdmin,
-        peerIsAdmin: false,
+        peerIsAdmin: adminThread,
+        peerIsCustomer: isProfessional && conversation.kind === "CustomerProvider",
       });
   const preview = conversationListPreview(
     conversation.lastMessagePreview,
     Boolean(conversation.lastMessageHasAttachment),
   );
   const time = formatRelativeTime(conversation.lastMessageAt ?? conversation.createdAt);
-  const unread = conversation.isUnread && !selected;
+  const unreadCount = selected
+    ? 0
+    : Math.max(
+        conversation.unreadMessageCount || 0,
+        conversation.isUnread ? 1 : 0,
+      );
+  const unreadLabel = formatUnreadCount(unreadCount);
+  const unread = Boolean(unreadLabel);
+  const avatarUrl = conversation.otherParticipantAvatarUrl?.trim() || null;
 
   return (
     <button
       type="button"
       className={`flex w-full min-w-0 items-start gap-3 rounded-2xl px-3 py-3 text-start transition ${
-        selected
-          ? variant === "widget"
-            ? "bg-white shadow-[0_6px_16px_rgba(90,55,45,0.08)]"
-            : "bg-[var(--wesal-pink)]"
-          : variant === "widget"
-            ? "hover:bg-white/80"
-            : "hover:bg-[var(--wesal-pink)]/70"
+        adminThread
+          ? selected
+            ? "border border-[var(--wesal-maroon)]/30 bg-[var(--wesal-pink)]"
+            : "border border-transparent bg-[var(--wesal-pink-soft)]/80 hover:border-[var(--wesal-maroon)]/20"
+          : selected
+            ? variant === "widget"
+              ? "bg-white shadow-[0_6px_16px_rgba(90,55,45,0.08)]"
+              : "bg-[var(--wesal-pink)]"
+            : variant === "widget"
+              ? "hover:bg-white/80"
+              : "hover:bg-[var(--wesal-pink)]/70"
       } ${unread ? "font-semibold" : ""}`}
       aria-current={selected ? "true" : undefined}
       data-testid="inbox-conversation"
       data-conversation-id={conversation.conversationId}
+      data-kind={conversation.kind ?? undefined}
+      data-admin={adminThread ? "true" : "false"}
       data-unread={unread ? "true" : "false"}
       onClick={() => onSelect(conversation.conversationId)}
     >
       <span
-        className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--wesal-maroon)] text-xs font-bold text-white"
+        className="relative mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--wesal-maroon)] text-xs font-bold text-white"
         aria-hidden="true"
       >
-        {conversationAvatarInitials(title)}
+        {avatarUrl && !adminThread ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          conversationAvatarInitials(title)
+        )}
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-baseline justify-between gap-2">
@@ -82,12 +107,18 @@ export default function ConversationListItem({
           ) : null}
         </span>
         <span className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
-          {hall ? (
+          {hall && !adminThread ? (
             <span className="max-w-full truncate rounded-full bg-[var(--wesal-pink-soft)] px-2 py-0.5 text-[0.65rem] font-semibold text-[var(--wesal-maroon)]">
               {hall}
             </span>
           ) : null}
-          <span className="rounded-full border border-[var(--wesal-border)] px-2 py-0.5 text-[0.65rem] font-medium text-[var(--wesal-muted)]">
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${
+              adminThread
+                ? "border-[var(--wesal-maroon)]/35 bg-white text-[var(--wesal-maroon)]"
+                : "border-[var(--wesal-border)] text-[var(--wesal-muted)]"
+            }`}
+          >
             {role}
           </span>
         </span>
@@ -95,13 +126,13 @@ export default function ConversationListItem({
           <span className="line-clamp-2 min-w-0 flex-1 text-xs font-normal leading-5 text-[var(--wesal-text)]">
             {preview || t("messages.previewEmpty")}
           </span>
-          {unread ? (
+          {unreadLabel ? (
             <span
               className="mt-0.5 inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#c62828] px-1 text-[0.65rem] font-bold text-white"
-              aria-label={t("messages.unread")}
+              aria-label={t("messages.unreadCount", { count: unreadCount })}
               data-testid="inbox-unread-badge"
             >
-              1
+              {unreadLabel}
             </span>
           ) : null}
         </span>

@@ -38,6 +38,18 @@ export const HALL_OWNER_MESSAGES_PATH = "/owner/messages";
 /** Hall Owner notifications feed (all account alerts). */
 export const HALL_OWNER_NOTIFICATIONS_PATH = "/owner/notifications";
 
+/** Hall Owner offers management. */
+export const HALL_OWNER_OFFERS_PATH = "/owner/offers";
+
+/** Professional (coordinator / photographer) offers management. */
+export const PROFESSIONAL_OFFERS_MANAGE_PATH = "/profile/offers";
+
+/** Public Discover feed (includes Offers filter). */
+export const DISCOVER_PATH = "/discover";
+
+/** Public professional (coordinator / photographer) profile. */
+export const PROFESSIONAL_PUBLIC_PATH = "/professionals";
+
 /** Standalone Hall Owner bookings calendar (Edit 25). Distinct from /owner/bookings, which aliases booking requests. */
 export const HALL_OWNER_CALENDAR_PATH = "/owner/calendar";
 
@@ -80,6 +92,9 @@ export const PROFESSIONALS_PATH = "/professionals";
 export function professionalProfilePath(userId: string): string {
   return `${PROFESSIONALS_PATH}/${encodeURIComponent(userId.trim())}`;
 }
+
+/** Admin post / offer moderation (Section 15). */
+export const ADMIN_POSTS_PATH = "/admin/posts";
 
 export function adminHallSubmissionPath(hallId: string): string {
   return `${ADMIN_MANAGEMENT_PATH}/halls/${encodeURIComponent(hallId)}`;

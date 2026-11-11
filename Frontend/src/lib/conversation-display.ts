@@ -54,8 +54,10 @@ export function conversationPeerRoleLabel(options: {
   viewerIsHallOwner: boolean;
   viewerIsAdmin: boolean;
   peerIsAdmin?: boolean;
+  peerIsCustomer?: boolean;
 }): string {
   if (options.peerIsAdmin) return t("messages.role.admin");
+  if (options.peerIsCustomer) return t("messages.role.customer");
   if (options.viewerIsAdmin) return t("messages.role.owner");
   if (options.viewerIsHallOwner) return t("messages.role.user");
   return t("messages.role.owner");

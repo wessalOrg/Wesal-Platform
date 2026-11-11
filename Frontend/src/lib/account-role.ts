@@ -22,6 +22,16 @@ export function isPhotographerRole(role: WesalRole | null | undefined): boolean 
   return normalizeRole(role) === "photographer";
 }
 
+/** Event coordinators and photographers manage professional offers. */
+export function isProfessionalRole(role: WesalRole | null | undefined): boolean {
+  const normalized = normalizeRole(role);
+  return (
+    normalized === "eventcoordinator" ||
+    normalized === "coordinator" ||
+    normalized === "photographer"
+  );
+}
+
 export function isHallOwnerAccountType(
   accountType: string | null | undefined,
 ): boolean {
