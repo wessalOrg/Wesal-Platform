@@ -194,6 +194,8 @@ export async function mockCreateHallConversation(hallId: string): Promise<{
   ownerUserId: string;
   createdAt: string;
   isExisting: boolean;
+  contextPostId: string | null;
+  contextOfferId: string | null;
 }> {
   await wait(LATENCY_MS);
   const existing = INBOX.find((row) => row.hallId === hallId);
@@ -206,6 +208,8 @@ export async function mockCreateHallConversation(hallId: string): Promise<{
       ownerUserId: existing.otherParticipantId,
       createdAt: existing.createdAt,
       isExisting: true,
+      contextPostId: null,
+      contextOfferId: null,
     };
   }
 
@@ -223,6 +227,7 @@ export async function mockCreateHallConversation(hallId: string): Promise<{
       lastMessagePreview: "",
       lastMessageAt: null,
       messageCount: 0,
+      unreadMessageCount: 0,
       createdAt,
       isUnread: false,
     });
@@ -243,6 +248,8 @@ export async function mockCreateHallConversation(hallId: string): Promise<{
     ownerUserId: `owner-${hallId}`,
     createdAt,
     isExisting: false,
+    contextPostId: null,
+    contextOfferId: null,
   };
 }
 

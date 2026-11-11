@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import MabroukFigure from "@/components/brand/MabroukFigure";
 import BookingRejectionCard from "@/components/messages/BookingRejectionCard";
 import ChatImageLightbox from "@/components/messages/ChatImageLightbox";
 import SubscriptionExpiryWarningCard from "@/components/messages/SubscriptionExpiryWarningCard";
@@ -20,6 +21,8 @@ type ThreadMessageItemProps = {
   hallName: string;
   conversationId?: string | null;
   arriving?: boolean;
+  /** Hide repeated sender label when consecutive from the same peer. */
+  groupedWithPrevious?: boolean;
   tone?: "default" | "owner";
   onRetrySend: (messageId: string) => void;
 };
@@ -31,6 +34,7 @@ export default function ThreadMessageItem({
   hallName,
   conversationId,
   arriving = false,
+  groupedWithPrevious = false,
   tone = "default",
   onRetrySend,
 }: ThreadMessageItemProps) {
@@ -66,6 +70,7 @@ export default function ThreadMessageItem({
       retrying={retrying}
       tone={tone}
       conversationId={conversationId}
+      groupedWithPrevious={groupedWithPrevious}
       onRetrySend={onRetrySend}
     />
   );
@@ -77,6 +82,7 @@ function ThreadBubble({
   retrying,
   tone = "default",
   conversationId,
+  groupedWithPrevious = false,
   onRetrySend,
 }: {
   message: ThreadMessage;
@@ -84,6 +90,7 @@ function ThreadBubble({
   retrying: boolean;
   tone?: "default" | "owner";
   conversationId?: string | null;
+  groupedWithPrevious?: boolean;
   onRetrySend: (messageId: string) => void;
 }) {
   const t = useT();
@@ -92,13 +99,16 @@ function ThreadBubble({
 
   return (
     <article
-      className={`flex min-w-0 ${own ? "justify-end" : "justify-start"}`}
+      className={`flex min-w-0 ${own ? "justify-end" : "justify-start"} ${
+        groupedWithPrevious ? "mt-1" : "mt-3"
+      }`}
       data-testid="thread-message"
       data-own={own ? "true" : "false"}
+      data-grouped={groupedWithPrevious ? "true" : "false"}
       data-delivery={retrying ? "retrying" : message.delivery}
     >
       <div className={`min-w-0 max-w-[85%] ${own ? "ms-8" : "me-6"}`}>
-        {own || tone === "owner" ? null : (
+        {own || tone === "owner" || groupedWithPrevious ? null : (
           <p className="mb-1 truncate text-[0.68rem] text-[var(--wesal-muted)]">{message.senderName}</p>
         )}
         <div
@@ -119,15 +129,26 @@ function ThreadBubble({
             {retrying ? t("messages.retrying") : t("messages.sending")}
           </p>
         ) : failed ? (
-          <div className={`mt-1 flex items-center gap-2 ${own ? "justify-end" : "justify-start"}`}>
-            <p className="text-[0.65rem] text-[#a86267]">{t("messages.sendFailed")}</p>
-            <button
-              type="button"
-              className="text-[0.65rem] font-semibold text-[var(--wesal-maroon)] underline"
-              onClick={() => onRetrySend(message.clientRequestId || message.id)}
-            >
-              {t("messages.retrySend")}
-            </button>
+          <div
+            className={`mt-1.5 flex items-center gap-2 ${own ? "justify-end" : "justify-start"}`}
+            data-testid="thread-send-failed"
+          >
+            <MabroukFigure
+              pose="sendFail"
+              size="sm"
+              rounded="2xl"
+              className="!h-14 !w-16 bg-transparent"
+            />
+            <div className={`min-w-0 ${own ? "text-end" : "text-start"}`}>
+              <p className="text-[0.65rem] text-[#a86267]">{t("messages.sendFailed")}</p>
+              <button
+                type="button"
+                className="mt-0.5 inline-flex min-h-11 items-center text-[0.65rem] font-semibold text-[var(--wesal-maroon)] underline"
+                onClick={() => onRetrySend(message.clientRequestId || message.id)}
+              >
+                {t("messages.retrySend")}
+              </button>
+            </div>
           </div>
         ) : (
           <p className={`mt-1 text-[0.65rem] text-[var(--wesal-muted)] ${own ? "text-end" : "text-start"}`}>

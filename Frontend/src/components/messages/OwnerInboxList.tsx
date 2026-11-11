@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import MabroukFigure from "@/components/brand/MabroukFigure";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 import {
@@ -10,6 +11,7 @@ import {
   conversationListPreview,
 } from "@/lib/conversation-display";
 import { isOwnerAdminConversation, ownerConversationTitle } from "@/lib/owner-admin-conversation";
+import { formatUnreadCount } from "@/lib/unread-badge";
 import type { ConversationSummary, InboxStatus } from "@/types/messages";
 
 type InboxFilter = "all" | "users" | "admin";
@@ -50,7 +52,10 @@ export default function OwnerInboxList({
   );
   const userRows = rows.filter((item) => !isOwnerAdminConversation(item, rows));
   const adminRows = rows.filter((item) => isOwnerAdminConversation(item, rows));
-  const unreadCount = rows.filter((item) => item.isUnread).length;
+  const unreadCount = rows.reduce(
+    (sum, item) => sum + Math.max(item.unreadMessageCount || 0, item.isUnread ? 1 : 0),
+    0,
+  );
   const needle = query.trim().toLowerCase();
   const visible = (filter === "users" ? userRows : filter === "admin" ? adminRows : rows).filter(
     (item) => {
@@ -125,9 +130,19 @@ export default function OwnerInboxList({
           </button>
         </div>
       ) : visible.length === 0 ? (
-        <p className="owner-chat-empty" data-testid="owner-chat-empty">
-          {rows.length === 0 ? t("messages.empty") : t("owner.messages.noMatches")}
-        </p>
+        <div className="owner-chat-empty flex flex-col items-center px-3 py-6 text-center" data-testid="owner-chat-empty">
+          {rows.length === 0 ? (
+            <MabroukFigure
+              pose="messageEmpty"
+              size="md"
+              rounded="2xl"
+              className="mb-3 !h-32 !w-36 bg-transparent sm:!h-36 sm:!w-40"
+            />
+          ) : null}
+          <p>
+            {rows.length === 0 ? t("messages.empty") : t("owner.messages.noMatches")}
+          </p>
+        </div>
       ) : (
         <ul className="owner-chat-rows" data-testid="inbox-conversation-list">
           {visible.map((conversation) => {
@@ -138,6 +153,13 @@ export default function OwnerInboxList({
             );
             const selected = conversation.conversationId === selectedId;
             const admin = isOwnerAdminConversation(conversation, rows);
+            const unreadCount = selected
+              ? 0
+              : Math.max(
+                  conversation.unreadMessageCount || 0,
+                  conversation.isUnread ? 1 : 0,
+                );
+            const unreadLabel = formatUnreadCount(unreadCount);
             return (
               <li key={conversation.conversationId}>
                 <button
@@ -165,9 +187,15 @@ export default function OwnerInboxList({
                       <span className="line-clamp-1 min-w-0 flex-1 text-xs leading-5 text-[var(--wesal-muted)]">
                         {preview || t("messages.previewEmpty")}
                       </span>
-                      {conversation.isUnread && !selected ? (
-                        <span className="owner-chat-unread" data-testid="inbox-unread-badge">
-                          1
+                      {unreadLabel ? (
+                        <span
+                          className="owner-chat-unread"
+                          aria-label={t("messages.unreadCount", {
+                            count: unreadCount,
+                          })}
+                          data-testid="inbox-unread-badge"
+                        >
+                          {unreadLabel}
                         </span>
                       ) : null}
                     </span>

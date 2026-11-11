@@ -19,11 +19,20 @@ import { isProfessionalPublisherRole } from "@/lib/account-permissions";
 import { canAccessMessaging } from "@/lib/hall-access";
 import { useMessageDrafts } from "@/hooks/useMessageDrafts";
 import { useThreadDeliverySync } from "@/hooks/useThreadDeliverySync";
-import { getCurrentUserId } from "@/lib/current-user";
-import { refreshUnreadCount } from "@/hooks/useUnreadCount";
+import { getCurrentUserId, isSameUserId } from "@/lib/current-user";
+import {
+  applyUnreadCount as applySharedUnreadSnapshot,
+  refreshUnreadCount,
+} from "@/hooks/useUnreadCount";
 import { applyBookingAcceptanceFromMessage } from "@/lib/apply-booking-acceptance-from-message";
 import { applyBookingRejectionFromMessage } from "@/lib/apply-booking-rejection-from-message";
 import { markConversationAsRead } from "@/services/conversations";
+import {
+  markConversationReadOnHub,
+  setConversationOpen,
+  subscribeIncomingMessages,
+  subscribeUnreadCounts,
+} from "@/services/conversation-realtime";
 import type { ConversationSummary, InboxStatus, MessageThread, ThreadStatus } from "@/types/messages";
 
 type MessagesInboxContextValue = {
@@ -85,7 +94,9 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
     pathname === "/profile/messages" ||
     pathname.startsWith("/profile/messages/") ||
     pathname === "/owner/messages" ||
-    pathname.startsWith("/owner/messages/");
+    pathname.startsWith("/owner/messages/") ||
+    pathname === "/admin/messages" ||
+    pathname.startsWith("/admin/messages/");
   const isMessagesRoute = pathname === "/messages" || pathname.startsWith("/messages/");
   const inboxActive = Boolean(sessionReady && ownerKey && (isOpen || isEmbeddedInbox || isMessagesRoute));
   const inbox = useInboxConversations(ownerKey, inboxActive, includeAdminAccount);
@@ -108,8 +119,70 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   const sendThreadAttachment = threadState.sendAttachment;
   const retryThreadSend = threadState.retrySend;
   const applyPreview = inbox.applyPreview;
+  const applyUnreadCount = inbox.applyUnreadCount;
   const markLocalRead = inbox.markLocalRead;
   const refreshInbox = inbox.refresh;
+
+  // 13.5 — tell the hub the actively viewed conversation only (suppresses alerts / unread).
+  // Closing the floating inbox or leaving messages routes must clear hub presence.
+  useEffect(() => {
+    if (!sessionReady || !ownerKey || !inboxActive || !selectedId) {
+      setConversationOpen(null);
+      return;
+    }
+    setConversationOpen(selectedId);
+    return () => {
+      setConversationOpen(null);
+    };
+  }, [sessionReady, ownerKey, inboxActive, selectedId]);
+
+  // Keep inbox list + badge synced for every incoming message (including closed threads).
+  useEffect(() => {
+    if (!sessionReady || !ownerKey) return;
+    return subscribeIncomingMessages((payload) => {
+      if (!payload?.conversationId || !payload.message) return;
+      const own = isSameUserId(payload.message.senderUserId, currentUserId);
+      const viewing = selectedId === payload.conversationId;
+      if (!viewing) {
+        applyPreview(
+          payload.conversationId,
+          payload.message.content,
+          payload.message.sentAt,
+          !own,
+          Boolean(payload.message.hasAttachment),
+        );
+      }
+      if (typeof payload.totalUnreadCount === "number") {
+        applySharedUnreadSnapshot(payload.totalUnreadCount);
+      } else if (!own && !viewing) {
+        void refreshUnreadCount();
+      }
+      if (typeof payload.unreadMessageCount === "number") {
+        applyUnreadCount(payload.conversationId, payload.unreadMessageCount);
+      }
+    });
+  }, [
+    applyPreview,
+    applyUnreadCount,
+    currentUserId,
+    ownerKey,
+    selectedId,
+    sessionReady,
+  ]);
+
+  useEffect(() => {
+    if (!sessionReady || !ownerKey) return;
+    return subscribeUnreadCounts((payload) => {
+      if (typeof payload.totalUnreadCount === "number") {
+        applySharedUnreadSnapshot(payload.totalUnreadCount);
+      } else {
+        void refreshUnreadCount();
+      }
+      if (payload.conversationId != null && typeof payload.unreadMessageCount === "number") {
+        applyUnreadCount(payload.conversationId, payload.unreadMessageCount);
+      }
+    });
+  }, [applyUnreadCount, ownerKey, sessionReady]);
 
   useConversationRealtime(
     sessionReady && ownerKey && threadFetchEnabled ? selectedId : null,
@@ -130,12 +203,14 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
         "",
         payload.conversationId,
       );
-      void markConversationAsRead(payload.conversationId).catch(() => undefined);
+      void markConversationAsRead(payload.conversationId)
+        .then(() => markConversationReadOnHub(payload.conversationId))
+        .catch(() => undefined);
     },
   );
 
   useThreadDeliverySync(
-    sessionReady && ownerKey && threadFetchEnabled ? selectedId : null,
+    sessionReady && ownerKey && threadFetchEnabled && inboxActive ? selectedId : null,
     ownerKey,
     threadState.status === "ready" || threadState.status === "empty",
     (message, conversationId) => {
@@ -150,18 +225,21 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       );
       applyBookingRejectionFromMessage(message.content);
       applyBookingAcceptanceFromMessage(message.content, "", conversationId);
-      void markConversationAsRead(conversationId).catch(() => undefined);
+      void markConversationAsRead(conversationId)
+        .then(() => markConversationReadOnHub(conversationId))
+        .catch(() => undefined);
     },
   );
 
   // Mark the open conversation as read, then revalidate the shared unread badge.
   useEffect(() => {
-    if (!ownerKey || !selectedId || !threadFetchEnabled) return;
+    if (!ownerKey || !selectedId || !threadFetchEnabled || !inboxActive) return;
     if (threadState.status !== "ready" && threadState.status !== "empty") return;
 
     let cancelled = false;
     void markConversationAsRead(selectedId)
       .then(() => {
+        markConversationReadOnHub(selectedId);
         if (!cancelled) return refreshUnreadCount();
       })
       .catch(() => {
@@ -171,7 +249,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [ownerKey, selectedId, threadFetchEnabled, threadState.status]);
+  }, [ownerKey, selectedId, threadFetchEnabled, inboxActive, threadState.status]);
 
   useEffect(() => {
     const thread = threadState.thread;

@@ -10,10 +10,12 @@ import {
 } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import AdminChatBanner from "@/components/messages/AdminChatBanner";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
 import OwnerConfirmPaymentBar from "@/components/messages/OwnerConfirmPaymentBar";
+import ProductInquiryCard from "@/components/offers/ProductInquiryCard";
 import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
@@ -21,6 +23,8 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAdminChat } from "@/hooks/useAdminChat";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useT } from "@/i18n";
+import { isAdminAccountConversation } from "@/lib/admin-account-conversation";
+import { findThreadContextCard } from "@/lib/conversation-mapper";
 import { isOwnerAdminConversation, ownerConversationTitle } from "@/lib/owner-admin-conversation";
 import { floatingPanelBounds } from "@/lib/floating-panel-bounds";
 import {
@@ -311,30 +315,35 @@ export default function MessagesInboxPanel() {
   const peerIsAdmin = selected
     ? isOwnerAdminConversation(selected, conversations)
     : false;
+  const adminAccountThread = selected ? isAdminAccountConversation(selected) : false;
+  const inquiryContext = findThreadContextCard(thread?.messages);
   const threadTitle = selected
     ? peerIsAdmin || isHallOwner
       ? ownerConversationTitle(selected, lang, conversations)
-      : conversationPreviewTitle(selected, lang)
+      : adminAccountThread
+        ? t("messages.adminChat.title")
+        : conversationPreviewTitle(selected, lang)
     : thread
       ? conversationHallLabel(thread, lang)
       : t("messages.title");
-  const threadSubtitle = peerIsAdmin
-    ? null
-    : selected
-      ? conversationPreviewSubtitle(selected, lang)
-      : thread && conversationHallLabel(thread, lang) !== threadTitle
-        ? conversationHallLabel(thread, lang)
-        : null;
+  const threadSubtitle =
+    peerIsAdmin || adminAccountThread
+      ? null
+      : selected
+        ? conversationPreviewSubtitle(selected, lang)
+        : thread && conversationHallLabel(thread, lang) !== threadTitle
+          ? conversationHallLabel(thread, lang)
+          : null;
   const threadBadge = peerIsAdmin
     ? t("owner.messages.admin")
     : conversationPeerRoleLabel({
         viewerIsHallOwner: isHallOwner,
         viewerIsAdmin: isAdmin,
-        peerIsAdmin: false,
+        peerIsAdmin: adminAccountThread,
       });
 
   const iconBtnClass =
-    "inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--wesal-maroon)]/45 bg-white text-[var(--wesal-maroon)] shadow-[0_4px_12px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white";
+    "inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wesal-maroon)]/45 bg-white text-[var(--wesal-maroon)] shadow-[0_4px_12px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white";
 
   return (
     <MessagesErrorBoundary>
@@ -442,9 +451,21 @@ export default function MessagesInboxPanel() {
                 subtitle={threadSubtitle}
                 badge={showThread ? threadBadge : null}
                 peerDisplayName={
-                  isHallOwner && selected && isOwnerAdminConversation(selected, conversations)
-                    ? t("owner.messages.admin")
+                  adminAccountThread ||
+                  (isHallOwner && selected && isOwnerAdminConversation(selected, conversations))
+                    ? t("messages.adminChat.title")
                     : null
+                }
+                context={
+                  <>
+                    {adminAccountThread ? <AdminChatBanner className="mb-2" /> : null}
+                    {inquiryContext ? (
+                      <ProductInquiryCard
+                        context={inquiryContext}
+                        variant={inquiryContext.contextPostId ? "panel" : "inline"}
+                      />
+                    ) : null}
+                  </>
                 }
                 currentUserId={currentUserId}
                 onRetryLoad={retryThread}

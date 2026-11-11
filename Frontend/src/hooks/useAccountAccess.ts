@@ -5,6 +5,7 @@ import {
   canAccessRegularProfile,
   isAdminRole,
   isHallOwnerRole,
+  isProfessionalRole,
   resolveSessionRole,
 } from "@/lib/account-role";
 import { getStoredAuth } from "@/lib/auth-storage";
@@ -35,6 +36,7 @@ export function useAccountAccess() {
   );
   const isHallOwner = isHallOwnerRole(role);
   const isAdmin = isAdminRole(role);
+  const isProfessional = isProfessionalRole(role);
   const canOpenRegularProfile = canAccessRegularProfile(authenticated, role);
 
   const logout = async () => {
@@ -52,6 +54,7 @@ export function useAccountAccess() {
     role,
     isHallOwner,
     isAdmin,
+    isProfessional,
     canOpenRegularProfile,
     logout,
   };

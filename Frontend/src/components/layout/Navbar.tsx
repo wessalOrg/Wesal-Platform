@@ -17,12 +17,10 @@ import { useTranslateLang } from "@/i18n";
 import { getAccountProfilePath } from "@/lib/account-profile-path";
 import { markAuthNavigation } from "@/lib/auth-nav";
 
+/** Section 17 — landing top bar keeps only Home + Discover. */
 const NAV_HREFS = [
   { href: "/", key: "nav.home" },
-  { href: "/halls", key: "nav.halls" },
-  { href: "/event-planners", key: "nav.eventPlanners" },
-  { href: "/photographers", key: "nav.photographers" },
-  { href: "/about", key: "nav.about" },
+  { href: "/discover", key: "nav.discover" },
 ] as const;
 
 function navPath(href: string) {
@@ -178,7 +176,7 @@ export default function Navbar({
 
             <button
               type="button"
-              className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-border)] text-sm text-[var(--wesal-maroon)] lg:hidden"
+              className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--wesal-border)] text-sm text-[var(--wesal-maroon)] lg:hidden"
               aria-expanded={open}
               aria-controls="mobile-nav"
               aria-label={t("nav.menu")}

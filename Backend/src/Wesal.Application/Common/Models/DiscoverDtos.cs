@@ -5,6 +5,8 @@ public sealed class DiscoverItemDto
 {
     public string ContentType { get; init; } = string.Empty;
     public Guid Id { get; init; }
+    /// <summary>Hall id when ContentType is Hall or HallOffer; otherwise null.</summary>
+    public Guid? HallId { get; init; }
     public string? OwnerUserId { get; init; }
     public string? DisplayName { get; init; }
     public string? Content { get; init; }

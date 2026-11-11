@@ -302,7 +302,7 @@ export default function ProfessionalOfferForm({
                 <img src={preview} alt="" className="aspect-square w-full object-cover" />
                 <button
                   type="button"
-                  className="absolute end-1 top-1 rounded-full bg-black/55 px-2 py-0.5 text-xs text-white"
+                  className="absolute end-1 top-1 inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-black/55 px-2 text-xs text-white"
                   disabled={submitting}
                   onClick={() => {
                     const next = files.filter((_, i) => i !== index);
@@ -318,7 +318,7 @@ export default function ProfessionalOfferForm({
         ) : null}
         <label
           htmlFor={fileId}
-          className="btn-outline mt-3 inline-flex !min-h-10 cursor-pointer items-center px-3 text-sm"
+          className="btn-outline mt-3 inline-flex !min-h-11 cursor-pointer items-center px-3 text-sm"
         >
           {t("professionals.offers.addImages")}
         </label>

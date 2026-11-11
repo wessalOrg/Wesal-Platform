@@ -136,6 +136,16 @@ export function refreshUnreadCount(): Promise<void> {
   return pullUnreadCount(activeSessionKey);
 }
 
+/** Apply a hub-pushed total unread count without waiting for the next poll. */
+export function applyUnreadCount(totalUnreadCount: number): void {
+  if (!activeSessionKey) return;
+  setSnapshot({
+    count: normalizeUnreadCount(totalUnreadCount),
+    ready: true,
+    sessionKey: activeSessionKey,
+  });
+}
+
 /**
  * Shared unread-conversation counter for the current authenticated user.
  * Multiple consumers share one poller / one source of truth.

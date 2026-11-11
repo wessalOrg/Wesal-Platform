@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import MabroukFigure from "@/components/brand/MabroukFigure";
 import MessageComposer from "@/components/messages/MessageComposer";
 import ThreadMessageItem from "@/components/messages/ThreadMessageItem";
 import { useUiLang } from "@/components/layout/LanguageProvider";
@@ -89,6 +90,19 @@ export default function MessageThreadView({
   const arrivingId = useRejectionArrival(conversationId ?? thread?.conversationId ?? null, messages);
   const { markRetrying, isRetrying } = useRetryingMessages(messages);
   const showEmpty = (status === "empty" || status === "ready") && messages.length === 0;
+  const [isOffline, setIsOffline] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof navigator === "undefined") return;
+    const sync = () => setIsOffline(!navigator.onLine);
+    sync();
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    return () => {
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", sync);
+    };
+  }, []);
 
   const widget = variant === "widget";
   const owner = appearance === "owner";
@@ -118,8 +132,8 @@ export default function MessageThreadView({
               owner
                 ? "owner-chat-back"
                 : widget
-                  ? "mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-maroon)]/45 bg-white text-[var(--wesal-maroon)] shadow-[0_4px_12px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
-                  : "mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)]"
+                  ? "mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-maroon)]/45 bg-white text-[var(--wesal-maroon)] shadow-[0_4px_12px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-maroon)] hover:bg-[var(--wesal-maroon)] hover:text-white"
+                  : "mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--wesal-border)] text-[var(--wesal-maroon)]"
             }
             aria-label={t("messages.backToInbox")}
             onClick={onBack}
@@ -170,9 +184,20 @@ export default function MessageThreadView({
           onScroll={onScroll}
         >
           {status === "idle" ? (
-            <p className="px-2 py-10 text-center text-sm leading-7 text-[var(--wesal-muted)]">
-              {t("messages.selectConversation")}
-            </p>
+            <div
+              className="flex flex-col items-center px-2 py-10 text-center"
+              data-testid="thread-select-conversation"
+            >
+              <MabroukFigure
+                pose="messageEmpty"
+                size="md"
+                rounded="2xl"
+                className="mb-3 !h-32 !w-36 bg-transparent sm:!h-36 sm:!w-40"
+              />
+              <p className="text-sm leading-7 text-[var(--wesal-muted)]">
+                {t("messages.selectConversation")}
+              </p>
+            </div>
           ) : null}
 
           {status === "loading" ? (
@@ -186,23 +211,63 @@ export default function MessageThreadView({
             </div>
           ) : null}
 
+          {isOffline ? (
+            <div
+              className="mb-3 flex items-center gap-3 rounded-2xl border border-[var(--wesal-border)] bg-white px-3 py-2.5"
+              role="status"
+              data-testid="thread-offline"
+            >
+              <MabroukFigure
+                pose="offline"
+                size="sm"
+                rounded="2xl"
+                className="!h-16 !w-[4.75rem] bg-transparent"
+              />
+              <p className="min-w-0 text-sm leading-6 text-[var(--wesal-muted)]">
+                {t("messages.offline")}
+              </p>
+            </div>
+          ) : null}
+
           {status === "error" ? (
-            <div className="px-2 py-10 text-center" data-testid="thread-error">
+            <div className="flex flex-col items-center px-2 py-10 text-center" data-testid="thread-error">
+              <MabroukFigure
+                pose="sendFail"
+                size="md"
+                rounded="2xl"
+                className="mb-3 !h-32 !w-36 bg-transparent sm:!h-36 sm:!w-40"
+              />
               <p className="text-sm leading-7 text-[var(--wesal-muted)]">{error ?? t("errors.thread.load")}</p>
-              <button type="button" className="btn-outline mt-4" onClick={onRetryLoad}>
+              <button type="button" className="btn-outline mt-4 min-h-11" onClick={onRetryLoad}>
                 {t("common.retry")}
               </button>
             </div>
           ) : null}
 
           {showEmpty ? (
-            <p className="px-2 py-10 text-center text-sm leading-7 text-[var(--wesal-muted)]" data-testid="thread-empty">
-              {t("messages.threadEmpty")}
-            </p>
+            <div className="flex flex-col items-center px-2 py-10 text-center" data-testid="thread-empty">
+              <MabroukFigure
+                pose="messageEmpty"
+                size="md"
+                rounded="2xl"
+                className="mb-3 !h-32 !w-36 bg-transparent sm:!h-36 sm:!w-40"
+              />
+              <p className="text-sm leading-7 text-[var(--wesal-muted)]">
+                {t("messages.threadEmpty")}
+              </p>
+            </div>
           ) : null}
 
           {status !== "loading" && status !== "error" && status !== "idle"
-            ? messages.filter((message) => message?.id).map((message) => (
+            ? messages.filter((message) => message?.id).map((message, index, list) => {
+                const previous = index > 0 ? list[index - 1] : null;
+                const groupedWithPrevious = Boolean(
+                  previous &&
+                    isSameUserId(previous.senderUserId, message.senderUserId) &&
+                    previous.delivery !== "failed" &&
+                    message.delivery !== "failed",
+                );
+                return (
                 <ThreadMessageItem
                   key={message.id}
                   message={
@@ -217,12 +282,14 @@ export default function MessageThreadView({
                   hallName={localizedHallName}
                   conversationId={conversationId ?? thread?.conversationId}
                   arriving={arrivingId === message.id}
+                  groupedWithPrevious={groupedWithPrevious}
                   onRetrySend={(id) => {
                     markRetrying(id);
                     onRetrySend(id);
                   }}
                 />
-              ))
+                );
+              })
             : null}
         </div>
 

@@ -32,6 +32,13 @@ export function mapProfileDto(data: unknown): UserProfile {
 
   const setupRaw = dto.isSetupComplete ?? dto.IsSetupComplete;
   const approvalRaw = dto.approvalStatus ?? dto.ApprovalStatus;
+  const lockedUntil =
+    asText(dto.lockedUntil ?? dto.LockedUntil) || null;
+  const isLockedRaw = Boolean(dto.isLocked ?? dto.IsLocked);
+  const lockedUntilMs = lockedUntil ? Date.parse(lockedUntil) : NaN;
+  const isLocked =
+    isLockedRaw &&
+    (Number.isNaN(lockedUntilMs) || lockedUntilMs > Date.now());
 
   return {
     id: asText(dto.id ?? dto.Id ?? dto.userId ?? dto.UserId) || "self",
@@ -48,6 +55,8 @@ export function mapProfileDto(data: unknown): UserProfile {
         ? null
         : String(approvalRaw).trim() || null,
     createdAt,
+    isLocked,
+    lockedUntil: isLocked ? lockedUntil : null,
   };
 }
 

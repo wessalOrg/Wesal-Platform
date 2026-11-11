@@ -3,16 +3,21 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import MabroukFigure from "@/components/brand/MabroukFigure";
+import AdminChatBanner from "@/components/messages/AdminChatBanner";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
 import { useMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import OwnerConfirmPaymentBar from "@/components/messages/OwnerConfirmPaymentBar";
+import ProductInquiryCard from "@/components/offers/ProductInquiryCard";
 import ProtectedHallMessageThread from "@/components/messages/ProtectedHallMessageThread";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useAdminChat } from "@/hooks/useAdminChat";
 import { useT } from "@/i18n";
+import { isAdminAccountConversation } from "@/lib/admin-account-conversation";
+import { findThreadContextCard } from "@/lib/conversation-mapper";
 import { isOwnerAdminConversation, ownerConversationTitle } from "@/lib/owner-admin-conversation";
 import {
   conversationHallLabel,
@@ -65,21 +70,28 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
 
   const selected = conversations.find((item) => item.conversationId === selectedId) ?? null;
   const showThread = Boolean(selectedId);
+  const adminAccountThread = selected ? isAdminAccountConversation(selected) : false;
+  const inquiryContext = findThreadContextCard(thread?.messages);
   const threadTitle = selected
     ? isHallOwner
       ? ownerConversationTitle(selected, lang, conversations)
-      : conversationPreviewTitle(selected, lang)
+      : adminAccountThread
+        ? t("messages.adminChat.title")
+        : conversationPreviewTitle(selected, lang)
     : thread
       ? conversationHallLabel(thread, lang)
       : t("messages.title");
   const threadSubtitle = selected
-    ? conversationPreviewSubtitle(selected, lang)
+    ? adminAccountThread
+      ? null
+      : conversationPreviewSubtitle(selected, lang)
     : thread && conversationHallLabel(thread, lang) !== threadTitle
       ? conversationHallLabel(thread, lang)
       : null;
   const threadBadge = conversationPeerRoleLabel({
     viewerIsHallOwner: isHallOwner,
     viewerIsAdmin: isAdmin,
+    peerIsAdmin: adminAccountThread || Boolean(selected && isOwnerAdminConversation(selected, conversations)),
   });
 
   if (!ready) {
@@ -151,9 +163,21 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
                 subtitle={threadSubtitle}
                 badge={threadBadge}
                 peerDisplayName={
-                  isHallOwner && selected && isOwnerAdminConversation(selected, conversations)
-                    ? t("owner.messages.admin")
+                  adminAccountThread ||
+                  (isHallOwner && selected && isOwnerAdminConversation(selected, conversations))
+                    ? t("messages.adminChat.title")
                     : null
+                }
+                context={
+                  <>
+                    {adminAccountThread ? <AdminChatBanner className="mb-2" /> : null}
+                    {inquiryContext ? (
+                      <ProductInquiryCard
+                        context={inquiryContext}
+                        variant={inquiryContext.contextPostId ? "panel" : "inline"}
+                      />
+                    ) : null}
+                  </>
                 }
                 currentUserId={currentUserId}
                 onRetryLoad={retryThread}
@@ -196,7 +220,16 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
               />
             </ProtectedHallMessageThread>
           ) : (
-            <div className="seeker-messages-placeholder" data-testid="messages-inbox-placeholder">
+            <div
+              className="seeker-messages-placeholder flex flex-col items-center gap-3 px-4 text-center"
+              data-testid="messages-inbox-placeholder"
+            >
+              <MabroukFigure
+                pose="messageEmpty"
+                size="md"
+                rounded="2xl"
+                className="!h-32 !w-36 bg-transparent sm:!h-36 sm:!w-40"
+              />
               <p>{t("messages.selectConversation")}</p>
             </div>
           )}

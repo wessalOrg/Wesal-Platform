@@ -41,7 +41,7 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
                 || selected == Filter.Halls && hall.Address.ToLower().Contains(pattern));
             results.Add(halls.Select(hall => new DiscoverItemDto
             {
-                ContentType = "Hall", Id = hall.Id, OwnerUserId = hall.OwnerId, DisplayName = hall.Name,
+                ContentType = "Hall", Id = hall.Id, HallId = hall.Id, OwnerUserId = hall.OwnerId, DisplayName = hall.Name,
                 ImageUrl = hall.MainImageUrl, Location = hall.Address, Price = hall.Price, CreatedAt = hall.CreatedAt
             }));
         }
@@ -84,7 +84,7 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
         if (filter is Filter.All or Filter.Halls)
             result.Add(PublicHalls().Select(hall => new DiscoverItemDto
             {
-                ContentType = "Hall", Id = hall.Id, OwnerUserId = hall.OwnerId, DisplayName = hall.Name,
+                ContentType = "Hall", Id = hall.Id, HallId = hall.Id, OwnerUserId = hall.OwnerId, DisplayName = hall.Name,
                 Content = hall.Description, ImageUrl = hall.MainImageUrl, Location = hall.Address,
                 Price = hall.Price, CreatedAt = hall.CreatedAt
             }));
@@ -158,7 +158,7 @@ public sealed class DiscoverService(ApplicationDbContext db, TimeProvider clock)
                     && offer.StartsAt <= now && now < offer.EndsAt
                 select new DiscoverItemDto
                 {
-                    ContentType = "HallOffer", Id = offer.Id, OwnerUserId = hall.OwnerId,
+                    ContentType = "HallOffer", Id = offer.Id, HallId = hall.Id, OwnerUserId = hall.OwnerId,
                     DisplayName = hall.Name, Content = hall.Description, ImageUrl = hall.MainImageUrl,
                     Location = hall.Address, OldPrice = offer.OldBookingPrice, OfferPrice = offer.OfferPrice,
                     StartsAt = offer.StartsAt, EndsAt = offer.EndsAt, CreatedAt = offer.CreatedAt

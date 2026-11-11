@@ -15,13 +15,43 @@ export type ServerNotificationEvent = {
   actionTarget?: string | null;
   targetId?: string | null;
   occurredAt?: string;
+  conversationId?: string | null;
+  senderName?: string | null;
+  senderAvatarUrl?: string | null;
+  messagePreview?: string | null;
+  messageCount?: number | null;
 };
 
 /** Converts one server notification into the local feed. Unknown kinds are ignored. */
 export function applyServerNotification(raw: unknown): void {
   if (!raw || typeof raw !== "object") return;
-  const event = raw as ServerNotificationEvent;
-  const mapped = mapServerNotification(event);
+  const event = raw as ServerNotificationEvent & Record<string, unknown>;
+  const mapped = mapServerNotification({
+    kind: event.kind,
+    title: event.title,
+    body: event.body,
+    actionLabel: event.actionLabel,
+    actionTarget: event.actionTarget,
+    targetId: event.targetId,
+    conversationId:
+      (typeof event.conversationId === "string" && event.conversationId) ||
+      (typeof event.ConversationId === "string" ? event.ConversationId : null),
+    senderName:
+      (typeof event.senderName === "string" && event.senderName) ||
+      (typeof event.SenderName === "string" ? event.SenderName : null),
+    senderAvatarUrl:
+      (typeof event.senderAvatarUrl === "string" && event.senderAvatarUrl) ||
+      (typeof event.SenderAvatarUrl === "string" ? event.SenderAvatarUrl : null),
+    messagePreview:
+      (typeof event.messagePreview === "string" && event.messagePreview) ||
+      (typeof event.MessagePreview === "string" ? event.MessagePreview : null),
+    messageCount:
+      typeof event.messageCount === "number"
+        ? event.messageCount
+        : typeof event.MessageCount === "number"
+          ? event.MessageCount
+          : null,
+  });
   if (!mapped) return;
 
   pushPlatformNotification({

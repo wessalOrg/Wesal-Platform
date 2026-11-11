@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 import { useT } from "@/i18n";
+import { conversationAvatarInitials } from "@/lib/conversation-display";
+import { formatRelativeTime } from "@/lib/relative-time";
 import type { PlatformNotification } from "@/types/platform-notification";
 
 type NotificationToastProps = {
@@ -27,28 +29,56 @@ export default function NotificationToast({
 
   if (!item) return null;
 
+  const isMessage = item.type === "new_message";
+  const avatarUrl = item.metadata.sender_avatar_url?.trim() || null;
+  const senderName = item.metadata.sender_name?.trim() || item.title;
+  const time = formatRelativeTime(item.created_at);
+
   return (
     <div
-      className={`wesal-notify-toast wesal-notify-toast--${item.tone}`}
+      className={`wesal-notify-toast wesal-notify-toast--${item.tone}${
+        isMessage ? " cursor-pointer" : ""
+      }`}
       role="status"
       aria-live="polite"
       data-testid="platform-notification-toast"
       data-type={item.type}
+      onClick={isMessage ? () => onAction(item) : undefined}
     >
-      <span className={`wesal-notify-toast-icon wesal-notify-tone--${item.tone}`} aria-hidden="true">
-        <BellMiniIcon />
-      </span>
+      {isMessage ? (
+        <span
+          className="wesal-notify-toast-icon flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--wesal-maroon)] text-xs font-bold text-white"
+          aria-hidden="true"
+        >
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            conversationAvatarInitials(senderName)
+          )}
+        </span>
+      ) : (
+        <span className={`wesal-notify-toast-icon wesal-notify-tone--${item.tone}`} aria-hidden="true">
+          <BellMiniIcon />
+        </span>
+      )}
       <div className="wesal-notify-toast-copy">
-        <p className="wesal-notify-toast-title">{item.title}</p>
+        <p className="wesal-notify-toast-title">{senderName}</p>
         <p className="wesal-notify-toast-body">{item.body}</p>
-        {item.action_label ? (
+        {isMessage && time ? (
+          <p className="mt-1 text-[0.65rem] text-[var(--wesal-muted)]">{time}</p>
+        ) : null}
+        {item.action_label || isMessage ? (
           <button
             type="button"
             className="wesal-notify-toast-action"
             data-testid="platform-notification-toast-action"
-            onClick={() => onAction(item)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onAction(item);
+            }}
           >
-            {item.action_label}
+            {item.action_label || t("messages.notification.open")}
           </button>
         ) : null}
       </div>
@@ -56,7 +86,10 @@ export default function NotificationToast({
         type="button"
         className="wesal-notify-toast-close"
         aria-label={t("common.close")}
-        onClick={onClose}
+        onClick={(event) => {
+          event.stopPropagation();
+          onClose();
+        }}
       >
         ✕
       </button>

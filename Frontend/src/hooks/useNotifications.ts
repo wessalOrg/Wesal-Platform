@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
 import { getAccessToken } from "@/lib/auth-token";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/platform-notifications-store";
 import { resolveNotificationActionUrl } from "@/lib/platform-notification-routes";
 import {
+  fetchNotificationsUnreadCount,
   fetchServerNotifications,
   markAllServerNotificationsRead,
   markServerNotificationRead,
@@ -29,6 +30,17 @@ const HYDRATION_TTL_MS = 30_000;
 
 let hydration: { token: string; at: number } | null = null;
 let inflight: Promise<void> | null = null;
+let unreadInflight: Promise<number> | null = null;
+
+function refreshUnreadCountFromServer(): Promise<number> {
+  if (unreadInflight) return unreadInflight;
+  unreadInflight = fetchNotificationsUnreadCount()
+    .catch(() => -1)
+    .finally(() => {
+      unreadInflight = null;
+    });
+  return unreadInflight;
+}
 
 /**
  * Pulls the durable inbox into the local feed. Concurrent callers (the navbar bell and a
@@ -66,38 +78,69 @@ export function useNotifications(audienceOverride?: NotificationAudience) {
     readPlatformNotificationsSnapshot,
     () => "",
   );
+  const [serverUnreadCount, setServerUnreadCount] = useState<number | null>(null);
 
   const items = useMemo(
     () => (snapshot ? listPlatformNotifications(audience) : []),
     [audience, snapshot],
   );
 
-  const unreadCount = useMemo(
+  const localUnreadCount = useMemo(
     () => items.filter((item) => !item.is_read).length,
     [items],
   );
+  const unreadCount =
+    serverUnreadCount != null && serverUnreadCount >= 0
+      ? serverUnreadCount
+      : localUnreadCount;
 
   useEffect(() => {
     const token = getAccessToken();
-    if (!token || token.startsWith("stub-") || notificationsUseMock()) return;
+    if (!token || token.startsWith("stub-") || notificationsUseMock()) {
+      setServerUnreadCount(null);
+      return;
+    }
     const fresh =
       hydration?.token === token && Date.now() - hydration.at < HYDRATION_TTL_MS;
-    if (fresh) return;
+    if (fresh) {
+      void refreshUnreadCountFromServer().then((count) => {
+        if (count >= 0) setServerUnreadCount(count);
+      });
+      return;
+    }
     hydration = { token, at: Date.now() };
-    void refreshNotificationsFromServer();
+    void refreshNotificationsFromServer().then(() =>
+      refreshUnreadCountFromServer().then((count) => {
+        if (count >= 0) setServerUnreadCount(count);
+      }),
+    );
   }, [identity.isAdmin, identity.isHallOwner]);
 
   const markRead = useCallback((id: string) => {
     markPlatformNotificationRead(id);
+    setServerUnreadCount((prev) =>
+      prev != null && prev > 0 ? prev - 1 : prev,
+    );
     if (isServerNotificationId(id)) {
-      void markServerNotificationRead(id).catch(() => undefined);
+      void markServerNotificationRead(id)
+        .then(() => refreshUnreadCountFromServer())
+        .then((count) => {
+          if (count >= 0) setServerUnreadCount(count);
+        })
+        .catch(() => undefined);
     }
   }, []);
 
   const markAllRead = useCallback(() => {
     markPlatformNotificationsRead(audience);
+    setServerUnreadCount(0);
     if (!notificationsUseMock()) {
-      void markAllServerNotificationsRead().catch(() => undefined);
+      void markAllServerNotificationsRead()
+        .then(() => refreshUnreadCountFromServer())
+        .then((count) => {
+          if (count >= 0) setServerUnreadCount(count);
+        })
+        .catch(() => undefined);
     }
   }, [audience]);
 

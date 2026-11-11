@@ -1,7 +1,9 @@
 import { t } from "@/i18n";
+import { resolveOfferMediaUrl } from "@/lib/offer-format";
 import type {
   ConversationKind,
   ConversationSummary,
+  MessageContextCard,
   MessageThread,
   ThreadMessage,
 } from "@/types/messages";
@@ -47,6 +49,22 @@ export function unwrapConversationList(data: unknown): unknown[] {
   return Array.isArray(nested) ? nested : [];
 }
 
+function readContext(dto: Record<string, unknown>): MessageContextCard {
+  return {
+    contextPostId: asText(dto.contextPostId ?? dto.ContextPostId) || null,
+    contextOfferId: asText(dto.contextOfferId ?? dto.ContextOfferId) || null,
+    contextTitle: asText(dto.contextTitle ?? dto.ContextTitle) || null,
+    contextText: asText(dto.contextText ?? dto.ContextText) || null,
+    contextImageUrl:
+      resolveOfferMediaUrl(asText(dto.contextImageUrl ?? dto.ContextImageUrl)) || null,
+    contextOwnerUserId: asText(dto.contextOwnerUserId ?? dto.ContextOwnerUserId) || null,
+    contextItemAvailable:
+      dto.contextItemAvailable == null && dto.ContextItemAvailable == null
+        ? null
+        : Boolean(dto.contextItemAvailable ?? dto.ContextItemAvailable),
+  };
+}
+
 export function mapInboxItemDto(data: unknown): ConversationSummary | null {
   const dto = asRecord(data);
   if (!dto) return null;
@@ -55,6 +73,13 @@ export function mapInboxItemDto(data: unknown): ConversationSummary | null {
   const hallId = asText(dto.hallId ?? dto.HallId);
   const kind = mapConversationKind(dto.kind ?? dto.Kind);
   const hallNameRaw = asText(dto.hallName ?? dto.HallName);
+  const unreadMessageCount =
+    typeof dto.unreadMessageCount === "number"
+      ? dto.unreadMessageCount
+      : typeof dto.UnreadMessageCount === "number"
+        ? dto.UnreadMessageCount
+        : 0;
+  const isUnread = Boolean(dto.isUnread ?? dto.IsUnread) || unreadMessageCount > 0;
   return {
     conversationId,
     kind,
@@ -66,6 +91,10 @@ export function mapInboxItemDto(data: unknown): ConversationSummary | null {
     otherParticipantId: asText(dto.otherParticipantId ?? dto.OtherParticipantId),
     otherParticipantName:
       asText(dto.otherParticipantName ?? dto.OtherParticipantName) || t("common.user"),
+    otherParticipantAvatarUrl:
+      resolveOfferMediaUrl(
+        asText(dto.otherParticipantAvatarUrl ?? dto.OtherParticipantAvatarUrl),
+      ) || null,
     lastMessagePreview: asText(dto.lastMessagePreview ?? dto.LastMessagePreview),
     lastMessageHasAttachment: Boolean(
       dto.lastMessageHasAttachment ?? dto.LastMessageHasAttachment,
@@ -77,9 +106,31 @@ export function mapInboxItemDto(data: unknown): ConversationSummary | null {
         : typeof dto.MessageCount === "number"
           ? dto.MessageCount
           : 0,
+    unreadMessageCount: Math.max(0, unreadMessageCount),
     createdAt: readIso(dto.createdAt ?? dto.CreatedAt, new Date().toISOString()),
-    isUnread: Boolean(dto.isUnread ?? dto.IsUnread),
+    isUnread,
   };
+}
+
+/** First post/offer context card found in a thread (inquiry preview). */
+export function findThreadContextCard(
+  messages: ThreadMessage[] | null | undefined,
+): MessageContextCard | null {
+  if (!messages?.length) return null;
+  for (const message of messages) {
+    if (message.contextPostId || message.contextOfferId || message.contextTitle) {
+      return {
+        contextPostId: message.contextPostId ?? null,
+        contextOfferId: message.contextOfferId ?? null,
+        contextTitle: message.contextTitle ?? null,
+        contextText: message.contextText ?? null,
+        contextImageUrl: message.contextImageUrl ?? null,
+        contextOwnerUserId: message.contextOwnerUserId ?? null,
+        contextItemAvailable: message.contextItemAvailable ?? null,
+      };
+    }
+  }
+  return null;
 }
 
 function readAttachment(dto: Record<string, unknown>): {
@@ -100,7 +151,9 @@ export function mapThreadMessageDto(data: unknown): ThreadMessage | null {
   const id = asText(dto.id ?? dto.Id ?? dto.messageId ?? dto.MessageId);
   const content = asText(dto.content ?? dto.Content);
   const attachment = readAttachment(dto);
-  if (!id || (!content && !attachment.hasAttachment)) return null;
+  const context = readContext(dto);
+  const hasContext = Boolean(context.contextPostId || context.contextOfferId || context.contextTitle);
+  if (!id || (!content && !attachment.hasAttachment && !hasContext)) return null;
   return {
     id,
     senderUserId: asText(dto.senderUserId ?? dto.SenderUserId),
@@ -111,6 +164,7 @@ export function mapThreadMessageDto(data: unknown): ThreadMessage | null {
     hasAttachment: attachment.hasAttachment,
     attachmentUrl: attachment.attachmentUrl,
     attachmentFileName: attachment.attachmentFileName,
+    ...context,
   };
 }
 
@@ -142,6 +196,7 @@ export function mapSendMessageDto(
   const id = asText(dto.messageId ?? dto.MessageId ?? dto.id ?? dto.Id);
   if (!id) return null;
   const attachment = readAttachment(dto);
+  const context = readContext(dto);
   return {
     id,
     clientRequestId,
@@ -153,12 +208,15 @@ export function mapSendMessageDto(
     hasAttachment: attachment.hasAttachment,
     attachmentUrl: attachment.attachmentUrl,
     attachmentFileName: attachment.attachmentFileName,
+    ...context,
   };
 }
 
 export function mapRealtimeMessageDto(data: unknown): {
   conversationId: string;
   message: ThreadMessage;
+  unreadMessageCount?: number;
+  totalUnreadCount?: number;
 } | null {
   const dto = asRecord(data);
   if (!dto) return null;
@@ -168,7 +226,19 @@ export function mapRealtimeMessageDto(data: unknown): {
     id: dto.messageId ?? dto.MessageId ?? dto.id ?? dto.Id,
   });
   if (!conversationId || !message) return null;
-  return { conversationId, message };
+  const unreadMessageCount =
+    typeof dto.unreadMessageCount === "number"
+      ? dto.unreadMessageCount
+      : typeof dto.UnreadMessageCount === "number"
+        ? dto.UnreadMessageCount
+        : undefined;
+  const totalUnreadCount =
+    typeof dto.totalUnreadCount === "number"
+      ? dto.totalUnreadCount
+      : typeof dto.TotalUnreadCount === "number"
+        ? dto.TotalUnreadCount
+        : undefined;
+  return { conversationId, message, unreadMessageCount, totalUnreadCount };
 }
 
 export function conversationTimeValue(iso: string | null | undefined): number {

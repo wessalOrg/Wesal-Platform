@@ -17,6 +17,7 @@ import {
   PROFESSIONAL_PICTURE_ACCEPT,
   validateProfessionalPicture,
 } from "@/lib/professional-picture-validation";
+import { isOfferPubliclyVisible } from "@/lib/offer-status";
 import {
   isCoordinatorProfessional,
   isPhotographerProfessional,
@@ -322,9 +323,16 @@ export default function ProfessionalPublicProfileView({
   const avatarUrl = displayPictureUrl ? resolveMediaUrl(displayPictureUrl) : "";
   const location = professionalPublicLocation(profile);
   const postsForTab = posts ?? profile.posts;
-  const offersForTab = offers ?? profile.offers;
+  // Public visitors only see active offers; owners keep full mine list for stop/manage.
+  const offersForTab = (offers ?? profile.offers).filter((offer) =>
+    canManageOffers
+      ? true
+      : isOfferPubliclyVisible(offer.startsAt, offer.endsAt, offer.stoppedAt),
+  );
   const postsCount = posts?.length ?? profile.posts.length;
-  const offersCount = offers?.length ?? profile.offers.length;
+  const offersCount = canManageOffers
+    ? (offers?.length ?? profile.offers.length)
+    : offersForTab.length;
 
   return (
     <div className="ppp" data-testid="professional-public-profile">

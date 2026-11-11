@@ -37,7 +37,7 @@ export default function NotificationsView() {
 
   return (
     <section
-      className="mx-auto max-w-lg rounded-2xl bg-white p-6 shadow-[0_12px_30px_rgba(90,55,45,0.08)]"
+      className="mx-auto max-w-2xl rounded-2xl bg-white p-4 shadow-[0_12px_30px_rgba(90,55,45,0.08)] sm:p-6"
       data-testid="notifications-view"
     >
       <h1 className="text-2xl font-bold text-[var(--wesal-maroon)]">

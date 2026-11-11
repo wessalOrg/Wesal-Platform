@@ -21,6 +21,14 @@ export type UserProfile = {
   approvalStatus: string | null;
   /** Present only when the profile payload includes a join/created timestamp. */
   createdAt?: string | null;
+  /** Professional setup complete (coordinators / photographers). */
+  isSetupComplete?: boolean;
+  /** Account approval status name from the API (e.g. Approved, Pending). */
+  approvalStatus?: string | null;
+  /** Active publishing restriction (moderation lock). */
+  isLocked?: boolean;
+  /** UTC end of the publishing restriction window. */
+  lockedUntil?: string | null;
 };
 
 export type UpdateProfileInput = {
