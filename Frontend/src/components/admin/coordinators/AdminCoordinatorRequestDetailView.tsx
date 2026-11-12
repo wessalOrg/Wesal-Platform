@@ -38,7 +38,7 @@ type AdminCoordinatorRequestDetailViewProps = {
   userId: string;
 };
 
-type DetailTab = "basic" | "gallery" | "identity";
+type DetailTab = "basic" | "business" | "gallery";
 
 function statusLabelKey(status: AdminCoordinatorRequestDetail["approvalStatus"]): string {
   switch (status) {
@@ -241,129 +241,162 @@ export default function AdminCoordinatorRequestDetailView({
     detail.businessType === "Shop"
       ? detail.shopName || detail.fullName
       : detail.onlineStoreName || detail.fullName;
-  const roleLabel = t(
+  const businessTypeLabel = t(
     detail.businessType === "Shop"
       ? "admin.coordinators.businessType.shop"
       : "admin.coordinators.businessType.freelance",
   );
+  const specialtyLabel =
+    detail.businessType === "Shop"
+      ? detail.shopName || businessTypeLabel
+      : detail.onlineStoreName || businessTypeLabel;
+  const addressValue =
+    detail.businessType === "Shop" ? detail.shopLocation || "—" : "—";
+  const displayName = detail.fullName || headline;
+
+  const galleryBlock = (
+    <div className="admin-coord-docs-stack admin-coord-docs-stack--gallery">
+      {detail.businessType === "Shop" ? (
+        <AdminSecureDocumentViewer
+          key={`${detail.userId}-shop`}
+          available={detail.hasShopPhoto}
+          sourceKey={detail.hasShopPhoto ? detail.userId : null}
+          labelKey="admin.coordinators.detail.docs.shopPhoto"
+          altKey="admin.coordinators.detail.docs.shopPhotoAlt"
+          hintKey="admin.coordinators.detail.docs.open"
+          missingHintKey="admin.coordinators.detail.docs.missing"
+          errorKey="admin.coordinators.detail.docs.errors.loadFailed"
+          loadDocument={() => fetchAdminCoordinatorShopPhotoUrl(detail.userId)}
+          testId="admin-coordinator-shop-photo"
+        />
+      ) : (
+        <>
+          <AdminSecureDocumentViewer
+            key={`${detail.userId}-work-1`}
+            available={detail.hasWorkPhoto1}
+            sourceKey={detail.hasWorkPhoto1 ? `${detail.userId}-1` : null}
+            labelKey="admin.coordinators.detail.docs.workPhoto1"
+            altKey="admin.coordinators.detail.docs.workPhoto1Alt"
+            hintKey="admin.coordinators.detail.docs.open"
+            missingHintKey="admin.coordinators.detail.docs.missing"
+            errorKey="admin.coordinators.detail.docs.errors.loadFailed"
+            loadDocument={() => fetchAdminCoordinatorWorkPhotoUrl(detail.userId, 1)}
+            testId="admin-coordinator-work-photo-1"
+          />
+          <AdminSecureDocumentViewer
+            key={`${detail.userId}-work-2`}
+            available={detail.hasWorkPhoto2}
+            sourceKey={detail.hasWorkPhoto2 ? `${detail.userId}-2` : null}
+            labelKey="admin.coordinators.detail.docs.workPhoto2"
+            altKey="admin.coordinators.detail.docs.workPhoto2Alt"
+            hintKey="admin.coordinators.detail.docs.open"
+            missingHintKey="admin.coordinators.detail.docs.missing"
+            errorKey="admin.coordinators.detail.docs.errors.loadFailed"
+            loadDocument={() => fetchAdminCoordinatorWorkPhotoUrl(detail.userId, 2)}
+            testId="admin-coordinator-work-photo-2"
+          />
+        </>
+      )}
+    </div>
+  );
+
+  const identityBlock = (
+    <section className="admin-coord-identity-panel admin-coord-identity-panel--sensitive">
+      <div className="admin-coord-identity-head">
+        <h3 className="admin-coord-info-title mb-0">
+          {t("admin.coordinators.detail.identityTitle")}
+        </h3>
+        <span className="admin-coord-sensitive-badge">
+          {t("admin.coordinators.detail.identitySensitive")}
+        </span>
+      </div>
+      <AdminSecureDocumentViewer
+        key={`${detail.userId}-identity`}
+        available={detail.hasIdentityDocument}
+        sourceKey={detail.hasIdentityDocument ? detail.userId : null}
+        labelKey="admin.coordinators.detail.docs.identity"
+        altKey="admin.coordinators.detail.docs.identityAlt"
+        hintKey="admin.coordinators.detail.docs.open"
+        missingHintKey="admin.coordinators.detail.docs.missing"
+        errorKey="admin.coordinators.detail.docs.errors.loadFailed"
+        loadDocument={() => fetchAdminCoordinatorIdentityUrl(detail.userId)}
+        testId="admin-coordinator-identity"
+      />
+      <p className="admin-coord-sensitive-hint">
+        {t("admin.coordinators.detail.identitySensitiveHint")}
+      </p>
+    </section>
+  );
+
+  const personalBlock = (
+    <section className="admin-coord-info-panel">
+      <h3 className="admin-coord-info-title">
+        {t("admin.coordinators.detail.account")}
+      </h3>
+      <dl className="admin-coord-info-list">
+        <InfoRow label={t("admin.coordinators.detail.fullName")} value={detail.fullName || "—"} />
+        <InfoRow label={t("admin.coordinators.detail.email")} value={detail.email || "—"} />
+        <InfoRow
+          label={t("admin.coordinators.detail.userPhone")}
+          value={detail.userPhoneNumber || detail.setupPhoneNumber || "—"}
+        />
+        <InfoRow label={t("admin.coordinators.detail.address")} value={addressValue} />
+      </dl>
+    </section>
+  );
+
+  const businessBlock = (
+    <section className="admin-coord-info-panel">
+      <h3 className="admin-coord-info-title">
+        {t("admin.coordinators.detail.business")}
+      </h3>
+      <dl className="admin-coord-info-list">
+        <InfoRow
+          label={t("admin.coordinators.detail.businessType")}
+          value={specialtyLabel}
+        />
+        <InfoRow
+          label={t("admin.coordinators.detail.experience")}
+          value={businessTypeLabel}
+        />
+        {detail.businessType === "Shop" ? (
+          <InfoRow
+            label={t("admin.coordinators.detail.shopLocation")}
+            value={detail.shopLocation || "—"}
+          />
+        ) : (
+          <InfoRow
+            label={t("admin.coordinators.detail.onlineStoreName")}
+            value={detail.onlineStoreName || "—"}
+          />
+        )}
+        <InfoRow
+          label={t("admin.coordinators.detail.submittedAt")}
+          value={formatSubmittedAt(detail.submittedAt, locale)}
+        />
+      </dl>
+    </section>
+  );
 
   return (
     <div className="seeker-home space-y-4" data-testid="admin-coordinator-detail">
-      <section className="seeker-welcome seeker-welcome--compact">
-        <div className="seeker-welcome-copy">
-          <p className="text-xs font-semibold text-[var(--wesal-muted)]">
-            <Link href={ADMIN_COORDINATORS_PATH} className="hover:underline">
-              {t("admin.coordinators.detail.back")}
-            </Link>
-          </p>
-          <h1 className="seeker-welcome-title">
-            {t("admin.coordinators.queue.title")}
-          </h1>
-          <p className="seeker-welcome-body">
-            {t("admin.coordinators.queue.subtitle")}
-          </p>
-        </div>
+      <section className="admin-coord-review-header">
+        <Link href={ADMIN_COORDINATORS_PATH} className="admin-coord-review-back">
+          {t("admin.coordinators.detail.back")}
+        </Link>
       </section>
 
-      <section className="admin-coord-card admin-coord-detail-card">
-        <div className="admin-coord-detail-top">
-          <div className="admin-coord-detail-identity">
-            <span className="admin-coord-detail-avatar" aria-hidden="true">
-              {(detail.fullName || headline).slice(0, 1)}
-            </span>
-            <div className="min-w-0 text-start">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-lg font-extrabold text-[var(--wesal-text)]">
-                  {detail.fullName || headline}
-                </h2>
-                <span className={statusBadgeClass(detail.approvalStatus)}>
-                  {t(statusLabelKey(detail.approvalStatus))}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-[var(--wesal-muted)]">
-                {roleLabel}
-                {" · "}
-                {formatSubmittedAt(detail.submittedAt, locale)}
-              </p>
-              {headline && headline !== detail.fullName ? (
-                <p className="mt-0.5 text-sm font-semibold text-[var(--wesal-maroon)]">
-                  {headline}
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="admin-coord-detail-actions">
-            {showActions ? (
-              <button
-                type="button"
-                className="btn-primary !min-h-11"
-                disabled={approvePending || rejectPending}
-                aria-busy={approvePending || undefined}
-                data-testid="admin-coordinator-approve"
-                onClick={() => void onApprove()}
-              >
-                {approvePending
-                  ? t("admin.coordinators.approve.submitting")
-                  : t("admin.coordinators.approve.submit")}
-              </button>
-            ) : null}
-            {canReject ? (
-              <div className="flex min-w-[10rem] flex-col items-stretch gap-1">
-                <button
-                  type="button"
-                  className="btn-outline admin-coord-reject-btn !min-h-11"
-                  disabled={approvePending || rejectPending}
-                  data-testid="admin-coordinator-reject-open"
-                  onClick={() => {
-                    setRejectOpen(true);
-                    setActionError(null);
-                    setTab("basic");
-                  }}
-                >
-                  {t("admin.coordinators.reject.submit")}
-                </button>
-                <p className="admin-coord-reject-hint">
-                  {t("admin.coordinators.reject.mustWriteReason")}
-                </p>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              className="btn-outline !min-h-11"
-              disabled={contactPending}
-              aria-busy={contactPending || undefined}
-              data-testid="admin-coordinator-contact"
-              onClick={() => void onContact()}
-            >
-              {contactPending
-                ? t("admin.coordinators.contact.opening")
-                : t("admin.coordinators.contact.submit")}
-            </button>
-          </div>
-        </div>
-
-        {actionSuccess ? (
-          <p className="mt-3 text-sm font-medium text-[var(--wesal-maroon)]" role="status">
-            {actionSuccess}
-          </p>
-        ) : null}
-        {actionError ? (
-          <p className="mt-3 text-sm font-medium text-[#b42318]" role="alert">
-            {actionError}
-          </p>
-        ) : null}
-
+      <section className="admin-coord-card admin-coord-detail-card admin-coord-review-card">
         <div
-          className="admin-coord-tabs"
+          className="admin-coord-tabs admin-coord-tabs--underline"
           role="tablist"
           aria-label={t("admin.coordinators.detail.tabsAria")}
         >
           {(
             [
               ["basic", "admin.coordinators.detail.tabs.basic"],
+              ["business", "admin.coordinators.detail.tabs.business"],
               ["gallery", "admin.coordinators.detail.tabs.gallery"],
-              ["identity", "admin.coordinators.detail.tabs.identity"],
             ] as const
           ).map(([id, labelKey]) => {
             const active = tab === id;
@@ -383,202 +416,189 @@ export default function AdminCoordinatorRequestDetailView({
           })}
         </div>
 
-        {tab === "basic" ? (
-          <div className="admin-coord-detail-grid">
-            <section className="admin-coord-info-panel">
-              <h3 className="admin-coord-info-title">
-                {t("admin.coordinators.detail.account")}
-              </h3>
-              <dl className="admin-coord-info-list">
-                <InfoRow label={t("admin.coordinators.detail.fullName")} value={detail.fullName} />
-                <InfoRow label={t("admin.coordinators.detail.email")} value={detail.email} />
-                <InfoRow
-                  label={t("admin.coordinators.detail.userPhone")}
-                  value={detail.userPhoneNumber || "—"}
-                />
-                <InfoRow
-                  label={t("admin.coordinators.detail.setupPhone")}
-                  value={detail.setupPhoneNumber || "—"}
-                />
-              </dl>
-            </section>
-
-            <section className="admin-coord-info-panel">
-              <h3 className="admin-coord-info-title">
-                {t("admin.coordinators.detail.business")}
-              </h3>
-              <dl className="admin-coord-info-list">
-                <InfoRow
-                  label={t("admin.coordinators.detail.businessType")}
-                  value={roleLabel}
-                />
-                {detail.businessType === "Shop" ? (
-                  <>
-                    <InfoRow
-                      label={t("admin.coordinators.detail.shopName")}
-                      value={detail.shopName || "—"}
-                    />
-                    <InfoRow
-                      label={t("admin.coordinators.detail.shopLocation")}
-                      value={detail.shopLocation || "—"}
-                    />
-                  </>
-                ) : (
-                  <InfoRow
-                    label={t("admin.coordinators.detail.onlineStoreName")}
-                    value={detail.onlineStoreName || "—"}
-                  />
-                )}
-                <InfoRow
-                  label={t("admin.coordinators.detail.submittedAt")}
-                  value={formatSubmittedAt(detail.submittedAt, locale)}
-                />
-              </dl>
-            </section>
-          </div>
+        {actionSuccess ? (
+          <p className="mt-3 text-sm font-medium text-[var(--wesal-maroon)]" role="status">
+            {actionSuccess}
+          </p>
+        ) : null}
+        {actionError ? (
+          <p className="mt-3 text-sm font-medium text-[#b42318]" role="alert">
+            {actionError}
+          </p>
         ) : null}
 
-        {tab === "gallery" ? (
-          <section className="admin-coord-gallery-panel mt-4">
-            <h3 className="admin-coord-info-title">
-              {t("admin.coordinators.detail.galleryTitle")}
-            </h3>
-            <div className="admin-coord-docs-stack admin-coord-docs-stack--gallery">
-              {detail.businessType === "Shop" ? (
-                <AdminSecureDocumentViewer
-                  key={`${detail.userId}-shop`}
-                  available={detail.hasShopPhoto}
-                  sourceKey={detail.hasShopPhoto ? detail.userId : null}
-                  labelKey="admin.coordinators.detail.docs.shopPhoto"
-                  altKey="admin.coordinators.detail.docs.shopPhotoAlt"
-                  hintKey="admin.coordinators.detail.docs.open"
-                  missingHintKey="admin.coordinators.detail.docs.missing"
-                  errorKey="admin.coordinators.detail.docs.errors.loadFailed"
-                  loadDocument={() => fetchAdminCoordinatorShopPhotoUrl(detail.userId)}
-                  testId="admin-coordinator-shop-photo"
-                />
-              ) : (
-                <>
-                  <AdminSecureDocumentViewer
-                    key={`${detail.userId}-work-1`}
-                    available={detail.hasWorkPhoto1}
-                    sourceKey={detail.hasWorkPhoto1 ? `${detail.userId}-1` : null}
-                    labelKey="admin.coordinators.detail.docs.workPhoto1"
-                    altKey="admin.coordinators.detail.docs.workPhoto1Alt"
-                    hintKey="admin.coordinators.detail.docs.open"
-                    missingHintKey="admin.coordinators.detail.docs.missing"
-                    errorKey="admin.coordinators.detail.docs.errors.loadFailed"
-                    loadDocument={() => fetchAdminCoordinatorWorkPhotoUrl(detail.userId, 1)}
-                    testId="admin-coordinator-work-photo-1"
-                  />
-                  <AdminSecureDocumentViewer
-                    key={`${detail.userId}-work-2`}
-                    available={detail.hasWorkPhoto2}
-                    sourceKey={detail.hasWorkPhoto2 ? `${detail.userId}-2` : null}
-                    labelKey="admin.coordinators.detail.docs.workPhoto2"
-                    altKey="admin.coordinators.detail.docs.workPhoto2Alt"
-                    hintKey="admin.coordinators.detail.docs.open"
-                    missingHintKey="admin.coordinators.detail.docs.missing"
-                    errorKey="admin.coordinators.detail.docs.errors.loadFailed"
-                    loadDocument={() => fetchAdminCoordinatorWorkPhotoUrl(detail.userId, 2)}
-                    testId="admin-coordinator-work-photo-2"
-                  />
-                </>
-              )}
-            </div>
-          </section>
-        ) : null}
-
-        {tab === "identity" ? (
-          <section className="admin-coord-identity-panel mt-4">
-            <h3 className="admin-coord-info-title">
-              {t("admin.coordinators.detail.identityTitle")}
-            </h3>
-            <p className="mb-3 text-xs text-[var(--wesal-muted)]">
-              {t("admin.coordinators.detail.identityHint")}
-            </p>
-            <AdminSecureDocumentViewer
-              key={`${detail.userId}-identity`}
-              available={detail.hasIdentityDocument}
-              sourceKey={detail.hasIdentityDocument ? detail.userId : null}
-              labelKey="admin.coordinators.detail.docs.identity"
-              altKey="admin.coordinators.detail.docs.identityAlt"
-              hintKey="admin.coordinators.detail.docs.open"
-              missingHintKey="admin.coordinators.detail.docs.missing"
-              errorKey="admin.coordinators.detail.docs.errors.loadFailed"
-              loadDocument={() => fetchAdminCoordinatorIdentityUrl(detail.userId)}
-              testId="admin-coordinator-identity"
-            />
-          </section>
-        ) : null}
-
-        {rejectOpen ? (
-          <section
-            className="admin-coord-info-panel mt-4 text-start"
-            data-testid="admin-coordinator-reject-dialog"
+        <div className="admin-coord-review-layout">
+          <aside
+            className="admin-coord-review-sidebar"
+            aria-label={t("admin.coordinators.detail.actions")}
+            data-testid="admin-coordinator-actions"
           >
-            <h3 className="admin-coord-info-title">
-              {t("admin.coordinators.reject.title")}
-            </h3>
-            <p className="mt-1 text-sm leading-6 text-[var(--wesal-muted)]">
-              {t("admin.coordinators.reject.subtitle")}
-            </p>
-            <label
-              htmlFor={reasonId}
-              className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]"
-            >
-              {t("admin.coordinators.reject.reasonLabel")}
-            </label>
-            <textarea
-              id={reasonId}
-              value={reason}
-              disabled={rejectPending}
-              maxLength={ADMIN_COORDINATOR_REJECT_REASON_MAX + 20}
-              rows={4}
-              placeholder={t("admin.coordinators.reject.reasonPlaceholder")}
-              aria-describedby={`${reasonId}-hint${validationText ? ` ${reasonId}-error` : ""}`}
-              className={`${hallFieldClassName(Boolean(validationText))} mt-2 min-h-[5.5rem] w-full resize-y`}
-              onChange={(event) => {
-                setReason(event.target.value);
-                setReasonIssue(validateAdminCoordinatorRejectReason(event.target.value));
-              }}
-            />
-            <p id={`${reasonId}-hint`} className="mt-1 text-xs text-[var(--wesal-muted)]">
-              {t("admin.coordinators.reject.reasonHint", {
-                max: String(ADMIN_COORDINATOR_REJECT_REASON_MAX),
-              })}
-            </p>
-            {validationText ? (
-              <p id={`${reasonId}-error`} className="mt-1 text-sm text-[#b42318]" role="alert">
-                {validationText}
-              </p>
-            ) : null}
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <div className="admin-coord-review-profile">
+              <span className="admin-coord-review-avatar" aria-hidden="true">
+                {displayName.slice(0, 1)}
+              </span>
+              <div className="min-w-0 text-center">
+                <h2 className="admin-coord-review-name">{displayName}</h2>
+                <p className="admin-coord-review-role">
+                  {t("admin.coordinators.detail.role")}
+                </p>
+                <p className="admin-coord-review-date">
+                  {formatSubmittedAt(detail.submittedAt, locale)}
+                </p>
+                <span className={statusBadgeClass(detail.approvalStatus)}>
+                  {t(statusLabelKey(detail.approvalStatus))}
+                </span>
+              </div>
+            </div>
+
+            <div className="admin-coord-review-actions">
+              {showActions ? (
+                <button
+                  type="button"
+                  className="btn-primary admin-coord-action-btn admin-coord-approve-btn !min-h-11"
+                  disabled={approvePending || rejectPending}
+                  aria-busy={approvePending || undefined}
+                  data-testid="admin-coordinator-approve"
+                  onClick={() => void onApprove()}
+                >
+                  <ActionIconCheck />
+                  {approvePending
+                    ? t("admin.coordinators.approve.submitting")
+                    : t("admin.coordinators.approve.submit")}
+                </button>
+              ) : null}
+              {canReject ? (
+                <div className="admin-coord-action-block">
+                  <button
+                    type="button"
+                    className="btn-outline admin-coord-action-btn admin-coord-reject-btn !min-h-11"
+                    disabled={approvePending || rejectPending}
+                    data-testid="admin-coordinator-reject-open"
+                    onClick={() => {
+                      setRejectOpen(true);
+                      setActionError(null);
+                      setTab("basic");
+                    }}
+                  >
+                    <ActionIconClose />
+                    {t("admin.coordinators.reject.submit")}
+                  </button>
+                  <p className="admin-coord-reject-hint">
+                    {t("admin.coordinators.reject.mustWriteReason")}
+                  </p>
+                </div>
+              ) : null}
               <button
                 type="button"
-                className="btn-primary !min-h-11"
-                disabled={rejectPending}
-                aria-busy={rejectPending || undefined}
-                data-testid="admin-coordinator-reject-confirm"
-                onClick={() => void onReject()}
+                className="btn-outline admin-coord-action-btn !min-h-11"
+                disabled={contactPending}
+                aria-busy={contactPending || undefined}
+                data-testid="admin-coordinator-contact"
+                onClick={() => void onContact()}
               >
-                {rejectPending
-                  ? t("admin.coordinators.reject.submitting")
-                  : t("admin.coordinators.reject.confirm")}
-              </button>
-              <button
-                type="button"
-                className="btn-outline !min-h-11"
-                disabled={rejectPending}
-                onClick={() => {
-                  if (!rejectPending) setRejectOpen(false);
-                }}
-              >
-                {t("admin.coordinators.reject.cancel")}
+                <ActionIconChat />
+                {contactPending
+                  ? t("admin.coordinators.contact.opening")
+                  : t("admin.coordinators.contact.submit")}
               </button>
             </div>
-          </section>
-        ) : null}
+          </aside>
+
+          <div className="admin-coord-review-main">
+            {tab === "basic" ? (
+              <div className="admin-coord-overview">
+                {personalBlock}
+                <section className="admin-coord-gallery-panel">
+                  <h3 className="admin-coord-info-title">
+                    {t("admin.coordinators.detail.galleryTitle")}
+                  </h3>
+                  {galleryBlock}
+                </section>
+                {businessBlock}
+                {identityBlock}
+              </div>
+            ) : null}
+
+            {tab === "business" ? businessBlock : null}
+
+            {tab === "gallery" ? (
+              <section className="admin-coord-gallery-panel">
+                <h3 className="admin-coord-info-title">
+                  {t("admin.coordinators.detail.galleryTitle")}
+                </h3>
+                {galleryBlock}
+              </section>
+            ) : null}
+
+            {rejectOpen ? (
+              <section
+                className="admin-coord-info-panel mt-4 text-start"
+                data-testid="admin-coordinator-reject-dialog"
+              >
+                <h3 className="admin-coord-info-title">
+                  {t("admin.coordinators.reject.title")}
+                </h3>
+                <p className="mt-1 text-sm leading-6 text-[var(--wesal-muted)]">
+                  {t("admin.coordinators.reject.subtitle")}
+                </p>
+                <label
+                  htmlFor={reasonId}
+                  className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]"
+                >
+                  {t("admin.coordinators.reject.reasonLabel")}
+                </label>
+                <textarea
+                  id={reasonId}
+                  value={reason}
+                  disabled={rejectPending}
+                  maxLength={ADMIN_COORDINATOR_REJECT_REASON_MAX + 20}
+                  rows={4}
+                  placeholder={t("admin.coordinators.reject.reasonPlaceholder")}
+                  aria-describedby={`${reasonId}-hint${validationText ? ` ${reasonId}-error` : ""}`}
+                  className={`${hallFieldClassName(Boolean(validationText))} mt-2 min-h-[5.5rem] w-full resize-y`}
+                  onChange={(event) => {
+                    setReason(event.target.value);
+                    setReasonIssue(validateAdminCoordinatorRejectReason(event.target.value));
+                  }}
+                />
+                <p id={`${reasonId}-hint`} className="mt-1 text-xs text-[var(--wesal-muted)]">
+                  {t("admin.coordinators.reject.reasonHint", {
+                    max: String(ADMIN_COORDINATOR_REJECT_REASON_MAX),
+                  })}
+                </p>
+                {validationText ? (
+                  <p id={`${reasonId}-error`} className="mt-1 text-sm text-[#b42318]" role="alert">
+                    {validationText}
+                  </p>
+                ) : null}
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    className="btn-primary !min-h-11"
+                    disabled={rejectPending}
+                    aria-busy={rejectPending || undefined}
+                    data-testid="admin-coordinator-reject-confirm"
+                    onClick={() => void onReject()}
+                  >
+                    {rejectPending
+                      ? t("admin.coordinators.reject.submitting")
+                      : t("admin.coordinators.reject.confirm")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-outline !min-h-11"
+                    disabled={rejectPending}
+                    onClick={() => {
+                      if (!rejectPending) setRejectOpen(false);
+                    }}
+                  >
+                    {t("admin.coordinators.reject.cancel")}
+                  </button>
+                </div>
+              </section>
+            ) : null}
+          </div>
+        </div>
       </section>
     </div>
   );
@@ -590,5 +610,45 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <dt>{label}</dt>
       <dd>{value}</dd>
     </div>
+  );
+}
+
+function ActionIconCheck() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3.5 8.5 6.5 11.5 12.5 4.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ActionIconClose() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M4 4l8 8M12 4l-8 8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ActionIconChat() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3 4.5A1.5 1.5 0 0 1 4.5 3h7A1.5 1.5 0 0 1 13 4.5v5A1.5 1.5 0 0 1 11.5 11H7l-3 2v-2.2A1.5 1.5 0 0 1 3 9.5v-5Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

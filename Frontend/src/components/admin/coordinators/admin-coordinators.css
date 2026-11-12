@@ -189,8 +189,30 @@
 
 /* Detail */
 
+.admin-coord-review-header {
+  padding-inline: 0.15rem;
+}
+
+.admin-coord-review-back {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--wesal-muted);
+  text-decoration: none;
+}
+
+.admin-coord-review-back:hover {
+  color: var(--wesal-maroon);
+  text-decoration: underline;
+}
+
 .admin-coord-detail-card {
   padding: 1.15rem 1.15rem 1.35rem;
+}
+
+.admin-coord-review-card {
+  background: color-mix(in srgb, var(--wesal-pink) 8%, #fbf8f7);
+  border-color: color-mix(in srgb, var(--wesal-maroon) 8%, white);
+  box-shadow: 0 10px 28px rgba(88, 40, 48, 0.04);
 }
 
 .admin-coord-detail-top {
@@ -235,10 +257,10 @@
 
 .admin-coord-reject-hint {
   width: 100%;
-  text-align: end;
+  text-align: center;
   font-size: 0.72rem;
   color: var(--wesal-muted);
-  margin-top: -0.15rem;
+  margin-top: 0.15rem;
 }
 
 .admin-coord-tabs {
@@ -267,6 +289,145 @@
   border-color: color-mix(in srgb, var(--wesal-maroon) 18%, white);
 }
 
+.admin-coord-tabs--underline {
+  justify-content: center;
+  gap: 1.75rem;
+  margin-top: 0.25rem;
+  margin-bottom: 1.1rem;
+  padding-top: 0.15rem;
+  padding-bottom: 0;
+  border-top: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--wesal-maroon) 10%, white);
+}
+
+.admin-coord-tabs--underline .admin-coord-tab {
+  min-height: 2.45rem;
+  padding: 0.45rem 0.35rem 0.7rem;
+  border-radius: 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.9rem;
+  margin-bottom: -1px;
+}
+
+.admin-coord-tabs--underline .admin-coord-tab--active {
+  background: transparent;
+  color: var(--wesal-maroon);
+  border-color: transparent;
+  border-bottom-color: var(--wesal-maroon);
+}
+
+.admin-coord-review-layout {
+  display: grid;
+  gap: 1.1rem;
+  align-items: start;
+}
+
+@media (min-width: 980px) {
+  .admin-coord-review-layout {
+    /* Sidebar first → right in RTL (matches mockup) */
+    grid-template-columns: minmax(15.5rem, 17.5rem) minmax(0, 1fr);
+  }
+}
+
+.admin-coord-review-sidebar {
+  border-radius: 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--wesal-maroon) 10%, white);
+  background: #fff;
+  padding: 1.15rem 1rem 1.2rem;
+  display: grid;
+  gap: 1.1rem;
+  box-shadow: 0 10px 28px rgba(88, 40, 48, 0.05);
+}
+
+@media (min-width: 980px) {
+  .admin-coord-review-sidebar {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+.admin-coord-review-profile {
+  display: grid;
+  justify-items: center;
+  gap: 0.65rem;
+}
+
+.admin-coord-review-avatar {
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--wesal-pink) 55%, white);
+  color: var(--wesal-maroon);
+  font-size: 1.45rem;
+  font-weight: 800;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--wesal-maroon) 12%, white);
+}
+
+.admin-coord-review-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--wesal-text);
+  line-height: 1.3;
+}
+
+.admin-coord-review-role {
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--wesal-muted);
+}
+
+.admin-coord-review-date {
+  margin-top: 0.2rem;
+  margin-bottom: 0.45rem;
+  font-size: 0.75rem;
+  color: var(--wesal-muted);
+}
+
+.admin-coord-review-actions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.admin-coord-action-block {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.admin-coord-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  border-radius: 0.85rem !important;
+}
+
+.admin-coord-approve-btn {
+  background: var(--wesal-maroon) !important;
+  border-color: var(--wesal-maroon) !important;
+}
+
+.admin-coord-review-main {
+  min-width: 0;
+}
+
+.admin-coord-overview {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .admin-coord-overview {
+    grid-template-columns: minmax(14rem, 0.95fr) minmax(0, 1.35fr);
+    align-items: start;
+  }
+}
+
 .admin-coord-detail-grid {
   display: grid;
   gap: 1rem;
@@ -285,8 +446,9 @@
 .admin-coord-identity-panel {
   border-radius: 1rem;
   border: 1px solid color-mix(in srgb, var(--wesal-maroon) 9%, white);
-  background: color-mix(in srgb, var(--wesal-pink) 18%, white);
-  padding: 0.95rem;
+  background: #fff;
+  padding: 1rem 1.05rem;
+  box-shadow: 0 8px 22px rgba(88, 40, 48, 0.04);
 }
 
 .admin-coord-info-title {
@@ -298,7 +460,7 @@
 
 .admin-coord-info-list {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.75rem;
 }
 
 .admin-coord-info-row dt {
@@ -308,11 +470,45 @@
 }
 
 .admin-coord-info-row dd {
-  margin-top: 0.15rem;
+  margin-top: 0.2rem;
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--wesal-text);
   word-break: break-word;
+}
+
+.admin-coord-identity-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.admin-coord-sensitive-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #b42318 12%, white);
+  color: #9b1c1c;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.admin-coord-sensitive-hint {
+  margin-top: 0.7rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--wesal-muted);
+}
+
+.admin-coord-identity-panel--sensitive {
+  background: color-mix(in srgb, var(--wesal-pink) 14%, white);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--wesal-maroon) 18%, white);
 }
 
 .admin-coord-docs-stack {
@@ -465,6 +661,18 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .admin-coord-review-layout {
+    grid-template-columns: minmax(13.5rem, 0.75fr) minmax(0, 1.35fr);
+  }
+
+  .admin-coord-tabs--underline {
+    gap: 1.1rem;
+  }
+
+  .admin-coord-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .admin-photo-detail-layout {
     grid-template-columns: minmax(0, 1.35fr) minmax(13.5rem, 0.75fr);
   }
@@ -555,22 +763,49 @@
   }
 
   .admin-coord-reject-hint {
-    text-align: start;
+    text-align: center;
     font-size: 0.68rem;
   }
 
   .admin-coord-tabs {
-    margin-top: 0.9rem;
-    padding-top: 0.7rem;
+    margin-top: 0.35rem;
+    padding-top: 0.15rem;
     gap: 0.35rem;
+  }
+
+  .admin-coord-tabs--underline {
+    justify-content: space-between;
+    gap: 0.35rem;
+    margin-bottom: 0.85rem;
   }
 
   .admin-coord-tab {
     flex: 1 1 auto;
     min-height: 2.3rem;
-    padding: 0.3rem 0.65rem;
-    font-size: 0.76rem;
+    padding: 0.3rem 0.35rem 0.55rem;
+    font-size: 0.74rem;
     text-align: center;
+  }
+
+  .admin-coord-review-layout {
+    gap: 0.85rem;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-coord-review-sidebar {
+    order: -1;
+    padding: 0.95rem 0.85rem;
+  }
+
+  .admin-coord-review-avatar {
+    width: 3.5rem;
+    height: 3.5rem;
+    font-size: 1.2rem;
+  }
+
+  .admin-coord-overview {
+    gap: 0.75rem;
+    grid-template-columns: 1fr;
   }
 
   .admin-coord-detail-grid {
@@ -582,7 +817,8 @@
   .admin-coord-info-panel,
   .admin-coord-gallery-panel,
   .admin-coord-identity-panel,
-  .admin-photo-actions-panel {
+  .admin-photo-actions-panel,
+  .admin-coord-review-sidebar {
     border-radius: 0.85rem;
     padding: 0.75rem;
   }
