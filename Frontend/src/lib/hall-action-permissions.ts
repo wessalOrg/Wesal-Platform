@@ -25,12 +25,24 @@ function normalizeRole(role: string | null | undefined): string {
 }
 
 function isHallOwnerRole(role: string | null | undefined): boolean {
-  return normalizeRole(role) === "hallowner";
+  const value = normalizeRole(role);
+  return value === "hallowner" || value === "owner";
 }
 
-function isRegisteredUserRole(role: string | null | undefined): boolean {
+/**
+ * Mirrors backend `HallBookingAccess.IsSeeker`: RegisteredUser, EventCoordinator,
+ * and Photographer may browse/book/comment/rate. Hall owners and admins cannot.
+ * Account approval is intentionally ignored — it gates publishing only.
+ */
+function isHallSeekerRole(role: string | null | undefined): boolean {
+  if (isHallOwnerRole(role)) return false;
   const value = normalizeRole(role);
-  return value === "registereduser" || value === "regularuser";
+  return (
+    value === "registereduser" ||
+    value === "regularuser" ||
+    value === "eventcoordinator" ||
+    value === "photographer"
+  );
 }
 
 /**
@@ -39,8 +51,6 @@ function isRegisteredUserRole(role: string | null | undefined): boolean {
  *
  * Ownership only applies while authenticated — a Guest must never inherit
  * a stale `isOwner` flag from a previous hall fetch.
- *
- * Hall owners may browse and book other halls, but never their own.
  */
 export function getHallActionPermissions({
   session,
@@ -50,17 +60,15 @@ export function getHallActionPermissions({
   const isGuest = authReady && !session.isAuthenticated;
   const authenticated = authReady && session.isAuthenticated;
   const ownsHall = authenticated && isOwnHall;
-  const registered = isRegisteredUserRole(session.role);
-  const hallOwner = isHallOwnerRole(session.role);
-  const canActAsBooker = registered || hallOwner;
+  const canActAsSeeker = isHallSeekerRole(session.role);
 
   return {
     authReady,
     isGuest,
     isOwnHall: ownsHall,
-    canBook: authenticated && !ownsHall && canActAsBooker,
-    canComment: authenticated && !ownsHall && canActAsBooker,
-    canRate: authenticated && !ownsHall && canActAsBooker,
-    canContactOwner: authenticated && !ownsHall && canActAsBooker,
+    canBook: authenticated && !ownsHall && canActAsSeeker,
+    canComment: authenticated && !ownsHall && canActAsSeeker,
+    canRate: authenticated && !ownsHall && canActAsSeeker,
+    canContactOwner: authenticated && !ownsHall && canActAsSeeker,
   };
 }
