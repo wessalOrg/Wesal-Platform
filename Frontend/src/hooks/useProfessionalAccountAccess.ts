@@ -53,6 +53,7 @@ export function useProfessionalAccountAccess() {
     ...account,
     profile,
     profileStatus,
+    statusLoading,
     phase,
     permissionContext: ctx,
     canPublish: canPublishProfessionalContent(ctx),
