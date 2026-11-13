@@ -302,6 +302,15 @@ public static class NotificationCatalog
                 EnglishActionLabel: "Open the conversation with administration",
                 ActionTarget: NotificationActionTarget.Conversation),
 
+            [NotificationKind.CoordinatorNeedsChangesForCoordinator] = new NotificationTemplate(
+                ArabicTitle: "طلبك يحتاج إلى تعديل",
+                EnglishTitle: "Your request needs editing",
+                ArabicBody: "توجد ملاحظات من الإدارة على بياناتك أو مستنداتك. افتح المحادثة لمعرفة التفاصيل، ثم عدّل المطلوب وأعد تقديم الطلب.",
+                EnglishBody: "There are notes from the administration on your data or documents. Open the conversation to see the details, then edit what is required and resubmit the request.",
+                ArabicActionLabel: "فتح المحادثة مع الإدارة",
+                EnglishActionLabel: "Open the conversation with administration",
+                ActionTarget: NotificationActionTarget.Conversation),
+
             // 21. An Admin rejected a Photographer's account request (Task 6, 6.5 + 15.6).
             // The requirement's body cell describes behavior ("shows the rejection reason
             // written by the admin") rather than literal wording, so the body carries the

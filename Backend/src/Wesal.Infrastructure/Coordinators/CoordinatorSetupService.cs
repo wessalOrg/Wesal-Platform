@@ -385,10 +385,12 @@ public sealed class CoordinatorSetupService : ICoordinatorSetupService
         var user = await ResolveCoordinatorUserAsync(cancellationToken);
         if (_accountLocks is not null) await _accountLocks.EnsureUnlockedAsync(user.Id, cancellationToken);
 
-        // Only allow resubmit from Rejected status (per Task 7)
-        if (user.ApprovalStatus != AccountApprovalStatus.Rejected)
+        // Allow resubmit after rejection or when admin requested changes.
+        if (user.ApprovalStatus != AccountApprovalStatus.Rejected
+            && user.ApprovalStatus != AccountApprovalStatus.NeedsChanges)
         {
-            throw new ConflictException("Coordinator resubmission is only allowed when the account is rejected.");
+            throw new ConflictException(
+                "Coordinator resubmission is only allowed when the account is rejected or needs changes.");
         }
 
         ValidateForm(submission.Form);

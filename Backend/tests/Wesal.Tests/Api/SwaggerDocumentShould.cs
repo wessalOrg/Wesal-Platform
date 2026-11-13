@@ -40,6 +40,7 @@ public class SwaggerDocumentShould
     private const string AdminCoordinatorListPath = "/api/v{version}/admin/coordinators";
     private const string AdminCoordinatorDetailPath = "/api/v{version}/admin/coordinators/{userId}";
     private const string AdminCoordinatorRejectPath = "/api/v{version}/admin/coordinators/{userId}/reject";
+    private const string AdminCoordinatorRequestChangesPath = "/api/v{version}/admin/coordinators/{userId}/request-changes";
     private const string AdminCoordinatorConversationPath = "/api/v{version}/admin/coordinators/{userId}/conversation";
     private const string AdminPhotographerListPath = "/api/v{version}/admin/photographers";
     private const string AdminPhotographerDetailPath = "/api/v{version}/admin/photographers/{userId}";
@@ -183,6 +184,7 @@ public class SwaggerDocumentShould
             "/api/v{version}/admin/coordinators/{userId}/work-photos/{index}",
             "/api/v{version}/admin/coordinators/{userId}/approve",
             AdminCoordinatorRejectPath,
+            AdminCoordinatorRequestChangesPath,
             AdminCoordinatorConversationPath,
             AdminPhotographerListPath,
             AdminPhotographerDetailPath,

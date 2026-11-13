@@ -474,6 +474,13 @@ export default function AdminPhotographerRequestDetailView({
                   if (!canChanges) return;
                   setActionPanel("changes");
                   setActionError(null);
+                  window.setTimeout(() => {
+                    document
+                      .querySelector<HTMLElement>(
+                        "[data-testid='admin-photographer-request-changes-dialog']",
+                      )
+                      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                  }, 0);
                 }}
               >
                 <ActionIconEdit />

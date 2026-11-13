@@ -84,12 +84,8 @@ export function canPerformAccountAction(
       if (!ctx.authenticated) return false;
       if (!isProfessionalPublisherRole(ctx.role)) return false;
       const phase = phaseOf(ctx);
-      // Backend: coordinator resubmit = Rejected only; photographer = Rejected | NeedsChanges.
-      if (phase === "rejected") return true;
-      if (phase === "needs_changes") {
-        const role = (ctx.role ?? "").trim().toLowerCase();
-        return role === "photographer";
-      }
+      // Backend: coordinator + photographer resubmit = Rejected | NeedsChanges.
+      if (phase === "rejected" || phase === "needs_changes") return true;
       return false;
     }
 

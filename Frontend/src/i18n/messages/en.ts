@@ -1721,6 +1721,25 @@ const en: MessageCatalog = {
   "admin.coordinators.reject.errors.generic": "Could not reject the request. Please try again.",
   "admin.coordinators.reject.errors.conflict":
     "This request was already updated. The page has been refreshed.",
+  "admin.coordinators.requestChanges.submit": "Request edits",
+  "admin.coordinators.requestChanges.title": "Request coordinator data changes",
+  "admin.coordinators.requestChanges.subtitle":
+    "Describe the data or documents the coordinator must update before the request is reviewed again. Notes are saved in the admin conversation.",
+  "admin.coordinators.requestChanges.notesLabel": "Edit notes (required)",
+  "admin.coordinators.requestChanges.notesPlaceholder":
+    "Clearly list the fields or documents that need correction.",
+  "admin.coordinators.requestChanges.notesHint": "Required · up to {max} characters.",
+  "admin.coordinators.requestChanges.notesRequired": "Please enter correction notes.",
+  "admin.coordinators.requestChanges.notesTooLong": "The notes are too long.",
+  "admin.coordinators.requestChanges.confirm": "Confirm request changes",
+  "admin.coordinators.requestChanges.cancel": "Cancel",
+  "admin.coordinators.requestChanges.submitting": "Sending…",
+  "admin.coordinators.requestChanges.success":
+    "Change request sent. The request now awaits updated details.",
+  "admin.coordinators.requestChanges.errors.generic":
+    "Could not request changes. Please try again.",
+  "admin.coordinators.requestChanges.errors.conflict":
+    "This request was already updated. The page has been refreshed.",
   "admin.coordinators.contact.submit": "Contact coordinator",
   "admin.coordinators.contact.opening": "Opening conversation…",
   "admin.coordinators.contact.threadFallback": "Event coordinator",

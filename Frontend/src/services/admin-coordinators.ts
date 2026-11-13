@@ -7,6 +7,7 @@ import {
   mapAdminCoordinatorRequestPage,
 } from "@/lib/admin-coordinators-mapper";
 import { toRejectAdminCoordinatorPayload } from "@/lib/admin-reject-coordinator";
+import { toRequestChangesAdminCoordinatorPayload } from "@/lib/admin-request-changes-coordinator";
 import { getAccessToken } from "@/lib/auth-token";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type {
@@ -178,6 +179,36 @@ export async function rejectAdminCoordinatorRequest(
   } catch (error) {
     if (error instanceof ApiError) throw error;
     throw new ApiError("admin.coordinators.reject.errors.generic", 0);
+  }
+}
+
+/** POST /api/v1/admin/coordinators/{userId}/request-changes  body: { notes } */
+export async function requestChangesAdminCoordinatorRequest(
+  userId: string,
+  notes: string,
+): Promise<AdminCoordinatorDecisionResult> {
+  if (usesDemoAdminStub()) {
+    demoCoordinatorStatus = "NeedsChanges";
+    return {
+      userId,
+      status: "NeedsChanges",
+      notificationDelivered: false,
+    };
+  }
+  try {
+    const { data } = await api.post<unknown>(
+      `/admin/coordinators/${encodeURIComponent(userId)}/request-changes`,
+      toRequestChangesAdminCoordinatorPayload(notes),
+      { timeout: 15000 },
+    );
+    const mapped = mapAdminCoordinatorDecision(data);
+    if (!mapped) {
+      throw new ApiError("admin.coordinators.requestChanges.errors.generic", 0);
+    }
+    return mapped;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError("admin.coordinators.requestChanges.errors.generic", 0);
   }
 }
 

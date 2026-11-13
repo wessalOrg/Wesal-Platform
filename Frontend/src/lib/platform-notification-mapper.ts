@@ -157,6 +157,13 @@ export const SERVER_NOTIFICATION_KIND_MAP: Record<string, ServerNotificationKind
     target: "conversation",
     actionUrl: professionalAdminConversationUrl,
   },
+  CoordinatorNeedsChangesForCoordinator: {
+    type: "account_needs_edit",
+    audience: "seeker",
+    tone: "warning",
+    target: "conversation",
+    actionUrl: professionalAdminConversationUrl,
+  },
   CoordinatorRejectedForCoordinator: {
     type: "account_rejected",
     audience: "seeker",

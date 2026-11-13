@@ -18,12 +18,18 @@ import {
 import {
   canApproveCoordinator,
   canRejectCoordinator,
+  canRequestChangesCoordinator,
 } from "@/lib/admin-coordinators-mapper";
 import {
   ADMIN_COORDINATOR_REJECT_REASON_MAX,
   adminCoordinatorRejectReasonMessageKey,
   validateAdminCoordinatorRejectReason,
 } from "@/lib/admin-reject-coordinator";
+import {
+  ADMIN_COORDINATOR_REQUEST_CHANGES_NOTES_MAX,
+  adminCoordinatorRequestChangesNotesMessageKey,
+  validateAdminCoordinatorRequestChangesNotes,
+} from "@/lib/admin-request-changes-coordinator";
 import { ApiError } from "@/lib/api-error";
 import { useT } from "@/i18n";
 import {
@@ -32,6 +38,7 @@ import {
   fetchAdminCoordinatorRequestDetail,
   openAdminCoordinatorConversation,
   rejectAdminCoordinatorRequest,
+  requestChangesAdminCoordinatorRequest,
 } from "@/services/admin-coordinators";
 import {
   fetchAdminCoordinatorIdentityUrl,
@@ -46,6 +53,8 @@ import "./admin-coordinators.css";
 type AdminCoordinatorRequestDetailViewProps = {
   userId: string;
 };
+
+type ActionPanel = null | "reject" | "changes";
 
 type GalleryItem = {
   key: string;
@@ -145,17 +154,21 @@ export default function AdminCoordinatorRequestDetailView({
   const t = useT();
   const router = useRouter();
   const reasonId = useId();
+  const notesId = useId();
   const [detail, setDetail] = useState<AdminCoordinatorRequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [approvePending, setApprovePending] = useState(false);
   const [rejectPending, setRejectPending] = useState(false);
+  const [changesPending, setChangesPending] = useState(false);
   const [contactPending, setContactPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [reasonIssue, setReasonIssue] = useState<"required" | "tooLong" | null>(null);
-  const [rejectOpen, setRejectOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [notesIssue, setNotesIssue] = useState<"required" | "tooLong" | null>(null);
+  const [actionPanel, setActionPanel] = useState<ActionPanel>(null);
 
   const locale = useMemo(() => {
     if (typeof document !== "undefined" && document.documentElement.lang === "en") {
@@ -190,7 +203,7 @@ export default function AdminCoordinatorRequestDetailView({
   }, [load]);
 
   const onApprove = async () => {
-    if (!detail || approvePending || rejectPending) return;
+    if (!detail || approvePending || rejectPending || changesPending) return;
     if (!canApproveCoordinator(detail.approvalStatus)) return;
     setApprovePending(true);
     setActionError(null);
@@ -215,7 +228,7 @@ export default function AdminCoordinatorRequestDetailView({
   };
 
   const onReject = async () => {
-    if (!detail || approvePending || rejectPending) return;
+    if (!detail || approvePending || rejectPending || changesPending) return;
     const issue = validateAdminCoordinatorRejectReason(reason);
     setReasonIssue(issue);
     if (issue) return;
@@ -227,7 +240,7 @@ export default function AdminCoordinatorRequestDetailView({
       setDetail((current) =>
         current ? { ...current, approvalStatus: result.status } : current,
       );
-      setRejectOpen(false);
+      setActionPanel(null);
       setReason("");
       setActionSuccess(t("admin.coordinators.reject.success"));
       void load();
@@ -240,6 +253,35 @@ export default function AdminCoordinatorRequestDetailView({
       }
     } finally {
       setRejectPending(false);
+    }
+  };
+
+  const onRequestChanges = async () => {
+    if (!detail || approvePending || rejectPending || changesPending) return;
+    const issue = validateAdminCoordinatorRequestChangesNotes(notes);
+    setNotesIssue(issue);
+    if (issue) return;
+    setChangesPending(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const result = await requestChangesAdminCoordinatorRequest(detail.userId, notes);
+      setDetail((current) =>
+        current ? { ...current, approvalStatus: result.status } : current,
+      );
+      setNotes("");
+      setActionPanel(null);
+      setActionSuccess(t("admin.coordinators.requestChanges.success"));
+      void load();
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setActionError(t("admin.coordinators.requestChanges.errors.conflict"));
+        void load();
+      } else {
+        setActionError(t("admin.coordinators.requestChanges.errors.generic"));
+      }
+    } finally {
+      setChangesPending(false);
     }
   };
 
@@ -291,8 +333,12 @@ export default function AdminCoordinatorRequestDetailView({
 
   const showActions = canApproveCoordinator(detail.approvalStatus);
   const canReject = canRejectCoordinator(detail.approvalStatus);
+  const canChanges = canRequestChangesCoordinator(detail.approvalStatus);
   const validationText = reasonIssue
     ? t(adminCoordinatorRejectReasonMessageKey(reasonIssue))
+    : null;
+  const notesValidationText = notesIssue
+    ? t(adminCoordinatorRequestChangesNotesMessageKey(notesIssue))
     : null;
   const businessTypeLabel = t(
     detail.businessType === "Shop"
@@ -308,7 +354,7 @@ export default function AdminCoordinatorRequestDetailView({
     detail.userId === DEMO_COORDINATOR_REQUEST_ID
       ? t("admin.coordinators.detail.experienceSample")
       : businessTypeLabel;
-  const busy = approvePending || rejectPending;
+  const busy = approvePending || rejectPending || changesPending;
 
   return (
     <div className="acr-page" data-testid="admin-coordinator-detail">
@@ -431,17 +477,39 @@ export default function AdminCoordinatorRequestDetailView({
                   disabled={busy}
                   data-testid="admin-coordinator-reject-open"
                   onClick={() => {
-                    setRejectOpen(true);
+                    setActionPanel("reject");
                     setActionError(null);
+                    window.setTimeout(() => {
+                      document
+                        .querySelector<HTMLElement>("[data-testid='admin-coordinator-reject-dialog']")
+                        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    }, 0);
                   }}
                 >
                   <ActionIconClose />
                   {t("admin.coordinators.reject.submit")}
                 </button>
               ) : null}
-              <button type="button" className="acr-btn acr-btn--outline" disabled>
+              <button
+                type="button"
+                className="acr-btn acr-btn--outline"
+                disabled={busy || !canChanges}
+                data-testid="admin-coordinator-request-changes-open"
+                onClick={() => {
+                  if (!canChanges) return;
+                  setActionPanel("changes");
+                  setActionError(null);
+                  window.setTimeout(() => {
+                    document
+                      .querySelector<HTMLElement>(
+                        "[data-testid='admin-coordinator-request-changes-dialog']",
+                      )
+                      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                  }, 0);
+                }}
+              >
                 <ActionIconEdit />
-                {t("admin.coordinators.detail.requestChanges")}
+                {t("admin.coordinators.requestChanges.submit")}
               </button>
               <button
                 type="button"
@@ -513,7 +581,7 @@ export default function AdminCoordinatorRequestDetailView({
         </AcrInfoCard>
       </div>
 
-      {rejectOpen ? (
+      {actionPanel === "reject" ? (
         <section className="acr-card acr-reject-card" data-testid="admin-coordinator-reject-dialog">
           <h3 className="admin-coord-info-title">{t("admin.coordinators.reject.title")}</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--wesal-muted)]">
@@ -553,7 +621,7 @@ export default function AdminCoordinatorRequestDetailView({
             <button
               type="button"
               className="btn-primary !min-h-11"
-              disabled={rejectPending}
+              disabled={busy}
               aria-busy={rejectPending || undefined}
               data-testid="admin-coordinator-reject-confirm"
               onClick={() => void onReject()}
@@ -565,12 +633,79 @@ export default function AdminCoordinatorRequestDetailView({
             <button
               type="button"
               className="btn-outline !min-h-11"
-              disabled={rejectPending}
+              disabled={busy}
               onClick={() => {
-                if (!rejectPending) setRejectOpen(false);
+                if (!busy) setActionPanel(null);
               }}
             >
               {t("admin.coordinators.reject.cancel")}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {actionPanel === "changes" ? (
+        <section
+          className="acr-card acr-reject-card"
+          data-testid="admin-coordinator-request-changes-dialog"
+        >
+          <h3 className="admin-coord-info-title">
+            {t("admin.coordinators.requestChanges.title")}
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-[var(--wesal-muted)]">
+            {t("admin.coordinators.requestChanges.subtitle")}
+          </p>
+          <label
+            htmlFor={notesId}
+            className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]"
+          >
+            {t("admin.coordinators.requestChanges.notesLabel")}
+          </label>
+          <textarea
+            id={notesId}
+            value={notes}
+            disabled={changesPending}
+            maxLength={ADMIN_COORDINATOR_REQUEST_CHANGES_NOTES_MAX + 20}
+            rows={4}
+            placeholder={t("admin.coordinators.requestChanges.notesPlaceholder")}
+            className={`${hallFieldClassName(Boolean(notesValidationText))} mt-2 min-h-[5.5rem] w-full resize-y`}
+            onChange={(event) => {
+              setNotes(event.target.value);
+              setNotesIssue(validateAdminCoordinatorRequestChangesNotes(event.target.value));
+            }}
+          />
+          <p className="mt-1 text-xs text-[var(--wesal-muted)]">
+            {t("admin.coordinators.requestChanges.notesHint", {
+              max: String(ADMIN_COORDINATOR_REQUEST_CHANGES_NOTES_MAX),
+            })}
+          </p>
+          {notesValidationText ? (
+            <p className="mt-1 text-sm text-[#b42318]" role="alert">
+              {notesValidationText}
+            </p>
+          ) : null}
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              className="btn-primary !min-h-11"
+              disabled={busy}
+              aria-busy={changesPending || undefined}
+              data-testid="admin-coordinator-request-changes-confirm"
+              onClick={() => void onRequestChanges()}
+            >
+              {changesPending
+                ? t("admin.coordinators.requestChanges.submitting")
+                : t("admin.coordinators.requestChanges.confirm")}
+            </button>
+            <button
+              type="button"
+              className="btn-outline !min-h-11"
+              disabled={busy}
+              onClick={() => {
+                if (!busy) setActionPanel(null);
+              }}
+            >
+              {t("admin.coordinators.requestChanges.cancel")}
             </button>
           </div>
         </section>

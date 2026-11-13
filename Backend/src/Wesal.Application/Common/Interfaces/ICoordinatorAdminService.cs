@@ -81,6 +81,16 @@ public interface ICoordinatorAdminService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Asks the coordinator to edit their data or documents: status becomes NeedsChanges,
+    /// the mandatory notes are posted into the Admin conversation, and the notification
+    /// points at that thread. 409 when the account already needs changes.
+    /// </summary>
+    Task<AdminAccountRequestDecisionResultDto> RequestCoordinatorChangesAsync(
+        string userId,
+        AdminRequestChangesDto request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Resolves (creating on demand) the Admin↔coordinator conversation for the
     /// "contact coordinator" action (WESAL Task 5, requirement 5.6). Opening never posts
     /// a placeholder message.

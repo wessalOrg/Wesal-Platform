@@ -156,6 +156,28 @@ public class AdminCoordinatorsController : ControllerBase
     }
 
     /// <summary>
+    /// Asks the coordinator to edit their data or documents: status becomes NeedsChanges,
+    /// notes are posted into the Admin conversation, and the notification points at it.
+    /// 409 when the account already needs changes.
+    /// </summary>
+    [HttpPost("{userId}/request-changes")]
+    [ProducesResponseType(typeof(AdminAccountRequestDecisionResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<AdminAccountRequestDecisionResultDto>> RequestCoordinatorChanges(
+        string userId,
+        AdminRequestChangesDto request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _coordinatorAdminService.RequestCoordinatorChangesAsync(userId, request, cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Resolves (creating on demand) the Admin↔coordinator conversation for the
     /// "contact coordinator" action (Task 5, requirement 5.6). Never posts a message.
     /// </summary>

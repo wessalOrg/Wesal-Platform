@@ -189,3 +189,9 @@ export function canRejectCoordinator(
 ): boolean {
   return status === "Pending";
 }
+
+export function canRequestChangesCoordinator(
+  status: AccountApprovalStatus | null | undefined,
+): boolean {
+  return status === "Pending";
+}

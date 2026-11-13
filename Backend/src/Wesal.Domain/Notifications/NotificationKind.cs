@@ -124,7 +124,13 @@ public enum NotificationKind
     ProfessionalOfferDeletedByAdmin = 41,
     PublishingRestricted = 42,
     AccountLocked = 43,
-    AccountUnlocked = 44
+    AccountUnlocked = 44,
+
+    /// <summary>
+    /// An Admin asked an Event Coordinator to edit their data or documents; the
+    /// click-through opens the Admin conversation that carries the notes.
+    /// </summary>
+    CoordinatorNeedsChangesForCoordinator = 45
 }
 
 /// <summary>

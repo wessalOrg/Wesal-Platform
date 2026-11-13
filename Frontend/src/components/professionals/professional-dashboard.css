@@ -134,8 +134,8 @@
 }
 
 .pro-dash-banner--greeting {
-  min-height: 7.5rem;
-  padding: 1.35rem 1.35rem 1.4rem;
+  min-height: 8.75rem;
+  padding: 1.65rem 1.55rem 1.7rem;
 }
 
 .pro-dash-banner-main--greeting {
@@ -143,7 +143,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 1.15rem;
+  gap: 1.35rem;
   width: 100%;
 }
 
@@ -158,26 +158,28 @@ html:not([dir="rtl"]) .pro-dash-banner-main--greeting {
 }
 
 .pro-dash-banner--greeting .pro-dash-banner-avatar {
-  width: 4.4rem;
-  height: 4.4rem;
+  width: 5.35rem;
+  height: 5.35rem;
   flex-shrink: 0;
   margin-inline-start: auto;
+  /* Nudge ~3 steps inward from the far left toward the text. */
+  margin-inline-end: 1.65rem;
 }
 
 .pro-dash-banner--greeting .pro-dash-banner-avatar-placeholder {
-  font-size: 1.05rem;
+  font-size: 1.2rem;
 }
 
 .pro-dash-banner--greeting .pro-dash-banner-title {
   margin: 0;
-  font-size: clamp(1.2rem, 2.2vw, 1.55rem);
+  font-size: clamp(1.28rem, 2.4vw, 1.7rem);
 }
 
 .pro-dash-banner--greeting .pro-dash-banner-body {
-  margin: 0.45rem 0 0;
-  max-width: 28rem;
-  font-size: 0.88rem;
-  line-height: 1.6;
+  margin: 0.5rem 0 0;
+  max-width: 32rem;
+  font-size: 0.92rem;
+  line-height: 1.65;
 }
 
 .pro-dash-banner--rejected,

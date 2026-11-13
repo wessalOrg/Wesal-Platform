@@ -288,6 +288,57 @@ public sealed class CoordinatorAdminService : ICoordinatorAdminService
         };
     }
 
+    // --- Request changes with mandatory notes ---------------------------------------
+
+    public async Task<AdminAccountRequestDecisionResultDto> RequestCoordinatorChangesAsync(
+        string userId,
+        AdminRequestChangesDto request,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var (user, _) = await LoadRequestAsync(userId, cancellationToken);
+
+        AccountRequestReviewActions.EnsureTransitionAllowed(
+            user.ApprovalStatus, AccountApprovalStatus.NeedsChanges, "coordinator account");
+
+        var notes = AccountRequestReviewActions.ValidateAndTrimNotes(request?.Notes);
+
+        var conversationId = await _unitOfWork.ExecuteInTransactionAsync<Guid>(async () =>
+        {
+            var (conversation, _) = await _reviewActions.ResolveOrCreateConversationAsync(user.Id, cancellationToken);
+
+            await _reviewActions.BuildAndPersistNotificationAsync(
+                NotificationKind.CoordinatorNeedsChangesForCoordinator,
+                user.Id,
+                values: null,
+                targetId: conversation.Id.ToString(),
+                cancellationToken);
+
+            await _reviewActions.PostMessageAsync(conversation, notes, cancellationToken);
+
+            user.ApprovalStatus = AccountApprovalStatus.NeedsChanges;
+            await UpdateUserAsync(user, cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return conversation.Id;
+        }, cancellationToken);
+
+        var delivered = await _reviewActions.DispatchBestEffortAsync(
+            NotificationKind.CoordinatorNeedsChangesForCoordinator,
+            user.Id,
+            values: null,
+            targetId: conversationId.ToString(),
+            cancellationToken);
+
+        return new AdminAccountRequestDecisionResultDto
+        {
+            UserId = user.Id,
+            Status = AccountApprovalStatus.NeedsChanges,
+            NotificationDelivered = delivered
+        };
+    }
+
     // --- Requirement 5.6: contact the coordinator (open/create the thread) -----------
 
     public async Task<AdminUserConversationDto> GetCoordinatorConversationAsync(

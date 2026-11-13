@@ -1714,6 +1714,25 @@ const ar: MessageCatalog = {
   "admin.coordinators.reject.errors.generic": "تعذر رفض الطلب. حاول مرة أخرى.",
   "admin.coordinators.reject.errors.conflict":
     "تم تحديث حالة الطلب مسبقاً. تم تحديث الصفحة.",
+  "admin.coordinators.requestChanges.submit": "طلب تعديلات",
+  "admin.coordinators.requestChanges.title": "طلب تعديل بيانات المنسق",
+  "admin.coordinators.requestChanges.subtitle":
+    "يرجى توضيح البيانات أو المستندات التي يجب على المنسق تعديلها قبل إعادة مراجعة الطلب. تُحفظ الملاحظات في محادثة الإدارة.",
+  "admin.coordinators.requestChanges.notesLabel": "ملاحظات التعديل (إلزامي)",
+  "admin.coordinators.requestChanges.notesPlaceholder":
+    "اذكر بوضوح الحقول أو المستندات المطلوب تصحيحها.",
+  "admin.coordinators.requestChanges.notesHint": "مطلوب · حتى {max} حرفاً.",
+  "admin.coordinators.requestChanges.notesRequired": "يرجى إدخال ملاحظات التعديل.",
+  "admin.coordinators.requestChanges.notesTooLong": "الملاحظات طويلة جداً.",
+  "admin.coordinators.requestChanges.confirm": "تأكيد طلب التعديل",
+  "admin.coordinators.requestChanges.cancel": "إلغاء",
+  "admin.coordinators.requestChanges.submitting": "جاري الإرسال…",
+  "admin.coordinators.requestChanges.success":
+    "تم إرسال طلب التعديل. أصبحت حالة الطلب بانتظار تعديل البيانات.",
+  "admin.coordinators.requestChanges.errors.generic":
+    "تعذر إرسال طلب التعديل. حاول مرة أخرى.",
+  "admin.coordinators.requestChanges.errors.conflict":
+    "تم تحديث حالة الطلب مسبقاً. تم تحديث الصفحة.",
   "admin.coordinators.contact.submit": "التواصل مع المنسق",
   "admin.coordinators.contact.opening": "جاري فتح المحادثة…",
   "admin.coordinators.contact.threadFallback": "منسق مناسبات",
