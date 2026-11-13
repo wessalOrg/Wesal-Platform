@@ -399,31 +399,29 @@ function StatusBanner({
         </div>
       </div>
 
-      {phase !== "approved" ? (
-        <div className="pro-dash-banner-actions">
-          {canResubmit ? (
-            <Link href={editHref} className="pro-dash-banner-cta" data-testid="pro-dash-edit">
-              {t("auth.pendingAccount.editResubmit")}
-            </Link>
-          ) : null}
-          <button
-            type="button"
-            className={
-              canResubmit
-                ? "pro-dash-banner-cta pro-dash-banner-cta--ghost"
-                : "pro-dash-banner-cta"
-            }
-            disabled={contactPending}
-            aria-busy={contactPending || undefined}
-            data-testid="pro-dash-contact-admin"
-            onClick={onContactAdmin}
-          >
-            {contactPending
-              ? t("auth.pendingAccount.contactAdminOpening")
-              : t("auth.pendingAccount.contactAdmin")}
-          </button>
-        </div>
-      ) : null}
+      <div className="pro-dash-banner-actions">
+        {canResubmit ? (
+          <Link href={editHref} className="pro-dash-banner-cta" data-testid="pro-dash-edit">
+            {t("auth.pendingAccount.editResubmit")}
+          </Link>
+        ) : null}
+        <button
+          type="button"
+          className={
+            canResubmit
+              ? "pro-dash-banner-cta pro-dash-banner-cta--ghost"
+              : "pro-dash-banner-cta"
+          }
+          disabled={contactPending}
+          aria-busy={contactPending || undefined}
+          data-testid="pro-dash-contact-admin"
+          onClick={onContactAdmin}
+        >
+          {contactPending
+            ? t("auth.pendingAccount.contactAdminOpening")
+            : t("auth.pendingAccount.contactAdmin")}
+        </button>
+      </div>
     </section>
   );
 }
