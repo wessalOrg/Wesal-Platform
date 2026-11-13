@@ -2,31 +2,23 @@
 
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
+import WesalLogo from "@/components/brand/WesalLogo";
 import { useT } from "@/i18n";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 
 type AccountActivatedModalProps = {
   open: boolean;
-  roleLabel: string;
-  userName: string;
-  profileId?: string;
   onClose: () => void;
 };
 
 export default function AccountActivatedModal({
   open,
-  roleLabel,
-  userName,
-  profileId = "",
   onClose,
 }: AccountActivatedModalProps) {
   const t = useT();
   const titleId = useId();
   const descId = useId();
   const okRef = useRef<HTMLButtonElement>(null);
-  const name = userName.trim() || t("profile.unspecified");
-  const avatarUrl = useProfileAvatarUrl([profileId || null]);
 
   useEffect(() => {
     if (!open) return;
@@ -47,70 +39,78 @@ export default function AccountActivatedModal({
 
   return createPortal(
     <div
-      className="pro-dash-activated-overlay"
+      className="pro-activated-overlay"
       role="presentation"
       data-testid="pro-account-activated-overlay"
     >
       <button
         type="button"
-        className="pro-dash-activated-backdrop"
+        className="pro-activated-backdrop"
         aria-label={t("common.close")}
         onClick={onClose}
       />
-      <div className="pro-dash-activated-frame">
+      <div className="pro-activated-frame">
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
           aria-describedby={descId}
-          className="pro-dash-banner pro-dash-banner--approved pro-dash-activated-card"
+          className="pro-activated-card"
           data-testid="pro-account-activated-modal"
         >
-          <div className="pro-dash-banner-glow" aria-hidden="true" />
-
-          <button
-            type="button"
-            className="pro-dash-activated-close"
-            aria-label={t("common.close")}
-            onClick={onClose}
-          >
-            <CloseIcon />
-          </button>
-
-          <div className="pro-dash-banner-main pro-dash-banner-main--greeting">
-            <div className="pro-dash-banner-copy">
-              <h2 id={titleId} className="pro-dash-banner-title">
-                {t("pro.dash.activated.hello", { name })}
-              </h2>
-              <p id={descId} className="pro-dash-banner-body">
-                {t("pro.dash.activated.sub")}
-              </p>
-              <p className="pro-dash-activated-role-hint">{roleLabel}</p>
+          <div className="pro-activated-head">
+            <div className="pro-activated-brand" aria-hidden="true">
+              <WesalLogo className="h-8 w-auto" variant="brand" title={t("brand.name")} />
+              <span className="pro-activated-brand-name">{t("brand.name")}</span>
             </div>
-            <span
-              className={`pro-dash-banner-avatar${avatarUrl ? " pro-dash-banner-avatar--filled" : ""}`}
-              aria-hidden="true"
+            <button
+              type="button"
+              className="pro-activated-close"
+              aria-label={t("common.close")}
+              onClick={onClose}
             >
-              <span className="pro-dash-banner-icon-ring" />
-              {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt="" className="pro-dash-banner-avatar-img" />
-              ) : (
-                <span className="pro-dash-banner-avatar-placeholder">{initials(name)}</span>
-              )}
-            </span>
+              <CloseIcon />
+            </button>
           </div>
 
-          <div className="pro-dash-banner-actions">
+          <div className="pro-activated-body">
+            <div className="pro-activated-seal" aria-hidden="true">
+              <span className="pro-activated-rays" />
+              <span className="pro-activated-badge">
+                <CheckIcon />
+              </span>
+            </div>
+
+            <h2 id={titleId} className="pro-activated-title">
+              <span className="pro-activated-title-mark" aria-hidden="true" />
+              {t("pro.dash.activated.congrats")}
+            </h2>
+            <p id={descId} className="pro-activated-desc">
+              {t("pro.dash.activated.success")}
+            </p>
+
             <button
               ref={okRef}
               type="button"
-              className="pro-dash-banner-cta"
+              className="pro-activated-ok"
               data-testid="pro-account-activated-ok"
               onClick={onClose}
             >
               {t("common.ok")}
             </button>
+          </div>
+
+          <div className="pro-activated-waves" aria-hidden="true">
+            <svg viewBox="0 0 360 72" preserveAspectRatio="none">
+              <path
+                className="pro-activated-wave pro-activated-wave--back"
+                d="M0 36c36 18 72 18 108 0s72-18 108 0 72 18 108 0 36-9 36-9V72H0Z"
+              />
+              <path
+                className="pro-activated-wave pro-activated-wave--front"
+                d="M0 44c40 16 80 16 120 0s80-16 120 0 80 16 120 0V72H0Z"
+              />
+            </svg>
           </div>
         </div>
       </div>
@@ -119,10 +119,18 @@ export default function AccountActivatedModal({
   );
 }
 
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
-  if (parts.length === 0) return "";
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" aria-hidden="true">
+      <path
+        d="m6.5 12.5 3.4 3.4 7.6-7.8"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 function CloseIcon() {

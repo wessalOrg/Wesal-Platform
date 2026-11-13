@@ -201,13 +201,7 @@ export default function ProfessionalDashboardHome() {
       data-phase={phase}
       data-role={access.role ?? ""}
     >
-      <AccountActivatedModal
-        open={activatedOpen}
-        roleLabel={roleLabel}
-        userName={userName}
-        profileId={profileId}
-        onClose={onCloseActivated}
-      />
+      <AccountActivatedModal open={activatedOpen} onClose={onCloseActivated} />
 
       <StatusBanner
         phase={phase}

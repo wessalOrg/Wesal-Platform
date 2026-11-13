@@ -758,6 +758,8 @@ const en: MessageCatalog = {
     "Your account is active. You can now create posts and offers and manage your presence on Wesal.",
   "pro.dash.activated.hello": "Welcome, {name}",
   "pro.dash.activated.sub": "We're glad you're here — start sharing your work and offers on Wesal.",
+  "pro.dash.activated.congrats": "Congratulations!",
+  "pro.dash.activated.success": "Your account has been activated successfully",
   "pro.dash.availableTitle": "What you can do now",
   "pro.dash.lockedTitle": "What you can’t do yet",
   "pro.dash.quickTitle": "Quick actions",
