@@ -351,7 +351,11 @@ function StatusBanner({
         aria-label={approvedHello}
       >
         <div className="pro-dash-banner-glow" aria-hidden="true" />
-        <div className="pro-dash-banner-main">
+        <div className="pro-dash-banner-main pro-dash-banner-main--greeting">
+          <div className="pro-dash-banner-copy">
+            <h1 className="pro-dash-banner-title">{approvedHello}</h1>
+            <p className="pro-dash-banner-body">{t("pro.dash.activated.sub")}</p>
+          </div>
           <span
             className={`pro-dash-banner-avatar${avatarUrl ? " pro-dash-banner-avatar--filled" : ""}`}
             aria-hidden="true"
@@ -366,9 +370,6 @@ function StatusBanner({
               </span>
             )}
           </span>
-          <div className="pro-dash-banner-copy">
-            <h1 className="pro-dash-banner-title">{approvedHello}</h1>
-          </div>
         </div>
       </section>
     );

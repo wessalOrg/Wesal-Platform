@@ -77,7 +77,16 @@ export default function AccountActivatedModal({
             <CloseIcon />
           </button>
 
-          <div className="pro-dash-banner-main">
+          <div className="pro-dash-banner-main pro-dash-banner-main--greeting">
+            <div className="pro-dash-banner-copy">
+              <h2 id={titleId} className="pro-dash-banner-title">
+                {t("pro.dash.activated.hello", { name })}
+              </h2>
+              <p id={descId} className="pro-dash-banner-body">
+                {t("pro.dash.activated.sub")}
+              </p>
+              <p className="pro-dash-activated-role-hint">{roleLabel}</p>
+            </div>
             <span
               className={`pro-dash-banner-avatar${avatarUrl ? " pro-dash-banner-avatar--filled" : ""}`}
               aria-hidden="true"
@@ -90,15 +99,6 @@ export default function AccountActivatedModal({
                 <span className="pro-dash-banner-avatar-placeholder">{initials(name)}</span>
               )}
             </span>
-
-            <div className="pro-dash-banner-copy">
-              <h2 id={titleId} className="pro-dash-banner-title">
-                {t("pro.dash.activated.hello", { name })}
-              </h2>
-              <p id={descId} className="pro-dash-activated-role-hint">
-                {roleLabel}
-              </p>
-            </div>
           </div>
 
           <div className="pro-dash-banner-actions">

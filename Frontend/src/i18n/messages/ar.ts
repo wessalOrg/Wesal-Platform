@@ -751,6 +751,7 @@ const ar: MessageCatalog = {
   "pro.dash.banner.approved.body":
     "حسابك أصبح نشطاً. يمكنك الآن إنشاء المنشورات والعروض وإدارة حضورك على وصال.",
   "pro.dash.activated.hello": "أهلاً بك {name}",
+  "pro.dash.activated.sub": "يسعدنا انضمامك — ابدأ بنشر أعمالك وعروضك على وصال.",
   "pro.dash.availableTitle": "ما يمكنك فعله الآن",
   "pro.dash.lockedTitle": "ما لا يمكنك فعله حالياً",
   "pro.dash.quickTitle": "إجراءات سريعة",
