@@ -338,22 +338,20 @@ function StatusBanner({
   onContactAdmin: () => void;
 }) {
   const t = useT();
-  const copy = bannerCopy(phase, t);
-  const statusLabel = bannerStatusLabel(phase, t);
   const avatarUrl = useProfileAvatarUrl([profileId || null]);
   const greetingName = userName.trim() || t("profile.unspecified");
   const approved = phase === "approved";
+  const approvedHello = t("pro.dash.activated.hello", { name: greetingName });
 
-  return (
-    <section
-      className={`pro-dash-banner pro-dash-banner--${phase}`}
-      data-testid="pro-dash-status-banner"
-      aria-label={copy.title}
-    >
-      <div className="pro-dash-banner-glow" aria-hidden="true" />
-
-      <div className="pro-dash-banner-main">
-        {approved ? (
+  if (approved) {
+    return (
+      <section
+        className="pro-dash-banner pro-dash-banner--approved pro-dash-banner--greeting"
+        data-testid="pro-dash-status-banner"
+        aria-label={approvedHello}
+      >
+        <div className="pro-dash-banner-glow" aria-hidden="true" />
+        <div className="pro-dash-banner-main">
           <span
             className={`pro-dash-banner-avatar${avatarUrl ? " pro-dash-banner-avatar--filled" : ""}`}
             aria-hidden="true"
@@ -368,17 +366,33 @@ function StatusBanner({
               </span>
             )}
           </span>
-        ) : (
-          <span className="pro-dash-banner-icon" aria-hidden="true">
-            <span className="pro-dash-banner-icon-ring" />
-            <StatusGlyph phase={phase} />
-          </span>
-        )}
+          <div className="pro-dash-banner-copy">
+            <h1 className="pro-dash-banner-title">{approvedHello}</h1>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const copy = bannerCopy(phase, t);
+  const statusLabel = bannerStatusLabel(phase, t);
+
+  return (
+    <section
+      className={`pro-dash-banner pro-dash-banner--${phase}`}
+      data-testid="pro-dash-status-banner"
+      aria-label={copy.title}
+    >
+      <div className="pro-dash-banner-glow" aria-hidden="true" />
+
+      <div className="pro-dash-banner-main">
+        <span className="pro-dash-banner-icon" aria-hidden="true">
+          <span className="pro-dash-banner-icon-ring" />
+          <StatusGlyph phase={phase} />
+        </span>
 
         <div className="pro-dash-banner-copy">
-          <p className="pro-dash-banner-role">
-            {approved ? t("pro.dash.activated.hello", { name: greetingName }) : roleLabel}
-          </p>
+          <p className="pro-dash-banner-role">{roleLabel}</p>
           <h1 className="pro-dash-banner-title">{copy.title}</h1>
           <p className="pro-dash-banner-status">{statusLabel}</p>
           <p className="pro-dash-banner-body">{copy.body}</p>

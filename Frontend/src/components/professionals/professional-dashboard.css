@@ -133,6 +133,24 @@
   border-color: color-mix(in srgb, #1f7a4d 16%, #d7e8dc);
 }
 
+.pro-dash-banner--greeting {
+  padding-block: 1.05rem;
+}
+
+.pro-dash-banner--greeting .pro-dash-banner-main {
+  align-items: center;
+}
+
+.pro-dash-banner--greeting .pro-dash-banner-avatar {
+  width: 3.6rem;
+  height: 3.6rem;
+}
+
+.pro-dash-banner--greeting .pro-dash-banner-title {
+  margin: 0;
+  font-size: clamp(1.08rem, 1.9vw, 1.32rem);
+}
+
 .pro-dash-banner--rejected,
 .pro-dash-banner--needs_changes {
   background:

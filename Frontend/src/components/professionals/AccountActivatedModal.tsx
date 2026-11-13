@@ -92,16 +92,11 @@ export default function AccountActivatedModal({
             </span>
 
             <div className="pro-dash-banner-copy">
-              <p className="pro-dash-banner-role">
-                {t("pro.dash.activated.hello", { name })}
-              </p>
-              <p className="pro-dash-activated-role-hint">{roleLabel}</p>
               <h2 id={titleId} className="pro-dash-banner-title">
-                {t("pro.dash.banner.approved.title")}
+                {t("pro.dash.activated.hello", { name })}
               </h2>
-              <p className="pro-dash-banner-status">{t("pro.dash.badge.on")}</p>
-              <p id={descId} className="pro-dash-banner-body">
-                {t("pro.dash.banner.approved.body")}
+              <p id={descId} className="pro-dash-activated-role-hint">
+                {roleLabel}
               </p>
             </div>
           </div>
