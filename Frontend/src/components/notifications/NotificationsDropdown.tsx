@@ -80,7 +80,7 @@ export default function NotificationsDropdown({
       </div>
 
       <div
-        className="flex gap-1.5 overflow-x-auto border-b border-[var(--wesal-border)] px-3 py-2"
+        className="seeker-notify-filters"
         role="tablist"
         aria-label={t("notifications.filters.label")}
       >
@@ -97,10 +97,8 @@ export default function NotificationsDropdown({
             type="button"
             role="tab"
             aria-selected={filter === id}
-            className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-3 py-2 text-[0.7rem] font-bold transition ${
-              filter === id
-                ? "bg-[var(--wesal-maroon)] text-white"
-                : "bg-[var(--wesal-pink-soft)] text-[var(--wesal-maroon)]"
+            className={`seeker-notify-filter-chip${
+              filter === id ? " seeker-notify-filter-chip--active" : ""
             }`}
             onClick={() => setFilter(id)}
           >

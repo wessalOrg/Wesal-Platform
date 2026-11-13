@@ -6782,6 +6782,7 @@ html[dir="rtl"] .seeker-notify-panel {
 
 .seeker-notify-panel-head {
   display: flex;
+  flex-shrink: 0;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
@@ -6793,6 +6794,47 @@ html[dir="rtl"] .seeker-notify-panel {
       color-mix(in srgb, var(--wesal-pink, #f5e8e4) 55%, var(--wesal-white)) 0%,
       #fcf9f7 100%
     );
+}
+
+.seeker-notify-filters {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.4rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  position: relative;
+  z-index: 2;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--wesal-border, #eee6de) 85%, var(--wesal-white));
+  background: #ffffff;
+}
+
+.seeker-notify-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.seeker-notify-filter-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.3rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wesal-pink-soft, #fcf9f7);
+  color: var(--wesal-maroon, #c17b7f);
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.seeker-notify-filter-chip--active {
+  background: var(--wesal-maroon, #c17b7f);
+  color: #ffffff;
 }
 
 .seeker-notify-panel-title {
@@ -6831,12 +6873,21 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-notify-list {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   margin: 0;
   padding: 0.45rem;
   list-style: none;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   background-color: #ffffff;
+}
+
+.seeker-notify-list > li + li {
+  margin-top: 0.25rem;
 }
 
 .seeker-notify-empty {
@@ -6848,14 +6899,18 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-notify-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
   border-radius: 0.95rem;
-  padding: 0.8rem 0.75rem;
   text-decoration: none;
   color: inherit;
   transition: background-color 140ms ease;
+}
+
+.wesal-notify-item--unread {
+  box-shadow: inset 3px 0 0 #c62828;
+}
+
+html[dir="rtl"] .wesal-notify-item--unread {
+  box-shadow: inset -3px 0 0 #c62828;
 }
 
 .seeker-notify-item:hover {
@@ -7035,6 +7090,9 @@ html[dir="rtl"] .seeker-notify-panel {
 }
 
 .seeker-notify-panel-foot {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
   border-top: 1px solid color-mix(in srgb, var(--wesal-border, #eee6de) 85%, var(--wesal-white));
   padding: 0.7rem 0.85rem 0.85rem;
   background:
@@ -9084,9 +9142,11 @@ h2.admin-sub-owner-name,
 
 @keyframes seeker-notify-item-in {
   from {
-    transform: translateY(0.55rem);
+    opacity: 0.35;
+    transform: translateY(0.25rem);
   }
   to {
+    opacity: 1;
     transform: translateY(0);
   }
 }

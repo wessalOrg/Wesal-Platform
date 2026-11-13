@@ -756,6 +756,7 @@ const en: MessageCatalog = {
   "pro.dash.banner.approved.title": "Congratulations! Your account is active",
   "pro.dash.banner.approved.body":
     "Your account is active. You can now create posts and offers and manage your presence on Wesal.",
+  "pro.dash.activated.hello": "Welcome, {name}",
   "pro.dash.availableTitle": "What you can do now",
   "pro.dash.lockedTitle": "What you can’t do yet",
   "pro.dash.quickTitle": "Quick actions",
@@ -900,6 +901,9 @@ const en: MessageCatalog = {
   "notify.hallApproved.title": "Your hall was approved",
   "notify.hallApproved.body":
     "Your hall was approved and is waiting for a Wesal subscription payment notice. Send the payment notice from My Halls to activate hall services.",
+  "notify.accountApproved.title": "Congrats! Your account has been approved",
+  "notify.accountApproved.body":
+    "You can now create posts and offers and manage your presence on Wesal.",
   "notify.hallRejected.title": "Hall rejected",
   "notify.hallRejected.body":
     "Hall \"{hallName}\" was rejected. You can contact admin to review the notes.",
@@ -3033,7 +3037,7 @@ const en: MessageCatalog = {
   "messages.professional.adminHint":
     "Admin support is available even if your professional account is not approved yet.",
   "messages.professional.adminEmpty": "No admin conversation yet",
-  "messages.professional.adminEmptyHint": "Tap the button above to start a chat with Wesal admin.",
+  "messages.professional.adminEmptyHint": "Your chats with Wesal admin will appear here when available.",
   "messages.notification.open": "Open conversation",
   "messages.notification.grouped": "{count} new messages",
   "messages.selectConversation": "Select a conversation to view messages.",

@@ -18,9 +18,6 @@ type ProfessionalInboxListProps = {
   focusAdmin?: boolean;
   onSelect: (conversationId: string) => void;
   onRetry: () => void;
-  onContactAdmin: () => void;
-  contactingAdmin?: boolean;
-  contactAdminError?: string | null;
 };
 
 export default function ProfessionalInboxList({
@@ -31,9 +28,6 @@ export default function ProfessionalInboxList({
   focusAdmin = false,
   onSelect,
   onRetry,
-  onContactAdmin,
-  contactingAdmin = false,
-  contactAdminError = null,
 }: ProfessionalInboxListProps) {
   const t = useT();
   const [filter, setFilter] = useState<InboxFilter>(focusAdmin ? "admin" : "customers");
@@ -90,28 +84,6 @@ export default function ProfessionalInboxList({
           onClick={() => setFilter("admin")}
         />
       </div>
-
-      {filter === "admin" ? (
-        <div className="border-b border-[var(--wesal-border)] px-3 py-2">
-          <button
-            type="button"
-            className="btn-outline w-full !text-sm"
-            data-testid="professional-contact-admin"
-            disabled={contactingAdmin}
-            onClick={onContactAdmin}
-          >
-            {contactingAdmin ? t("common.loading") : t("messages.professional.contactAdmin")}
-          </button>
-          {contactAdminError ? (
-            <p role="alert" className="mt-2 text-xs text-[#a86267]">
-              {contactAdminError}
-            </p>
-          ) : null}
-          <p className="mt-2 text-[0.7rem] leading-5 text-[var(--wesal-muted)]">
-            {t("messages.professional.adminHint")}
-          </p>
-        </div>
-      ) : null}
 
       {status === "idle" || status === "loading" ? (
         <div className="space-y-2 p-3" aria-busy="true" data-testid="inbox-list-loading">

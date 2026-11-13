@@ -750,6 +750,7 @@ const ar: MessageCatalog = {
   "pro.dash.banner.approved.title": "مبارك! تم تفعيل حسابك بنجاح",
   "pro.dash.banner.approved.body":
     "حسابك أصبح نشطاً. يمكنك الآن إنشاء المنشورات والعروض وإدارة حضورك على وصال.",
+  "pro.dash.activated.hello": "أهلاً بك {name}",
   "pro.dash.availableTitle": "ما يمكنك فعله الآن",
   "pro.dash.lockedTitle": "ما لا يمكنك فعله حالياً",
   "pro.dash.quickTitle": "إجراءات سريعة",
@@ -893,6 +894,9 @@ const ar: MessageCatalog = {
   "notify.hallApproved.title": "تم اعتماد قاعتك",
   "notify.hallApproved.body":
     "تم اعتماد قاعتك بنجاح وبانتظار اشعار دفع اشتراك منصة وصال. يرجى إرسال إشعار الدفع من قاعاتك لتفعيل خدمات الصالة.",
+  "notify.accountApproved.title": "مبروك! تمت الموافقة على حسابك",
+  "notify.accountApproved.body":
+    "يمكنك الآن إنشاء المنشورات والعروض وإدارة حضورك على وصال.",
   "notify.hallRejected.title": "تم رفض الصالة",
   "notify.hallRejected.body":
     "تم رفض صالة \"{hallName}\". يمكنك التواصل مع الإدارة لمراجعة الملاحظات.",
@@ -2976,7 +2980,7 @@ const ar: MessageCatalog = {
   "messages.professional.adminHint":
     "دعم الإدارة متاح حتى لو لم تتم الموافقة على حسابك المهني بعد.",
   "messages.professional.adminEmpty": "لا توجد محادثة مع الإدارة بعد",
-  "messages.professional.adminEmptyHint": "اضغط الزر أعلاه لبدء محادثة مع إدارة وصال.",
+  "messages.professional.adminEmptyHint": "ستظهر هنا محادثاتك مع إدارة وصال عند توفرها.",
   "messages.notification.open": "فتح المحادثة",
   "messages.notification.grouped": "{count} رسائل جديدة",
   "messages.selectConversation": "اختر محادثة لعرض الرسائل.",

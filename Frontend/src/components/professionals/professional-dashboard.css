@@ -4,6 +4,87 @@
   gap: 0.95rem;
 }
 
+.pro-dash-activated-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+}
+
+.pro-dash-activated-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(40, 25, 20, 0.45);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
+}
+
+.pro-dash-activated-frame {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 100%;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  pointer-events: none;
+}
+
+@media (min-width: 640px) {
+  .pro-dash-activated-frame {
+    align-items: center;
+    padding: 1rem;
+  }
+}
+
+.pro-dash-activated-card {
+  pointer-events: auto;
+  position: relative;
+  width: min(100%, 34rem);
+  margin: 0;
+  border-radius: 1.35rem 1.35rem 0 0;
+  box-shadow: 0 1.5rem 3.75rem rgba(60, 35, 30, 0.2);
+  animation: pro-dash-activated-in 220ms ease-out;
+}
+
+@media (min-width: 640px) {
+  .pro-dash-activated-card {
+    border-radius: 1.35rem;
+  }
+}
+
+.pro-dash-activated-close {
+  position: absolute;
+  inset-block-start: 0.85rem;
+  inset-inline-start: 0.85rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wesal-muted);
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.pro-dash-activated-close:hover {
+  background: color-mix(in srgb, #d8f3e3 55%, white);
+}
+
+@keyframes pro-dash-activated-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .pro-dash-banner {
   position: relative;
   overflow: hidden;
@@ -95,6 +176,57 @@
 
 .pro-dash-banner--approved .pro-dash-banner-icon-ring {
   border-color: color-mix(in srgb, #1f7a4d 35%, transparent);
+}
+
+.pro-dash-banner-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.1rem;
+  height: 3.1rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  color: #17663a;
+  background: color-mix(in srgb, #d8f3e3 78%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #1f7a4d 12%, transparent);
+}
+
+.pro-dash-banner-avatar .pro-dash-banner-icon-ring {
+  border-color: color-mix(in srgb, #1f7a4d 35%, transparent);
+}
+
+.pro-dash-banner-avatar--filled {
+  background: #fff;
+}
+
+.pro-dash-banner-avatar-img,
+.pro-dash-banner-avatar-placeholder {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.pro-dash-banner-avatar-img {
+  object-fit: cover;
+  display: block;
+}
+
+.pro-dash-banner-avatar-placeholder {
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.pro-dash-activated-role-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--wesal-muted);
 }
 
 .pro-dash-banner--rejected .pro-dash-banner-icon,

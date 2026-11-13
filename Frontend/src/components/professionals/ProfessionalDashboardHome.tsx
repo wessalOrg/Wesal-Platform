@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import AccountActivatedModal from "@/components/professionals/AccountActivatedModal";
 import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAccess";
 import { useProfessionalReviewNotes } from "@/hooks/useProfessionalReviewNotes";
+import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { useT } from "@/i18n";
 import {
   COORDINATOR_SETUP_PATH,
@@ -14,6 +16,11 @@ import {
 } from "@/lib/account-profile-path";
 import { isPhotographerRole } from "@/lib/account-role";
 import { ApiError } from "@/lib/api-error";
+import {
+  hasSeenAccountActivatedModal,
+  markAccountActivatedModalSeen,
+  notifyProfessionalAccountApproved,
+} from "@/lib/platform-notifications-store";
 import { professionalRoleLabelKey } from "@/lib/professional-role-label";
 import { contactAdminAccount, conversationErrorMessage } from "@/services/conversations";
 import type { ProfessionalAccountPhase } from "@/types/account-approval";
@@ -39,6 +46,7 @@ export default function ProfessionalDashboardHome() {
   const access = useProfessionalAccountAccess();
   const [contactPending, setContactPending] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
+  const [activatedOpen, setActivatedOpen] = useState(false);
 
   const phase = access.phase;
   const { notes: adminNotes, loading: notesLoading } = useProfessionalReviewNotes(phase);
@@ -49,6 +57,25 @@ export default function ProfessionalDashboardHome() {
   const editHref = isPhotographerRole(access.role)
     ? `${PHOTOGRAPHER_SETUP_PATH}?${RESUBMIT_QUERY}`
     : `${COORDINATOR_SETUP_PATH}?${RESUBMIT_QUERY}`;
+  const userName =
+    access.profile?.fullName?.trim() || access.displayName?.trim() || "";
+
+  useEffect(() => {
+    if (access.statusLoading || phase !== "approved") return;
+    const userId = access.userId?.trim();
+    if (!userId) return;
+
+    notifyProfessionalAccountApproved(userId);
+    if (!hasSeenAccountActivatedModal(userId)) {
+      setActivatedOpen(true);
+    }
+  }, [access.statusLoading, access.userId, phase]);
+
+  const onCloseActivated = () => {
+    const userId = access.userId?.trim();
+    if (userId) markAccountActivatedModalSeen(userId);
+    setActivatedOpen(false);
+  };
 
   const onContactAdmin = async () => {
     if (contactPending) return;
@@ -174,9 +201,19 @@ export default function ProfessionalDashboardHome() {
       data-phase={phase}
       data-role={access.role ?? ""}
     >
+      <AccountActivatedModal
+        open={activatedOpen}
+        roleLabel={roleLabel}
+        userName={userName}
+        profileId={profileId}
+        onClose={onCloseActivated}
+      />
+
       <StatusBanner
         phase={phase}
         roleLabel={roleLabel}
+        userName={userName}
+        profileId={profileId}
         canResubmit={access.canResubmitSetup}
         editHref={editHref}
         contactPending={contactPending}
@@ -284,6 +321,8 @@ export default function ProfessionalDashboardHome() {
 function StatusBanner({
   phase,
   roleLabel,
+  userName,
+  profileId,
   canResubmit,
   editHref,
   contactPending,
@@ -291,6 +330,8 @@ function StatusBanner({
 }: {
   phase: ProfessionalAccountPhase;
   roleLabel: string;
+  userName: string;
+  profileId: string;
   canResubmit: boolean;
   editHref: string;
   contactPending: boolean;
@@ -299,6 +340,9 @@ function StatusBanner({
   const t = useT();
   const copy = bannerCopy(phase, t);
   const statusLabel = bannerStatusLabel(phase, t);
+  const avatarUrl = useProfileAvatarUrl([profileId || null]);
+  const greetingName = userName.trim() || t("profile.unspecified");
+  const approved = phase === "approved";
 
   return (
     <section
@@ -309,13 +353,32 @@ function StatusBanner({
       <div className="pro-dash-banner-glow" aria-hidden="true" />
 
       <div className="pro-dash-banner-main">
-        <span className="pro-dash-banner-icon" aria-hidden="true">
-          <span className="pro-dash-banner-icon-ring" />
-          <StatusGlyph phase={phase} />
-        </span>
+        {approved ? (
+          <span
+            className={`pro-dash-banner-avatar${avatarUrl ? " pro-dash-banner-avatar--filled" : ""}`}
+            aria-hidden="true"
+          >
+            <span className="pro-dash-banner-icon-ring" />
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" className="pro-dash-banner-avatar-img" />
+            ) : (
+              <span className="pro-dash-banner-avatar-placeholder">
+                {initials(greetingName)}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className="pro-dash-banner-icon" aria-hidden="true">
+            <span className="pro-dash-banner-icon-ring" />
+            <StatusGlyph phase={phase} />
+          </span>
+        )}
 
         <div className="pro-dash-banner-copy">
-          <p className="pro-dash-banner-role">{roleLabel}</p>
+          <p className="pro-dash-banner-role">
+            {approved ? t("pro.dash.activated.hello", { name: greetingName }) : roleLabel}
+          </p>
           <h1 className="pro-dash-banner-title">{copy.title}</h1>
           <p className="pro-dash-banner-status">{statusLabel}</p>
           <p className="pro-dash-banner-body">{copy.body}</p>
@@ -445,6 +508,12 @@ function StatusGlyph({ phase }: { phase: ProfessionalAccountPhase }) {
   if (phase === "approved") return <CheckGlyph />;
   if (phase === "rejected" || phase === "needs_changes") return <AlertGlyph />;
   return <ClockGlyph />;
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  if (parts.length === 0) return "";
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
 }
 
 function ClockGlyph() {

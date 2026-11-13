@@ -11,6 +11,8 @@ import type {
 
 const STORAGE_KEY = "wesal-platform-notifications";
 const WELCOME_SEEN_KEY = "wesal-welcome-seen";
+const ACCOUNT_APPROVED_SEEN_KEY = "wesal-account-approved-seen";
+const ACCOUNT_ACTIVATED_MODAL_SEEN_KEY = "wesal-account-activated-modal-seen";
 const MAX_ITEMS = 40;
 
 export const PLATFORM_NOTIFICATIONS_CHANGED = "wesal-platform-notifications-changed";
@@ -284,16 +286,33 @@ export function markPlatformNotificationsRead(audience?: NotificationAudience): 
   notifyChanged();
 }
 
-export function hasSeenWelcome(userId: string): boolean {
+function hasSeenId(storageKey: string, userId: string): boolean {
   if (!canUseStorage() || !userId.trim()) return false;
   try {
-    const raw = window.localStorage.getItem(WELCOME_SEEN_KEY);
+    const raw = window.localStorage.getItem(storageKey);
     if (!raw) return false;
     const parsed = JSON.parse(raw) as unknown;
     return Array.isArray(parsed) && parsed.includes(userId);
   } catch {
     return false;
   }
+}
+
+function markSeenId(storageKey: string, userId: string): void {
+  if (!canUseStorage() || !userId.trim()) return;
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    const ids = Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
+    if (ids.includes(userId)) return;
+    window.localStorage.setItem(storageKey, JSON.stringify([...ids, userId]));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+export function hasSeenWelcome(userId: string): boolean {
+  return hasSeenId(WELCOME_SEEN_KEY, userId);
 }
 
 /** Seeker welcome after registration (or first session if register did not fire). */
@@ -311,16 +330,34 @@ export function notifySeekerWelcome(userId?: string | null): void {
 }
 
 export function markWelcomeSeen(userId: string): void {
-  if (!canUseStorage() || !userId.trim()) return;
-  try {
-    const raw = window.localStorage.getItem(WELCOME_SEEN_KEY);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-    const ids = Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
-    if (ids.includes(userId)) return;
-    window.localStorage.setItem(WELCOME_SEEN_KEY, JSON.stringify([...ids, userId]));
-  } catch {
-    /* ignore quota */
-  }
+  markSeenId(WELCOME_SEEN_KEY, userId);
+}
+
+/** Local fallback when the durable inbox has not yet delivered the approval event. */
+export function notifyProfessionalAccountApproved(userId?: string | null): void {
+  const id = userId?.trim() || "";
+  if (!id || hasSeenId(ACCOUNT_APPROVED_SEEN_KEY, id)) return;
+  const alreadyDelivered = readRaw().some(
+    (item) => item.type === "account_approved" && item.audience === "seeker",
+  );
+  markSeenId(ACCOUNT_APPROVED_SEEN_KEY, id);
+  if (alreadyDelivered) return;
+  pushPlatformNotification({
+    type: "account_approved",
+    audience: "seeker",
+    titleKey: "notify.accountApproved.title",
+    bodyKey: "notify.accountApproved.body",
+    tone: "success",
+    toast: false,
+  });
+}
+
+export function hasSeenAccountActivatedModal(userId: string): boolean {
+  return hasSeenId(ACCOUNT_ACTIVATED_MODAL_SEEN_KEY, userId);
+}
+
+export function markAccountActivatedModalSeen(userId: string): void {
+  markSeenId(ACCOUNT_ACTIVATED_MODAL_SEEN_KEY, userId);
 }
 
 export function subscribePlatformNotifications(listener: () => void): () => void {

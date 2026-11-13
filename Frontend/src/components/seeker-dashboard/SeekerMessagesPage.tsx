@@ -49,8 +49,6 @@ export default function SeekerMessagesPage() {
     pathname.startsWith("/owner/messages") && searchParams.get("contact") === "admin";
   const professionalContactAdmin =
     isProfessional && searchParams.get("contact") === "admin";
-  const [contactingProAdmin, setContactingProAdmin] = useState(false);
-  const [proAdminError, setProAdminError] = useState<string | null>(null);
   const {
     selectedId,
     canUseMessaging,
@@ -173,30 +171,21 @@ export default function SeekerMessagesPage() {
           : "";
   const hallId = selected?.hallId ?? thread?.hallId ?? "";
 
-  const openProfessionalAdmin = () => {
+  useEffect(() => {
+    if (!professionalContactAdmin) return;
     const existing = conversations.find((item) => isAdminAccountConversation(item));
     if (existing) {
       selectConversation(existing.conversationId);
       return;
     }
-    setContactingProAdmin(true);
-    setProAdminError(null);
     void contactAdminAccount()
       .then((created) => {
         retryInbox();
         selectConversation(created.conversationId);
       })
-      .catch((err) => {
-        setProAdminError(conversationErrorMessage(err, "start"));
-      })
-      .finally(() => {
-        setContactingProAdmin(false);
+      .catch(() => {
+        /* Deep-link open is best-effort; inbox still usable without banner CTA. */
       });
-  };
-
-  useEffect(() => {
-    if (!professionalContactAdmin) return;
-    openProfessionalAdmin();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot deep link
   }, [professionalContactAdmin]);
 
@@ -246,9 +235,6 @@ export default function SeekerMessagesPage() {
                 focusAdmin={professionalContactAdmin}
                 onSelect={selectConversation}
                 onRetry={retryInbox}
-                onContactAdmin={openProfessionalAdmin}
-                contactingAdmin={contactingProAdmin}
-                contactAdminError={proAdminError}
               />
             ) : (
               <ConversationList

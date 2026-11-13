@@ -25,11 +25,11 @@ export default function NotificationItem({
   return (
     <button
       type="button"
-      className={`wesal-notify-item group relative flex w-full items-start gap-3 rounded-2xl border text-start transition ${
+      className={`wesal-notify-item group relative grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-2xl border text-start transition ${
         feed
           ? "border-[var(--wesal-border)] bg-white px-4 py-3.5 shadow-[0_6px_18px_rgba(90,55,45,0.05)] hover:border-[var(--wesal-maroon)]/30"
-          : "seeker-notify-item border-transparent px-3 py-2.5 hover:bg-[var(--wesal-pink-soft)]"
-      } ${unread ? "wesal-notify-item--unread bg-[var(--wesal-pink-soft)]/70" : ""}`}
+          : "seeker-notify-item border-transparent bg-white px-3 py-2.5 hover:bg-[var(--wesal-pink-soft)]"
+      } ${unread ? "wesal-notify-item--unread bg-[var(--wesal-pink-soft)]" : ""}`}
       data-testid={`platform-notification-${item.id}`}
       data-type={item.type}
       data-read={unread ? "false" : "true"}
@@ -37,7 +37,7 @@ export default function NotificationItem({
     >
       {isMessage ? (
         <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--wesal-maroon)] text-xs font-bold text-white"
+          className="col-start-1 row-span-2 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--wesal-maroon)] text-xs font-bold text-white"
           aria-hidden="true"
         >
           {avatarUrl ? (
@@ -49,44 +49,44 @@ export default function NotificationItem({
         </span>
       ) : (
         <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${toneSurface(item.tone)}`}
+          className={`col-start-1 row-span-2 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${toneSurface(item.tone)}`}
           aria-hidden="true"
         >
           <NotificationTypeIcon type={item.type} tone={item.tone} />
         </span>
       )}
 
-      <span className="min-w-0 flex-1">
-        <span className="flex items-start justify-between gap-2">
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-bold text-[var(--wesal-maroon-dark)]">
-              {isMessage ? senderName : item.title}
-              {isMessage && count > 1 ? ` · ${count}` : ""}
-            </span>
-            <span className="mt-0.5 block text-xs leading-5 text-[var(--wesal-muted)]">
-              {item.body}
-            </span>
-            {item.action_label ? (
-              <span className="wesal-notify-item-action mt-1 inline-block text-[0.7rem] font-bold text-[var(--wesal-maroon)]">
-                {item.action_label}
-              </span>
-            ) : null}
-          </span>
-          <span className="flex shrink-0 flex-col items-end gap-2">
-            <span className="text-[0.65rem] text-[var(--wesal-muted)]">
-              {formatNotificationTime(item.created_at)}
-            </span>
-            {unread ? (
-              <span
-                className="h-2 w-2 rounded-full bg-[#c62828]"
-                aria-hidden="true"
-                data-testid="notification-unread-dot"
-              />
-            ) : feed ? (
-              <ChevronIcon />
-            ) : null}
-          </span>
+      <span className="col-start-2 row-start-1 min-w-0">
+        <span className="block truncate text-sm font-bold leading-5 text-[var(--wesal-maroon-dark)]">
+          {isMessage ? senderName : item.title}
+          {isMessage && count > 1 ? ` · ${count}` : ""}
         </span>
+      </span>
+
+      <span className="col-start-3 row-start-1 flex shrink-0 items-center gap-1.5 self-start pt-0.5">
+        <span className="whitespace-nowrap text-[0.65rem] leading-none text-[var(--wesal-muted)]">
+          {formatNotificationTime(item.created_at)}
+        </span>
+        {unread ? (
+          <span
+            className="h-2 w-2 shrink-0 rounded-full bg-[#c62828]"
+            aria-hidden="true"
+            data-testid="notification-unread-dot"
+          />
+        ) : feed ? (
+          <ChevronIcon />
+        ) : null}
+      </span>
+
+      <span className="col-start-2 col-end-4 row-start-2 min-w-0">
+        <span className="line-clamp-2 block text-xs leading-5 text-[var(--wesal-muted)]">
+          {item.body}
+        </span>
+        {item.action_label ? (
+          <span className="wesal-notify-item-action mt-1 inline-block text-[0.7rem] font-bold text-[var(--wesal-maroon)]">
+            {item.action_label}
+          </span>
+        ) : null}
       </span>
     </button>
   );
