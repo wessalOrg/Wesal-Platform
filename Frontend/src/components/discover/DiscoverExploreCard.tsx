@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/i18n";
 import { isUnauthorizedApiError } from "@/lib/api-error";
 import { discoverItemHref } from "@/lib/discover-filter";
+import {
+  hydrateSavedHallsFromServer,
+  isHallSaved,
+  subscribeSavedHalls,
+  toggleSavedHall,
+} from "@/lib/saved-halls";
 import {
   addPostFavorite,
   removePostFavorite,
@@ -73,14 +79,9 @@ export default function DiscoverExploreCard({
               initialSaved={initialSaved}
               onChanged={onFavoriteChanged}
             />
-          ) : (
-            <span
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-[var(--wesal-maroon)] shadow-sm"
-              aria-hidden="true"
-            >
-              <HeartIcon filled={false} />
-            </span>
-          )}
+          ) : isHall ? (
+            <HallHeartButton hallId={item.id} />
+          ) : null}
         </div>
       </div>
 
@@ -218,6 +219,48 @@ function PostHeartButton({
         void toggle(event);
       }}
       data-testid={`discover-favorite-${postId}`}
+    >
+      <HeartIcon filled={saved} />
+    </button>
+  );
+}
+
+function HallHeartButton({ hallId }: { hallId: string }) {
+  const t = useT();
+  const router = useRouter();
+  const { session } = useAuth();
+  const saved = useSyncExternalStore(
+    subscribeSavedHalls,
+    () => isHallSaved(hallId),
+    () => false,
+  );
+
+  useEffect(() => {
+    void hydrateSavedHallsFromServer();
+  }, []);
+
+  function toggle(event: React.MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!session.isAuthenticated) {
+      router.push(
+        `/login?redirect=${encodeURIComponent(`/halls/${encodeURIComponent(hallId)}`)}`,
+      );
+      return;
+    }
+    toggleSavedHall(hallId);
+  }
+
+  return (
+    <button
+      type="button"
+      className={`inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-sm transition ${
+        saved ? "text-[var(--wesal-maroon)]" : "text-[var(--wesal-muted)]"
+      }`}
+      aria-pressed={saved}
+      aria-label={saved ? t("halls.details.saved") : t("halls.catalog.favorite")}
+      onClick={toggle}
+      data-testid={`discover-hall-favorite-${hallId}`}
     >
       <HeartIcon filled={saved} />
     </button>

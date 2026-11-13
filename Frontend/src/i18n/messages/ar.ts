@@ -46,7 +46,7 @@ const ar: MessageCatalog = {
   "common.hoursAgo": "منذ {count} س",
   "common.daysAgo": "منذ {count} ي",
   "nav.home": "الرئيسية",
-  "nav.discover": "كل ما تبحث عنه",
+  "nav.discover": "فرحتك من هنا",
   "nav.halls": "القاعات",
   "nav.offers": "العروض",
   "nav.about": "من نحن",
@@ -1392,7 +1392,7 @@ const ar: MessageCatalog = {
   "statistics.errors.forbidden":
     "الإحصائيات متاحة فقط لحسابات المنسقين والمصورين المعتمدة.",
 
-  "meta.discoverTitle": "كل ما تبحث عنه | وصال",
+  "meta.discoverTitle": "فرحتك من هنا | وصال",
   "meta.discoverDescription":
     "ابحث واستكشف القاعات والمنسقين والمصورين والعروض على وصال.",
   "meta.adminManagementTitle": "مراجعة القاعات | وصال",
@@ -3361,6 +3361,8 @@ const ar: MessageCatalog = {
   "offers.card.untitled": "عرض خاص",
   "offers.card.noImage": "بدون صورة",
   "offers.card.viewDetails": "عرض التفاصيل",
+  "offers.card.viewHall": "الذهاب إلى القاعة",
+  "offers.card.viewProfile": "عرض الصفحة",
   "offers.card.hallOffer": "عرض قاعة",
   "offers.card.professionalOffer": "عرض مهني",
   "offers.stop.title": "تأكيد إيقاف العرض",

@@ -26,6 +26,9 @@ function mergeAdminAccountRow(
         hallName: "",
         otherParticipantId: existing.otherParticipantId || "admin",
         otherParticipantName: adminRow.otherParticipantName,
+        // §13.1 — admin DTO has no unread; prefer the dedicated unread-count patch.
+        unreadMessageCount: adminRow.unreadMessageCount,
+        isUnread: adminRow.isUnread,
       }
     : adminRow;
   return [merged, ...withoutDup].sort(

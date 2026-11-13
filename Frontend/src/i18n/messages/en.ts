@@ -49,7 +49,7 @@ const en: MessageCatalog = {
   "common.hoursAgo": "{count}h ago",
   "common.daysAgo": "{count}d ago",
   "nav.home": "Home",
-  "nav.discover": "All you're looking for",
+  "nav.discover": "Your joy starts here",
   "nav.halls": "Halls",
   "nav.offers": "Offers",
   "nav.about": "About us",
@@ -1399,7 +1399,7 @@ const en: MessageCatalog = {
   "statistics.errors.loadFailed": "Could not load statistics.",
   "statistics.errors.forbidden":
     "Statistics are available only for approved coordinator and photographer accounts.",
-  "meta.discoverTitle": "All you're looking for | Wesal",
+  "meta.discoverTitle": "Your joy starts here | Wesal",
   "meta.discoverDescription":
     "Search and explore halls, coordinators, photographers, and offers on Wesal.",
   "meta.adminManagementTitle": "Admin hall review | Wesal",
@@ -3420,6 +3420,8 @@ const en: MessageCatalog = {
   "offers.card.untitled": "Special offer",
   "offers.card.noImage": "No image",
   "offers.card.viewDetails": "View details",
+  "offers.card.viewHall": "Go to hall",
+  "offers.card.viewProfile": "View page",
   "offers.card.hallOffer": "Hall offer",
   "offers.card.professionalOffer": "Professional offer",
   "offers.stop.title": "Confirm stopping the offer",

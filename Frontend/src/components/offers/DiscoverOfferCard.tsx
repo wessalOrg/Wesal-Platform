@@ -115,7 +115,11 @@ export default function DiscoverOfferCard({
             onClick={openDetails}
             data-testid={`discover-offer-open-${item.id}`}
           >
-            {t("offers.card.openDetails")}
+            {item.contentType === "HallOffer"
+              ? t("offers.card.viewHall")
+              : item.contentType === "ProfessionalOffer"
+                ? t("offers.card.viewProfile")
+                : t("offers.card.viewDetails")}
           </button>
         </div>
       </div>

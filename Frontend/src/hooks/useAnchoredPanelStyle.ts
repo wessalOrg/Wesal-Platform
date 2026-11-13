@@ -9,6 +9,11 @@ export type AnchoredPanelOptions = {
   estimateHeight?: number;
   /** Prefer opening above the trigger when there is room. */
   preferUp?: boolean;
+  /**
+   * Force vertical placement. `"down"` / `"up"` skip auto-flip;
+   * `"auto"` (default) uses space + preferUp / estimateHeight.
+   */
+  placement?: "auto" | "down" | "up";
   /** Horizontal alignment relative to the trigger. */
   align?: "start" | "end";
 };
@@ -27,6 +32,7 @@ export function useAnchoredPanelStyle(
     width = "anchor",
     estimateHeight = 320,
     preferUp = false,
+    placement = "auto",
     align = "start",
   } = options;
   const [style, setStyle] = useState<CSSProperties>({
@@ -62,9 +68,15 @@ export function useAnchoredPanelStyle(
 
       const spaceBelow = window.innerHeight - rect.bottom - 8;
       const spaceAbove = rect.top - 8;
-      const openUp = preferUp
-        ? spaceAbove >= Math.min(estimateHeight, spaceBelow) || spaceAbove > spaceBelow
-        : spaceBelow < estimateHeight && spaceAbove > spaceBelow;
+      const openUp =
+        placement === "up"
+          ? true
+          : placement === "down"
+            ? false
+            : preferUp
+              ? spaceAbove >= Math.min(estimateHeight, spaceBelow) ||
+                spaceAbove > spaceBelow
+              : spaceBelow < estimateHeight && spaceAbove > spaceBelow;
 
       setStyle({
         position: "fixed",
@@ -90,7 +102,7 @@ export function useAnchoredPanelStyle(
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [open, anchorRef, width, estimateHeight, preferUp, align]);
+  }, [open, anchorRef, width, estimateHeight, preferUp, placement, align]);
 
   return style;
 }

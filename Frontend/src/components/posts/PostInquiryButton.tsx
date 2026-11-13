@@ -23,7 +23,7 @@ export default function PostInquiryButton({
     <div className={className}>
       <button
         type="button"
-        className={`inline-flex min-h-11 w-full items-center justify-center gap-2 px-4 text-sm font-bold sm:w-auto ${
+        className={`inline-flex min-h-11 w-full items-center justify-center gap-2 px-4 text-sm font-bold ${
           variant === "primary" ? "btn-primary" : "btn-outline"
         }`}
         disabled={starting || !contentId}

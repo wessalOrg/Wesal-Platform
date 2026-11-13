@@ -12,6 +12,7 @@ import {
 import { useT } from "@/i18n";
 
 const MAX_LENGTH = 1000;
+const COMPOSER_BASE_HEIGHT_PX = 44; // h-11 — match attach + send
 const COMPOSER_MAX_HEIGHT_PX = 112;
 
 type MessageComposerProps = {
@@ -33,8 +34,9 @@ type MessageComposerProps = {
 
 function resizeField(el: HTMLTextAreaElement | null) {
   if (!el) return;
-  el.style.height = "0px";
-  el.style.height = `${Math.min(el.scrollHeight, COMPOSER_MAX_HEIGHT_PX)}px`;
+  el.style.height = `${COMPOSER_BASE_HEIGHT_PX}px`;
+  const next = Math.max(COMPOSER_BASE_HEIGHT_PX, Math.min(el.scrollHeight, COMPOSER_MAX_HEIGHT_PX));
+  el.style.height = `${next}px`;
 }
 
 export default function MessageComposer({
@@ -154,7 +156,7 @@ export default function MessageComposer({
           </button>
         </div>
       ) : null}
-      <div className="flex items-end gap-2">
+      <div className="flex items-center gap-2">
         {onPickAttachment ? (
           <>
             <input
@@ -194,13 +196,14 @@ export default function MessageComposer({
           disabled={disabled || attachmentBusy}
           maxLength={MAX_LENGTH}
           placeholder={disabled ? t("messages.selectConversation") : t("messages.composerPlaceholder")}
-          className={`max-h-28 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto px-3 py-2.5 text-sm leading-6 outline-none disabled:opacity-70 ${
+          className={`box-border h-11 max-h-28 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto px-3 py-2 text-sm leading-5 outline-none disabled:opacity-70 ${
             owner
               ? "owner-chat-field"
               : variant === "widget"
                 ? "rounded-xl border border-[var(--wesal-maroon)]/20 bg-white focus:border-[var(--wesal-maroon)]"
                 : "rounded-xl border border-[var(--wesal-border)] bg-[#faf7f4] focus:border-[var(--wesal-maroon)]"
           }`}
+          style={{ height: COMPOSER_BASE_HEIGHT_PX }}
           enterKeyHint="send"
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
@@ -210,17 +213,19 @@ export default function MessageComposer({
           className={
             owner
               ? "owner-chat-send"
-              : "btn-primary inline-flex h-11 w-11 shrink-0 items-center justify-center p-0 sm:h-auto sm:w-auto sm:min-w-[5.5rem] sm:px-4"
+              : "btn-primary inline-flex h-11 min-h-11 shrink-0 items-center justify-center gap-1.5 px-4 text-sm sm:min-w-[5.5rem]"
           }
           disabled={!canSend}
           aria-label={t("messages.send")}
         >
-          <span className={owner ? "sr-only" : "hidden sm:inline"}>
+          <span className={owner ? "sr-only" : undefined}>
             {attachmentBusy ? t("messages.attaching") : t("messages.send")}
           </span>
-          <span className={owner ? "" : "sm:hidden"} aria-hidden={owner ? undefined : true}>
-            <SendIcon />
-          </span>
+          {owner ? (
+            <span aria-hidden="true">
+              <SendIcon />
+            </span>
+          ) : null}
         </button>
       </div>
     </form>

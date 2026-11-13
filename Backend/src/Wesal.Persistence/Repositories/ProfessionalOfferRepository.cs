@@ -34,9 +34,10 @@ public sealed class ProfessionalOfferRepository(ApplicationDbContext context) : 
 
     private IQueryable<ProfessionalOffer> AccessibleOffers(string? ownerId, DateTimeOffset now)
     {
-        var own = context.ProfessionalOffers.AsNoTracking().Where(offer => ownerId != null && offer.OwnerUserId == ownerId);
         var visible = context.ProfessionalOffers.AsNoTracking().VisibleAt(context, now);
-        return own.Concat(visible);
+        if (ownerId is null) return visible;
+        var own = context.ProfessionalOffers.AsNoTracking().Where(offer => offer.OwnerUserId == ownerId);
+        return own.Union(visible);
     }
 
     public async Task<IReadOnlyList<ProfessionalOffer>> ListOwnAsync(string ownerId, int skip, int take, CancellationToken cancellationToken = default)

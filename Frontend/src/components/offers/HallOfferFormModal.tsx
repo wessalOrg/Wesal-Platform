@@ -2,7 +2,9 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
+import ConsultDateField from "@/components/home/ConsultDateField";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
 import { useT } from "@/i18n";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 import {
@@ -223,7 +225,7 @@ export default function HallOfferFormModal({
                   type="number"
                   min={0}
                   step="0.01"
-                  className="wesal-input w-full"
+                  className={hallFieldClassName(false)}
                   value={values.oldBookingPrice}
                   disabled={busy}
                   onChange={(event) => patch({ oldBookingPrice: event.target.value })}
@@ -237,7 +239,7 @@ export default function HallOfferFormModal({
                   type="number"
                   min={0}
                   step="0.01"
-                  className="wesal-input w-full text-[var(--wesal-maroon)]"
+                  className={`${hallFieldClassName(false)} text-[var(--wesal-maroon)]`}
                   value={values.offerPrice}
                   disabled={busy}
                   onChange={(event) => patch({ offerPrice: event.target.value })}
@@ -253,24 +255,24 @@ export default function HallOfferFormModal({
                   <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
                     {t("offers.form.startsAt")}
                   </span>
-                  <input
-                    type="date"
-                    className="wesal-input w-full"
+                  <ConsultDateField
                     value={values.startsAt}
                     disabled={busy}
-                    onChange={(event) => patch({ startsAt: event.target.value })}
+                    triggerClassName={hallFieldClassName(false)}
+                    onChange={(next) => patch({ startsAt: next })}
+                    testId="hall-offer-starts-at"
                   />
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
                     {t("offers.form.endsAt")}
                   </span>
-                  <input
-                    type="date"
-                    className="wesal-input w-full"
+                  <ConsultDateField
                     value={values.endsAt}
                     disabled={busy}
-                    onChange={(event) => patch({ endsAt: event.target.value })}
+                    triggerClassName={hallFieldClassName(false)}
+                    onChange={(next) => patch({ endsAt: next })}
+                    testId="hall-offer-ends-at"
                   />
                 </label>
               </div>

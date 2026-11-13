@@ -281,38 +281,39 @@ export default function PostDetailsView({
               </span>
             </div>
 
-            <div className="flex flex-wrap gap-2 border-y border-[var(--wesal-border)] py-3">
-              <PostFavoriteButton
-                postId={post.id}
-                initialSaved={post.isSavedByCurrentUser}
-                saveCount={post.saveCount}
-                onChanged={(saved, nextCount) => {
-                  setPost((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          isSavedByCurrentUser: saved,
-                          saveCount: nextCount,
-                        }
-                      : prev,
-                  );
-                }}
-              />
-              <PostShareButton
-                postId={post.id}
-                onCopied={() => setLinkCopied(true)}
-              />
-              {profileHref ? (
-                <Link
-                  href={profileHref}
-                  className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--wesal-border)] bg-white px-3 py-1.5 text-xs font-bold text-[var(--wesal-maroon)]"
-                >
-                  {t("posts.viewPublisher")}
-                </Link>
-              ) : null}
+            <div className="mx-auto flex w-fit max-w-full flex-col items-stretch gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-2 border-y border-[var(--wesal-border)] py-3">
+                <PostFavoriteButton
+                  postId={post.id}
+                  initialSaved={post.isSavedByCurrentUser}
+                  saveCount={post.saveCount}
+                  onChanged={(saved, nextCount) => {
+                    setPost((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            isSavedByCurrentUser: saved,
+                            saveCount: nextCount,
+                          }
+                        : prev,
+                    );
+                  }}
+                />
+                <PostShareButton
+                  postId={post.id}
+                  onCopied={() => setLinkCopied(true)}
+                />
+                {profileHref ? (
+                  <Link
+                    href={profileHref}
+                    className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--wesal-border)] bg-white px-3 py-1.5 text-xs font-bold text-[var(--wesal-maroon)]"
+                  >
+                    {t("posts.viewPublisher")}
+                  </Link>
+                ) : null}
+              </div>
+              <PostInquiryButton kind="post" contentId={post.id} className="w-full" />
             </div>
-
-            <PostInquiryButton kind="post" contentId={post.id} className="w-full sm:w-auto" />
 
             <PostCommentSection
               postId={post.id}

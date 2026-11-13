@@ -53,7 +53,7 @@ const ROUND_CLASS: Record<NonNullable<MabroukFigureProps["rounded"]>, string> = 
  *
  * Poses map to design scenes:
  * - favoritesEmpty: pointing at empty-favorite heart box
- * - removeConfirm: question-mark pose (pair with trash affordance in host UI)
+ * - removeConfirm: question-mark pose (host UI may overlay a small trash near the mark)
  * - messageEmpty: resting on / beside message card
  * - offline: sad beside broken wifi / cloud
  * - sendFail: exclamation / fail gesture

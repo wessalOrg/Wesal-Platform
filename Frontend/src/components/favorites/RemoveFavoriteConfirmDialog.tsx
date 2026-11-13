@@ -104,17 +104,17 @@ export default function RemoveFavoriteConfirmDialog({
           </button>
 
           <div
-            className="mx-auto mt-1 flex max-w-[18rem] items-end justify-center gap-1 sm:gap-2"
+            className="relative mx-auto mt-1 flex w-full max-w-[14rem] items-center justify-center"
             aria-hidden="true"
           >
             <MabroukFigure
               pose="removeConfirm"
               size="md"
-              rounded="2xl"
-              className="!h-[7.5rem] !w-[7.5rem] shadow-[0_0.5rem_1.25rem_rgba(90,55,45,0.1)]"
+              rounded="none"
+              className="!h-[8.5rem] !w-[8.5rem] bg-transparent"
             />
-            <span className="mb-4 inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,#b42318_12%,white)] text-[#b42318] shadow-[0_0.35rem_0.85rem_rgba(180,35,24,0.12)] ring-1 ring-[#f5c6c2]">
-              <TrashIcon className="h-6 w-6" />
+            <span className="absolute end-[0.35rem] top-[0.15rem] inline-flex h-9 w-9 items-center justify-center rounded-full bg-[color-mix(in_srgb,#b42318_12%,white)] text-[#b42318] ring-1 ring-[#f5c6c2]">
+              <TrashIcon className="h-4 w-4" />
             </span>
           </div>
 
