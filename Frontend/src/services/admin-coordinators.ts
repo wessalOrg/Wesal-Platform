@@ -19,10 +19,71 @@ import type {
 
 const PAGE_SIZE = 10;
 
+/** Local demo-only coordinator request for layout review (stub-admin). */
+export const DEMO_COORDINATOR_REQUEST_ID = "demo-coord-sara";
+
+type DemoApprovalStatus = AdminCoordinatorRequestDetail["approvalStatus"];
+
+let demoCoordinatorStatus: DemoApprovalStatus = "Pending";
+
 function usesDemoAdminStub(): boolean {
   if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return Boolean(token?.startsWith("stub-admin"));
+}
+
+function buildDemoCoordinatorDetail(
+  status: DemoApprovalStatus = demoCoordinatorStatus,
+): AdminCoordinatorRequestDetail {
+  return {
+    userId: DEMO_COORDINATOR_REQUEST_ID,
+    fullName: "سارة خليل",
+    email: "sara@gmail.com",
+    userPhoneNumber: "+972 59 123 4567",
+    approvalStatus: status,
+    isSetupComplete: true,
+    businessType: "Freelance",
+    shopName: null,
+    shopLocation: "غزة - الرمال",
+    onlineStoreName: "تنسيق فعاليات ومؤتمرات",
+    setupPhoneNumber: "+972 59 123 4567",
+    submittedAt: "2025-06-20T10:00:00.000Z",
+    hasIdentityDocument: true,
+    hasShopPhoto: false,
+    hasWorkPhoto1: true,
+    hasWorkPhoto2: true,
+  };
+}
+
+function buildDemoCoordinatorPage(
+  status: AdminCoordinatorRequestFilter,
+  page: number,
+): AdminCoordinatorRequestPage {
+  const detail = buildDemoCoordinatorDetail();
+  const matches =
+    status === "Pending"
+      ? detail.approvalStatus === "Pending" || detail.approvalStatus === "NeedsChanges"
+      : detail.approvalStatus === status;
+  const items = matches
+    ? [
+        {
+          userId: detail.userId,
+          fullName: "سارة أحمد",
+          email: detail.email,
+          approvalStatus: detail.approvalStatus,
+          businessType: detail.businessType,
+          displayName: detail.onlineStoreName || detail.fullName,
+          submittedAt: detail.submittedAt,
+        },
+      ]
+    : [];
+  return {
+    items,
+    page: Math.max(1, page),
+    pageSize: PAGE_SIZE,
+    totalCount: items.length,
+    totalPages: items.length > 0 ? 1 : 0,
+  };
 }
 
 /** GET /api/v1/admin/coordinators?status=&page=&pageSize= */
@@ -31,7 +92,7 @@ export async function fetchAdminCoordinatorRequests(
   page = 1,
 ): Promise<AdminCoordinatorRequestPage> {
   if (usesDemoAdminStub()) {
-    return { items: [], page: 1, pageSize: PAGE_SIZE, totalCount: 0, totalPages: 0 };
+    return buildDemoCoordinatorPage(status, page);
   }
   const { data } = await api.get<unknown>("/admin/coordinators", {
     params: { status, page, pageSize: PAGE_SIZE },
@@ -45,7 +106,10 @@ export async function fetchAdminCoordinatorRequestDetail(
   userId: string,
 ): Promise<AdminCoordinatorRequestDetail> {
   if (usesDemoAdminStub()) {
-    throw new ApiError("admin.coordinators.detail.errors.loadFailed", 0);
+    if (userId !== DEMO_COORDINATOR_REQUEST_ID) {
+      throw new ApiError("admin.coordinators.detail.errors.notFound", 404);
+    }
+    return buildDemoCoordinatorDetail();
   }
   const { data } = await api.get<unknown>(
     `/admin/coordinators/${encodeURIComponent(userId)}`,
@@ -63,6 +127,7 @@ export async function approveAdminCoordinatorRequest(
   userId: string,
 ): Promise<AdminCoordinatorDecisionResult> {
   if (usesDemoAdminStub()) {
+    demoCoordinatorStatus = "Approved";
     return {
       userId,
       status: "Approved",
@@ -92,6 +157,7 @@ export async function rejectAdminCoordinatorRequest(
   reason: string,
 ): Promise<AdminCoordinatorDecisionResult> {
   if (usesDemoAdminStub()) {
+    demoCoordinatorStatus = "Rejected";
     return {
       userId,
       status: "Rejected",

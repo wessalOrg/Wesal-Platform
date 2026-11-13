@@ -20,10 +20,66 @@ import type {
 
 const PAGE_SIZE = 10;
 
+/** Local demo-only photographer request for layout review (stub-admin). */
+export const DEMO_PHOTOGRAPHER_REQUEST_ID = "demo-photo-layla";
+
+type DemoApprovalStatus = AdminPhotographerRequestDetail["approvalStatus"];
+
+let demoPhotographerStatus: DemoApprovalStatus = "Pending";
+
 function usesDemoAdminStub(): boolean {
   if (!isDemoModeEnabled()) return false;
   const token = getAccessToken();
   return Boolean(token?.startsWith("stub-admin"));
+}
+
+function buildDemoPhotographerDetail(
+  status: DemoApprovalStatus = demoPhotographerStatus,
+): AdminPhotographerRequestDetail {
+  return {
+    userId: DEMO_PHOTOGRAPHER_REQUEST_ID,
+    fullName: "ليلى حسن",
+    email: "layla@gmail.com",
+    userPhoneNumber: "+972 59 987 6543",
+    approvalStatus: status,
+    isSetupComplete: true,
+    hasStudio: true,
+    studioName: "استوديو نور",
+    studioLocation: "غزة - الرمال",
+    detailedStudioLocation: "شارع الوحدة — الطابق الثاني",
+    legalFullName: null,
+    setupPhoneNumber: "+972 59 987 6543",
+    submittedAt: "2025-06-20T10:00:00.000Z",
+    hasIdentityDocument: true,
+  };
+}
+
+function buildDemoPhotographerPage(
+  status: AdminPhotographerRequestFilter,
+  page: number,
+): AdminPhotographerRequestPage {
+  const detail = buildDemoPhotographerDetail();
+  const matches = detail.approvalStatus === status;
+  const items = matches
+    ? [
+        {
+          userId: detail.userId,
+          fullName: "ليلى أحمد",
+          email: detail.email,
+          approvalStatus: detail.approvalStatus,
+          hasStudio: detail.hasStudio,
+          displayName: detail.studioName || detail.fullName,
+          submittedAt: detail.submittedAt,
+        },
+      ]
+    : [];
+  return {
+    items,
+    page: Math.max(1, page),
+    pageSize: PAGE_SIZE,
+    totalCount: items.length,
+    totalPages: items.length > 0 ? 1 : 0,
+  };
 }
 
 /** GET /api/v1/admin/photographers?status=&page=&pageSize= */
@@ -32,7 +88,7 @@ export async function fetchAdminPhotographerRequests(
   page = 1,
 ): Promise<AdminPhotographerRequestPage> {
   if (usesDemoAdminStub()) {
-    return { items: [], page: 1, pageSize: PAGE_SIZE, totalCount: 0, totalPages: 0 };
+    return buildDemoPhotographerPage(status, page);
   }
   const { data } = await api.get<unknown>("/admin/photographers", {
     params: { status, page, pageSize: PAGE_SIZE },
@@ -46,7 +102,10 @@ export async function fetchAdminPhotographerRequestDetail(
   userId: string,
 ): Promise<AdminPhotographerRequestDetail> {
   if (usesDemoAdminStub()) {
-    throw new ApiError("admin.photographers.detail.errors.loadFailed", 0);
+    if (userId !== DEMO_PHOTOGRAPHER_REQUEST_ID) {
+      throw new ApiError("admin.photographers.detail.errors.notFound", 404);
+    }
+    return buildDemoPhotographerDetail();
   }
   const { data } = await api.get<unknown>(
     `/admin/photographers/${encodeURIComponent(userId)}`,
@@ -64,6 +123,7 @@ export async function approveAdminPhotographerRequest(
   userId: string,
 ): Promise<AdminPhotographerDecisionResult> {
   if (usesDemoAdminStub()) {
+    demoPhotographerStatus = "Approved";
     return {
       userId,
       status: "Approved",
@@ -93,6 +153,7 @@ export async function rejectAdminPhotographerRequest(
   reason: string,
 ): Promise<AdminPhotographerDecisionResult> {
   if (usesDemoAdminStub()) {
+    demoPhotographerStatus = "Rejected";
     return {
       userId,
       status: "Rejected",
@@ -122,6 +183,7 @@ export async function requestChangesAdminPhotographerRequest(
   notes: string,
 ): Promise<AdminPhotographerDecisionResult> {
   if (usesDemoAdminStub()) {
+    demoPhotographerStatus = "NeedsChanges";
     return {
       userId,
       status: "NeedsChanges",

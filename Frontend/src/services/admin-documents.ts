@@ -9,6 +9,58 @@ function usesMock(): boolean {
   return !token || token.startsWith("stub-");
 }
 
+/** Soft placeholder images for local demo admin review layouts. */
+function createDemoImageDocument(
+  label: string,
+  from: string,
+  to: string,
+): AdminSecureDocument {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720" viewBox="0 0 960 720">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="${from}"/>
+      <stop offset="100%" stop-color="${to}"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="720" fill="url(#g)"/>
+  <rect x="48" y="48" width="864" height="624" rx="28" fill="rgba(255,255,255,0.18)"/>
+  <text x="480" y="370" text-anchor="middle" fill="rgba(255,255,255,0.95)" font-family="Tahoma, Arial, sans-serif" font-size="42" font-weight="700">${label}</text>
+</svg>`;
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  return { url: URL.createObjectURL(blob), mimeType: "image/svg+xml" };
+}
+
+const DEMO_WORK_PALETTE: Array<{ label: string; from: string; to: string }> = [
+  { label: "قاعة أفراح", from: "#c48b8b", to: "#8f5a5a" },
+  { label: "تزيين طاولة", from: "#d4a5a5", to: "#a56b6b" },
+  { label: "ورود", from: "#b97878", to: "#7d4a4a" },
+  { label: "تفاصيل", from: "#cfa0a0", to: "#946060" },
+  { label: "جلسة تصوير", from: "#c99595", to: "#855555" },
+];
+
+function demoCoordinatorWorkPhoto(index: number): AdminSecureDocument {
+  const tone = DEMO_WORK_PALETTE[(index - 1) % DEMO_WORK_PALETTE.length]!;
+  return createDemoImageDocument(tone.label, tone.from, tone.to);
+}
+
+function demoCoordinatorIdentity(): AdminSecureDocument {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
+  <rect width="900" height="560" rx="24" fill="#f4ece8"/>
+  <rect x="36" y="36" width="828" height="488" rx="18" fill="#fff" stroke="#e2d6d1" stroke-width="3"/>
+  <rect x="70" y="90" width="210" height="260" rx="14" fill="#e8ddd8"/>
+  <circle cx="175" cy="175" r="48" fill="#d2c0b8"/>
+  <rect x="120" y="250" width="110" height="14" rx="7" fill="#d2c0b8"/>
+  <rect x="330" y="120" width="480" height="22" rx="11" fill="#dccfc9"/>
+  <rect x="330" y="170" width="360" height="18" rx="9" fill="#e7dbd5"/>
+  <rect x="330" y="220" width="400" height="18" rx="9" fill="#e7dbd5"/>
+  <rect x="330" y="270" width="300" height="18" rx="9" fill="#e7dbd5"/>
+  <rect x="330" y="340" width="220" height="70" rx="12" fill="#f0e4df"/>
+  <text x="450" y="480" text-anchor="middle" fill="#9a7b72" font-family="Tahoma, Arial, sans-serif" font-size="28" font-weight="700">هوية تجريبية</text>
+</svg>`;
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  return { url: URL.createObjectURL(blob), mimeType: "image/svg+xml" };
+}
+
 export const ADMIN_OWNER_IDENTITY_PATH = (ownerId: string) =>
   `/admin/halls/owners/${encodeURIComponent(ownerId)}/identity-document`;
 
@@ -151,6 +203,10 @@ const ADMIN_COORDINATOR_WORK_PHOTO_PATH = (userId: string, index: 1 | 2) =>
 export async function fetchAdminCoordinatorIdentityUrl(
   userId: string,
 ): Promise<AdminSecureDocument | null> {
+  if (usesMock()) {
+    void userId;
+    return demoCoordinatorIdentity();
+  }
   return fetchAdminDocument(
     ADMIN_COORDINATOR_IDENTITY_PATH(userId),
     "admin.coordinators.detail.docs.errors.loadFailed",
@@ -161,6 +217,10 @@ export async function fetchAdminCoordinatorIdentityUrl(
 export async function fetchAdminCoordinatorShopPhotoUrl(
   userId: string,
 ): Promise<AdminSecureDocument | null> {
+  if (usesMock()) {
+    void userId;
+    return createDemoImageDocument("صورة المحل", "#c48b8b", "#8f5a5a");
+  }
   return fetchAdminDocument(
     ADMIN_COORDINATOR_SHOP_PHOTO_PATH(userId),
     "admin.coordinators.detail.docs.errors.loadFailed",
@@ -172,10 +232,22 @@ export async function fetchAdminCoordinatorWorkPhotoUrl(
   userId: string,
   index: 1 | 2,
 ): Promise<AdminSecureDocument | null> {
+  if (usesMock()) {
+    void userId;
+    return demoCoordinatorWorkPhoto(index);
+  }
   return fetchAdminDocument(
     ADMIN_COORDINATOR_WORK_PHOTO_PATH(userId, index),
     "admin.coordinators.detail.docs.errors.loadFailed",
   );
+}
+
+/** Extra demo gallery frames so the mosaic matches the review mockup locally. */
+export async function fetchDemoCoordinatorGalleryFrame(
+  index: number,
+): Promise<AdminSecureDocument | null> {
+  if (!usesMock()) return null;
+  return demoCoordinatorWorkPhoto(index);
 }
 
 const ADMIN_PHOTOGRAPHER_IDENTITY_PATH = (userId: string) =>
@@ -185,6 +257,10 @@ const ADMIN_PHOTOGRAPHER_IDENTITY_PATH = (userId: string) =>
 export async function fetchAdminPhotographerIdentityUrl(
   userId: string,
 ): Promise<AdminSecureDocument | null> {
+  if (usesMock()) {
+    void userId;
+    return demoCoordinatorIdentity();
+  }
   return fetchAdminDocument(
     ADMIN_PHOTOGRAPHER_IDENTITY_PATH(userId),
     "admin.photographers.detail.docs.errors.loadFailed",

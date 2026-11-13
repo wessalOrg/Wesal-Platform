@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import AdminRequestQueueMobileCard from "@/components/admin/AdminRequestQueueMobileCard";
 import { useAdminPhotographerRequests } from "@/hooks/useAdminPhotographerRequests";
 import { adminPhotographerRequestPath } from "@/lib/account-profile-path";
 import { isAdminPhotographerFilter } from "@/lib/admin-photographers-mapper";
@@ -259,39 +260,17 @@ export default function AdminPhotographerRequestsView() {
               data-testid="admin-photographer-requests-cards"
             >
               {visibleItems.map((row) => (
-                <li key={row.userId} className="admin-coord-mobile-card">
-                  <div className="admin-coord-person">
-                    <span className="admin-coord-avatar" aria-hidden="true">
-                      {initialLetter(row)}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-start justify-between gap-1.5">
-                        <p className="admin-coord-person-name !whitespace-normal">
-                          {row.fullName || row.displayName || "—"}
-                        </p>
-                        <span className={statusBadgeClass(row.approvalStatus)}>
-                          {t(statusBadgeKey(row.approvalStatus))}
-                        </span>
-                      </div>
-                      <p className="admin-coord-person-meta" dir="ltr">
-                        {row.email || "—"}
-                      </p>
-                      <p className="admin-coord-person-meta">
-                        {t(photographerTypeKey(row.hasStudio))}
-                        {" · "}
-                        {formatSubmittedAt(row.submittedAt, locale)}
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href={adminPhotographerRequestPath(row.userId)}
-                    className="admin-coord-details-btn admin-coord-details-btn--block"
-                    prefetch
-                  >
-                    <EyeIcon />
-                    {t("admin.photographers.queue.open")}
-                  </Link>
-                </li>
+                <AdminRequestQueueMobileCard
+                  key={row.userId}
+                  href={adminPhotographerRequestPath(row.userId)}
+                  name={row.fullName || row.displayName || "—"}
+                  email={row.email || "—"}
+                  meta={`${t(photographerTypeKey(row.hasStudio))} · ${formatSubmittedAt(row.submittedAt, locale)}`}
+                  statusClassName={statusBadgeClass(row.approvalStatus)}
+                  statusLabel={t(statusBadgeKey(row.approvalStatus))}
+                  openLabel={t("admin.photographers.queue.open")}
+                  initial={initialLetter(row)}
+                />
               ))}
             </ul>
 
@@ -328,7 +307,11 @@ export default function AdminPhotographerRequestsView() {
                           </div>
                         </div>
                       </td>
-                      <td dir="ltr">{row.email || "—"}</td>
+                      <td>
+                        <span dir="ltr" className="admin-coord-email">
+                          {row.email || "—"}
+                        </span>
+                      </td>
                       <td>{t(photographerTypeKey(row.hasStudio))}</td>
                       <td>{formatSubmittedAt(row.submittedAt, locale)}</td>
                       <td>
