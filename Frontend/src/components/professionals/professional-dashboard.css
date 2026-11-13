@@ -142,10 +142,12 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
   gap: 1.15rem;
+  width: 100%;
 }
 
-/* Visual left for the avatar in LTR; RTL already places the second item on the left. */
+/* Keep the avatar at the visual far left in LTR as well. */
 html:not([dir="rtl"]) .pro-dash-banner-main--greeting {
   flex-direction: row-reverse;
 }
@@ -158,6 +160,8 @@ html:not([dir="rtl"]) .pro-dash-banner-main--greeting {
 .pro-dash-banner--greeting .pro-dash-banner-avatar {
   width: 4.4rem;
   height: 4.4rem;
+  flex-shrink: 0;
+  margin-inline-start: auto;
 }
 
 .pro-dash-banner--greeting .pro-dash-banner-avatar-placeholder {
