@@ -3,7 +3,9 @@
 import { useMemo, useState, type FormEvent } from "react";
 import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
 import OfferStatusBadge from "@/components/offers/OfferStatusBadge";
+import ConsultDateField from "@/components/home/ConsultDateField";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
 import { useT } from "@/i18n";
 import {
   formatOfferDateRange,
@@ -290,7 +292,7 @@ export default function ProfessionalOfferForm({
           </span>
           <input
             type="text"
-            className="wesal-input w-full"
+            className={hallFieldClassName(false)}
             maxLength={TITLE_MAX}
             value={values.content}
             disabled={busy}
@@ -308,7 +310,7 @@ export default function ProfessionalOfferForm({
               type="number"
               min={0}
               step="0.01"
-              className="wesal-input w-full"
+              className={hallFieldClassName(false)}
               value={values.oldPrice}
               disabled={busy}
               onChange={(event) => patch({ oldPrice: event.target.value })}
@@ -322,7 +324,7 @@ export default function ProfessionalOfferForm({
               type="number"
               min={0}
               step="0.01"
-              className="wesal-input w-full text-[var(--wesal-maroon)]"
+              className={`${hallFieldClassName(false)} text-[var(--wesal-maroon)]`}
               value={values.offerPrice}
               disabled={busy}
               onChange={(event) => patch({ offerPrice: event.target.value })}
@@ -359,7 +361,7 @@ export default function ProfessionalOfferForm({
               type="number"
               min={0}
               step="0.01"
-              className="wesal-input w-full"
+              className={hallFieldClassName(false)}
               value={values.priceBox}
               disabled={busy}
               placeholder={t("offers.form.priceBoxPlaceholder")}
@@ -383,24 +385,24 @@ export default function ProfessionalOfferForm({
             <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
               {t("offers.form.startsAt")}
             </span>
-            <input
-              type="date"
-              className="wesal-input w-full"
+            <ConsultDateField
               value={values.startsAt}
               disabled={busy}
-              onChange={(event) => patch({ startsAt: event.target.value })}
+              triggerClassName={hallFieldClassName(false)}
+              onChange={(next) => patch({ startsAt: next })}
+              testId="pro-offer-starts-at"
             />
           </label>
           <label className="block">
             <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
               {t("offers.form.endsAt")}
             </span>
-            <input
-              type="date"
-              className="wesal-input w-full"
+            <ConsultDateField
               value={values.endsAt}
               disabled={busy}
-              onChange={(event) => patch({ endsAt: event.target.value })}
+              triggerClassName={hallFieldClassName(false)}
+              onChange={(next) => patch({ endsAt: next })}
+              testId="pro-offer-ends-at"
             />
           </label>
         </div>

@@ -118,7 +118,7 @@ export default function WesalSelect({
         open={open && !disabled}
         anchorRef={triggerRef}
         panelRef={panelRef}
-        options={{ width: "anchor", estimateHeight: 280 }}
+        options={{ width: "anchor", estimateHeight: 280, placement: "down" }}
         id={listId}
         role="listbox"
         aria-labelledby={label ? `${fieldId}-label` : undefined}

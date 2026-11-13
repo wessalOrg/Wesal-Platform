@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/i18n";
+import { buildHallDetailsPath } from "@/lib/booking-intent";
 import {
   hydrateSavedHallsFromServer,
   isHallSaved,
@@ -27,6 +30,8 @@ export default function HallDetailsHeader({
   part = "all",
 }: HallDetailsHeaderProps) {
   const t = useT();
+  const router = useRouter();
+  const { session } = useAuth();
   const saved = useSyncExternalStore(
     subscribeSavedHalls,
     () => isHallSaved(hall.id),
@@ -83,6 +88,12 @@ export default function HallDetailsHeader({
   };
 
   const toggleSaved = () => {
+    if (!session.isAuthenticated) {
+      router.push(
+        `/login?redirect=${encodeURIComponent(buildHallDetailsPath(hall.id))}`,
+      );
+      return;
+    }
     toggleSavedHall(hall.id);
   };
 

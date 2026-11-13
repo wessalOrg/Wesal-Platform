@@ -224,9 +224,12 @@ export async function fetchMyAdminAccountConversation(): Promise<ConversationSum
     };
   }
   try {
-    const { data } = await api.get<ConversationResponse>("/conversations/admin-account", {
-      timeout: 8000,
-    });
+    const [{ data }, unread] = await Promise.all([
+      api.get<ConversationResponse>("/conversations/admin-account", {
+        timeout: 8000,
+      }),
+      fetchAdminAccountUnreadCount().catch(() => 0),
+    ]);
     const thread = mapResponse(data, "");
     if (!thread.conversationId) return null;
     return {
@@ -239,9 +242,9 @@ export async function fetchMyAdminAccountConversation(): Promise<ConversationSum
       lastMessagePreview: "",
       lastMessageAt: null,
       messageCount: 0,
-      unreadMessageCount: 0,
+      unreadMessageCount: unread,
       createdAt: thread.createdAt,
-      isUnread: false,
+      isUnread: unread > 0,
     };
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
@@ -309,10 +312,18 @@ export async function fetchProfessionalConversations(): Promise<ConversationSumm
 export async function fetchAdminAccountConversation(): Promise<ConversationSummary | null> {
   if (conversationsUseMock()) return null;
   try {
-    const { data } = await api.get<unknown>("/conversations/admin-account", { timeout: 8000 });
+    const [{ data }, unread] = await Promise.all([
+      api.get<unknown>("/conversations/admin-account", { timeout: 8000 }),
+      fetchAdminAccountUnreadCount().catch(() => 0),
+    ]);
     const mapped = mapInboxItem(data);
     if (!mapped) return null;
-    return { ...mapped, kind: mapped.kind ?? "AdminAccount" };
+    return {
+      ...mapped,
+      kind: mapped.kind ?? "AdminAccount",
+      unreadMessageCount: unread,
+      isUnread: unread > 0,
+    };
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null;
     throw err;
@@ -495,6 +506,10 @@ export function conversationErrorMessage(
     }
     if (scope === "send") {
       return err.message || t("errors.send.failed");
+    }
+    // Prefer localized fallback over raw ASP.NET titles like "An unexpected error occurred".
+    if (err.status != null && err.status >= 500) {
+      return fallback;
     }
     return err.message || fallback;
   }

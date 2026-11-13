@@ -61,7 +61,7 @@ export function hallFieldClassName(hasError: boolean): string {
   return [
     "box-border min-h-12 w-full min-w-0 max-w-full rounded-xl border bg-white",
     "px-3.5 py-2.5 text-base outline-none transition sm:text-sm",
-    "placeholder:text-[var(--wesal-muted)]",
+    "placeholder:text-[var(--wesal-muted)] placeholder:opacity-85",
     "focus-visible:border-[var(--wesal-maroon)] focus-visible:ring-2 focus-visible:ring-[var(--wesal-maroon)]/20",
     "disabled:cursor-not-allowed disabled:opacity-70",
     hasError

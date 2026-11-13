@@ -211,13 +211,13 @@ export default function PostCommentSection({
             </button>
           </div>
         ) : null}
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2">
           <textarea
-            className="wesal-input min-h-[2.75rem] flex-1 resize-none !rounded-xl !bg-white py-2.5"
+            className="wesal-input !min-h-11 h-11 flex-1 resize-none !rounded-xl !bg-white !py-2.5 leading-normal hover:border-[var(--wesal-maroon-soft)] focus:border-[var(--wesal-maroon)] focus-visible:border-[var(--wesal-maroon)]"
             maxLength={POST_COMMENT_MAX_LENGTH}
             value={draft}
             disabled={busy}
-            rows={2}
+            rows={1}
             placeholder={t("posts.comments.placeholder")}
             onChange={(event) => setDraft(event.target.value)}
           />

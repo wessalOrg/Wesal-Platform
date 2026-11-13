@@ -230,7 +230,7 @@ export default function RestrictionModal({
                 max={720}
                 value={customHours}
                 disabled={busy}
-                className="mt-1 min-h-11 w-full rounded-xl border border-[var(--wesal-border)] px-3 py-2 text-sm outline-none focus:border-[var(--wesal-maroon)]"
+                className="mt-1 min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--wesal-text)] outline-none focus:border-[var(--wesal-maroon)]"
                 onChange={(event) => setCustomHours(event.target.value)}
                 data-testid="restriction-custom-hours"
               />

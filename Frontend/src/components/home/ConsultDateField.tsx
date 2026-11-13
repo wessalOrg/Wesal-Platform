@@ -8,6 +8,10 @@ import { useT } from "@/i18n";
 type ConsultDateFieldProps = {
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
+  /** Overrides default consult trigger chrome (e.g. hallFieldClassName). */
+  triggerClassName?: string;
+  testId?: string;
 };
 
 function parseIso(value: string) {
@@ -30,7 +34,13 @@ function sameDay(a: Date, b: Date) {
   );
 }
 
-export default function ConsultDateField({ value, onChange }: ConsultDateFieldProps) {
+export default function ConsultDateField({
+  value,
+  onChange,
+  disabled = false,
+  triggerClassName,
+  testId,
+}: ConsultDateFieldProps) {
   const t = useT();
   const lang = useUiLang();
   const panelId = useId();
@@ -92,10 +102,17 @@ export default function ConsultDateField({ value, onChange }: ConsultDateFieldPr
       <button
         ref={triggerRef}
         type="button"
-        className="consult-input consult-date-trigger"
+        className={
+          triggerClassName
+            ? `${triggerClassName} consult-date-trigger`
+            : "consult-input consult-date-trigger"
+        }
         aria-expanded={open}
         aria-controls={panelId}
+        disabled={disabled}
+        data-testid={testId}
         onClick={() => {
+          if (disabled) return;
           setCursor(selected ?? new Date());
           setOpen((current) => !current);
         }}
@@ -105,10 +122,10 @@ export default function ConsultDateField({ value, onChange }: ConsultDateFieldPr
         </span>
       </button>
       <AnchoredPanel
-        open={open}
+        open={open && !disabled}
         anchorRef={triggerRef}
         panelRef={panelRef}
-        options={{ width: "anchor", estimateHeight: 340 }}
+        options={{ width: "anchor", estimateHeight: 340, placement: "down" }}
         id={panelId}
         className="consult-date-panel"
         dir="ltr"

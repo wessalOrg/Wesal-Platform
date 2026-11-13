@@ -492,6 +492,7 @@ public sealed class PublishingServiceShould : IDisposable
         public Task AddAsync(HallOffer offer, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task LockHallForOfferAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<HallOffer?> GetForUpdateAsync(Guid hallId, Guid offerId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<HallOffer?> GetActiveByIdAsync(Guid offerId, DateTimeOffset now, CancellationToken cancellationToken = default) => Task.FromResult<HallOffer?>(null);
         public Task<IReadOnlyList<HallOffer>> ListOwnAsync(Guid hallId, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<HallOffer>>([]);
         public Task<int> CountOwnAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task<HallOffer?> GetActiveForHallAsync(Guid hallId, DateTimeOffset now, CancellationToken cancellationToken = default) => Task.FromResult<HallOffer?>(null);
@@ -509,6 +510,8 @@ public sealed class PublishingServiceShould : IDisposable
         public Task LockHallForOfferAsync(Guid hallId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<HallOffer?> GetForUpdateAsync(Guid hallId, Guid offerId, CancellationToken cancellationToken = default)
             => Task.FromResult(_rows.FirstOrDefault(offer => offer.HallId == hallId && offer.Id == offerId));
+        public Task<HallOffer?> GetActiveByIdAsync(Guid offerId, DateTimeOffset now, CancellationToken cancellationToken = default)
+            => Task.FromResult(_rows.FirstOrDefault(offer => offer.Id == offerId && offer.StoppedAt is null && offer.StartsAt <= now && now < offer.EndsAt));
         public Task<IReadOnlyList<HallOffer>> ListOwnAsync(Guid hallId, int skip, int take, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<HallOffer>>(_rows.Where(offer => offer.HallId == hallId).OrderByDescending(offer => offer.CreatedAt).Skip(skip).Take(take).ToArray());
         public Task<int> CountOwnAsync(Guid hallId, CancellationToken cancellationToken = default)

@@ -55,7 +55,10 @@ export default function IncomingMessageAlert() {
     onMessagesPage: onMessagesSurface(pathname),
   };
 
-  const { canUseMessaging, currentUserId, openInbox, selectConversation } = inbox;
+  const { canUseMessaging, currentUserId, openInbox, selectConversation, conversations } =
+    inbox;
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
 
   useEffect(() => {
     if (!canUseMessaging) return;
@@ -79,6 +82,11 @@ export default function IncomingMessageAlert() {
         message.content,
         Boolean(message.hasAttachment),
       );
+      // §13.6 — MessageSentEvent has no avatar; reuse inbox peer avatar when known.
+      const peerAvatar =
+        conversationsRef.current
+          .find((item) => item.conversationId === conversationId)
+          ?.otherParticipantAvatarUrl?.trim() || null;
       const now = Date.now();
       const grouping =
         groupRef.current?.conversationId === conversationId &&
@@ -92,12 +100,13 @@ export default function IncomingMessageAlert() {
             sentAt: message.sentAt,
             messageCount: previous.messageCount + 1,
             senderName: message.senderName || previous.senderName,
+            senderAvatarUrl: peerAvatar || previous.senderAvatarUrl,
           };
         }
         return {
           conversationId,
           senderName: message.senderName,
-          senderAvatarUrl: null,
+          senderAvatarUrl: peerAvatar,
           preview,
           sentAt: message.sentAt,
           messageCount: 1,

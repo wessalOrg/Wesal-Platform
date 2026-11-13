@@ -8,6 +8,7 @@ import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
 import OfferStatusBadge from "@/components/offers/OfferStatusBadge";
 import StopOfferConfirmDialog from "@/components/offers/StopOfferConfirmDialog";
 import { useUiLang } from "@/components/layout/LanguageProvider";
+import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
 import WesalSelect from "@/components/ui/WesalSelect";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useT } from "@/i18n";
@@ -215,8 +216,8 @@ export default function HallOwnerOffersPage() {
         <StatCard label={t("offers.owner.stats.expired")} value={counts.expired} />
       </section>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-[12rem] sm:min-w-[16rem]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-start">
+        <div className="w-full min-w-0 sm:w-[16rem] sm:shrink-0">
           <WesalSelect
             label={t("offers.owner.hallSelect")}
             value={selectedHallId}
@@ -232,10 +233,12 @@ export default function HallOwnerOffersPage() {
         </div>
         <input
           type="search"
-          className="wesal-input w-full sm:max-w-xs"
+          className={`${hallFieldClassName(false)} w-full border-[var(--wesal-border)] text-[var(--wesal-text)] placeholder:text-[var(--wesal-muted)] placeholder:opacity-85 sm:w-[22rem] md:w-[26rem]`}
           placeholder={t("offers.owner.search")}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          data-testid="owner-offers-search"
+          aria-label={t("offers.owner.search")}
         />
       </div>
 

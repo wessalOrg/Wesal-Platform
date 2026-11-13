@@ -26,6 +26,9 @@ public sealed class HallOfferRepository(ApplicationDbContext context) : IHallOff
     public Task<int> CountOwnAsync(Guid hallId, CancellationToken cancellationToken = default)
         => context.HallOffers.CountAsync(offer => offer.HallId == hallId, cancellationToken);
 
+    public Task<HallOffer?> GetActiveByIdAsync(Guid offerId, DateTimeOffset now, CancellationToken cancellationToken = default)
+        => Active(now).Where(offer => offer.Id == offerId).Include(offer => offer.Hall).FirstOrDefaultAsync(cancellationToken);
+
     public Task<HallOffer?> GetActiveForHallAsync(Guid hallId, DateTimeOffset now, CancellationToken cancellationToken = default)
         => Active(now).Where(offer => offer.HallId == hallId).Include(offer => offer.Hall).FirstOrDefaultAsync(cancellationToken);
 

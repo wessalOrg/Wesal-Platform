@@ -469,11 +469,11 @@ function HallInquiryActions({
       <p className="mt-1.5 overflow-x-auto whitespace-nowrap text-xs leading-5 text-[var(--wesal-muted)] [scrollbar-width:none] sm:leading-6 [&::-webkit-scrollbar]:hidden">
         {t("halls.details.inquiryHint")}
       </p>
-      <div className="mt-3 flex w-full flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="mt-3 flex w-full flex-col items-stretch gap-2 lg:flex-row lg:flex-wrap lg:items-center">
         {phone ? (
           <span
             dir="ltr"
-            className="wesal-text-bold inline-flex h-9 w-full items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-border)_55%,transparent)] bg-[#f7f4f2] text-xs text-[var(--wesal-text)] transition hover:border-[var(--wesal-maroon)] hover:shadow-sm sm:w-auto"
+            className="wesal-text-bold inline-flex h-9 w-full items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wesal-border)_55%,transparent)] bg-[#f7f4f2] text-xs text-[var(--wesal-text)] transition hover:border-[var(--wesal-maroon)] hover:shadow-sm lg:w-auto"
           >
             <a
               href={`tel:${phone.replace(/[^\d+]/g, "")}`}
@@ -500,7 +500,7 @@ function HallInquiryActions({
             target="_blank"
             rel="noopener noreferrer"
             aria-label={t("halls.details.inquiryWhatsAppAria")}
-            className="wesal-text-bold inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-xs text-white shadow-sm transition hover:bg-[#1ebe5d] sm:w-auto"
+            className="wesal-text-bold inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-center text-xs text-white shadow-sm transition hover:bg-[#1ebe5d] lg:w-auto"
           >
             <WhatsAppIcon />
             {t("halls.details.inquiryWhatsApp")}
@@ -512,7 +512,7 @@ function HallInquiryActions({
           isAvailable={isAvailable}
           variant="compact"
           label={t("halls.details.inquiryMessages")}
-          className="w-full sm:w-auto"
+          className="w-full lg:w-auto"
         />
       </div>
     </section>

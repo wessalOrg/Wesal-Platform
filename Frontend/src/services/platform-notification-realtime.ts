@@ -63,6 +63,8 @@ export function applyServerNotification(raw: unknown): void {
     action_url: mapped.action_url,
     metadata: mapped.metadata,
     tone: mapped.tone,
+    // §13.5 — live MessageNotificationBanner owns the popup for new messages.
+    toast: mapped.type === "new_message" ? false : undefined,
   });
 }
 

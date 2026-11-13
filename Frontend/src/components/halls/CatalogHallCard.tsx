@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { GoldStar } from "@/components/ui/GoldStar";
 import HallLockedBadge from "@/components/halls/HallLockedBadge";
 import HallMedia from "@/components/halls/HallMedia";
@@ -17,6 +19,12 @@ import {
   localizePriceLabel,
   localizeTag,
 } from "@/lib/localize-hall-display";
+import {
+  hydrateSavedHallsFromServer,
+  isHallSaved,
+  subscribeSavedHalls,
+  toggleSavedHall,
+} from "@/lib/saved-halls";
 import type { FeaturedHall } from "@/types/hall";
 
 type CatalogHallCardProps = {
@@ -38,13 +46,36 @@ export default function CatalogHallCard({
   const t = useT();
   const lang = useUiLang();
   const router = useRouter();
+  const { session } = useAuth();
   const permissions = useHallPermissions();
+  const saved = useSyncExternalStore(
+    subscribeSavedHalls,
+    () => isHallSaved(hall.id),
+    () => false,
+  );
+
+  useEffect(() => {
+    void hydrateSavedHallsFromServer();
+  }, []);
+
   const openPopupOrDetails = () => {
     if (onOpen) {
       onOpen();
       return;
     }
     router.push(buildHallDetailsPath(hall.id));
+  };
+
+  const toggleFavorite = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!session.isAuthenticated) {
+      router.push(
+        `/login?redirect=${encodeURIComponent(buildHallDetailsPath(hall.id))}`,
+      );
+      return;
+    }
+    toggleSavedHall(hall.id);
   };
   const bookHref = catalogBookHref(hall.id, permissions);
   const hallUnavailable = hall.isAvailable === false;
@@ -107,6 +138,18 @@ export default function CatalogHallCard({
             className={`absolute z-10 ${compact ? "start-2.5 top-2.5" : "start-3 top-3"}`}
           />
         ) : null}
+        <button
+          type="button"
+          className={`absolute z-20 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-sm transition ${
+            compact ? "end-2 top-2" : "end-3 top-3"
+          } ${saved ? "text-[var(--wesal-maroon)]" : "text-[var(--wesal-muted)]"}`}
+          aria-pressed={saved}
+          aria-label={saved ? t("halls.details.saved") : t("halls.catalog.favorite")}
+          data-testid={`hall-card-favorite-${hall.id}`}
+          onClick={toggleFavorite}
+        >
+          <HeartIcon filled={saved} />
+        </button>
         {priceLabel ? (
           <span
             className={`hall-price-badge absolute z-10 ${
@@ -315,6 +358,24 @@ function GuestsIcon() {
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function HeartIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill={filled ? "currentColor" : "none"}
+      aria-hidden="true"
+    >
+      <path
+        d="M12 19.2 5.4 12.8a3.8 3.8 0 0 1 5.4-5.4L12 8.6l1.2-1.2a3.8 3.8 0 0 1 5.4 5.4L12 19.2Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
       />
     </svg>
   );

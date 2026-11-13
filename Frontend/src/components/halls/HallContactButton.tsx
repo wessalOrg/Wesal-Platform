@@ -15,7 +15,7 @@ const CONTACT_PAGE_CLASS =
   "btn-primary min-h-11 h-full w-full gap-2 whitespace-nowrap";
 
 const CONTACT_COMPACT_CLASS =
-  "wesal-text-bold inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_22%,white)] bg-[color-mix(in_srgb,var(--wesal-pink)_72%,white)] px-3.5 text-xs text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink)]";
+  "wesal-text-bold inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--wesal-maroon)_22%,white)] bg-[color-mix(in_srgb,var(--wesal-pink)_72%,white)] px-3.5 text-center text-xs text-[var(--wesal-maroon)] transition hover:bg-[var(--wesal-pink)]";
 
 type HallContactButtonProps = {
   hallId: string;
@@ -47,7 +47,7 @@ export default function HallContactButton({
   const faceClass = compact ? CONTACT_COMPACT_CLASS : CONTACT_BAR_CLASS;
   const wrapClass = `${
     compact
-      ? "inline-flex max-w-full"
+      ? "flex max-w-full"
       : bubble
         ? "relative min-w-0 h-full w-full"
         : "min-w-0 flex-1"

@@ -24,6 +24,7 @@ public sealed class ConversationService : IConversationService
     private readonly IMessageAttachmentStore _messageAttachmentStore;
     private readonly IPostRepository? _postRepository;
     private readonly IProfessionalOfferRepository? _offerRepository;
+    private readonly IHallOfferRepository? _hallOfferRepository;
     private readonly IUserNotificationWriter? _notificationWriter;
     private readonly INotificationService? _notificationService;
     private readonly INotificationDispatcher? _notificationDispatcher;
@@ -42,6 +43,7 @@ public sealed class ConversationService : IConversationService
         IMessageAttachmentStore? messageAttachmentStore = null,
         IPostRepository? postRepository = null,
         IProfessionalOfferRepository? offerRepository = null,
+        IHallOfferRepository? hallOfferRepository = null,
         IUserNotificationWriter? notificationWriter = null,
         INotificationService? notificationService = null,
         INotificationDispatcher? notificationDispatcher = null,
@@ -61,6 +63,7 @@ public sealed class ConversationService : IConversationService
         _messageAttachmentStore = messageAttachmentStore ?? Documents.LocalMessageAttachmentStore.Instance;
         _postRepository = postRepository;
         _offerRepository = offerRepository;
+        _hallOfferRepository = hallOfferRepository;
         _notificationWriter = notificationWriter;
         _notificationService = notificationService;
         _notificationDispatcher = notificationDispatcher;
@@ -82,11 +85,25 @@ public sealed class ConversationService : IConversationService
 
     public async Task<ConversationResponse> StartFromOfferAsync(Guid offerId, CancellationToken cancellationToken = default)
     {
-        var offer = _offerRepository is null ? null : await _offerRepository.GetAccessibleAsync(offerId, null, DateTimeOffset.UtcNow, cancellationToken);
-        if (offer is null) throw new NotFoundException("Professional offer", offerId);
-        var response = await GetOrCreateProviderConversationAsync(offer.OwnerUserId, cancellationToken);
-        await _conversationRepository.SetPendingContextAsync(response.ConversationId, null, offerId, cancellationToken);
-        return WithContext(response, null, offerId);
+        var now = DateTimeOffset.UtcNow;
+        var professional = _offerRepository is null
+            ? null
+            : await _offerRepository.GetAccessibleAsync(offerId, null, now, cancellationToken);
+        if (professional is not null)
+        {
+            var providerThread = await GetOrCreateProviderConversationAsync(professional.OwnerUserId, cancellationToken);
+            await _conversationRepository.SetPendingContextAsync(providerThread.ConversationId, null, offerId, cancellationToken);
+            return WithContext(providerThread, null, offerId);
+        }
+
+        var hallOffer = _hallOfferRepository is null
+            ? null
+            : await _hallOfferRepository.GetActiveByIdAsync(offerId, now, cancellationToken);
+        if (hallOffer is null) throw new NotFoundException("Offer", offerId);
+
+        var hallThread = await CreateConversationAsync(hallOffer.HallId, cancellationToken);
+        await _conversationRepository.SetPendingContextAsync(hallThread.ConversationId, null, offerId, cancellationToken);
+        return WithContext(hallThread, null, offerId);
     }
 
     private static ConversationResponse WithContext(ConversationResponse response, Guid? postId, Guid? offerId)
@@ -545,9 +562,28 @@ public sealed class ConversationService : IConversationService
             }
             else if (contextualMessage.ContextOfferId is Guid contextOfferId)
             {
-                var offer = _offerRepository is null ? null : await _offerRepository.GetAccessibleAsync(contextOfferId, null, DateTimeOffset.UtcNow, cancellationToken);
-                contextAvailability[contextualMessage.Id] = offer is not null
-                    && string.Equals(offer.OwnerUserId, contextualMessage.ContextOwnerUserId, StringComparison.OrdinalIgnoreCase);
+                var now = DateTimeOffset.UtcNow;
+                var offer = _offerRepository is null
+                    ? null
+                    : await _offerRepository.GetAccessibleAsync(contextOfferId, null, now, cancellationToken);
+                if (offer is not null)
+                {
+                    contextAvailability[contextualMessage.Id] = string.Equals(
+                        offer.OwnerUserId,
+                        contextualMessage.ContextOwnerUserId,
+                        StringComparison.OrdinalIgnoreCase);
+                }
+                else
+                {
+                    var hallOffer = _hallOfferRepository is null
+                        ? null
+                        : await _hallOfferRepository.GetActiveByIdAsync(contextOfferId, now, cancellationToken);
+                    contextAvailability[contextualMessage.Id] = hallOffer?.Hall is not null
+                        && string.Equals(
+                            hallOffer.Hall.OwnerId,
+                            contextualMessage.ContextOwnerUserId,
+                            StringComparison.OrdinalIgnoreCase);
+                }
             }
         }
 
@@ -784,10 +820,10 @@ public sealed class ConversationService : IConversationService
         Conversation conversation, SendMessageRequest request, CancellationToken cancellationToken)
     {
         if (!request.ContextPostId.HasValue && !request.ContextOfferId.HasValue) return (null, null, null, null);
-        if (conversation.Kind != ConversationKind.CustomerProvider)
-            throw new ValidationException("Only customer-provider messages can include a post or offer context.");
         if (request.ContextPostId is Guid postId)
         {
+            if (conversation.Kind != ConversationKind.CustomerProvider)
+                throw new ValidationException("Only customer-provider messages can include a post context.");
             var post = _postRepository is null ? null : await _postRepository.GetPublicAsync(postId, cancellationToken);
             if (post is null || !string.Equals(post.OwnerUserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase))
                 throw new NotFoundException("Post", postId);
@@ -795,13 +831,39 @@ public sealed class ConversationService : IConversationService
             return ("Post", post.Content is null ? null : post.Content[..Math.Min(post.Content.Length, 500)],
                 image is null ? null : $"/api/v1/posts/{postId:D}/images/{image.Id:D}", post.OwnerUserId);
         }
+
         var offerId = request.ContextOfferId!.Value;
-        var offer = _offerRepository is null ? null : await _offerRepository.GetAccessibleAsync(offerId, null, DateTimeOffset.UtcNow, cancellationToken);
-        if (offer is null || !string.Equals(offer.OwnerUserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase))
-            throw new NotFoundException("Professional offer", offerId);
-        var offerImage = offer.Images.OrderBy(row => row.Order).FirstOrDefault();
-        return ("Offer", offer.Content is null ? null : offer.Content[..Math.Min(offer.Content.Length, 500)],
-            offerImage is null ? null : $"/api/v1/offers/{offerId:D}/images/{offerImage.Id:D}", offer.OwnerUserId);
+        var now = DateTimeOffset.UtcNow;
+        var offer = _offerRepository is null
+            ? null
+            : await _offerRepository.GetAccessibleAsync(offerId, null, now, cancellationToken);
+        if (offer is not null)
+        {
+            if (conversation.Kind != ConversationKind.CustomerProvider)
+                throw new ValidationException("Only customer-provider messages can include a professional offer context.");
+            if (!string.Equals(offer.OwnerUserId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase))
+                throw new NotFoundException("Professional offer", offerId);
+            var offerImage = offer.Images.OrderBy(row => row.Order).FirstOrDefault();
+            return ("Offer", offer.Content is null ? null : offer.Content[..Math.Min(offer.Content.Length, 500)],
+                offerImage is null ? null : $"/api/v1/offers/{offerId:D}/images/{offerImage.Id:D}", offer.OwnerUserId);
+        }
+
+        var hallOffer = _hallOfferRepository is null
+            ? null
+            : await _hallOfferRepository.GetActiveByIdAsync(offerId, now, cancellationToken);
+        if (hallOffer?.Hall is null
+            || conversation.Kind != ConversationKind.HallBooking
+            || conversation.HallId != hallOffer.HallId
+            || !string.Equals(hallOffer.Hall.OwnerId, conversation.HallOwnerId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new NotFoundException("Offer", offerId);
+        }
+
+        var hallName = hallOffer.Hall.Name?.Trim();
+        var text = string.IsNullOrWhiteSpace(hallName)
+            ? null
+            : hallName[..Math.Min(hallName.Length, 500)];
+        return ("Offer", text, null, hallOffer.Hall.OwnerId);
     }
 
     private static string SanitizeMessageText(string content)
