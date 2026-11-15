@@ -18,6 +18,10 @@ public sealed class AccountLockRepository(ApplicationDbContext context) : IAccou
                 && row.StartsAt <= now && row.EndsAt > now)
             .OrderByDescending(row => row.EndsAt).Select(row => (DateTimeOffset?)row.EndsAt).FirstOrDefaultAsync(cancellationToken);
 
+    public async Task<IReadOnlySet<string>> GetActiveUserIdsAsync(IReadOnlyCollection<string> userIds, DateTimeOffset now, CancellationToken cancellationToken = default)
+        => (await context.AccountLocks.AsNoTracking().Where(row => userIds.Contains(row.UserId) && row.LiftedAt == null
+                && row.StartsAt <= now && row.EndsAt > now).Select(row => row.UserId).Distinct().ToListAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
+
     public Task<UserPublishingRestriction?> GetActiveAsync(string userId, DateTimeOffset now, CancellationToken cancellationToken = default)
         => context.AccountLocks.AsNoTracking().Where(row => row.UserId == userId && row.LiftedAt == null
                 && row.StartsAt <= now && row.EndsAt > now)

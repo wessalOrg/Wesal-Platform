@@ -30,6 +30,9 @@ public class Conversation : BaseAuditableEntity
 
     public Guid? PendingContextPostId { get; set; }
     public Guid? PendingContextOfferId { get; set; }
+    public Guid? EventRequestId { get; set; }
+    public ServiceType? EventRequestServiceType { get; set; }
+    public EventRequest? EventRequest { get; set; }
 
     public ICollection<Message> Messages { get; set; } = [];
 }

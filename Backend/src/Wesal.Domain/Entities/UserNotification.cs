@@ -43,6 +43,7 @@ public class UserNotification
     public DateTimeOffset? ReadAt { get; set; }
 
     public Guid? ConversationId { get; set; }
+    public string? PayloadJson { get; set; }
     public string? GroupSenderUserId { get; set; }
     public string? SenderName { get; set; }
     public string? SenderAvatarUrl { get; set; }

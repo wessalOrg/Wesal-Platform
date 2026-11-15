@@ -112,7 +112,10 @@ public sealed class ConversationService : IConversationService
             ConversationId = response.ConversationId, HallId = response.HallId, HallName = response.HallName,
             InitiatorUserId = response.InitiatorUserId, OwnerUserId = response.OwnerUserId,
             CreatedAt = response.CreatedAt, IsExisting = response.IsExisting, Kind = response.Kind,
-            ContextPostId = postId, ContextOfferId = offerId
+            ContextPostId = postId, ContextOfferId = offerId,
+            EventRequestId = response.EventRequestId, EventRequestSeekerName = response.EventRequestSeekerName,
+            EventRequestDate = response.EventRequestDate, EventRequestType = response.EventRequestType,
+            EventRequestTypeLabel = response.EventRequestTypeLabel, EventRequestService = response.EventRequestService
         };
 
     public async Task<ConversationResponse> ContactAdminAccountAsync(CancellationToken cancellationToken = default)
@@ -1389,7 +1392,15 @@ public sealed class ConversationService : IConversationService
             IsExisting = isExisting,
             Kind = conversation.Kind,
             ContextPostId = conversation.PendingContextPostId,
-            ContextOfferId = conversation.PendingContextOfferId
+            ContextOfferId = conversation.PendingContextOfferId,
+            EventRequestId = conversation.EventRequestId,
+            EventRequestSeekerName = conversation.EventRequest?.SeekerFullName,
+            EventRequestDate = conversation.EventRequest?.EventDate,
+            EventRequestType = conversation.EventRequest?.EventType,
+            EventRequestTypeLabel = conversation.EventRequest is null
+                ? null
+                : EventTypeLabels.Get(conversation.EventRequest.EventType),
+            EventRequestService = conversation.EventRequestServiceType
         };
     }
 

@@ -36,6 +36,7 @@ public static class DependencyInjection
             }));
 
         services.AddMemoryCache();
+        services.Configure<EventRequestOptions>(configuration.GetSection(EventRequestOptions.SectionName));
 
         services.AddDataProtection();
 
@@ -91,6 +92,8 @@ public static class DependencyInjection
         services.AddScoped<IAiKnowledgeStudioRepository, AiKnowledgeStudioRepository>();
         services.AddScoped<IDiscoverService, DiscoverService>();
         services.AddScoped<IStatisticsService, StatisticsService>();
+        services.AddScoped<IEventRequestService, EventRequestService>();
+        services.AddHostedService<EventRequestFanoutBackgroundService>();
 
         return services;
     }

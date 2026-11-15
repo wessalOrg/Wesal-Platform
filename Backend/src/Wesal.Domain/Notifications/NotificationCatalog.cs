@@ -54,6 +54,9 @@ public static class NotificationTokens
     public const string Amount = "{Amount}";
     public const string Reason = "{Reason}";
     public const string Period = "{Period}";
+    public const string EventSeekerName = "{EventSeekerName}";
+    public const string EventType = "{EventType}";
+    public const string ServiceType = "{ServiceType}";
 
     /// <summary>
     /// A whole hourly range such as "09:00 - 12:00", for the notices that describe one
@@ -311,6 +314,16 @@ public static class NotificationCatalog
                 EnglishActionLabel: "Open the conversation with administration",
                 ActionTarget: NotificationActionTarget.Conversation),
 
+            [NotificationKind.EVENT_REQUEST_HALL] = EventRequestTemplate("طلب مناسبة جديد", "New event request",
+                "الباحث \"" + NotificationTokens.EventSeekerName + "\" يبحث عن صالة في تاريخ \"" + NotificationTokens.Date + "\" بمناسبة \"" + NotificationTokens.EventType + "\". انقر هنا للتواصل معه عن قاعتك وعروضك.",
+                "A seeker is looking for a hall on " + NotificationTokens.Date + " for " + NotificationTokens.EventType + "."),
+            [NotificationKind.EVENT_REQUEST_DECORATION_GIFTS] = EventRequestTemplate("طلب مناسبة جديد", "New event request",
+                "الباحث \"" + NotificationTokens.EventSeekerName + "\" يبحث عن محلات تزيين وهدايا في تاريخ \"" + NotificationTokens.Date + "\" بمناسبة \"" + NotificationTokens.EventType + "\". انقر هنا للتواصل معه عن منتجاتك وعروضك.",
+                "A seeker is looking for decoration and gift shops on " + NotificationTokens.Date + " for " + NotificationTokens.EventType + "."),
+            [NotificationKind.EVENT_REQUEST_PHOTOGRAPHY] = EventRequestTemplate("طلب مناسبة جديد", "New event request",
+                "الباحث \"" + NotificationTokens.EventSeekerName + "\" يبحث عن مصورين في تاريخ \"" + NotificationTokens.Date + "\" بمناسبة \"" + NotificationTokens.EventType + "\". انقر هنا للتواصل معه عن تصويرك وعروضك.",
+                "A seeker is looking for photographers on " + NotificationTokens.Date + " for " + NotificationTokens.EventType + "."),
+
             // 21. An Admin rejected a Photographer's account request (Task 6, 6.5 + 15.6).
             // The requirement's body cell describes behavior ("shows the rejection reason
             // written by the admin") rather than literal wording, so the body carries the
@@ -461,6 +474,9 @@ public static class NotificationCatalog
                 "Your account has been unlocked. You can now publish and edit your data, and your account and posts will appear to users again.",
                 null, null, NotificationActionTarget.None)
         };
+
+    private static NotificationTemplate EventRequestTemplate(string arTitle, string enTitle, string arBody, string enBody)
+        => new(arTitle, enTitle, arBody, enBody, "فتح المحادثة", "Open conversation", NotificationActionTarget.Conversation);
 
     public static NotificationTemplate Get(NotificationKind kind)
         => All.TryGetValue(kind, out var template)

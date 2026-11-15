@@ -6,6 +6,7 @@ public interface IAccountLockRepository
 {
     Task AcquireUserLockAsync(string userId, CancellationToken cancellationToken = default);
     Task<DateTimeOffset?> GetActiveEndsAtAsync(string userId, DateTimeOffset now, CancellationToken cancellationToken = default);
+    Task<IReadOnlySet<string>> GetActiveUserIdsAsync(IReadOnlyCollection<string> userIds, DateTimeOffset now, CancellationToken cancellationToken = default);
     Task<UserPublishingRestriction?> GetActiveAsync(string userId, DateTimeOffset now, CancellationToken cancellationToken = default);
     Task<UserPublishingRestriction?> GetCurrentAsync(string userId, DateTimeOffset now, CancellationToken cancellationToken = default);
     Task<UserPublishingRestriction?> GetActiveForUpdateAsync(string userId, DateTimeOffset now, CancellationToken cancellationToken = default);

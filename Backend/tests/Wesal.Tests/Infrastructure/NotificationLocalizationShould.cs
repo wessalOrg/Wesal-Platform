@@ -238,7 +238,9 @@ public sealed class NotificationLocalizationShould : IDisposable
             [NotificationTokens.TimeRange] = "18:00 - 22:00",
             [NotificationTokens.DaysRemaining] = "3",
             [NotificationTokens.SenderName] = "Ahmed",
-            [NotificationTokens.MessagePreview] = "Hello"
+            [NotificationTokens.MessagePreview] = "Hello",
+            [NotificationTokens.EventSeekerName] = "Sara",
+            [NotificationTokens.EventType] = "Wedding"
         };
 
         foreach (var kind in Enum.GetValues<NotificationKind>())

@@ -777,6 +777,12 @@ namespace Wesal.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("EventRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("EventRequestServiceType")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("HallId")
                         .HasColumnType("uuid");
 
@@ -808,6 +814,8 @@ namespace Wesal.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EventRequestId");
 
                     b.HasIndex("HallId");
 
@@ -901,6 +909,108 @@ namespace Wesal.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_CoordinatorProfiles_BusinessType", "\"BusinessType\" IN (1, 2)");
                         });
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.EventRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("EventDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FanoutAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("FanoutCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("FanoutNextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("NeedsDecorationAndGifts")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("NeedsHall")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("NeedsPhotographers")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SeekerFullName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("SeekerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventDate");
+
+                    b.HasIndex("SeekerId", "CreatedAt");
+
+                    b.ToTable("EventRequests", "wesal");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.EventRequestNotificationTarget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EventRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("NotificationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<int>("ServiceType")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("NotificationId")
+                        .IsUnique();
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("EventRequestId", "ProviderId", "ServiceType")
+                        .IsUnique();
+
+                    b.ToTable("EventRequestNotificationTargets", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.ExternalBookingDetails", b =>
@@ -1154,25 +1264,6 @@ namespace Wesal.Persistence.Migrations
                     b.ToTable("HallFavorites", "wesal");
                 });
 
-            modelBuilder.Entity("Wesal.Domain.Entities.HallPageViewEvent", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("HallId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("ViewedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HallId", "ViewedAt");
-
-                    b.ToTable("HallPageViewEvents", "wesal");
-                });
-
             modelBuilder.Entity("Wesal.Domain.Entities.HallFeature", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1285,6 +1376,25 @@ namespace Wesal.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_HallOffers_Window", "\"EndsAt\" > \"StartsAt\"");
                         });
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.HallPageViewEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HallId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ViewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HallId", "ViewedAt");
+
+                    b.ToTable("HallPageViewEvents", "wesal");
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.HallSlotAvailability", b =>
@@ -1922,6 +2032,9 @@ namespace Wesal.Persistence.Migrations
                         .HasMaxLength(160)
                         .HasColumnType("character varying(160)");
 
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("jsonb");
+
                     b.Property<DateTimeOffset?>("ReadAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2302,10 +2415,17 @@ namespace Wesal.Persistence.Migrations
 
             modelBuilder.Entity("Wesal.Domain.Entities.Conversation", b =>
                 {
+                    b.HasOne("Wesal.Domain.Entities.EventRequest", "EventRequest")
+                        .WithMany()
+                        .HasForeignKey("EventRequestId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
                         .WithMany()
                         .HasForeignKey("HallId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("EventRequest");
 
                     b.Navigation("Hall");
                 });
@@ -2319,6 +2439,36 @@ namespace Wesal.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.EventRequest", b =>
+                {
+                    b.HasOne("Wesal.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SeekerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.EventRequestNotificationTarget", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.EventRequest", null)
+                        .WithMany()
+                        .HasForeignKey("EventRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Wesal.Domain.Entities.UserNotification", null)
+                        .WithMany()
+                        .HasForeignKey("NotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Wesal.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.ExternalBookingDetails", b =>
@@ -2358,15 +2508,6 @@ namespace Wesal.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Wesal.Domain.Entities.HallPageViewEvent", b =>
-                {
-                    b.HasOne("Wesal.Domain.Entities.Hall", null)
-                        .WithMany()
-                        .HasForeignKey("HallId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Wesal.Domain.Entities.HallFeature", b =>
                 {
                     b.HasOne("Wesal.Domain.Entities.Hall", "Hall")
@@ -2398,6 +2539,15 @@ namespace Wesal.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Hall");
+                });
+
+            modelBuilder.Entity("Wesal.Domain.Entities.HallPageViewEvent", b =>
+                {
+                    b.HasOne("Wesal.Domain.Entities.Hall", null)
+                        .WithMany()
+                        .HasForeignKey("HallId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Wesal.Domain.Entities.HallSlotAvailability", b =>

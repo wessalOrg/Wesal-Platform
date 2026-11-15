@@ -71,4 +71,10 @@ public sealed class ConversationResponse
     public ConversationKind Kind { get; init; }
     public Guid? ContextPostId { get; init; }
     public Guid? ContextOfferId { get; init; }
+    public Guid? EventRequestId { get; init; }
+    public string? EventRequestSeekerName { get; init; }
+    public DateOnly? EventRequestDate { get; init; }
+    public EventType? EventRequestType { get; init; }
+    public string? EventRequestTypeLabel { get; init; }
+    public ServiceType? EventRequestService { get; init; }
 }

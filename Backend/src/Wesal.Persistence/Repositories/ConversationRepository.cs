@@ -185,6 +185,7 @@ public sealed class ConversationRepository : IConversationRepository
     {
         return await _context.Conversations
             .Include(c => c.Hall)
+            .Include(c => c.EventRequest)
             .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
     }
 

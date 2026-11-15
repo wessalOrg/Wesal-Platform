@@ -13,6 +13,14 @@ public interface IAccountLockService
     /// </summary>
     Task<DateTimeOffset?> GetLockedUntilAsync(string userId, CancellationToken cancellationToken = default);
 
+    async Task<IReadOnlySet<string>> GetLockedUserIdsAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default)
+    {
+        var locked = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var userId in userIds)
+            if (await IsLockedAsync(userId, cancellationToken)) locked.Add(userId);
+        return locked;
+    }
+
     async Task<bool> IsLockedAsync(string userId, CancellationToken cancellationToken = default)
         => await GetLockedUntilAsync(userId, cancellationToken) is not null;
 

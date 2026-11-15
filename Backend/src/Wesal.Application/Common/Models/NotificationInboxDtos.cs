@@ -19,6 +19,7 @@ public sealed class UserNotificationDto
     public string? SenderAvatarUrl { get; init; }
     public string? MessagePreview { get; init; }
     public int MessageCount { get; init; }
+    public string? PayloadJson { get; init; }
 }
 
 public sealed class MarkNotificationsReadResponse

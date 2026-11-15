@@ -25,6 +25,12 @@ public sealed class AccountLockService : IAccountLockService
         return await _restrictions.GetActiveEndsAtAsync(userId, now, cancellationToken);
     }
 
+    public Task<IReadOnlySet<string>> GetLockedUserIdsAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _restrictions.GetActiveUserIdsAsync(userIds, _timeProvider.GetUtcNow(), cancellationToken);
+    }
+
     public async Task EnsureUnlockedAsync(string userId, CancellationToken cancellationToken = default)
     {
         if (await GetLockedUntilAsync(userId, cancellationToken) is { } lockedUntil)

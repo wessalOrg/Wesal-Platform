@@ -130,7 +130,10 @@ public enum NotificationKind
     /// An Admin asked an Event Coordinator to edit their data or documents; the
     /// click-through opens the Admin conversation that carries the notes.
     /// </summary>
-    CoordinatorNeedsChangesForCoordinator = 45
+    CoordinatorNeedsChangesForCoordinator = 45,
+    EVENT_REQUEST_HALL = 46,
+    EVENT_REQUEST_DECORATION_GIFTS = 47,
+    EVENT_REQUEST_PHOTOGRAPHY = 48
 }
 
 /// <summary>

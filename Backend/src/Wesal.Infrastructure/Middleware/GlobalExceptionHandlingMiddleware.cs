@@ -57,6 +57,7 @@ public class GlobalExceptionHandlingMiddleware
                 "A resource conflict occurred",
                 "Conflict",
                 null),
+            TooManyRequestsException => (StatusCodes.Status429TooManyRequests, "Too many requests", "TooManyRequests", null),
             BusinessRuleException rule => (
                 StatusCodes.Status422UnprocessableEntity,
                 rule.Message,

@@ -33,6 +33,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<Comment> Comments => Set<Comment>();
 
     public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<EventRequest> EventRequests => Set<EventRequest>();
+    public DbSet<EventRequestNotificationTarget> EventRequestNotificationTargets => Set<EventRequestNotificationTarget>();
 
     public DbSet<Message> Messages => Set<Message>();
 
@@ -350,6 +352,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
                 .IsUnique().HasFilter("\"Kind\" = 2");
 
             entity.HasIndex(conversation => conversation.HallId);
+            entity.HasIndex(conversation => conversation.EventRequestId);
+            entity.HasOne(conversation => conversation.EventRequest).WithMany()
+                .HasForeignKey(conversation => conversation.EventRequestId).OnDelete(DeleteBehavior.SetNull);
 
             // HallId is Guid?: a hall-less Admin request thread (Tasks 5/6) is a real
             // conversation with no venue behind it, so the FK must be optional. Nothing else
@@ -359,6 +364,34 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
                 .WithMany()
                 .HasForeignKey(conversation => conversation.HallId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<EventRequest>(entity =>
+        {
+            entity.ToTable("EventRequests");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.SeekerId).IsRequired().HasMaxLength(450);
+            entity.Property(x => x.SeekerFullName).IsRequired().HasMaxLength(120);
+            entity.Property(x => x.EventDate).HasColumnType("date");
+            entity.Property(x => x.EventType).HasConversion<int>();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.FanoutNextAttemptAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(x => new { x.SeekerId, x.CreatedAt });
+            entity.HasIndex(x => x.EventDate);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.SeekerId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<EventRequestNotificationTarget>(entity =>
+        {
+            entity.ToTable("EventRequestNotificationTargets");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ProviderId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(x => new { x.EventRequestId, x.ProviderId, x.ServiceType }).IsUnique();
+            entity.HasIndex(x => x.NotificationId).IsUnique();
+            entity.HasIndex(x => x.ConversationId);
+            entity.HasOne<EventRequest>().WithMany().HasForeignKey(x => x.EventRequestId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<UserNotification>().WithMany().HasForeignKey(x => x.NotificationId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<Message>(entity =>
@@ -616,6 +649,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(notification => notification.SenderAvatarUrl).HasMaxLength(1000);
             entity.Property(notification => notification.MessagePreview).HasMaxLength(160);
             entity.Property(notification => notification.ConversationId);
+            entity.Property(notification => notification.PayloadJson).HasColumnType("jsonb");
             entity.HasIndex(notification => new { notification.RecipientUserId, notification.ConversationId, notification.GroupSenderUserId, notification.ReadAt });
             entity.Property(notification => notification.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(notification => notification.ReadAt).HasColumnType("timestamp with time zone");

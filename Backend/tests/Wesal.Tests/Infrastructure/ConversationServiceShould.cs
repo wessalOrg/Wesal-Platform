@@ -922,6 +922,56 @@ public class ConversationServiceShould
         Assert.Empty(repository.Conversations);
     }
 
+    [Fact]
+    public async Task EventRequestConversation_ShowsItsContextAndDeniesNonRecipients()
+    {
+        var request = new EventRequest
+        {
+            Id = Guid.NewGuid(),
+            SeekerId = "seeker-1",
+            SeekerFullName = "سلمى",
+            EventDate = new DateOnly(2026, 12, 1),
+            EventType = EventType.WEDDING
+        };
+        var conversation = new Conversation
+        {
+            Id = Guid.NewGuid(),
+            Kind = ConversationKind.CustomerProvider,
+            SenderUserId = "seeker-1",
+            HallOwnerId = "provider-1",
+            EventRequestId = request.Id,
+            EventRequestServiceType = ServiceType.PHOTOGRAPHY,
+            EventRequest = request,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        var repository = new FakeConversationRepository();
+        repository.Conversations.Add(conversation);
+
+        var seeker = CreateService(repository, new FakeHallRepository(), authenticated: true,
+            userId: "seeker-1", roles: [ApplicationRoles.RegisteredUser]);
+        var result = await seeker.GetConversationAsync(conversation.Id);
+        Assert.Equal(request.Id, result.EventRequestId);
+        Assert.Equal("سلمى", result.EventRequestSeekerName);
+        Assert.Equal(request.EventDate, result.EventRequestDate);
+        Assert.Equal(EventType.WEDDING, result.EventRequestType);
+        Assert.Equal("زفاف", result.EventRequestTypeLabel);
+        Assert.Equal(ServiceType.PHOTOGRAPHY, result.EventRequestService);
+
+        var recipient = CreateService(repository, new FakeHallRepository(), authenticated: true,
+            userId: "provider-1", roles: [ApplicationRoles.Photographer]);
+        Assert.Equal(conversation.Id, (await recipient.GetConversationAsync(conversation.Id)).ConversationId);
+        Assert.Contains(await recipient.GetMyConversationsAsync(), row => row.ConversationId == conversation.Id);
+
+        var stranger = CreateService(repository, new FakeHallRepository(), authenticated: true,
+            userId: "stranger-1", roles: [ApplicationRoles.RegisteredUser]);
+        await Assert.ThrowsAsync<ForbiddenException>(() => stranger.GetConversationAsync(conversation.Id));
+
+        // An Admin is not a recipient of this provider thread and must not be able to read it.
+        var admin = CreateService(repository, new FakeHallRepository(), authenticated: true,
+            userId: "admin-1", roles: [ApplicationRoles.Admin]);
+        await Assert.ThrowsAsync<ForbiddenException>(() => admin.GetConversationAsync(conversation.Id));
+    }
+
     private static Hall CreateApprovedHall(string name, string ownerId)
         => new()
         {

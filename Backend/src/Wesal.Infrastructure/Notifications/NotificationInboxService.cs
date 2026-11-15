@@ -90,6 +90,7 @@ public sealed class NotificationInboxService : INotificationInboxService
         Id = row.Id, Kind = row.Kind, Title = row.Title, Body = row.Body, CreatedAt = row.CreatedAt,
         ReadAt = row.ReadAt, ActionTarget = row.ActionTarget, TargetId = row.TargetId,
         ConversationId = row.ConversationId, SenderName = row.SenderName,
-        SenderAvatarUrl = row.SenderAvatarUrl, MessagePreview = row.MessagePreview, MessageCount = row.MessageCount
+        SenderAvatarUrl = row.SenderAvatarUrl, MessagePreview = row.MessagePreview, MessageCount = row.MessageCount,
+        PayloadJson = row.PayloadJson
     };
 }
