@@ -105,7 +105,7 @@ export default function CatalogHallCard({
 
   return (
     <article
-      className={`hall-card group overflow-hidden border-0 bg-[var(--wesal-white)] transition-[box-shadow] duration-200 ${
+      className={`hall-card group flex h-full flex-col overflow-hidden border-0 bg-[var(--wesal-white)] transition-[box-shadow] duration-200 ${
         compact
           ? "rounded-xl shadow-[0_8px_20px_rgba(90,55,45,0.07)] hover:shadow-[0_12px_28px_rgba(90,55,45,0.11)]"
           : "rounded-2xl shadow-[0_10px_28px_rgba(90,55,45,0.08)] hover:shadow-[0_16px_36px_rgba(90,55,45,0.12)]"
@@ -114,7 +114,7 @@ export default function CatalogHallCard({
       data-testid={`hall-card-${hall.id}`}
     >
       <div
-        className={`relative overflow-hidden bg-[var(--wesal-pink)] ${
+        className={`relative shrink-0 overflow-hidden bg-[var(--wesal-pink)] ${
           compact ? "aspect-[3/2]" : "aspect-[4/3]"
         }`}
       >
@@ -163,7 +163,11 @@ export default function CatalogHallCard({
         ) : null}
       </div>
 
-      <div className={compact ? "space-y-2 p-3" : "space-y-3 p-4"}>
+      <div
+        className={`flex flex-1 flex-col ${
+          compact ? "space-y-2 p-3" : "space-y-3 p-4"
+        }`}
+      >
         <button
           type="button"
           onClick={openPopupOrDetails}
@@ -224,7 +228,11 @@ export default function CatalogHallCard({
           )}
         </button>
 
-        <div className={`flex items-end justify-between gap-2 ${compact ? "pt-0.5" : "pt-1"}`}>
+        <div
+          className={`mt-auto flex items-end justify-between gap-2 ${
+            compact ? "pt-0.5" : "pt-1"
+          }`}
+        >
           <div className={`flex min-w-0 flex-wrap ${compact ? "gap-1.5" : "gap-2"}`}>
             <span
               className={`hall-card-tag rounded-full bg-[var(--wesal-pink)] font-medium text-[var(--wesal-maroon-dark)] ${

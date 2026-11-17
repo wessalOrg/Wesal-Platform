@@ -5,11 +5,13 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import CatalogHallCard from "@/components/halls/CatalogHallCard";
 import Reveal from "@/components/ui/Reveal";
-import { FEATURED_HALLS_FALLBACK } from "@/constants/featuredHallsFallback";
 import { usePublicHallsRevalidation } from "@/hooks/usePublicHallsRevalidation";
 import { useT } from "@/i18n";
+import { discoverItemHref } from "@/lib/discover-filter";
+import { fetchDiscoverFeed } from "@/services/discover";
 import { fetchFeaturedHalls } from "@/services/halls";
 import type { FeaturedHall } from "@/types/hall";
+import type { DiscoverItem } from "@/types/offers";
 
 const HallDetailsView = dynamic(
   () => import("@/components/halls/HallDetailsView"),
@@ -19,17 +21,6 @@ const HallDetailsView = dynamic(
 const FILTERS = ["all", "halls", "planners", "photo"] as const;
 const LANDING_PREVIEW_COUNT = 3;
 
-const SERVICE_PLACES = [
-  { id: "photo1", category: "photo", image: "/providers/photo-villa-sparkle.jpg" },
-  { id: "photo2", category: "photo", image: "/providers/photo-chello-house.jpg" },
-  { id: "photo3", category: "photo", image: "/providers/photo-photo-house.jpg" },
-  { id: "photo4", category: "photo", image: "/providers/photo-villa-moments.jpg" },
-  { id: "decor1", category: "planners", image: "/providers/decor-tulip.jpg" },
-  { id: "decor2", category: "planners", image: "/providers/decor-borno.jpg" },
-  { id: "decor3", category: "planners", image: "/providers/decor-safeer.jpg" },
-  { id: "decor4", category: "planners", image: "/providers/decor-lavender.jpg" },
-] as const;
-
 type ProviderFilter = (typeof FILTERS)[number];
 type LoadStatus = "loading" | "ready" | "error";
 
@@ -37,7 +28,10 @@ export default function FeaturedHallsSection() {
   const t = useT();
   const [filter, setFilter] = useState<ProviderFilter>("all");
   const [halls, setHalls] = useState<FeaturedHall[]>([]);
+  const [photographers, setPhotographers] = useState<DiscoverItem[]>([]);
+  const [planners, setPlanners] = useState<DiscoverItem[]>([]);
   const [status, setStatus] = useState<LoadStatus>("loading");
+  const [prosStatus, setProsStatus] = useState<LoadStatus>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -45,31 +39,37 @@ export default function FeaturedHallsSection() {
   const hasLoadedRef = useRef(false);
 
   const showsHalls = filter === "all" || filter === "halls";
-  const photoPlaces = SERVICE_PLACES.filter((place) => place.category === "photo");
-  const plannerPlaces = SERVICE_PLACES.filter((place) => place.category === "planners");
+  const showsPros = filter === "all" || filter === "photo" || filter === "planners";
+  const sectionLoading =
+    (showsHalls && status === "loading") || (showsPros && prosStatus === "loading");
 
-  // "All" must mix halls + photography + décor (not fill the whole row with halls).
   let previewHalls: FeaturedHall[] = [];
-  let previewPlaces: Array<(typeof SERVICE_PLACES)[number]> = [];
-  if (filter === "halls") {
-    previewHalls = status !== "loading" ? halls.slice(0, LANDING_PREVIEW_COUNT) : [];
-  } else if (filter === "photo") {
-    previewPlaces = photoPlaces.slice(0, LANDING_PREVIEW_COUNT);
-  } else if (filter === "planners") {
-    previewPlaces = plannerPlaces.slice(0, LANDING_PREVIEW_COUNT);
-  } else if (status !== "loading") {
-    previewHalls = halls.slice(0, 1);
-    previewPlaces = [...photoPlaces.slice(0, 1), ...plannerPlaces.slice(0, 1)];
-    const slotsLeft = Math.max(
-      0,
-      LANDING_PREVIEW_COUNT - previewHalls.length - previewPlaces.length,
-    );
-    if (slotsLeft > 0 && halls.length > previewHalls.length) {
-      previewHalls = halls.slice(0, previewHalls.length + slotsLeft);
+  let previewProviders: DiscoverItem[] = [];
+  if (!sectionLoading) {
+    if (filter === "halls") {
+      previewHalls = halls.slice(0, LANDING_PREVIEW_COUNT);
+    } else if (filter === "photo") {
+      previewProviders = photographers.slice(0, LANDING_PREVIEW_COUNT);
+    } else if (filter === "planners") {
+      previewProviders = planners.slice(0, LANDING_PREVIEW_COUNT);
+    } else {
+      previewHalls = halls.slice(0, 1);
+      previewProviders = [
+        ...photographers.slice(0, 1),
+        ...planners.slice(0, 1),
+      ];
+      const slotsLeft = Math.max(
+        0,
+        LANDING_PREVIEW_COUNT - previewHalls.length - previewProviders.length,
+      );
+      if (slotsLeft > 0 && halls.length > previewHalls.length) {
+        previewHalls = halls.slice(0, previewHalls.length + slotsLeft);
+      }
     }
   }
 
   const browseHref = filter === "halls" ? "/halls" : "/discover";
+  const hasPreview = previewHalls.length > 0 || previewProviders.length > 0;
 
   const requestRevalidate = useCallback(() => {
     setReloadKey((key) => key + 1);
@@ -84,27 +84,47 @@ export default function FeaturedHallsSection() {
       setIsRefreshing(true);
     } else {
       setStatus("loading");
+      setProsStatus("loading");
       setIsRefreshing(false);
     }
 
     void fetchFeaturedHalls("all").then((result) => {
       if (!active) return;
 
+      setHalls(result.halls);
       if (result.source === "api") {
-        setHalls(result.halls);
         setStatus("ready");
         setErrorMessage(null);
-        setIsRefreshing(false);
-        hasLoadedRef.current = true;
-        return;
+      } else {
+        setStatus("error");
+        setErrorMessage(result.error ?? null);
       }
-
-      setHalls(FEATURED_HALLS_FALLBACK);
-      setStatus("error");
-      setErrorMessage(result.error ?? null);
       setIsRefreshing(false);
       hasLoadedRef.current = true;
     });
+
+    void Promise.all([
+      fetchDiscoverFeed("Photographers", 1, LANDING_PREVIEW_COUNT),
+      fetchDiscoverFeed("EventCoordinators", 1, LANDING_PREVIEW_COUNT),
+    ])
+      .then(([photoPage, plannerPage]) => {
+        if (!active) return;
+        setPhotographers(
+          photoPage.items.filter((item) => item.contentType === "Photographer"),
+        );
+        setPlanners(
+          plannerPage.items.filter(
+            (item) => item.contentType === "EventCoordinator",
+          ),
+        );
+        setProsStatus("ready");
+      })
+      .catch(() => {
+        if (!active) return;
+        setPhotographers([]);
+        setPlanners([]);
+        setProsStatus("error");
+      });
 
     return () => {
       active = false;
@@ -177,6 +197,7 @@ export default function FeaturedHallsSection() {
                   onClick={() => {
                     hasLoadedRef.current = false;
                     setStatus("loading");
+                    setProsStatus("loading");
                     setReloadKey((key) => key + 1);
                   }}
                   className="btn-outline mt-3"
@@ -193,7 +214,7 @@ export default function FeaturedHallsSection() {
               </p>
             ) : null}
 
-            {showsHalls && status === "loading" ? (
+            {sectionLoading ? (
               <div
                 className="mt-7 grid gap-[1.15rem] sm:grid-cols-2 lg:grid-cols-3 lg:gap-5"
                 data-testid="featured-halls-loading"
@@ -205,18 +226,17 @@ export default function FeaturedHallsSection() {
               </div>
             ) : null}
 
-            {showsHalls &&
-            status !== "loading" &&
-            halls.length === 0 &&
-            previewPlaces.length === 0 ? (
+            {!sectionLoading && !hasPreview ? (
               <p className="mt-6 text-center text-sm text-[var(--wesal-muted)]" role="status">
-                {t("home.featured.empty")}
+                {filter === "halls"
+                  ? t("home.featured.empty")
+                  : t("home.providers.emptyCategory")}
               </p>
             ) : null}
 
-            {(showsHalls && status !== "loading" && previewHalls.length > 0) || previewPlaces.length > 0 ? (
+            {!sectionLoading && hasPreview ? (
               <div
-                className={`mt-7 grid gap-[1.15rem] sm:grid-cols-2 lg:grid-cols-3 lg:gap-5${
+                className={`mt-7 grid items-stretch gap-[1.15rem] sm:grid-cols-2 lg:grid-cols-3 lg:gap-5${
                   showsHalls && isRefreshing ? " pointer-events-none opacity-60" : ""
                 }`}
                 role="tabpanel"
@@ -232,8 +252,12 @@ export default function FeaturedHallsSection() {
                     onOpen={() => setOpenHallId(hall.id)}
                   />
                 ))}
-                {previewPlaces.map((place, index) => (
-                  <ServicePlaceCard key={place.id} placeId={place.id} image={place.image} index={index} />
+                {previewProviders.map((provider, index) => (
+                  <FeaturedProviderCard
+                    key={`${provider.contentType}-${provider.id}`}
+                    item={provider}
+                    index={index}
+                  />
                 ))}
               </div>
             ) : null}
@@ -259,38 +283,58 @@ export default function FeaturedHallsSection() {
   );
 }
 
-function ServicePlaceCard({
-  placeId,
-  image,
+function FeaturedProviderCard({
+  item,
   index,
 }: {
-  placeId: string;
-  image: string;
+  item: DiscoverItem;
   index: number;
 }) {
   const t = useT();
-  const name = t(`home.providers.place.${placeId}.name`);
+  const href = discoverItemHref(item) ?? "/discover";
+  const name =
+    item.displayName?.trim() ||
+    item.content?.trim() ||
+    t("offers.card.untitled");
+  const roleLabel =
+    item.contentType === "Photographer"
+      ? t("discover.type.Photographer")
+      : t("discover.type.EventCoordinator");
+  const location = item.location?.trim() || null;
 
   return (
     <article
-      className="hall-card overflow-hidden rounded-[0.95rem] border-0 bg-white shadow-[0_9px_24px_rgba(90,55,45,0.075)]"
+      className="hall-card flex h-full flex-col overflow-hidden rounded-[0.95rem] border-0 bg-white shadow-[0_9px_24px_rgba(90,55,45,0.075)]"
       style={{ animationDelay: `${index * 90}ms` }}
-      data-testid={`service-place-${placeId}`}
+      data-testid={`service-place-${item.id}`}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-[var(--wesal-pink)]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image} alt={name} className="h-full w-full object-cover" />
+      <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-[var(--wesal-pink)]">
+        {item.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.imageUrl} alt={name} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-3xl font-extrabold text-[var(--wesal-maroon)]">
+            {(name.charAt(0) || "?").toUpperCase()}
+          </div>
+        )}
       </div>
-      <div className="space-y-2 p-3.5 sm:p-4">
-        <h3 className="text-[0.95rem] font-bold leading-snug text-[var(--wesal-maroon)] sm:text-base">{name}</h3>
-        <p className="text-[0.8rem] text-[var(--wesal-muted)] sm:text-sm">{t(`home.providers.place.${placeId}.area`)}</p>
-        <p className="text-[0.8rem] text-[var(--wesal-text)] sm:text-sm">{t(`home.providers.place.${placeId}.note`)}</p>
-        <Link
-          href="/help"
-          className="btn-primary !min-h-9 inline-flex !rounded-lg !px-3 !text-xs !font-bold !bg-[var(--wesal-maroon-dark)] hover:!bg-[#8a454b]"
-        >
-          {t("home.providers.inquire")}
-        </Link>
+      <div className="flex flex-1 flex-col space-y-2 p-3.5 sm:p-4">
+        <h3 className="text-[0.95rem] font-bold leading-snug text-[var(--wesal-maroon)] sm:text-base">
+          {name}
+        </h3>
+        {location ? (
+          <p className="text-[0.8rem] text-[var(--wesal-muted)] sm:text-sm">{location}</p>
+        ) : null}
+        <p className="text-[0.8rem] text-[var(--wesal-text)] sm:text-sm">{roleLabel}</p>
+        <div className="mt-auto flex items-end justify-end pt-1">
+          <Link
+            href={href}
+            className="hall-card-book btn-primary shrink-0 !min-h-9 !rounded-lg !bg-[var(--wesal-maroon-dark)] !px-3 !text-xs !font-bold hover:!bg-[#8a454b]"
+            data-testid={`provider-inquire-${item.id}`}
+          >
+            {t("home.providers.inquire")}
+          </Link>
+        </div>
       </div>
     </article>
   );
