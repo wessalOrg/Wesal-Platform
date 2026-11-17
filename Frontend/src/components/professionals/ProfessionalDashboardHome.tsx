@@ -11,10 +11,13 @@ import { useT } from "@/i18n";
 import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import {
   COORDINATOR_SETUP_PATH,
+  DISCOVER_PATH,
   PHOTOGRAPHER_SETUP_PATH,
   professionalAdminMessagesPath,
   professionalProfilePath,
 } from "@/lib/account-profile-path";
+
+const DISCOVER_HALLS_PATH = `${DISCOVER_PATH}?filter=Halls`;
 import { isPhotographerRole } from "@/lib/account-role";
 import { ApiError } from "@/lib/api-error";
 import {
@@ -23,7 +26,11 @@ import {
   notifyProfessionalAccountApproved,
 } from "@/lib/platform-notifications-store";
 import { professionalRoleLabelKey } from "@/lib/professional-role-label";
-import { contactAdminAccount, conversationErrorMessage } from "@/services/conversations";
+import {
+  buildAdminAccountSummary,
+  contactAdminAccount,
+  conversationErrorMessage,
+} from "@/services/conversations";
 import type { ProfessionalAccountPhase } from "@/types/account-approval";
 import "./professional-dashboard.css";
 
@@ -85,8 +92,12 @@ export default function ProfessionalDashboardHome() {
     setContactError(null);
     try {
       const thread = await contactAdminAccount();
-      // Prefill selection so the embedded inbox opens the Admin thread immediately.
+      // Prefill inbox + selection so /profile/messages opens the Admin thread immediately.
+      inbox?.ensureConversation(
+        buildAdminAccountSummary(thread.conversationId, thread.createdAt),
+      );
       inbox?.selectConversation(thread.conversationId);
+      inbox?.refreshInbox();
       router.push(professionalAdminMessagesPath(thread.conversationId));
     } catch (error) {
       setContactError(
@@ -113,7 +124,7 @@ export default function ProfessionalDashboardHome() {
       titleKey: "pro.dash.feature.book.title",
       bodyKey: "pro.dash.feature.book.body",
       ctaKey: "pro.dash.feature.book.cta",
-      href: "/halls",
+      href: DISCOVER_HALLS_PATH,
       icon: <BookIcon />,
     },
     {
@@ -162,7 +173,7 @@ export default function ProfessionalDashboardHome() {
       titleKey: "pro.dash.feature.book.title",
       bodyKey: "pro.dash.feature.book.body",
       ctaKey: "pro.dash.feature.book.cta",
-      href: "/halls",
+      href: DISCOVER_HALLS_PATH,
       icon: <BookIcon />,
     },
     {

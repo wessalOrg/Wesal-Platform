@@ -19,6 +19,7 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAdminChat } from "@/hooks/useAdminChat";
 import { useContactAdmin } from "@/hooks/useContactAdmin";
 import {
+  buildAdminAccountSummary,
   contactAdminAccount,
   contactAdminForHall,
   conversationErrorMessage,
@@ -57,6 +58,8 @@ export default function SeekerMessagesPage() {
     conversations,
     inboxError,
     retryInbox,
+    refreshInbox,
+    ensureConversation,
     threadStatus,
     thread,
     threadError,
@@ -172,43 +175,65 @@ export default function SeekerMessagesPage() {
   const hallId = selected?.hallId ?? thread?.hallId ?? "";
 
   const professionalAdminBootstrap = useRef(false);
+  const professionalAdminRefreshOnce = useRef<string | null>(null);
+
   useEffect(() => {
     if (!isProfessional) return;
+
     if (focusConversationId) {
+      ensureConversation(buildAdminAccountSummary(focusConversationId));
       if (selectedId !== focusConversationId) {
         selectConversation(focusConversationId);
       }
-      return;
     }
-    if (!professionalContactAdmin) {
+
+    if (!professionalContactAdmin && !focusConversationId) {
       professionalAdminBootstrap.current = false;
+      professionalAdminRefreshOnce.current = null;
       return;
     }
+
     const existing = conversations.find((item) => isAdminAccountConversation(item));
     if (existing) {
-      if (selectedId !== existing.conversationId) {
+      if (!focusConversationId && selectedId !== existing.conversationId) {
         selectConversation(existing.conversationId);
       }
       return;
     }
+
     if (inboxStatus !== "ready" && inboxStatus !== "empty") return;
+
+    if (focusConversationId) {
+      // Deep-link already selected; refresh once so the Admin tab picks up the server row.
+      if (professionalAdminRefreshOnce.current !== focusConversationId) {
+        professionalAdminRefreshOnce.current = focusConversationId;
+        refreshInbox();
+      }
+      return;
+    }
+
     if (professionalAdminBootstrap.current) return;
     professionalAdminBootstrap.current = true;
+
     void contactAdminAccount()
       .then((created) => {
-        retryInbox();
+        ensureConversation(
+          buildAdminAccountSummary(created.conversationId, created.createdAt),
+        );
         selectConversation(created.conversationId);
+        refreshInbox();
       })
       .catch(() => {
         professionalAdminBootstrap.current = false;
       });
   }, [
     conversations,
+    ensureConversation,
     focusConversationId,
     inboxStatus,
     isProfessional,
     professionalContactAdmin,
-    retryInbox,
+    refreshInbox,
     selectConversation,
     selectedId,
   ]);

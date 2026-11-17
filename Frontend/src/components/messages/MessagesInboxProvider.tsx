@@ -44,6 +44,8 @@ type MessagesInboxContextValue = {
   conversations: ConversationSummary[];
   inboxError: string | null;
   retryInbox: () => void;
+  refreshInbox: () => void;
+  ensureConversation: (conversation: ConversationSummary) => void;
   threadStatus: ThreadStatus;
   thread: MessageThread | null;
   threadError: string | null;
@@ -122,6 +124,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   const applyUnreadCount = inbox.applyUnreadCount;
   const markLocalRead = inbox.markLocalRead;
   const refreshInbox = inbox.refresh;
+  const ensureConversation = inbox.ensureConversation;
 
   // 13.5 — tell the hub the actively viewed conversation only (suppresses alerts / unread).
   // Closing the floating inbox or leaving messages routes must clear hub presence.
@@ -377,6 +380,8 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       conversations: inbox.conversations,
       inboxError: inbox.error,
       retryInbox: inbox.retry,
+      refreshInbox,
+      ensureConversation,
       threadStatus: threadState.status,
       thread: threadState.thread,
       threadError: threadState.error,
@@ -400,6 +405,8 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       inbox.conversations,
       inbox.error,
       inbox.retry,
+      refreshInbox,
+      ensureConversation,
       threadState.status,
       threadState.thread,
       threadState.error,

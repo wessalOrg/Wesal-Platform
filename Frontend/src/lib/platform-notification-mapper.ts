@@ -1,7 +1,7 @@
 import {
   HALL_OWNER_HALLS_PATH,
-  REGULAR_MESSAGES_PATH,
   REGULAR_PROFILE_PATH,
+  professionalAdminMessagesPath,
 } from "@/lib/account-profile-path";
 import { SEEKER_BOOKINGS_PATH, conversationMessagePath } from "@/constants/seekerDashboardNav";
 import { ownerBookingsPath } from "@/lib/hall-owner-query-keys";
@@ -13,11 +13,9 @@ import type {
   PlatformNotificationType,
 } from "@/types/platform-notification";
 
-/** Deep-link professionals (and seekers) into the Admin/support thread. */
+/** Deep-link professionals into the Admin tab + AdminAccount thread. */
 function professionalAdminConversationUrl(conversationId: string | null): string {
-  const id = conversationId?.trim();
-  if (!id) return REGULAR_MESSAGES_PATH;
-  return `${REGULAR_MESSAGES_PATH}?conversation_id=${encodeURIComponent(id)}`;
+  return professionalAdminMessagesPath(conversationId);
 }
 
 export type ServerNotificationKindMapping = {
@@ -285,14 +283,14 @@ export const SERVER_NOTIFICATION_KIND_MAP: Record<string, ServerNotificationKind
     audience: "seeker",
     tone: "info",
     target: "conversation",
-    actionUrl: (id) => messagesPath(id),
+    actionUrl: professionalAdminConversationUrl,
   },
   AdminMessageForPhotographer: {
     type: "new_message",
     audience: "seeker",
     tone: "info",
     target: "conversation",
-    actionUrl: (id) => messagesPath(id),
+    actionUrl: professionalAdminConversationUrl,
   },
   // Legacy aliases kept for older hub payloads.
   NewAdminMessage: {
@@ -300,14 +298,14 @@ export const SERVER_NOTIFICATION_KIND_MAP: Record<string, ServerNotificationKind
     audience: "seeker",
     tone: "info",
     target: "conversation",
-    actionUrl: (id) => messagesPath(id),
+    actionUrl: professionalAdminConversationUrl,
   },
   AdminMessageForProfessional: {
     type: "new_message",
     audience: "seeker",
     tone: "info",
     target: "conversation",
-    actionUrl: (id) => messagesPath(id),
+    actionUrl: professionalAdminConversationUrl,
   },
 
   // —— Admin moderation (14.3) ——

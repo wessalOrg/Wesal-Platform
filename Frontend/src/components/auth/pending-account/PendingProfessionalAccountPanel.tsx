@@ -14,7 +14,11 @@ import {
 import { ApiError } from "@/lib/api-error";
 import { isPhotographerRole } from "@/lib/account-role";
 import { useProfessionalReviewNotes } from "@/hooks/useProfessionalReviewNotes";
-import { contactAdminAccount, conversationErrorMessage } from "@/services/conversations";
+import {
+  buildAdminAccountSummary,
+  contactAdminAccount,
+  conversationErrorMessage,
+} from "@/services/conversations";
 import type { ProfessionalAccountPhase } from "@/types/account-approval";
 import type { WesalRole } from "@/types/session";
 import "@/components/auth/role-setup/role-setup.css";
@@ -77,7 +81,11 @@ export default function PendingProfessionalAccountPanel({
     setContactError(null);
     try {
       const thread = await contactAdminAccount();
+      inbox?.ensureConversation(
+        buildAdminAccountSummary(thread.conversationId, thread.createdAt),
+      );
       inbox?.selectConversation(thread.conversationId);
+      inbox?.refreshInbox();
       router.push(professionalAdminMessagesPath(thread.conversationId));
     } catch (error) {
       setContactError(

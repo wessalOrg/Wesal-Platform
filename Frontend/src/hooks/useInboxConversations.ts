@@ -163,12 +163,29 @@ export function useInboxConversations(
     setStatus((current) => (current === "empty" ? "ready" : current));
   }, []);
 
+  const ensureConversation = useCallback((row: ConversationSummary) => {
+    if (!row.conversationId) return;
+    setConversations((current) => {
+      if (current.some((item) => item.conversationId === row.conversationId)) {
+        return current;
+      }
+      return mergeAdminAccountRow(current, row);
+    });
+    setStatus((current) =>
+      current === "empty" || current === "idle" || current === "loading"
+        ? "ready"
+        : current,
+    );
+    setError(null);
+  }, []);
+
   return {
     status,
     conversations,
     error,
     retry: () => setRetryTick((n) => n + 1),
     refresh,
+    ensureConversation,
     applyPreview,
     applyUnreadCount,
     markLocalRead,

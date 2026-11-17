@@ -1,9 +1,9 @@
 import {
   ADMIN_MANAGEMENT_PATH,
   HALL_OWNER_HALLS_PATH,
-  REGULAR_MESSAGES_PATH,
   REGULAR_PROFILE_PATH,
   adminHallSubmissionPath,
+  professionalAdminMessagesPath,
 } from "@/lib/account-profile-path";
 import {
   SEEKER_BOOKINGS_PATH,
@@ -78,14 +78,16 @@ export function resolveNotificationActionUrl(
       return hallId ? adminHallSubmissionPath(hallId) : ADMIN_MANAGEMENT_PATH;
     case "registration_rejected":
     case "registration_needs_changes":
-      return conversationId
-        ? `${REGULAR_MESSAGES_PATH}?conversation_id=${encodeURIComponent(conversationId)}`
-        : REGULAR_MESSAGES_PATH;
-    case "new_message":
     case "account_needs_edit":
     case "account_rejected":
+      return professionalAdminMessagesPath(conversationId || null);
+    case "new_message":
+      // Admin→professional kinds set an explicit actionUrl with contact=admin.
+      // Generic new_message only deep-links the conversation id.
       return conversationId
-        ? `${REGULAR_MESSAGES_PATH}?conversation_id=${encodeURIComponent(conversationId)}`
+        ? audience === "owner"
+          ? `/owner/messages?conversation_id=${encodeURIComponent(conversationId)}`
+          : `${SEEKER_MESSAGES_PATH}?conversation_id=${encodeURIComponent(conversationId)}`
         : audience === "owner"
           ? "/owner/messages"
           : SEEKER_MESSAGES_PATH;

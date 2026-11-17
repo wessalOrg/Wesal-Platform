@@ -308,26 +308,34 @@ export async function fetchProfessionalConversations(): Promise<ConversationSumm
     );
 }
 
-/** Professional ↔ admin account thread (may 404 when not created yet). */
+/**
+ * Professional ↔ admin account thread (may 404 when not created yet).
+ * ConversationResponse is not an inbox DTO — always map via fetchMyAdminAccountConversation.
+ */
 export async function fetchAdminAccountConversation(): Promise<ConversationSummary | null> {
-  if (conversationsUseMock()) return null;
-  try {
-    const [{ data }, unread] = await Promise.all([
-      api.get<unknown>("/conversations/admin-account", { timeout: 8000 }),
-      fetchAdminAccountUnreadCount().catch(() => 0),
-    ]);
-    const mapped = mapInboxItem(data);
-    if (!mapped) return null;
-    return {
-      ...mapped,
-      kind: mapped.kind ?? "AdminAccount",
-      unreadMessageCount: unread,
-      isUnread: unread > 0,
-    };
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 404) return null;
-    throw err;
-  }
+  return fetchMyAdminAccountConversation();
+}
+
+/** Local inbox row used right after POST /conversations/contact-admin-account. */
+export function buildAdminAccountSummary(
+  conversationId: string,
+  createdAt?: string | null,
+): ConversationSummary {
+  const at = createdAt?.trim() || new Date().toISOString();
+  return {
+    conversationId,
+    kind: "AdminAccount",
+    hallId: "",
+    hallName: "",
+    otherParticipantId: "admin",
+    otherParticipantName: t("owner.messages.admin"),
+    lastMessagePreview: "",
+    lastMessageAt: null,
+    messageCount: 0,
+    unreadMessageCount: 0,
+    createdAt: at,
+    isUnread: false,
+  };
 }
 
 export async function fetchProfessionalUnreadCount(): Promise<number> {

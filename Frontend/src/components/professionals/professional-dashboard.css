@@ -338,8 +338,8 @@ html:not([dir="rtl"]) .pro-dash-banner-main--greeting {
   height: 5.35rem;
   flex-shrink: 0;
   margin-inline-start: auto;
-  /* Nudge ~3 steps inward from the far left toward the text. */
-  margin-inline-end: 1.65rem;
+  /* Nudge inward from the far left toward the text. */
+  margin-inline-end: 2.45rem;
 }
 
 .pro-dash-banner--greeting .pro-dash-banner-avatar-placeholder {
