@@ -155,6 +155,23 @@ export async function contactAdminForHall(hallId: string): Promise<ConversationT
   return thread;
 }
 
+function threadFromAdminSummary(
+  summary: ConversationSummary,
+  isExisting = true,
+): ConversationThread {
+  return {
+    conversationId: summary.conversationId,
+    hallId: "",
+    hallName: "",
+    initiatorUserId: "",
+    ownerUserId: "",
+    createdAt: summary.createdAt || new Date().toISOString(),
+    isExisting,
+    contextPostId: null,
+    contextOfferId: null,
+  };
+}
+
 /**
  * EventCoordinator / Photographer ↔ Admin account thread
  * (`POST /conversations/contact-admin-account`, ConversationKind.AdminAccount).
@@ -174,16 +191,31 @@ export async function contactAdminAccount(): Promise<ConversationThread> {
       contextOfferId: null,
     };
   }
-  const { data } = await api.post<ConversationResponse>(
-    "/conversations/contact-admin-account",
-    undefined,
-    { timeout: 8000 },
-  );
-  const thread = mapResponse(data, "");
-  if (!thread.conversationId) {
-    throw new ApiError(t("errors.conversation.create"), 500);
+
+  try {
+    const { data } = await api.post<ConversationResponse>(
+      "/conversations/contact-admin-account",
+      {},
+      { timeout: 20000 },
+    );
+    const thread = mapResponse(data, "");
+    if (thread.conversationId && thread.conversationId !== "00000000-0000-0000-0000-000000000000") {
+      return thread;
+    }
+  } catch (err) {
+    // Thread may already exist (or POST flaked) — recover via GET before failing the CTA.
+    const existing = await fetchMyAdminAccountConversation().catch(() => null);
+    if (existing?.conversationId) {
+      return threadFromAdminSummary(existing, true);
+    }
+    throw err;
   }
-  return thread;
+
+  const existing = await fetchMyAdminAccountConversation().catch(() => null);
+  if (existing?.conversationId) {
+    return threadFromAdminSummary(existing, true);
+  }
+  throw new ApiError(t("errors.conversation.create"), 500);
 }
 
 /** POST /posts/{postId}/conversation — inquiry tied to a post. */
@@ -507,6 +539,10 @@ export function conversationErrorMessage(
       return t("errors.conversation.unauthorized");
     }
     if (err.status === 403) {
+      // Contact-admin uses the same scope="start" helper; prefer the dedicated copy.
+      if (scope === "start" && /coordinator|photographer|administration|admin/i.test(err.message)) {
+        return t("auth.pendingAccount.contactAdminError");
+      }
       return scope === "start" ? t("errors.conversation.forbidden") : t("errors.conversation.accessDenied");
     }
     if (err.status === 404) {

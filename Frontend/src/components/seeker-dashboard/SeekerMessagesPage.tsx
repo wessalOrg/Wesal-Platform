@@ -181,7 +181,11 @@ export default function SeekerMessagesPage() {
     if (!isProfessional) return;
 
     if (focusConversationId) {
-      ensureConversation(buildAdminAccountSummary(focusConversationId));
+      try {
+        ensureConversation?.(buildAdminAccountSummary(focusConversationId));
+      } catch {
+        // Keep deep-link selection even if local inbox merge throws.
+      }
       if (selectedId !== focusConversationId) {
         selectConversation(focusConversationId);
       }
@@ -214,17 +218,23 @@ export default function SeekerMessagesPage() {
 
     if (professionalAdminBootstrap.current) return;
     professionalAdminBootstrap.current = true;
+    setCreateAdminError(null);
 
     void contactAdminAccount()
       .then((created) => {
-        ensureConversation(
-          buildAdminAccountSummary(created.conversationId, created.createdAt),
-        );
+        try {
+          ensureConversation?.(
+            buildAdminAccountSummary(created.conversationId, created.createdAt),
+          );
+        } catch {
+          // Selection + refresh still open the Admin thread.
+        }
         selectConversation(created.conversationId);
         refreshInbox();
       })
-      .catch(() => {
+      .catch((err) => {
         professionalAdminBootstrap.current = false;
+        setCreateAdminError(conversationErrorMessage(err, "start"));
       });
   }, [
     conversations,

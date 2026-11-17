@@ -122,7 +122,10 @@ public sealed class ConversationService : IConversationService
     {
         EnsureAuthenticated();
         var userId = _currentUser.UserId!;
-        if (!_currentUser.Roles.Any(role => role is ApplicationRoles.EventCoordinator or ApplicationRoles.Photographer))
+        var canContactAdmin = _currentUser.Roles.Any(role =>
+            string.Equals(role, ApplicationRoles.EventCoordinator, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(role, ApplicationRoles.Photographer, StringComparison.OrdinalIgnoreCase));
+        if (!canContactAdmin)
             throw new ForbiddenException("Only coordinators and photographers can contact the administration through this endpoint.");
         var existing = await _conversationRepository.GetAdminUserConversationAsync(userId, cancellationToken);
         if (existing is not null) return MapToResponse(existing, string.Empty, isExisting: true);

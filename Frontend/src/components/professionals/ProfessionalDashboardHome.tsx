@@ -93,11 +93,16 @@ export default function ProfessionalDashboardHome() {
     try {
       const thread = await contactAdminAccount();
       // Prefill inbox + selection so /profile/messages opens the Admin thread immediately.
-      inbox?.ensureConversation(
-        buildAdminAccountSummary(thread.conversationId, thread.createdAt),
-      );
-      inbox?.selectConversation(thread.conversationId);
-      inbox?.refreshInbox();
+      // Use optional method calls — never block navigation if local inbox wiring throws.
+      try {
+        inbox?.ensureConversation?.(
+          buildAdminAccountSummary(thread.conversationId, thread.createdAt),
+        );
+        inbox?.selectConversation?.(thread.conversationId);
+        inbox?.refreshInbox?.();
+      } catch {
+        // Ignore — messages page bootstrap opens the Admin thread from the URL.
+      }
       router.push(professionalAdminMessagesPath(thread.conversationId));
     } catch (error) {
       setContactError(
@@ -105,6 +110,8 @@ export default function ProfessionalDashboardHome() {
           ? conversationErrorMessage(error, "start")
           : t("auth.pendingAccount.contactAdminError"),
       );
+      // Soft recovery: open Admin messages tab so the page can create/open the thread.
+      router.push(professionalAdminMessagesPath());
     } finally {
       setContactPending(false);
     }

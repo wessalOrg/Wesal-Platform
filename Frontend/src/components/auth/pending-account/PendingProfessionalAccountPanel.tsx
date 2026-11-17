@@ -81,11 +81,15 @@ export default function PendingProfessionalAccountPanel({
     setContactError(null);
     try {
       const thread = await contactAdminAccount();
-      inbox?.ensureConversation(
-        buildAdminAccountSummary(thread.conversationId, thread.createdAt),
-      );
-      inbox?.selectConversation(thread.conversationId);
-      inbox?.refreshInbox();
+      try {
+        inbox?.ensureConversation?.(
+          buildAdminAccountSummary(thread.conversationId, thread.createdAt),
+        );
+        inbox?.selectConversation?.(thread.conversationId);
+        inbox?.refreshInbox?.();
+      } catch {
+        // Ignore — messages page bootstrap opens the Admin thread from the URL.
+      }
       router.push(professionalAdminMessagesPath(thread.conversationId));
     } catch (error) {
       setContactError(
@@ -93,6 +97,7 @@ export default function PendingProfessionalAccountPanel({
           ? conversationErrorMessage(error, "start")
           : t("auth.pendingAccount.contactAdminError"),
       );
+      router.push(professionalAdminMessagesPath());
     } finally {
       setContactPending(false);
     }
