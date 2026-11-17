@@ -178,21 +178,28 @@ export async function fetchProfilePosts(
 
 /** GET /posts/{postId}/share-link */
 export async function fetchPostShareLink(postId: string): Promise<string> {
+  const absolutePostUrl = (candidate?: string | null) => {
+    const path = `/posts/${encodeURIComponent(postId)}`;
+    if (typeof window === "undefined") return candidate || path;
+    try {
+      const resolved = new URL(candidate || path, window.location.origin);
+      if (resolved.protocol === "http:" || resolved.protocol === "https:") {
+        return resolved.href;
+      }
+    } catch {
+      // Fall back to the current public app origin below.
+    }
+    return new URL(path, window.location.origin).href;
+  };
   try {
     const { data } = await api.get<{ shareLink?: string; ShareLink?: string }>(
       `${POSTS_PATH}/${encodeURIComponent(postId)}/share-link`,
       { timeout: 10000 },
     );
     const link = asText(data?.shareLink ?? data?.ShareLink);
-    if (link) return link;
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}/posts/${encodeURIComponent(postId)}`;
-    }
-    return `/posts/${encodeURIComponent(postId)}`;
+    return absolutePostUrl(link);
   } catch (err) {
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}/posts/${encodeURIComponent(postId)}`;
-    }
+    if (typeof window !== "undefined") return absolutePostUrl();
     if (err instanceof ApiError) throw err;
     throw new ApiError(
       err instanceof Error ? err.message : "posts.errors.shareFailed",
