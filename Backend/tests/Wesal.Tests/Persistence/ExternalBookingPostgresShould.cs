@@ -15,10 +15,16 @@ public sealed class ExternalBookingPostgresShould
     [ExternalPostgresFact]
     public async Task CommittedExternalBookingPreventsDayBlockingAndWindowNarrowing()
     {
-        await using var h=await ExternalBookingHarness.CreateAsync(true);await h.CreateAsync();await using var op=h.Operation();
+        await using var h=await ExternalBookingHarness.CreateAsync(true);
+        // The owner availability service uses the real UTC date while external-booking
+        // creation uses the harness clock. Keep the occupied day in the future so this
+        // test exercises the booking conflict rather than the past-date validation.
+        h.Clock.Now=DateTimeOffset.UtcNow;
+        var bookedDate=DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2);
+        await h.CreateAsync(h.Request with { Date=bookedDate });await using var op=h.Operation();
         var availability=new Wesal.Infrastructure.OwnerDashboard.OwnerHourlyAvailabilityService(op.Users,h.Current,
             new OwnerDashboardRepository(op.Db),new BookingRepository(op.Db),new UnitOfWork(op.Db));
-        await Assert.ThrowsAsync<ConflictException>(()=>availability.SetDayBlockAsync(h.HallId,new(){Date=h.Request.Date,IsOpen=false}));
+        await Assert.ThrowsAsync<ConflictException>(()=>availability.SetDayBlockAsync(h.HallId,new(){Date=bookedDate,IsOpen=false}));
         await Assert.ThrowsAsync<ConflictException>(()=>availability.UpdateHourlySettingsAsync(h.HallId,new(){HourlySlotStart=new TimeOnly(12,0)}));
         await using var verify=h.Context();Assert.False(await verify.HallDayAvailabilities.AnyAsync(x=>!x.IsOpen));
         Assert.Equal(new TimeOnly(9,0),(await verify.Halls.SingleAsync()).HourlySlotStart);
