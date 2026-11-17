@@ -69,8 +69,42 @@ export function calculateOfferDiscountPercent(
 export function datetimeLocalToIso(value: string): string | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const date = new Date(trimmed);
-  if (Number.isNaN(date.getTime())) return null;
+  // Parse local components explicitly — `new Date("YYYY-MM-DDTHH:mm")` is
+  // inconsistent across browsers and treats incomplete typed values as empty.
+  const match = trimmed.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+  );
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hours = Number(match[4] ?? "0");
+  const minutes = Number(match[5] ?? "0");
+  const seconds = Number(match[6] ?? "0");
+  if (
+    !year ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59 ||
+    seconds < 0 ||
+    seconds > 59
+  ) {
+    return null;
+  }
+  const date = new Date(year, month - 1, day, hours, minutes, seconds);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
   return date.toISOString();
 }
 

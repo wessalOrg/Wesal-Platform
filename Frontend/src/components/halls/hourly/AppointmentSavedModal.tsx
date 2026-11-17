@@ -13,6 +13,7 @@ type AppointmentSavedModalProps = {
 
 export default function AppointmentSavedModal({ open, onClose }: AppointmentSavedModalProps) {
   const t = useT();
+
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;

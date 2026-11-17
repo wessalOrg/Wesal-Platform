@@ -23,6 +23,18 @@ export const REGULAR_PROFILE_PATH = "/profile";
 /** Regular User messages. */
 export const REGULAR_MESSAGES_PATH = `${REGULAR_PROFILE_PATH}/messages`;
 
+/** Professional ↔ Admin messages deep-link (`contact=admin` opens the Admin tab). */
+export function professionalAdminMessagesPath(
+  conversationId?: string | null,
+): string {
+  const params = new URLSearchParams();
+  params.set("contact", "admin");
+  if (conversationId?.trim()) {
+    params.set("conversation_id", conversationId.trim());
+  }
+  return `${REGULAR_MESSAGES_PATH}?${params.toString()}`;
+}
+
 /** Hall Owner dashboard workspace (home + management). */
 export const HALL_OWNER_MANAGEMENT_PATH = "/owner";
 

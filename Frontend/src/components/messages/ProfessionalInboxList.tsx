@@ -32,11 +32,7 @@ export default function ProfessionalInboxList({
   const t = useT();
   const [filter, setFilter] = useState<InboxFilter>(focusAdmin ? "admin" : "customers");
   const [previousFocusAdmin, setPreviousFocusAdmin] = useState(focusAdmin);
-
-  if (focusAdmin !== previousFocusAdmin) {
-    setPreviousFocusAdmin(focusAdmin);
-    if (focusAdmin) setFilter("admin");
-  }
+  const [seenSelectedId, setSeenSelectedId] = useState(selectedId);
 
   const rows = useMemo(
     () => conversations.filter((item) => item?.conversationId),
@@ -44,6 +40,16 @@ export default function ProfessionalInboxList({
   );
   const customerRows = rows.filter((item) => !isAdminAccountConversation(item));
   const adminRows = rows.filter((item) => isAdminAccountConversation(item));
+  const selectedIsAdmin = adminRows.some((item) => item.conversationId === selectedId);
+
+  if (focusAdmin !== previousFocusAdmin) {
+    setPreviousFocusAdmin(focusAdmin);
+    if (focusAdmin) setFilter("admin");
+  }
+  if (selectedId !== seenSelectedId) {
+    setSeenSelectedId(selectedId);
+    if (selectedIsAdmin) setFilter("admin");
+  }
   const totalUnread = rows.reduce(
     (sum, item) => sum + Math.max(item.unreadMessageCount || 0, item.isUnread ? 1 : 0),
     0,

@@ -166,35 +166,4 @@ export async function fetchLockedPhotographers(
  * Authenticated blob for admin moderation image routes (Bearer required).
  * Path may be absolute `/api/v1/admin/moderation/...` or relative to the API base.
  */
-export async function fetchAdminModerationImageBlob(
-  imagePath: string,
-): Promise<string | null> {
-  const trimmed = imagePath.trim();
-  if (!trimmed) return null;
-  let path = trimmed;
-  if (/^https?:\/\//i.test(trimmed)) {
-    try {
-      const url = new URL(trimmed);
-      path = url.pathname + url.search;
-    } catch {
-      return null;
-    }
-  }
-  if (path.startsWith("/api/v1/")) {
-    path = path.slice("/api/v1".length);
-  }
-  const { data, headers } = await api.get<Blob>(path, {
-    responseType: "blob",
-    timeout: 20000,
-  });
-  if (!(data instanceof Blob) || data.size === 0) return null;
-  const typeHeader =
-    typeof headers["content-type"] === "string"
-      ? headers["content-type"].split(";")[0]?.trim()
-      : "";
-  const blob =
-    typeHeader && !data.type
-      ? new Blob([data], { type: typeHeader })
-      : data;
-  return URL.createObjectURL(blob);
-}
+export { fetchAuthenticatedMediaBlob as fetchAdminModerationImageBlob } from "@/services/authenticated-media";

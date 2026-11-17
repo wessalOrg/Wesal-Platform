@@ -3044,6 +3044,187 @@ button.btn-primary.wesal-auth-submit:disabled:active {
   font-weight: 700;
 }
 
+.wesal-datetime {
+  position: relative;
+}
+
+.wesal-datetime-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.wesal-datetime-placeholder {
+  color: var(--wesal-muted);
+}
+
+.wesal-datetime-value {
+  color: var(--wesal-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.wesal-datetime-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--wesal-maroon);
+}
+
+.wesal-datetime-panel {
+  border-radius: 1.15rem;
+  border: 1px solid var(--wesal-border);
+  background: var(--wesal-white);
+  padding: 0.85rem;
+  box-shadow: 0 18px 40px rgba(120, 80, 70, 0.14);
+  overflow: hidden;
+}
+
+.wesal-datetime-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: stretch;
+}
+
+.wesal-datetime-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.wesal-datetime-month {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--wesal-maroon-dark);
+}
+
+.wesal-datetime-nav {
+  display: grid;
+  height: 2rem;
+  width: 2rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--wesal-pink);
+  color: var(--wesal-maroon-dark);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.wesal-datetime-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.2rem;
+}
+
+.wesal-datetime-weekday {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--wesal-gold);
+}
+
+.wesal-datetime-day {
+  height: 2rem;
+  border-radius: 999px;
+  color: var(--wesal-text);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.wesal-datetime-day:hover {
+  background: var(--wesal-pink);
+}
+
+.wesal-datetime-day.is-today {
+  box-shadow: inset 0 0 0 1px var(--wesal-maroon);
+}
+
+.wesal-datetime-day.is-selected {
+  background: var(--wesal-maroon);
+  color: #fff;
+}
+
+.wesal-datetime-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.55rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--wesal-border);
+}
+
+.wesal-datetime-actions button {
+  color: var(--wesal-maroon);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.wesal-datetime-time {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(2.6rem, auto));
+  gap: 0.35rem;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 1px solid var(--wesal-border);
+  min-height: 16.5rem;
+}
+
+.wesal-datetime-time-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-height: 16.5rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-block: 0.15rem;
+}
+
+.wesal-datetime-time-col--period {
+  overflow: visible;
+  justify-content: flex-start;
+}
+
+.wesal-datetime-time-item {
+  min-height: 2rem;
+  padding-inline: 0.45rem;
+  border-radius: 0.55rem;
+  color: var(--wesal-text);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.wesal-datetime-time-item:hover {
+  background: var(--wesal-pink);
+}
+
+.wesal-datetime-time-item.is-selected {
+  background: var(--wesal-maroon);
+  color: #fff;
+}
+
+@media (max-width: 560px) {
+  .wesal-datetime-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .wesal-datetime-time {
+    border-inline-start: 0;
+    border-top: 1px solid var(--wesal-border);
+    padding-inline-start: 0;
+    padding-top: 0.75rem;
+    min-height: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .wesal-datetime-time-col {
+    max-height: 10rem;
+  }
+}
+
 .consult-city {
   position: relative;
 }

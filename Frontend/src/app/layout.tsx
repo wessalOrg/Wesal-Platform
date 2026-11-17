@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import { AiAssistantProvider } from "@/components/assistant/AiAssistantProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import HallOwnerAudioAlerts from "@/components/halls/notifications/HallOwnerAudioAlerts";
@@ -96,11 +97,6 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {process.env.NODE_ENV === "development" ? (
-          <script dangerouslySetInnerHTML={{ __html: DEV_CURSOR_REF_GUARD }} />
-        ) : null}
-        <script dangerouslySetInnerHTML={{ __html: LANGUAGE_BOOT_SCRIPT }} />
-        <script dangerouslySetInnerHTML={{ __html: FAB_POSITION_BOOT_SCRIPT }} />
         {/* Legacy iOS (< 15) needs the apple- prefixed tags; modern
             browsers use mobile-web-app-capable emitted via metadata. */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -111,6 +107,23 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="وصال" />
       </head>
       <body className={`${wesalSans.className} min-h-svh overflow-x-hidden font-sans`}>
+        {process.env.NODE_ENV === "development" ? (
+          <Script
+            id="wesal-dev-cursor-ref-guard"
+            strategy="beforeInteractive"
+            dangerouslySetInnerHTML={{ __html: DEV_CURSOR_REF_GUARD }}
+          />
+        ) : null}
+        <Script
+          id="wesal-language-boot"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: LANGUAGE_BOOT_SCRIPT }}
+        />
+        <Script
+          id="wesal-fab-position-boot"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: FAB_POSITION_BOOT_SCRIPT }}
+        />
         <PwaRegister />
         <AuthProvider>
           <AudioPermissionProvider>

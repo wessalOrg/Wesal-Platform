@@ -93,7 +93,7 @@ export default function ProfessionalPostForm({
     replacePreviews(merged);
     setImagesIssue(
       validateProfessionalPostImages(merged, {
-        required: mode === "create",
+        required: false,
         existingCount: existingImages.length,
       }),
     );
@@ -110,7 +110,7 @@ export default function ProfessionalPostForm({
     replacePreviews(next);
     setImagesIssue(
       validateProfessionalPostImages(next, {
-        required: mode === "create",
+        required: false,
         existingCount: existingImages.length,
       }),
     );
@@ -119,8 +119,9 @@ export default function ProfessionalPostForm({
   const validate = () => {
     const nextContentIssue = validateProfessionalPostContent(content);
     const parsedPrice = parseProfessionalPostPrice(priceText);
+    // Backend: image OR non-empty caption — images are never mandatory alone.
     const nextImagesIssue = validateProfessionalPostImages(newFiles, {
-      required: mode === "create",
+      required: false,
       existingCount: mode === "edit" ? existingImages.length : 0,
     });
     const imageCount =
@@ -343,8 +344,15 @@ export default function ProfessionalPostForm({
             placeholder={t("professionals.posts.contentPlaceholder")}
             className={`${hallFieldClassName(Boolean(contentIssue))} mt-2 min-h-[6rem] w-full resize-y`}
             onChange={(event) => {
-              setContent(event.target.value);
-              setContentIssue(validateProfessionalPostContent(event.target.value));
+              const next = event.target.value;
+              setContent(next);
+              setContentIssue(validateProfessionalPostContent(next));
+              if (imagesIssue === "bodyRequired" || imagesIssue === "required") {
+                const imageCount = existingImages.length + newFiles.length;
+                setImagesIssue(
+                  hasProfessionalPostBody(next, imageCount) ? null : "bodyRequired",
+                );
+              }
             }}
           />
           <p className="mt-1 text-xs text-[var(--wesal-muted)]">

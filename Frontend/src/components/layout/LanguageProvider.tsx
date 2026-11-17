@@ -45,12 +45,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const stored = getStoredUiLang();
-      applyLanguage(stored);
-      setStatus("ready");
-    }, 0);
-    return () => window.clearTimeout(timer);
+    const stored = getStoredUiLang();
+    applyLanguage(stored);
+    setStatus("ready");
   }, [applyLanguage]);
 
   useEffect(() => {

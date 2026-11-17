@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import WesalLogo from "@/components/brand/WesalLogo";
 import { useT } from "@/i18n";
+import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import {
   COORDINATOR_SETUP_PATH,
   PHOTOGRAPHER_SETUP_PATH,
-  REGULAR_MESSAGES_PATH,
+  professionalAdminMessagesPath,
 } from "@/lib/account-profile-path";
 import { ApiError } from "@/lib/api-error";
 import { isPhotographerRole } from "@/lib/account-role";
@@ -35,6 +36,7 @@ export default function PendingProfessionalAccountPanel({
 }: PendingProfessionalAccountPanelProps) {
   const t = useT();
   const router = useRouter();
+  const inbox = useOptionalMessagesInbox();
   const [contactPending, setContactPending] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
   const { notes: adminNotes, loading: notesLoading } = useProfessionalReviewNotes(phase);
@@ -75,8 +77,8 @@ export default function PendingProfessionalAccountPanel({
     setContactError(null);
     try {
       const thread = await contactAdminAccount();
-      const href = `${REGULAR_MESSAGES_PATH}?conversation_id=${encodeURIComponent(thread.conversationId)}`;
-      router.push(href);
+      inbox?.selectConversation(thread.conversationId);
+      router.push(professionalAdminMessagesPath(thread.conversationId));
     } catch (error) {
       setContactError(
         error instanceof ApiError

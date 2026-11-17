@@ -171,23 +171,47 @@ export default function SeekerMessagesPage() {
           : "";
   const hallId = selected?.hallId ?? thread?.hallId ?? "";
 
+  const professionalAdminBootstrap = useRef(false);
   useEffect(() => {
-    if (!professionalContactAdmin) return;
-    const existing = conversations.find((item) => isAdminAccountConversation(item));
-    if (existing) {
-      selectConversation(existing.conversationId);
+    if (!isProfessional) return;
+    if (focusConversationId) {
+      if (selectedId !== focusConversationId) {
+        selectConversation(focusConversationId);
+      }
       return;
     }
+    if (!professionalContactAdmin) {
+      professionalAdminBootstrap.current = false;
+      return;
+    }
+    const existing = conversations.find((item) => isAdminAccountConversation(item));
+    if (existing) {
+      if (selectedId !== existing.conversationId) {
+        selectConversation(existing.conversationId);
+      }
+      return;
+    }
+    if (inboxStatus !== "ready" && inboxStatus !== "empty") return;
+    if (professionalAdminBootstrap.current) return;
+    professionalAdminBootstrap.current = true;
     void contactAdminAccount()
       .then((created) => {
         retryInbox();
         selectConversation(created.conversationId);
       })
       .catch(() => {
-        /* Deep-link open is best-effort; inbox still usable without banner CTA. */
+        professionalAdminBootstrap.current = false;
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot deep link
-  }, [professionalContactAdmin]);
+  }, [
+    conversations,
+    focusConversationId,
+    inboxStatus,
+    isProfessional,
+    professionalContactAdmin,
+    retryInbox,
+    selectConversation,
+    selectedId,
+  ]);
 
   return (
     <MessagesErrorBoundary>

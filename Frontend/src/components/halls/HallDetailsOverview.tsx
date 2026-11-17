@@ -1,5 +1,6 @@
 "use client";
 
+import HallActiveOfferBanner from "@/components/halls/HallActiveOfferBanner";
 import HallDetailsHeader from "@/components/halls/HallDetailsHeader";
 import HallHeroGallery from "@/components/halls/HallHeroGallery";
 import HallQuickInfo from "@/components/halls/HallQuickInfo";
@@ -19,6 +20,7 @@ export default function HallDetailsOverview({ hall }: HallDetailsOverviewProps) 
       <HallHeroGallery images={hall.gallery} hallName={hall.name} />
       <HallYouTubeEmbed url={hall.youtubeVideoUrl} variant="link" />
       <HallDetailsHeader hall={hall} sections={[]} part="meta" />
+      <HallActiveOfferBanner key={hall.id} hallId={hall.id} />
       <HallQuickInfo hall={hall} />
     </section>
   );

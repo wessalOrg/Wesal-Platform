@@ -71,7 +71,7 @@ export default function HeroCopy({ titleId, intro }: HeroCopyProps) {
           </span>
         </button>
         <Link
-          href="/halls"
+          href="/discover"
           className="btn-outline min-h-11 shrink-0 gap-1.5 px-3 text-[0.72rem] font-semibold whitespace-nowrap sm:gap-2 sm:px-5 sm:text-sm"
           data-testid="hero-cta-explore"
         >

@@ -34,6 +34,10 @@ export function ownerHallNotificationsPath(
   return id ? `${base}?request_id=${encodeURIComponent(id)}` : base;
 }
 
+export function ownerHallOffersPath(hallId: string): string {
+  return `/owner/halls/${encodeURIComponent(hallId)}/offers`;
+}
+
 export function ownerBookingsPath(requestId?: string | null, hallId?: string | null): string {
   const params = new URLSearchParams();
   if (hallId?.trim()) params.set("hallId", hallId.trim());
@@ -44,7 +48,7 @@ export function ownerBookingsPath(requestId?: string | null, hallId?: string | n
 
 export function parseOwnerHallIdFromPathname(pathname: string): string | null {
   const match = pathname.match(
-    /^\/owner\/halls\/([^/]+)(?:\/notifications)?\/?$/,
+    /^\/owner\/halls\/([^/]+)(?:\/(?:notifications|offers|view))?\/?$/,
   );
   if (!match) return null;
   let hallId: string;
@@ -59,4 +63,8 @@ export function parseOwnerHallIdFromPathname(pathname: string): string | null {
 
 export function isOwnerHallNotificationsPath(pathname: string): boolean {
   return /^\/owner\/halls\/[^/]+\/notifications\/?$/.test(pathname);
+}
+
+export function isOwnerHallOffersPath(pathname: string): boolean {
+  return /^\/owner\/halls\/[^/]+\/offers\/?$/.test(pathname);
 }

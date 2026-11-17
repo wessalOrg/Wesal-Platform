@@ -8,11 +8,14 @@ import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
 import OfferStatusBadge from "@/components/offers/OfferStatusBadge";
 import StopOfferConfirmDialog from "@/components/offers/StopOfferConfirmDialog";
 import PublishingRestrictionBanner from "@/components/moderation/PublishingRestrictionBanner";
+import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAccountPublishingLock } from "@/hooks/useAccountPublishingLock";
+import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAccess";
 import { useT } from "@/i18n";
 import { ApiError } from "@/lib/api-error";
-import { formatOfferDateRange, offerDateToIso } from "@/lib/offer-format";
+import { formatOfferDateRange } from "@/lib/offer-format";
+import { datetimeLocalToIso } from "@/lib/offer-validation";
 import { resolveOfferStatus } from "@/lib/offer-status";
 import {
   createProfessionalOffer,
@@ -31,6 +34,9 @@ export default function ProfessionalOffersManagePage() {
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG-u-nu-latn" : "en-US";
   const publishingLock = useAccountPublishingLock();
+  const { canPublish, statusLoading: approvalLoading } =
+    useProfessionalAccountAccess();
+  const canMutate = canPublish && !publishingLock.isLocked && !approvalLoading;
   const [offers, setOffers] = useState<ProfessionalOffer[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -101,6 +107,10 @@ export default function ProfessionalOffersManagePage() {
   }
 
   async function handleSubmit(values: ProfessionalOfferFormValues) {
+    if (!canPublish || approvalLoading) {
+      setFormError("professionals.offers.errors.forbidden");
+      return;
+    }
     if (publishingLock.isLocked) {
       setFormError("moderation.restriction.blocked");
       return;
@@ -114,8 +124,8 @@ export default function ProfessionalOffersManagePage() {
       priceBox: values.includePrice
         ? Number(values.priceBox || values.offerPrice)
         : null,
-      startsAt: offerDateToIso(values.startsAt, false),
-      endsAt: offerDateToIso(values.endsAt, true),
+      startsAt: datetimeLocalToIso(values.startsAt) ?? "",
+      endsAt: datetimeLocalToIso(values.endsAt) ?? "",
       images: values.newFiles,
     };
     try {
@@ -178,14 +188,14 @@ export default function ProfessionalOffersManagePage() {
         <ProfessionalOfferForm
           mode={view === "edit" ? "edit" : "create"}
           initial={editing}
-          busy={formBusy || publishingLock.isLocked}
+          busy={formBusy || !canMutate}
           errorKey={formError}
           onCancel={() => {
             setView("list");
             setEditing(null);
           }}
           onRequestStop={
-            view === "edit" && editing && !publishingLock.isLocked
+            view === "edit" && editing && canMutate
               ? () => {
                   setStopError(null);
                   setStopTarget(editing);
@@ -226,14 +236,16 @@ export default function ProfessionalOffersManagePage() {
           <button
             type="button"
             className="btn-primary min-h-10 shrink-0 px-3 text-sm sm:min-h-10 sm:px-4 sm:text-base disabled:cursor-not-allowed disabled:opacity-55"
-            disabled={publishingLock.isLocked}
+            disabled={!canMutate}
             title={
               publishingLock.isLocked
                 ? t("moderation.restriction.blocked")
-                : undefined
+                : !canPublish
+                  ? t("professionals.offers.errors.forbidden")
+                  : undefined
             }
             onClick={() => {
-              if (publishingLock.isLocked) return;
+              if (!canMutate) return;
               setEditing(null);
               setFormError(null);
               setView("create");
@@ -292,7 +304,7 @@ export default function ProfessionalOffersManagePage() {
       {/* Mobile: compact cards (no horizontal table scroll). */}
       <ul className="grid gap-2.5 md:hidden">
         {visible.map(({ offer, status: offerStatus }) => {
-          const canManage =
+          const lifecycleOpen =
             offerStatus === "active" || offerStatus === "scheduled";
           return (
             <li
@@ -302,14 +314,11 @@ export default function ProfessionalOffersManagePage() {
             >
               <div className="flex gap-2.5">
                 <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[var(--wesal-pink)]">
-                  {offer.images[0]?.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={offer.images[0].url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
+                  <AuthenticatedApiImage
+                    src={offer.images[0]?.url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex flex-wrap items-start justify-between gap-1.5">
@@ -328,19 +337,21 @@ export default function ProfessionalOffersManagePage() {
                   </p>
                 </div>
               </div>
-              {canManage ? (
+              {lifecycleOpen ? (
                 <div className="mt-2.5 flex gap-2">
                   <button
                     type="button"
                     className="btn-outline min-h-9 flex-1 px-2 text-xs disabled:opacity-50"
-                    disabled={publishingLock.isLocked}
+                    disabled={!canMutate}
                     title={
                       publishingLock.isLocked
                         ? t("moderation.restriction.blocked")
-                        : undefined
+                        : !canPublish
+                          ? t("professionals.offers.errors.forbidden")
+                          : undefined
                     }
                     onClick={() => {
-                      if (publishingLock.isLocked) return;
+                      if (!canMutate) return;
                       void openEdit(offer);
                     }}
                   >
@@ -349,14 +360,16 @@ export default function ProfessionalOffersManagePage() {
                   <button
                     type="button"
                     className="min-h-9 flex-1 rounded-lg border border-[var(--wesal-maroon)] px-2 text-xs font-bold text-[var(--wesal-maroon)] disabled:opacity-50"
-                    disabled={publishingLock.isLocked}
+                    disabled={!canMutate}
                     title={
                       publishingLock.isLocked
                         ? t("moderation.restriction.blocked")
-                        : undefined
+                        : !canPublish
+                          ? t("professionals.offers.errors.forbidden")
+                          : undefined
                     }
                     onClick={() => {
-                      if (publishingLock.isLocked) return;
+                      if (!canMutate) return;
                       setStopError(null);
                       setStopTarget(offer);
                     }}
@@ -384,7 +397,7 @@ export default function ProfessionalOffersManagePage() {
           </thead>
           <tbody>
             {visible.map(({ offer, status: offerStatus }) => {
-              const canManage =
+              const lifecycleOpen =
                 offerStatus === "active" || offerStatus === "scheduled";
               return (
                 <tr
@@ -395,14 +408,11 @@ export default function ProfessionalOffersManagePage() {
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--wesal-pink)]">
-                        {offer.images[0]?.url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={offer.images[0].url}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        ) : null}
+                        <AuthenticatedApiImage
+                          src={offer.images[0]?.url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       </div>
                       <div className="min-w-0">
                         <p className="truncate font-bold text-[var(--wesal-maroon-dark)]">
@@ -426,36 +436,40 @@ export default function ProfessionalOffersManagePage() {
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex flex-wrap gap-2">
-                      {canManage ? (
+                      {lifecycleOpen ? (
                         <button
                           type="button"
                           className="btn-outline min-h-8 px-2 text-xs disabled:opacity-50"
-                          disabled={publishingLock.isLocked}
+                          disabled={!canMutate}
                           title={
                             publishingLock.isLocked
                               ? t("moderation.restriction.blocked")
-                              : undefined
+                              : !canPublish
+                                ? t("professionals.offers.errors.forbidden")
+                                : undefined
                           }
                           onClick={() => {
-                            if (publishingLock.isLocked) return;
+                            if (!canMutate) return;
                             void openEdit(offer);
                           }}
                         >
                           {t("offers.actions.edit")}
                         </button>
                       ) : null}
-                      {canManage ? (
+                      {lifecycleOpen ? (
                         <button
                           type="button"
                           className="min-h-8 rounded-lg border border-[var(--wesal-maroon)] px-2 text-xs font-bold text-[var(--wesal-maroon)] disabled:opacity-50"
-                          disabled={publishingLock.isLocked}
+                          disabled={!canMutate}
                           title={
                             publishingLock.isLocked
                               ? t("moderation.restriction.blocked")
-                              : undefined
+                              : !canPublish
+                                ? t("professionals.offers.errors.forbidden")
+                                : undefined
                           }
                           onClick={() => {
-                            if (publishingLock.isLocked) return;
+                            if (!canMutate) return;
                             setStopError(null);
                             setStopTarget(offer);
                           }}

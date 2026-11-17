@@ -5,6 +5,7 @@ import { useUiLang } from "@/components/layout/LanguageProvider";
 import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
 import OfferStatusBadge from "@/components/offers/OfferStatusBadge";
 import PostInquiryButton from "@/components/posts/PostInquiryButton";
+import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
 import { useT } from "@/i18n";
 import { buildHallDetailsPath } from "@/lib/booking-intent";
 import { formatOfferDateRange } from "@/lib/offer-format";
@@ -66,18 +67,16 @@ export default function DiscoverOfferCard({
       data-offer-id={item.id}
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-[var(--wesal-pink)]">
-        {item.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={item.imageUrl}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--wesal-muted)]">
-            {t("offers.card.noImage")}
-          </div>
-        )}
+        <AuthenticatedApiImage
+          src={item.imageUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          fallback={
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--wesal-muted)]">
+              {t("offers.card.noImage")}
+            </div>
+          }
+        />
         <span className="absolute end-3 top-3 rounded-md bg-[var(--wesal-maroon)] px-2 py-1 text-[0.65rem] font-bold text-white">
           {t("offers.card.badge")}
         </span>
@@ -88,6 +87,11 @@ export default function DiscoverOfferCard({
           {title}
         </h3>
         <p className="text-xs text-[var(--wesal-muted)]">{subtitle}</p>
+        {item.contentType === "HallOffer" && item.location?.trim() ? (
+          <p className="line-clamp-1 text-xs text-[var(--wesal-muted)]">
+            {item.location.trim()}
+          </p>
+        ) : null}
         <OfferPriceDisplay
           oldPrice={item.oldPrice}
           offerPrice={item.offerPrice}

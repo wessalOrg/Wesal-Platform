@@ -3,21 +3,24 @@
 import { useMemo, useState, type FormEvent } from "react";
 import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
 import OfferStatusBadge from "@/components/offers/OfferStatusBadge";
-import ConsultDateField from "@/components/home/ConsultDateField";
+import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
+import WesalDateTimeField from "@/components/ui/WesalDateTimeField";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
 import { useT } from "@/i18n";
+import { formatOfferDateRange, resolveOfferMediaUrl } from "@/lib/offer-format";
 import {
-  formatOfferDateRange,
-  isoToOfferDateInput,
-  offerDateToIso,
-  resolveOfferMediaUrl,
-} from "@/lib/offer-format";
+  datetimeLocalToIso,
+  isoToDatetimeLocalValue,
+  OFFER_CONTENT_MAX,
+  OFFER_IMAGES_MAX,
+  validateOfferDateRange,
+} from "@/lib/offer-validation";
 import { offerDiscountPercent, resolveOfferStatus } from "@/lib/offer-status";
 import type { ProfessionalOffer } from "@/types/offers";
 
-const TITLE_MAX = 150;
-const MAX_IMAGES = 5;
+const TITLE_MAX = OFFER_CONTENT_MAX;
+const MAX_IMAGES = OFFER_IMAGES_MAX;
 
 export type ProfessionalOfferFormValues = {
   content: string;
@@ -64,8 +67,8 @@ function fromOffer(offer: ProfessionalOffer): ProfessionalOfferFormValues {
     offerPrice: String(offer.offerPrice ?? ""),
     includePrice: offer.priceBox != null,
     priceBox: offer.priceBox != null ? String(offer.priceBox) : "",
-    startsAt: isoToOfferDateInput(offer.startsAt),
-    endsAt: isoToOfferDateInput(offer.endsAt),
+    startsAt: isoToDatetimeLocalValue(offer.startsAt),
+    endsAt: isoToDatetimeLocalValue(offer.endsAt),
     existingImages: offer.images.map((img) => ({
       id: img.id,
       url: resolveOfferMediaUrl(img.url),
@@ -87,7 +90,6 @@ export function validateProfessionalOfferForm(
   if (!hasText && totalImages === 0) {
     return t("offers.validation.contentOrImage");
   }
-  if (!values.startsAt || !values.endsAt) return t("offers.validation.datesRequired");
   if (!Number.isFinite(oldPrice) || oldPrice <= 0) {
     return t("offers.validation.oldPriceRequired");
   }
@@ -101,11 +103,16 @@ export function validateProfessionalOfferForm(
       return t("offers.validation.priceBoxInvalid");
     }
   }
-  const startIso = offerDateToIso(values.startsAt, false);
-  const endIso = offerDateToIso(values.endsAt, true);
-  if (!startIso || !endIso) return t("offers.validation.datesRequired");
-  if (new Date(endIso).getTime() <= new Date(startIso).getTime()) {
-    return t("offers.validation.endAfterStart");
+  const dates = validateOfferDateRange(values.startsAt, values.endsAt);
+  if (dates.issue === "required" || !dates.startsAt || !dates.endsAt) {
+    return dates.issue === "invalid"
+      ? t("offers.validation.datesInvalid")
+      : t("offers.validation.datesRequired");
+  }
+  if (dates.issue === "invalid") return t("offers.validation.datesInvalid");
+  if (dates.issue === "endBeforeStart") return t("offers.validation.endAfterStart");
+  if (dates.issue === "endNotFuture") {
+    return t("offers.validation.endNotFuture");
   }
   if (values.content.length > TITLE_MAX) {
     return t("offers.validation.titleMax", { count: TITLE_MAX });
@@ -137,16 +144,14 @@ export default function ProfessionalOfferForm({
   const oldPriceNum = Number(values.oldPrice);
   const offerPriceNum = Number(values.offerPrice);
   const discount = offerDiscountPercent(oldPriceNum, offerPriceNum);
+  const previewStarts = datetimeLocalToIso(values.startsAt);
+  const previewEnds = datetimeLocalToIso(values.endsAt);
   const previewStatus = resolveOfferStatus(
-    offerDateToIso(values.startsAt, false) || null,
-    offerDateToIso(values.endsAt, true) || null,
+    previewStarts,
+    previewEnds,
     initial?.stoppedAt ?? null,
   );
-  const dateLabel = formatOfferDateRange(
-    offerDateToIso(values.startsAt, false) || null,
-    offerDateToIso(values.endsAt, true) || null,
-    locale,
-  );
+  const dateLabel = formatOfferDateRange(previewStarts, previewEnds, locale);
 
   const resolvedError = useMemo(() => {
     if (localError) return localError;
@@ -230,8 +235,11 @@ export default function ProfessionalOfferForm({
                 key={img.id}
                 className="relative h-20 w-20 overflow-hidden rounded-xl border border-[var(--wesal-border)]"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.url} alt="" className="h-full w-full object-cover" />
+                <AuthenticatedApiImage
+                  src={img.url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
                 <button
                   type="button"
                   className="absolute end-0.5 top-0.5 flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white"
@@ -381,30 +389,30 @@ export default function ProfessionalOfferForm({
         ) : null}
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block">
+          <div>
             <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
               {t("offers.form.startsAt")}
             </span>
-            <ConsultDateField
+            <WesalDateTimeField
               value={values.startsAt}
               disabled={busy}
               triggerClassName={hallFieldClassName(false)}
               onChange={(next) => patch({ startsAt: next })}
               testId="pro-offer-starts-at"
             />
-          </label>
-          <label className="block">
+          </div>
+          <div>
             <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
               {t("offers.form.endsAt")}
             </span>
-            <ConsultDateField
+            <WesalDateTimeField
               value={values.endsAt}
               disabled={busy}
               triggerClassName={hallFieldClassName(false)}
               onChange={(next) => patch({ endsAt: next })}
               testId="pro-offer-ends-at"
             />
-          </label>
+          </div>
         </div>
 
         {resolvedError ? (
@@ -445,18 +453,16 @@ export default function ProfessionalOfferForm({
       <aside className="space-y-3">
         <div className="overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-white shadow-sm">
           <div className="relative aspect-[4/3] bg-[var(--wesal-pink)]">
-            {previewImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={previewImage}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-xs text-[var(--wesal-muted)]">
-                {t("offers.card.noImage")}
-              </div>
-            )}
+            <AuthenticatedApiImage
+              src={previewImage || null}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              fallback={
+                <div className="absolute inset-0 flex items-center justify-center text-xs text-[var(--wesal-muted)]">
+                  {t("offers.card.noImage")}
+                </div>
+              }
+            />
             <span className="absolute end-3 top-3 rounded-md bg-[var(--wesal-maroon)] px-2 py-1 text-[0.65rem] font-bold text-white">
               {t("offers.card.badge")}
             </span>

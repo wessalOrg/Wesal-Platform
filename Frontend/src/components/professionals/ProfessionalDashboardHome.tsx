@@ -8,10 +8,11 @@ import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAcce
 import { useProfessionalReviewNotes } from "@/hooks/useProfessionalReviewNotes";
 import { useProfileAvatarUrl } from "@/hooks/useProfileAvatarUrl";
 import { useT } from "@/i18n";
+import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import {
   COORDINATOR_SETUP_PATH,
   PHOTOGRAPHER_SETUP_PATH,
-  REGULAR_MESSAGES_PATH,
+  professionalAdminMessagesPath,
   professionalProfilePath,
 } from "@/lib/account-profile-path";
 import { isPhotographerRole } from "@/lib/account-role";
@@ -43,6 +44,7 @@ type FeatureCard = {
 export default function ProfessionalDashboardHome() {
   const t = useT();
   const router = useRouter();
+  const inbox = useOptionalMessagesInbox();
   const access = useProfessionalAccountAccess();
   const [contactPending, setContactPending] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
@@ -83,9 +85,9 @@ export default function ProfessionalDashboardHome() {
     setContactError(null);
     try {
       const thread = await contactAdminAccount();
-      router.push(
-        `${REGULAR_MESSAGES_PATH}?conversation_id=${encodeURIComponent(thread.conversationId)}`,
-      );
+      // Prefill selection so the embedded inbox opens the Admin thread immediately.
+      inbox?.selectConversation(thread.conversationId);
+      router.push(professionalAdminMessagesPath(thread.conversationId));
     } catch (error) {
       setContactError(
         error instanceof ApiError

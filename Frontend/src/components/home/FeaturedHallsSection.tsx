@@ -35,7 +35,7 @@ type LoadStatus = "loading" | "ready" | "error";
 
 export default function FeaturedHallsSection() {
   const t = useT();
-  const [filter, setFilter] = useState<ProviderFilter>("halls");
+  const [filter, setFilter] = useState<ProviderFilter>("all");
   const [halls, setHalls] = useState<FeaturedHall[]>([]);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -45,19 +45,31 @@ export default function FeaturedHallsSection() {
   const hasLoadedRef = useRef(false);
 
   const showsHalls = filter === "all" || filter === "halls";
-  const visiblePlaces = SERVICE_PLACES.filter(
-    (place) => filter === "all" || place.category === filter,
-  );
-  const previewHalls =
-    showsHalls && status !== "loading" ? halls.slice(0, LANDING_PREVIEW_COUNT) : [];
-  const previewPlaces = visiblePlaces.slice(
-    0,
-    filter === "all"
-      ? status === "loading"
-        ? 0
-        : Math.max(0, LANDING_PREVIEW_COUNT - previewHalls.length)
-      : LANDING_PREVIEW_COUNT,
-  );
+  const photoPlaces = SERVICE_PLACES.filter((place) => place.category === "photo");
+  const plannerPlaces = SERVICE_PLACES.filter((place) => place.category === "planners");
+
+  // "All" must mix halls + photography + décor (not fill the whole row with halls).
+  let previewHalls: FeaturedHall[] = [];
+  let previewPlaces: Array<(typeof SERVICE_PLACES)[number]> = [];
+  if (filter === "halls") {
+    previewHalls = status !== "loading" ? halls.slice(0, LANDING_PREVIEW_COUNT) : [];
+  } else if (filter === "photo") {
+    previewPlaces = photoPlaces.slice(0, LANDING_PREVIEW_COUNT);
+  } else if (filter === "planners") {
+    previewPlaces = plannerPlaces.slice(0, LANDING_PREVIEW_COUNT);
+  } else if (status !== "loading") {
+    previewHalls = halls.slice(0, 1);
+    previewPlaces = [...photoPlaces.slice(0, 1), ...plannerPlaces.slice(0, 1)];
+    const slotsLeft = Math.max(
+      0,
+      LANDING_PREVIEW_COUNT - previewHalls.length - previewPlaces.length,
+    );
+    if (slotsLeft > 0 && halls.length > previewHalls.length) {
+      previewHalls = halls.slice(0, previewHalls.length + slotsLeft);
+    }
+  }
+
+  const browseHref = filter === "halls" ? "/halls" : "/discover";
 
   const requestRevalidate = useCallback(() => {
     setReloadKey((key) => key + 1);
@@ -193,7 +205,10 @@ export default function FeaturedHallsSection() {
               </div>
             ) : null}
 
-            {showsHalls && status !== "loading" && halls.length === 0 && visiblePlaces.length === 0 ? (
+            {showsHalls &&
+            status !== "loading" &&
+            halls.length === 0 &&
+            previewPlaces.length === 0 ? (
               <p className="mt-6 text-center text-sm text-[var(--wesal-muted)]" role="status">
                 {t("home.featured.empty")}
               </p>
@@ -225,7 +240,7 @@ export default function FeaturedHallsSection() {
 
             <div className="mt-7 flex justify-center">
               <Link
-                href="/halls"
+                href={browseHref}
                 className="inline-flex items-center gap-2.5 rounded-full border border-[var(--wesal-gold)] bg-white px-5 py-2.5 text-sm font-semibold text-[var(--wesal-gold)] transition-colors hover:bg-[var(--wesal-gold)] hover:text-white"
                 data-testid="browse-more-halls"
               >

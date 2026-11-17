@@ -13,7 +13,8 @@ import WesalSelect from "@/components/ui/WesalSelect";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useT } from "@/i18n";
 import { ApiError } from "@/lib/api-error";
-import { formatOfferDateRange, offerDateToIso } from "@/lib/offer-format";
+import { formatOfferDateRange } from "@/lib/offer-format";
+import { datetimeLocalToIso } from "@/lib/offer-validation";
 import { offerDiscountPercent, resolveOfferStatus } from "@/lib/offer-status";
 import { localizeHallName } from "@/lib/localize-hall-display";
 import {
@@ -148,8 +149,8 @@ export default function HallOwnerOffersPage() {
     const payload = {
       oldBookingPrice: Number(values.oldBookingPrice),
       offerPrice: Number(values.offerPrice),
-      startsAt: offerDateToIso(values.startsAt, false),
-      endsAt: offerDateToIso(values.endsAt, true),
+      startsAt: datetimeLocalToIso(values.startsAt) ?? "",
+      endsAt: datetimeLocalToIso(values.endsAt) ?? "",
     };
     try {
       if (formMode === "edit" && editing) {

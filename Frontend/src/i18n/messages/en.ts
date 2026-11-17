@@ -237,6 +237,7 @@ const en: MessageCatalog = {
   "home.consult.topic.other": "Other",
   "home.consult.date": "Expected occasion date",
   "home.consult.datePlaceholder": "dd / mm / yyyy",
+  "home.consult.dateTimePlaceholder": "dd / mm / yyyy · hh:mm",
   "home.consult.dateClear": "Clear",
   "home.consult.dateToday": "Today",
   "home.consult.datePrev": "Previous month",
@@ -1215,17 +1216,19 @@ const en: MessageCatalog = {
   "professionals.posts.editAction": "Edit post",
   "professionals.posts.createTitle": "Add a new post",
   "professionals.posts.createSubtitle":
-    "Share photos of your work and services with Wesal visitors.",
+    "Share a caption or photos of your work and services with Wesal visitors.",
   "professionals.posts.editTitle": "Edit post",
   "professionals.posts.editSubtitle": "Update your caption, price, or images.",
-  "professionals.posts.imagesLabel": "Post images",
-  "professionals.posts.imagesHint": "JPG, PNG, or WebP · up to {max} images · 5 MB each.",
+  "professionals.posts.imagesLabel": "Post images (optional)",
+  "professionals.posts.imagesHint":
+    "Optional if you write a caption · JPG, PNG, or WebP · up to {max} images · 5 MB each.",
   "professionals.posts.addImages": "Add images",
   "professionals.posts.removeImage": "Remove",
-  "professionals.posts.contentLabel": "Caption (optional)",
+  "professionals.posts.contentLabel": "Caption",
   "professionals.posts.contentPlaceholder":
     "Tell visitors about your work or the service you offer…",
-  "professionals.posts.contentHint": "Optional · up to {max} characters.",
+  "professionals.posts.contentHint":
+    "Required if you do not upload an image · up to {max} characters.",
   "professionals.posts.priceLabel": "Price (optional)",
   "professionals.posts.pricePlaceholder": "e.g. 250",
   "professionals.posts.priceHint": "Optional · non-negative number with up to 2 decimals.",
@@ -1311,6 +1314,7 @@ const en: MessageCatalog = {
   "professionals.offers.errors.priceBoxInvalid":
     "Price box must be a non-negative number with up to 2 decimals.",
   "professionals.offers.errors.datesRequired": "Start and end dates are required.",
+  "professionals.offers.errors.datesInvalid": "Start or end date is invalid. Pick them from the calendar.",
   "professionals.offers.errors.endBeforeStart": "End must be later than start.",
   "professionals.offers.errors.endNotFuture": "End must be in the future.",
   "professionals.offers.errors.imagesInvalid":
@@ -2424,6 +2428,7 @@ const en: MessageCatalog = {
   "owner.offers.errors.offerNotLower":
     "Offer price must be lower than the original booking price.",
   "owner.offers.errors.datesRequired": "Start and end dates are required.",
+  "owner.offers.errors.datesInvalid": "Start or end date is invalid. Pick them from the calendar.",
   "owner.offers.errors.endBeforeStart": "End must be later than start.",
   "owner.offers.errors.endNotFuture": "End must be in the future.",
   "owner.management.notifications.title": "Booking requests",
@@ -3478,10 +3483,12 @@ const en: MessageCatalog = {
   "offers.form.createNote": "The offer appears to customers only between the start and end dates.",
   "offers.form.editNote": "The offer updates immediately after you save changes.",
   "offers.validation.datesRequired": "Choose a start and end date.",
+  "offers.validation.datesInvalid": "Start or end date is invalid. Pick them from the calendar.",
   "offers.validation.oldPriceRequired": "Enter a valid original price.",
   "offers.validation.offerPriceRequired": "Enter a valid offer price.",
   "offers.validation.offerBelowOld": "Offer price must be lower than the original price.",
   "offers.validation.endAfterStart": "End date must be after the start date.",
+  "offers.validation.endNotFuture": "End must be in the future.",
   "offers.validation.titleMax": "Title must be at most {count} characters.",
   "offers.validation.imagesMax": "You can attach up to {count} images.",
   "offers.validation.contentOrImage":

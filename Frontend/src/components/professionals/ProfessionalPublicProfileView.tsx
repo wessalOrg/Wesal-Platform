@@ -6,7 +6,10 @@ import ProfessionalBioEditor from "@/components/professionals/ProfessionalBioEdi
 import ProfessionalContentCard from "@/components/professionals/ProfessionalContentCard";
 import ProfessionalOfferForm from "@/components/professionals/ProfessionalOfferForm";
 import ProfessionalPostForm from "@/components/professionals/ProfessionalPostForm";
+import PublishingRestrictionBanner from "@/components/moderation/PublishingRestrictionBanner";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
+import { useAccountPublishingLock } from "@/hooks/useAccountPublishingLock";
+import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAccess";
 import { useProfessionalPublicProfile } from "@/hooks/useProfessionalPublicProfile";
 import { useStartProfessionalConversation } from "@/hooks/useStartProfessionalConversation";
 import { useT } from "@/i18n";
@@ -71,6 +74,9 @@ export default function ProfessionalPublicProfileView({
   const pictureInputRef = useRef<HTMLInputElement>(null);
   const postsFetchStartedRef = useRef(false);
   const { ready, authenticated, userId: viewerId, isAdmin } = useAccountAccess();
+  const publishingLock = useAccountPublishingLock();
+  const { canPublish, statusLoading: approvalLoading } =
+    useProfessionalAccountAccess();
   const { status, profile, errorKey, loading, reload } =
     useProfessionalPublicProfile(userId);
   const { start, starting, error: contactError } = useStartProfessionalConversation();
@@ -117,7 +123,9 @@ export default function ProfessionalPublicProfileView({
   const isOwner = Boolean(
     ready && authenticated && viewerId && profile && viewerId === profile.userId,
   );
-  const canManagePosts = Boolean(isOwner && profile?.isPubliclyAvailable);
+  const canManagePosts = Boolean(
+    isOwner && profile?.isPubliclyAvailable && canPublish && !approvalLoading,
+  );
   const canManageOffers = canManagePosts;
 
   const displayBio =
@@ -572,9 +580,16 @@ export default function ProfessionalPublicProfileView({
             {canManagePosts ? (
               <button
                 type="button"
-                className="btn-primary !min-h-10 px-3.5 text-sm"
+                className="btn-primary !min-h-10 px-3.5 text-sm disabled:cursor-not-allowed disabled:opacity-55"
                 data-testid="professional-post-create-open"
+                disabled={publishingLock.isLocked}
+                title={
+                  publishingLock.isLocked
+                    ? t("moderation.restriction.blocked")
+                    : undefined
+                }
                 onClick={() => {
+                  if (publishingLock.isLocked) return;
                   setEditingPost(null);
                   setPostFormMode("create");
                   setOfferFormOpen(false);
@@ -588,9 +603,16 @@ export default function ProfessionalPublicProfileView({
             {canManageOffers ? (
               <button
                 type="button"
-                className="btn-outline !min-h-10 px-3.5 text-sm"
+                className="btn-outline !min-h-10 px-3.5 text-sm disabled:cursor-not-allowed disabled:opacity-55"
                 data-testid="professional-offer-create-open"
+                disabled={publishingLock.isLocked}
+                title={
+                  publishingLock.isLocked
+                    ? t("moderation.restriction.blocked")
+                    : undefined
+                }
                 onClick={() => {
+                  if (publishingLock.isLocked) return;
                   setOfferFormOpen(true);
                   setPostFormMode(null);
                   setEditingPost(null);
@@ -605,13 +627,17 @@ export default function ProfessionalPublicProfileView({
         ) : null}
       </div>
 
+      {isOwner && publishingLock.isLocked ? (
+        <PublishingRestrictionBanner lockedUntil={publishingLock.lockedUntil} />
+      ) : null}
+
       {postActionSuccess || offerActionSuccess ? (
         <p className="text-sm font-medium text-[var(--wesal-maroon)]" role="status">
           {offerActionSuccess ?? postActionSuccess}
         </p>
       ) : null}
 
-      {postFormMode ? (
+      {postFormMode && !publishingLock.isLocked ? (
         <ProfessionalPostForm
           mode={postFormMode}
           initialPost={postFormMode === "edit" ? editingPost : null}
@@ -625,7 +651,7 @@ export default function ProfessionalPublicProfileView({
         />
       ) : null}
 
-      {offerFormOpen ? (
+      {offerFormOpen && !publishingLock.isLocked ? (
         <ProfessionalOfferForm
           onClose={() => setOfferFormOpen(false)}
           onSaved={() => {

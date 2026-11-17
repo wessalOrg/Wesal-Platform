@@ -2,16 +2,17 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
-import ConsultDateField from "@/components/home/ConsultDateField";
+import WesalDateTimeField from "@/components/ui/WesalDateTimeField";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
 import { useT } from "@/i18n";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
+import { formatOfferDateRange } from "@/lib/offer-format";
 import {
-  formatOfferDateRange,
-  isoToOfferDateInput,
-  offerDateToIso,
-} from "@/lib/offer-format";
+  datetimeLocalToIso,
+  isoToDatetimeLocalValue,
+  validateOfferDateRange,
+} from "@/lib/offer-validation";
 import { offerDiscountPercent } from "@/lib/offer-status";
 import type { HallOffer } from "@/types/offers";
 
@@ -45,8 +46,8 @@ function fromOffer(offer: HallOffer): HallOfferFormValues {
   return {
     oldBookingPrice: String(offer.oldBookingPrice ?? ""),
     offerPrice: String(offer.offerPrice ?? ""),
-    startsAt: isoToOfferDateInput(offer.startsAt),
-    endsAt: isoToOfferDateInput(offer.endsAt),
+    startsAt: isoToDatetimeLocalValue(offer.startsAt),
+    endsAt: isoToDatetimeLocalValue(offer.endsAt),
   };
 }
 
@@ -56,7 +57,6 @@ export function validateHallOfferForm(
 ): string | null {
   const oldPrice = Number(values.oldBookingPrice);
   const offerPrice = Number(values.offerPrice);
-  if (!values.startsAt || !values.endsAt) return t("offers.validation.datesRequired");
   if (!Number.isFinite(oldPrice) || oldPrice <= 0) {
     return t("offers.validation.oldPriceRequired");
   }
@@ -64,12 +64,15 @@ export function validateHallOfferForm(
     return t("offers.validation.offerPriceRequired");
   }
   if (offerPrice >= oldPrice) return t("offers.validation.offerBelowOld");
-  const startIso = offerDateToIso(values.startsAt, false);
-  const endIso = offerDateToIso(values.endsAt, true);
-  if (!startIso || !endIso) return t("offers.validation.datesRequired");
-  if (new Date(endIso).getTime() <= new Date(startIso).getTime()) {
-    return t("offers.validation.endAfterStart");
+  const dates = validateOfferDateRange(values.startsAt, values.endsAt);
+  if (dates.issue === "required" || !dates.startsAt || !dates.endsAt) {
+    return dates.issue === "invalid"
+      ? t("offers.validation.datesInvalid")
+      : t("offers.validation.datesRequired");
   }
+  if (dates.issue === "invalid") return t("offers.validation.datesInvalid");
+  if (dates.issue === "endBeforeStart") return t("offers.validation.endAfterStart");
+  if (dates.issue === "endNotFuture") return t("offers.validation.endNotFuture");
   return null;
 }
 
@@ -135,8 +138,8 @@ export default function HallOfferFormModal({
   const offerPriceNum = Number(values.offerPrice);
   const discount = offerDiscountPercent(oldPriceNum, offerPriceNum);
   const dateLabel = formatOfferDateRange(
-    offerDateToIso(values.startsAt, false) || null,
-    offerDateToIso(values.endsAt, true) || null,
+    datetimeLocalToIso(values.startsAt),
+    datetimeLocalToIso(values.endsAt),
     locale,
   );
 
@@ -251,30 +254,30 @@ export default function HallOfferFormModal({
                 </p>
               ) : null}
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block">
+                <div>
                   <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
                     {t("offers.form.startsAt")}
                   </span>
-                  <ConsultDateField
+                  <WesalDateTimeField
                     value={values.startsAt}
                     disabled={busy}
                     triggerClassName={hallFieldClassName(false)}
                     onChange={(next) => patch({ startsAt: next })}
                     testId="hall-offer-starts-at"
                   />
-                </label>
-                <label className="block">
+                </div>
+                <div>
                   <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
                     {t("offers.form.endsAt")}
                   </span>
-                  <ConsultDateField
+                  <WesalDateTimeField
                     value={values.endsAt}
                     disabled={busy}
                     triggerClassName={hallFieldClassName(false)}
                     onChange={(next) => patch({ endsAt: next })}
                     testId="hall-offer-ends-at"
                   />
-                </label>
+                </div>
               </div>
               {resolvedError ? (
                 <p className="text-sm text-[#b42318]" role="alert">

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
+import WesalDateTimeField from "@/components/ui/WesalDateTimeField";
 import { ApiError, isForbiddenApiError, isUnauthorizedApiError } from "@/lib/api-error";
 import {
   OFFER_CONTENT_MAX,
@@ -98,7 +99,9 @@ export default function ProfessionalOfferForm({
           ? t("professionals.offers.errors.endBeforeStart")
           : dates.issue === "endNotFuture"
             ? t("professionals.offers.errors.endNotFuture")
-            : t("professionals.offers.errors.datesRequired"),
+            : dates.issue === "invalid"
+              ? t("professionals.offers.errors.datesInvalid")
+              : t("professionals.offers.errors.datesRequired"),
       );
       return null;
     }
@@ -229,27 +232,29 @@ export default function ProfessionalOfferForm({
           <label htmlFor={startsId} className="text-sm font-semibold text-[var(--wesal-text)]">
             {t("professionals.offers.startsLabel")}
           </label>
-          <input
-            id={startsId}
-            type="datetime-local"
-            value={startsLocal}
-            disabled={submitting}
-            className={`${hallFieldClassName(false)} mt-2 w-full`}
-            onChange={(e) => setStartsLocal(e.target.value)}
-          />
+          <div className="mt-2">
+            <WesalDateTimeField
+              id={startsId}
+              value={startsLocal}
+              disabled={submitting}
+              triggerClassName={`${hallFieldClassName(false)} w-full`}
+              onChange={setStartsLocal}
+            />
+          </div>
         </div>
         <div>
           <label htmlFor={endsId} className="text-sm font-semibold text-[var(--wesal-text)]">
             {t("professionals.offers.endsLabel")}
           </label>
-          <input
-            id={endsId}
-            type="datetime-local"
-            value={endsLocal}
-            disabled={submitting}
-            className={`${hallFieldClassName(false)} mt-2 w-full`}
-            onChange={(e) => setEndsLocal(e.target.value)}
-          />
+          <div className="mt-2">
+            <WesalDateTimeField
+              id={endsId}
+              value={endsLocal}
+              disabled={submitting}
+              triggerClassName={`${hallFieldClassName(false)} w-full`}
+              onChange={setEndsLocal}
+            />
+          </div>
         </div>
       </div>
 

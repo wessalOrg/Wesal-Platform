@@ -234,6 +234,7 @@ const ar: MessageCatalog = {
   "home.consult.topic.other": "أخرى",
   "home.consult.date": "تاريخ المناسبة المتوقع",
   "home.consult.datePlaceholder": "dd / mm / yyyy",
+  "home.consult.dateTimePlaceholder": "dd / mm / yyyy · hh:mm",
   "home.consult.dateClear": "محو",
   "home.consult.dateToday": "اليوم",
   "home.consult.datePrev": "الشهر السابق",
@@ -1207,17 +1208,19 @@ const ar: MessageCatalog = {
   "professionals.posts.editAction": "تعديل المنشور",
   "professionals.posts.createTitle": "إضافة منشور جديد",
   "professionals.posts.createSubtitle":
-    "شارك صور أعمالك وخدماتك مع زوار وصال.",
+    "انشر نصاً أو صوراً من أعمالك وخدماتك لزوار وصال.",
   "professionals.posts.editTitle": "تعديل المنشور",
   "professionals.posts.editSubtitle": "حدّث الوصف أو السعر أو الصور.",
-  "professionals.posts.imagesLabel": "صور المنشور",
-  "professionals.posts.imagesHint": "JPG أو PNG أو WebP · حتى {max} صور · 5 ميجابايت لكل صورة.",
+  "professionals.posts.imagesLabel": "صور المنشور (اختياري)",
+  "professionals.posts.imagesHint":
+    "اختياري إذا كتبت وصفاً · JPG أو PNG أو WebP · حتى {max} صور · 5 ميجابايت لكل صورة.",
   "professionals.posts.addImages": "إضافة صور",
   "professionals.posts.removeImage": "إزالة",
-  "professionals.posts.contentLabel": "وصف المنشور (اختياري)",
+  "professionals.posts.contentLabel": "وصف المنشور",
   "professionals.posts.contentPlaceholder":
     "احكي للزوار عن عملك أو الخدمة التي تقدمها...",
-  "professionals.posts.contentHint": "اختياري · حتى {max} حرفاً.",
+  "professionals.posts.contentHint":
+    "مطلوب إذا لم ترفع صورة · حتى {max} حرفاً.",
   "professionals.posts.priceLabel": "السعر (اختياري)",
   "professionals.posts.pricePlaceholder": "مثال: 250",
   "professionals.posts.priceHint": "اختياري · رقم غير سالب وبحد أقصى منزلتين عشريتين.",
@@ -1303,6 +1306,7 @@ const ar: MessageCatalog = {
   "professionals.offers.errors.priceBoxInvalid":
     "صندوق السعر يجب أن يكون رقماً غير سالب وبحد أقصى منزلتين عشريتين.",
   "professionals.offers.errors.datesRequired": "تاريخ البداية والنهاية مطلوبان.",
+  "professionals.offers.errors.datesInvalid": "تواريخ البداية أو النهاية غير صحيحة. اخترها من التقويم.",
   "professionals.offers.errors.endBeforeStart": "يجب أن تكون النهاية بعد البداية.",
   "professionals.offers.errors.endNotFuture": "يجب أن تكون النهاية في المستقبل.",
   "professionals.offers.errors.imagesInvalid":
@@ -2414,6 +2418,7 @@ const ar: MessageCatalog = {
   "owner.offers.errors.offerNotLower":
     "يجب أن يكون سعر العرض أقل من سعر الحجز الأصلي.",
   "owner.offers.errors.datesRequired": "تاريخ البداية والنهاية مطلوبان.",
+  "owner.offers.errors.datesInvalid": "تواريخ البداية أو النهاية غير صحيحة. اخترها من التقويم.",
   "owner.offers.errors.endBeforeStart": "يجب أن تكون النهاية بعد البداية.",
   "owner.offers.errors.endNotFuture": "يجب أن تكون النهاية في المستقبل.",
   "owner.management.notifications.title": "طلبات الحجز",
@@ -3427,10 +3432,12 @@ const ar: MessageCatalog = {
   "offers.form.priceBoxHint":
     "سعر عرض اختياري يظهر على بطاقة العرض. اتركه معطّلاً لإخفائه.",
   "offers.validation.datesRequired": "حدد تاريخ البداية والنهاية.",
+  "offers.validation.datesInvalid": "تواريخ البداية أو النهاية غير صحيحة. اخترها من التقويم.",
   "offers.validation.oldPriceRequired": "أدخل السعر الأصلي بشكل صحيح.",
   "offers.validation.offerPriceRequired": "أدخل سعر العرض بشكل صحيح.",
   "offers.validation.offerBelowOld": "يجب أن يكون سعر العرض أقل من السعر الأصلي.",
   "offers.validation.endAfterStart": "تاريخ النهاية يجب أن يكون بعد تاريخ البداية.",
+  "offers.validation.endNotFuture": "يجب أن يكون تاريخ النهاية في المستقبل.",
   "offers.validation.titleMax": "العنوان يجب ألا يتجاوز {count} حرفاً.",
   "offers.validation.imagesMax": "يمكنك إرفاق حتى {count} صور.",
   "offers.errors.loadFailed": "تعذر تحميل العروض.",

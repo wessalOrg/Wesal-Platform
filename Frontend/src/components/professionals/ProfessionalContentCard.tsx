@@ -7,7 +7,7 @@ import {
   deriveOfferLifecycleStatus,
   type OfferLifecycleStatus,
 } from "@/lib/offer-validation";
-import { resolveMediaUrl } from "@/lib/hall-media-url";
+import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
 import type { ProfessionalProfileContentItem } from "@/types/professional-profile";
 
 type ProfessionalContentCardProps = {
@@ -68,7 +68,7 @@ export default function ProfessionalContentCard({
   showLifecycle = false,
 }: ProfessionalContentCardProps) {
   const t = useT();
-  const cover = item.images[0]?.url ? resolveMediaUrl(item.images[0].url) : "";
+  const cover = item.images[0]?.url ?? "";
   const locale =
     typeof document !== "undefined" && document.documentElement.lang === "en"
       ? "en-GB"
@@ -117,21 +117,18 @@ export default function ProfessionalContentCard({
       data-offer-status={lifecycle ?? undefined}
     >
       <div className="relative aspect-[4/3] bg-[color-mix(in_srgb,var(--wesal-pink)_55%,white)]">
-        {cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={cover}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center px-4 text-center text-sm text-[var(--wesal-muted)]">
-            {kind === "offer"
-              ? t("professionals.content.noOfferImage")
-              : t("professionals.content.noPostImage")}
-          </div>
-        )}
+        <AuthenticatedApiImage
+          src={cover || null}
+          alt=""
+          className="h-full w-full object-cover"
+          fallback={
+            <div className="flex h-full items-center justify-center px-4 text-center text-sm text-[var(--wesal-muted)]">
+              {kind === "offer"
+                ? t("professionals.content.noOfferImage")
+                : t("professionals.content.noPostImage")}
+            </div>
+          }
+        />
         {showLifecycle && lifecycle ? (
           <span className="absolute start-2 top-2 rounded-full bg-black/55 px-2.5 py-0.5 text-[11px] font-semibold text-white">
             {t(lifecycleLabelKey(lifecycle))}
