@@ -784,7 +784,8 @@ namespace Wesal.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<int?>("EventRequestServiceType")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("ServiceType");
 
                     b.Property<Guid?>("HallId")
                         .HasColumnType("uuid");

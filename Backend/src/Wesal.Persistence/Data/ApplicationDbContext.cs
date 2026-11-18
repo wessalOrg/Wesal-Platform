@@ -348,6 +348,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.Property(conversation => conversation.SenderUserId).IsRequired().HasMaxLength(450);
             entity.Property(conversation => conversation.HallOwnerId).IsRequired().HasMaxLength(450);
             entity.Property(conversation => conversation.Kind).HasDefaultValue(ConversationKind.HallBooking);
+            // AddEventRequestCard created this column as ServiceType; keep existing databases compatible.
+            entity.Property(conversation => conversation.EventRequestServiceType).HasColumnName("ServiceType");
             entity.HasIndex(conversation => new { conversation.SenderUserId, conversation.HallOwnerId })
                 .IsUnique().HasFilter("\"Kind\" = 2");
 
