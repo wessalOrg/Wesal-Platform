@@ -32,6 +32,7 @@ import {
   conversationErrorMessage,
 } from "@/services/conversations";
 import type { ProfessionalAccountPhase } from "@/types/account-approval";
+import { PROFESSIONAL_POSTS_PATH } from "@/constants/seekerDashboardNav";
 import "./professional-dashboard.css";
 
 const RESUBMIT_QUERY = "mode=edit";
@@ -199,7 +200,7 @@ export default function ProfessionalDashboardHome() {
       titleKey: "pro.dash.feature.post.title",
       bodyKey: "pro.dash.quick.post.body",
       ctaKey: "pro.dash.feature.post.cta",
-      href: canPublish ? publicProfileHref : undefined,
+      href: canPublish ? PROFESSIONAL_POSTS_PATH : undefined,
       locked: !canPublish,
       icon: <PostIcon />,
     },

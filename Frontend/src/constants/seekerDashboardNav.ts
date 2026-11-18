@@ -38,6 +38,7 @@ export function conversationMessagePath(conversationId: string, attach = false):
 export const SEEKER_NOTIFICATIONS_PATH = `${REGULAR_PROFILE_PATH}/notifications`;
 export const SEEKER_MESSAGES_PATH = `${REGULAR_PROFILE_PATH}/messages`;
 export const SEEKER_OFFERS_PATH = `${REGULAR_PROFILE_PATH}/offers`;
+export const PROFESSIONAL_POSTS_PATH = `${REGULAR_PROFILE_PATH}/posts`;
 export const SEEKER_STATISTICS_PATH = `${REGULAR_PROFILE_PATH}/statistics`;
 
 /** Messages page URL for a hall thread (seeker or owner-as-booker). */
@@ -82,6 +83,13 @@ export const SEEKER_DASHBOARD_NAV = [
     href: SEEKER_FAVORITES_PATH,
     labelKey: "seeker.nav.favorites",
     match: "prefix" as const,
+  },
+  {
+    id: "posts",
+    href: PROFESSIONAL_POSTS_PATH,
+    labelKey: "seeker.nav.posts",
+    match: "prefix" as const,
+    professionalOnly: true as const,
   },
   {
     id: "offers",

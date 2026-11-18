@@ -189,6 +189,13 @@ function NavIcon({ id }: { id: SeekerDashboardNavId }) {
           <circle cx="8.2" cy="8.2" r="1.2" fill="currentColor" />
         </svg>
       );
+    case "posts":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
+          <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="1.7" />
+          <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+      );
     case "statistics":
       return (
         <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">
