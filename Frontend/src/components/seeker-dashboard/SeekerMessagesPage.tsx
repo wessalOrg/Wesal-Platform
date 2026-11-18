@@ -178,7 +178,7 @@ export default function SeekerMessagesPage() {
   const professionalAdminRefreshOnce = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isProfessional) return;
+    if (!isProfessional || !canUseMessaging) return;
 
     if (focusConversationId) {
       try {
@@ -205,8 +205,6 @@ export default function SeekerMessagesPage() {
       return;
     }
 
-    if (inboxStatus !== "ready" && inboxStatus !== "empty") return;
-
     if (focusConversationId) {
       // Deep-link already selected; refresh once so the Admin tab picks up the server row.
       if (professionalAdminRefreshOnce.current !== focusConversationId) {
@@ -216,6 +214,7 @@ export default function SeekerMessagesPage() {
       return;
     }
 
+    // Contact Admin is independent of the customer inbox, including its error state.
     if (professionalAdminBootstrap.current) return;
     professionalAdminBootstrap.current = true;
     setCreateAdminError(null);
@@ -237,6 +236,7 @@ export default function SeekerMessagesPage() {
         setCreateAdminError(conversationErrorMessage(err, "start"));
       });
   }, [
+    canUseMessaging,
     conversations,
     ensureConversation,
     focusConversationId,

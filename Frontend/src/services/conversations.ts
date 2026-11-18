@@ -281,8 +281,8 @@ export async function fetchMyAdminAccountConversation(): Promise<ConversationSum
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
     const status = error.status;
-    // Missing conversation often comes back as 404/204/4xx — keep inbox usable.
-    if (status === 404 || status === 204 || (status != null && status >= 400 && status < 500)) {
+    // Only an absent thread is empty; authentication and permission failures are errors.
+    if (status === 404 || status === 204) {
       return null;
     }
     throw error;
@@ -392,10 +392,17 @@ export async function fetchAdminAccountUnreadCount(): Promise<number> {
 }
 
 async function fetchProfessionalInboxMerged(): Promise<ConversationSummary[]> {
-  const [customers, admin] = await Promise.all([
+  const [customersResult, adminResult] = await Promise.allSettled([
     fetchProfessionalConversations(),
-    fetchAdminAccountConversation().catch(() => null),
+    fetchAdminAccountConversation(),
   ]);
+  const admin = adminResult.status === "fulfilled" ? adminResult.value : null;
+  // A working Admin thread must remain accessible when the customer inbox fails.
+  // If neither source provides usable data, preserve the error instead of showing empty.
+  if (customersResult.status === "rejected" && !admin) {
+    throw customersResult.reason;
+  }
+  const customers = customersResult.status === "fulfilled" ? customersResult.value : [];
   const merged = admin
     ? [admin, ...customers.filter((item) => item.conversationId !== admin.conversationId)]
     : customers;
