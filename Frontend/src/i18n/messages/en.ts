@@ -2990,6 +2990,8 @@ const en: MessageCatalog = {
   "auth.stub.demoAdmin": "Demo login as admin",
   "auth.stub.demoSeeker": "Demo login as hall seeker",
   "auth.stub.demoHallOwner": "Demo login as hall owner",
+  "auth.stub.demoCoordinator": "Demo login as event coordinator",
+  "auth.stub.demoPhotographer": "Demo login as photographer",
   "auth.stub.demoFailed": "Could not start demo login.",
   "messages.loginInbox": "Log in to view your messages.",
   "messages.composerPlaceholder": "Write your message…",

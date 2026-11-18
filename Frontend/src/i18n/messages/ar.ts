@@ -2934,6 +2934,8 @@ const ar: MessageCatalog = {
   "auth.stub.demoAdmin": "دخول تجريبي كمشرف",
   "auth.stub.demoSeeker": "دخول تجريبي كباحث عن قاعة",
   "auth.stub.demoHallOwner": "دخول تجريبي كصاحب قاعة",
+  "auth.stub.demoCoordinator": "دخول تجريبي كمنسق مناسبات",
+  "auth.stub.demoPhotographer": "دخول تجريبي كمصور",
   "auth.stub.demoFailed": "تعذر تفعيل الدخول التجريبي.",
   "messages.loginInbox": "سجّل الدخول لعرض رسائلك.",
   "messages.composerPlaceholder": "اكتب رسالتك…",
