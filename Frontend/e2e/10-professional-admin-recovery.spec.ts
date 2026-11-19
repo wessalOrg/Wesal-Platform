@@ -112,3 +112,23 @@ test("A legacy admin row is replaced by the canonical admin row without losing c
   await page.getByRole("tab", { name: /العملاء/ }).click();
   await expect(inbox.locator('[data-conversation-id="customer-admin-name"]')).toHaveCount(1);
 });
+
+test("Arabic platform conversations without a kind stay in the Admin filter", async ({ page }) => {
+  await setup(page, true);
+  await page.route("**/api/v1/professional/conversations?*", (route) => route.fulfill({
+    contentType: "application/json", body: JSON.stringify([
+      { conversationId: "arabic-admin", hallId: "", otherParticipantId: "platform-user-id",
+        otherParticipantName: "فريق وصال - الإدارة" },
+      { conversationId: "real-customer", hallId: "", otherParticipantId: "customer-id",
+        otherParticipantName: "Customer", lastMessagePreview: "رسالة تذكر إدارة وصال" },
+    ]),
+  }));
+  await page.goto("/profile/messages");
+  const inbox = page.getByTestId("professional-chat-inbox");
+  await expect(inbox.getByRole("tab", { name: /العملاء/ })).toHaveText("العملاء(1)");
+  await expect(inbox.locator('[data-conversation-id="real-customer"]')).toHaveCount(1);
+  await expect(inbox.locator('[data-conversation-id="arabic-admin"]')).toHaveCount(0);
+  await inbox.getByRole("tab", { name: /الإدارة/ }).click();
+  await expect(inbox.locator('[data-conversation-id="arabic-admin"]')).toHaveCount(1);
+  await expect(inbox.locator('[data-conversation-id="real-customer"]')).toHaveCount(0);
+});

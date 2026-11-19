@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { isProfessionalRole, resolveSessionRole } from "@/lib/account-role";
+import { isAdminAccountConversation } from "@/lib/admin-account-conversation";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { readLocalSession } from "@/lib/local-session";
 import { getAccessToken } from "@/lib/auth-token";
@@ -337,7 +338,9 @@ export async function fetchProfessionalConversations(): Promise<ConversationSumm
     .map(mapInboxItem)
     .filter((item): item is ConversationSummary => Boolean(item))
     .map((item) =>
-      item.kind ? item : { ...item, kind: "CustomerProvider" as const },
+      item.kind
+        ? item
+        : { ...item, kind: isAdminAccountConversation(item) ? "AdminAccount" : "CustomerProvider" },
     );
 }
 
