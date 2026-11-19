@@ -134,25 +134,26 @@ export default function MessageComposer({
       ) : null}
       {attachmentPreviewUrl ? (
         <div
-          className="mb-2 flex min-w-0 items-center gap-2 rounded-xl border border-[var(--wesal-border)] bg-white p-2"
+          className="relative mb-2 h-20 w-20 overflow-hidden rounded-xl border border-[var(--wesal-border)] bg-white"
           data-testid="message-attachment-preview"
+          title={attachmentName || t("messages.attachReceipt")}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
           <img
             src={attachmentPreviewUrl}
-            alt=""
-            className="h-14 w-16 shrink-0 rounded-lg object-cover"
+            alt={attachmentName || t("messages.attachReceipt")}
+            className="h-full w-full object-cover"
           />
-          <p className="min-w-0 flex-1 truncate text-xs text-[var(--wesal-muted)]">
-            {attachmentName || t("messages.attachReceipt")}
-          </p>
           <button
             type="button"
-            className="text-xs font-semibold text-[#c45b55]"
+            className="absolute end-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-[#c45b55] shadow-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wesal-maroon)] disabled:opacity-60"
             disabled={disabled || attachmentBusy}
             onClick={onClearAttachment}
+            aria-label={t("messages.attachRemove")}
           >
-            {t("messages.attachRemove")}
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+              <path d="m5 5 10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
       ) : null}

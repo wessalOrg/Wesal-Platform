@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import MabroukFigure from "@/components/brand/MabroukFigure";
-import AdminChatBanner from "@/components/messages/AdminChatBanner";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
@@ -327,7 +326,6 @@ export default function SeekerMessagesPage() {
                 appearance={isHallOwner ? "owner" : "default"}
                 context={
                   <>
-                    {adminAccountThread ? <AdminChatBanner className="mb-2" /> : null}
                     {inquiryContext ? (
                       <div className="space-y-2">
                         {inquiryContext.contextPostId ? (

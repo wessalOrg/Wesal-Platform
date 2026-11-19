@@ -10,7 +10,6 @@ import {
 } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import AdminChatBanner from "@/components/messages/AdminChatBanner";
 import ConversationList from "@/components/messages/ConversationList";
 import MessagesErrorBoundary from "@/components/messages/MessagesErrorBoundary";
 import MessageThreadView from "@/components/messages/MessageThreadView";
@@ -458,7 +457,6 @@ export default function MessagesInboxPanel() {
                 }
                 context={
                   <>
-                    {adminAccountThread ? <AdminChatBanner className="mb-2" /> : null}
                     {inquiryContext ? (
                       <ProductInquiryCard
                         context={inquiryContext}
