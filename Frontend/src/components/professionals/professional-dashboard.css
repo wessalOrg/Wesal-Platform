@@ -38,14 +38,16 @@
 }
 
 .pro-activated-card {
+  --pro-activated-green: #1f7a4d;
+  --pro-activated-green-dark: #17663a;
   pointer-events: auto;
   position: relative;
   overflow: hidden;
   width: min(100%, 22.5rem);
   margin: 0;
   border-radius: 1.6rem 1.6rem 0 0;
-  background: linear-gradient(180deg, #fff 0%, #fbf7f5 72%, #f7f0ed 100%);
-  box-shadow: 0 1.5rem 3.75rem rgba(60, 35, 30, 0.24);
+  background: linear-gradient(180deg, #fff 0%, #f4fbf6 72%, #e3f2e8 100%);
+  box-shadow: 0 1.5rem 3.75rem rgba(23, 102, 58, 0.24);
   animation: pro-activated-in 240ms ease-out;
 }
 
@@ -70,7 +72,7 @@
   min-width: 0;
   align-items: center;
   gap: 0.45rem;
-  color: var(--wesal-brand-ink, var(--wesal-maroon));
+  color: var(--pro-activated-green-dark);
 }
 
 .pro-activated-brand-name {
@@ -87,13 +89,13 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #5c4a47;
+  color: var(--pro-activated-green-dark);
   cursor: pointer;
   transition: background-color 140ms ease;
 }
 
 .pro-activated-close:hover {
-  background: color-mix(in srgb, var(--wesal-maroon) 8%, white);
+  background: color-mix(in srgb, var(--pro-activated-green) 8%, white);
 }
 
 .pro-activated-body {
@@ -122,7 +124,7 @@
   background:
     repeating-conic-gradient(
       from 0deg,
-      color-mix(in srgb, var(--wesal-maroon) 18%, transparent) 0deg 8deg,
+      color-mix(in srgb, var(--pro-activated-green) 18%, transparent) 0deg 8deg,
       transparent 8deg 18deg
     );
   mask: radial-gradient(circle, transparent 42%, #000 43%);
@@ -138,7 +140,7 @@
   width: 4.35rem;
   height: 4.35rem;
   color: #fff;
-  background: var(--wesal-maroon);
+  background: var(--pro-activated-green);
   clip-path: polygon(
     50% 0%,
     61% 8%,
@@ -167,7 +169,7 @@
     26% 5%,
     39% 8%
   );
-  box-shadow: 0 0.55rem 1.4rem color-mix(in srgb, var(--wesal-maroon) 35%, transparent);
+  box-shadow: 0 0.55rem 1.4rem color-mix(in srgb, var(--pro-activated-green) 35%, transparent);
 }
 
 .pro-activated-title {
@@ -176,7 +178,7 @@
   font-size: clamp(1.55rem, 4vw, 1.85rem);
   font-weight: 800;
   line-height: 1.25;
-  color: var(--wesal-maroon-dark, var(--wesal-maroon));
+  color: var(--pro-activated-green-dark);
 }
 
 .pro-activated-title-mark {
@@ -186,7 +188,7 @@
   width: 76%;
   height: 0.55rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--wesal-pink) 70%, #f3c9c4);
+  background: #cfe9d9;
   opacity: 0.75;
   z-index: -1;
 }
@@ -197,7 +199,7 @@
   font-size: 0.95rem;
   font-weight: 600;
   line-height: 1.65;
-  color: #4a3b38;
+  color: var(--pro-activated-green-dark);
 }
 
 .pro-activated-ok {
@@ -210,12 +212,12 @@
   padding: 0.55rem 1.75rem;
   border: 0;
   border-radius: 999px;
-  background: var(--wesal-maroon);
+  background: var(--pro-activated-green);
   color: #fff;
   font-size: 0.98rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 0.65rem 1.35rem color-mix(in srgb, var(--wesal-maroon) 28%, transparent);
+  box-shadow: 0 0.65rem 1.35rem color-mix(in srgb, var(--pro-activated-green) 28%, transparent);
   transition: filter 140ms ease, transform 140ms ease;
 }
 
@@ -243,11 +245,11 @@
 }
 
 .pro-activated-wave--back {
-  fill: color-mix(in srgb, var(--wesal-maroon) 72%, #5a2a2c);
+  fill: color-mix(in srgb, var(--pro-activated-green) 72%, #b7ddc5);
 }
 
 .pro-activated-wave--front {
-  fill: var(--wesal-maroon);
+  fill: var(--pro-activated-green);
 }
 
 @keyframes pro-activated-in {
@@ -300,13 +302,6 @@
     transparent 70%
   );
   opacity: 0.7;
-}
-
-.pro-dash-banner--approved {
-  background:
-    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, #cfe9d9 55%, transparent), transparent 55%),
-    linear-gradient(145deg, #f4fbf6 0%, #fff 60%, #f7faf8 100%);
-  border-color: color-mix(in srgb, #1f7a4d 16%, #d7e8dc);
 }
 
 .pro-dash-banner--greeting {
@@ -395,12 +390,12 @@ html:not([dir="rtl"]) .pro-dash-banner-main--greeting {
 }
 
 .pro-dash-banner--approved .pro-dash-banner-icon {
-  color: #1f7a4d;
-  background: color-mix(in srgb, #d8f3e3 78%, white);
+  color: var(--wesal-maroon);
+  background: color-mix(in srgb, var(--wesal-pink) 78%, white);
 }
 
 .pro-dash-banner--approved .pro-dash-banner-icon-ring {
-  border-color: color-mix(in srgb, #1f7a4d 35%, transparent);
+  border-color: color-mix(in srgb, var(--wesal-maroon) 35%, transparent);
 }
 
 .pro-dash-banner-avatar {
@@ -411,13 +406,13 @@ html:not([dir="rtl"]) .pro-dash-banner-main--greeting {
   height: 3.1rem;
   flex-shrink: 0;
   border-radius: 999px;
-  color: #17663a;
-  background: color-mix(in srgb, #d8f3e3 78%, white);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #1f7a4d 12%, transparent);
+  color: var(--wesal-maroon);
+  background: color-mix(in srgb, var(--wesal-pink) 78%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wesal-maroon) 12%, transparent);
 }
 
 .pro-dash-banner-avatar .pro-dash-banner-icon-ring {
-  border-color: color-mix(in srgb, #1f7a4d 35%, transparent);
+  border-color: color-mix(in srgb, var(--wesal-maroon) 35%, transparent);
 }
 
 .pro-dash-banner-avatar--filled {
