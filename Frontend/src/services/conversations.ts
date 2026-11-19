@@ -2,6 +2,7 @@ import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { isProfessionalRole, resolveSessionRole } from "@/lib/account-role";
 import { getStoredAuth } from "@/lib/auth-storage";
+import { readLocalSession } from "@/lib/local-session";
 import { getAccessToken } from "@/lib/auth-token";
 import { conversationTimeValue, mapInboxItemDto, mapSendMessageDto, mapThreadDto, unwrapConversationList } from "@/lib/conversation-mapper";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
@@ -312,7 +313,7 @@ function mapInboxItem(data: unknown): ConversationSummary | null {
 function currentUserIsProfessional(): boolean {
   const stored = getStoredAuth()?.user;
   return isProfessionalRole(
-    resolveSessionRole(null, stored?.role, stored?.accountType),
+    resolveSessionRole(readLocalSession()?.role, stored?.role, stored?.accountType),
   );
 }
 
