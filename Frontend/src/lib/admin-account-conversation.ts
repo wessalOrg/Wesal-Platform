@@ -8,6 +8,7 @@ import { isOwnerAdminConversation } from "@/lib/owner-admin-conversation";
 export function isAdminAccountConversation(item: ConversationSummary | null | undefined): boolean {
   if (!item) return false;
   if (item.kind === "AdminAccount") return true;
+  if (item.kind === "CustomerProvider") return false;
   // Hall-scoped owner↔admin threads are not AdminAccount; ignore those here.
   if ((item.hallId ?? "").trim()) return false;
   return isOwnerAdminConversation(item);

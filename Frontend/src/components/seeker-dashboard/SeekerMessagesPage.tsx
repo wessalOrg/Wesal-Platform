@@ -180,10 +180,14 @@ export default function SeekerMessagesPage() {
     if (!isProfessional || !canUseMessaging) return;
 
     if (focusConversationId) {
-      try {
-        ensureConversation?.(buildAdminAccountSummary(focusConversationId));
-      } catch {
-        // Keep deep-link selection even if local inbox merge throws.
+      // A message deep link can target a customer too. Only seed an Admin row
+      // when the link explicitly came from the Contact Admin action.
+      if (professionalContactAdmin) {
+        try {
+          ensureConversation?.(buildAdminAccountSummary(focusConversationId));
+        } catch {
+          // Keep deep-link selection even if local inbox merge throws.
+        }
       }
       if (selectedId !== focusConversationId) {
         selectConversation(focusConversationId);

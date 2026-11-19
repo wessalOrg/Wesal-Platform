@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { conversationTimeValue } from "@/lib/conversation-mapper";
+import { isAdminAccountConversation } from "@/lib/admin-account-conversation";
 import {
   conversationErrorMessage,
   fetchInboxConversations,
@@ -15,7 +16,7 @@ function mergeAdminAccountRow(
 ): ConversationSummary[] {
   if (!adminRow) return items;
   const withoutDup = items.filter(
-    (item) => item.conversationId !== adminRow.conversationId && item.kind !== "AdminAccount",
+    (item) => item.conversationId !== adminRow.conversationId && !isAdminAccountConversation(item),
   );
   const existing = items.find((item) => item.conversationId === adminRow.conversationId);
   const merged: ConversationSummary = existing

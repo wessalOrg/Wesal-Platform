@@ -70,3 +70,45 @@ test("Contact Admin opens independently even when both inbox reads fail", async 
   await expect(page.getByTestId("message-thread-body")).toContainText("Admin recovery test message");
   expect(state.createdCount()).toBe(1);
 });
+
+test("A customer deep link does not add a second administration row", async ({ page }) => {
+  await setup(page);
+  const customerId = "82d33083-e81b-4ee9-8658-f548ce817d8f";
+  await page.route("**/api/v1/professional/conversations?*", (route) => route.fulfill({
+    contentType: "application/json", body: JSON.stringify([]),
+  }));
+  await page.route(`**/api/v1/conversations/${customerId}/messages`, (route) => route.fulfill({
+    contentType: "application/json", body: JSON.stringify({
+      conversationId: customerId, messages: [{
+        id: "customer-message", senderUserId: "customer", senderName: "Customer",
+        content: "Customer deep link message", sentAt: "2026-01-01T10:00:00Z",
+      }],
+    }),
+  }));
+  await page.goto(`/profile/messages?conversation_id=${customerId}`);
+  await expect(page.getByTestId("message-thread-body")).toContainText("Customer deep link message");
+  const inbox = page.getByTestId("professional-chat-inbox");
+  await inbox.getByRole("tab", { name: /الإدارة/ }).click();
+  await expect(inbox.getByTestId("inbox-conversation")).toHaveCount(1);
+  await expect(inbox.locator(`[data-conversation-id="${adminId}"]`)).toHaveCount(1);
+  await expect(inbox.locator(`[data-conversation-id="${customerId}"]`)).toHaveCount(0);
+});
+
+test("A legacy admin row is replaced by the canonical admin row without losing customers", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/v1/professional/conversations?*", (route) => route.fulfill({
+    contentType: "application/json", body: JSON.stringify([
+      { conversationId: "legacy-admin", kind: "HallBooking", hallId: "",
+        otherParticipantId: "admin", otherParticipantName: "Wesal Admin" },
+      { conversationId: "customer-admin-name", kind: "CustomerProvider", hallId: "",
+        otherParticipantId: "customer", otherParticipantName: "Admin" },
+    ]),
+  }));
+  await page.goto("/profile/messages?contact=admin");
+  await expect(page.getByTestId("message-thread-body")).toContainText("Admin recovery test message");
+  const inbox = page.getByTestId("professional-chat-inbox");
+  await expect(inbox.getByTestId("inbox-conversation")).toHaveCount(1);
+  await expect(inbox.locator(`[data-conversation-id="${adminId}"]`)).toHaveCount(1);
+  await page.getByRole("tab", { name: /العملاء/ }).click();
+  await expect(inbox.locator('[data-conversation-id="customer-admin-name"]')).toHaveCount(1);
+});
