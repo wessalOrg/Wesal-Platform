@@ -6,6 +6,7 @@ import BookingRequestRow from "@/components/bookings/BookingRequestRow";
 import CancelBookingDialog from "@/components/bookings/CancelBookingDialog";
 import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useBookingOwnerChat } from "@/hooks/useBookingOwnerChat";
+import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { useBookingViewport } from "@/hooks/useBookingViewport";
 import { useUserBookings } from "@/hooks/useUserBookings";
 import { useT } from "@/i18n";
@@ -18,6 +19,7 @@ type UserBookingsListProps = {
 
 export default function UserBookingsList({ compact = false }: UserBookingsListProps) {
   const t = useT();
+  const { isProfessional } = useAccountAccess();
   const viewport = useBookingViewport();
   const searchParams = useSearchParams();
   const focusBookingId = searchParams.get("booking_id")?.trim() || null;
@@ -86,9 +88,11 @@ export default function UserBookingsList({ compact = false }: UserBookingsListPr
 
   return (
     <section className={compact ? "mt-6" : undefined} data-testid="user-bookings-list">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">{t("bookings.title")}</h2>
-      </div>
+      {!isProfessional ? (
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold text-[var(--wesal-maroon)]">{t("bookings.title")}</h2>
+        </div>
+      ) : null}
 
       {pending.length === 0 && other.length === 0 ? (
         <p className="rounded-2xl bg-white px-4 py-4 text-sm text-[var(--wesal-muted)]">
