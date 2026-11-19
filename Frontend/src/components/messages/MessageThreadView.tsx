@@ -170,9 +170,9 @@ export default function MessageThreadView({
         </div>
       </header>
 
-      {context ? <div className="shrink-0 px-3 pb-2 sm:px-4">{context}</div> : null}
+      {context ? <div className="shrink-0 px-3 pb-2 empty:hidden sm:px-4">{context}</div> : null}
 
-      {notice ? <div className="shrink-0 px-3 pt-2 sm:px-4">{notice}</div> : null}
+      {notice ? <div className="shrink-0 px-3 pt-2 empty:hidden sm:px-4">{notice}</div> : null}
 
       <div className="relative min-h-0 flex-1">
         <div
