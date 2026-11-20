@@ -19,7 +19,10 @@
 .offer-editor-upload[aria-disabled="true"] { opacity: .6; cursor: default; }
 .offer-editor-images > p:last-child { line-height: 1.8; margin-top: 9px; }
 .offer-editor-details input:not([type="checkbox"]):not([type="file"]), .offer-editor-details .wesal-datetime-trigger { min-height: 44px; border-radius: 11px; background-color: #fff; font-size: 13px; }
-.offer-editor-footer { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 10px; padding-top: 18px; border-top: 1px solid var(--wesal-border); }
+.offer-editor-details input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+.offer-editor-details input[type="number"]::-webkit-inner-spin-button,
+.offer-editor-details input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.offer-editor-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding-top: 18px; border-top: 1px solid var(--wesal-border); }
 .offer-editor-footer > button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 0 0 auto; min-height: 40px; padding: 8px 16px; border-radius: 10px; font-size: 13px; }
 .offer-editor-footer svg { width: 18px; height: 18px; flex-shrink: 0; }
 .offer-editor-aside { display: flex; flex-direction: column; gap: 16px; }
