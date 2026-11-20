@@ -122,15 +122,6 @@ export default function WesalDateTimeField({
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!open || !panelRef.current) return;
-    panelRef.current
-      .querySelectorAll(".wesal-datetime-time-item.is-selected")
-      .forEach((el) => {
-        el.scrollIntoView({ block: "center" });
-      });
-  }, [open, cursor.hours, cursor.minutes]);
-
   const firstWeekday = new Date(cursor.year, cursor.month - 1, 1).getDay();
   const daysInMonth = new Date(cursor.year, cursor.month, 0).getDate();
   const cells: Array<number | null> = [
@@ -226,10 +217,12 @@ export default function WesalDateTimeField({
         open={open && !disabled}
         anchorRef={triggerRef}
         panelRef={panelRef}
-        options={{ width: 520, estimateHeight: 380, placement: "down" }}
+        options={{ width: 360, estimateHeight: 320, preferUp: true }}
         id={panelId}
         className="wesal-datetime-panel"
         dir="ltr"
+        role="dialog"
+        aria-label={t("home.consult.dateTimePlaceholder")}
       >
         <div className="wesal-datetime-layout">
           <div className="wesal-datetime-calendar">
@@ -280,6 +273,10 @@ export default function WesalDateTimeField({
                       .filter(Boolean)
                       .join(" ")}
                     onClick={() => pickDay(day)}
+                    aria-pressed={isSelected}
+                    aria-label={new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(
+                      new Date(cursor.year, cursor.month - 1, day),
+                    )}
                   >
                     {day}
                   </button>
@@ -313,49 +310,55 @@ export default function WesalDateTimeField({
           <div
             className="wesal-datetime-time"
             aria-label={t("owner.management.addHall.fields.periodStart")}
+            dir={lang === "ar" ? "rtl" : "ltr"}
           >
-            <div className="wesal-datetime-time-col">
-              {HOURS.map((hour) => (
-                <button
-                  key={`h-${hour}`}
-                  type="button"
-                  className={`wesal-datetime-time-item${hour === hour12 ? " is-selected" : ""}`}
-                  onClick={() => pickHour(hour)}
-                >
-                  {pad(hour)}
-                </button>
-              ))}
-            </div>
-            <div className="wesal-datetime-time-col">
-              {MINUTES.map((minute) => (
-                <button
-                  key={`m-${minute}`}
-                  type="button"
-                  className={`wesal-datetime-time-item${minute === cursor.minutes ? " is-selected" : ""}`}
-                  onClick={() => pickMinute(minute)}
-                >
-                  {pad(minute)}
-                </button>
-              ))}
-            </div>
-            <div className="wesal-datetime-time-col wesal-datetime-time-col--period">
-              <button
-                type="button"
-                className={`wesal-datetime-time-item${isPm ? "" : " is-selected"}`}
-                onClick={() => pickPeriod(false)}
+            <label>
+              <span>{t("owner.management.addHall.fields.hour")}</span>
+              <select
+                aria-label={t("owner.management.addHall.fields.hour")}
+                value={hour12}
+                onChange={(event) => pickHour(Number(event.target.value))}
               >
-                {amLabel}
-              </button>
-              <button
-                type="button"
-                className={`wesal-datetime-time-item${isPm ? " is-selected" : ""}`}
-                onClick={() => pickPeriod(true)}
+                {HOURS.map((hour) => (
+                  <option key={hour} value={hour}>{pad(hour)}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>{t("owner.management.addHall.fields.minute")}</span>
+              <select
+                aria-label={t("owner.management.addHall.fields.minute")}
+                value={cursor.minutes}
+                onChange={(event) => pickMinute(Number(event.target.value))}
               >
-                {pmLabel}
-              </button>
-            </div>
+                {MINUTES.map((minute) => (
+                  <option key={minute} value={minute}>{pad(minute)}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>{t("halls.catalog.period")}</span>
+              <select
+                aria-label={t("halls.catalog.period")}
+                value={isPm ? "pm" : "am"}
+                onChange={(event) => pickPeriod(event.target.value === "pm")}
+              >
+                <option value="am">{amLabel}</option>
+                <option value="pm">{pmLabel}</option>
+              </select>
+            </label>
           </div>
         </div>
+        <button
+          type="button"
+          className="wesal-datetime-done"
+          onClick={() => {
+            setOpen(false);
+            triggerRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          {t("common.ok")}
+        </button>
       </AnchoredPanel>
     </div>
   );
