@@ -7,20 +7,46 @@
 }
 
 .ppp-hero {
+  position: relative;
+  isolation: isolate;
   overflow: hidden;
   border-radius: 1.5rem;
   border: 1px solid color-mix(in srgb, var(--wesal-maroon) 10%, white);
-  background:
-    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.72), transparent 42%),
-    radial-gradient(circle at 88% 8%, rgba(255, 214, 224, 0.55), transparent 38%),
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--wesal-pink) 72%, white) 0%,
-      #fff7f9 48%,
-      #ffffff 100%
-    );
+  background: linear-gradient(100deg,#faecec,#fff8fb 65%,#f9e8ed);
   box-shadow: 0 18px 40px rgba(88, 40, 48, 0.07);
 }
+
+.ppp-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(to right, transparent, #fff7fa 45%), url('/home/planners-aisle.png');
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: cover;
+  opacity: .4;
+}
+
+.ppp--visitor .ppp-stats {
+  gap: 0;
+  border-inline: 1px solid var(--wesal-border);
+  margin-block: 6px 12px;
+}
+
+.ppp--visitor .ppp-stat {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 16px;
+}
+
+.ppp--visitor .ppp-stat + .ppp-stat { border-inline-start: 1px solid var(--wesal-border); }
+.ppp--visitor .ppp-stat-value { font-size: 32px; color: var(--wesal-maroon-dark); font-weight: 700; }
+.ppp--visitor .ppp-stat-label { font-size: 14px; color: var(--wesal-muted); margin-top: 6px; }
+.ppp--visitor .ppp-message { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px !important; border-radius: 14px; background: var(--wesal-maroon); color: #fff; font-size: 17px; font-weight: 700; }
+.ppp--visitor .ppp-message svg { width: 25px; height: 25px; flex-shrink: 0; }
+.ppp--visitor .ppp-message:hover:not(:disabled) { background: var(--wesal-maroon-dark); }
 
 .ppp-hero-inner {
   display: grid;

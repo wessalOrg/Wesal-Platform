@@ -23,7 +23,6 @@ import {
 } from "@/lib/professional-picture-validation";
 import { isOfferPubliclyVisible } from "@/lib/offer-status";
 import {
-  isCoordinatorProfessional,
   isPhotographerProfessional,
   professionalPublicLocation,
 } from "@/lib/professional-profile-mapper";
@@ -48,20 +47,6 @@ type ProfessionalPublicProfileViewProps = {
   /** Read-only visitor rendering inside the account dashboard. */
   visitorPreview?: boolean;
 };
-
-function roleLabelKey(profile: PublicProfessionalProfile): string {
-  if (isPhotographerProfessional(profile.role)) {
-    return profile.studioName
-      ? "professionals.role.studioPhotographer"
-      : "professionals.role.independentPhotographer";
-  }
-  if (isCoordinatorProfessional(profile.role)) {
-    return profile.shopName
-      ? "professionals.role.shopCoordinator"
-      : "professionals.role.freelanceCoordinator";
-  }
-  return "professionals.role.professional";
-}
 
 function messageLabelKey(profile: PublicProfessionalProfile): string {
   return isPhotographerProfessional(profile.role)
@@ -347,7 +332,7 @@ export default function ProfessionalPublicProfileView({
     : offersForTab.length;
 
   return (
-    <div className="ppp" data-testid="professional-public-profile">
+    <div className={`ppp${!isOwner ? " ppp--visitor" : ""}`} data-testid="professional-public-profile">
       <section className="ppp-hero">
         <div className="ppp-hero-inner">
           <div className="ppp-identity">
@@ -390,7 +375,6 @@ export default function ProfessionalPublicProfileView({
                   {t("professionals.profile.verified")}
                 </span>
               </div>
-              <p className="ppp-role">{t(roleLabelKey(profile))}</p>
               {displayBio ? (
                 <p className="ppp-bio-inline">{displayBio}</p>
               ) : (
@@ -519,7 +503,8 @@ export default function ProfessionalPublicProfileView({
                     className="btn-primary ppp-message inline-flex !min-h-11 items-center justify-center"
                     data-testid="professional-contact-login"
                   >
-                    {t(messageLabelKey(profile))}
+                    <MessageIcon />
+                    <span>{t(messageLabelKey(profile))}</span>
                   </Link>
                 ) : (
                   <button
@@ -530,9 +515,10 @@ export default function ProfessionalPublicProfileView({
                     data-testid="professional-contact"
                     onClick={() => void start(profile.userId, { loginHref })}
                   >
-                    {starting
+                    <MessageIcon />
+                    <span>{starting
                       ? t("professionals.contact.opening")
-                      : t(messageLabelKey(profile))}
+                      : t(messageLabelKey(profile))}</span>
                   </button>
                 )}
                 {contactError ? (
@@ -791,6 +777,15 @@ function ListError({
         {t("common.retry")}
       </button>
     </section>
+  );
+}
+
+function MessageIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M20.5 11.5a8.5 8.5 0 0 1-8.5 8.5H5l-4 2 1.8-6A8.5 8.5 0 1 1 20.5 11.5Z"
+        stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
