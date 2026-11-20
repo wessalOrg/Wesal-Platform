@@ -17,9 +17,15 @@
 .portfolio-workspace .ppp-name { font-size: 25px; }
 .portfolio-workspace .ppp-role { display: inline-flex; padding: 4px 10px; border-radius: 8px; background: #f9e3e8; }
 .portfolio-workspace .ppp-avatar { width: 100px; height: 100px; }
-.portfolio-workspace .ppp-toolbar { border-radius: 20px 20px 0 0; border: 1px solid var(--wesal-border); padding: 12px 18px 0; background: rgb(255 255 255 / 80%); }
-.portfolio-workspace .ppp-tabs { flex: 1; border: 0; }
-.portfolio-workspace .ppp-tab { flex: 1; min-height: 48px; }
+.portfolio-workspace .ppp-toolbar { align-items: center; gap: 14px; border-radius: 18px; border: 1px solid var(--wesal-border); padding: 12px; background: #fff; box-shadow: 0 4px 16px rgb(88 40 48 / 3%); }
+.portfolio-workspace .ppp-tabs { flex: 0 1 340px; display: flex; flex-wrap: nowrap; gap: 4px; min-width: 0; padding: 4px; border: 1px solid #f0e2df; border-radius: 14px; background: #faf4f2; }
+.portfolio-workspace .ppp-tab { display: inline-flex; align-items: center; justify-content: center; flex: 1; gap: 8px; min-height: 44px; padding: 8px 20px; border-radius: 10px; color: #8b726d; font-size: 14px; transition: background 150ms, color 150ms, box-shadow 150ms; }
+.portfolio-workspace .ppp-tab[aria-selected="true"] { background: var(--wesal-maroon); color: #fff; box-shadow: 0 3px 8px rgb(122 70 68 / 14%); }
+.portfolio-workspace .ppp-tab[aria-selected="true"]::after { display: none; }
+.portfolio-workspace .ppp-tab:not([aria-selected="true"]):hover { background: #f1e3df; color: var(--wesal-maroon-dark); }
+.portfolio-workspace .ppp-manage { margin-inline-start: auto; gap: 8px; }
+.portfolio-workspace .ppp-manage > button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px !important; min-width: 124px; border-radius: 12px; padding-inline: 18px; font-size: 13px; }
+.portfolio-workspace .ppp-toolbar button:focus-visible { outline: 2px solid var(--wesal-maroon-dark); outline-offset: 3px; }
 .portfolio-workspace .ppp-section { box-shadow: none; }
 .portfolio-workspace .ppp-section-title { font-size: 14px; color: var(--wesal-muted); }
 .portfolio-workspace .ppp-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
@@ -32,5 +38,8 @@
   .portfolio-workspace .ppp-owner-card { flex: 1; padding: 8px 12px; }
   .portfolio-workspace .ppp-owner-actions { width: 100%; }
   .portfolio-workspace .ppp-grid { grid-template-columns: minmax(0,1fr); }
-  .portfolio-workspace .ppp-toolbar { padding-inline: 10px; }
+  .portfolio-workspace .ppp-toolbar { flex-direction: column; align-items: stretch; padding: 10px; gap: 10px; }
+  .portfolio-workspace .ppp-tabs { flex: none; width: 100%; }
+  .portfolio-workspace .ppp-manage { margin-inline-start: 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .portfolio-workspace .ppp-manage > button { min-width: 0; padding-inline: 10px; }
 }
