@@ -8,6 +8,7 @@ import {
   type OfferLifecycleStatus,
 } from "@/lib/offer-validation";
 import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
+import OfferDateRange from "@/components/offers/OfferDateRange";
 import type { ProfessionalProfileContentItem } from "@/types/professional-profile";
 
 type ProfessionalContentCardProps = {
@@ -162,12 +163,7 @@ export default function ProfessionalContentCard({
           </p>
         ) : null}
         {kind === "offer" && (item.startsAt || item.endsAt) ? (
-          <p className="text-xs leading-5 text-[var(--wesal-muted)]">
-            {t("professionals.offers.dateRange", {
-              start: formatWhen(item.startsAt, locale),
-              end: formatWhen(item.endsAt, locale),
-            })}
-          </p>
+          <OfferDateRange startsAt={item.startsAt} endsAt={item.endsAt} />
         ) : null}
         {kind === "post" && price != null ? (
           <p className="text-sm font-semibold text-[var(--wesal-maroon)]">

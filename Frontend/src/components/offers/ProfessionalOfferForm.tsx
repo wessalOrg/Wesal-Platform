@@ -5,10 +5,10 @@ import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
 import OfferStatusBadge from "@/components/offers/OfferStatusBadge";
 import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
 import WesalDateTimeField from "@/components/ui/WesalDateTimeField";
-import { useUiLang } from "@/components/layout/LanguageProvider";
 import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
 import { useT } from "@/i18n";
-import { formatOfferDateRange, resolveOfferMediaUrl } from "@/lib/offer-format";
+import { resolveOfferMediaUrl } from "@/lib/offer-format";
+import OfferDateRange from "./OfferDateRange";
 import {
   datetimeLocalToIso,
   isoToDatetimeLocalValue,
@@ -136,8 +136,6 @@ export default function ProfessionalOfferForm({
   onRequestStop,
 }: ProfessionalOfferFormProps) {
   const t = useT();
-  const lang = useUiLang();
-  const locale = lang === "ar" ? "ar-EG-u-nu-latn" : "en-US";
   const [values, setValues] = useState<ProfessionalOfferFormValues>(() =>
     initial ? fromOffer(initial) : emptyValues(),
   );
@@ -154,7 +152,6 @@ export default function ProfessionalOfferForm({
     previewEnds,
     initial?.stoppedAt ?? null,
   );
-  const dateLabel = formatOfferDateRange(previewStarts, previewEnds, locale);
 
   const resolvedError = useMemo(() => {
     if (localError) return localError;
@@ -486,9 +483,7 @@ export default function ProfessionalOfferForm({
             />
             <div className="flex flex-wrap items-center gap-2">
               {previewStarts && previewEnds ? <OfferStatusBadge status={previewStatus} /> : null}
-              {dateLabel ? (
-                <span className="text-[0.7rem] text-[var(--wesal-muted)]">{dateLabel}</span>
-              ) : null}
+              <OfferDateRange startsAt={previewStarts} endsAt={previewEnds} />
             </div>
           </div>
         </div>

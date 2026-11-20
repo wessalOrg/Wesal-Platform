@@ -10,12 +10,11 @@ import OfferStatusBadge from "@/components/offers/OfferStatusBadge";
 import StopOfferConfirmDialog from "@/components/offers/StopOfferConfirmDialog";
 import PublishingRestrictionBanner from "@/components/moderation/PublishingRestrictionBanner";
 import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
-import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useAccountPublishingLock } from "@/hooks/useAccountPublishingLock";
 import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAccess";
 import { useT } from "@/i18n";
 import { ApiError } from "@/lib/api-error";
-import { formatOfferDateRange } from "@/lib/offer-format";
+import OfferDateRange from "./OfferDateRange";
 import { datetimeLocalToIso } from "@/lib/offer-validation";
 import { resolveOfferStatus } from "@/lib/offer-status";
 import {
@@ -35,8 +34,6 @@ type ViewMode = "list" | "create" | "edit";
 
 export default function ProfessionalOffersManagePage() {
   const t = useT();
-  const lang = useUiLang();
-  const locale = lang === "ar" ? "ar-EG-u-nu-latn" : "en-US";
   const publishingLock = useAccountPublishingLock();
   const { canPublish, userId, statusLoading: approvalLoading } =
     useProfessionalAccountAccess();
@@ -333,7 +330,7 @@ export default function ProfessionalOffersManagePage() {
                     </div>
                     <div className="pro-offers-meta">
                       <OfferStatusBadge status={offerStatus} />
-                      <span>{formatOfferDateRange(offer.startsAt, offer.endsAt, locale)}</span>
+                      <OfferDateRange startsAt={offer.startsAt} endsAt={offer.endsAt} />
                     </div>
                   </div>
                   <div className="pro-offers-actions">
