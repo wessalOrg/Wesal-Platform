@@ -46,6 +46,7 @@ type ProfessionalPublicProfileViewProps = {
   userId: string;
   /** Read-only visitor rendering inside the account dashboard. */
   visitorPreview?: boolean;
+  showCreateActions?: boolean;
 };
 
 function messageLabelKey(profile: PublicProfessionalProfile): string {
@@ -57,6 +58,7 @@ function messageLabelKey(profile: PublicProfessionalProfile): string {
 export default function ProfessionalPublicProfileView({
   userId,
   visitorPreview = false,
+  showCreateActions = true,
 }: ProfessionalPublicProfileViewProps) {
   const t = useT();
   const pictureInputId = useId();
@@ -500,7 +502,7 @@ export default function ProfessionalPublicProfileView({
                 {ready && !authenticated ? (
                   <Link
                     href={loginHref}
-                    className="btn-primary ppp-message inline-flex !min-h-11 items-center justify-center"
+                    className="btn-primary ppp-message inline-flex items-center justify-center"
                     data-testid="professional-contact-login"
                   >
                     <MessageIcon />
@@ -509,7 +511,7 @@ export default function ProfessionalPublicProfileView({
                 ) : (
                   <button
                     type="button"
-                    className="btn-primary ppp-message !min-h-11"
+                    className="btn-primary ppp-message"
                     disabled={visitorPreview || starting || !ready}
                     aria-busy={starting || undefined}
                     data-testid="professional-contact"
@@ -526,9 +528,6 @@ export default function ProfessionalPublicProfileView({
                     {contactError}
                   </p>
                 ) : null}
-                <p className="ppp-owner-card-hint">
-                  {t("professionals.profile.visitorHint")}
-                </p>
               </div>
             ) : null}
           </div>
@@ -574,7 +573,7 @@ export default function ProfessionalPublicProfileView({
           ))}
         </div>
 
-        {canManagePosts || canManageOffers ? (
+        {showCreateActions && (canManagePosts || canManageOffers) ? (
           <div className="ppp-manage">
             {canManagePosts ? (
               <button

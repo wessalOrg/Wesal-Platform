@@ -41,7 +41,7 @@ export default function ProfessionalPortfolioPage() {
         </p>
       ) : null}
       <ProfessionalPublicProfileView key={`${access.sessionKey}-${visitorPreview}`} userId={access.userId}
-        visitorPreview={visitorPreview} />
+        visitorPreview={visitorPreview} showCreateActions={false} />
     </div>
   );
 }

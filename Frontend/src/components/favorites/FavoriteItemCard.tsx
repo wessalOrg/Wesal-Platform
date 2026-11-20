@@ -91,21 +91,26 @@ export default function FavoriteItemCard({
           </p>
         ) : null}
 
-        <div className="mt-auto grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
+        <div className="mt-auto flex items-center justify-end gap-2 pt-2">
           <Link
             href={href}
-            className="btn-primary inline-flex min-h-10 items-center justify-center gap-1.5 px-3 text-xs"
+            className="btn-primary inline-flex !h-10 !w-10 !min-h-10 shrink-0 items-center justify-center !p-0"
+            aria-label={viewLabel}
+            title={viewLabel}
           >
-            {viewLabel}
-            <span aria-hidden="true">←</span>
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+              <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
+            </svg>
           </Link>
           <button
             type="button"
-            className="btn-outline inline-flex min-h-10 items-center justify-center gap-1.5 px-3 text-xs"
+            className="btn-outline inline-flex !h-10 !w-10 !min-h-10 shrink-0 items-center justify-center !p-0"
             onClick={onRemove}
+            aria-label={t("seeker.favorites.remove")}
+            title={t("seeker.favorites.remove")}
           >
             <TrashIcon />
-            {t("seeker.favorites.remove")}
           </button>
         </div>
       </div>
@@ -153,7 +158,7 @@ function CalendarIcon() {
 
 function TrashIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
       <path
         d="M5 7h14M10 7V5h4v2M8 7v12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7"
         stroke="currentColor"

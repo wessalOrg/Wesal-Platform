@@ -34,7 +34,6 @@
 .portfolio-workspace .ppp--visitor .ppp-stat + .ppp-stat { border-inline-start: 1px solid var(--wesal-border); }
 .portfolio-workspace .ppp--visitor .ppp-stat-value { font-size: 32px; color: var(--wesal-maroon-dark); }
 .portfolio-workspace .ppp--visitor .ppp-owner-actions { display: flex; flex-direction: column; width: 100%; }
-.portfolio-workspace .ppp--visitor .ppp-owner-card-hint { display: block; }
 @media (min-width: 960px) { .portfolio-workspace .ppp--visitor .ppp-hero-inner { grid-template-columns: minmax(0,1fr) minmax(240px,300px); align-items: start; } }
 @media (max-width: 1000px) { .portfolio-workspace .ppp-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 560px) {

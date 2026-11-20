@@ -214,19 +214,18 @@ export default function MessageComposer({
           className={
             owner
               ? "owner-chat-send"
-              : "btn-primary inline-flex h-11 min-h-11 shrink-0 items-center justify-center gap-1.5 px-4 text-sm sm:min-w-[5.5rem]"
+              : "btn-primary inline-flex h-11 w-11 min-h-11 shrink-0 items-center justify-center !p-0"
           }
           disabled={!canSend}
           aria-label={t("messages.send")}
+          title={t("messages.send")}
         >
-          <span className={owner ? "sr-only" : undefined}>
+          <span className="sr-only">
             {attachmentBusy ? t("messages.attaching") : t("messages.send")}
           </span>
-          {owner ? (
-            <span aria-hidden="true">
-              <SendIcon />
-            </span>
-          ) : null}
+          <span aria-hidden="true">
+            <SendIcon />
+          </span>
         </button>
       </div>
     </form>
