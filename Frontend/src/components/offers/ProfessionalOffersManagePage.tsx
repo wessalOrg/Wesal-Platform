@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ProfessionalOfferForm, {
   type ProfessionalOfferFormValues,
@@ -25,6 +26,9 @@ import {
   updateProfessionalOffer,
 } from "@/services/professional-offers";
 import type { OfferLifecycleStatus, ProfessionalOffer } from "@/types/offers";
+import { professionalProfilePath } from "@/lib/account-profile-path";
+import OfferManageIcon, { OfferBannerCamera } from "@/components/offers/OfferManageIcon";
+import "./professional-offers-manage.css";
 
 type StatusFilter = "all" | OfferLifecycleStatus;
 type ViewMode = "list" | "create" | "edit";
@@ -34,7 +38,7 @@ export default function ProfessionalOffersManagePage() {
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG-u-nu-latn" : "en-US";
   const publishingLock = useAccountPublishingLock();
-  const { canPublish, statusLoading: approvalLoading } =
+  const { canPublish, userId, statusLoading: approvalLoading } =
     useProfessionalAccountAccess();
   const canMutate = canPublish && !publishingLock.isLocked && !approvalLoading;
   const [offers, setOffers] = useState<ProfessionalOffer[]>([]);
@@ -223,19 +227,20 @@ export default function ProfessionalOffersManagePage() {
 
   return (
     <div className="min-w-0 space-y-4 sm:space-y-5" data-testid="professional-offers-page">
-      <header className="overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-[linear-gradient(120deg,color-mix(in_srgb,var(--wesal-maroon)_12%,white),var(--wesal-pink-soft))] p-3.5 sm:p-5">
-        <div className="flex flex-wrap items-end justify-between gap-2.5 sm:gap-3">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-extrabold text-[var(--wesal-maroon-dark)] sm:text-xl">
+      <header className="pro-offers-hero">
+        <OfferBannerCamera />
+        <div className="pro-offers-hero-content">
+          <div className="pro-offers-hero-copy">
+            <h1><OfferManageIcon name="tag" />
               {t("offers.pro.title")}
             </h1>
-            <p className="mt-1 text-[0.7rem] text-[var(--wesal-muted)] sm:text-xs">
+            <p className="pro-offers-hero-subtitle">
               {t("offers.pro.subtitle")}
             </p>
           </div>
           <button
             type="button"
-            className="btn-primary min-h-10 shrink-0 px-3 text-sm sm:min-h-10 sm:px-4 sm:text-base disabled:cursor-not-allowed disabled:opacity-55"
+            className="pro-offers-create"
             disabled={!canMutate}
             title={
               publishingLock.isLocked
@@ -252,7 +257,7 @@ export default function ProfessionalOffersManagePage() {
             }}
             data-testid="pro-offers-add"
           >
-            + {t("offers.pro.add")}
+            <span aria-hidden="true">+</span> {t("offers.pro.add")}
           </button>
         </div>
       </header>
@@ -260,7 +265,7 @@ export default function ProfessionalOffersManagePage() {
         <PublishingRestrictionBanner lockedUntil={publishingLock.lockedUntil} />
       ) : null}
 
-      <div className="-mx-0.5 flex flex-nowrap gap-1.5 overflow-x-auto px-0.5 pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+      <div className="pro-offers-filters" role="group" aria-label={t("offers.pro.title")}>
         {(
           [
             ["all", counts.total],
@@ -273,14 +278,13 @@ export default function ProfessionalOffersManagePage() {
           <button
             key={key}
             type="button"
-            className={`shrink-0 rounded-full px-2.5 py-1.5 text-[0.7rem] font-bold transition sm:px-3 sm:text-xs ${
-              filter === key
-                ? "bg-[var(--wesal-maroon)] text-white"
-                : "bg-white text-[var(--wesal-muted)] ring-1 ring-[var(--wesal-border)]"
-            }`}
+            className={`pro-offers-filter${filter === key ? " is-active" : ""}`}
+            aria-pressed={filter === key}
+            data-testid={`pro-offers-filter-${key}`}
             onClick={() => setFilter(key)}
           >
-            {t(`offers.filter.${key}`)} ({count})
+            <OfferManageIcon name={key} />
+            {t(`offers.filter.${key}`)} <span>({count})</span>
           </button>
         ))}
       </div>
@@ -301,190 +305,66 @@ export default function ProfessionalOffersManagePage() {
         </p>
       ) : null}
 
-      {/* Mobile: compact cards (no horizontal table scroll). */}
-      <ul className="grid gap-2.5 md:hidden">
-        {visible.map(({ offer, status: offerStatus }) => {
-          const lifecycleOpen =
-            offerStatus === "active" || offerStatus === "scheduled";
-          return (
-            <li
-              key={offer.id}
-              className="rounded-xl border border-[var(--wesal-border)] bg-white p-3"
-              data-testid={`pro-offer-card-${offer.id}`}
-            >
-              <div className="flex gap-2.5">
-                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[var(--wesal-pink)]">
-                  <AuthenticatedApiImage
-                    src={offer.images[0]?.url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex flex-wrap items-start justify-between gap-1.5">
-                    <p className="text-sm font-bold leading-snug text-[var(--wesal-maroon-dark)] [overflow-wrap:anywhere]">
-                      {offer.content?.trim() || t("offers.card.untitled")}
-                    </p>
-                    <OfferStatusBadge status={offerStatus} />
-                  </div>
-                  <OfferPriceDisplay
-                    oldPrice={offer.oldPrice}
-                    offerPrice={offer.offerPrice}
-                    size="sm"
-                  />
-                  <p className="text-[0.7rem] text-[var(--wesal-muted)]">
-                    {formatOfferDateRange(offer.startsAt, offer.endsAt, locale)}
-                  </p>
-                </div>
-              </div>
-              {lifecycleOpen ? (
-                <div className="mt-2.5 flex gap-2">
-                  <button
-                    type="button"
-                    className="btn-outline min-h-9 flex-1 px-2 text-xs disabled:opacity-50"
-                    disabled={!canMutate}
-                    title={
-                      publishingLock.isLocked
-                        ? t("moderation.restriction.blocked")
-                        : !canPublish
-                          ? t("professionals.offers.errors.forbidden")
-                          : undefined
-                    }
-                    onClick={() => {
-                      if (!canMutate) return;
-                      void openEdit(offer);
-                    }}
-                  >
-                    {t("offers.actions.edit")}
-                  </button>
-                  <button
-                    type="button"
-                    className="min-h-9 flex-1 rounded-lg border border-[var(--wesal-maroon)] px-2 text-xs font-bold text-[var(--wesal-maroon)] disabled:opacity-50"
-                    disabled={!canMutate}
-                    title={
-                      publishingLock.isLocked
-                        ? t("moderation.restriction.blocked")
-                        : !canPublish
-                          ? t("professionals.offers.errors.forbidden")
-                          : undefined
-                    }
-                    onClick={() => {
-                      if (!canMutate) return;
-                      setStopError(null);
-                      setStopTarget(offer);
-                    }}
-                  >
-                    {t("offers.actions.stop")}
-                  </button>
-                </div>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-
-      {/* Desktop/tablet: original table. */}
-      <div className="hidden overflow-x-auto rounded-2xl border border-[var(--wesal-border)] bg-white md:block">
-        <table className="min-w-full text-start text-sm">
-          <thead className="bg-[var(--wesal-pink-soft)] text-xs text-[var(--wesal-muted)]">
-            <tr>
-              <th className="px-3 py-3 font-bold">{t("offers.table.offer")}</th>
-              <th className="px-3 py-3 font-bold">{t("offers.table.price")}</th>
-              <th className="px-3 py-3 font-bold">{t("offers.table.duration")}</th>
-              <th className="px-3 py-3 font-bold">{t("offers.table.status")}</th>
-              <th className="px-3 py-3 font-bold">{t("offers.table.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
+      {status === "ready" && visible.length > 0 ? (
+        <section className="pro-offers-list" aria-label={t("offers.table.offer")}>
+          <div className="pro-offers-list-heading">{t("offers.table.offer")}</div>
+          <ul>
             {visible.map(({ offer, status: offerStatus }) => {
-              const lifecycleOpen =
-                offerStatus === "active" || offerStatus === "scheduled";
+              const lifecycleOpen = offerStatus === "active" || offerStatus === "scheduled";
+              const lines = offer.content?.trim().split(/\r?\n/) ?? [];
+              const title = lines[0] || t("offers.card.untitled");
+              const description = lines.slice(1).join(" ");
+              const profileId = offer.ownerUserId || userId;
+              const actionDisabled = !canMutate || formBusy;
+              const actionHint = publishingLock.isLocked
+                ? t("moderation.restriction.blocked")
+                : !canPublish ? t("professionals.offers.errors.forbidden") : undefined;
               return (
-                <tr
-                  key={offer.id}
-                  className="border-t border-[var(--wesal-border)]"
-                  data-testid={`pro-offer-row-${offer.id}`}
-                >
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--wesal-pink)]">
-                        <AuthenticatedApiImage
-                          src={offer.images[0]?.url}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-bold text-[var(--wesal-maroon-dark)]">
-                          {offer.content?.trim() || t("offers.card.untitled")}
-                        </p>
-                      </div>
+                <li className="pro-offers-row" key={offer.id} data-testid={"pro-offer-row-" + offer.id}>
+                  <div className="pro-offers-image">
+                    <AuthenticatedApiImage src={offer.images[0]?.url} alt="" className="h-full w-full object-cover"
+                      fallback={<OfferManageIcon name="tag" />} />
+                  </div>
+                  <div className="pro-offers-details">
+                    <h2>{title}</h2>
+                    {description ? <p className="pro-offers-description">{description}</p> : null}
+                    <div className="pro-offers-price">
+                      <OfferManageIcon name="tag" />
+                      <OfferPriceDisplay oldPrice={offer.oldPrice} offerPrice={offer.offerPrice} size="sm" />
                     </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <OfferPriceDisplay
-                      oldPrice={offer.oldPrice}
-                      offerPrice={offer.offerPrice}
-                      size="sm"
-                    />
-                  </td>
-                  <td className="px-3 py-3 text-xs text-[var(--wesal-muted)]">
-                    {formatOfferDateRange(offer.startsAt, offer.endsAt, locale)}
-                  </td>
-                  <td className="px-3 py-3">
-                    <OfferStatusBadge status={offerStatus} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      {lifecycleOpen ? (
-                        <button
-                          type="button"
-                          className="btn-outline min-h-8 px-2 text-xs disabled:opacity-50"
-                          disabled={!canMutate}
-                          title={
-                            publishingLock.isLocked
-                              ? t("moderation.restriction.blocked")
-                              : !canPublish
-                                ? t("professionals.offers.errors.forbidden")
-                                : undefined
-                          }
-                          onClick={() => {
-                            if (!canMutate) return;
-                            void openEdit(offer);
-                          }}
-                        >
-                          {t("offers.actions.edit")}
-                        </button>
-                      ) : null}
-                      {lifecycleOpen ? (
-                        <button
-                          type="button"
-                          className="min-h-8 rounded-lg border border-[var(--wesal-maroon)] px-2 text-xs font-bold text-[var(--wesal-maroon)] disabled:opacity-50"
-                          disabled={!canMutate}
-                          title={
-                            publishingLock.isLocked
-                              ? t("moderation.restriction.blocked")
-                              : !canPublish
-                                ? t("professionals.offers.errors.forbidden")
-                                : undefined
-                          }
-                          onClick={() => {
-                            if (!canMutate) return;
-                            setStopError(null);
-                            setStopTarget(offer);
-                          }}
-                        >
-                          {t("offers.actions.stop")}
-                        </button>
-                      ) : null}
+                    <div className="pro-offers-meta">
+                      <OfferStatusBadge status={offerStatus} />
+                      <span>{formatOfferDateRange(offer.startsAt, offer.endsAt, locale)}</span>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                  <div className="pro-offers-actions">
+                    {profileId ? (
+                      <Link href={professionalProfilePath(profileId)} className="pro-offers-action"
+                        aria-label={t("offers.card.viewProfile")} title={t("offers.card.viewProfile")}>
+                        <OfferManageIcon name="view" />
+                      </Link>
+                    ) : null}
+                    {lifecycleOpen ? (
+                      <>
+                        <button type="button" className="pro-offers-action" disabled={actionDisabled}
+                          aria-label={t("offers.actions.edit")} title={actionHint || t("offers.actions.edit")}
+                          onClick={() => { if (!actionDisabled) void openEdit(offer); }}>
+                          <OfferManageIcon name="edit" />
+                        </button>
+                        <button type="button" className="pro-offers-action" disabled={actionDisabled}
+                          aria-label={t("offers.actions.stop")} title={actionHint || t("offers.actions.stop")}
+                          onClick={() => { if (!actionDisabled) { setStopError(null); setStopTarget(offer); } }}>
+                          <OfferManageIcon name="more" />
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                </li>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+          </ul>
+        </section>
+      ) : null}
 
       <StopOfferConfirmDialog
         open={Boolean(stopTarget)}
