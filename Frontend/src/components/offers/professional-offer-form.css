@@ -1,4 +1,4 @@
-.offer-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 290px); align-items: start; gap: 20px; color: var(--wesal-text); }
+.offer-editor { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr); align-items: start; gap: 20px; color: var(--wesal-text); }
 .offer-editor-details, .offer-editor-preview-panel, .offer-editor-status-panel { min-width: 0; padding: 20px; border: 1px solid var(--wesal-border); border-radius: 20px; background: linear-gradient(135deg, #fff, #fff8fa); box-shadow: 0 5px 20px rgb(88 40 48 / 4%); }
 .offer-editor-details { display: flex; flex-direction: column; gap: 20px; }
 .offer-editor-heading { display: flex; align-items: center; gap: 12px; }
@@ -19,9 +19,9 @@
 .offer-editor-upload[aria-disabled="true"] { opacity: .6; cursor: default; }
 .offer-editor-images > p:last-child { line-height: 1.8; margin-top: 9px; }
 .offer-editor-details input:not([type="checkbox"]):not([type="file"]), .offer-editor-details .wesal-datetime-trigger { min-height: 44px; border-radius: 11px; background-color: #fff; font-size: 13px; }
-.offer-editor-footer { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 18px; border-top: 1px solid var(--wesal-border); }
-.offer-editor-footer > button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; flex: 1 1 130px; min-height: 44px; border-radius: 12px; font-size: 14px; }
-.offer-editor-footer svg { width: 21px; height: 21px; flex-shrink: 0; }
+.offer-editor-footer { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 10px; padding-top: 18px; border-top: 1px solid var(--wesal-border); }
+.offer-editor-footer > button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 0 0 auto; min-height: 40px; padding: 8px 16px; border-radius: 10px; font-size: 13px; }
+.offer-editor-footer svg { width: 18px; height: 18px; flex-shrink: 0; }
 .offer-editor-aside { display: flex; flex-direction: column; gap: 16px; }
 .offer-editor-preview-panel, .offer-editor-status-panel { padding: 14px; }
 .offer-editor-panel-title { display: flex; align-items: center; gap: 8px; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--wesal-border); color: var(--wesal-maroon-dark); font-size: 16px; font-weight: 800; }
