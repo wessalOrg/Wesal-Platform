@@ -150,6 +150,7 @@ export function mapPublicProfessionalProfile(
     shopName: asText(dto.shopName ?? dto.ShopName) || null,
     onlineStoreName: asText(dto.onlineStoreName ?? dto.OnlineStoreName) || null,
     phoneNumber: asText(dto.phoneNumber ?? dto.PhoneNumber) || null,
+    editablePhoneNumber: asText(dto.editablePhoneNumber ?? dto.EditablePhoneNumber) || null,
     shopLocation: asText(dto.shopLocation ?? dto.ShopLocation) || null,
     studioName: asText(dto.studioName ?? dto.StudioName) || null,
     studioLocation: asText(dto.studioLocation ?? dto.StudioLocation) || null,

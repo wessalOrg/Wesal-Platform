@@ -44,6 +44,8 @@ export type PublicProfessionalProfile = {
   shopName: string | null;
   onlineStoreName: string | null;
   phoneNumber: string | null;
+  /** Owner-only contact value for editing, including non-public phone numbers. */
+  editablePhoneNumber?: string | null;
   shopLocation: string | null;
   studioName: string | null;
   studioLocation: string | null;

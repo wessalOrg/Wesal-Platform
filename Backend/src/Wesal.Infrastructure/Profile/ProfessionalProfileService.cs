@@ -91,6 +91,7 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
                 ShopName = profile.BusinessType == CoordinatorBusinessType.Shop ? profile.ShopName : null,
                 OnlineStoreName = profile.BusinessType == CoordinatorBusinessType.Freelance ? profile.OnlineStoreName : null,
                 PhoneNumber = profile.PhoneNumber,
+                EditablePhoneNumber = IsCurrentOwner(userId) ? profile.PhoneNumber : null,
                 ShopLocation = profile.BusinessType == CoordinatorBusinessType.Shop ? profile.ShopLocation : null,
                 Bio = profile.Bio,
                 ProfilePictureUrl = user.ProfilePictureUrl,
@@ -113,6 +114,7 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
             StudioLocation = photographer.HasStudio ? photographer.StudioLocation : null,
             DetailedStudioLocation = photographer.HasStudio ? photographer.DetailedStudioLocation : null,
             PhoneNumber = photographer.HasStudio ? photographer.PhoneNumber : null,
+            EditablePhoneNumber = IsCurrentOwner(userId) ? photographer.PhoneNumber : null,
             Bio = photographer.Bio,
             ProfilePictureUrl = user.ProfilePictureUrl,
             Posts = photographerPosts.Items,
@@ -127,18 +129,23 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
         var bio = SanitizeBio(request.Bio);
         if (bio.Length > MaxBioLength)
             throw new ValidationException(new Dictionary<string, string[]> { ["Bio"] = [$"Bio cannot exceed {MaxBioLength} characters."] });
+        var phoneNumber = request.PhoneNumber?.Trim();
+        if (phoneNumber is not null && !Regex.IsMatch(phoneNumber, @"^\+?[0-9][0-9\s\-]{6,19}$"))
+            throw new ValidationException(new Dictionary<string, string[]> { ["PhoneNumber"] = ["A valid phone number is required."] });
 
         var roles = await _userManager.GetRolesAsync(user);
         if (roles.Contains(ApplicationRoles.EventCoordinator))
         {
             var profile = await _coordinators.GetByUserIdAsync(user.Id, cancellationToken) ?? throw new NotFoundException("Profile", user.Id);
             profile.Bio = bio.Length == 0 ? null : bio;
+            if (phoneNumber is not null) profile.PhoneNumber = phoneNumber;
             await _coordinators.UpdateAsync(profile, cancellationToken);
         }
         else if (roles.Contains(ApplicationRoles.Photographer))
         {
             var profile = await _photographers.GetByUserIdAsync(user.Id, cancellationToken) ?? throw new NotFoundException("Profile", user.Id);
             profile.Bio = bio.Length == 0 ? null : bio;
+            if (phoneNumber is not null) profile.PhoneNumber = phoneNumber;
             await _photographers.UpdateAsync(profile, cancellationToken);
         }
         else
@@ -223,6 +230,9 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
         await _restrictions.EnsureUnlockedAsync(user.Id, cancellationToken);
         return user;
     }
+
+    private bool IsCurrentOwner(string userId)
+        => _currentUser.IsAuthenticated && string.Equals(_currentUser.UserId, userId, StringComparison.Ordinal);
 
     private static string SanitizeBio(string? bio)
     {

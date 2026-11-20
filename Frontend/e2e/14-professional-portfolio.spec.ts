@@ -7,6 +7,7 @@ const stoppedOffer = { ...activeOffer, id: "stopped-offer", content: "Stopped pr
 
 async function setup(page: Page, role: string) {
   let bio = "My professional biography";
+  let phoneNumber = "0591234567";
   await page.addInitScript(({ role, userId }) => {
     const token = `test.${btoa(JSON.stringify({ sub: userId, role, exp: Date.now() / 1000 + 3600 }))}.test`;
     sessionStorage.setItem("wesal-access-token", token);
@@ -27,14 +28,16 @@ async function setup(page: Page, role: string) {
     if (path === "/session") return json({ isAuthenticated: true, role });
     if (path === "/profile") return json({ id: userId, fullName: "Test Professional", concurrencyStamp: "test", isSetupComplete: true, approvalStatus: "Approved" });
     if (path === "/profile/bio" && route.request().method() === "PUT") {
-      bio = route.request().postDataJSON().bio;
+      const input = route.request().postDataJSON();
+      bio = input.bio;
+      if (input.phoneNumber !== undefined) phoneNumber = input.phoneNumber;
       return json({});
     }
     const posts = [1, 2, 3].map((id) => ({ id: `post-${id}`, ownerUserId: userId,
       content: `Professional work ${id}`, price: 120, createdAt: "2026-11-20T10:00:00Z",
       images: [{ id: `image-${id}`, url: "http://localhost:3000/home/photographers-venue.jpg", order: 0 }] }));
     if (path === `/profile/${userId}`) return json({ userId, role, approvalStatus: "Approved", isPubliclyAvailable: true,
-      displayName: "Test Professional", bio, phoneNumber: "0591234567", shopLocation: "Ramallah", studioLocation: "Ramallah", posts, offers: [activeOffer] });
+      displayName: "Test Professional", bio, phoneNumber, editablePhoneNumber: phoneNumber, shopLocation: "Ramallah", studioLocation: "Ramallah", posts, offers: [activeOffer] });
     if (path === `/posts/profile/${userId}`) return json({ items: posts, totalCount: posts.length });
     if (path === "/offers/mine") return json({ items: [activeOffer, stoppedOffer] });
     if (path === `/offers/profile/${userId}`) return json({ items: [activeOffer] });
@@ -53,8 +56,13 @@ for (const [role, width, height] of [["Photographer", 1366, 900], ["EventCoordin
     await expect(page.getByTestId("professional-post-card")).toHaveCount(3);
     await page.getByTestId("professional-bio-edit-open").click();
     await page.locator("textarea").fill("Updated professional biography");
+    await page.getByTestId("professional-bio-phone").fill("invalid");
+    await page.getByTestId("professional-bio-save").click();
+    await expect(page.getByTestId("professional-bio-phone")).toHaveAttribute("aria-invalid", "true");
+    await page.getByTestId("professional-bio-phone").fill("0597654321");
     await page.getByTestId("professional-bio-save").click();
     await expect(page.locator(".ppp-bio-inline")).toHaveText("Updated professional biography");
+    await expect(page.getByTestId("professional-profile-phone")).toContainText("0597654321");
     await page.getByTestId("professional-tab-offers").click();
     await expect(page.getByTestId("professional-offer-card")).toHaveCount(2);
     await page.getByTestId("portfolio-visitor-toggle").click();
@@ -93,7 +101,8 @@ test("Profile phone can be copied while the call link remains available", async 
   await page.goto("/profile/professional-profile");
   const copy = page.getByTestId("professional-profile-phone-copy");
   await copy.click();
-  await expect(copy).toContainText("تم نسخ الرقم");
+  await expect(copy).toHaveAttribute("aria-label", "تم نسخ الرقم");
+  await expect(copy.locator("span")).toHaveClass("sr-only");
   await expect(page.locator("html")).toHaveAttribute("data-copied-number", "0591234567");
   await expect(page.getByTestId("professional-profile-phone")).toHaveAttribute("href", "tel:0591234567");
 });

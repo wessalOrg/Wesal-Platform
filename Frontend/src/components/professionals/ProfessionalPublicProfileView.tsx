@@ -544,6 +544,7 @@ export default function ProfessionalPublicProfileView({
       {bioOpen && isOwner ? (
         <ProfessionalBioEditor
           initialBio={displayBio}
+          initialPhoneNumber={profile.editablePhoneNumber ?? profile.phoneNumber}
           onClose={() => setBioOpen(false)}
           onSaved={(next) => {
             setLocalBio(next);

@@ -82,6 +82,8 @@ public sealed class PublicProfessionalProfileResponse
     public string? ShopName { get; init; }
     public string? OnlineStoreName { get; init; }
     public string? PhoneNumber { get; init; }
+    /// <summary>Returned only to the profile owner for editing; never a public phone fallback.</summary>
+    public string? EditablePhoneNumber { get; init; }
     public string? ShopLocation { get; init; }
     public string? StudioName { get; init; }
     public string? StudioLocation { get; init; }
@@ -114,4 +116,6 @@ public sealed class PublicProfileContentDto
 public sealed class UpdatePublicBioRequest
 {
     public string? Bio { get; init; }
+    /// <summary>Omitting this property preserves the existing professional contact number.</summary>
+    public string? PhoneNumber { get; init; }
 }

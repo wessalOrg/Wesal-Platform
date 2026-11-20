@@ -32,6 +32,8 @@ export default function ProfilePhoneCopyButton({ phone }: { phone: string }) {
   return (
     <>
       <button type="button" className="ppp-phone-copy" data-testid="professional-profile-phone-copy"
+        aria-label={t(status === "copied" ? "halls.details.phoneCopied" : "halls.details.copyPhone")}
+        title={t(status === "copied" ? "halls.details.phoneCopied" : "halls.details.copyPhone")}
         onClick={async () => {
           try {
             await copyNumber(phone.trim());
@@ -41,10 +43,12 @@ export default function ProfilePhoneCopyButton({ phone }: { phone: string }) {
           }
         }}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+          {status === "copied" ? <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" /> : <>
           <rect x="8" y="8" width="12" height="13" rx="2" />
           <path d="M15 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+          </>}
         </svg>
-        <span aria-live="polite">{t(status === "copied" ? "halls.details.phoneCopied" : "halls.details.copyPhone")}</span>
+        <span className="sr-only" aria-live="polite">{status === "copied" ? t("halls.details.phoneCopied") : ""}</span>
       </button>
       {status === "error" ? <span className="ppp-phone-copy-error" role="alert">{t("portfolio.phoneCopyFailed")}</span> : null}
     </>

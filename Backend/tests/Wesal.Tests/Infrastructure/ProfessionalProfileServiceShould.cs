@@ -158,6 +158,55 @@ public sealed class ProfessionalProfileServiceShould : IDisposable
     }
 
     [Fact]
+    public async Task SaveCoordinatorBioAndContactPhoneTogetherWithoutChangingLoginPhone()
+    {
+        var coordinator = await CreateCoordinatorAsync();
+        var originalLoginPhone = coordinator.PhoneNumber;
+        await CreateService(coordinator).UpdateBioAsync(new UpdatePublicBioRequest { Bio = "Updated bio", PhoneNumber = " +970599222222 " });
+        var profile = await _context.CoordinatorProfiles.SingleAsync(p => p.UserId == coordinator.Id);
+        Assert.Equal("Updated bio", profile.Bio);
+        Assert.Equal("+970599222222", profile.PhoneNumber);
+        Assert.Equal(originalLoginPhone, (await _users.FindByIdAsync(coordinator.Id))!.PhoneNumber);
+        Assert.Equal("+970599222222", (await CreateService().GetPublicProfileAsync(coordinator.Id)).PhoneNumber);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SavePhotographerPhoneAndPreservePublicPhoneVisibility(bool hasStudio)
+    {
+        var photographer = await CreatePhotographerAsync(AccountApprovalStatus.Approved, hasStudio);
+        await CreateService(photographer).UpdateBioAsync(new UpdatePublicBioRequest { Bio = "Updated", PhoneNumber = "+970599333333" });
+        Assert.Equal("+970599333333", (await _context.PhotographerProfiles.SingleAsync(p => p.UserId == photographer.Id)).PhoneNumber);
+        var own = await CreateService(photographer).GetPublicProfileAsync(photographer.Id);
+        Assert.Equal("+970599333333", own.EditablePhoneNumber);
+        var visitor = await CreateService().GetPublicProfileAsync(photographer.Id);
+        Assert.Null(visitor.EditablePhoneNumber);
+        Assert.Equal(hasStudio ? "+970599333333" : null, visitor.PhoneNumber);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("invalid")]
+    [InlineData("123")]
+    public async Task RejectInvalidPhoneWithoutChangingBioOrPhone(string phoneNumber)
+    {
+        var coordinator = await CreateCoordinatorAsync();
+        await Assert.ThrowsAsync<ValidationException>(() => CreateService(coordinator).UpdateBioAsync(new UpdatePublicBioRequest { Bio = "Must not save", PhoneNumber = phoneNumber }));
+        var profile = await _context.CoordinatorProfiles.SingleAsync(p => p.UserId == coordinator.Id);
+        Assert.Equal("Original", profile.Bio);
+        Assert.Equal("+970599111111", profile.PhoneNumber);
+    }
+
+    [Fact]
+    public async Task KeepExistingPhoneWhenOlderClientsOnlySubmitBio()
+    {
+        var coordinator = await CreateCoordinatorAsync();
+        await CreateService(coordinator).UpdateBioAsync(new UpdatePublicBioRequest { Bio = "Updated" });
+        Assert.Equal("+970599111111", (await _context.CoordinatorProfiles.SingleAsync(p => p.UserId == coordinator.Id)).PhoneNumber);
+    }
+
+    [Fact]
     public async Task BlockBioEditWhileRestricted()
     {
         var coordinator = await CreateCoordinatorAsync();
