@@ -18,6 +18,9 @@ import {
 } from "@/lib/offer-validation";
 import { offerDiscountPercent, resolveOfferStatus } from "@/lib/offer-status";
 import type { ProfessionalOffer } from "@/types/offers";
+import OfferManageIcon from "./OfferManageIcon";
+import PostEditorIcon from "@/components/professionals/PostEditorIcon";
+import "./professional-offer-form.css";
 
 const TITLE_MAX = OFFER_CONTENT_MAX;
 const MAX_IMAGES = OFFER_IMAGES_MAX;
@@ -214,22 +217,23 @@ export default function ProfessionalOfferForm({
 
   return (
     <div
-      className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)]"
+      className="offer-editor"
       data-testid="professional-offer-form"
     >
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 shadow-sm sm:p-5"
+        className="offer-editor-details"
       >
-        <h2 className="text-base font-extrabold text-[var(--wesal-maroon-dark)]">
-          {t("offers.form.details")}
-        </h2>
+        <header className="offer-editor-heading">
+          <span className="offer-editor-heading-icon"><OfferManageIcon name="tag" /></span>
+          <div><h2>{t("offers.form.details")}</h2><p>{t("offers.form.detailsHint")}</p></div>
+        </header>
 
-        <div>
-          <p className="mb-2 text-sm font-bold text-[var(--wesal-maroon-dark)]">
-            {t("offers.form.images")}
+        <div className="offer-editor-images">
+          <p className="offer-editor-label">
+            <PostEditorIcon name="image" />{t("offers.form.images")}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="offer-editor-image-list">
             {values.existingImages.map((img) => (
               <div
                 key={img.id}
@@ -270,7 +274,8 @@ export default function ProfessionalOfferForm({
               </div>
             ))}
             {values.existingImages.length + values.newFiles.length < MAX_IMAGES ? (
-              <label className="flex h-20 w-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--wesal-maroon)]/40 bg-[var(--wesal-pink-soft)] text-center text-[0.65rem] font-bold text-[var(--wesal-maroon)]">
+              <label className="offer-editor-upload" aria-disabled={busy}>
+                <PostEditorIcon name="image" />
                 <span>{t("offers.form.addImages")}</span>
                 <input
                   type="file"
@@ -291,9 +296,9 @@ export default function ProfessionalOfferForm({
           </p>
         </div>
 
-        <label className="block">
+        <label className="offer-editor-content">
           <span className="mb-1.5 flex items-center justify-between text-sm font-bold text-[var(--wesal-maroon-dark)]">
-            <span>{t("offers.form.title")}</span>
+            <span className="offer-editor-label"><PostEditorIcon name="document" />{t("offers.form.title")}</span>
             <span className="text-[0.7rem] font-medium text-[var(--wesal-muted)]">
               {values.content.length}/{TITLE_MAX}
             </span>
@@ -312,7 +317,7 @@ export default function ProfessionalOfferForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
-              {t("offers.form.oldPrice")}
+              <span className="offer-editor-label"><PostEditorIcon name="price" />{t("offers.form.oldPrice")}<span aria-hidden="true">*</span></span>
             </span>
             <input
               type="number"
@@ -326,7 +331,7 @@ export default function ProfessionalOfferForm({
           </label>
           <label className="block">
             <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
-              {t("offers.form.offerPrice")}
+              <span className="offer-editor-label"><OfferManageIcon name="tag" />{t("offers.form.offerPrice")}<span aria-hidden="true">*</span></span>
             </span>
             <input
               type="number"
@@ -391,7 +396,7 @@ export default function ProfessionalOfferForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
-              {t("offers.form.startsAt")}
+              <span className="offer-editor-label"><OfferManageIcon name="scheduled" />{t("offers.form.startsAt")}<span aria-hidden="true">*</span></span>
             </span>
             <WesalDateTimeField
               value={values.startsAt}
@@ -403,7 +408,7 @@ export default function ProfessionalOfferForm({
           </div>
           <div>
             <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
-              {t("offers.form.endsAt")}
+              <span className="offer-editor-label"><OfferManageIcon name="scheduled" />{t("offers.form.endsAt")}<span aria-hidden="true">*</span></span>
             </span>
             <WesalDateTimeField
               value={values.endsAt}
@@ -421,8 +426,9 @@ export default function ProfessionalOfferForm({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap gap-3 pt-1">
+        <div className="offer-editor-footer">
           <button type="submit" className="btn-primary min-h-11 px-5" disabled={busy}>
+            <PostEditorIcon name="send" />
             {busy
               ? t("offers.form.saving")
               : mode === "edit"
@@ -435,6 +441,7 @@ export default function ProfessionalOfferForm({
             disabled={busy}
             onClick={onCancel}
           >
+            <PostEditorIcon name="close" />
             {t("offers.form.cancel")}
           </button>
           {mode === "edit" && onRequestStop && previewStatus !== "stopped" && previewStatus !== "expired" ? (
@@ -450,8 +457,10 @@ export default function ProfessionalOfferForm({
         </div>
       </form>
 
-      <aside className="space-y-3">
-        <div className="overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-white shadow-sm">
+      <aside className="offer-editor-aside">
+        <section className="offer-editor-preview-panel">
+        <h3 className="offer-editor-panel-title"><OfferManageIcon name="view" />{t("offers.form.preview")}</h3>
+        <div className="offer-editor-preview-card">
           <div className="relative aspect-[4/3] bg-[var(--wesal-pink)]">
             <AuthenticatedApiImage
               src={previewImage || null}
@@ -472,11 +481,11 @@ export default function ProfessionalOfferForm({
               {values.content.trim() || t("offers.card.untitled")}
             </p>
             <OfferPriceDisplay
-              oldPrice={Number.isFinite(oldPriceNum) ? oldPriceNum : null}
-              offerPrice={Number.isFinite(offerPriceNum) ? offerPriceNum : null}
+              oldPrice={values.oldPrice.trim() && Number.isFinite(oldPriceNum) ? oldPriceNum : null}
+              offerPrice={values.offerPrice.trim() && Number.isFinite(offerPriceNum) ? offerPriceNum : null}
             />
             <div className="flex flex-wrap items-center gap-2">
-              <OfferStatusBadge status={previewStatus} />
+              {previewStarts && previewEnds ? <OfferStatusBadge status={previewStatus} /> : null}
               {dateLabel ? (
                 <span className="text-[0.7rem] text-[var(--wesal-muted)]">{dateLabel}</span>
               ) : null}
@@ -486,6 +495,16 @@ export default function ProfessionalOfferForm({
         <p className="rounded-xl bg-[color-mix(in_srgb,var(--wesal-maroon)_10%,white)] px-3 py-2 text-[0.7rem] leading-5 text-[var(--wesal-maroon-dark)]">
           {mode === "edit" ? t("offers.form.editNote") : t("offers.form.createNote")}
         </p>
+        </section>
+        <section className="offer-editor-status-panel">
+          <h3 className="offer-editor-panel-title"><OfferManageIcon name="all" />{t("offers.form.statusTitle")}</h3>
+          <p className="offer-editor-status-hint">{t("offers.form.statusHint")}</p>
+          {(["scheduled", "active", "expired", ...(initial?.stoppedAt ? ["stopped" as const] : [])] as const).map((status) => (
+            <div key={status} className="offer-editor-status" data-current={Boolean(previewStarts && previewEnds && previewStatus === status)}>
+              <OfferManageIcon name={status} /><span>{t(`offers.status.${status}`)}</span><span className="offer-editor-status-dot" aria-hidden="true" />
+            </div>
+          ))}
+        </section>
       </aside>
     </div>
   );

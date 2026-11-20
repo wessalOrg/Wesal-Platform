@@ -1,0 +1,39 @@
+.offer-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 290px); align-items: start; gap: 20px; color: var(--wesal-text); }
+.offer-editor-details, .offer-editor-preview-panel, .offer-editor-status-panel { min-width: 0; padding: 20px; border: 1px solid var(--wesal-border); border-radius: 20px; background: linear-gradient(135deg, #fff, #fff8fa); box-shadow: 0 5px 20px rgb(88 40 48 / 4%); }
+.offer-editor-details { display: flex; flex-direction: column; gap: 20px; }
+.offer-editor-heading { display: flex; align-items: center; gap: 12px; }
+.offer-editor-heading h2 { color: var(--wesal-maroon-dark); font-size: 23px; font-weight: 800; }
+.offer-editor-heading p { margin-top: 4px; font-size: 12px; color: var(--wesal-muted); }
+.offer-editor-heading-icon { display: grid; place-items: center; flex-shrink: 0; width: 46px; height: 46px; border-radius: 13px; background: var(--wesal-pink-soft); color: var(--wesal-maroon); }
+.offer-editor-heading-icon svg { width: 26px; height: 26px; }
+.offer-editor-label { display: flex; align-items: center; gap: 8px; color: var(--wesal-maroon-dark); font-size: 13px; font-weight: 700; }
+.offer-editor-label svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--wesal-maroon); }
+.offer-editor-images { padding: 14px; border: 1px solid var(--wesal-border); border-radius: 14px; background: rgb(255 255 255 / 65%); }
+.offer-editor-image-list { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.offer-editor-image-list > div { border-radius: 12px; width: 76px; height: 76px; }
+.offer-editor-image-list > div button { inset-inline-end: 2px; top: 2px; width: 28px; height: 28px; border: 1px solid var(--wesal-border); background: rgb(255 255 255 / 94%); color: var(--wesal-maroon-dark); }
+.offer-editor-upload { position: relative; display: flex; flex: 1 1 150px; min-height: 124px; align-items: center; justify-content: center; flex-direction: column; gap: 10px; padding: 16px; border: 1px dashed var(--wesal-maroon); border-radius: 13px; background: var(--wesal-pink-soft); color: var(--wesal-maroon-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
+.offer-editor-upload svg { width: 32px; height: 32px; color: var(--wesal-maroon); }
+.offer-editor-upload:hover { background: color-mix(in srgb, var(--wesal-maroon) 9%, white); }
+.offer-editor-upload:focus-within { outline: 2px solid var(--wesal-maroon); outline-offset: 3px; }
+.offer-editor-upload[aria-disabled="true"] { opacity: .6; cursor: default; }
+.offer-editor-images > p:last-child { line-height: 1.8; margin-top: 9px; }
+.offer-editor-details input:not([type="checkbox"]):not([type="file"]), .offer-editor-details .wesal-datetime-trigger { min-height: 44px; border-radius: 11px; background-color: #fff; font-size: 13px; }
+.offer-editor-footer { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 18px; border-top: 1px solid var(--wesal-border); }
+.offer-editor-footer > button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; flex: 1 1 130px; min-height: 44px; border-radius: 12px; font-size: 14px; }
+.offer-editor-footer svg { width: 21px; height: 21px; flex-shrink: 0; }
+.offer-editor-aside { display: flex; flex-direction: column; gap: 16px; }
+.offer-editor-preview-panel, .offer-editor-status-panel { padding: 14px; }
+.offer-editor-panel-title { display: flex; align-items: center; gap: 8px; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--wesal-border); color: var(--wesal-maroon-dark); font-size: 16px; font-weight: 800; }
+.offer-editor-panel-title svg { width: 21px; height: 21px; color: var(--wesal-maroon); }
+.offer-editor-preview-card { overflow: hidden; border: 1px solid var(--wesal-border); border-radius: 14px; background: #fff; }
+.offer-editor-preview-panel > p { margin-top: 12px; }
+.offer-editor-preview-card > div:last-child { padding: 14px; }
+.offer-editor-status-hint { margin-bottom: 12px; color: var(--wesal-muted); font-size: 11px; line-height: 1.8; }
+.offer-editor-status { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 12px; border: 1px solid var(--wesal-border); border-radius: 12px; color: var(--wesal-muted); font-size: 13px; }
+.offer-editor-status > svg { width: 22px; height: 22px; }
+.offer-editor-status[data-current="true"] { color: var(--wesal-maroon-dark); background: var(--wesal-pink-soft); border-color: var(--wesal-maroon); font-weight: 700; }
+.offer-editor-status-dot { width: 14px; height: 14px; margin-inline-start: auto; border: 1px solid currentColor; border-radius: 50%; }
+.offer-editor-status[data-current="true"] .offer-editor-status-dot { border: 4px solid var(--wesal-maroon); }
+@media (max-width: 850px) { .offer-editor { grid-template-columns: minmax(0, 1fr); } .offer-editor-aside { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+@media (max-width: 560px) { .offer-editor { gap: 14px; } .offer-editor-details { padding: 16px; gap: 18px; } .offer-editor-heading h2 { font-size: 20px; } .offer-editor-aside { display: flex; } .offer-editor-upload { flex-basis: 100%; } }
