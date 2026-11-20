@@ -57,6 +57,9 @@ export default function PhotographerSetupScreen({
       router.replace("/");
       return;
     }
+    // Keep the submission confirmation visible while the refreshed profile
+    // moves to Pending. The dialog's action takes the user to their account.
+    if (showPending) return;
     if (professional.phase === "loading") return;
 
     if (isResubmitFlow) {
@@ -84,6 +87,7 @@ export default function PhotographerSetupScreen({
     router,
     session.isAuthenticated,
     session.role,
+    showPending,
     status,
   ]);
 
@@ -92,9 +96,10 @@ export default function PhotographerSetupScreen({
     (status === "ready" &&
       session.isAuthenticated &&
       isPhotographerRole(session.role) &&
-      (isResubmitFlow
-        ? professional.canResubmitSetup || professional.phase === "loading"
-        : true));
+      (showPending ||
+        !isResubmitFlow ||
+        professional.canResubmitSetup ||
+        professional.phase === "loading"));
 
   if (!canView) {
     return (

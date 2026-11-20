@@ -1,5 +1,7 @@
 "use client";
 
+import PortfolioIcon from "@/components/ui/PortfolioIcon";
+
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -146,6 +148,8 @@ export default function SeekerSidebar({
 
 function NavIcon({ id }: { id: SeekerDashboardNavId }) {
   switch (id) {
+    case "portfolio":
+      return <PortfolioIcon />;
     case "home":
       return (
         <svg viewBox="0 0 24 24" fill="none" className="h-[1.15rem] w-[1.15rem]" aria-hidden="true">

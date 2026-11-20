@@ -1,0 +1,36 @@
+.portfolio-workspace { display: flex; flex-direction: column; min-width: 0; gap: 18px; }
+.portfolio-workspace-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.portfolio-workspace-toolbar h1 { font-size: 23px; font-weight: 800; color: var(--wesal-maroon-dark); }
+.portfolio-workspace-toolbar > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.portfolio-preview-notice { padding: 12px 16px; border: 1px solid var(--wesal-border); border-radius: 14px; background: var(--wesal-pink-soft); color: var(--wesal-maroon-dark); font-size: 13px; line-height: 1.8; }
+.portfolio-workspace .ppp-hero { position: relative; isolation: isolate; background: linear-gradient(100deg,#faecec,#fff8fb 65%,#f9e8ed); }
+.portfolio-workspace .ppp-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background-image: linear-gradient(to right, transparent, #fff7fa 45%),url('/home/planners-aisle.png'); background-repeat: no-repeat; background-position: left center; background-size: cover; opacity: .4; }
+.portfolio-workspace .ppp-hero-inner { grid-template-columns: minmax(0,1fr); padding: 28px; gap: 18px; }
+.portfolio-workspace .ppp-side { width: auto; display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 18px; }
+.portfolio-workspace .ppp-stats { order: 2; width: 220px; max-width: 100%; }
+.portfolio-workspace .ppp-stat { border: 0; border-radius: 0; border-inline-start: 1px solid var(--wesal-border); background: transparent; padding: 6px 14px; }
+.portfolio-workspace .ppp-stat-value { font-size: 19px; color: var(--wesal-text); }
+.portfolio-workspace .ppp-owner-actions { display: flex; flex-wrap: wrap; gap: 12px; max-width: 100%; }
+.portfolio-workspace .ppp-owner-card { width: auto; min-height: 44px; padding: 8px 18px; border-radius: 12px; background: rgb(255 255 255 / 55%); }
+.portfolio-workspace .ppp-owner-card-icon { width: 22px; height: 22px; background: transparent; }
+.portfolio-workspace .ppp-owner-card-hint { display: none; }
+.portfolio-workspace .ppp-name { font-size: 25px; }
+.portfolio-workspace .ppp-role { display: inline-flex; padding: 4px 10px; border-radius: 8px; background: #f9e3e8; }
+.portfolio-workspace .ppp-avatar { width: 100px; height: 100px; }
+.portfolio-workspace .ppp-toolbar { border-radius: 20px 20px 0 0; border: 1px solid var(--wesal-border); padding: 12px 18px 0; background: rgb(255 255 255 / 80%); }
+.portfolio-workspace .ppp-tabs { flex: 1; border: 0; }
+.portfolio-workspace .ppp-tab { flex: 1; min-height: 48px; }
+.portfolio-workspace .ppp-section { box-shadow: none; }
+.portfolio-workspace .ppp-section-title { font-size: 14px; color: var(--wesal-muted); }
+.portfolio-workspace .ppp-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+@media (max-width: 1000px) { .portfolio-workspace .ppp-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 560px) {
+  .portfolio-workspace-toolbar h1 { font-size: 20px; }
+  .portfolio-workspace .ppp-hero-inner { padding: 20px 16px; }
+  .portfolio-workspace .ppp-name { font-size: 21px; }
+  .portfolio-workspace .ppp-avatar { width: 80px; height: 80px; }
+  .portfolio-workspace .ppp-owner-card { flex: 1; padding: 8px 12px; }
+  .portfolio-workspace .ppp-owner-actions { width: 100%; }
+  .portfolio-workspace .ppp-grid { grid-template-columns: minmax(0,1fr); }
+  .portfolio-workspace .ppp-toolbar { padding-inline: 10px; }
+}

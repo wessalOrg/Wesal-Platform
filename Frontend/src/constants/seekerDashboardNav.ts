@@ -39,6 +39,7 @@ export const SEEKER_NOTIFICATIONS_PATH = `${REGULAR_PROFILE_PATH}/notifications`
 export const SEEKER_MESSAGES_PATH = `${REGULAR_PROFILE_PATH}/messages`;
 export const SEEKER_OFFERS_PATH = `${REGULAR_PROFILE_PATH}/offers`;
 export const PROFESSIONAL_POSTS_PATH = `${REGULAR_PROFILE_PATH}/posts`;
+export const PROFESSIONAL_PORTFOLIO_PATH = `${REGULAR_PROFILE_PATH}/professional-profile`;
 export const SEEKER_STATISTICS_PATH = `${REGULAR_PROFILE_PATH}/statistics`;
 
 /** Messages page URL for a hall thread (seeker or owner-as-booker). */
@@ -88,6 +89,13 @@ export const SEEKER_DASHBOARD_NAV = [
     id: "posts",
     href: PROFESSIONAL_POSTS_PATH,
     labelKey: "seeker.nav.posts",
+    match: "prefix" as const,
+    professionalOnly: true as const,
+  },
+  {
+    id: "portfolio",
+    href: PROFESSIONAL_PORTFOLIO_PATH,
+    labelKey: "portfolio.title",
     match: "prefix" as const,
     professionalOnly: true as const,
   },

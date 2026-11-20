@@ -44,6 +44,8 @@ import "./professional-public-profile.css";
 
 type ProfessionalPublicProfileViewProps = {
   userId: string;
+  /** Read-only visitor rendering inside the account dashboard. */
+  visitorPreview?: boolean;
 };
 
 function roleLabelKey(profile: PublicProfessionalProfile): string {
@@ -68,6 +70,7 @@ function messageLabelKey(profile: PublicProfessionalProfile): string {
 
 export default function ProfessionalPublicProfileView({
   userId,
+  visitorPreview = false,
 }: ProfessionalPublicProfileViewProps) {
   const t = useT();
   const pictureInputId = useId();
@@ -121,7 +124,7 @@ export default function ProfessionalPublicProfileView({
   }
 
   const isOwner = Boolean(
-    ready && authenticated && viewerId && profile && viewerId === profile.userId,
+    !visitorPreview && ready && authenticated && viewerId && profile && viewerId === profile.userId,
   );
   const canManagePosts = Boolean(
     isOwner && profile?.isPubliclyAvailable && canPublish && !approvalLoading,
@@ -496,7 +499,7 @@ export default function ProfessionalPublicProfileView({
                   <button
                     type="button"
                     className="btn-primary ppp-message !min-h-11"
-                    disabled={starting || !ready}
+                    disabled={visitorPreview || starting || !ready}
                     aria-busy={starting || undefined}
                     data-testid="professional-contact"
                     onClick={() => void start(profile.userId, { loginHref })}
