@@ -82,3 +82,18 @@ test("Seeker accounts do not get a professional profile menu or editing tools", 
   await expect(page.getByTestId("seeker-nav-portfolio")).toHaveCount(0);
   await expect(page.getByTestId("professional-picture-change")).toHaveCount(0);
 });
+
+test("Profile phone can be copied while the call link remains available", async ({ page }) => {
+  await setup(page, "Photographer");
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+      writeText: async (value: string) => { document.documentElement.dataset.copiedNumber = value; },
+    } });
+  });
+  await page.goto("/profile/professional-profile");
+  const copy = page.getByTestId("professional-profile-phone-copy");
+  await copy.click();
+  await expect(copy).toContainText("تم نسخ الرقم");
+  await expect(page.locator("html")).toHaveAttribute("data-copied-number", "0591234567");
+  await expect(page.getByTestId("professional-profile-phone")).toHaveAttribute("href", "tel:0591234567");
+});

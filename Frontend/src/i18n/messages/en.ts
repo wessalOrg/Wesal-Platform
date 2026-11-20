@@ -948,6 +948,7 @@ const en: MessageCatalog = {
   "portfolio.openPublic": "Open public page",
   "portfolio.previewNotice": "Visitor preview is active. Editing tools are hidden and messaging is disabled during preview.",
   "portfolio.professionalOnly": "Professional profiles are available to photographers and coordinators only.",
+  "portfolio.phoneCopyFailed": "Automatic copying failed. Select the number to copy it manually.",
   "dashboard.posts.subtitle": "Share your work and updates, and create and manage your posts in one place.",
   "dashboard.posts.create": "Create post",
   "dashboard.posts.emptyTitle": "Publish your first post",

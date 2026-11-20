@@ -941,6 +941,7 @@ const ar: MessageCatalog = {
   "portfolio.openPublic": "فتح الصفحة العامة",
   "portfolio.previewNotice": "أنت في وضع معاينة الزائر. أدوات التعديل مخفية، والمراسلة معطّلة أثناء المعاينة.",
   "portfolio.professionalOnly": "الملف المهني متاح للمصورين والمنسقين فقط.",
+  "portfolio.phoneCopyFailed": "تعذر النسخ تلقائيًا. يمكنك تحديد الرقم ونسخه يدويًا.",
   "dashboard.posts.subtitle": "شارك أعمالك وأحدث أخبارك، وأنشئ منشوراتك وأدرها من مكان واحد.",
   "dashboard.posts.create": "إنشاء منشور",
   "dashboard.posts.emptyTitle": "ابدأ بأول منشور لك",

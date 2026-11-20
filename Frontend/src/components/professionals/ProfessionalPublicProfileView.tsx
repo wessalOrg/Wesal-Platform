@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import ProfessionalBioEditor from "@/components/professionals/ProfessionalBioEditor";
+import ProfilePhoneCopyButton from "@/components/professionals/ProfilePhoneCopyButton";
 import ProfessionalContentCard from "@/components/professionals/ProfessionalContentCard";
 import ProfessionalOfferForm from "@/components/professionals/ProfessionalOfferForm";
 import ProfessionalPostForm from "@/components/professionals/ProfessionalPostForm";
@@ -397,7 +398,24 @@ export default function ProfessionalPublicProfileView({
                   {t("professionals.bio.empty")}
                 </p>
               )}
-              {location ? <p className="ppp-location">{location}</p> : null}
+              {location || profile.phoneNumber?.trim() ? (
+                <div className="ppp-contact-details">
+                  {location ? <p className="ppp-location">{location}</p> : null}
+                  {profile.phoneNumber?.trim() ? (
+                    <div className="ppp-phone-group">
+                    <a className="ppp-phone" href={`tel:${profile.phoneNumber.replace(/[^\d+]/g, "")}`}
+                      data-testid="professional-profile-phone">
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="m7 3 3 5-2.5 2.5a15 15 0 0 0 6 6L16 14l5 3-1 4C10 22 2 14 3 4l4-1Z"
+                          stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span dir="ltr">{profile.phoneNumber}</span>
+                    </a>
+                    <ProfilePhoneCopyButton key={profile.phoneNumber} phone={profile.phoneNumber} />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -522,24 +540,6 @@ export default function ProfessionalPublicProfileView({
           </div>
         </div>
       </section>
-
-      {(displayBio || profile.phoneNumber) && !isOwner ? (
-        <section className="ppp-about" aria-labelledby="ppp-about-title">
-          <h2 id="ppp-about-title" className="ppp-about-title">
-            {t("professionals.bio.sectionTitle")}
-          </h2>
-          {displayBio ? (
-            <p className="ppp-about-body">{displayBio}</p>
-          ) : (
-            <p className="ppp-about-body ppp-bio-empty">{t("professionals.bio.empty")}</p>
-          )}
-          {profile.phoneNumber ? (
-            <p className="ppp-about-meta" dir="ltr">
-              {profile.phoneNumber}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
 
       {bioOpen && isOwner ? (
         <ProfessionalBioEditor
