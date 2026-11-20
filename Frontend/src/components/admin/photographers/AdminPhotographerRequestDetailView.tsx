@@ -327,9 +327,6 @@ export default function AdminPhotographerRequestDetailView({
       ? "admin.photographers.type.studio"
       : "admin.photographers.type.independent",
   );
-  const specialtyLabel = detail.hasStudio
-    ? detail.studioName || typeLabel
-    : detail.legalFullName || typeLabel;
   const addressValue = detail.studioLocation || detail.detailedStudioLocation || "—";
   const experienceValue =
     detail.userId === DEMO_PHOTOGRAPHER_REQUEST_ID
@@ -520,11 +517,6 @@ export default function AdminPhotographerRequestDetailView({
               icon={<IconCalendar />}
               label={t("admin.photographers.detail.experience")}
               value={experienceValue}
-            />
-            <InfoRow
-              icon={<IconLayers />}
-              label={t("admin.photographers.detail.photographerType")}
-              value={specialtyLabel}
             />
             <InfoRow
               icon={<IconDocument />}

@@ -345,10 +345,6 @@ export default function AdminCoordinatorRequestDetailView({
       ? "admin.coordinators.businessType.shop"
       : "admin.coordinators.businessType.freelance",
   );
-  const specialtyLabel =
-    detail.businessType === "Shop"
-      ? detail.shopName || businessTypeLabel
-      : detail.onlineStoreName || businessTypeLabel;
   const addressValue = detail.shopLocation || "—";
   const experienceValue =
     detail.userId === DEMO_COORDINATOR_REQUEST_ID
@@ -545,11 +541,6 @@ export default function AdminCoordinatorRequestDetailView({
               icon={<IconCalendar />}
               label={t("admin.coordinators.detail.experience")}
               value={experienceValue}
-            />
-            <InfoRow
-              icon={<IconLayers />}
-              label={t("admin.coordinators.detail.businessType")}
-              value={specialtyLabel}
             />
             <InfoRow
               icon={<IconDocument />}
