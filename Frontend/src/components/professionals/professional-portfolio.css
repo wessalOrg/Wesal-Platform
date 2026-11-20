@@ -28,7 +28,7 @@
 .portfolio-workspace .ppp-section { box-shadow: none; }
 .portfolio-workspace .ppp-section-title { font-size: 14px; color: var(--wesal-muted); }
 .portfolio-workspace .ppp-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
-.portfolio-workspace .ppp--visitor .ppp-side { width: 100%; flex-direction: row; align-items: center; }
+.portfolio-workspace .ppp--visitor .ppp-side { width: 100%; flex-direction: row; flex-wrap: nowrap; justify-content: flex-end; align-items: center; }
 .portfolio-workspace .ppp--visitor .ppp-stats { order: 0; width: auto; max-width: 260px; }
 .portfolio-workspace .ppp--visitor .ppp-stat { border: 0; background: transparent; }
 .portfolio-workspace .ppp--visitor .ppp-stat + .ppp-stat { border-inline-start: 1px solid var(--wesal-border); }
