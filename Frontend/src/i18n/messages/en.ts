@@ -1244,6 +1244,9 @@ const en: MessageCatalog = {
   "professionals.posts.imagesHint":
     "Optional if you write a caption · JPG, PNG, or WebP · up to {max} images · 5 MB each.",
   "professionals.posts.addImages": "Add images",
+  "professionals.posts.dropImages": "Drag images here or click to choose",
+  "professionals.posts.imagesHelp": "Choose clear photos of your work.",
+  "professionals.posts.characterCount": "{count} / {max} characters",
   "professionals.posts.removeImage": "Remove",
   "professionals.posts.contentLabel": "Caption",
   "professionals.posts.contentPlaceholder":

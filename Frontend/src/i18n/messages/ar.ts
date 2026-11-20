@@ -1236,6 +1236,9 @@ const ar: MessageCatalog = {
   "professionals.posts.imagesHint":
     "اختياري إذا كتبت وصفاً · JPG أو PNG أو WebP · حتى {max} صور · 5 ميجابايت لكل صورة.",
   "professionals.posts.addImages": "إضافة صور",
+  "professionals.posts.dropImages": "اسحب الصور هنا أو اضغط للاختيار",
+  "professionals.posts.imagesHelp": "اختر صورًا واضحة من أعمالك.",
+  "professionals.posts.characterCount": "{count} / {max} حرف",
   "professionals.posts.removeImage": "إزالة",
   "professionals.posts.contentLabel": "وصف المنشور",
   "professionals.posts.contentPlaceholder":

@@ -1,0 +1,57 @@
+.post-editor { min-width: 0; padding: 24px; border: 1px solid var(--wesal-border); border-radius: 26px; background: linear-gradient(135deg,#fff,#fdf8f7); box-shadow: 0 12px 32px rgb(122 70 68 / 7%); }
+.post-editor-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 26px; }
+.post-editor-head-icon { display: grid; place-items: center; flex-shrink: 0; width: 52px; height: 52px; border-radius: 16px; background: var(--wesal-pink); color: var(--wesal-maroon-dark); }
+.post-editor-head-icon svg { width: 28px; height: 28px; }
+.post-editor h2 { margin: 0; color: var(--wesal-maroon-dark); font-size: 25px; font-weight: 800; line-height: 1.5; }
+.post-editor-head p { margin-top: 5px; color: var(--wesal-muted); font-size: 14px; line-height: 1.8; }
+.post-editor-layout { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); gap: 18px; align-items: start; }
+.post-editor-main { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.post-editor-caption, .post-editor-images { min-width: 0; padding: 18px; border: 1px solid color-mix(in srgb,var(--wesal-maroon) 17%,white); border-radius: 17px; background: rgb(255 255 255 / 45%); }
+.post-editor-label { display: flex; align-items: center; gap: 9px; color: var(--wesal-maroon-dark); font-size: 16px; font-weight: 700; }
+.post-editor-label svg { flex-shrink: 0; width: 22px; height: 22px; color: var(--wesal-maroon); }
+.post-editor-textarea { display: block; width: 100%; min-height: 150px; margin-top: 16px; padding: 14px; border: 1px solid color-mix(in srgb,var(--wesal-maroon) 45%,white); border-radius: 14px; background: #fff; color: var(--wesal-text); font-size: 14px; line-height: 1.9; resize: vertical; }
+.post-editor-textarea::placeholder { color: var(--wesal-muted); }
+.post-editor-counter { margin-top: 8px; color: var(--wesal-muted); font-size: 12px; text-align: end; }
+.post-editor-price { min-width: 0; padding-inline: 14px; }
+.post-editor-price-field { display: flex; min-width: 0; margin-top: 12px; overflow: hidden; border: 1px solid var(--wesal-border); border-radius: 13px; background: #fff; }
+.post-editor-price-field input { width: 100%; min-width: 0; min-height: 46px; border: 0; padding: 10px 14px; outline: 0; color: var(--wesal-text); background: transparent; font-size: 14px; }
+.post-editor-price-field > span { display: grid; place-items: center; flex-shrink: 0; min-width: 78px; padding-inline: 12px; border-inline-start: 1px solid var(--wesal-border); background: var(--wesal-pink-soft); color: var(--wesal-muted); font-size: 13px; }
+.post-editor-hint { display: flex; align-items: flex-start; gap: 7px; margin-top: 10px; color: var(--wesal-muted); font-size: 12px; line-height: 1.8; }
+.post-editor-hint svg { flex-shrink: 0; width: 17px; height: 17px; margin-top: 2px; color: var(--wesal-maroon); }
+.post-editor-images-intro { margin-top: 8px; color: var(--wesal-muted); font-size: 13px; }
+.post-editor-dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 240px; margin-top: 18px; padding: 22px 12px; border: 1.5px dashed var(--wesal-maroon); border-radius: 16px; background: linear-gradient(135deg,#fff,var(--wesal-pink-soft)); color: var(--wesal-maroon-dark); cursor: pointer; transition: background 150ms,border-color 150ms; }
+.post-editor-dropzone > svg { width: 48px; height: 48px; }
+.post-editor-dropzone strong { font-size: 17px; font-weight: 700; }
+.post-editor-dropzone > span { font-size: 13px; color: var(--wesal-muted); }
+.post-editor-dropzone small { border-radius: 999px; padding: 5px 13px; background: var(--wesal-pink); color: var(--wesal-maroon-dark); font-size: 12px; }
+.post-editor-dropzone:hover:not(:disabled), .post-editor-dropzone.is-dragging { background: var(--wesal-pink); border-color: var(--wesal-maroon-dark); }
+.post-editor-dropzone.has-images { min-height: 160px; }
+.post-editor-dropzone:disabled { opacity: .5; cursor: not-allowed; }
+.post-editor-previews { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 12px; }
+.post-editor-previews li { position: relative; min-width: 0; overflow: hidden; border: 1px solid var(--wesal-border); border-radius: 12px; }
+.post-editor-previews img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.post-editor-remove { position: absolute; top: 5px; inset-inline-end: 5px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: rgb(255 255 255 / 95%); color: var(--wesal-maroon-dark); box-shadow: 0 2px 5px rgb(88 40 48 / 12%); }
+.post-editor-remove svg { width: 16px; height: 16px; }
+.post-editor-error { margin-top: 8px; color: #a86267; font-size: 13px; line-height: 1.7; }
+.post-editor-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--wesal-border); }
+.post-editor-actions > button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 10px 24px; border: 1px solid var(--wesal-maroon); border-radius: 13px; font-size: 14px; font-weight: 700; }
+.post-editor-publish { background: var(--wesal-maroon); color: #fff; }
+.post-editor-publish:hover:not(:disabled) { background: var(--wesal-maroon-dark); }
+.post-editor-publish svg { width: 22px; height: 22px; }
+.post-editor-cancel { min-width: 110px; background: #fff; color: var(--wesal-maroon-dark); }
+.post-editor-actions > button:disabled { opacity: .55; cursor: not-allowed; }
+.post-editor :is(button,textarea,input):focus-visible { outline: 2px solid var(--wesal-maroon); outline-offset: 3px; }
+.post-editor-price-field:focus-within { border-color: var(--wesal-maroon); box-shadow: 0 0 0 2px color-mix(in srgb,var(--wesal-maroon) 15%,transparent); }
+.post-editor-price-field.has-error, .post-editor-textarea[aria-invalid="true"] { border-color: #a86267; }
+@media (max-width: 760px) {
+  .post-editor { padding: 18px 14px; border-radius: 20px; }
+  .post-editor-head { gap: 10px; margin-bottom: 18px; }
+  .post-editor-head-icon { width: 42px; height: 42px; border-radius: 12px; }
+  .post-editor h2 { font-size: 20px; }
+  .post-editor-head p { font-size: 12px; }
+  .post-editor-layout { grid-template-columns: minmax(0,1fr); }
+  .post-editor-caption, .post-editor-images { padding: 14px; }
+  .post-editor-price { padding-inline: 4px; }
+  .post-editor-dropzone { min-height: 180px; }
+  .post-editor-actions > button { padding-inline: 18px; }
+}

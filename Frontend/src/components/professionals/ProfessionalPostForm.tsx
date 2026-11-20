@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
+import PostEditorIcon from "@/components/professionals/PostEditorIcon";
+import "./professional-post-form.css";
 import { ApiError, isForbiddenApiError, isUnauthorizedApiError } from "@/lib/api-error";
 import { resolveMediaUrl } from "@/lib/hall-media-url";
 import {
@@ -44,6 +45,8 @@ export default function ProfessionalPostForm({
   const priceId = useId();
   const fileId = useId();
   const objectUrls = useRef<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
 
   const [content, setContent] = useState(initialPost?.content ?? "");
   const [priceText, setPriceText] = useState(
@@ -232,204 +235,110 @@ export default function ProfessionalPostForm({
     }
   })();
 
-  return (
-    <section
-      className="min-w-0 rounded-2xl border border-[color-mix(in_srgb,var(--wesal-maroon)_14%,white)] bg-white p-3.5 shadow-[0_16px_36px_rgba(88,40,48,0.1)] sm:rounded-3xl sm:p-5"
-      role="dialog"
-      aria-labelledby={titleId}
-      data-testid="professional-post-form"
-    >
-      <h2 id={titleId} className="text-lg font-bold text-[var(--wesal-text)]">
-        {mode === "create"
-          ? t("professionals.posts.createTitle")
-          : t("professionals.posts.editTitle")}
-      </h2>
-      <p className="mt-1 text-sm leading-6 text-[var(--wesal-muted)]">
-        {mode === "create"
-          ? t("professionals.posts.createSubtitle")
-          : t("professionals.posts.editSubtitle")}
-      </p>
+  const imageLimitReached = existingImages.length + newFiles.length >= PROFESSIONAL_POST_IMAGES_MAX;
 
-      <div className="mt-4 space-y-4">
+  return (
+    <section className="post-editor" role="dialog" aria-labelledby={titleId} data-testid="professional-post-form">
+      <header className="post-editor-head">
+        <span className="post-editor-head-icon"><PostEditorIcon name={mode === "create" ? "add" : "document"} /></span>
         <div>
-          <p className="text-sm font-semibold text-[var(--wesal-text)]">
-            {t("professionals.posts.imagesLabel")}
-          </p>
-          <p className="mt-1 text-xs text-[var(--wesal-muted)]">
-            {t("professionals.posts.imagesHint", {
-              max: String(PROFESSIONAL_POST_IMAGES_MAX),
-            })}
-          </p>
-          {(existingImages.length > 0 || newPreviews.length > 0) && (
-            <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <h2 id={titleId}>{t(mode === "create" ? "professionals.posts.createTitle" : "professionals.posts.editTitle")}</h2>
+          <p>{t(mode === "create" ? "professionals.posts.createSubtitle" : "professionals.posts.editSubtitle")}</p>
+        </div>
+      </header>
+      <div className="post-editor-layout">
+        <div className="post-editor-main">
+          <div className="post-editor-caption">
+            <label htmlFor={contentId} className="post-editor-label">
+              <PostEditorIcon name="document" />{t("professionals.posts.contentLabel")}
+            </label>
+            <textarea id={contentId} value={content} disabled={submitting} maxLength={PROFESSIONAL_POST_CONTENT_MAX + 40}
+              rows={5} placeholder={t("professionals.posts.contentPlaceholder")} className="post-editor-textarea"
+              aria-invalid={Boolean(contentIssue)} aria-describedby={contentId + "-hint " + contentId + "-count"}
+              onChange={(event) => {
+                const next = event.target.value;
+                setContent(next);
+                setContentIssue(validateProfessionalPostContent(next));
+                if (imagesIssue === "bodyRequired" || imagesIssue === "required") {
+                  const imageCount = existingImages.length + newFiles.length;
+                  setImagesIssue(hasProfessionalPostBody(next, imageCount) ? null : "bodyRequired");
+                }
+              }} />
+            <p id={contentId + "-count"} className="post-editor-counter" data-testid="professional-post-character-count">
+              {t("professionals.posts.characterCount", { count: String(content.length), max: String(PROFESSIONAL_POST_CONTENT_MAX) })}
+            </p>
+            <p id={contentId + "-hint"} className="sr-only">{t("professionals.posts.contentHint", { max: String(PROFESSIONAL_POST_CONTENT_MAX) })}</p>
+            {contentIssue ? <p className="post-editor-error" role="alert">{t("professionals.posts.errors.contentTooLong")}</p> : null}
+          </div>
+          <div className="post-editor-price">
+            <label htmlFor={priceId} className="post-editor-label"><PostEditorIcon name="price" />{t("professionals.posts.priceLabel")}</label>
+            <div className={"post-editor-price-field" + (priceIssue ? " has-error" : "")}>
+              <input id={priceId} type="text" inputMode="decimal" value={priceText} disabled={submitting}
+                placeholder={t("professionals.posts.pricePlaceholder")} aria-invalid={Boolean(priceIssue)}
+                aria-describedby={priceId + "-hint"}
+                onChange={(event) => { setPriceText(event.target.value); setPriceIssue(parseProfessionalPostPrice(event.target.value).issue); }} />
+              <span>{t("offers.currency")}</span>
+            </div>
+            <p id={priceId + "-hint"} className="post-editor-hint"><PostEditorIcon name="info" />{t("professionals.posts.priceHint")}</p>
+            {priceErrorText ? <p className="post-editor-error" role="alert">{priceErrorText}</p> : null}
+          </div>
+        </div>
+        <div className="post-editor-images"
+          onDragOver={(event) => { event.preventDefault(); if (!submitting && !imageLimitReached) setDragging(true); }}
+          onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }}
+          onDrop={(event) => {
+            event.preventDefault(); setDragging(false);
+            if (!submitting && !imageLimitReached) onPickFiles(event.dataTransfer.files);
+          }}>
+          <p className="post-editor-label"><PostEditorIcon name="image" />{t("professionals.posts.imagesLabel")}</p>
+          <p className="post-editor-images-intro">{t("professionals.posts.imagesHelp")}</p>
+          <button type="button" disabled={submitting || imageLimitReached} data-testid="professional-post-dropzone"
+            className={"post-editor-dropzone" + (dragging ? " is-dragging" : "") + (existingImages.length + newFiles.length > 0 ? " has-images" : "")}
+            aria-describedby={fileId + "-hint"} onClick={() => fileInputRef.current?.click()}>
+            <PostEditorIcon name="image" />
+            <strong>{t("professionals.posts.addImages")}</strong>
+            <span>{t("professionals.posts.dropImages")}</span>
+            <small>JPG, PNG, WebP</small>
+          </button>
+          <input ref={fileInputRef} id={fileId} type="file" accept={PROFESSIONAL_POST_IMAGE_ACCEPT} multiple className="sr-only"
+            aria-label={t("professionals.posts.imagesLabel")} tabIndex={-1} disabled={submitting || imageLimitReached}
+            onChange={(event) => { onPickFiles(event.target.files); event.target.value = ""; }} />
+          {existingImages.length + newPreviews.length > 0 ? (
+            <ul className="post-editor-previews" data-testid="professional-post-image-previews">
               {existingImages.map((image) => (
-                <li key={image.id} className="relative overflow-hidden rounded-xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={image.url}
-                    alt=""
-                    className="aspect-square w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    className="absolute end-1 top-1 rounded-full bg-black/55 px-2 py-0.5 text-xs text-white"
-                    disabled={submitting}
-                    onClick={() => removeExisting(image.id)}
-                  >
-                    {t("professionals.posts.removeImage")}
-                  </button>
+                <li key={image.id}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- existing post image */}
+                  <img src={image.url} alt="" />
+                  <button type="button" className="post-editor-remove" disabled={submitting}
+                    aria-label={t("professionals.posts.removeImage")} title={t("professionals.posts.removeImage")}
+                    onClick={() => removeExisting(image.id)}><PostEditorIcon name="close" /></button>
                 </li>
               ))}
               {newPreviews.map((preview, index) => (
-                <li key={preview} className="relative overflow-hidden rounded-xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={preview}
-                    alt=""
-                    className="aspect-square w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    className="absolute end-1 top-1 rounded-full bg-black/55 px-2 py-0.5 text-xs text-white"
-                    disabled={submitting}
-                    onClick={() => removeNew(index)}
-                  >
-                    {t("professionals.posts.removeImage")}
-                  </button>
+                <li key={preview}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- local image preview */}
+                  <img src={preview} alt="" />
+                  <button type="button" className="post-editor-remove" disabled={submitting}
+                    aria-label={t("professionals.posts.removeImage")} title={t("professionals.posts.removeImage")}
+                    onClick={() => removeNew(index)}><PostEditorIcon name="close" /></button>
                 </li>
               ))}
             </ul>
-          )}
-          <label
-            htmlFor={fileId}
-            className="btn-outline mt-3 inline-flex !min-h-10 cursor-pointer items-center px-3 text-sm"
-          >
-            {t("professionals.posts.addImages")}
-          </label>
-          <input
-            id={fileId}
-            type="file"
-            accept={PROFESSIONAL_POST_IMAGE_ACCEPT}
-            multiple
-            className="sr-only"
-            disabled={
-              submitting ||
-              existingImages.length + newFiles.length >= PROFESSIONAL_POST_IMAGES_MAX
-            }
-            onChange={(event) => {
-              onPickFiles(event.target.files);
-              event.target.value = "";
-            }}
-          />
-          {imagesErrorText ? (
-            <p className="mt-2 text-sm text-[#b42318]" role="alert">
-              {imagesErrorText}
-            </p>
           ) : null}
-        </div>
-
-        <div>
-          <label
-            htmlFor={contentId}
-            className="block text-sm font-semibold text-[var(--wesal-text)]"
-          >
-            {t("professionals.posts.contentLabel")}
-          </label>
-          <textarea
-            id={contentId}
-            value={content}
-            disabled={submitting}
-            maxLength={PROFESSIONAL_POST_CONTENT_MAX + 40}
-            rows={4}
-            placeholder={t("professionals.posts.contentPlaceholder")}
-            className={`${hallFieldClassName(Boolean(contentIssue))} mt-2 min-h-[6rem] w-full resize-y`}
-            onChange={(event) => {
-              const next = event.target.value;
-              setContent(next);
-              setContentIssue(validateProfessionalPostContent(next));
-              if (imagesIssue === "bodyRequired" || imagesIssue === "required") {
-                const imageCount = existingImages.length + newFiles.length;
-                setImagesIssue(
-                  hasProfessionalPostBody(next, imageCount) ? null : "bodyRequired",
-                );
-              }
-            }}
-          />
-          <p className="mt-1 text-xs text-[var(--wesal-muted)]">
-            {t("professionals.posts.contentHint", {
-              max: String(PROFESSIONAL_POST_CONTENT_MAX),
-            })}
-          </p>
-          {contentIssue ? (
-            <p className="mt-1 text-sm text-[#b42318]" role="alert">
-              {t("professionals.posts.errors.contentTooLong")}
-            </p>
-          ) : null}
-        </div>
-
-        <div>
-          <label
-            htmlFor={priceId}
-            className="block text-sm font-semibold text-[var(--wesal-text)]"
-          >
-            {t("professionals.posts.priceLabel")}
-          </label>
-          <input
-            id={priceId}
-            type="text"
-            inputMode="decimal"
-            value={priceText}
-            disabled={submitting}
-            placeholder={t("professionals.posts.pricePlaceholder")}
-            className={`${hallFieldClassName(Boolean(priceIssue))} mt-2 w-full`}
-            onChange={(event) => {
-              setPriceText(event.target.value);
-              setPriceIssue(parseProfessionalPostPrice(event.target.value).issue);
-            }}
-          />
-          <p className="mt-1 text-xs text-[var(--wesal-muted)]">
-            {t("professionals.posts.priceHint")}
-          </p>
-          {priceErrorText ? (
-            <p className="mt-1 text-sm text-[#b42318]" role="alert">
-              {priceErrorText}
-            </p>
-          ) : null}
+          <p id={fileId + "-hint"} className="post-editor-hint"><PostEditorIcon name="info" />{t("professionals.posts.imagesHint", { max: String(PROFESSIONAL_POST_IMAGES_MAX) })}</p>
+          {imagesErrorText ? <p className="post-editor-error" role="alert">{imagesErrorText}</p> : null}
         </div>
       </div>
-
-      {error ? (
-        <p className="mt-3 text-sm text-[#b42318]" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-        <button
-          type="button"
-          className="btn-primary !min-h-11"
-          disabled={submitting}
-          aria-busy={submitting || undefined}
-          data-testid="professional-post-submit"
-          onClick={() => void onSubmit()}
-        >
-          {submitting
-            ? mode === "create"
-              ? t("professionals.posts.publishing")
-              : t("professionals.posts.saving")
-            : mode === "create"
-              ? t("professionals.posts.publish")
-              : t("professionals.posts.save")}
+      {error ? <p className="post-editor-error" role="alert">{error}</p> : null}
+      <footer className="post-editor-actions">
+        <button type="button" className="post-editor-publish" disabled={submitting} aria-busy={submitting || undefined}
+          data-testid="professional-post-submit" onClick={() => void onSubmit()}>
+          <PostEditorIcon name="send" />
+          {t(submitting ? (mode === "create" ? "professionals.posts.publishing" : "professionals.posts.saving")
+            : (mode === "create" ? "professionals.posts.publish" : "professionals.posts.save"))}
         </button>
-        <button
-          type="button"
-          className="btn-outline !min-h-11"
-          disabled={submitting}
-          onClick={onClose}
-        >
-          {t("professionals.posts.cancel")}
-        </button>
-      </div>
+        <button type="button" className="post-editor-cancel" disabled={submitting} onClick={onClose}>{t("professionals.posts.cancel")}</button>
+      </footer>
     </section>
   );
 }
