@@ -949,6 +949,8 @@ const en: MessageCatalog = {
   "portfolio.previewNotice": "Visitor preview is active. Editing tools are hidden and messaging is disabled during preview.",
   "portfolio.professionalOnly": "Professional profiles are available to photographers and coordinators only.",
   "portfolio.phoneCopyFailed": "Automatic copying failed. Select the number to copy it manually.",
+  "professionals.bio.locationLabel": "Location",
+  "professionals.bio.locationHint": "Your city or service area, visible to visitors of your professional profile.",
   "dashboard.posts.subtitle": "Share your work and updates, and create and manage your posts in one place.",
   "dashboard.posts.create": "Create post",
   "dashboard.posts.emptyTitle": "Publish your first post",

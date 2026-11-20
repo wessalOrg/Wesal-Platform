@@ -118,4 +118,6 @@ public sealed class UpdatePublicBioRequest
     public string? Bio { get; init; }
     /// <summary>Omitting this property preserves the existing professional contact number.</summary>
     public string? PhoneNumber { get; init; }
+    /// <summary>Public city/service area. Omission leaves the current location unchanged.</summary>
+    public string? Location { get; init; }
 }

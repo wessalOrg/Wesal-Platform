@@ -92,7 +92,7 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
                 OnlineStoreName = profile.BusinessType == CoordinatorBusinessType.Freelance ? profile.OnlineStoreName : null,
                 PhoneNumber = profile.PhoneNumber,
                 EditablePhoneNumber = IsCurrentOwner(userId) ? profile.PhoneNumber : null,
-                ShopLocation = profile.BusinessType == CoordinatorBusinessType.Shop ? profile.ShopLocation : null,
+                ShopLocation = profile.ShopLocation,
                 Bio = profile.Bio,
                 ProfilePictureUrl = user.ProfilePictureUrl,
                 Posts = posts.Items,
@@ -111,7 +111,7 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
             IsPubliclyAvailable = true,
             DisplayName = PublicProfiles.ResolveDisplayName(photographer.HasStudio ? photographer.StudioName : null),
             StudioName = photographer.HasStudio ? photographer.StudioName : null,
-            StudioLocation = photographer.HasStudio ? photographer.StudioLocation : null,
+            StudioLocation = photographer.StudioLocation,
             DetailedStudioLocation = photographer.HasStudio ? photographer.DetailedStudioLocation : null,
             PhoneNumber = photographer.HasStudio ? photographer.PhoneNumber : null,
             EditablePhoneNumber = IsCurrentOwner(userId) ? photographer.PhoneNumber : null,
@@ -132,6 +132,9 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
         var phoneNumber = request.PhoneNumber?.Trim();
         if (phoneNumber is not null && !Regex.IsMatch(phoneNumber, @"^\+?[0-9][0-9\s\-]{6,19}$"))
             throw new ValidationException(new Dictionary<string, string[]> { ["PhoneNumber"] = ["A valid phone number is required."] });
+        var location = request.Location is null ? null : SanitizeBio(request.Location);
+        if (location is { Length: > 500 })
+            throw new ValidationException(new Dictionary<string, string[]> { ["Location"] = ["Location cannot exceed 500 characters."] });
 
         var roles = await _userManager.GetRolesAsync(user);
         if (roles.Contains(ApplicationRoles.EventCoordinator))
@@ -139,6 +142,7 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
             var profile = await _coordinators.GetByUserIdAsync(user.Id, cancellationToken) ?? throw new NotFoundException("Profile", user.Id);
             profile.Bio = bio.Length == 0 ? null : bio;
             if (phoneNumber is not null) profile.PhoneNumber = phoneNumber;
+            if (location is not null) profile.ShopLocation = location.Length == 0 ? null : location;
             await _coordinators.UpdateAsync(profile, cancellationToken);
         }
         else if (roles.Contains(ApplicationRoles.Photographer))
@@ -146,6 +150,7 @@ public sealed class ProfessionalProfileService : IProfessionalProfileService
             var profile = await _photographers.GetByUserIdAsync(user.Id, cancellationToken) ?? throw new NotFoundException("Profile", user.Id);
             profile.Bio = bio.Length == 0 ? null : bio;
             if (phoneNumber is not null) profile.PhoneNumber = phoneNumber;
+            if (location is not null) profile.StudioLocation = location.Length == 0 ? null : location;
             await _photographers.UpdateAsync(profile, cancellationToken);
         }
         else

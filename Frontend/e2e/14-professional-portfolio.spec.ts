@@ -8,6 +8,7 @@ const stoppedOffer = { ...activeOffer, id: "stopped-offer", content: "Stopped pr
 async function setup(page: Page, role: string) {
   let bio = "My professional biography";
   let phoneNumber = "0591234567";
+  let location = "Ramallah";
   await page.addInitScript(({ role, userId }) => {
     const token = `test.${btoa(JSON.stringify({ sub: userId, role, exp: Date.now() / 1000 + 3600 }))}.test`;
     sessionStorage.setItem("wesal-access-token", token);
@@ -31,13 +32,14 @@ async function setup(page: Page, role: string) {
       const input = route.request().postDataJSON();
       bio = input.bio;
       if (input.phoneNumber !== undefined) phoneNumber = input.phoneNumber;
+      if (input.location !== undefined) location = input.location;
       return json({});
     }
     const posts = [1, 2, 3].map((id) => ({ id: `post-${id}`, ownerUserId: userId,
       content: `Professional work ${id}`, price: 120, createdAt: "2026-11-20T10:00:00Z",
       images: [{ id: `image-${id}`, url: "http://localhost:3000/home/photographers-venue.jpg", order: 0 }] }));
     if (path === `/profile/${userId}`) return json({ userId, role, approvalStatus: "Approved", isPubliclyAvailable: true,
-      displayName: "Test Professional", bio, phoneNumber, editablePhoneNumber: phoneNumber, shopLocation: "Ramallah", studioLocation: "Ramallah", posts, offers: [activeOffer] });
+      displayName: "Test Professional", bio, phoneNumber, editablePhoneNumber: phoneNumber, shopLocation: location, studioLocation: location, posts, offers: [activeOffer] });
     if (path === `/posts/profile/${userId}`) return json({ items: posts, totalCount: posts.length });
     if (path === "/offers/mine") return json({ items: [activeOffer, stoppedOffer] });
     if (path === `/offers/profile/${userId}`) return json({ items: [activeOffer] });
@@ -60,9 +62,11 @@ for (const [role, width, height] of [["Photographer", 1366, 900], ["EventCoordin
     await page.getByTestId("professional-bio-save").click();
     await expect(page.getByTestId("professional-bio-phone")).toHaveAttribute("aria-invalid", "true");
     await page.getByTestId("professional-bio-phone").fill("0597654321");
+    await page.getByTestId("professional-bio-location").fill("Gaza");
     await page.getByTestId("professional-bio-save").click();
     await expect(page.locator(".ppp-bio-inline")).toHaveText("Updated professional biography");
     await expect(page.getByTestId("professional-profile-phone")).toContainText("0597654321");
+    await expect(page.getByTestId("professional-profile-location")).toHaveText("Gaza");
     await page.getByTestId("professional-tab-offers").click();
     await expect(page.getByTestId("professional-offer-card")).toHaveCount(2);
     await page.getByTestId("portfolio-visitor-toggle").click();
@@ -72,6 +76,7 @@ for (const [role, width, height] of [["Photographer", 1366, 900], ["EventCoordin
     await expect(page.getByTestId("professional-bio-edit-open")).toHaveCount(0);
     await expect(page.getByTestId("professional-post-create-open")).toHaveCount(0);
     await expect(page.getByTestId("professional-contact")).toBeDisabled();
+    await expect(page.getByTestId("professional-profile-location")).toHaveText("Gaza");
     await page.getByTestId("professional-tab-offers").click();
     await expect(page.getByTestId("professional-offer-card")).toHaveCount(1);
     await expect(page.getByTestId("professional-offer-stop")).toHaveCount(0);

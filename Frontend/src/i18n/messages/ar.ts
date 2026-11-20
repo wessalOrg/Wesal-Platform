@@ -942,6 +942,8 @@ const ar: MessageCatalog = {
   "portfolio.previewNotice": "أنت في وضع معاينة الزائر. أدوات التعديل مخفية، والمراسلة معطّلة أثناء المعاينة.",
   "portfolio.professionalOnly": "الملف المهني متاح للمصورين والمنسقين فقط.",
   "portfolio.phoneCopyFailed": "تعذر النسخ تلقائيًا. يمكنك تحديد الرقم ونسخه يدويًا.",
+  "professionals.bio.locationLabel": "الموقع",
+  "professionals.bio.locationHint": "المدينة أو منطقة تقديم الخدمة، وتظهر لزوار ملفك المهني.",
   "dashboard.posts.subtitle": "شارك أعمالك وأحدث أخبارك، وأنشئ منشوراتك وأدرها من مكان واحد.",
   "dashboard.posts.create": "إنشاء منشور",
   "dashboard.posts.emptyTitle": "ابدأ بأول منشور لك",

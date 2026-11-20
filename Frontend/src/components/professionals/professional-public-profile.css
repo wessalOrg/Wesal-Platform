@@ -194,6 +194,9 @@
 }
 
 .ppp-contact-details .ppp-location { margin: 0; }
+.ppp-location-contact { display: inline-flex; align-items: center; gap: 7px; overflow-wrap: anywhere; }
+.ppp-phone-group + .ppp-location-contact { padding-inline-start: 18px; border-inline-start: 1px solid var(--wesal-border); }
+.ppp-location-contact svg { width: 18px; height: 18px; color: var(--wesal-maroon); flex-shrink: 0; }
 
 .ppp-phone {
   display: inline-flex;

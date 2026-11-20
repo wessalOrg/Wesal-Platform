@@ -31,11 +31,12 @@ export async function fetchPublicProfessionalProfile(
 }
 
 /** PUT /api/v1/profile/bio — owner only; Approved coordinator/photographer. */
-export async function updateProfessionalBio(bio: string, phoneNumber?: string): Promise<void> {
+export async function updateProfessionalBio(bio: string, phoneNumber?: string, location?: string): Promise<void> {
   try {
     await api.put("/profile/bio", {
       ...toUpdateProfessionalBioPayload(bio),
       ...(phoneNumber === undefined ? {} : { phoneNumber: phoneNumber.trim() }),
+      ...(location === undefined ? {} : { location: location.trim() }),
     }, {
       timeout: 10000,
     });

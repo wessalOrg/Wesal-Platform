@@ -206,6 +206,53 @@ public sealed class ProfessionalProfileServiceShould : IDisposable
         Assert.Equal("+970599111111", (await _context.CoordinatorProfiles.SingleAsync(p => p.UserId == coordinator.Id)).PhoneNumber);
     }
 
+    [Theory]
+    [InlineData(CoordinatorBusinessType.Shop)]
+    [InlineData(CoordinatorBusinessType.Freelance)]
+    public async Task SaveAndPublishCoordinatorLocation(CoordinatorBusinessType businessType)
+    {
+        var coordinator = await CreateCoordinatorAsync();
+        var profile = await _context.CoordinatorProfiles.SingleAsync(p => p.UserId == coordinator.Id);
+        profile.BusinessType = businessType;
+        await _context.SaveChangesAsync();
+        await CreateService(coordinator).UpdateBioAsync(new UpdatePublicBioRequest { Bio = "New bio", Location = " <b>Gaza</b> " });
+        Assert.Equal("Gaza", (await CreateService().GetPublicProfileAsync(coordinator.Id)).ShopLocation);
+        Assert.Equal("New bio", (await _context.CoordinatorProfiles.SingleAsync(p => p.UserId == coordinator.Id)).Bio);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SaveAndPublishPhotographerLocation(bool hasStudio)
+    {
+        var photographer = await CreatePhotographerAsync(AccountApprovalStatus.Approved, hasStudio);
+        await CreateService(photographer).UpdateBioAsync(new UpdatePublicBioRequest { Bio = "New bio", Location = "Ramallah" });
+        Assert.Equal("Ramallah", (await CreateService().GetPublicProfileAsync(photographer.Id)).StudioLocation);
+    }
+
+    [Fact]
+    public async Task RejectExcessiveLocationBeforeChangingAnyProfileFields()
+    {
+        var coordinator = await CreateCoordinatorAsync();
+        await Assert.ThrowsAsync<ValidationException>(() => CreateService(coordinator).UpdateBioAsync(new UpdatePublicBioRequest
+        { Bio = "Must not save", PhoneNumber = "+970599222222", Location = new string('x', 501) }));
+        var profile = await _context.CoordinatorProfiles.SingleAsync(p => p.UserId == coordinator.Id);
+        Assert.Equal("Original", profile.Bio);
+        Assert.Equal("+970599111111", profile.PhoneNumber);
+        Assert.Equal("Gaza", profile.ShopLocation);
+    }
+
+    [Fact]
+    public async Task PreserveLocationWhenOmittedAndAllowExplicitlyClearingIt()
+    {
+        var coordinator = await CreateCoordinatorAsync();
+        var service = CreateService(coordinator);
+        await service.UpdateBioAsync(new UpdatePublicBioRequest { Bio = "Updated" });
+        Assert.Equal("Gaza", (await service.GetPublicProfileAsync(coordinator.Id)).ShopLocation);
+        await service.UpdateBioAsync(new UpdatePublicBioRequest { Bio = "Updated", Location = " " });
+        Assert.Null((await service.GetPublicProfileAsync(coordinator.Id)).ShopLocation);
+    }
+
     [Fact]
     public async Task BlockBioEditWhileRestricted()
     {

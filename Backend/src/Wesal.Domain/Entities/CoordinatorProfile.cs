@@ -30,6 +30,7 @@ public class CoordinatorProfile
 
     public string? ShopName { get; set; }
 
+    /// <summary>Shop location, or an optional public service area added through the professional profile.</summary>
     public string? ShopLocation { get; set; }
 
     /// <summary>Private relative URL of the shop photo attachment.</summary>

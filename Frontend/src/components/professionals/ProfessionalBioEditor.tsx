@@ -13,6 +13,7 @@ import { updateProfessionalBio } from "@/services/professional-profile";
 type ProfessionalBioEditorProps = {
   initialBio: string | null;
   initialPhoneNumber: string | null;
+  initialLocation: string | null;
   onClose: () => void;
   onSaved: (nextBio: string | null) => void;
 };
@@ -20,6 +21,7 @@ type ProfessionalBioEditorProps = {
 export default function ProfessionalBioEditor({
   initialBio,
   initialPhoneNumber,
+  initialLocation,
   onClose,
   onSaved,
 }: ProfessionalBioEditorProps) {
@@ -27,6 +29,7 @@ export default function ProfessionalBioEditor({
   const fieldId = useId();
   const [value, setValue] = useState(initialBio ?? "");
   const [phone, setPhone] = useState(initialPhoneNumber ?? "");
+  const [location, setLocation] = useState(initialLocation ?? "");
   const [phoneInvalid, setPhoneInvalid] = useState(false);
   const [issue, setIssue] = useState<"tooLong" | null>(null);
   const [saving, setSaving] = useState(false);
@@ -45,7 +48,8 @@ export default function ProfessionalBioEditor({
     setSaving(true);
     setError(null);
     try {
-      await updateProfessionalBio(value, phoneChanged ? phone : undefined);
+      await updateProfessionalBio(value, phoneChanged ? phone : undefined,
+        location.trim() !== (initialLocation ?? "").trim() ? location : undefined);
       onSaved(value.trim() || null);
       onClose();
     } catch (err) {
@@ -98,15 +102,29 @@ export default function ProfessionalBioEditor({
       <p id={`${fieldId}-hint`} className="mt-1 text-xs text-[var(--wesal-muted)]">
         {t("professionals.bio.hint", { max: String(PROFESSIONAL_BIO_MAX) })}
       </p>
-      <label htmlFor={`${fieldId}-phone`} className="mt-4 block text-sm font-semibold text-[var(--wesal-text)]">
-        {t("profile.phone")}
-      </label>
-      <input id={`${fieldId}-phone`} type="tel" autoComplete="tel" dir="ltr" value={phone}
-        disabled={saving} maxLength={20} data-testid="professional-bio-phone"
-        aria-invalid={phoneInvalid || undefined} aria-describedby={phoneInvalid ? `${fieldId}-phone-error` : undefined}
-        className={`${hallFieldClassName(phoneInvalid)} mt-2 w-full`}
-        onChange={(event) => { setPhone(event.target.value); setPhoneInvalid(false); }} />
-      {phoneInvalid ? <p id={`${fieldId}-phone-error`} className="mt-1 text-sm text-[#b42318]" role="alert">{t("errors.profile.phoneInvalid")}</p> : null}
+      <div className="mt-4 grid grid-cols-2 items-start gap-3">
+        <div className="min-w-0">
+          <label htmlFor={`${fieldId}-phone`} className="block text-sm font-semibold text-[var(--wesal-text)]">
+            {t("profile.phone")}
+          </label>
+          <input id={`${fieldId}-phone`} type="tel" autoComplete="tel" dir="ltr" value={phone}
+            disabled={saving} maxLength={20} data-testid="professional-bio-phone"
+            aria-invalid={phoneInvalid || undefined} aria-describedby={phoneInvalid ? `${fieldId}-phone-error` : undefined}
+            className={`${hallFieldClassName(phoneInvalid)} mt-2 w-full min-w-0`}
+            onChange={(event) => { setPhone(event.target.value); setPhoneInvalid(false); }} />
+          {phoneInvalid ? <p id={`${fieldId}-phone-error`} className="mt-1 text-sm text-[#b42318]" role="alert">{t("errors.profile.phoneInvalid")}</p> : null}
+        </div>
+        <div className="min-w-0">
+          <label htmlFor={`${fieldId}-location`} className="block text-sm font-semibold text-[var(--wesal-text)]">
+            {t("professionals.bio.locationLabel")}
+          </label>
+          <input id={`${fieldId}-location`} type="text" value={location} maxLength={500}
+            disabled={saving} data-testid="professional-bio-location" aria-describedby={`${fieldId}-location-hint`}
+            className={`${hallFieldClassName(false)} mt-2 w-full min-w-0`}
+            onChange={(event) => setLocation(event.target.value)} />
+        </div>
+      </div>
+      <p id={`${fieldId}-location-hint`} className="mt-1 text-xs text-[var(--wesal-muted)]">{t("professionals.bio.locationHint")}</p>
       {validationText ? (
         <p id={`${fieldId}-error`} className="mt-1 text-sm text-[#b42318]" role="alert">
           {validationText}

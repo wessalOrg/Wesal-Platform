@@ -38,7 +38,7 @@ public class PhotographerProfile
 
     public string? StudioName { get; set; }
 
-    /// <summary>General location of the studio.</summary>
+    /// <summary>General studio location, or an optional public service area for an independent photographer.</summary>
     public string? StudioLocation { get; set; }
 
     /// <summary>The studio's detailed geographic location (kept distinct from <see cref="StudioLocation"/>).</summary>

@@ -400,7 +400,6 @@ export default function ProfessionalPublicProfileView({
               )}
               {location || profile.phoneNumber?.trim() ? (
                 <div className="ppp-contact-details">
-                  {location ? <p className="ppp-location">{location}</p> : null}
                   {profile.phoneNumber?.trim() ? (
                     <div className="ppp-phone-group">
                     <a className="ppp-phone" href={`tel:${profile.phoneNumber.replace(/[^\d+]/g, "")}`}
@@ -413,6 +412,15 @@ export default function ProfessionalPublicProfileView({
                     </a>
                     <ProfilePhoneCopyButton key={profile.phoneNumber} phone={profile.phoneNumber} />
                     </div>
+                  ) : null}
+                  {location ? (
+                    <p className="ppp-location ppp-location-contact" data-testid="professional-profile-location">
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                        <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.7" />
+                      </svg>
+                      <span>{location}</span>
+                    </p>
                   ) : null}
                 </div>
               ) : null}
@@ -545,6 +553,7 @@ export default function ProfessionalPublicProfileView({
         <ProfessionalBioEditor
           initialBio={displayBio}
           initialPhoneNumber={profile.editablePhoneNumber ?? profile.phoneNumber}
+          initialLocation={profile.shopLocation ?? profile.studioLocation}
           onClose={() => setBioOpen(false)}
           onSaved={(next) => {
             setLocalBio(next);
