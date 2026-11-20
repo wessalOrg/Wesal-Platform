@@ -27,7 +27,7 @@ import {
 } from "@/services/professional-offers";
 import type { OfferLifecycleStatus, ProfessionalOffer } from "@/types/offers";
 import { professionalProfilePath } from "@/lib/account-profile-path";
-import OfferManageIcon, { OfferBannerCamera } from "@/components/offers/OfferManageIcon";
+import OfferManageIcon from "@/components/offers/OfferManageIcon";
 import "./professional-offers-manage.css";
 
 type StatusFilter = "all" | OfferLifecycleStatus;
@@ -228,7 +228,6 @@ export default function ProfessionalOffersManagePage() {
   return (
     <div className="min-w-0 space-y-4 sm:space-y-5" data-testid="professional-offers-page">
       <header className="pro-offers-hero">
-        <OfferBannerCamera />
         <div className="pro-offers-hero-content">
           <div className="pro-offers-hero-copy">
             <h1><OfferManageIcon name="tag" />
