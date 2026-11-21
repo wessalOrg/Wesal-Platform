@@ -14,6 +14,7 @@ import {
   validateProfessionalPostContent,
   validateProfessionalPostImages,
 } from "@/lib/professional-post-validation";
+import { useRequestScope } from "@/hooks/useRequestScope";
 import { useT } from "@/i18n";
 import {
   createProfessionalPost,
@@ -26,6 +27,7 @@ type ProfessionalPostFormProps = {
   initialPost?: ProfessionalProfileContentItem | null;
   onClose: () => void;
   onSaved: () => void;
+  onSubmittingChange?: (submitting: boolean) => void;
 };
 
 type ExistingImage = {
@@ -33,19 +35,27 @@ type ExistingImage = {
   url: string;
 };
 
-export default function ProfessionalPostForm({
+export default function ProfessionalPostForm(props: ProfessionalPostFormProps) {
+  // Each target owns its draft, validation state and local image URLs.
+  return <ProfessionalPostFormDraft key={`${props.mode}:${props.initialPost?.id ?? "new"}`} {...props} />;
+}
+
+function ProfessionalPostFormDraft({
   mode,
   initialPost = null,
   onClose,
   onSaved,
+  onSubmittingChange,
 }: ProfessionalPostFormProps) {
   const t = useT();
+  const scope = useRequestScope();
   const titleId = useId();
   const contentId = useId();
   const priceId = useId();
   const fileId = useId();
   const objectUrls = useRef<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const saveInProgress = useRef(false);
   const [dragging, setDragging] = useState(false);
 
   const [content, setContent] = useState(initialPost?.content ?? "");
@@ -146,11 +156,15 @@ export default function ProfessionalPostForm({
   };
 
   const onSubmit = async () => {
-    if (submitting) return;
+    const current = scope.capture();
+    if (!current() || saveInProgress.current) return;
     if (!validate()) return;
     const parsedPrice = parseProfessionalPostPrice(priceText);
+    saveInProgress.current = true;
     setSubmitting(true);
+    onSubmittingChange?.(true);
     setError(null);
+    let saved = false;
     try {
       if (mode === "create") {
         await createProfessionalPost({
@@ -173,9 +187,9 @@ export default function ProfessionalPostForm({
           images: newFiles,
         });
       }
-      onSaved();
-      onClose();
+      saved = true;
     } catch (err) {
+      if (!current()) return;
       if (isUnauthorizedApiError(err)) {
         setError(t("professionals.posts.errors.unauthorized"));
       } else if (isForbiddenApiError(err)) {
@@ -196,7 +210,15 @@ export default function ProfessionalPostForm({
         );
       }
     } finally {
-      setSubmitting(false);
+      saveInProgress.current = false;
+      if (current()) {
+        setSubmitting(false);
+        onSubmittingChange?.(false);
+      }
+    }
+    if (saved && current()) {
+      onSaved();
+      onClose();
     }
   };
 

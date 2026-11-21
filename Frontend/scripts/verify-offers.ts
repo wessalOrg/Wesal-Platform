@@ -11,7 +11,6 @@ import {
   datetimeLocalToIso,
   deriveOfferLifecycleStatus,
   parseOfferMoney,
-  parseOptionalOfferMoney,
   validateOfferDateRange,
   validateOfferPricePair,
 } from "../src/lib/offer-validation";
@@ -25,13 +24,9 @@ import { mapHallOffer } from "../src/lib/hall-offers-mapper";
 assert.deepEqual(parseOfferMoney("1200.5"), { value: 1200.5, issue: null });
 assert.equal(parseOfferMoney("").issue, "required");
 assert.equal(parseOfferMoney("0").issue, "nonPositive");
-assert.equal(parseOfferMoney("12.555").issue, "invalid");
+assert.equal(parseOfferMoney("12.555").issue, "decimals");
 assert.equal(parseOfferMoney(String(OFFER_MAX_MONEY + 1)).issue, "tooLarge");
 
-assert.deepEqual(parseOptionalOfferMoney(""), { value: null, issue: null });
-assert.deepEqual(parseOptionalOfferMoney("0"), { value: 0, issue: null });
-assert.equal(parseOptionalOfferMoney("-1").issue, "invalid");
-assert.equal(parseOptionalOfferMoney("abc").issue, "invalid");
 
 assert.equal(validateOfferPricePair(100, 80), null);
 assert.equal(validateOfferPricePair(100, 100), "offerNotLower");

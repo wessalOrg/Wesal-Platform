@@ -70,6 +70,7 @@ function mapImage(payload: unknown): ProfessionalProfileContentImage | null {
 
 export function mapProfessionalProfileContentItem(
   payload: unknown,
+  kind: "post" | "offer" = "post",
 ): ProfessionalProfileContentItem | null {
   if (!payload || typeof payload !== "object") return null;
   const dto = payload as Record<string, unknown>;
@@ -87,7 +88,7 @@ export function mapProfessionalProfileContentItem(
     id,
     ownerUserId: asId(dto.ownerUserId ?? dto.OwnerUserId),
     content: asText(dto.content ?? dto.Content) || null,
-    price: asNumber(dto.price ?? dto.Price),
+    price: kind === "post" ? asNumber(dto.price ?? dto.Price) : null,
     oldPrice: asNumber(dto.oldPrice ?? dto.OldPrice),
     offerPrice: asNumber(dto.offerPrice ?? dto.OfferPrice),
     startsAt: asText(dto.startsAt ?? dto.StartsAt) || null,
@@ -103,6 +104,7 @@ export function mapProfessionalProfileContentItem(
 
 export function mapProfessionalProfileContentPage(
   payload: unknown,
+  kind: "post" | "offer" = "post",
 ): ProfessionalProfileContentPage {
   if (!payload || typeof payload !== "object") {
     return { items: [], page: 1, pageSize: 10, totalCount: 0, totalPages: 0 };
@@ -111,7 +113,7 @@ export function mapProfessionalProfileContentPage(
   const rawItems = dto.items ?? dto.Items;
   const items = Array.isArray(rawItems)
     ? rawItems
-        .map(mapProfessionalProfileContentItem)
+        .map((item) => mapProfessionalProfileContentItem(item, kind))
         .filter((row): row is ProfessionalProfileContentItem => Boolean(row))
     : [];
   const page = Math.max(1, asInt(dto.pageNumber ?? dto.PageNumber ?? dto.page ?? 1));
@@ -160,12 +162,12 @@ export function mapPublicProfessionalProfile(
     profilePictureUrl: asText(dto.profilePictureUrl ?? dto.ProfilePictureUrl) || null,
     posts: Array.isArray(rawPosts)
       ? rawPosts
-          .map(mapProfessionalProfileContentItem)
+          .map((item) => mapProfessionalProfileContentItem(item))
           .filter((row): row is ProfessionalProfileContentItem => Boolean(row))
       : [],
     offers: Array.isArray(rawOffers)
       ? rawOffers
-          .map(mapProfessionalProfileContentItem)
+          .map((item) => mapProfessionalProfileContentItem(item, "offer"))
           .filter((row): row is ProfessionalProfileContentItem => Boolean(row))
       : [],
   };

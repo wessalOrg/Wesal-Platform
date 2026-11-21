@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useActiveHallOffer } from "@/hooks/useActiveHallOffer";
+import { isOfferPubliclyVisible } from "@/lib/offer-status";
 import { calculateOfferDiscountPercent } from "@/lib/offer-validation";
 import { useT } from "@/i18n";
-import { fetchActiveHallOffer } from "@/services/hall-offers";
-import type { HallOffer } from "@/types/hall-offers";
 
 type HallActiveOfferBannerProps = {
   hallId: string;
@@ -26,36 +25,14 @@ export default function HallActiveOfferBanner({
   hallId,
 }: HallActiveOfferBannerProps) {
   const t = useT();
-  const [offer, setOffer] = useState<HallOffer | null>(null);
-  const [ready, setReady] = useState(false);
+  const offer = useActiveHallOffer(hallId);
   const locale =
     typeof document !== "undefined" && document.documentElement.lang === "en"
       ? "en-GB"
       : "ar-EG";
 
-  useEffect(() => {
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      setReady(false);
-      setOffer(null);
-      void fetchActiveHallOffer(hallId)
-        .then((row) => {
-          if (!cancelled) setOffer(row);
-        })
-        .catch(() => {
-          if (!cancelled) setOffer(null);
-        })
-        .finally(() => {
-          if (!cancelled) setReady(true);
-        });
-    }, 0);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [hallId]);
 
-  if (!ready || !offer) return null;
+  if (!offer || !isOfferPubliclyVisible(offer.startsAt, offer.endsAt, offer.stoppedAt)) return null;
 
   const discount = calculateOfferDiscountPercent(
     offer.oldBookingPrice,

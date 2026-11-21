@@ -11,9 +11,10 @@ import { formatOfferDateRange } from "@/lib/offer-format";
 import {
   datetimeLocalToIso,
   isoToDatetimeLocalValue,
-  validateOfferDateRange,
 } from "@/lib/offer-validation";
 import { offerDiscountPercent } from "@/lib/offer-status";
+import { getOfferFieldErrors } from "@/lib/offer-form-validation";
+import { useOfferValidationErrors } from "./OfferValidationErrors";
 import type { HallOffer } from "@/types/offers";
 
 export type HallOfferFormValues = {
@@ -55,24 +56,9 @@ export function validateHallOfferForm(
   values: HallOfferFormValues,
   t: (key: string, vars?: Record<string, string | number>) => string,
 ): string | null {
-  const oldPrice = Number(values.oldBookingPrice);
-  const offerPrice = Number(values.offerPrice);
-  if (!Number.isFinite(oldPrice) || oldPrice <= 0) {
-    return t("offers.validation.oldPriceRequired");
-  }
-  if (!Number.isFinite(offerPrice) || offerPrice <= 0) {
-    return t("offers.validation.offerPriceRequired");
-  }
-  if (offerPrice >= oldPrice) return t("offers.validation.offerBelowOld");
-  const dates = validateOfferDateRange(values.startsAt, values.endsAt);
-  if (dates.issue === "required" || !dates.startsAt || !dates.endsAt) {
-    return dates.issue === "invalid"
-      ? t("offers.validation.datesInvalid")
-      : t("offers.validation.datesRequired");
-  }
-  if (dates.issue === "invalid") return t("offers.validation.datesInvalid");
-  if (dates.issue === "endBeforeStart") return t("offers.validation.endAfterStart");
-  if (dates.issue === "endNotFuture") return t("offers.validation.endNotFuture");
+  const errors = getOfferFieldErrors({ ...values, oldPrice: values.oldBookingPrice });
+  const first = Object.values(errors)[0];
+  if (first) return t(first);
   return null;
 }
 
@@ -88,18 +74,18 @@ export default function HallOfferFormModal({
   onSubmit,
 }: HallOfferFormModalProps) {
   const t = useT();
+  const { setErrors, clearErrors, fieldProps, errorFor } = useOfferValidationErrors();
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG-u-nu-latn" : "en-US";
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const [values, setValues] = useState<HallOfferFormValues>(emptyValues);
-  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setValues(initial ? fromOffer(initial) : emptyValues());
-    setLocalError(null);
-  }, [open, initial]);
+    setErrors({});
+  }, [open, initial, setErrors]);
 
   useEffect(() => {
     if (!open) return;
@@ -144,7 +130,6 @@ export default function HallOfferFormModal({
   );
 
   const resolvedError = useMemo(() => {
-    if (localError) return localError;
     if (!errorKey) return null;
     if (
       errorKey.startsWith("offers.") ||
@@ -154,22 +139,21 @@ export default function HallOfferFormModal({
       return t(errorKey);
     }
     return errorKey;
-  }, [errorKey, localError, t]);
+  }, [errorKey, t]);
 
   if (!open) return null;
 
   function patch(partial: Partial<HallOfferFormValues>) {
     setValues((prev) => ({ ...prev, ...partial }));
-    setLocalError(null);
+    clearErrors();
   }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const error = validateHallOfferForm(values, t);
-    if (error) {
-      setLocalError(error);
-      return;
-    }
+    if (busy) return;
+    const errors = getOfferFieldErrors({ ...values, oldPrice: values.oldBookingPrice });
+    setErrors(errors);
+    if (Object.keys(errors).length) return;
     onSubmit(values);
   }
 
@@ -225,28 +209,30 @@ export default function HallOfferFormModal({
                   {t("offers.hall.oldBookingPrice")}
                 </span>
                 <input
-                  type="number"
-                  min={0}
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   className={hallFieldClassName(false)}
                   value={values.oldBookingPrice}
+                  {...fieldProps("oldPrice")}
                   disabled={busy}
                   onChange={(event) => patch({ oldBookingPrice: event.target.value })}
                 />
+                {errorFor("oldPrice")}
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
                   {t("offers.hall.offerPrice")}
                 </span>
                 <input
-                  type="number"
-                  min={0}
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   className={`${hallFieldClassName(false)} text-[var(--wesal-maroon)]`}
                   value={values.offerPrice}
+                  {...fieldProps("offerPrice")}
                   disabled={busy}
                   onChange={(event) => patch({ offerPrice: event.target.value })}
                 />
+                {errorFor("offerPrice")}
               </label>
               {discount != null ? (
                 <p className="text-xs font-bold text-[var(--wesal-maroon)]">
@@ -260,11 +246,13 @@ export default function HallOfferFormModal({
                   </span>
                   <WesalDateTimeField
                     value={values.startsAt}
+                    {...fieldProps("startsAt")}
                     disabled={busy}
                     triggerClassName={hallFieldClassName(false)}
                     onChange={(next) => patch({ startsAt: next })}
                     testId="hall-offer-starts-at"
                   />
+                  {errorFor("startsAt")}
                 </div>
                 <div>
                   <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
@@ -272,11 +260,13 @@ export default function HallOfferFormModal({
                   </span>
                   <WesalDateTimeField
                     value={values.endsAt}
+                    {...fieldProps("endsAt")}
                     disabled={busy}
                     triggerClassName={hallFieldClassName(false)}
                     onChange={(next) => patch({ endsAt: next })}
                     testId="hall-offer-ends-at"
                   />
+                  {errorFor("endsAt")}
                 </div>
               </div>
               {resolvedError ? (

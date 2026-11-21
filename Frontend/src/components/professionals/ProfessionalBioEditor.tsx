@@ -7,6 +7,7 @@ import {
   PROFESSIONAL_BIO_MAX,
   validateProfessionalBio,
 } from "@/lib/professional-bio";
+import { useRequestScope } from "@/hooks/useRequestScope";
 import { useT } from "@/i18n";
 import { updateProfessionalBio } from "@/services/professional-profile";
 
@@ -26,6 +27,7 @@ export default function ProfessionalBioEditor({
   onSaved,
 }: ProfessionalBioEditorProps) {
   const t = useT();
+  const scope = useRequestScope();
   const fieldId = useId();
   const [value, setValue] = useState(initialBio ?? "");
   const [phone, setPhone] = useState(initialPhoneNumber ?? "");
@@ -39,6 +41,8 @@ export default function ProfessionalBioEditor({
     issue === "tooLong" ? t("professionals.bio.errors.tooLong") : null;
 
   const onSave = async () => {
+    const current = scope.capture();
+    if (!current()) return;
     const nextIssue = validateProfessionalBio(value);
     setIssue(nextIssue);
     const phoneChanged = phone.trim() !== (initialPhoneNumber ?? "").trim();
@@ -50,16 +54,18 @@ export default function ProfessionalBioEditor({
     try {
       await updateProfessionalBio(value, phoneChanged ? phone : undefined,
         location.trim() !== (initialLocation ?? "").trim() ? location : undefined);
+      if (!current()) return;
       onSaved(value.trim() || null);
       onClose();
     } catch (err) {
+      if (!current()) return;
       if (err instanceof ApiError && err.status === 403) {
         setError(t("professionals.bio.errors.forbidden"));
       } else {
         setError(t("professionals.bio.errors.saveFailed"));
       }
     } finally {
-      setSaving(false);
+      if (current()) setSaving(false);
     }
   };
 

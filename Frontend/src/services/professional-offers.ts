@@ -36,14 +36,10 @@ type ApiOffer = {
   OwnerUserId?: string | null;
   content?: string | null;
   Content?: string | null;
-  price?: number | null;
-  Price?: number | null;
   oldPrice?: number | null;
   OldPrice?: number | null;
   offerPrice?: number | null;
   OfferPrice?: number | null;
-  priceBox?: number | null;
-  PriceBox?: number | null;
   startsAt?: string | null;
   StartsAt?: string | null;
   endsAt?: string | null;
@@ -129,7 +125,6 @@ export function mapProfessionalOffer(raw: ApiOffer | null | undefined): Professi
     content: asText(raw.content ?? raw.Content) || null,
     oldPrice,
     offerPrice,
-    priceBox: asNumber(raw.priceBox ?? raw.PriceBox ?? raw.price ?? raw.Price),
     startsAt,
     endsAt,
     stoppedAt: asText(raw.stoppedAt ?? raw.StoppedAt) || null,
@@ -166,9 +161,6 @@ function appendOfferFields(
   }
   form.append("oldPrice", String(input.oldPrice));
   form.append("offerPrice", String(input.offerPrice));
-  if (input.priceBox != null && Number.isFinite(input.priceBox)) {
-    form.append("priceBox", String(input.priceBox));
-  }
   form.append("startsAt", input.startsAt);
   form.append("endsAt", input.endsAt);
   for (const file of input.images ?? []) {
@@ -289,7 +281,7 @@ export async function fetchOwnProfessionalOffers(
     params: { page, pageSize },
     timeout: 12000,
   });
-  return mapProfessionalProfileContentPage(data);
+  return mapProfessionalProfileContentPage(data, "offer");
 }
 
 /** GET /offers/profile/{userId} — active offers only */
@@ -342,7 +334,7 @@ export async function fetchProfessionalOfferContentItem(
     `/offers/${encodeURIComponent(offerId)}`,
     { timeout: 10000 },
   );
-  const mapped = mapProfessionalProfileContentItem(data);
+  const mapped = mapProfessionalProfileContentItem(data, "offer");
   if (!mapped) throw new ApiError("professionals.offers.errors.loadFailed", 0);
   return mapped;
 }

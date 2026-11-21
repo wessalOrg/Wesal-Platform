@@ -18,8 +18,6 @@ export type ProfessionalOffer = {
   content: string | null;
   oldPrice: number;
   offerPrice: number;
-  /** Optional price-box field from API (`price` / PriceBox). */
-  priceBox: number | null;
   startsAt: string;
   endsAt: string;
   stoppedAt: string | null;
@@ -46,7 +44,6 @@ export type CreateProfessionalOfferInput = {
   content?: string | null;
   oldPrice: number;
   offerPrice: number;
-  priceBox?: number | null;
   startsAt: string;
   endsAt: string;
   images?: File[];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import HallOfferFormModal, {
   type HallOfferFormValues,
 } from "@/components/offers/HallOfferFormModal";
@@ -10,6 +10,9 @@ import StopOfferConfirmDialog from "@/components/offers/StopOfferConfirmDialog";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
 import WesalSelect from "@/components/ui/WesalSelect";
+import { useOfferLifecycle } from "@/hooks/useOfferLifecycle";
+import { useRequestScope } from "@/hooks/useRequestScope";
+import type { HallOwnerHall } from "@/types/hall-owner-halls";
 import { useHallOwnerHalls } from "@/hooks/useHallOwnerHalls";
 import { useT } from "@/i18n";
 import { ApiError } from "@/lib/api-error";
@@ -30,9 +33,6 @@ type StatusFilter = "all" | OfferLifecycleStatus;
 type OfferRow = HallOffer & { status: OfferLifecycleStatus };
 
 export default function HallOwnerOffersPage() {
-  const t = useT();
-  const lang = useUiLang();
-  const locale = lang === "ar" ? "ar-EG-u-nu-latn" : "en-US";
   const { halls, isLoading: hallsLoading } = useHallOwnerHalls();
   const approvedHalls = useMemo(
     () =>
@@ -46,12 +46,46 @@ export default function HallOwnerOffersPage() {
     [halls],
   );
 
-  const [selectedHallId, setSelectedHallId] = useState<string>("");
-  const [offers, setOffers] = useState<OfferRow[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [selection, setSelection] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
+  const selectedHallId = approvedHalls.some((hall) => hall.id === selection)
+    ? selection : (approvedHalls[0]?.id ?? "");
+  return (
+    <HallOffersWorkspace
+      key={selectedHallId}
+      selectedHallId={selectedHallId}
+      approvedHalls={approvedHalls}
+      hallsLoading={hallsLoading}
+      onHallChange={setSelection}
+      filter={filter}
+      onFilterChange={setFilter}
+      query={query}
+      onQueryChange={setQuery}
+    />
+  );
+}
+
+function HallOffersWorkspace({ selectedHallId, approvedHalls, hallsLoading, onHallChange,
+  filter, onFilterChange, query, onQueryChange }: {
+  selectedHallId: string;
+  approvedHalls: HallOwnerHall[];
+  hallsLoading: boolean;
+  onHallChange: (id: string) => void;
+  filter: StatusFilter;
+  onFilterChange: (filter: StatusFilter) => void;
+  query: string;
+  onQueryChange: (query: string) => void;
+}) {
+  const t = useT();
+  const lang = useUiLang();
+  const locale = lang === "ar" ? "ar-EG-u-nu-latn" : "en-US";
+  const scope = useRequestScope();
+  const saving = useRef(false);
+  const stopping = useRef(false);
+  const [offers, setOffers] = useState<HallOffer[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [errorKey, setErrorKey] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [editing, setEditing] = useState<HallOffer | null>(null);
@@ -61,58 +95,61 @@ export default function HallOwnerOffersPage() {
   const [stopBusy, setStopBusy] = useState(false);
   const [stopError, setStopError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!selectedHallId && approvedHalls[0]) {
-      setSelectedHallId(approvedHalls[0].id);
-    }
-  }, [approvedHalls, selectedHallId]);
-
-  const loadOffers = useCallback(async (hallId: string) => {
+  const loadOffers = useCallback(async (quiet = false) => {
+    const current = scope.latest("offers");
+    if (!current()) return;
+    const hallId = selectedHallId;
     if (!hallId) {
       setOffers([]);
       setStatus("ready");
       return;
     }
-    setStatus("loading");
+    if (!quiet) setStatus("loading");
     setErrorKey(null);
     try {
       const page = await fetchOwnerHallOffers(hallId, 1, 50);
-      setOffers(
-        page.items.map((item) => ({
-          ...item,
-          status: resolveOfferStatus(item.startsAt, item.endsAt, item.stoppedAt),
-        })),
-      );
+      if (!current()) return;
+      setOffers(page.items);
       setStatus("ready");
     } catch (err) {
+      if (!current()) return;
       setStatus("error");
       setErrorKey(
         err instanceof ApiError ? err.message : "offers.errors.loadFailed",
       );
     }
-  }, []);
+  }, [scope, selectedHallId]);
 
   useEffect(() => {
-    void loadOffers(selectedHallId);
-  }, [loadOffers, selectedHallId]);
+    const timer = window.setTimeout(() => { void loadOffers(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadOffers]);
 
   const selectedHall = approvedHalls.find((hall) => hall.id === selectedHallId);
   const hallName = selectedHall
     ? localizeHallName(selectedHall.id, selectedHall.name, lang)
     : "";
 
-  const counts = useMemo(() => {
-    const active = offers.filter((o) => o.status === "active").length;
-    const scheduled = offers.filter((o) => o.status === "scheduled").length;
-    const expired = offers.filter(
+  useOfferLifecycle(offers, {
+    revalidateAtBoundary: false,
+    onRevalidate: () => loadOffers(true),
+  });
+  const rows: OfferRow[] = offers.map((item) => ({ ...item,
+    status: resolveOfferStatus(item.startsAt, item.endsAt, item.stoppedAt),
+  }));
+
+  const counts = (() => {
+    const active = rows.filter((o) => o.status === "active").length;
+    const scheduled = rows.filter((o) => o.status === "scheduled").length;
+    const expired = rows.filter(
       (o) => o.status === "expired" || o.status === "stopped",
     ).length;
-    return { total: offers.length, active, scheduled, expired };
-  }, [offers]);
+    return { total: rows.length, active, scheduled, expired };
+  })();
 
-  const visible = useMemo(() => {
+  const visible = (() => {
     const needle = query.trim().toLowerCase();
-    return offers.filter((offer) => {
+    return rows.filter((offer) => {
       if (filter === "all") {
         /* keep */
       } else if (filter === "expired") {
@@ -126,9 +163,10 @@ export default function HallOwnerOffersPage() {
         String(offer.offerPrice).includes(needle)
       );
     });
-  }, [filter, hallName, offers, query]);
+  })();
 
   function openCreate() {
+    if (saving.current || stopping.current || !selectedHallId) return;
     setFormMode("create");
     setEditing(null);
     setFormError(null);
@@ -136,6 +174,7 @@ export default function HallOwnerOffersPage() {
   }
 
   function openEdit(offer: HallOffer) {
+    if (saving.current || stopping.current || offer.hallId !== selectedHallId) return;
     setFormMode("edit");
     setEditing(offer);
     setFormError(null);
@@ -143,7 +182,10 @@ export default function HallOwnerOffersPage() {
   }
 
   async function handleFormSubmit(values: HallOfferFormValues) {
-    if (!selectedHallId) return;
+    const current = scope.capture();
+    if (!current() || !selectedHallId || saving.current || stopping.current) return;
+    if (formMode === "edit" && (!editing || editing.hallId !== selectedHallId)) return;
+    saving.current = true;
     setFormBusy(true);
     setFormError(null);
     const payload = {
@@ -158,31 +200,37 @@ export default function HallOwnerOffersPage() {
       } else {
         await createHallOffer(selectedHallId, payload);
       }
+      if (!current()) return;
       setFormOpen(false);
-      await loadOffers(selectedHallId);
+      await loadOffers();
     } catch (err) {
+      if (!current()) return;
       setFormError(
         err instanceof ApiError ? err.message : "offers.errors.saveFailed",
       );
     } finally {
-      setFormBusy(false);
+      if (current()) { saving.current = false; setFormBusy(false); }
     }
   }
 
   async function handleStop() {
-    if (!stopTarget || !selectedHallId) return;
+    const current = scope.capture();
+    if (!current() || !stopTarget || stopTarget.hallId !== selectedHallId || saving.current || stopping.current) return;
+    stopping.current = true;
     setStopBusy(true);
     setStopError(null);
     try {
       await stopHallOffer(selectedHallId, stopTarget.id);
+      if (!current()) return;
       setStopTarget(null);
-      await loadOffers(selectedHallId);
+      await loadOffers();
     } catch (err) {
+      if (!current()) return;
       setStopError(
         err instanceof ApiError ? err.message : "offers.errors.stopFailed",
       );
     } finally {
-      setStopBusy(false);
+      if (current()) { stopping.current = false; setStopBusy(false); }
     }
   }
 
@@ -228,7 +276,7 @@ export default function HallOwnerOffersPage() {
               value: hall.id,
               label: localizeHallName(hall.id, hall.name, lang),
             }))}
-            onChange={setSelectedHallId}
+            onChange={onHallChange}
             testId="owner-offers-hall-select"
           />
         </div>
@@ -237,7 +285,7 @@ export default function HallOwnerOffersPage() {
           className={`${hallFieldClassName(false)} w-full border-[var(--wesal-border)] text-[var(--wesal-text)] placeholder:text-[var(--wesal-muted)] placeholder:opacity-85 sm:w-[22rem] md:w-[26rem]`}
           placeholder={t("offers.owner.search")}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => onQueryChange(event.target.value)}
           data-testid="owner-offers-search"
           aria-label={t("offers.owner.search")}
         />
@@ -260,7 +308,7 @@ export default function HallOwnerOffersPage() {
                 ? "bg-[var(--wesal-maroon)] text-white"
                 : "bg-white text-[var(--wesal-muted)] ring-1 ring-[var(--wesal-border)]"
             }`}
-            onClick={() => setFilter(key)}
+            onClick={() => onFilterChange(key)}
           >
             {t(`offers.filter.${key}`)} ({count})
           </button>
@@ -334,6 +382,7 @@ export default function HallOwnerOffersPage() {
                     type="button"
                     className="btn-outline min-h-9 px-3 text-xs"
                     onClick={() => {
+                      if (saving.current || stopping.current || offer.hallId !== selectedHallId) return;
                       setStopError(null);
                       setStopTarget(offer);
                     }}

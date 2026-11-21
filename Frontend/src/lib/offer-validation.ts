@@ -18,31 +18,15 @@ export function parseOfferMoney(
   if (!trimmed) {
     return required ? { value: null, issue: "required" } : { value: null, issue: null };
   }
-  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
+  if (!/^[+-]?\d+(\.\d+)?$/.test(trimmed)) {
     return { value: null, issue: "invalid" };
   }
   const value = Number(trimmed);
   if (!Number.isFinite(value)) return { value: null, issue: "invalid" };
   if (value <= 0) return { value: null, issue: "nonPositive" };
   if (value > OFFER_MAX_MONEY) return { value: null, issue: "tooLarge" };
-  if (Math.round(value * 100) / 100 !== value) return { value: null, issue: "decimals" };
-  return { value, issue: null };
-}
-
-/** Optional non-negative money (PriceBox / IsMoney — 0 allowed). */
-export function parseOptionalOfferMoney(
-  raw: string,
-): { value: number | null; issue: OfferMoneyIssue | null } {
-  const trimmed = raw.trim();
-  if (!trimmed) return { value: null, issue: null };
-  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
-    return { value: null, issue: "invalid" };
-  }
-  const value = Number(trimmed);
-  if (!Number.isFinite(value)) return { value: null, issue: "invalid" };
-  if (value < 0) return { value: null, issue: "nonPositive" };
-  if (value > OFFER_MAX_MONEY) return { value: null, issue: "tooLarge" };
-  if (Math.round(value * 100) / 100 !== value) return { value: null, issue: "decimals" };
+  // Decimal.Round(value, 2) == value allows additional trailing zeroes.
+  if (/[1-9]/.test((trimmed.split(".")[1] ?? "").slice(2))) return { value: null, issue: "decimals" };
   return { value, issue: null };
 }
 

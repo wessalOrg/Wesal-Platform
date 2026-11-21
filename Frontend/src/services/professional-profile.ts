@@ -110,5 +110,5 @@ export async function fetchProfessionalProfileOffers(
     `/offers/profile/${encodeURIComponent(userId)}`,
     { params: { page, pageSize }, timeout: 12000 },
   );
-  return mapProfessionalProfileContentPage(data);
+  return mapProfessionalProfileContentPage(data, "offer");
 }

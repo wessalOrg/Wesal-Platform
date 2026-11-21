@@ -8,8 +8,9 @@ import {
   calculateOfferDiscountPercent,
   parseOfferMoney,
   validateOfferDateRange,
-  validateOfferPricePair,
 } from "@/lib/offer-validation";
+import { getOfferFieldErrors } from "@/lib/offer-form-validation";
+import { useOfferValidationErrors } from "@/components/offers/OfferValidationErrors";
 import { useT } from "@/i18n";
 import { createHallOffer } from "@/services/hall-offers";
 
@@ -25,6 +26,7 @@ export default function HallOfferForm({
   onSaved,
 }: HallOfferFormProps) {
   const t = useT();
+  const { setErrors, clearErrors, fieldProps, errorFor } = useOfferValidationErrors();
   const titleId = useId();
   const oldPriceId = useId();
   const offerPriceId = useId();
@@ -35,7 +37,6 @@ export default function HallOfferForm({
   const [offerPriceText, setOfferPriceText] = useState("");
   const [startsLocal, setStartsLocal] = useState("");
   const [endsLocal, setEndsLocal] = useState("");
-  const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -47,32 +48,12 @@ export default function HallOfferForm({
       : null;
 
   const validate = () => {
-    if (oldParsed.issue || oldParsed.value == null) {
-      setFieldError(t("owner.offers.errors.oldPriceInvalid"));
-      return null;
-    }
-    if (offerParsed.issue || offerParsed.value == null) {
-      setFieldError(t("owner.offers.errors.offerPriceInvalid"));
-      return null;
-    }
-    if (validateOfferPricePair(oldParsed.value, offerParsed.value)) {
-      setFieldError(t("owner.offers.errors.offerNotLower"));
-      return null;
-    }
+    const errors = getOfferFieldErrors({ oldPrice: oldPriceText, offerPrice: offerPriceText,
+      startsAt: startsLocal, endsAt: endsLocal });
+    setErrors(errors);
+    if (Object.keys(errors).length || oldParsed.value == null || offerParsed.value == null) return null;
     const dates = validateOfferDateRange(startsLocal, endsLocal);
-    if (dates.issue || !dates.startsAt || !dates.endsAt) {
-      setFieldError(
-        dates.issue === "endBeforeStart"
-          ? t("owner.offers.errors.endBeforeStart")
-          : dates.issue === "endNotFuture"
-            ? t("owner.offers.errors.endNotFuture")
-            : dates.issue === "invalid"
-              ? t("owner.offers.errors.datesInvalid")
-              : t("owner.offers.errors.datesRequired"),
-      );
-      return null;
-    }
-    setFieldError(null);
+    if (!dates.startsAt || !dates.endsAt) return null;
     return {
       oldBookingPrice: oldParsed.value,
       offerPrice: offerParsed.value,
@@ -131,12 +112,14 @@ export default function HallOfferForm({
           <input
             id={oldPriceId}
             value={oldPriceText}
+              {...fieldProps("oldPrice")}
             disabled={submitting}
             inputMode="decimal"
             className={`${hallFieldClassName(false)} mt-2 w-full`}
             placeholder={t("owner.offers.pricePlaceholder")}
-            onChange={(e) => setOldPriceText(e.target.value)}
+            onChange={(e) => { setOldPriceText(e.target.value); clearErrors(); }}
           />
+            {errorFor("oldPrice")}
         </div>
         <div>
           <label htmlFor={offerPriceId} className="text-sm font-semibold text-[var(--wesal-text)]">
@@ -145,12 +128,14 @@ export default function HallOfferForm({
           <input
             id={offerPriceId}
             value={offerPriceText}
+              {...fieldProps("offerPrice")}
             disabled={submitting}
             inputMode="decimal"
             className={`${hallFieldClassName(false)} mt-2 w-full`}
             placeholder={t("owner.offers.pricePlaceholder")}
-            onChange={(e) => setOfferPriceText(e.target.value)}
+            onChange={(e) => { setOfferPriceText(e.target.value); clearErrors(); }}
           />
+            {errorFor("offerPrice")}
         </div>
       </div>
 
@@ -182,10 +167,12 @@ export default function HallOfferForm({
             <WesalDateTimeField
               id={startsId}
               value={startsLocal}
+              {...fieldProps("startsAt")}
               disabled={submitting}
               triggerClassName={`${hallFieldClassName(false)} w-full`}
-              onChange={setStartsLocal}
+              onChange={(value) => { setStartsLocal(value); clearErrors(); }}
             />
+            {errorFor("startsAt")}
           </div>
         </div>
         <div>
@@ -196,19 +183,16 @@ export default function HallOfferForm({
             <WesalDateTimeField
               id={endsId}
               value={endsLocal}
+              {...fieldProps("endsAt")}
               disabled={submitting}
               triggerClassName={`${hallFieldClassName(false)} w-full`}
-              onChange={setEndsLocal}
+              onChange={(value) => { setEndsLocal(value); clearErrors(); }}
             />
+            {errorFor("endsAt")}
           </div>
         </div>
       </div>
 
-      {fieldError ? (
-        <p className="mt-3 text-sm text-[#b42318]" role="alert">
-          {fieldError}
-        </p>
-      ) : null}
       {error ? (
         <p className="mt-2 text-sm text-[#b42318]" role="alert">
           {error}

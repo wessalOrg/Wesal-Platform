@@ -13,6 +13,8 @@ type WesalDateTimeFieldProps = {
   triggerClassName?: string;
   testId?: string;
   id?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 };
 
 type ParsedLocal = {
@@ -85,6 +87,8 @@ export default function WesalDateTimeField({
   triggerClassName,
   testId,
   id,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
 }: WesalDateTimeFieldProps) {
   const t = useT();
   const lang = useUiLang();
@@ -184,7 +188,7 @@ export default function WesalDateTimeField({
   );
 
   return (
-    <div className="wesal-datetime" ref={rootRef}>
+    <div className="wesal-datetime" ref={rootRef} aria-invalid={invalid}>
       <button
         ref={triggerRef}
         id={id}
@@ -195,6 +199,7 @@ export default function WesalDateTimeField({
             : "consult-input wesal-datetime-trigger"
         }
         aria-expanded={open}
+        aria-describedby={describedBy}
         aria-controls={panelId}
         disabled={disabled}
         data-testid={testId}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DiscoverOfferCard from "@/components/offers/DiscoverOfferCard";
 import { useT } from "@/i18n";
-import { ApiError } from "@/lib/api-error";
+import { useOfferLifecycle } from "@/hooks/useOfferLifecycle";
+import { useRequestScope } from "@/hooks/useRequestScope";
 import { isOfferPubliclyVisible } from "@/lib/offer-status";
 import { fetchProfileProfessionalOffers } from "@/services/professional-offers";
 import type { DiscoverItem, ProfessionalOffer } from "@/types/offers";
@@ -17,38 +18,36 @@ type PublicProfileOffersSectionProps = {
  * Active professional offers for a public profile (GET /offers/profile/{userId}).
  * Expired / stopped offers are omitted by the API; client also filters as a guard.
  */
-export default function PublicProfileOffersSection({
+export default function PublicProfileOffersSection(props: PublicProfileOffersSectionProps) {
+  return <ProfileOffers key={props.userId} {...props} />;
+}
+
+function ProfileOffers({
   userId,
   className = "",
 }: PublicProfileOffersSectionProps) {
   const t = useT();
-  const [offers, setOffers] = useState<ProfessionalOffer[]>([]);
+  const scope = useRequestScope();
+  const [loadedOffers, setOffers] = useState<ProfessionalOffer[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
+  const load = useCallback(async (quiet = false) => {
+    const current = scope.latest("offers");
+    if (!current()) return;
+    if (!quiet) setStatus("loading");
+    try {
+      const page = await fetchProfileProfessionalOffers(userId, 1, 20);
+      if (!current()) return;
+      setOffers(page.items);
+      setStatus("ready");
+    } catch { if (current()) setStatus("error"); }
+  }, [scope, userId]);
   useEffect(() => {
-    let cancelled = false;
-    setStatus("loading");
-    void fetchProfileProfessionalOffers(userId, 1, 20)
-      .then((page) => {
-        if (cancelled) return;
-        setOffers(
-          page.items.filter((offer) =>
-            isOfferPubliclyVisible(offer.startsAt, offer.endsAt, offer.stoppedAt),
-          ),
-        );
-        setStatus("ready");
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setStatus("error");
-        if (!(err instanceof ApiError)) {
-          /* keep empty */
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+  useOfferLifecycle(loadedOffers, { discoverUnloaded: true, onRevalidate: () => load(true) });
+  const offers = loadedOffers.filter((offer) => isOfferPubliclyVisible(offer.startsAt, offer.endsAt, offer.stoppedAt));
 
   if (status === "loading") {
     return (
@@ -94,7 +93,7 @@ function toDiscoverItem(offer: ProfessionalOffer): DiscoverItem {
     content: offer.content,
     imageUrl: offer.images[0]?.url ?? null,
     location: null,
-    price: offer.priceBox,
+    price: null,
     oldPrice: offer.oldPrice,
     offerPrice: offer.offerPrice,
     startsAt: offer.startsAt,

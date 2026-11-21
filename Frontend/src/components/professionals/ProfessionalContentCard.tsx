@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRequestScope } from "@/hooks/useRequestScope";
 import { useT } from "@/i18n";
 import {
   canStopOffer,
@@ -9,12 +11,14 @@ import {
 } from "@/lib/offer-validation";
 import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
 import OfferDateRange from "@/components/offers/OfferDateRange";
+import ProfessionalOfferDetails from "@/components/offers/ProfessionalOfferDetails";
 import type { ProfessionalProfileContentItem } from "@/types/professional-profile";
 
 type ProfessionalContentCardProps = {
   item: ProfessionalProfileContentItem;
   kind: "post" | "offer";
   canEdit?: boolean;
+  editDisabled?: boolean;
   onEdit?: (item: ProfessionalProfileContentItem) => void;
   canStop?: boolean;
   onStop?: (item: ProfessionalProfileContentItem) => Promise<void> | void;
@@ -63,12 +67,14 @@ export default function ProfessionalContentCard({
   item,
   kind,
   canEdit = false,
+  editDisabled = false,
   onEdit,
   canStop = false,
   onStop,
   showLifecycle = false,
 }: ProfessionalContentCardProps) {
   const t = useT();
+  const scope = useRequestScope();
   const cover = item.images[0]?.url ?? "";
   const locale =
     typeof document !== "undefined" && document.documentElement.lang === "en"
@@ -94,20 +100,23 @@ export default function ProfessionalContentCard({
   const [stopError, setStopError] = useState<string | null>(null);
 
   const onConfirmStop = async () => {
-    if (!onStop || stopping) return;
+    const current = scope.capture();
+    if (!current() || !onStop || stopping) return;
     setStopping(true);
     setStopError(null);
     try {
       await onStop(item);
+      if (!current()) return;
       setConfirmStop(false);
     } catch (error) {
+      if (!current()) return;
       setStopError(
         error instanceof Error && error.message.trim()
           ? error.message
           : t("professionals.offers.errors.stopFailed"),
       );
     } finally {
-      setStopping(false);
+      if (current()) setStopping(false);
     }
   };
 
@@ -175,11 +184,16 @@ export default function ProfessionalContentCard({
             {formatWhen(item.createdAt, locale)}
           </p>
         ) : null}
+        {kind === "post" ? <Link href={`/posts/${encodeURIComponent(item.id)}`}
+          className="btn-outline !min-h-9 mt-1 inline-flex w-full items-center justify-center px-3 text-sm"
+          data-testid="professional-post-open">{t("dashboard.posts.view")}</Link>
+          : <ProfessionalOfferDetails offerId={item.id} disabled={editDisabled} />}
         {canEdit && kind === "post" && onEdit ? (
           <button
             type="button"
             className="btn-outline !min-h-9 mt-1 w-full px-3 text-sm"
             data-testid="professional-post-edit"
+            disabled={editDisabled}
             onClick={() => onEdit(item)}
           >
             {t("professionals.posts.editAction")}

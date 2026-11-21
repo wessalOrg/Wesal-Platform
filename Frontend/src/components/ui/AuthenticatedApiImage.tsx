@@ -13,6 +13,9 @@ type AuthenticatedApiImageProps = {
   className?: string;
   /** Shown while loading or when the image cannot be resolved. */
   fallback?: ReactNode;
+  loadingFallback?: ReactNode;
+  /** Opt in to showing the fallback when a directly loaded image fails. */
+  showErrorFallback?: boolean;
   loading?: "lazy" | "eager";
 };
 
@@ -26,6 +29,8 @@ export default function AuthenticatedApiImage({
   alt = "",
   className,
   fallback = null,
+  loadingFallback = fallback,
+  showErrorFallback = false,
   loading = "lazy",
 }: AuthenticatedApiImageProps) {
   const resolved = resolveMediaUrl(src);
@@ -74,18 +79,21 @@ export default function AuthenticatedApiImage({
   }, [needsAuth, resolved]);
 
   if (!resolved) return <>{fallback}</>;
+  if (failed && showErrorFallback) return <>{fallback}</>;
 
   if (!needsAuth) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={resolved} alt={alt} className={className} loading={loading} />
+      <img src={resolved} alt={alt} className={className} loading={loading}
+        onError={showErrorFallback ? () => setFailed(true) : undefined} />
     );
   }
 
-  if (!blobSrc || failed) return <>{fallback}</>;
+  if (!blobSrc || failed) return <>{failed ? fallback : loadingFallback}</>;
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={blobSrc} alt={alt} className={className} loading={loading} />
+    <img src={blobSrc} alt={alt} className={className} loading={loading}
+      onError={showErrorFallback ? () => setFailed(true) : undefined} />
   );
 }

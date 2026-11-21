@@ -85,7 +85,7 @@ export function mapDiscoverItem(
     content: asText(raw.content ?? raw.Content) || null,
     imageUrl: resolveOfferMediaUrl(asText(raw.imageUrl ?? raw.ImageUrl)) || null,
     location: asText(raw.location ?? raw.Location) || null,
-    price: asNumber(raw.price ?? raw.Price),
+    price: contentType === "ProfessionalOffer" ? null : asNumber(raw.price ?? raw.Price),
     oldPrice: asNumber(raw.oldPrice ?? raw.OldPrice),
     offerPrice: asNumber(raw.offerPrice ?? raw.OfferPrice),
     startsAt: asText(raw.startsAt ?? raw.StartsAt) || null,

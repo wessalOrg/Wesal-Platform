@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ProfessionalPostForm from "@/components/professionals/ProfessionalPostForm";
 import PublishingRestrictionBanner from "@/components/moderation/PublishingRestrictionBanner";
 import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
@@ -35,6 +35,8 @@ export default function ProfessionalPostsManagePage() {
     owner: string;
     post: ProfessionalProfileContentItem | null;
   } | null>(null);
+  const [postSubmitting, setPostSubmitting] = useState(false);
+  const postSaveInProgress = useRef(false);
   const [success, setSuccess] = useState<{ owner: string; key: string } | null>(null);
   const ownerId = access.userId || access.profile?.id || "";
   const owner = access.sessionKey || "";
@@ -61,7 +63,7 @@ export default function ProfessionalPostsManagePage() {
   }, [canRead, ownerId, page, requestKey]);
 
   const openForm = (post: ProfessionalProfileContentItem | null = null) => {
-    if (!canPublish) return;
+    if (!canPublish || postSaveInProgress.current) return;
     setSuccess(null);
     setForm({ owner, post });
   };
@@ -117,6 +119,10 @@ export default function ProfessionalPostsManagePage() {
           key={activeForm.post?.id ?? "new"}
           mode={activeForm.post ? "edit" : "create"}
           initialPost={activeForm.post}
+          onSubmittingChange={(submitting) => {
+            postSaveInProgress.current = submitting;
+            setPostSubmitting(submitting);
+          }}
           onClose={() => setForm(null)}
           onSaved={() => {
             setSuccess({ owner, key: activeForm.post ? "professionals.posts.updateSuccess" : "professionals.posts.createSuccess" });
@@ -164,7 +170,7 @@ export default function ProfessionalPostsManagePage() {
                   </div>
                   <div className="professional-post-row-actions">
                     <Link href={`/posts/${encodeURIComponent(post.id)}`} className="professional-post-row-action" aria-label={t("dashboard.posts.view")} title={t("dashboard.posts.view")}><OfferManageIcon name="view" /></Link>
-                    <button type="button" className="professional-post-row-action" aria-label={t("professionals.posts.editAction")} title={t("professionals.posts.editAction")} disabled={!canPublish} onClick={() => openForm(post)}><OfferManageIcon name="edit" /></button>
+                    <button type="button" className="professional-post-row-action" aria-label={t("professionals.posts.editAction")} title={t("professionals.posts.editAction")} disabled={!canPublish || postSubmitting} onClick={() => openForm(post)}><OfferManageIcon name="edit" /></button>
                   </div>
                 </article>
               ))}

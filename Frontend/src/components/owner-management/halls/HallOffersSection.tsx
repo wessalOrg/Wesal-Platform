@@ -9,6 +9,8 @@ import {
   deriveOfferLifecycleStatus,
   type OfferLifecycleStatus,
 } from "@/lib/offer-validation";
+import { useOfferLifecycle } from "@/hooks/useOfferLifecycle";
+import { useRequestScope } from "@/hooks/useRequestScope";
 import { useT } from "@/i18n";
 import { fetchOwnerHallOffers, stopHallOffer } from "@/services/hall-offers";
 import type { HallOffer } from "@/types/offers";
@@ -56,6 +58,7 @@ function lifecycleLabelKey(status: OfferLifecycleStatus): string {
 
 export default function HallOffersSection({ hallId }: HallOffersSectionProps) {
   const t = useT();
+  const scope = useRequestScope();
   const [items, setItems] = useState<HallOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -69,13 +72,16 @@ export default function HallOffersSection({ hallId }: HallOffersSectionProps) {
       ? "en-GB"
       : "ar-EG";
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (quiet = false) => {
+    const current = scope.latest("offers");
+    if (!current()) return;
+    if (!quiet) setLoading(true);
     setErrorKey(null);
     try {
       const page = await fetchOwnerHallOffers(hallId, 1, 30);
-      setItems(page.items);
+      if (current()) setItems(page.items);
     } catch (error) {
+      if (!current()) return;
       if (error instanceof ApiError && error.status === 401) {
         setErrorKey("owner.offers.errors.unauthorized");
       } else if (error instanceof ApiError && error.status === 403) {
@@ -87,9 +93,9 @@ export default function HallOffersSection({ hallId }: HallOffersSectionProps) {
       }
       setItems([]);
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, [hallId]);
+  }, [hallId, scope]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -97,6 +103,8 @@ export default function HallOffersSection({ hallId }: HallOffersSectionProps) {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  useOfferLifecycle(items, { revalidateAtBoundary: false, onRevalidate: () => load(true) });
 
   const onStop = async (offerId: string) => {
     if (stoppingId) return;

@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import DiscoverOfferCard from "@/components/offers/DiscoverOfferCard";
+import { useOfferLifecycle } from "@/hooks/useOfferLifecycle";
+import { useRequestScope } from "@/hooks/useRequestScope";
+import { filterVisibleDiscoverItems } from "@/lib/discover-filter";
 import { useT } from "@/i18n";
 import { ApiError } from "@/lib/api-error";
 import { fetchDiscoverFeed } from "@/services/discover";
@@ -21,35 +24,47 @@ const PAGE_SIZE = 12;
 
 export default function DiscoverOffersView() {
   const t = useT();
+  const scope = useRequestScope();
   const searchParams = useSearchParams();
   const initialFilter = normalizeFilter(searchParams.get("filter"));
   const [filter, setFilter] = useState<DiscoverFilter>(initialFilter);
-  const [items, setItems] = useState<DiscoverItem[]>([]);
+  const [loadedItems, setItems] = useState<DiscoverItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const [serverTotalCount, setTotalCount] = useState(0);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorKey, setErrorKey] = useState<string | null>(null);
 
-  const load = useCallback(async (nextFilter: DiscoverFilter, nextPage: number) => {
-    setStatus("loading");
+  const load = useCallback(async (nextFilter: DiscoverFilter, nextPage: number, quiet = false) => {
+    const current = scope.latest("discover");
+    if (!current()) return;
+    if (!quiet) setStatus("loading");
     setErrorKey(null);
     try {
       const result = await fetchDiscoverFeed(nextFilter, nextPage, PAGE_SIZE);
+      if (!current()) return;
+      const lastPage = Math.max(1, result.totalPages);
+      if (quiet && nextPage > lastPage) {
+        setTotalPages(lastPage);
+        setPage(lastPage);
+        return;
+      }
       setItems(result.items);
       setTotalPages(Math.max(1, result.totalPages));
       setTotalCount(result.totalCount);
       setStatus("ready");
     } catch (err) {
+      if (!current()) return;
       setStatus("error");
       setErrorKey(
         err instanceof ApiError ? err.message : "discover.errors.loadFailed",
       );
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
-    void load(filter, page);
+    const timer = window.setTimeout(() => { void load(filter, page); }, 0);
+    return () => window.clearTimeout(timer);
   }, [filter, load, page]);
 
   useEffect(() => {
@@ -57,6 +72,14 @@ export default function DiscoverOffersView() {
     setFilter(fromUrl);
     setPage(1);
   }, [searchParams]);
+
+  useOfferLifecycle(loadedItems.filter((item) => item.contentType === "ProfessionalOffer" || item.contentType === "HallOffer"), {
+    enabled: filter === "All" || filter === "Offers",
+    discoverUnloaded: filter === "All" || filter === "Offers",
+    onRevalidate: () => load(filter, page, true),
+  });
+  const items = filterVisibleDiscoverItems(loadedItems);
+  const totalCount = Math.max(0, serverTotalCount - (loadedItems.length - items.length));
 
   const offerItems =
     filter === "Offers"

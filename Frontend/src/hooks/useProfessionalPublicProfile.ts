@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRequestScope } from "@/hooks/useRequestScope";
 import { ApiError } from "@/lib/api-error";
 import { fetchPublicProfessionalProfile } from "@/services/professional-profile";
 import type { PublicProfessionalProfile } from "@/types/professional-profile";
@@ -17,9 +18,11 @@ export function useProfessionalPublicProfile(userId: string) {
     profile: null,
     errorKey: null,
   });
-  const requestSeq = useRef(0);
+  const scope = useRequestScope();
 
   const reload = useCallback(async () => {
+    const current = scope.latest("profile");
+    if (!current()) return;
     const id = userId.trim();
     if (!id) {
       setState({
@@ -29,14 +32,13 @@ export function useProfessionalPublicProfile(userId: string) {
       });
       return;
     }
-    const seq = ++requestSeq.current;
     setState({ status: "loading", profile: null, errorKey: null });
     try {
       const profile = await fetchPublicProfessionalProfile(id);
-      if (seq !== requestSeq.current) return;
+      if (!current()) return;
       setState({ status: "ready", profile, errorKey: null });
     } catch (error) {
-      if (seq !== requestSeq.current) return;
+      if (!current()) return;
       if (error instanceof ApiError && error.status === 404) {
         setState({
           status: "notFound",
@@ -54,7 +56,7 @@ export function useProfessionalPublicProfile(userId: string) {
             : "professionals.profile.errors.loadFailed",
       });
     }
-  }, [userId]);
+  }, [userId, scope]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

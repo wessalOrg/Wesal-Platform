@@ -10,14 +10,14 @@ import {
   OFFER_IMAGES_MAX,
   calculateOfferDiscountPercent,
   parseOfferMoney,
-  parseOptionalOfferMoney,
   validateOfferDateRange,
-  validateOfferPricePair,
 } from "@/lib/offer-validation";
 import {
   PROFESSIONAL_POST_IMAGE_MAX_BYTES,
-  validateProfessionalPostImages,
 } from "@/lib/professional-post-validation";
+import { getOfferFieldErrors, offerImageMetadataError, validateOfferImageFiles } from "@/lib/offer-form-validation";
+import { useOfferValidationErrors } from "@/components/offers/OfferValidationErrors";
+import { useRequestScope } from "@/hooks/useRequestScope";
 import { useT } from "@/i18n";
 import { createProfessionalOffer } from "@/services/professional-offers";
 
@@ -31,11 +31,12 @@ export default function ProfessionalOfferForm({
   onSaved,
 }: ProfessionalOfferFormProps) {
   const t = useT();
+  const scope = useRequestScope();
+  const { setErrors, clearErrors, fieldProps, errorFor } = useOfferValidationErrors();
   const titleId = useId();
   const contentId = useId();
   const oldPriceId = useId();
   const offerPriceId = useId();
-  const priceBoxId = useId();
   const startsId = useId();
   const endsId = useId();
   const fileId = useId();
@@ -44,12 +45,10 @@ export default function ProfessionalOfferForm({
   const [content, setContent] = useState("");
   const [oldPriceText, setOldPriceText] = useState("");
   const [offerPriceText, setOfferPriceText] = useState("");
-  const [priceBoxText, setPriceBoxText] = useState("");
   const [startsLocal, setStartsLocal] = useState("");
   const [endsLocal, setEndsLocal] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [fieldError, setFieldError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,13 +61,13 @@ export default function ProfessionalOfferForm({
 
   const oldParsed = parseOfferMoney(oldPriceText);
   const offerParsed = parseOfferMoney(offerPriceText);
-  const priceBoxParsed = parseOptionalOfferMoney(priceBoxText);
   const discount =
     oldParsed.value != null && offerParsed.value != null
       ? calculateOfferDiscountPercent(oldParsed.value, offerParsed.value)
       : null;
 
   const replacePreviews = (nextFiles: File[]) => {
+    clearErrors();
     for (const url of objectUrls.current) URL.revokeObjectURL(url);
     const next = nextFiles.map((file) => URL.createObjectURL(file));
     objectUrls.current = next;
@@ -76,54 +75,17 @@ export default function ProfessionalOfferForm({
   };
 
   const validate = (): CreatePayload | null => {
-    if (oldParsed.issue || oldParsed.value == null) {
-      setFieldError(t("professionals.offers.errors.oldPriceInvalid"));
-      return null;
-    }
-    if (offerParsed.issue || offerParsed.value == null) {
-      setFieldError(t("professionals.offers.errors.offerPriceInvalid"));
-      return null;
-    }
-    if (validateOfferPricePair(oldParsed.value, offerParsed.value)) {
-      setFieldError(t("professionals.offers.errors.offerNotLower"));
-      return null;
-    }
-    if (priceBoxParsed.issue) {
-      setFieldError(t("professionals.offers.errors.priceBoxInvalid"));
-      return null;
-    }
+    const errors = getOfferFieldErrors({ oldPrice: oldPriceText, offerPrice: offerPriceText,
+      startsAt: startsLocal, endsAt: endsLocal, content, images: files });
+    setErrors(errors);
+    if (Object.keys(errors).length || oldParsed.value == null || offerParsed.value == null) return null;
     const dates = validateOfferDateRange(startsLocal, endsLocal);
-    if (dates.issue || !dates.startsAt || !dates.endsAt) {
-      setFieldError(
-        dates.issue === "endBeforeStart"
-          ? t("professionals.offers.errors.endBeforeStart")
-          : dates.issue === "endNotFuture"
-            ? t("professionals.offers.errors.endNotFuture")
-            : dates.issue === "invalid"
-              ? t("professionals.offers.errors.datesInvalid")
-              : t("professionals.offers.errors.datesRequired"),
-      );
-      return null;
-    }
-    const imagesIssue = validateProfessionalPostImages(files, { required: false });
-    if (imagesIssue) {
-      setFieldError(t("professionals.offers.errors.imagesInvalid"));
-      return null;
-    }
-    if (!content.trim() && files.length === 0) {
-      setFieldError(t("professionals.offers.errors.bodyRequired"));
-      return null;
-    }
-    if (content.trim().length > OFFER_CONTENT_MAX) {
-      setFieldError(t("professionals.offers.errors.contentTooLong"));
-      return null;
-    }
-    setFieldError(null);
+    if (!dates.startsAt || !dates.endsAt) return null;
     return {
       content,
       oldPrice: oldParsed.value,
       offerPrice: offerParsed.value,
-      priceBox: priceBoxParsed.value,
+
       startsAt: dates.startsAt,
       endsAt: dates.endsAt,
       images: files,
@@ -134,23 +96,29 @@ export default function ProfessionalOfferForm({
     content: string;
     oldPrice: number;
     offerPrice: number;
-    priceBox: number | null;
+
     startsAt: string;
     endsAt: string;
     images: File[];
   };
 
   const onSubmit = async () => {
-    if (submitting) return;
+    const current = scope.capture();
+    if (!current() || submitting) return;
     const payload = validate();
     if (!payload) return;
     setSubmitting(true);
     setError(null);
     try {
+      const imageError = await validateOfferImageFiles(payload.images);
+      if (!current()) return;
+      if (imageError) { setErrors({ images: imageError }); return; }
       await createProfessionalOffer(payload);
+      if (!current()) return;
       onSaved();
       onClose();
     } catch (err) {
+      if (!current()) return;
       if (isUnauthorizedApiError(err)) {
         setError(t("professionals.offers.errors.unauthorized"));
       } else if (isForbiddenApiError(err)) {
@@ -161,7 +129,7 @@ export default function ProfessionalOfferForm({
         setError(t("professionals.offers.errors.createFailed"));
       }
     } finally {
-      setSubmitting(false);
+      if (current()) setSubmitting(false);
     }
   };
 
@@ -187,12 +155,14 @@ export default function ProfessionalOfferForm({
           <input
             id={oldPriceId}
             value={oldPriceText}
+              {...fieldProps("oldPrice")}
             disabled={submitting}
             inputMode="decimal"
             className={`${hallFieldClassName(false)} mt-2 w-full`}
             placeholder={t("professionals.offers.pricePlaceholder")}
-            onChange={(e) => setOldPriceText(e.target.value)}
+            onChange={(e) => { setOldPriceText(e.target.value); clearErrors(); }}
           />
+            {errorFor("oldPrice")}
         </div>
         <div>
           <label htmlFor={offerPriceId} className="text-sm font-semibold text-[var(--wesal-text)]">
@@ -201,12 +171,14 @@ export default function ProfessionalOfferForm({
           <input
             id={offerPriceId}
             value={offerPriceText}
+              {...fieldProps("offerPrice")}
             disabled={submitting}
             inputMode="decimal"
             className={`${hallFieldClassName(false)} mt-2 w-full`}
             placeholder={t("professionals.offers.pricePlaceholder")}
-            onChange={(e) => setOfferPriceText(e.target.value)}
+            onChange={(e) => { setOfferPriceText(e.target.value); clearErrors(); }}
           />
+            {errorFor("offerPrice")}
         </div>
       </div>
 
@@ -236,10 +208,12 @@ export default function ProfessionalOfferForm({
             <WesalDateTimeField
               id={startsId}
               value={startsLocal}
+              {...fieldProps("startsAt")}
               disabled={submitting}
               triggerClassName={`${hallFieldClassName(false)} w-full`}
-              onChange={setStartsLocal}
+              onChange={(value) => { setStartsLocal(value); clearErrors(); }}
             />
+            {errorFor("startsAt")}
           </div>
         </div>
         <div>
@@ -250,27 +224,14 @@ export default function ProfessionalOfferForm({
             <WesalDateTimeField
               id={endsId}
               value={endsLocal}
+              {...fieldProps("endsAt")}
               disabled={submitting}
               triggerClassName={`${hallFieldClassName(false)} w-full`}
-              onChange={setEndsLocal}
+              onChange={(value) => { setEndsLocal(value); clearErrors(); }}
             />
+            {errorFor("endsAt")}
           </div>
         </div>
-      </div>
-
-      <div className="mt-3">
-        <label htmlFor={priceBoxId} className="text-sm font-semibold text-[var(--wesal-text)]">
-          {t("professionals.offers.priceBoxLabel")}
-        </label>
-        <input
-          id={priceBoxId}
-          value={priceBoxText}
-          disabled={submitting}
-          inputMode="decimal"
-          className={`${hallFieldClassName(false)} mt-2 w-full`}
-          placeholder={t("professionals.offers.pricePlaceholder")}
-          onChange={(e) => setPriceBoxText(e.target.value)}
-        />
       </div>
 
       <div className="mt-3">
@@ -280,13 +241,15 @@ export default function ProfessionalOfferForm({
         <textarea
           id={contentId}
           value={content}
+              {...fieldProps("content")}
           disabled={submitting}
           rows={3}
           maxLength={OFFER_CONTENT_MAX + 40}
           className={`${hallFieldClassName(false)} mt-2 min-h-[5rem] w-full resize-y`}
           placeholder={t("professionals.offers.contentPlaceholder")}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => { setContent(e.target.value); clearErrors(); }}
         />
+            {errorFor("content")}
       </div>
 
       <div className="mt-3">
@@ -329,6 +292,7 @@ export default function ProfessionalOfferForm({
         </label>
         <input
           id={fileId}
+          {...fieldProps("images")}
           type="file"
           accept={OFFER_IMAGE_ACCEPT}
           multiple
@@ -336,19 +300,16 @@ export default function ProfessionalOfferForm({
           disabled={submitting || files.length >= OFFER_IMAGES_MAX}
           onChange={(event) => {
             const picked = event.target.files ? Array.from(event.target.files) : [];
-            const next = [...files, ...picked].slice(0, OFFER_IMAGES_MAX);
+            const next = [...files, ...picked];
             setFiles(next);
             replacePreviews(next);
+            setErrors({ images: offerImageMetadataError(next) ?? undefined });
             event.target.value = "";
           }}
         />
+        {errorFor("images")}
       </div>
 
-      {fieldError ? (
-        <p className="mt-3 text-sm text-[#b42318]" role="alert">
-          {fieldError}
-        </p>
-      ) : null}
       {error ? (
         <p className="mt-2 text-sm text-[#b42318]" role="alert">
           {error}

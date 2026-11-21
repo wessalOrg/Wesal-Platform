@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import ContentImageGallery from "@/components/posts/ContentImageGallery";
 import PostActionsMenu from "@/components/posts/PostActionsMenu";
 import PostCommentSection from "@/components/posts/PostCommentSection";
 import PostFavoriteButton from "@/components/posts/PostFavoriteButton";
@@ -33,7 +34,6 @@ export default function PostDetailsView({
   const [post, setPost] = useState<Post | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorKey, setErrorKey] = useState<string | null>(null);
-  const [imageIndex, setImageIndex] = useState(0);
   const [linkCopied, setLinkCopied] = useState(false);
   const [commentTotal, setCommentTotal] = useState(0);
 
@@ -41,7 +41,6 @@ export default function PostDetailsView({
     let cancelled = false;
     setStatus("loading");
     setErrorKey(null);
-    setImageIndex(0);
 
     void (async () => {
       try {
@@ -107,7 +106,6 @@ export default function PostDetailsView({
     );
   }
 
-  const image = post.images[imageIndex] ?? post.images[0] ?? null;
   const profileHref = post.ownerUserId
     ? `${PROFESSIONAL_PUBLIC_PATH}/${encodeURIComponent(post.ownerUserId)}`
     : null;
@@ -124,28 +122,8 @@ export default function PostDetailsView({
         data-testid={`post-details-${post.id}`}
       >
         <div className="grid gap-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-          <div className="relative min-h-[18rem] bg-[var(--wesal-pink)] lg:min-h-[32rem]">
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image.url}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-[var(--wesal-muted)]">
-                {post.content?.trim() || t("posts.textOnly")}
-              </div>
-            )}
-
-            <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
-              {post.images.length > 1 ? (
-                <span className="rounded-full bg-black/45 px-2.5 py-1 text-[0.7rem] font-bold text-white">
-                  {imageIndex + 1}/{post.images.length}
-                </span>
-              ) : (
-                <span />
-              )}
+          <ContentImageGallery key={post.id} images={post.images}
+            emptyState={post.content?.trim() || t("posts.textOnly")} className="lg:min-h-[32rem]">
               <PostFavoriteButton
                 postId={post.id}
                 initialSaved={post.isSavedByCurrentUser}
@@ -163,50 +141,7 @@ export default function PostDetailsView({
                   );
                 }}
               />
-            </div>
-
-            {post.images.length > 1 ? (
-              <>
-                <button
-                  type="button"
-                  className="absolute start-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[var(--wesal-maroon)] shadow"
-                  aria-label={t("posts.prevImage")}
-                  onClick={() =>
-                    setImageIndex((index) =>
-                      index <= 0 ? post.images.length - 1 : index - 1,
-                    )
-                  }
-                >
-                  <ChevronIcon dir="prev" />
-                </button>
-                <button
-                  type="button"
-                  className="absolute end-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[var(--wesal-maroon)] shadow"
-                  aria-label={t("posts.nextImage")}
-                  onClick={() =>
-                    setImageIndex((index) =>
-                      index >= post.images.length - 1 ? 0 : index + 1,
-                    )
-                  }
-                >
-                  <ChevronIcon dir="next" />
-                </button>
-                <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
-                  {post.images.map((img, index) => (
-                    <button
-                      key={img.id}
-                      type="button"
-                      className={`h-2 w-2 rounded-full ${
-                        index === imageIndex ? "bg-white" : "bg-white/50"
-                      }`}
-                      aria-label={t("posts.imageDot", { index: index + 1 })}
-                      onClick={() => setImageIndex(index)}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : null}
-          </div>
+          </ContentImageGallery>
 
           <div className="flex min-h-0 flex-col gap-4 p-4 sm:p-5">
             {onClose ? (
@@ -368,25 +303,6 @@ function VerifiedBadge() {
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
-      />
-    </svg>
-  );
-}
-
-function ChevronIcon({ dir }: { dir: "prev" | "next" }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={`h-4 w-4 ${dir === "prev" ? "rtl:rotate-180" : "rotate-180 rtl:rotate-0"}`}
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M14.5 6 8.5 12l6 6"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </svg>
   );

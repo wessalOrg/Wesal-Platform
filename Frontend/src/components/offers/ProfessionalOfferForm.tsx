@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
 import OfferStatusBadge from "@/components/offers/OfferStatusBadge";
 import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
@@ -14,9 +14,10 @@ import {
   isoToDatetimeLocalValue,
   OFFER_CONTENT_MAX,
   OFFER_IMAGES_MAX,
-  validateOfferDateRange,
 } from "@/lib/offer-validation";
 import { offerDiscountPercent, resolveOfferStatus } from "@/lib/offer-status";
+import { getOfferFieldErrors, offerImageMetadataError, validateOfferImageFiles } from "@/lib/offer-form-validation";
+import { useOfferValidationErrors } from "./OfferValidationErrors";
 import type { ProfessionalOffer } from "@/types/offers";
 import OfferManageIcon from "./OfferManageIcon";
 import PostEditorIcon from "@/components/professionals/PostEditorIcon";
@@ -29,8 +30,6 @@ export type ProfessionalOfferFormValues = {
   content: string;
   oldPrice: string;
   offerPrice: string;
-  includePrice: boolean;
-  priceBox: string;
   startsAt: string;
   endsAt: string;
   existingImages: Array<{ id: string; url: string }>;
@@ -53,8 +52,6 @@ function emptyValues(): ProfessionalOfferFormValues {
     content: "",
     oldPrice: "",
     offerPrice: "",
-    includePrice: true,
-    priceBox: "",
     startsAt: "",
     endsAt: "",
     existingImages: [],
@@ -68,8 +65,6 @@ function fromOffer(offer: ProfessionalOffer): ProfessionalOfferFormValues {
     content: offer.content ?? "",
     oldPrice: String(offer.oldPrice ?? ""),
     offerPrice: String(offer.offerPrice ?? ""),
-    includePrice: offer.priceBox != null,
-    priceBox: offer.priceBox != null ? String(offer.priceBox) : "",
     startsAt: isoToDatetimeLocalValue(offer.startsAt),
     endsAt: isoToDatetimeLocalValue(offer.endsAt),
     existingImages: offer.images.map((img) => ({
@@ -81,65 +76,23 @@ function fromOffer(offer: ProfessionalOffer): ProfessionalOfferFormValues {
   };
 }
 
-export function validateProfessionalOfferForm(
-  values: ProfessionalOfferFormValues,
-  t: (key: string, vars?: Record<string, string | number>) => string,
-): string | null {
-  const oldPrice = Number(values.oldPrice);
-  const offerPrice = Number(values.offerPrice);
-  const totalImages = values.existingImages.length + values.newFiles.length;
-  const hasText = values.content.trim().length > 0;
-  // 10.1 — image or plain-text post (at least one required).
-  if (!hasText && totalImages === 0) {
-    return t("offers.validation.contentOrImage");
-  }
-  if (!Number.isFinite(oldPrice) || oldPrice <= 0) {
-    return t("offers.validation.oldPriceRequired");
-  }
-  if (!Number.isFinite(offerPrice) || offerPrice <= 0) {
-    return t("offers.validation.offerPriceRequired");
-  }
-  if (offerPrice >= oldPrice) return t("offers.validation.offerBelowOld");
-  if (values.includePrice) {
-    const box = Number(values.priceBox);
-    if (values.priceBox.trim() && (!Number.isFinite(box) || box < 0)) {
-      return t("offers.validation.priceBoxInvalid");
-    }
-  }
-  const dates = validateOfferDateRange(values.startsAt, values.endsAt);
-  if (dates.issue === "required" || !dates.startsAt || !dates.endsAt) {
-    return dates.issue === "invalid"
-      ? t("offers.validation.datesInvalid")
-      : t("offers.validation.datesRequired");
-  }
-  if (dates.issue === "invalid") return t("offers.validation.datesInvalid");
-  if (dates.issue === "endBeforeStart") return t("offers.validation.endAfterStart");
-  if (dates.issue === "endNotFuture") {
-    return t("offers.validation.endNotFuture");
-  }
-  if (values.content.length > TITLE_MAX) {
-    return t("offers.validation.titleMax", { count: TITLE_MAX });
-  }
-  if (totalImages > MAX_IMAGES) {
-    return t("offers.validation.imagesMax", { count: MAX_IMAGES });
-  }
-  return null;
-}
-
 export default function ProfessionalOfferForm({
   mode,
   initial = null,
-  busy = false,
+  busy: requestBusy = false,
   errorKey = null,
   onSubmit,
   onCancel,
   onRequestStop,
 }: ProfessionalOfferFormProps) {
   const t = useT();
+  const { setErrors, clearErrors, fieldProps, errorFor } = useOfferValidationErrors();
+  const [checkingImages, setCheckingImages] = useState(false);
+  const checkingRef = useRef(false);
+  const busy = requestBusy || checkingImages;
   const [values, setValues] = useState<ProfessionalOfferFormValues>(() =>
     initial ? fromOffer(initial) : emptyValues(),
   );
-  const [localError, setLocalError] = useState<string | null>(null);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   const oldPriceNum = Number(values.oldPrice);
@@ -154,7 +107,6 @@ export default function ProfessionalOfferForm({
   );
 
   const resolvedError = useMemo(() => {
-    if (localError) return localError;
     if (!errorKey) return null;
     if (
       errorKey.startsWith("offers.") ||
@@ -165,22 +117,20 @@ export default function ProfessionalOfferForm({
       return t(errorKey);
     }
     return errorKey;
-  }, [errorKey, localError, t]);
+  }, [errorKey, t]);
 
   function patch(partial: Partial<ProfessionalOfferFormValues>) {
     setValues((prev) => ({ ...prev, ...partial }));
-    setLocalError(null);
+    clearErrors();
   }
 
   function onPickFiles(files: FileList | null) {
     if (!files?.length) return;
-    const next = [...values.newFiles, ...Array.from(files)].slice(
-      0,
-      Math.max(0, MAX_IMAGES - values.existingImages.length),
-    );
+    const next = [...values.newFiles, ...Array.from(files)];
     previewUrls.forEach((url) => URL.revokeObjectURL(url));
     setPreviewUrls(next.map((file) => URL.createObjectURL(file)));
     patch({ newFiles: next, replaceImages: mode === "edit" });
+    setErrors({ images: offerImageMetadataError(next, values.existingImages.length) ?? undefined });
   }
 
   function removeExisting(id: string) {
@@ -197,14 +147,19 @@ export default function ProfessionalOfferForm({
     patch({ newFiles: next, replaceImages: mode === "edit" });
   }
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const error = validateProfessionalOfferForm(values, t);
-    if (error) {
-      setLocalError(error);
-      return;
-    }
-    onSubmit(values);
+    if (busy || checkingRef.current) return;
+    const errors = getOfferFieldErrors({ ...values, images: values.newFiles, existingImageCount: values.existingImages.length });
+    setErrors(errors);
+    if (Object.keys(errors).length) return;
+    checkingRef.current = true;
+    setCheckingImages(true);
+    try {
+      const imageError = await validateOfferImageFiles(values.newFiles, values.existingImages.length);
+      if (imageError) { setErrors({ images: imageError }); return; }
+      onSubmit(values);
+    } finally { checkingRef.current = false; setCheckingImages(false); }
   }
 
   const previewImage =
@@ -277,6 +232,7 @@ export default function ProfessionalOfferForm({
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
+                  {...fieldProps("images")}
                   multiple
                   className="sr-only"
                   disabled={busy}
@@ -291,6 +247,7 @@ export default function ProfessionalOfferForm({
           <p className="mt-1.5 text-[0.7rem] text-[var(--wesal-muted)]">
             {t("offers.form.imagesHint", { count: MAX_IMAGES })}
           </p>
+          {errorFor("images")}
         </div>
 
         <label className="offer-editor-content">
@@ -305,10 +262,12 @@ export default function ProfessionalOfferForm({
             className={hallFieldClassName(false)}
             maxLength={TITLE_MAX}
             value={values.content}
+            {...fieldProps("content")}
             disabled={busy}
             onChange={(event) => patch({ content: event.target.value })}
             placeholder={t("offers.form.titlePlaceholder")}
           />
+          {errorFor("content")}
         </label>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -317,72 +276,32 @@ export default function ProfessionalOfferForm({
               <span className="offer-editor-label"><PostEditorIcon name="price" />{t("offers.form.oldPrice")}<span aria-hidden="true">*</span></span>
             </span>
             <input
-              type="number"
-              min={0}
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               className={hallFieldClassName(false)}
               value={values.oldPrice}
+              {...fieldProps("oldPrice")}
               disabled={busy}
               onChange={(event) => patch({ oldPrice: event.target.value })}
             />
+            {errorFor("oldPrice")}
           </label>
           <label className="block">
             <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
               <span className="offer-editor-label"><OfferManageIcon name="tag" />{t("offers.form.offerPrice")}<span aria-hidden="true">*</span></span>
             </span>
             <input
-              type="number"
-              min={0}
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               className={`${hallFieldClassName(false)} text-[var(--wesal-maroon)]`}
               value={values.offerPrice}
+              {...fieldProps("offerPrice")}
               disabled={busy}
               onChange={(event) => patch({ offerPrice: event.target.value })}
             />
+            {errorFor("offerPrice")}
           </label>
         </div>
-
-        <label className="flex items-center justify-between gap-3 rounded-xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-3 py-2.5">
-          <span className="text-sm font-bold text-[var(--wesal-maroon-dark)]">
-            {t("offers.form.addPriceBox")}
-          </span>
-          <input
-            type="checkbox"
-            className="wesal-checkbox"
-            checked={values.includePrice}
-            disabled={busy}
-            onChange={(event) =>
-              patch({
-                includePrice: event.target.checked,
-                priceBox: event.target.checked
-                  ? values.priceBox || values.offerPrice
-                  : "",
-              })
-            }
-          />
-        </label>
-
-        {values.includePrice ? (
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
-              {t("offers.form.priceBox")}
-            </span>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              className={hallFieldClassName(false)}
-              value={values.priceBox}
-              disabled={busy}
-              placeholder={t("offers.form.priceBoxPlaceholder")}
-              onChange={(event) => patch({ priceBox: event.target.value })}
-              data-testid="offer-price-box"
-            />
-            <p className="mt-1 text-[0.7rem] text-[var(--wesal-muted)]">
-              {t("offers.form.priceBoxHint")}
-            </p>
-          </label>
-        ) : null}
 
         {discount != null ? (
           <p className="text-xs font-bold text-[var(--wesal-maroon)]">
@@ -397,11 +316,13 @@ export default function ProfessionalOfferForm({
             </span>
             <WesalDateTimeField
               value={values.startsAt}
+              {...fieldProps("startsAt")}
               disabled={busy}
               triggerClassName={hallFieldClassName(false)}
               onChange={(next) => patch({ startsAt: next })}
               testId="pro-offer-starts-at"
             />
+            {errorFor("startsAt")}
           </div>
           <div>
             <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
@@ -409,11 +330,13 @@ export default function ProfessionalOfferForm({
             </span>
             <WesalDateTimeField
               value={values.endsAt}
+              {...fieldProps("endsAt")}
               disabled={busy}
               triggerClassName={hallFieldClassName(false)}
               onChange={(next) => patch({ endsAt: next })}
               testId="pro-offer-ends-at"
             />
+            {errorFor("endsAt")}
           </div>
         </div>
 

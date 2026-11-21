@@ -11,6 +11,7 @@ import { buildHallDetailsPath } from "@/lib/booking-intent";
 import { formatOfferDateRange } from "@/lib/offer-format";
 import { resolveOfferStatus } from "@/lib/offer-status";
 import type { DiscoverItem } from "@/types/offers";
+import ProfessionalOfferDetails from "./ProfessionalOfferDetails";
 
 type DiscoverOfferCardProps = {
   item: DiscoverItem;
@@ -107,6 +108,7 @@ export default function DiscoverOfferCard({
           ) : null}
         </div>
         <div className="mt-auto flex flex-col gap-2 pt-3">
+          {item.contentType === "ProfessionalOffer" ? <ProfessionalOfferDetails offerId={item.id} /> : null}
           <PostInquiryButton
             kind="offer"
             contentId={item.id}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ProfessionalOfferForm, {
   type ProfessionalOfferFormValues,
 } from "@/components/offers/ProfessionalOfferForm";
@@ -12,6 +12,8 @@ import PublishingRestrictionBanner from "@/components/moderation/PublishingRestr
 import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
 import { useAccountPublishingLock } from "@/hooks/useAccountPublishingLock";
 import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAccess";
+import { useOfferLifecycle } from "@/hooks/useOfferLifecycle";
+import { useRequestScope } from "@/hooks/useRequestScope";
 import { useT } from "@/i18n";
 import { ApiError } from "@/lib/api-error";
 import OfferDateRange from "./OfferDateRange";
@@ -34,6 +36,7 @@ type ViewMode = "list" | "create" | "edit";
 
 export default function ProfessionalOffersManagePage() {
   const t = useT();
+  const scope = useRequestScope();
   const publishingLock = useAccountPublishingLock();
   const { canPublish, userId, statusLoading: approvalLoading } =
     useProfessionalAccountAccess();
@@ -50,46 +53,51 @@ export default function ProfessionalOffersManagePage() {
   const [stopBusy, setStopBusy] = useState(false);
   const [stopError, setStopError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setStatus("loading");
+  const load = useCallback(async (quiet = false) => {
+    const current = scope.latest("offers");
+    if (!current()) return;
+    if (!quiet) setStatus("loading");
     setErrorKey(null);
     try {
       const page = await fetchMyProfessionalOffers(1, 50);
+      if (!current()) return;
       setOffers(page.items);
       setStatus("ready");
     } catch (err) {
+      if (!current()) return;
       setStatus("error");
       setErrorKey(
         err instanceof ApiError ? err.message : "offers.errors.loadFailed",
       );
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
-  const rows = useMemo(
-    () =>
-      offers.map((offer) => ({
-        offer,
-        status: resolveOfferStatus(offer.startsAt, offer.endsAt, offer.stoppedAt),
-      })),
-    [offers],
-  );
+  useOfferLifecycle(offers, {
+    revalidateAtBoundary: false,
+    onRevalidate: () => load(true),
+  });
 
-  const counts = useMemo(() => {
+  const rows = offers.map((offer) => ({
+    offer, status: resolveOfferStatus(offer.startsAt, offer.endsAt, offer.stoppedAt),
+  }));
+
+  const counts = (() => {
     const active = rows.filter((r) => r.status === "active").length;
     const scheduled = rows.filter((r) => r.status === "scheduled").length;
     const expired = rows.filter((r) => r.status === "expired").length;
     const stopped = rows.filter((r) => r.status === "stopped").length;
     return { total: rows.length, active, scheduled, expired, stopped };
-  }, [rows]);
+  })();
 
-  const visible = useMemo(() => {
+  const visible = (() => {
     if (filter === "all") return rows;
     return rows.filter((row) => row.status === filter);
-  }, [filter, rows]);
+  })();
 
   async function openEdit(offer: ProfessionalOffer) {
     setFormBusy(true);
@@ -122,9 +130,6 @@ export default function ProfessionalOffersManagePage() {
       content: values.content.trim() || null,
       oldPrice: Number(values.oldPrice),
       offerPrice: Number(values.offerPrice),
-      priceBox: values.includePrice
-        ? Number(values.priceBox || values.offerPrice)
-        : null,
       startsAt: datetimeLocalToIso(values.startsAt) ?? "",
       endsAt: datetimeLocalToIso(values.endsAt) ?? "",
       images: values.newFiles,

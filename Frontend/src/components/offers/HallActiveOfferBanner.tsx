@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useActiveHallOffer } from "@/hooks/useActiveHallOffer";
 import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
@@ -9,8 +9,6 @@ import {
   isOfferPubliclyVisible,
   offerDiscountPercent,
 } from "@/lib/offer-status";
-import { fetchActiveHallOffer } from "@/services/hall-offers";
-import type { HallOffer } from "@/types/offers";
 
 type HallActiveOfferBannerProps = {
   hallId: string;
@@ -24,21 +22,8 @@ export default function HallActiveOfferBanner({
   const t = useT();
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG-u-nu-latn" : "en-US";
-  const [offer, setOffer] = useState<HallOffer | null>(null);
+  const offer = useActiveHallOffer(hallId);
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchActiveHallOffer(hallId)
-      .then((row) => {
-        if (!cancelled) setOffer(row);
-      })
-      .catch(() => {
-        if (!cancelled) setOffer(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [hallId]);
 
   if (
     !offer ||
