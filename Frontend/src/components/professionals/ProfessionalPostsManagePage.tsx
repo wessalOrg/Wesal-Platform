@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 import ProfessionalPostForm from "@/components/professionals/ProfessionalPostForm";
 import PublishingRestrictionBanner from "@/components/moderation/PublishingRestrictionBanner";
 import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
+import OfferManageIcon from "@/components/offers/OfferManageIcon";
+import PostEditorIcon from "./PostEditorIcon";
+import "./professional-posts-manage.css";
 import { useUserProfileStore } from "@/components/profile/UserProfileProvider";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAccess";
@@ -144,22 +147,24 @@ export default function ProfessionalPostsManagePage() {
               {canPublish && !activeForm ? <button type="button" className="btn-outline mt-5" onClick={() => openForm()}>{t("dashboard.posts.create")}</button> : null}
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="professional-posts-list">
               {posts.map((post) => (
-                <article key={post.id} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--wesal-border)] bg-white" data-testid="dashboard-post-card">
-                  {post.images[0] ? (
-                    <AuthenticatedApiImage src={post.images[0].url} alt={post.content || t("posts.untitled")} className="aspect-[4/3] w-full object-cover" />
-                  ) : null}
-                  <div className="flex flex-1 flex-col p-4">
+                <article key={post.id} className="professional-post-row" data-testid="dashboard-post-card">
+                  <div className="professional-post-row-image">
+                    {post.images[0] ? (
+                      <AuthenticatedApiImage src={post.images[0].url} alt={post.content || t("posts.untitled")} className="h-full w-full object-cover" fallback={<PostEditorIcon name="image" />} />
+                    ) : <PostEditorIcon name="document" />}
+                  </div>
+                  <div className="professional-post-row-details">
                     {post.createdAt && Number.isFinite(Date.parse(post.createdAt)) ? (
                       <time dateTime={post.createdAt} className="text-xs text-[var(--wesal-muted)]">{new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(post.createdAt))}</time>
                     ) : null}
-                    <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[var(--wesal-text)]">{post.content || t("posts.untitled")}</p>
-                    {post.price != null ? <p className="mt-3 font-bold text-[var(--wesal-maroon-dark)]">{new Intl.NumberFormat(locale, { style: "currency", currency: "ILS" }).format(post.price)}</p> : null}
-                    <div className="mt-auto flex flex-wrap gap-2 pt-5">
-                      <Link href={`/posts/${encodeURIComponent(post.id)}`} className="btn-outline !min-h-10 !text-sm">{t("dashboard.posts.view")}</Link>
-                      <button type="button" className="btn-outline !min-h-10 !text-sm disabled:opacity-50" disabled={!canPublish} onClick={() => openForm(post)}>{t("professionals.posts.editAction")}</button>
-                    </div>
+                    <p className="professional-post-row-content">{post.content || t("posts.untitled")}</p>
+                    {post.price != null ? <p className="professional-post-row-price">{new Intl.NumberFormat(locale, { style: "currency", currency: "ILS" }).format(post.price)}</p> : null}
+                  </div>
+                  <div className="professional-post-row-actions">
+                    <Link href={`/posts/${encodeURIComponent(post.id)}`} className="professional-post-row-action" aria-label={t("dashboard.posts.view")} title={t("dashboard.posts.view")}><OfferManageIcon name="view" /></Link>
+                    <button type="button" className="professional-post-row-action" aria-label={t("professionals.posts.editAction")} title={t("professionals.posts.editAction")} disabled={!canPublish} onClick={() => openForm(post)}><OfferManageIcon name="edit" /></button>
                   </div>
                 </article>
               ))}

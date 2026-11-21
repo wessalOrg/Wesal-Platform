@@ -1,0 +1,23 @@
+.professional-posts-list { display: flex; flex-direction: column; gap: 12px; }
+.professional-post-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; align-items: center; gap: 18px; min-width: 0; padding: 16px; border: 1px solid var(--wesal-border); border-radius: 18px; background: #fff; }
+.professional-post-row-image { display: grid; place-items: center; height: 112px; overflow: hidden; border-radius: 13px; background: var(--wesal-pink-soft); color: var(--wesal-maroon); }
+.professional-post-row-image > svg { width: 30px; height: 30px; }
+.professional-post-row-details { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; min-width: 0; }
+.professional-post-row-content { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--wesal-text); font-size: 14px; line-height: 1.8; }
+.professional-post-row-price { color: var(--wesal-maroon-dark); font-size: 13px; font-weight: 700; }
+.professional-post-row-actions { display: flex; align-items: center; gap: 8px; }
+.professional-post-row-action { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: var(--wesal-pink-soft); color: var(--wesal-maroon-dark); }
+.professional-post-row-action svg { width: 18px; height: 18px; }
+.professional-post-row-action:hover:not(:disabled) { background: color-mix(in srgb, var(--wesal-maroon) 18%, white); }
+.professional-post-row-action:focus-visible { outline: 2px solid var(--wesal-maroon); outline-offset: 3px; }
+.professional-post-row-action:disabled { opacity: .45; cursor: not-allowed; }
+@media (max-width: 560px) {
+  .professional-post-row { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; padding: 12px; border-radius: 14px; }
+  .professional-post-row-image { height: 78px; border-radius: 10px; }
+  .professional-post-row-content { font-size: 12px; }
+  .professional-post-row-details > time { font-size: 10px; }
+  .professional-post-row-price { font-size: 12px; }
+  .professional-post-row-actions { gap: 5px; }
+  .professional-post-row-action { width: 32px; height: 32px; border-radius: 8px; }
+  .professional-post-row-action svg { width: 16px; height: 16px; }
+}
