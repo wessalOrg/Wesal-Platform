@@ -384,12 +384,26 @@ input[type="week"]::-webkit-calendar-picker-indicator {
   filter: invert(42%) sepia(18%) saturate(920%) hue-rotate(314deg) brightness(92%) contrast(88%);
 }
 
-/* Number steppers — same maroon tint as calendar icons */
+/*
+ * Number steppers: maroon chevrons on a clear field — never a filled maroon slab.
+ * Native filter tints the whole control; replace the glyph instead.
+ */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+  width: 1.1rem;
+  min-height: 1.75rem;
+  height: 100%;
   cursor: pointer;
-  opacity: 0.85;
-  filter: invert(42%) sepia(18%) saturate(920%) hue-rotate(314deg) brightness(92%) contrast(88%);
+  opacity: 1;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 20' fill='none'%3E%3Cpath d='M2.5 7.25 6 3.75l3.5 3.5' stroke='%23c17b7f' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2.5 12.75 6 16.25l3.5-3.5' stroke='%23c17b7f' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0.7rem 1.15rem;
+  filter: none;
 }
 
 select:focus,
@@ -467,6 +481,7 @@ option:hover {
 @supports (appearance: base-select) {
   select {
     appearance: base-select;
+    align-items: center;
   }
 
   select::picker(select) {
@@ -494,7 +509,19 @@ option:hover {
 
   select::picker-icon {
     color: var(--wesal-maroon);
+    align-self: center;
   }
+}
+
+/* Keep filter triggers vertically centered with the Filter CTA */
+.admin-moderation-filter-trigger {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  height: 2.75rem;
+  padding-block: 0;
+  line-height: 1.25;
 }
 
 /* Fit compact selects (e.g. verification) to their option text */
@@ -525,8 +552,37 @@ select.w-fit {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--wesal-maroon) 28%, white);
+  background: color-mix(in srgb, var(--wesal-maroon) 32%, white);
   color: var(--wesal-maroon-dark);
+}
+
+::-moz-selection {
+  background: color-mix(in srgb, var(--wesal-maroon) 32%, white);
+  color: var(--wesal-maroon-dark);
+}
+
+/* Search fields: brand selection + never show the native blue clear “x”. */
+input::selection,
+textarea::selection,
+.wesal-search-field::selection {
+  background: color-mix(in srgb, var(--wesal-maroon) 40%, white);
+  color: var(--wesal-maroon-dark);
+}
+
+input::-moz-selection,
+textarea::-moz-selection,
+.wesal-search-field::-moz-selection {
+  background: color-mix(in srgb, var(--wesal-maroon) 40%, white);
+  color: var(--wesal-maroon-dark);
+}
+
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
 }
 
 /* Buttons ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â soft rounded (match navbar design) */
@@ -6284,9 +6340,11 @@ button.btn-primary.wesal-auth-submit:disabled:active {
 .seeker-dash-sidebar-scroll {
   min-height: 0;
   flex: 1 1 0;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
 }
 
 .seeker-dash-sidebar-footer {

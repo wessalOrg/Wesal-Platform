@@ -30,7 +30,12 @@ export function useStartContentConversation() {
     async (
       kind: ContentKind,
       contentId: string,
-      options?: { onOpened?: () => void; loginHref?: string; draft?: string },
+      options?: {
+        onOpened?: () => void;
+        loginHref?: string;
+        draft?: string;
+        providerUserId?: string | null;
+      },
     ) => {
       if (!contentId || inFlight.current || starting) return null;
       inFlight.current = true;
@@ -39,8 +44,12 @@ export function useStartContentConversation() {
       try {
         const thread =
           kind === "post"
-            ? await startConversationFromPost(contentId)
-            : await startConversationFromOffer(contentId);
+            ? await startConversationFromPost(contentId, {
+                providerUserId: options?.providerUserId,
+              })
+            : await startConversationFromOffer(contentId, {
+                providerUserId: options?.providerUserId,
+              });
         options?.onOpened?.();
         if (inbox?.canUseMessaging) {
           inbox.openInbox(thread.conversationId, options?.draft);
@@ -54,12 +63,15 @@ export function useStartContentConversation() {
         return thread;
       } catch (err) {
         if (isUnauthorizedApiError(err)) {
+          const provider = options?.providerUserId?.trim();
           const fallback =
             options?.loginHref ??
             `/login?redirect=${encodeURIComponent(
-              kind === "post"
-                ? `/posts/${encodeURIComponent(contentId)}`
-                : `/discover?filter=Offers&offer=${encodeURIComponent(contentId)}`,
+              provider
+                ? `/professionals/${encodeURIComponent(provider)}`
+                : kind === "post"
+                  ? `/posts/${encodeURIComponent(contentId)}`
+                  : `/discover?filter=Offers&offer=${encodeURIComponent(contentId)}`,
             )}`;
           router.push(fallback);
           return null;

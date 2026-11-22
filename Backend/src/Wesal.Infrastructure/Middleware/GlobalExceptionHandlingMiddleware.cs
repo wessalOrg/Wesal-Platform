@@ -101,8 +101,8 @@ public class GlobalExceptionHandlingMiddleware
                 Extensions = { ["code"] = code, ["traceId"] = TraceIdFor(context) }
             };
 
-        // Surface the concrete conflict reason (email/phone already exists) to the client.
-        if (exception is ConflictException)
+        // Surface the concrete conflict / validation / not-found reason to the client.
+        if (exception is ConflictException or ValidationException or NotFoundException or ForbiddenException)
         {
             problemDetails.Detail = exception.Message;
         }

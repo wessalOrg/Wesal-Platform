@@ -24,14 +24,41 @@ public sealed class ConversationRepository : IConversationRepository
     }
 
     public Task<Conversation?> GetCustomerProviderConversationAsync(string customerId, string providerId, CancellationToken cancellationToken = default)
-        => _context.Conversations.AsNoTracking().FirstOrDefaultAsync(c => c.Kind == ConversationKind.CustomerProvider
-            && c.SenderUserId == customerId && c.HallOwnerId == providerId, cancellationToken);
+    {
+        // Match profile messaging even when JWT / stored ids differ only by case.
+        var customer = customerId.Trim();
+        var provider = providerId.Trim();
+        return _context.Conversations.AsNoTracking().FirstOrDefaultAsync(
+            c => c.Kind == ConversationKind.CustomerProvider
+                && c.SenderUserId.ToLower() == customer.ToLower()
+                && c.HallOwnerId.ToLower() == provider.ToLower(),
+            cancellationToken);
+    }
 
     public Task<bool> IsApprovedProviderAsync(string providerId, CancellationToken cancellationToken = default)
-        => _context.Users.VisibleToPublic(_context, _clock.GetUtcNow()).AnyAsync(user => user.Id == providerId
-            && _context.UserRoles.Any(userRole => userRole.UserId == providerId
-                && _context.Roles.Any(role => role.Id == userRole.RoleId
-                    && (role.Name == ApplicationRoles.EventCoordinator || role.Name == ApplicationRoles.Photographer))), cancellationToken);
+    {
+        var id = providerId.Trim();
+        var now = _clock.GetUtcNow();
+        // Same public gate as GET /profile/{userId}: approved, unlocked, coordinator/photographer.
+        return _context.Users.AsNoTracking()
+            .Where(user => user.Id == id)
+            .Where(user => user.ApprovalStatus == AccountApprovalStatus.Approved)
+            .Where(user => !_context.AccountLocks.Any(lockRow =>
+                lockRow.UserId == user.Id
+                && lockRow.LiftedAt == null
+                && lockRow.StartsAt <= now
+                && now < lockRow.EndsAt))
+            .AnyAsync(
+                user => _context.UserRoles.Any(userRole =>
+                    userRole.UserId == user.Id
+                    && _context.Roles.Any(role =>
+                        role.Id == userRole.RoleId
+                        && (role.Name == ApplicationRoles.EventCoordinator
+                            || role.Name == ApplicationRoles.Photographer
+                            || role.NormalizedName == "EVENTCOORDINATOR"
+                            || role.NormalizedName == "PHOTOGRAPHER"))),
+                cancellationToken);
+    }
 
     public Task<bool> IsPhotographerAsync(string userId, CancellationToken cancellationToken = default)
         => _context.UserRoles.AnyAsync(userRole => userRole.UserId == userId
@@ -575,7 +602,8 @@ public sealed class ConversationRepository : IConversationRepository
             && m.SenderUserId != PlatformSenders.System;
     }
 
-    public async Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)
+
+    public async Task<Dictionary<Guid, bool>> GetUnreadStatusAsync(string userId, IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken = default)
         => await GetUnreadStatusAsync(userId, isAdmin: false, [], conversationIds, cancellationToken);
 
     /// <summary>

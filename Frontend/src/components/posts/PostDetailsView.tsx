@@ -191,6 +191,7 @@ export default function PostDetailsView({
               </div>
               <PostActionsMenu
                 postId={post.id}
+                providerUserId={post.ownerUserId}
                 profileHref={profileHref}
                 onCopied={() => setLinkCopied(true)}
               />
@@ -247,7 +248,12 @@ export default function PostDetailsView({
                   </Link>
                 ) : null}
               </div>
-              <PostInquiryButton kind="post" contentId={post.id} className="w-full" />
+              <PostInquiryButton
+                kind="post"
+                contentId={post.id}
+                providerUserId={post.ownerUserId}
+                className="w-full"
+              />
             </div>
 
             <PostCommentSection

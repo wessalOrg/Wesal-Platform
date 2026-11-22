@@ -78,7 +78,10 @@ public sealed class ConversationService : IConversationService
     {
         var post = _postRepository is null ? null : await _postRepository.GetPublicAsync(postId, cancellationToken);
         if (post is null) throw new NotFoundException("Post", postId);
-        var response = await GetOrCreateProviderConversationAsync(post.OwnerUserId, cancellationToken);
+        // Public post already proves the owner is messageable — don't re-gate via
+        // IsApprovedProviderAsync (that query has diverged from public profile rules).
+        var response = await GetOrCreateProviderConversationAsync(
+            post.OwnerUserId, cancellationToken, skipApprovalCheck: true);
         await _conversationRepository.SetPendingContextAsync(response.ConversationId, postId, null, cancellationToken);
         return WithContext(response, postId, null);
     }
@@ -91,7 +94,8 @@ public sealed class ConversationService : IConversationService
             : await _offerRepository.GetAccessibleAsync(offerId, null, now, cancellationToken);
         if (professional is not null)
         {
-            var providerThread = await GetOrCreateProviderConversationAsync(professional.OwnerUserId, cancellationToken);
+            var providerThread = await GetOrCreateProviderConversationAsync(
+                professional.OwnerUserId, cancellationToken, skipApprovalCheck: true);
             await _conversationRepository.SetPendingContextAsync(providerThread.ConversationId, null, offerId, cancellationToken);
             return WithContext(providerThread, null, offerId);
         }
@@ -144,13 +148,17 @@ public sealed class ConversationService : IConversationService
         }
     }
 
-    private async Task<ConversationResponse> GetOrCreateProviderConversationAsync(string providerUserId, CancellationToken cancellationToken)
+    private async Task<ConversationResponse> GetOrCreateProviderConversationAsync(
+        string providerUserId,
+        CancellationToken cancellationToken,
+        bool skipApprovalCheck = false)
     {
         EnsureAuthenticated();
         var customerId = _currentUser.UserId!;
         if (string.Equals(customerId, providerUserId, StringComparison.OrdinalIgnoreCase))
             throw new ValidationException("You cannot message yourself.");
-        if (!await _conversationRepository.IsApprovedProviderAsync(providerUserId, cancellationToken))
+        if (!skipApprovalCheck
+            && !await _conversationRepository.IsApprovedProviderAsync(providerUserId, cancellationToken))
             throw new NotFoundException("Professional profile", providerUserId);
         var existing = await _conversationRepository.GetCustomerProviderConversationAsync(customerId, providerUserId, cancellationToken);
         if (existing is not null) return MapToResponse(existing, string.Empty, isExisting: true);
@@ -167,7 +175,14 @@ public sealed class ConversationService : IConversationService
         }
         catch (Exception ex) when (IsUniqueViolation(ex))
         {
+            // Concurrent create: the winning row may not be visible for a beat under
+            // read-committed; retry once before surfacing a 500.
             existing = await _conversationRepository.GetCustomerProviderConversationAsync(customerId, providerUserId, cancellationToken);
+            if (existing is null)
+            {
+                await Task.Delay(75, cancellationToken);
+                existing = await _conversationRepository.GetCustomerProviderConversationAsync(customerId, providerUserId, cancellationToken);
+            }
             if (existing is null) throw;
             return MapToResponse(existing, string.Empty, isExisting: true);
         }

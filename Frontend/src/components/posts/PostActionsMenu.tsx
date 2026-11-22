@@ -8,6 +8,7 @@ import { fetchPostShareLink, recordPostShare } from "@/services/posts";
 
 type PostActionsMenuProps = {
   postId: string;
+  providerUserId?: string | null;
   profileHref: string | null;
   onCopied?: () => void;
 };
@@ -15,6 +16,7 @@ type PostActionsMenuProps = {
 /** Figma overflow menu: copy link, message page, open profile. */
 export default function PostActionsMenu({
   postId,
+  providerUserId,
   profileHref,
   onCopied,
 }: PostActionsMenuProps) {
@@ -23,7 +25,7 @@ export default function PostActionsMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [copyBusy, setCopyBusy] = useState(false);
-  const { start, starting } = useStartContentConversation();
+  const { start, starting, error } = useStartContentConversation();
 
   useEffect(() => {
     if (!open) return;
@@ -98,7 +100,7 @@ export default function PostActionsMenu({
             data-testid="post-menu-message-page"
             onClick={() => {
               setOpen(false);
-              void start("post", postId);
+              void start("post", postId, { providerUserId });
             }}
           >
             <ChatIcon />
@@ -116,6 +118,11 @@ export default function PostActionsMenu({
             </Link>
           ) : null}
         </div>
+      ) : null}
+      {error ? (
+        <p className="absolute end-0 top-[calc(100%+0.35rem)] z-20 w-max max-w-[16rem] rounded-lg bg-white px-2 py-1 text-[0.7rem] text-[#b42318] shadow" role="alert">
+          {error}
+        </p>
       ) : null}
     </div>
   );

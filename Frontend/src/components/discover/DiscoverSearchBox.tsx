@@ -45,11 +45,14 @@ export default function DiscoverSearchBox({
         </span>
         <input
           id="discover-search-input"
-          type="search"
+          type="text"
+          role="searchbox"
+          enterKeyHint="search"
+          autoComplete="off"
           value={value}
           disabled={busy}
           placeholder={t(discoverSearchPlaceholderKey(filter))}
-          className="min-w-0 flex-1 bg-transparent px-2 text-sm text-[var(--wesal-text)] outline-none placeholder:text-[var(--wesal-muted)]"
+          className="wesal-search-field min-w-0 flex-1 bg-transparent px-2 text-sm text-[var(--wesal-text)] outline-none placeholder:text-[var(--wesal-muted)]"
           onChange={(event) => onChange(event.target.value)}
           data-testid="discover-search-input"
         />

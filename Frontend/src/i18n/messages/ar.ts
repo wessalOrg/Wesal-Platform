@@ -1138,7 +1138,9 @@ const ar: MessageCatalog = {
   "errors.conversation.create": "تعذر إنشاء المحادثة.",
   "errors.conversation.unauthorized": "يجب تسجيل الدخول لبدء محادثة.",
   "errors.conversation.forbidden": "غير مسموح بمراسلة هذه القاعة.",
-  "errors.conversation.notFound": "القاعة غير موجودة أو غير متاحة.",
+  "errors.conversation.notFound": "تعذر العثور على الطرف الآخر أو أنه غير متاح للمراسلة.",
+  "errors.conversation.providerUnavailable":
+    "هذا الحساب غير متاح للمراسلة حالياً.",
   "errors.rating.unauthorized": "يرجى تسجيل الدخول لتقييم القاعة.",
   "errors.rating.forbidden": "غير مسموح لك بتقييم هذه القاعة.",
   "errors.rating.notFound": "القاعة غير موجودة.",

@@ -80,12 +80,15 @@ export default function HallOfferFormModal({
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const [values, setValues] = useState<HallOfferFormValues>(emptyValues);
+  const [formSeed, setFormSeed] = useState({ open, initial });
 
-  useEffect(() => {
-    if (!open) return;
-    setValues(initial ? fromOffer(initial) : emptyValues());
-    setErrors({});
-  }, [open, initial, setErrors]);
+  if (open !== formSeed.open || (open && initial !== formSeed.initial)) {
+    setFormSeed({ open, initial });
+    if (open) {
+      setValues(initial ? fromOffer(initial) : emptyValues());
+      setErrors({});
+    }
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -226,7 +229,7 @@ export default function HallOfferFormModal({
                 <input
                   type="text"
                   inputMode="decimal"
-                  className={`${hallFieldClassName(false)} text-[var(--wesal-maroon)]`}
+                  className={hallFieldClassName(false)}
                   value={values.offerPrice}
                   {...fieldProps("offerPrice")}
                   disabled={busy}

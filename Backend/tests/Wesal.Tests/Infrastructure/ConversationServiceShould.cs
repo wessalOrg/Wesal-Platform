@@ -41,6 +41,26 @@ public class ConversationServiceShould
     }
 
     [Fact]
+    public async Task StartingFromPost_DoesNotReGateApprovedProviderWhenPostIsPublic()
+    {
+        // A public post already established the owner is messageable. A stale/false
+        // IsApprovedProviderAsync must not block "message about this post".
+        var conversationRepository = new FakeConversationRepository { ProviderApproved = false };
+        var post = new Post
+        {
+            Id = Guid.NewGuid(), OwnerUserId = "provider-1", Content = "Public post",
+        };
+        var service = CreateService(conversationRepository, new FakeHallRepository(), authenticated: true,
+            userId: "customer-1", postRepository: new FakePostRepository(post));
+
+        var conversation = await service.StartFromPostAsync(post.Id);
+
+        Assert.NotEqual(Guid.Empty, conversation.ConversationId);
+        Assert.Equal((Guid?)post.Id, conversation.ContextPostId);
+        Assert.Equal("provider-1", conversation.OwnerUserId);
+    }
+
+    [Fact]
     public async Task StartingFromPost_CarriesPublicSnapshotOnTheFirstMessageAndSurvivesPostRemoval()
     {
         var conversationRepository = new FakeConversationRepository { ProviderApproved = true };

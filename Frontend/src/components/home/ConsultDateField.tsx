@@ -114,7 +114,20 @@ export default function ConsultDateField({
         onClick={() => {
           if (disabled) return;
           setCursor(selected ?? new Date());
-          setOpen((current) => !current);
+          setOpen((current) => {
+            const next = !current;
+            if (next) {
+              // Keep room for the panel: center the field, then auto-flip up/down.
+              requestAnimationFrame(() => {
+                triggerRef.current?.scrollIntoView({
+                  block: "center",
+                  inline: "nearest",
+                  behavior: "smooth",
+                });
+              });
+            }
+            return next;
+          });
         }}
       >
         <span dir="ltr" className={selected ? "consult-date-value" : "consult-date-placeholder"}>
@@ -125,7 +138,12 @@ export default function ConsultDateField({
         open={open && !disabled}
         anchorRef={triggerRef}
         panelRef={panelRef}
-        options={{ width: "anchor", estimateHeight: 340, placement: "down" }}
+        options={{
+          width: 300,
+          estimateHeight: 360,
+          placement: "auto",
+          preferUp: true,
+        }}
         id={panelId}
         className="consult-date-panel"
         dir="ltr"

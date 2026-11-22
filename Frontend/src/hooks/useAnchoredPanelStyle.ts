@@ -60,11 +60,16 @@ export function useAnchoredPanelStyle(
           ? Math.max(rect.width, 1)
           : Math.min(width, window.innerWidth - 16);
 
+      // Prefer keeping the panel inside the viewport; bias toward the
+      // content side when the anchor sits near a side rail / edge.
       let left = align === "end" ? rect.right - panelWidth : rect.left;
-      if (left + panelWidth > window.innerWidth - 8) {
-        left = Math.max(8, window.innerWidth - panelWidth - 8);
-      }
+      const maxLeft = Math.max(8, window.innerWidth - panelWidth - 8);
+      if (left > maxLeft) left = maxLeft;
       if (left < 8) left = 8;
+      // If still overflowing the opposite edge (narrow screens), center on anchor.
+      if (left + panelWidth > window.innerWidth - 8) {
+        left = Math.max(8, Math.min(maxLeft, rect.left + rect.width / 2 - panelWidth / 2));
+      }
 
       const spaceBelow = window.innerHeight - rect.bottom - 8;
       const spaceAbove = rect.top - 8;

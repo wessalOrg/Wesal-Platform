@@ -63,20 +63,38 @@ type ConversationResponse = {
   ContextOfferId?: string | null;
 };
 
+function asConversationRecord(
+  data: unknown,
+): Record<string, unknown> {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+  const root = data as Record<string, unknown>;
+  const nested = root.data ?? root.Data ?? root.result ?? root.Result ?? root.value ?? root.Value;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>;
+  }
+  return root;
+}
+
 function mapResponse(
-  data: ConversationResponse | null | undefined,
+  data: ConversationResponse | null | undefined | unknown,
   fallbackHallId = "",
 ): ConversationThread {
-  const dto = data ?? {};
+  const dto = asConversationRecord(data);
+  const conversationId = String(
+    dto.conversationId ?? dto.ConversationId ?? dto.id ?? dto.Id ?? "",
+  ).trim();
   return {
-    conversationId: String(dto.conversationId ?? dto.ConversationId ?? dto.id ?? dto.Id ?? ""),
-    hallId: String(dto.hallId ?? dto.HallId ?? fallbackHallId ?? ""),
+    conversationId:
+      conversationId && conversationId !== "00000000-0000-0000-0000-000000000000"
+        ? conversationId
+        : "",
+    hallId: String(dto.hallId ?? dto.HallId ?? fallbackHallId ?? "").trim(),
     hallName:
-      (dto.hallName ?? dto.HallName)?.trim() ||
+      String(dto.hallName ?? dto.HallName ?? "").trim() ||
       (fallbackHallId ? t("common.hall") : ""),
-    initiatorUserId: dto.initiatorUserId ?? dto.InitiatorUserId ?? "",
-    ownerUserId: dto.ownerUserId ?? dto.OwnerUserId ?? "",
-    createdAt: dto.createdAt ?? dto.CreatedAt ?? new Date().toISOString(),
+    initiatorUserId: String(dto.initiatorUserId ?? dto.InitiatorUserId ?? ""),
+    ownerUserId: String(dto.ownerUserId ?? dto.OwnerUserId ?? ""),
+    createdAt: String(dto.createdAt ?? dto.CreatedAt ?? new Date().toISOString()),
     isExisting: Boolean(dto.isExisting ?? dto.IsExisting),
     contextPostId: String(dto.contextPostId ?? dto.ContextPostId ?? "").trim() || null,
     contextOfferId: String(dto.contextOfferId ?? dto.ContextOfferId ?? "").trim() || null,
@@ -123,8 +141,8 @@ export async function createProfessionalConversation(
   try {
     const { data } = await api.post<ConversationResponse>(
       `/professionals/${encodeURIComponent(providerUserId)}/conversations`,
-      undefined,
-      { timeout: 8000 },
+      {},
+      { timeout: 15000 },
     );
     const thread = mapResponse(data, "");
     if (!thread.conversationId) {
@@ -223,17 +241,51 @@ export async function contactAdminAccount(): Promise<ConversationThread> {
 /** POST /posts/{postId}/conversation — inquiry tied to a post. */
 export async function startConversationFromPost(
   postId: string,
+  options?: { providerUserId?: string | null },
 ): Promise<ConversationThread> {
-  const { data } = await api.post<ConversationResponse>(
-    `/posts/${encodeURIComponent(postId)}/conversation`,
-    undefined,
-    { timeout: 8000 },
-  );
-  const thread = mapResponse(data);
-  if (!thread.conversationId) {
-    throw new ApiError(t("errors.conversation.create"), 500);
+  const providerId = options?.providerUserId?.trim() || "";
+  if (conversationsUseMock()) {
+    return {
+      conversationId: `demo-post-${postId}`,
+      hallId: "",
+      hallName: t("professionals.contact.threadFallback"),
+      initiatorUserId: "",
+      ownerUserId: providerId,
+      createdAt: new Date().toISOString(),
+      isExisting: true,
+      contextPostId: postId,
+      contextOfferId: null,
+    };
   }
-  return thread;
+
+  // Open the page thread first when we know the publisher. The post-specific
+  // endpoint only adds context; it must not block starting the chat.
+  if (providerId) {
+    const thread = await createProfessionalConversation(providerId);
+    void api
+      .post(`/posts/${encodeURIComponent(postId)}/conversation`, {}, { timeout: 15000 })
+      .catch(() => undefined);
+    return {
+      ...thread,
+      contextPostId: thread.contextPostId ?? postId,
+    };
+  }
+
+  try {
+    const { data } = await api.post<ConversationResponse>(
+      `/posts/${encodeURIComponent(postId)}/conversation`,
+      {},
+      { timeout: 15000 },
+    );
+    const thread = mapResponse(data);
+    if (!thread.conversationId) {
+      throw new ApiError(t("errors.conversation.create"), 500);
+    }
+    return thread;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(t("errors.conversation.create"), 0);
+  }
 }
 
 /**
@@ -294,17 +346,50 @@ export async function fetchMyAdminAccountConversation(): Promise<ConversationSum
 /** POST /offers/{offerId}/conversation — inquiry tied to an offer. */
 export async function startConversationFromOffer(
   offerId: string,
+  options?: { providerUserId?: string | null },
 ): Promise<ConversationThread> {
-  const { data } = await api.post<ConversationResponse>(
-    `/offers/${encodeURIComponent(offerId)}/conversation`,
-    undefined,
-    { timeout: 8000 },
-  );
-  const thread = mapResponse(data);
-  if (!thread.conversationId) {
-    throw new ApiError(t("errors.conversation.create"), 500);
+  const providerId = options?.providerUserId?.trim() || "";
+  if (conversationsUseMock()) {
+    return {
+      conversationId: `demo-offer-${offerId}`,
+      hallId: "",
+      hallName: t("professionals.contact.threadFallback"),
+      initiatorUserId: "",
+      ownerUserId: providerId,
+      createdAt: new Date().toISOString(),
+      isExisting: true,
+      contextPostId: null,
+      contextOfferId: offerId,
+    };
   }
-  return thread;
+
+  // Same strategy as posts: open the page owner thread first.
+  if (providerId) {
+    const thread = await createProfessionalConversation(providerId);
+    void api
+      .post(`/offers/${encodeURIComponent(offerId)}/conversation`, {}, { timeout: 15000 })
+      .catch(() => undefined);
+    return {
+      ...thread,
+      contextOfferId: thread.contextOfferId ?? offerId,
+    };
+  }
+
+  try {
+    const { data } = await api.post<ConversationResponse>(
+      `/offers/${encodeURIComponent(offerId)}/conversation`,
+      {},
+      { timeout: 15000 },
+    );
+    const thread = mapResponse(data);
+    if (!thread.conversationId) {
+      throw new ApiError(t("errors.conversation.create"), 500);
+    }
+    return thread;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(t("errors.conversation.create"), 0);
+  }
 }
 
 function mapInboxItem(data: unknown): ConversationSummary | null {
@@ -557,7 +642,12 @@ export function conversationErrorMessage(
       return scope === "start" ? t("errors.conversation.forbidden") : t("errors.conversation.accessDenied");
     }
     if (err.status === 404) {
-      return scope === "start" ? t("errors.conversation.notFound") : t("errors.conversation.missing");
+      if (scope === "start") {
+        return err.code === "NotFound"
+          ? t("errors.conversation.providerUnavailable")
+          : t("errors.conversation.notFound");
+      }
+      return t("errors.conversation.missing");
     }
     if (scope === "send") {
       return err.message || t("errors.send.failed");

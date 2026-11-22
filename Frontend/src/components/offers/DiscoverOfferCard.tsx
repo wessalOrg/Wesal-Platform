@@ -112,6 +112,7 @@ export default function DiscoverOfferCard({
           <PostInquiryButton
             kind="offer"
             contentId={item.id}
+            providerUserId={item.ownerUserId}
             className="w-full"
             variant="outline"
           />

@@ -11,6 +11,7 @@ import ModerationSuccessModal from "@/components/admin/moderation/ModerationSucc
 import RestrictionModal from "@/components/admin/moderation/RestrictionModal";
 import UnlockAccountDialog from "@/components/admin/moderation/UnlockAccountDialog";
 import SuccessToast from "@/components/ui/SuccessToast";
+import WesalSelect from "@/components/ui/WesalSelect";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 import { ApiError } from "@/lib/api-error";
@@ -154,7 +155,9 @@ export default function AdminPostsManagementPage() {
   }, [appliedSearch, contentFilter, page, roleFilter, statusFilter]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   const roleLabel = useCallback(
@@ -349,14 +352,14 @@ export default function AdminPostsManagementPage() {
 
       <section className="rounded-[1.25rem] border border-[var(--wesal-border)] bg-white p-4 shadow-[0_0.5rem_1.5rem_rgba(90,55,45,0.04)] sm:p-5">
         <form
-          className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end"
+          className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center"
           onSubmit={(event) => {
             event.preventDefault();
             setPage(1);
             setAppliedSearch(search);
           }}
         >
-          <label className="min-w-0 flex-1 space-y-1">
+          <label className="min-w-0 flex-1">
             <span className="sr-only">{t("admin.moderation.searchLabel")}</span>
             <div className="relative">
               <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-[var(--wesal-muted)]">
@@ -367,58 +370,74 @@ export default function AdminPostsManagementPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t("admin.moderation.searchPlaceholder")}
-                className="min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white pe-3 ps-10 text-sm outline-none focus:border-[var(--wesal-maroon)]"
+                className="h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white pe-3 ps-10 text-sm leading-none outline-none focus:border-[var(--wesal-maroon)]"
                 data-testid="admin-moderation-search"
               />
             </div>
           </label>
 
-          <select
+          <WesalSelect
+            label={t("admin.moderation.filters.status")}
+            labelHidden
             value={statusFilter}
-            onChange={(event) => {
-              setStatusFilter(event.target.value as StatusFilter);
+            className="w-full lg:w-auto"
+            triggerClassName="admin-moderation-filter-trigger flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-start text-sm text-[var(--wesal-text)] outline-none transition focus:border-[var(--wesal-maroon)] lg:min-w-[10.5rem]"
+            testId="admin-moderation-filter-status"
+            options={[
+              { value: "all", label: t("admin.moderation.filters.statusAll") },
+              { value: "published", label: t("admin.moderation.status.published") },
+              { value: "restricted", label: t("admin.moderation.status.restricted") },
+              { value: "offer", label: t("admin.moderation.type.offer") },
+            ]}
+            onChange={(next) => {
+              setStatusFilter(next as StatusFilter);
               setPage(1);
             }}
-            className="min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm lg:w-auto"
-            aria-label={t("admin.moderation.filters.status")}
-          >
-            <option value="all">{t("admin.moderation.filters.statusAll")}</option>
-            <option value="published">{t("admin.moderation.status.published")}</option>
-            <option value="restricted">{t("admin.moderation.status.restricted")}</option>
-            <option value="offer">{t("admin.moderation.type.offer")}</option>
-          </select>
+          />
 
-          <select
+          <WesalSelect
+            label={t("admin.moderation.filters.role")}
+            labelHidden
             value={roleFilter}
-            onChange={(event) => {
-              setRoleFilter(event.target.value as RoleFilter);
+            className="w-full lg:w-auto"
+            triggerClassName="admin-moderation-filter-trigger flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-start text-sm text-[var(--wesal-text)] outline-none transition focus:border-[var(--wesal-maroon)] lg:min-w-[10.5rem]"
+            testId="admin-moderation-filter-role"
+            options={[
+              { value: "all", label: t("admin.moderation.filters.roleAll") },
+              { value: "Photographer", label: t("admin.moderation.role.photographer") },
+              {
+                value: "EventCoordinator",
+                label: t("admin.moderation.role.coordinator"),
+              },
+            ]}
+            onChange={(next) => {
+              setRoleFilter(next as RoleFilter);
               setPage(1);
             }}
-            className="min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm lg:w-auto"
-            aria-label={t("admin.moderation.filters.role")}
-          >
-            <option value="all">{t("admin.moderation.filters.roleAll")}</option>
-            <option value="Photographer">{t("admin.moderation.role.photographer")}</option>
-            <option value="EventCoordinator">
-              {t("admin.moderation.role.coordinator")}
-            </option>
-          </select>
+          />
 
-          <select
+          <WesalSelect
+            label={t("admin.moderation.filters.type")}
+            labelHidden
             value={contentFilter}
-            onChange={(event) => {
-              setContentFilter(event.target.value as ContentFilter);
+            className="w-full lg:w-auto"
+            triggerClassName="admin-moderation-filter-trigger flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-start text-sm text-[var(--wesal-text)] outline-none transition focus:border-[var(--wesal-maroon)] lg:min-w-[10.5rem]"
+            testId="admin-moderation-filter-type"
+            options={[
+              { value: "all", label: t("admin.moderation.filters.typeAll") },
+              { value: "posts", label: t("admin.moderation.filters.posts") },
+              { value: "offers", label: t("admin.moderation.filters.offers") },
+            ]}
+            onChange={(next) => {
+              setContentFilter(next as ContentFilter);
               setPage(1);
             }}
-            className="min-h-11 w-full rounded-xl border border-[var(--wesal-border)] bg-white px-3 text-sm lg:w-auto"
-            aria-label={t("admin.moderation.filters.type")}
-          >
-            <option value="all">{t("admin.moderation.filters.typeAll")}</option>
-            <option value="posts">{t("admin.moderation.filters.posts")}</option>
-            <option value="offers">{t("admin.moderation.filters.offers")}</option>
-          </select>
+          />
 
-          <button type="submit" className="btn-primary min-h-11 px-5">
+          <button
+            type="submit"
+            className="btn-primary inline-flex h-11 shrink-0 items-center justify-center px-5"
+          >
             {t("admin.moderation.filters.apply")}
           </button>
         </form>

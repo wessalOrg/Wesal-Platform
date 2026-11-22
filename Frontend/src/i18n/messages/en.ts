@@ -1145,7 +1145,10 @@ const en: MessageCatalog = {
   "errors.conversation.create": "Could not create the conversation.",
   "errors.conversation.unauthorized": "You must log in to start a conversation.",
   "errors.conversation.forbidden": "You cannot message this hall.",
-  "errors.conversation.notFound": "Hall not found or unavailable.",
+  "errors.conversation.notFound":
+    "The other party was not found or is unavailable for messaging.",
+  "errors.conversation.providerUnavailable":
+    "This account is not available for messaging right now.",
   "errors.rating.unauthorized": "Log in to rate this hall.",
   "errors.rating.forbidden": "You are not allowed to rate this hall.",
   "errors.rating.notFound": "Hall not found.",

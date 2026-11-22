@@ -6,6 +6,8 @@ import { useT } from "@/i18n";
 type PostInquiryButtonProps = {
   kind: "post" | "offer";
   contentId: string;
+  /** Professional owner id — used as fallback when offer conversation start fails. */
+  providerUserId?: string | null;
   className?: string;
   variant?: "primary" | "outline";
 };
@@ -13,6 +15,7 @@ type PostInquiryButtonProps = {
 export default function PostInquiryButton({
   kind,
   contentId,
+  providerUserId,
   className = "",
   variant = "primary",
 }: PostInquiryButtonProps) {
@@ -28,7 +31,7 @@ export default function PostInquiryButton({
         }`}
         disabled={starting || !contentId}
         onClick={() => {
-          void start(kind, contentId);
+          void start(kind, contentId, { providerUserId });
         }}
         data-testid={`${kind}-inquiry-button`}
       >

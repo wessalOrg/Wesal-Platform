@@ -293,7 +293,7 @@ export default function ProfessionalOfferForm({
             <input
               type="text"
               inputMode="decimal"
-              className={`${hallFieldClassName(false)} text-[var(--wesal-maroon)]`}
+              className={hallFieldClassName(false)}
               value={values.offerPrice}
               {...fieldProps("offerPrice")}
               disabled={busy}

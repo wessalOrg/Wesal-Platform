@@ -126,7 +126,11 @@ export default function AdminSidebar({
         </div>
 
         <nav className="seeker-dash-sidebar-nav">
-          <ul className="seeker-dash-sidebar-list seeker-dash-sidebar-list--static">
+          <div className="seeker-dash-sidebar-scroll">
+          <ul
+            className="seeker-dash-sidebar-list seeker-dash-sidebar-list--static"
+            data-testid="admin-sidebar-nav-list"
+          >
             <li>
               <Link
                 href={ADMIN_MABROUK_PATH}
@@ -313,6 +317,7 @@ export default function AdminSidebar({
               </Link>
             </li>
           </ul>
+          </div>
         </nav>
 
         <div className="seeker-dash-sidebar-footer">

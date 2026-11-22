@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ProfileAvatarField from "@/components/profile/ProfileAvatarField";
 import SuccessToast from "@/components/ui/SuccessToast";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
@@ -39,15 +39,17 @@ export default function AdminAccountPage() {
   const [avatarDraft, setAvatarDraft] = useState<string | null>(() =>
     readCommittedAvatar(userId),
   );
+  const [avatarUserId, setAvatarUserId] = useState(userId);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  useEffect(() => {
+  if (userId !== avatarUserId) {
+    setAvatarUserId(userId);
     const next = readCommittedAvatar(userId);
     setCommittedAvatar(next);
     setAvatarDraft(next);
-  }, [userId]);
+  }
 
   const avatarDirty = avatarDraft !== committedAvatar;
 
@@ -88,10 +90,10 @@ export default function AdminAccountPage() {
           }}
         />
 
-        <div className="seeker-settings-actions seeker-settings-actions--full mt-4">
+        <div className="seeker-settings-actions mt-4">
           <button
             type="button"
-            className="btn-primary min-h-11 w-full justify-center text-center"
+            className="btn-primary min-h-11 w-full justify-center px-8 text-center sm:w-auto sm:min-w-[10.5rem]"
             disabled={!avatarDirty || avatarBusy}
             data-testid="admin-settings-avatar-save"
             onClick={onSave}
