@@ -52,7 +52,7 @@ function mergeAdminAccountRow(
 }
 
 type PageMetadata = Omit<ProfessionalConversationPage, "items">;
-type InboxLoad = { items: ConversationSummary[]; pagination: PageMetadata | null; customerError: string | null };
+type InboxLoad = { items: ConversationSummary[]; pagination: PageMetadata | null; customerError: string | null; excludedAdminIds?: string[] };
 
 async function loadInbox(professional: boolean, includeAdminAccount: boolean, current: () => boolean, signal: AbortSignal): Promise<InboxLoad> {
   if (!professional) return { items: await fetchInboxConversations(), pagination: null, customerError: null };
@@ -66,7 +66,8 @@ async function loadInbox(professional: boolean, includeAdminAccount: boolean, cu
   }
   if (!page && !adminRow) throw failure;
   const { items, ...pagination } = page ?? { items: [] };
-  return { items: mergeAdminAccountRow(items, adminRow), pagination: page ? pagination as PageMetadata : null,
+  return { excludedAdminIds: items.filter(isAdminAccountConversation).map(row => row.conversationId),
+    items: mergeAdminAccountRow(items, adminRow), pagination: page ? pagination as PageMetadata : null,
     customerError: failure ? conversationErrorMessage(failure, "inbox") : null };
 }
 
@@ -122,13 +123,14 @@ type InboxState = {
   conversations: ConversationSummary[];
   error: string | null;
   pagination: PageMetadata | null;
+  excludedAdminPages: Record<number, string[]>;
   loadingMore: boolean;
   loadMoreError: string | null;
   hasMore: boolean;
 };
 
 function emptyInbox(context: InboxContext | null): InboxState {
-  return { context, status: context ? "loading" : "idle", conversations: [], error: null, pagination: null, loadingMore: false, loadMoreError: null, hasMore: false };
+  return { context, status: context ? "loading" : "idle", conversations: [], error: null, pagination: null, excludedAdminPages: {}, loadingMore: false, loadMoreError: null, hasMore: false };
 }
 
 /**
@@ -167,7 +169,7 @@ export function useInboxConversations(
     let cancelled = false;
     const current = () => !cancelled && latest() && isCurrentAuthenticatedAccount(context.account);
     void loadInbox(context.professional, context.includeAdminAccount, current, controller.signal)
-      .then(({ items, pagination, customerError }) => {
+      .then(({ items, pagination, customerError, excludedAdminIds = [] }) => {
         if (!current()) return;
         const patchedItems = scope.patchRows(items);
         if (pagination) scope.receivePage(pagination.pageNumber); else scope.resetPage();
@@ -186,6 +188,7 @@ export function useInboxConversations(
           }
           const conversations = orderConversations([...merged.values()]);
           return { context, conversations, pagination, status: conversations.length ? "ready" : "empty", error: null,
+            excludedAdminPages: { ...(previous.context === context ? previous.excludedAdminPages : {}), ...(pagination ? { [pagination.pageNumber]: excludedAdminIds } : {}) },
             loadingMore: false, loadMoreError: customerError,
             hasMore: Boolean(customerError || (pagination && scope.nextPage() <= pagination.totalPages)) };
         });
@@ -236,7 +239,12 @@ export function useInboxConversations(
         // Already-visible rows may have newer realtime or read-state updates than this response.
         const merged = new Map(previous.conversations.map(row => [row.conversationId, row]));
         for (const row of patchedItems) if (!merged.has(row.conversationId)) merged.set(row.conversationId, row);
+        const canonicalAdmin = previous.conversations.find(isAdminAccountConversation);
+        if (canonicalAdmin) for (const [id, row] of merged) {
+          if (id !== canonicalAdmin.conversationId && isAdminAccountConversation(row)) merged.delete(id);
+        }
         return { ...previous, conversations: orderConversations([...merged.values()]), pagination,
+          excludedAdminPages: { ...previous.excludedAdminPages, [pagination.pageNumber]: items.filter(isAdminAccountConversation).map(row => row.conversationId) },
           status: merged.size ? "ready" : "empty", loadingMore: false, loadMoreError: null, hasMore: pagination.hasNextPage };
       });
     }).catch(error => {
@@ -336,7 +344,8 @@ export function useInboxConversations(
     hasMore: visible.hasMore,
     loadingMore: visible.loadingMore,
     loadMoreError: visible.loadMoreError,
-    totalCount: visible.pagination?.totalCount ?? null,
+    // Correct known misplaced admin rows without changing the backend's page cursor.
+    totalCount: visible.pagination ? Math.max(0, visible.pagination.totalCount - new Set(Object.values(visible.excludedAdminPages).flat()).size) : null,
     ensureConversation,
     applyPreview,
     applyUnreadCount,

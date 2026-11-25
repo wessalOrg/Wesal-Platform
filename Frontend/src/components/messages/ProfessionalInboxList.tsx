@@ -9,7 +9,7 @@ import { isAdminAccountConversation } from "@/lib/admin-account-conversation";
 import { formatUnreadCount } from "@/lib/unread-badge";
 import type { ConversationSummary, InboxStatus } from "@/types/messages";
 
-type InboxFilter = "customers" | "admin";
+type InboxFilter = "customers" | "admin" | "all";
 
 type ProfessionalInboxListProps = {
   pagination?: InboxPagination;
@@ -58,7 +58,7 @@ export default function ProfessionalInboxList({
     0,
   );
   const totalUnreadLabel = formatUnreadCount(totalUnread);
-  const visible = filter === "admin" ? adminRows : customerRows;
+  const visible = filter === "all" ? rows : filter === "admin" ? adminRows : customerRows;
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="professional-chat-inbox">
@@ -91,6 +91,12 @@ export default function ProfessionalInboxList({
           label={t("messages.professional.filterAdmin")}
           count={adminRows.length}
           onClick={() => setFilter("admin")}
+        />
+        <FilterChip
+          active={filter === "all"}
+          label={t("messages.professional.filterAll")}
+          count={(pagination?.totalCount ?? customerRows.length) + adminRows.length}
+          onClick={() => setFilter("all")}
         />
       </div>
 
@@ -141,7 +147,7 @@ export default function ProfessionalInboxList({
           ))}
         </ul>
       )}
-      {filter === "customers" && status !== "loading" && status !== "error" ? <ConversationPagination pagination={pagination} /> : null}
+      {filter !== "admin" && status !== "loading" && status !== "error" ? <ConversationPagination pagination={pagination} /> : null}
     </div>
   );
 }

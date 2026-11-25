@@ -3059,6 +3059,7 @@ const ar: MessageCatalog = {
   "messages.adminChat.title": "إدارة وصال",
   "messages.adminChat.hint":
     "هذه محادثة مع فريق المنصة. يمكنك مراسلة الإدارة حتى أثناء مراجعة حسابك.",
+  "messages.professional.filterAll": "الكل",
   "messages.professional.filterCustomers": "العملاء",
   "messages.professional.filterAdmin": "الإدارة",
   "messages.professional.contactAdmin": "مراسلة إدارة وصال",

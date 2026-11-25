@@ -3117,6 +3117,7 @@ const en: MessageCatalog = {
   "messages.adminChat.title": "Wesal admin",
   "messages.adminChat.hint":
     "This conversation is with the platform team. You can message admin even while your account is under review.",
+  "messages.professional.filterAll": "All",
   "messages.professional.filterCustomers": "Customers",
   "messages.professional.filterAdmin": "Admin",
   "messages.professional.contactAdmin": "Message Wesal admin",

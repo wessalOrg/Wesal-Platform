@@ -33,7 +33,7 @@ export default function ConversationListItem({
   const lang = useUiLang();
   const { isHallOwner, isAdmin, isProfessional } = useAccountAccess();
   const adminThread = isAdminAccountConversation(conversation);
-  const peerIsAdmin = isOwnerAdminConversation(conversation);
+  const peerIsAdmin = isProfessional ? adminThread : isOwnerAdminConversation(conversation);
   const title =
     isHallOwner || peerIsAdmin
       ? ownerConversationTitle(conversation, lang)

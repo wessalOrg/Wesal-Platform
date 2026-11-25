@@ -32,7 +32,7 @@ test.beforeAll(async () => {
       import{setAccessToken}from'./src/lib/auth-token';import{setStoredAuth,clearAuthSession}from'./src/lib/auth-storage';
       window.requests=[];window.total=window.seedTotal??230;window.lang='ar';window.selected=null;
       window.row=n=>({conversationId:'chat-'+String(n).padStart(3,'0'),kind:'CustomerProvider',hallId:null,hallName:'',
-        otherParticipantId:'client-'+n,otherParticipantName:'Client '+n,lastMessagePreview:'message '+n,
+        otherParticipantId:'client-'+n,otherParticipantName:location.search.includes('platform-team')&&n===1?'فريق وصال - الإدارة':location.search.includes('platform-team')&&n===2?'Admin':'Client '+n,lastMessagePreview:'message '+n,
         lastMessageAt:new Date(Date.UTC(2030,0,1,0,0,230-n)).toISOString(),createdAt:'2029-01-01T00:00:00Z',messageCount:1,unreadMessageCount:n===1?2:0,isUnread:n===1});
       window.response=params=>{const page=Number(params.page)||1,pageSize=Math.min(100,Number(params.pageSize)||10),totalPages=Math.ceil(total/pageSize);
         const items=Array.from({length:total},(_,i)=>row(i+1)).slice((page-1)*pageSize,page*pageSize);
@@ -73,6 +73,64 @@ async function mount(page: Page, query = "", total = 230, deferred = false, resp
   if (deferred) await page.evaluate("deferred=true;ignoreAbort=true");
 }
 const more = (page: Page) => page.getByTestId("inbox-load-more");
+
+for (const role of ["Photographer", "Coordinator"]) {
+  test(`${role}: platform team stays out of Customers; All combines customers and administration`, async ({ page }) => {
+    await mount(page, "?platform-team", 3);
+    if (role === "Coordinator") await page.evaluate("actions.login('coordinator', 'Coordinator')");
+    await expect(page.getByRole("tab", { name: "العملاء(2)", exact: true })).toBeVisible();
+    await expect(page.getByTestId("inbox-conversation")).toHaveCount(2);
+    // A real customer named Admin must not acquire the platform team's branding.
+    await expect(page.getByTestId("inbox-conversation").filter({ hasText: "Admin" })).toHaveCount(1);
+    await expect(page.getByTestId("inbox-conversation").filter({ hasText: "فريق وصال" })).toHaveCount(0);
+    await page.getByRole("tab", { name: "الإدارة(1)", exact: true }).click();
+    await expect(page.getByTestId("inbox-conversation")).toHaveCount(1);
+    await expect(page.getByTestId("inbox-conversation")).toHaveAttribute("data-conversation-id", "admin");
+    await page.getByRole("tab", { name: "الكل(3)", exact: true }).click();
+    await expect(page.getByTestId("inbox-conversation")).toHaveCount(3);
+    await page.evaluate("actions.language('en')");
+    await expect(page.getByRole("tab", { name: "All(3)", exact: true })).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("tab", { name: "Customers(2)", exact: true }).click();
+    await expect(page.getByTestId("inbox-conversation")).toHaveCount(2);
+  });
+}
+
+test("All preserves load-more, and platform exclusions remain stable after refresh and account switching", async ({ page }) => {
+  await mount(page, "?platform-team", 102);
+  await page.getByRole("tab", { name: "الكل(102)", exact: true }).click();
+  await expect(page.getByTestId("inbox-conversation")).toHaveCount(100);
+  await more(page).click();
+  await expect(page.getByTestId("inbox-conversation")).toHaveCount(102);
+  await expect(more(page)).toHaveCount(0);
+  await page.locator("#refresh").click();
+  await expect(page.getByRole("tab", { name: "العملاء(101)", exact: true })).toBeVisible();
+  await expect(page.getByTestId("inbox-conversation")).toHaveCount(102);
+  await page.evaluate("actions.logout();actions.login('B')");
+  await expect(page.getByTestId("inbox-conversation")).toHaveCount(100);
+  await expect(more(page)).toBeVisible();
+});
+
+test("an inbox containing only the platform team has zero customers", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mount(page, "?platform-team", 1);
+  await expect(page.getByRole("tab", { name: "العملاء(0)", exact: true })).toBeVisible();
+  await expect(page.getByTestId("inbox-list-empty")).toBeVisible();
+  await page.getByRole("tab", { name: "الكل(1)", exact: true }).click();
+  await expect(page.getByTestId("inbox-conversation")).toHaveCount(1);
+  await expect(page.getByTestId("inbox-conversation")).toHaveAttribute("data-conversation-id", "admin");
+});
+
+test("a platform row in a later customer page is excluded without duplicating administration", async ({ page }) => {
+  await mount(page, "", 102, true);
+  await more(page).click();
+  await page.evaluate(`const data=response({page:2,pageSize:100});data.items[0].otherParticipantName='Wesal Team - Admin';requests[1].resolve(data)`);
+  await expect(page.getByRole("tab", { name: "العملاء(101)", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "الكل(102)", exact: true }).click();
+  await expect(page.getByTestId("inbox-conversation")).toHaveCount(102);
+  await page.locator("#refresh").click();
+  await page.evaluate("requests[2].resolve()");
+  await expect(page.getByRole("tab", { name: "العملاء(101)", exact: true })).toBeVisible();
+});
 
 test("more than 100 conversations remain accessible without fetching every page automatically", async ({ page }) => {
   await mount(page);
