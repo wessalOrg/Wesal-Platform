@@ -167,7 +167,8 @@ test("guest favorites preserve login behavior and post details links", async ({ 
   await mount(page);
   const card = page.getByTestId("community-post-post-1");
   await expect(card.locator(".community-caption")).toHaveAttribute("href", "/posts/post-1");
-  await card.getByTestId("post-favorite-button").click();
+  await expect(card.locator(".community-cover").getByTestId("post-favorite-button")).toHaveCount(0);
+  await card.locator(".community-post-actions").getByTestId("post-favorite-button").click();
   expect(await page.evaluate("navigations[0]")).toBe("/login?redirect=%2Fposts%2Fpost-1");
 });
 

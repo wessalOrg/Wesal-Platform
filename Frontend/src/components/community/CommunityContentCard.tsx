@@ -56,10 +56,10 @@ export default function CommunityContentCard({ item }: { item: DiscoverItem }) {
         : isHall ? <Link href={profileHref ?? "/discover?filter=Offers"} className="community-cover-link" aria-label={title}>{cover}</Link>
           : <button type="button" className="community-cover-link" aria-label={t("offers.card.viewDetails")}
             onClick={() => setDetailsOpen(true)}>{cover}<span className="community-view"><CommunityIcon name="eye" /></span></button>}
-      {isPost ? <div className="community-save"><PostFavoriteButton postId={item.id} variant="icon" /></div> : null}
     </div>
     {isPost ? <>
       <div className="community-post-actions">
+        <PostFavoriteButton postId={item.id} variant="icon" />
         <PostShareButton postId={item.id} />
         <Link href={postHref} className="community-comments" aria-label={t("community.comments")}><CommunityIcon name="comment" /></Link>
       </div>

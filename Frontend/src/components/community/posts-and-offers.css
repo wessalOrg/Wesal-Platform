@@ -58,9 +58,8 @@
 .community-profile-link svg, .community-card-actions button svg, .community-card-actions a svg { width: 14px; height: 14px; flex-shrink: 0; }
 .community-post-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; }
 .community-post-header > .community-publisher { flex: 1; }
-.community-save { position: absolute; top: 10px; inset-inline-end: 10px; }
-.community-save button { width: 36px; height: 36px; }
 .community-post-actions { display: flex; align-items: center; gap: 12px; padding: 9px 12px 0; color: var(--wesal-maroon-dark); }
+.community-post-actions [data-testid="post-favorite-button"] { width: 36px; height: 36px; }
 .community-post-actions [data-testid="post-share-button"] { min-height: 32px; padding: 3px 8px; border: 0; border-radius: 8px; font-size: 11px; }
 .community-comments { display: inline-grid; place-items: center; width: 36px; height: 36px; }
 .community-comments svg { width: 18px; height: 18px; }
