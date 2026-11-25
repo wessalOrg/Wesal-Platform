@@ -60,8 +60,8 @@ export default function CommunityContentCard({ item }: { item: DiscoverItem }) {
     {isPost ? <>
       <div className="community-post-actions">
         <PostFavoriteButton postId={item.id} variant="icon" />
-        <PostShareButton postId={item.id} />
         <Link href={postHref} className="community-comments" aria-label={t("community.comments")}><CommunityIcon name="comment" /></Link>
+        <PostShareButton postId={item.id} />
       </div>
       <Link href={postHref} className="community-caption"><p>{item.content?.trim() || t("professionals.content.postUntitled")}</p></Link>
       {item.price != null ? <p className="community-post-price">{new Intl.NumberFormat(lang === "ar" ? "ar-EG-u-nu-latn" : "en-US").format(item.price)} {t("offers.currency")}</p> : null}
