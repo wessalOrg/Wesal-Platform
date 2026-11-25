@@ -81,6 +81,12 @@ export default function ProfessionalInboxList({
         aria-label={t("messages.title")}
       >
         <FilterChip
+          active={filter === "all"}
+          label={t("messages.professional.filterAll")}
+          count={(pagination?.totalCount ?? customerRows.length) + adminRows.length}
+          onClick={() => setFilter("all")}
+        />
+        <FilterChip
           active={filter === "customers"}
           label={t("messages.professional.filterCustomers")}
           count={pagination?.totalCount ?? customerRows.length}
@@ -91,12 +97,6 @@ export default function ProfessionalInboxList({
           label={t("messages.professional.filterAdmin")}
           count={adminRows.length}
           onClick={() => setFilter("admin")}
-        />
-        <FilterChip
-          active={filter === "all"}
-          label={t("messages.professional.filterAll")}
-          count={(pagination?.totalCount ?? customerRows.length) + adminRows.length}
-          onClick={() => setFilter("all")}
         />
       </div>
 

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { build } from "esbuild";
 import path from "node:path";
+import fs from "node:fs";
 import ar from "../src/i18n/messages/ar";
 import en from "../src/i18n/messages/en";
 
@@ -72,6 +73,32 @@ async function mount(page: Page, options: { mode?: Mode; hold?: boolean; lang?: 
   return { details, writes, errors, catalog, setMode(next: Mode, pending = false) { mode = next; hold = pending; },
     setWriteFailure(failed: boolean) { writeFailure = failed; },
     edit(id = "offer-a") { return page.getByTestId(`pro-offer-row-${id}`).getByRole("button", { name: catalog["offers.actions.edit"], exact: true }); } };
+}
+
+for (const lang of ["ar", "en"] as const) for (const width of [390, 768, 1366]) {
+  test(`${lang} at ${width}px: status sits beside price and offer dates stay side by side`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await mount(page, { lang });
+    const chunks = path.resolve(".next/static/chunks");
+    const utilities = fs.readdirSync(chunks).filter(file => file.endsWith(".css"))
+      .map(file => fs.readFileSync(path.join(chunks, file), "utf8")).filter(css => css.includes(".container-wesal")).join("\n");
+    expect(utilities).toContain("container-wesal");
+    await page.addStyleTag({ content: utilities + "\n" + ["professional-offers-manage.css", "offer-date-range.css"]
+      .map(file => fs.readFileSync(path.resolve("src/components/offers", file), "utf8")).join("\n") });
+    const row = page.getByTestId("pro-offer-row-offer-a");
+    const price = await row.locator(".pro-offers-price").boundingBox();
+    const badge = await row.getByTestId("offer-status-scheduled").boundingBox();
+    expect(price).not.toBeNull(); expect(badge).not.toBeNull();
+    expect(Math.abs((price!.y + price!.height / 2) - (badge!.y + badge!.height / 2))).toBeLessThan(2);
+    if (lang === "ar") expect(badge!.x + badge!.width).toBeLessThan(price!.x);
+    else expect(badge!.x).toBeGreaterThan(price!.x + price!.width);
+    const dates = row.locator(".offer-date-range-row");
+    await expect(dates).toHaveCount(2);
+    const start = await dates.nth(0).boundingBox(), end = await dates.nth(1).boundingBox();
+    expect(Math.abs(start!.y - end!.y)).toBeLessThan(2);
+    expect(Math.abs(start!.x - end!.x)).toBeGreaterThan(20);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
 }
 
 test("an edit-detail HTTP 500 is visible after the list has loaded", async ({ page }) => {

@@ -47,10 +47,14 @@
 .pro-offers-details { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: flex-start; gap: 8px; }
 .pro-offers-details h2 { max-width: 100%; font-size: 16px; font-weight: 800; color: #81514d; overflow-wrap: anywhere; }
 .pro-offers-description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: pre-wrap; font-size: 13px; line-height: 1.8; color: #7b625c; overflow-wrap: anywhere; }
-.pro-offers-price { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 7px; max-width: 100%; padding: 6px 12px; border-radius: 999px; background: #f9e6e8; }
+.pro-offers-price-line { display: flex; align-items: center; gap: 10px; max-width: 100%; }
+.pro-offers-price-line > span { flex-shrink: 0; font-size: 10px; padding: 3px 8px; }
+.pro-offers-price { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 7px; min-width: 0; max-width: 100%; padding: 6px 12px; border-radius: 999px; background: #f9e6e8; }
 .pro-offers-price > svg { width: 17px; height: 17px; color: #ad3a52; flex-shrink: 0; }
-.pro-offers-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; color: var(--wesal-muted); font-size: 11px; }
-.pro-offers-meta > span:first-child { font-size: 10px; padding: 3px 8px; }
+.pro-offers-meta { min-width: 0; max-width: 100%; color: var(--wesal-muted); font-size: 11px; }
+.pro-offers-meta .offer-date-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pro-offers-meta .offer-date-range-row { min-width: 0; gap: 5px; }
+.pro-offers-meta .offer-date-range bdi { white-space: normal; }
 .pro-offers-actions { display: flex; align-items: center; gap: 10px; margin-inline-start: auto; }
 .pro-offers-action { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #f8ece9; color: #8c5b57; transition: background 150ms; }
 .pro-offers-action svg { width: 20px; height: 20px; }

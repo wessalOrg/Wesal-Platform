@@ -360,12 +360,14 @@ export default function ProfessionalOffersManagePage() {
                   <div className="pro-offers-details">
                     <h2>{title}</h2>
                     {description ? <p className="pro-offers-description">{description}</p> : null}
-                    <div className="pro-offers-price">
-                      <OfferManageIcon name="tag" />
-                      <OfferPriceDisplay oldPrice={offer.oldPrice} offerPrice={offer.offerPrice} size="sm" />
+                    <div className="pro-offers-price-line">
+                      <div className="pro-offers-price">
+                        <OfferManageIcon name="tag" />
+                        <OfferPriceDisplay oldPrice={offer.oldPrice} offerPrice={offer.offerPrice} size="sm" />
+                      </div>
+                      <OfferStatusBadge status={offerStatus} />
                     </div>
                     <div className="pro-offers-meta">
-                      <OfferStatusBadge status={offerStatus} />
                       <OfferDateRange startsAt={offer.startsAt} endsAt={offer.endsAt} />
                     </div>
                   </div>

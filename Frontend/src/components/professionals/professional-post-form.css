@@ -33,7 +33,7 @@
 .post-editor-remove { position: absolute; top: 5px; inset-inline-end: 5px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: rgb(255 255 255 / 95%); color: var(--wesal-maroon-dark); box-shadow: 0 2px 5px rgb(88 40 48 / 12%); }
 .post-editor-remove svg { width: 16px; height: 16px; }
 .post-editor-error { margin-top: 8px; color: #a86267; font-size: 13px; line-height: 1.7; }
-.post-editor-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--wesal-border); }
+.post-editor-actions { display: flex; align-items: center; justify-content: left; gap: 12px; margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--wesal-border); }
 .post-editor-actions > button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 10px 24px; border: 1px solid var(--wesal-maroon); border-radius: 13px; font-size: 14px; font-weight: 700; }
 .post-editor-publish { background: var(--wesal-maroon); color: #fff; }
 .post-editor-publish:hover:not(:disabled) { background: var(--wesal-maroon-dark); }

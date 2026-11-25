@@ -163,7 +163,7 @@ test("no customers keeps the empty state and separate admin conversation", async
   await mount(page, "", 0);
   await expect(page.getByTestId("inbox-list-empty")).toBeVisible();
   await expect(more(page)).toHaveCount(0);
-  await page.getByRole("tab").nth(1).click();
+  await page.getByRole("tab", { name: /^الإدارة/ }).click();
   await expect(page.getByTestId("inbox-conversation-list")).toBeVisible();
 });
 
@@ -263,9 +263,10 @@ for (const lang of ["ar", "en"]) for (const width of [390, 1366]) {
     await page.setViewportSize({ width, height: 900 });
     await mount(page, `?lang=${lang}`, 230, false, true);
     await expect(more(page)).toHaveText(lang === "ar" ? "تحميل المزيد" : "Load more");
-    await page.getByRole("tab").nth(1).click();
+    await expect(page.getByRole("tab").first()).toHaveText(lang === "ar" ? "الكل(231)" : "All(231)");
+    await page.getByRole("tab", { name: lang === "ar" ? /^الإدارة/ : /^Admin/ }).click();
     await expect(more(page)).toHaveCount(0);
-    await page.getByRole("tab").first().click();
+    await page.getByRole("tab", { name: lang === "ar" ? /^العملاء/ : /^Customers/ }).click();
     await more(page).focus();await page.keyboard.press("Enter");
     await expect(page.locator("#state")).toContainText('"count":201');
     expect(await page.evaluate("document.documentElement.scrollWidth<=innerWidth")).toBe(true);
