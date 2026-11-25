@@ -73,7 +73,52 @@ type ApiHelpTicket = {
 type ApiPagedHelpTickets = {
   items?: ApiHelpTicket[] | null;
   totalCount?: number;
+  pageNumber?: number;
+  pageSize?: number;
+  totalPages?: number;
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
 };
+
+export type AdminHelpTicketPage = {
+  items: HelpTicket[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+};
+
+export async function fetchAdminHelpTicketPage(page = 1, signal?: AbortSignal): Promise<AdminHelpTicketPage> {
+  if (helpTicketsUseMock()) {
+    const { listHelpTickets } = await import("@/lib/help-center-storage");
+    const tickets = listHelpTickets();
+    const totalCount = tickets.length, pageSize = 100, totalPages = Math.ceil(totalCount / pageSize);
+    return { items: tickets.slice((page - 1) * pageSize, page * pageSize), totalCount, pageSize,
+      pageNumber: page, totalPages, hasPreviousPage: page > 1, hasNextPage: page < totalPages };
+  }
+  const { data } = await api.get<ApiPagedHelpTickets>("/admin/help/tickets", {
+    params: { page, pageSize: 100 }, signal, timeout: READ_TIMEOUT_MS,
+  });
+  if (!data || !Array.isArray(data.items) ||
+      !Number.isInteger(data.pageNumber) || Number(data.pageNumber) < 1 ||
+      !Number.isInteger(data.pageSize) || Number(data.pageSize) < 1 ||
+      !Number.isInteger(data.totalCount) || Number(data.totalCount) < 0 ||
+      !Number.isInteger(data.totalPages) || Number(data.totalPages) < 0 ||
+      typeof data.hasNextPage !== "boolean" || typeof data.hasPreviousPage !== "boolean") {
+    throw new Error("Invalid help ticket pagination response.");
+  }
+  return { items: data.items.map(mapHelpTicket).filter((item): item is HelpTicket => item !== null),
+    totalCount: data.totalCount!, pageNumber: data.pageNumber!, pageSize: data.pageSize!,
+    totalPages: data.totalPages!, hasNextPage: data.hasNextPage, hasPreviousPage: data.hasPreviousPage };
+}
+
+/** Ticket totals are not conversation totals. A partial page cannot establish a global unread count. */
+export function countUnreadHelpConversations(page: AdminHelpTicketPage): number | null {
+  if (page.pageNumber !== 1 || page.hasNextPage || page.items.length !== page.totalCount) return null;
+  return new Set(page.items.filter(ticket => ticket.adminUnread).map(ticket => ticket.userId)).size;
+}
 
 type ApiCreatedHelpTicket = ApiHelpTicket;
 
@@ -124,20 +169,8 @@ export async function fetchAllHelpTickets(pageSize = 100): Promise<HelpTicket[]>
 }
 
 /** Conversations (distinct askers) with at least one question no Admin has opened yet. */
-export async function fetchUnreadHelpConversationCount(): Promise<number> {
-  const { data } = await withTransientRetry(() =>
-    api.get<ApiPagedHelpTickets>("/admin/help/tickets", {
-      params: { page: 1, pageSize: 100 },
-      timeout: READ_TIMEOUT_MS,
-    }),
-  );
-  const items = Array.isArray(data?.items) ? data.items : [];
-  const unreadUsers = new Set<string>();
-  for (const ticket of items) {
-    const userId = String(ticket.userId ?? "").trim();
-    if (userId && ticket.adminUnread) unreadUsers.add(userId);
-  }
-  return unreadUsers.size;
+export async function fetchUnreadHelpConversationCount(): Promise<number | null> {
+  return countUnreadHelpConversations(await fetchAdminHelpTicketPage());
 }
 
 export async function submitHelpTicket(input: {
@@ -162,25 +195,37 @@ export async function markHelpTicketReadOnServer(id: string): Promise<void> {
 }
 
 /** Marks the asker's whole conversation read for every Admin (shared read state). */
-export async function markHelpConversationReadOnServer(userId: string): Promise<void> {
-  await withTransientRetry(() =>
+export async function markHelpConversationReadOnServer(userId: string, signal?: AbortSignal): Promise<void> {
+  if (helpTicketsUseMock()) {
+    const { markHelpConversationRead } = await import("@/lib/help-center-storage");
+    if (!signal?.aborted) markHelpConversationRead(userId);
+    return;
+  }
+  const send = () =>
     api.post(
       `/admin/help/tickets/conversations/${encodeURIComponent(userId)}/read`,
       undefined,
-      { timeout: READ_TIMEOUT_MS },
-    ),
-  );
+      { timeout: READ_TIMEOUT_MS, signal },
+    );
+  if (signal) await send(); else await withTransientRetry(send);
 }
 
 /** Admin answer; also flips the ticket to "replied" server-side. */
-export async function replyHelpTicket(id: string, reply: string): Promise<HelpTicket> {
-  const { data } = await withTransientRetry(() =>
+export async function replyHelpTicket(id: string, reply: string, signal?: AbortSignal): Promise<HelpTicket> {
+  if (helpTicketsUseMock()) {
+    const { replyToHelpTicket } = await import("@/lib/help-center-storage");
+    if (signal?.aborted) throw new Error("Help ticket request cancelled.");
+    const ticket = replyToHelpTicket(id, reply);
+    if (!ticket) throw new Error("Invalid help ticket response.");
+    return ticket;
+  }
+  const send = () =>
     api.post<ApiHelpTicket>(
       `/admin/help/tickets/${id}/reply`,
       { reply },
-      { timeout: WRITE_TIMEOUT_MS },
-    ),
-  );
+      { timeout: WRITE_TIMEOUT_MS, signal },
+    );
+  const { data } = await (signal ? send() : withTransientRetry(send));
   const ticket = mapHelpTicket(data ?? {});
   if (!ticket) throw new Error("Invalid help ticket response.");
   return ticket;

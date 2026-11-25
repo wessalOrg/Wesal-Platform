@@ -758,19 +758,20 @@ function InfoRow({
 }
 
 function CoordinatorGalleryPanel({ detail }: { detail: AdminCoordinatorRequestDetail }) {
+  return <CoordinatorGalleryPanelContent key={`${detail.userId}:${detail.businessType}:${detail.hasShopPhoto}:${detail.hasWorkPhoto1}:${detail.hasWorkPhoto2}`} detail={detail} />;
+}
+
+function CoordinatorGalleryPanelContent({ detail }: { detail: AdminCoordinatorRequestDetail }) {
   const t = useT();
-  const items = useMemo(() => galleryItemsFor(detail), [detail]);
+  const [items] = useState(() => galleryItemsFor(detail));
   const [docs, setDocs] = useState<(AdminSecureDocument | null)[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(items.length > 0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const loadKey = `${detail.userId}:${detail.businessType}:${detail.hasShopPhoto}:${detail.hasWorkPhoto1}:${detail.hasWorkPhoto2}`;
 
   useEffect(() => {
     let cancelled = false;
     const createdUrls: string[] = [];
-    setLoading(true);
-    setLightboxIndex(null);
-    const currentItems = galleryItemsFor(detail);
+    const currentItems = items;
     void Promise.all(
       currentItems.map(async (item) => {
         if (!item.available) return null;
@@ -794,9 +795,7 @@ function CoordinatorGalleryPanel({ detail }: { detail: AdminCoordinatorRequestDe
       cancelled = true;
       createdUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-    // loadKey encodes the photo availability + identity for this request.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadKey]);
+  }, [items]);
 
   const readyIndexes = docs
     .map((doc, index) => (doc?.url ? index : -1))
@@ -899,7 +898,11 @@ function CoordinatorGalleryPanel({ detail }: { detail: AdminCoordinatorRequestDe
   );
 }
 
-function CoordinatorIdentityPanel({
+function CoordinatorIdentityPanel(props: { userId: string; available: boolean }) {
+  return <CoordinatorIdentityPanelContent key={props.userId + ":" + props.available} {...props} />;
+}
+
+function CoordinatorIdentityPanelContent({
   userId,
   available,
 }: {
@@ -908,17 +911,13 @@ function CoordinatorIdentityPanel({
 }) {
   const t = useT();
   const [doc, setDoc] = useState<AdminSecureDocument | null>(null);
-  const [phase, setPhase] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [phase, setPhase] = useState<"idle" | "loading" | "ready" | "error">(available ? "loading" : "idle");
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (!available) {
-      setPhase("idle");
-      return;
-    }
+    if (!available) return;
     let cancelled = false;
     let activeUrl: string | null = null;
-    setPhase("loading");
     void fetchAdminCoordinatorIdentityUrl(userId)
       .then((next) => {
         if (cancelled) {

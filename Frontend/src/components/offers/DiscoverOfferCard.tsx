@@ -84,7 +84,7 @@ export default function DiscoverOfferCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="line-clamp-2 text-sm font-extrabold text-[var(--wesal-maroon-dark)]">
+        <h3 className="line-clamp-2 whitespace-pre-wrap text-sm font-extrabold text-[var(--wesal-maroon-dark)]">
           {title}
         </h3>
         <p className="text-xs text-[var(--wesal-muted)]">{subtitle}</p>

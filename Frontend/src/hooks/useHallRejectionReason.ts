@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { isCurrentAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount,
+  subscribeAuthenticatedAccount, type AuthenticatedAccount } from "@/lib/authenticated-account";
 import { latestHallRejectionReason } from "@/lib/hall-rejection-reason";
 import { pickOwnerAdminConversation } from "@/lib/owner-admin-conversation";
 import { fetchConversationThread, fetchInboxConversations } from "@/services/conversations";
@@ -15,14 +17,17 @@ export type HallRejectionReasonState = {
 const IDLE: HallRejectionReasonState = { status: "idle", reason: "" };
 
 // Several rejected halls on one page share a single inbox request.
-let inboxRequest: { promise: Promise<ConversationSummary[]>; at: number } | null = null;
+let inboxRequest: { account: AuthenticatedAccount; promise: Promise<ConversationSummary[]>; at: number } | null = null;
 const INBOX_SHARE_MS = 5000;
 
-function sharedInbox(): Promise<ConversationSummary[]> {
+function sharedInbox(account: AuthenticatedAccount): Promise<ConversationSummary[]> {
   const now = Date.now();
-  if (inboxRequest && now - inboxRequest.at < INBOX_SHARE_MS) return inboxRequest.promise;
-  const promise = fetchInboxConversations();
-  inboxRequest = { promise, at: now };
+  if (inboxRequest?.account === account && now - inboxRequest.at < INBOX_SHARE_MS) return inboxRequest.promise;
+  const promise = fetchInboxConversations().then((items) => {
+    if (!isCurrentAuthenticatedAccount(account)) throw new Error("Obsolete inbox session");
+    return items;
+  });
+  inboxRequest = { account, promise, at: now };
   promise.catch(() => {
     if (inboxRequest?.promise === promise) inboxRequest = null;
   });
@@ -37,26 +42,32 @@ export function useHallRejectionReason(
   hallId: string | null | undefined,
   enabled: boolean,
 ): HallRejectionReasonState {
-  const [state, setState] = useState<{ key: string; value: HallRejectionReasonState } | null>(
+  const account = useSyncExternalStore(
+    subscribeAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount,
+  );
+  const [state, setState] = useState<{ account: AuthenticatedAccount; key: string; value: HallRejectionReasonState } | null>(
     null,
   );
-  const key = enabled && hallId ? hallId : "";
+  const key = account && enabled && hallId ? hallId : "";
 
   useEffect(() => {
-    if (!key) return;
+    if (!key || !account) return;
     let cancelled = false;
+    const current = () => !cancelled && isCurrentAuthenticatedAccount(account);
     void (async () => {
       try {
-        const items = await sharedInbox();
+        const items = await sharedInbox(account);
+        if (!current()) return;
         const conversation = pickOwnerAdminConversation(items, key);
         if (!conversation) {
-          if (!cancelled) setState({ key, value: { status: "missing", reason: "" } });
+          if (current()) setState({ account, key, value: { status: "missing", reason: "" } });
           return;
         }
         const thread = await fetchConversationThread(conversation.conversationId);
         const reason = latestHallRejectionReason(thread.messages);
-        if (cancelled) return;
+        if (!current()) return;
         setState({
+          account,
           key,
           value:
             reason === null
@@ -64,15 +75,15 @@ export function useHallRejectionReason(
               : { status: "found", reason },
         });
       } catch {
-        if (!cancelled) setState({ key, value: { status: "error", reason: "" } });
+        if (current()) setState({ account, key, value: { status: "error", reason: "" } });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [key]);
+  }, [account, key]);
 
   if (!key) return IDLE;
-  if (!state || state.key !== key) return { status: "loading", reason: "" };
+  if (!state || state.account !== account || state.key !== key) return { status: "loading", reason: "" };
   return state.value;
 }

@@ -22,8 +22,9 @@ import { useT } from "@/i18n";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import UnreadBadge from "@/components/ui/UnreadBadge";
 import { adminMabroukService } from "@/services/admin-mabrouk";
-import { fetchUnreadHelpConversationCount } from "@/services/help-tickets";
-import { HELP_CENTER_CHANGE_EVENT } from "@/types/help-center";
+import { countUnreadHelpConversations } from "@/services/help-tickets";
+import { useAdminHelpTickets } from "@/hooks/useAdminHelpTickets";
+
 
 type AdminSidebarProps = {
   id?: string;
@@ -42,7 +43,8 @@ export default function AdminSidebar({
   const { logout, isLoggingOut } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [mabroukGapCount, setMabroukGapCount] = useState(0);
-  const [helpUnreadCount, setHelpUnreadCount] = useState(0);
+  const help = useAdminHelpTickets();
+  const helpUnreadCount = help.result && !help.error ? countUnreadHelpConversations(help.result) : null;
   const { count: unreadCount, ready: unreadReady } = useUnreadCount();
   const messagesUnread = unreadReady ? unreadCount : 0;
   const homeActive =
@@ -87,27 +89,6 @@ export default function AdminSidebar({
     };
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-    const refreshHelpCount = async () => {
-      try {
-        const count = await fetchUnreadHelpConversationCount();
-        if (mounted) setHelpUnreadCount(count);
-      } catch {
-        if (mounted) setHelpUnreadCount(0);
-      }
-    };
-    void refreshHelpCount();
-    const timer = window.setInterval(() => void refreshHelpCount(), 60_000);
-    // Opening a conversation marks it read locally, so drop the badge immediately.
-    const onHelpChange = () => void refreshHelpCount();
-    window.addEventListener(HELP_CENTER_CHANGE_EVENT, onHelpChange);
-    return () => {
-      mounted = false;
-      window.clearInterval(timer);
-      window.removeEventListener(HELP_CENTER_CHANGE_EVENT, onHelpChange);
-    };
-  }, []);
 
   return (
     <>
@@ -308,11 +289,11 @@ export default function AdminSidebar({
                 </span>
                 <span className="inline-flex min-w-0 items-center gap-2">
                   <span className="min-w-0 truncate">{t("admin.nav.helpQuestions")}</span>
-                  <UnreadBadge
+                  {helpUnreadCount === null ? <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--wesal-pink)] px-1.5 text-xs" aria-label={t("admin.help.unreadUnavailable")} title={t("admin.help.unreadUnavailable")} data-testid="admin-help-unread-unknown">?</span> : <UnreadBadge
                     count={helpUnreadCount}
                     label={t("admin.nav.helpUnreadCount", { count: helpUnreadCount })}
                     data-testid="admin-nav-help-questions-count"
-                  />
+                  />}
                 </span>
               </Link>
             </li>

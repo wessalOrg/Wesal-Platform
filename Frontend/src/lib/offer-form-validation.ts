@@ -18,6 +18,21 @@ export function offerImageMetadataError(files: File[], existingCount = 0): strin
   return issue ? `offers.validation.image.${issue}` : null;
 }
 
+/** Field-specific feedback using the existing A05 date parsing and range rules. */
+export function getOfferDateFieldErrors(input: Pick<OfferValidationInput, "startsAt" | "endsAt">, now = new Date()): Pick<OfferFieldErrors, "startsAt" | "endsAt"> {
+  const errors: Pick<OfferFieldErrors, "startsAt" | "endsAt"> = {};
+  if (!input.startsAt.trim()) errors.startsAt = "offers.validation.startRequired";
+  else if (!datetimeLocalToIso(input.startsAt)) errors.startsAt = "offers.validation.startInvalid";
+  if (!input.endsAt.trim()) errors.endsAt = "offers.validation.endRequired";
+  else if (!datetimeLocalToIso(input.endsAt)) errors.endsAt = "offers.validation.endInvalid";
+  if (!errors.startsAt && !errors.endsAt) {
+    const dates = validateOfferDateRange(input.startsAt, input.endsAt, now);
+    if (dates.issue === "endBeforeStart") errors.endsAt = "offers.validation.endAfterStart";
+    if (dates.issue === "endNotFuture") errors.endsAt = "offers.validation.endNotFuture";
+  }
+  return errors;
+}
+
 /** Shared required offer fields and professional image validation. */
 export function getOfferFieldErrors(input: OfferValidationInput, now = new Date()): OfferFieldErrors {
   const errors: OfferFieldErrors = {};
@@ -28,15 +43,7 @@ export function getOfferFieldErrors(input: OfferValidationInput, now = new Date(
   if (old.value != null && offer.value != null && validateOfferPricePair(old.value, offer.value)) {
     errors.offerPrice = "offers.validation.offerBelowOld";
   }
-  if (!input.startsAt.trim()) errors.startsAt = "offers.validation.startRequired";
-  else if (!datetimeLocalToIso(input.startsAt)) errors.startsAt = "offers.validation.datesInvalid";
-  if (!input.endsAt.trim()) errors.endsAt = "offers.validation.endRequired";
-  else if (!datetimeLocalToIso(input.endsAt)) errors.endsAt = "offers.validation.datesInvalid";
-  if (!errors.startsAt && !errors.endsAt) {
-    const dates = validateOfferDateRange(input.startsAt, input.endsAt, now);
-    if (dates.issue === "endBeforeStart") errors.endsAt = "offers.validation.endAfterStart";
-    if (dates.issue === "endNotFuture") errors.endsAt = "offers.validation.endNotFuture";
-  }
+  Object.assign(errors, getOfferDateFieldErrors(input, now));
   if (input.content !== undefined) {
     const images = input.images ?? [];
     if (!input.content.trim() && images.length + (input.existingImageCount ?? 0) === 0) {

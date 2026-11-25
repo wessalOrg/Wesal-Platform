@@ -56,6 +56,7 @@ export default function SeekerMessagesPage() {
     inboxStatus,
     conversations,
     inboxError,
+    pagination,
     retryInbox,
     refreshInbox,
     ensureConversation,
@@ -132,13 +133,13 @@ export default function SeekerMessagesPage() {
   const inquiryContext = findThreadContextCard(thread?.messages);
   const threadHasNoHall = Boolean(thread && !(thread.hallId ?? "").trim());
   const peerIsAdmin = selected
-    ? isOwnerAdminConversation(selected, conversations) || isAdminAccountConversation(selected)
+    ? isOwnerAdminConversation(selected) || isAdminAccountConversation(selected)
     : ownerContactAdmin ||
       professionalContactAdmin ||
       (isProfessional && Boolean(focusConversationId || selectedId) && threadHasNoHall);
   const threadTitle = selected
     ? isHallOwner
-      ? ownerConversationTitle(selected, lang, conversations)
+      ? ownerConversationTitle(selected, lang)
       : adminAccountThread || peerIsAdmin
         ? t("messages.adminChat.title")
         : conversationPreviewTitle(selected, lang)
@@ -290,6 +291,7 @@ export default function SeekerMessagesPage() {
               />
             ) : isProfessional ? (
               <ProfessionalInboxList
+                pagination={pagination}
                 status={inboxStatus}
                 conversations={conversations}
                 selectedId={selectedId}
@@ -300,6 +302,7 @@ export default function SeekerMessagesPage() {
               />
             ) : (
               <ConversationList
+                pagination={pagination}
                 status={inboxStatus}
                 conversations={conversations}
                 selectedId={selectedId}

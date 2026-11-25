@@ -47,8 +47,8 @@ export type HallOwnerHallDetails = {
   hourlySlotStart: string | null;
   hourlySlotEnd: string | null;
   photos: ExistingHallPhoto[];
-  adminLocked: boolean;
-  systemLocked: boolean;
+  adminLocked: boolean | null;
+  systemLocked: boolean | null;
   /** Public average rating when available (1–5). */
   rating?: number | null;
   reviewCount?: number | null;

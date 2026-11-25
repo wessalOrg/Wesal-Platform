@@ -412,21 +412,45 @@ function readUnreadCountPayload(data: unknown): number {
   return typeof count === "number" ? Math.max(0, count) : 0;
 }
 
-/** Customer chats for coordinators / photographers. */
+export type ProfessionalConversationPage = {
+  items: ConversationSummary[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
+/** Customer pages only; the professional's AdminAccount thread has its own endpoint. */
+export async function fetchProfessionalConversationPage(page = 1, signal?: AbortSignal): Promise<ProfessionalConversationPage> {
+  const pageSize = 100;
+  if (conversationsUseMock()) {
+    const all = (await mockFetchInbox()).filter(item => !isAdminAccountConversation(item));
+    const totalPages = Math.ceil(all.length / pageSize);
+    return { items: all.slice((page - 1) * pageSize, page * pageSize), pageNumber: page, pageSize,
+      totalCount: all.length, totalPages, hasPreviousPage: page > 1, hasNextPage: page < totalPages };
+  }
+  const { data } = await api.get<unknown>("/professional/conversations", { params: { page, pageSize }, signal, timeout: 8000 });
+  const dto = data && typeof data === "object" ? data as Record<string, unknown> : {};
+  if (!Array.isArray(dto.items) || !Number.isInteger(dto.pageNumber) || Number(dto.pageNumber) < 1 ||
+      !Number.isInteger(dto.pageSize) || Number(dto.pageSize) < 1 ||
+      !Number.isInteger(dto.totalCount) || Number(dto.totalCount) < 0 ||
+      !Number.isInteger(dto.totalPages) || Number(dto.totalPages) < 0 ||
+      typeof dto.hasNextPage !== "boolean" || typeof dto.hasPreviousPage !== "boolean") {
+    throw new ApiError(t("errors.inbox.load"), 502);
+  }
+  return {
+    items: dto.items.map(mapInboxItem).filter((item): item is ConversationSummary => Boolean(item))
+      .map(item => item.kind ? item : { ...item, kind: isAdminAccountConversation(item) ? "AdminAccount" : "CustomerProvider" }),
+    pageNumber: Number(dto.pageNumber), pageSize: Number(dto.pageSize), totalCount: Number(dto.totalCount),
+    totalPages: Number(dto.totalPages), hasPreviousPage: dto.hasPreviousPage, hasNextPage: dto.hasNextPage,
+  };
+}
+
+/** Compatibility for single-list callers (e.g. locating the separate admin thread). */
 export async function fetchProfessionalConversations(): Promise<ConversationSummary[]> {
-  if (conversationsUseMock()) return mockFetchInbox();
-  const { data } = await api.get<unknown>("/professional/conversations", {
-    params: { page: 1, pageSize: 100 },
-    timeout: 8000,
-  });
-  return unwrapConversationList(data)
-    .map(mapInboxItem)
-    .filter((item): item is ConversationSummary => Boolean(item))
-    .map((item) =>
-      item.kind
-        ? item
-        : { ...item, kind: isAdminAccountConversation(item) ? "AdminAccount" : "CustomerProvider" },
-    );
+  return (await fetchProfessionalConversationPage()).items;
 }
 
 /**
@@ -525,6 +549,7 @@ export async function sendConversationMessage(
   conversationId: string,
   content: string,
   clientRequestId: string,
+  signal?: AbortSignal,
 ): Promise<ThreadMessage> {
   const trimmed = content.trim();
   if (!trimmed) {
@@ -540,7 +565,7 @@ export async function sendConversationMessage(
   const { data } = await api.post<unknown>(
     `/conversations/${conversationId}/messages`,
     { content: trimmed, clientRequestId },
-    { timeout: 8000 },
+    { timeout: 8000, signal },
   );
   const mapped = mapSendMessageDto(data, trimmed, clientRequestId);
   if (!mapped) {
@@ -554,6 +579,7 @@ export async function sendConversationAttachment(
   file: File,
   content: string,
   clientRequestId: string,
+  signal?: AbortSignal,
 ): Promise<ThreadMessage> {
   const caption = content.trim();
   if (caption.length > 1000) {
@@ -573,6 +599,7 @@ export async function sendConversationAttachment(
     formData,
     {
       timeout: 60000,
+      signal,
       transformRequest: [
         (body, headers) => {
           if (typeof FormData !== "undefined" && body instanceof FormData) {

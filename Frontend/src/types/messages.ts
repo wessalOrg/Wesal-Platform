@@ -60,6 +60,10 @@ export type ThreadMessage = {
   attachmentUrl?: string | null;
   attachmentFileName?: string | null;
   localPreviewUrl?: string | null;
+  /** Client-only source for a component-owned preview; never sent to the API. */
+  localPreviewFile?: File;
+  /** Client-only retry feedback; never sent to the messaging API. */
+  retryError?: "attachment-unavailable" | "attachment-unsupported" | "attachment-rejected";
 } & Partial<MessageContextCard>;
 
 export type MessageThread = {

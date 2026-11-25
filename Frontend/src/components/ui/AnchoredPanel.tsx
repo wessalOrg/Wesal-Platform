@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  useEffect,
-  useState,
   type CSSProperties,
   type ElementType,
   type HTMLAttributes,
@@ -10,6 +8,7 @@ import {
   type Ref,
   type RefObject,
 } from "react";
+import { useHydrated } from "@/hooks/useHydrated";
 import { createPortal } from "react-dom";
 import {
   useAnchoredPanelStyle,
@@ -43,12 +42,8 @@ export default function AnchoredPanel({
   children,
   ...rest
 }: AnchoredPanelProps) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHydrated();
   const anchoredStyle = useAnchoredPanelStyle(open, anchorRef, options);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   if (!open || !mounted) return null;
 

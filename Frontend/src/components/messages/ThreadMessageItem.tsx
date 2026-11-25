@@ -7,6 +7,7 @@ import ChatImageLightbox from "@/components/messages/ChatImageLightbox";
 import SubscriptionExpiryWarningCard from "@/components/messages/SubscriptionExpiryWarningCard";
 import { useBookingRejectionMessage } from "@/hooks/useBookingRejectionMessage";
 import { useMessageAttachment } from "@/hooks/useMessageAttachment";
+import { useChatAttachmentPreview } from "@/hooks/useChatAttachmentPreview";
 import { useSubscriptionExpiryWarningMessage } from "@/hooks/useSubscriptionExpiryWarningMessage";
 import { useT } from "@/i18n";
 import { isChatImageUrl, paymentReceiptNoticeCaption, safeMessageText } from "@/lib/chat-image-message";
@@ -26,6 +27,12 @@ type ThreadMessageItemProps = {
   tone?: "default" | "owner";
   onRetrySend: (messageId: string) => void;
 };
+
+const attachmentErrorKeys = {
+  "attachment-unavailable": "messages.attachmentRetryUnavailable",
+  "attachment-unsupported": "messages.attachmentUnsupported",
+  "attachment-rejected": "messages.attachmentRejected",
+} as const;
 
 export default function ThreadMessageItem({
   message,
@@ -140,7 +147,9 @@ function ThreadBubble({
               className="!h-14 !w-16 bg-transparent"
             />
             <div className={`min-w-0 ${own ? "text-end" : "text-start"}`}>
-              <p className="text-[0.65rem] text-[#a86267]">{t("messages.sendFailed")}</p>
+              <p className="text-[0.65rem] text-[#a86267]" role={message.retryError ? "alert" : undefined}>
+                {t(message.retryError ? attachmentErrorKeys[message.retryError] : "messages.sendFailed")}
+              </p>
               <button
                 type="button"
                 className="mt-0.5 inline-flex min-h-11 items-center text-[0.65rem] font-semibold text-[var(--wesal-maroon)] underline"
@@ -179,6 +188,7 @@ function ThreadBubbleBody({
         messageId={message.id}
         rawUrl={message.attachmentUrl}
         localPreviewUrl={message.localPreviewUrl}
+        localPreviewFile={message.localPreviewFile}
         caption={caption}
       />
     );
@@ -202,12 +212,14 @@ function ChatAttachmentBubble({
   messageId,
   rawUrl,
   localPreviewUrl,
+  localPreviewFile,
   caption,
 }: {
   conversationId: string | null;
   messageId: string;
   rawUrl?: string | null;
   localPreviewUrl?: string | null;
+  localPreviewFile?: File;
   caption: string;
 }) {
   const t = useT();
@@ -217,7 +229,10 @@ function ChatAttachmentBubble({
     Boolean(conversationId) && !messageId.startsWith("local:"),
     rawUrl,
   );
-  const src = localPreviewUrl || remote.url;
+  // Keep a failed/pending preview through retries, then hand over to the downloaded
+  // attachment. The preview owner releases its URL only after that DOM commit.
+  const preview = useChatAttachmentPreview(remote.url ? null : localPreviewFile);
+  const src = localPreviewUrl || remote.url || preview;
 
   return (
     <div className="space-y-2">

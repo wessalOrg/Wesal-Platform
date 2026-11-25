@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { fetchAdminModerationImageBlob } from "@/services/admin-moderation";
 
@@ -15,16 +16,19 @@ export default function AdminModerationThumb({
   alt = "",
   className = "h-14 w-20 rounded-xl object-cover",
 }: AdminModerationThumbProps) {
-  const [src, setSrc] = useState<string | null>(null);
+  const path = imagePath?.trim() ?? "";
+  const [result, setResult] = useState<{ path: string; src: string | null } | null>(null);
+  const [seenPath, setSeenPath] = useState(path);
+  if (seenPath !== path) {
+    setSeenPath(path);
+    setResult(null);
+  }
+  const src = result?.path === path ? result.src : null;
 
   useEffect(() => {
     let cancelled = false;
     let objectUrl: string | null = null;
-    const path = imagePath?.trim();
-    if (!path) {
-      setSrc(null);
-      return;
-    }
+    if (!path) return;
 
     void fetchAdminModerationImageBlob(path)
       .then((url) => {
@@ -33,17 +37,17 @@ export default function AdminModerationThumb({
           return;
         }
         objectUrl = url;
-        setSrc(url);
+        setResult({ path, src: url });
       })
       .catch(() => {
-        if (!cancelled) setSrc(null);
+        if (!cancelled) setResult({ path, src: null });
       });
 
     return () => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [imagePath]);
+  }, [path]);
 
   if (!src) {
     return (
@@ -56,5 +60,5 @@ export default function AdminModerationThumb({
     );
   }
 
-  return <img src={src} alt={alt} className={className} />;
+  return <Image src={src} alt={alt} width={80} height={56} unoptimized loading="eager" className={className} />;
 }

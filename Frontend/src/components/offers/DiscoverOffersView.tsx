@@ -31,7 +31,7 @@ export default function DiscoverOffersView() {
   const [loadedItems, setItems] = useState<DiscoverItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [serverTotalCount, setTotalCount] = useState(0);
+  const [serverTotalCount, setTotalCount] = useState<number | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorKey, setErrorKey] = useState<string | null>(null);
 
@@ -51,7 +51,7 @@ export default function DiscoverOffersView() {
       }
       setItems(result.items);
       setTotalPages(Math.max(1, result.totalPages));
-      setTotalCount(result.totalCount);
+      setTotalCount(result.hasTotalCount === false ? null : result.totalCount);
       setStatus("ready");
     } catch (err) {
       if (!current()) return;
@@ -67,11 +67,12 @@ export default function DiscoverOffersView() {
     return () => window.clearTimeout(timer);
   }, [filter, load, page]);
 
-  useEffect(() => {
-    const fromUrl = normalizeFilter(searchParams.get("filter"));
-    setFilter(fromUrl);
+  const [seenFilter, setSeenFilter] = useState(initialFilter);
+  if (seenFilter !== initialFilter) {
+    setSeenFilter(initialFilter);
+    setFilter(initialFilter);
     setPage(1);
-  }, [searchParams]);
+  }
 
   useOfferLifecycle(loadedItems.filter((item) => item.contentType === "ProfessionalOffer" || item.contentType === "HallOffer"), {
     enabled: filter === "All" || filter === "Offers",
@@ -79,7 +80,7 @@ export default function DiscoverOffersView() {
     onRevalidate: () => load(filter, page, true),
   });
   const items = filterVisibleDiscoverItems(loadedItems);
-  const totalCount = Math.max(0, serverTotalCount - (loadedItems.length - items.length));
+  const totalCount = loadedItems.length !== items.length ? "\u2026" : (serverTotalCount ?? "\u2026");
 
   const offerItems =
     filter === "Offers"

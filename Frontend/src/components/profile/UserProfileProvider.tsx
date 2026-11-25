@@ -5,14 +5,26 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { patchStoredUser } from "@/lib/auth-storage";
+import { normalizePublishingLock } from "@/lib/publishing-lock";
+import { isProfessionalRole } from "@/lib/account-role";
+import { MAX_TIMEOUT_MS } from "@/lib/offer-lifecycle";
+import { createRequestScope } from "@/lib/request-scope";
+import {
+  isCurrentAuthenticatedAccount,
+  readAuthenticatedAccount,
+  serverAuthenticatedAccount,
+  subscribeAuthenticatedAccount,
+} from "@/lib/authenticated-account";
 import { ProfileError } from "@/lib/profile-errors";
 import { fetchProfile, updateProfile } from "@/services/profile";
 import type { ProfileFieldErrors, UpdateProfileInput, UserProfile } from "@/types/profile";
@@ -56,9 +68,32 @@ function publishIdentity(
 }
 
 export function UserProfileProvider({ children }: { children: ReactNode }) {
-  const { applyIdentity } = useAuth();
+  const { applyIdentity, session } = useAuth();
   const { ready, authenticated, canOpenRegularProfile, displayName: seedName } =
     useAccountAccess();
+  const account = useSyncExternalStore(
+    subscribeAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount,
+  );
+  const requestScope = useMemo(() => ({
+    account, ready, authenticated, canOpenRegularProfile, ...createRequestScope(),
+  }), [account, ready, authenticated, canOpenRegularProfile]);
+  const generationRef = useRef(0);
+  const profileRef = useRef<UserProfile | null>(null);
+  const savingRef = useRef(false);
+  const inFlightRef = useRef<Promise<void> | null>(null);
+  const restrictionRefreshRef = useRef<Promise<void> | null>(null);
+  useLayoutEffect(() => {
+    generationRef.current += 1;
+    inFlightRef.current = null;
+    restrictionRefreshRef.current = null;
+    savingRef.current = false;
+    requestScope.activate();
+    return () => requestScope.dispose();
+  }, [requestScope]);
+  const isCurrent = useCallback(() =>
+    ready && authenticated && canOpenRegularProfile && requestScope.isActive() &&
+    isCurrentAuthenticatedAccount(account),
+  [account, ready, authenticated, canOpenRegularProfile, requestScope]);
 
   const [status, setStatus] = useState<UserProfileStoreStatus>("idle");
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -66,40 +101,30 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<ProfileFieldErrors>({});
-  const generationRef = useRef(0);
-  const profileRef = useRef<UserProfile | null>(null);
   const seedRef = useRef(seedName);
-  const inFlightRef = useRef<Promise<void> | null>(null);
 
-  const scopeKey = `${ready}|${authenticated}|${canOpenRegularProfile}`;
-  const [prevScopeKey, setPrevScopeKey] = useState(scopeKey);
-  if (prevScopeKey !== scopeKey) {
-    setPrevScopeKey(scopeKey);
-    if (!authenticated) {
-      setProfile(null);
-      setSaving(false);
-      setLoadError(null);
-      setFormError(null);
-      setFieldErrors({});
-      setStatus("idle");
-    } else if (!canOpenRegularProfile) {
-      setProfile(null);
-      setLoadError(null);
-      setFormError(null);
-      setFieldErrors({});
-      setStatus("forbidden");
-    }
+  const [previousScope, setPreviousScope] = useState(requestScope);
+  // Reset before children render; account changes must never expose the old profile.
+  if (previousScope !== requestScope) {
+    setPreviousScope(requestScope);
+    setProfile(null);
+    setSaving(false);
+    setLoadError(null);
+    setFormError(null);
+    setFieldErrors({});
+    setStatus(!authenticated || !account ? "idle" : !canOpenRegularProfile ? "forbidden" : "loading");
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     profileRef.current = profile;
     seedRef.current = seedName;
   });
 
   const clearFormFeedback = useCallback(() => {
+    if (!isCurrent()) return;
     setFormError(null);
     setFieldErrors({});
-  }, []);
+  }, [isCurrent]);
 
   const applyStampOnly = useCallback((stamp: string) => {
     if (!stamp) return;
@@ -110,9 +135,11 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const refetch = useCallback(async () => {
-    if (!canOpenRegularProfile) return;
-    if (inFlightRef.current) return inFlightRef.current;
+  const refetch = useCallback(async (replacePending = false) => {
+    const captured = requestScope.capture();
+    const active = () => captured() && isCurrent();
+    if (!canOpenRegularProfile || !active()) return;
+    if (inFlightRef.current && !replacePending) return inFlightRef.current;
 
     const generation = ++generationRef.current;
     if (!profileRef.current) setStatus("loading");
@@ -121,12 +148,12 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     const run = (async () => {
       try {
         const next = await fetchProfile(seedRef.current);
-        if (generation !== generationRef.current) return;
+        if (!active() || generation !== generationRef.current) return;
         setProfile(next);
         publishIdentity(next, applyIdentity);
         setStatus("ready");
       } catch (err) {
-        if (generation !== generationRef.current) return;
+        if (!active() || generation !== generationRef.current) return;
         setLoadError(err instanceof ProfileError ? err.message : "errors.profile.load");
         if (!profileRef.current) setStatus("error");
       }
@@ -138,7 +165,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     } finally {
       if (inFlightRef.current === run) inFlightRef.current = null;
     }
-  }, [applyIdentity, canOpenRegularProfile]);
+  }, [applyIdentity, canOpenRegularProfile, isCurrent, requestScope]);
 
   useEffect(() => {
     if (!ready) return;
@@ -146,6 +173,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     if (!authenticated) {
       generationRef.current += 1;
       inFlightRef.current = null;
+      restrictionRefreshRef.current = null;
       applyIdentity({ userName: null });
       return;
     }
@@ -153,15 +181,70 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     if (!canOpenRegularProfile) {
       generationRef.current += 1;
       inFlightRef.current = null;
+      restrictionRefreshRef.current = null;
       return;
     }
 
-    void refetch();
-  }, [ready, authenticated, canOpenRegularProfile, applyIdentity, refetch]);
+    const timer = window.setTimeout(() => { void refetch(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [ready, authenticated, canOpenRegularProfile, applyIdentity, refetch, requestScope]);
+
+  // A wake/expiry refresh supersedes an older GET, while focus + visibility share one request.
+  const refreshRestrictions = useCallback(() => {
+    if (restrictionRefreshRef.current) return restrictionRefreshRef.current;
+    const pending = refetch(true);
+    restrictionRefreshRef.current = pending;
+    void pending.finally(() => {
+      if (restrictionRefreshRef.current === pending) restrictionRefreshRef.current = null;
+    });
+    return pending;
+  }, [refetch]);
+
+  useEffect(() => {
+    if (!isCurrent() || !isProfessionalRole(session.role)) return;
+    const active = requestScope.capture();
+    const current = () => active() && isCurrent();
+    let timer: number | undefined;
+    let disposed = false;
+    const deadline = profile?.isLocked && profile.lockedUntil ? Date.parse(profile.lockedUntil) : NaN;
+    const normalize = () => {
+      if (current()) setProfile((profile) => profile ? normalizePublishingLock(profile) : profile);
+    };
+    const schedule = () => {
+      window.clearTimeout(timer);
+      if (!Number.isFinite(deadline) || disposed) return;
+      timer = window.setTimeout(() => {
+        if (disposed || !current()) return;
+        if (Date.now() < deadline) { schedule(); return; }
+        normalize();
+        void refreshRestrictions();
+      }, Math.min(MAX_TIMEOUT_MS, Math.max(0, deadline - Date.now())));
+    };
+    const resume = () => {
+      if (document.visibilityState === "hidden" || disposed || !current()) return;
+      normalize();
+      void refreshRestrictions();
+      schedule();
+    };
+    schedule();
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("focus", resume);
+    window.addEventListener("pageshow", resume);
+    return () => {
+      disposed = true;
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("focus", resume);
+      window.removeEventListener("pageshow", resume);
+    };
+  }, [isCurrent, requestScope, session.role, profile?.isLocked, profile?.lockedUntil, refreshRestrictions]);
 
   const save = useCallback(
     async (input: Omit<UpdateProfileInput, "concurrencyStamp">): Promise<boolean> => {
-      if (!profile || saving || !canOpenRegularProfile) return false;
+      if (!profile || savingRef.current || !isCurrent()) return false;
+      const captured = requestScope.capture();
+      const active = () => captured() && isCurrent();
+      savingRef.current = true;
 
       setSaving(true);
       setFormError(null);
@@ -172,20 +255,24 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
           { ...input, concurrencyStamp: profile.concurrencyStamp },
           seedName,
         );
+        if (!active()) return false;
         generationRef.current += 1;
         setProfile(next);
         publishIdentity(next, applyIdentity);
         setStatus("ready");
         return true;
       } catch (err) {
+        if (!active()) return false;
         const failure =
           err instanceof ProfileError ? err : new ProfileError("errors.profile.save");
 
         if (failure.code === "stale" || failure.code === "conflict") {
           try {
             const latest = await fetchProfile(seedRef.current);
+            if (!active()) return false;
             applyStampOnly(failure.currentStamp || latest.concurrencyStamp);
           } catch {
+            if (!active()) return false;
             applyStampOnly(failure.currentStamp ?? "");
           }
         }
@@ -196,10 +283,13 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
         setFormError(duplicateFieldError ? null : failure.message || "errors.profile.save");
         return false;
       } finally {
-        setSaving(false);
+        if (active()) {
+          savingRef.current = false;
+          setSaving(false);
+        }
       }
     },
-    [applyIdentity, applyStampOnly, canOpenRegularProfile, profile, saving, seedName],
+    [applyIdentity, applyStampOnly, isCurrent, profile, requestScope, seedName],
   );
 
   const value = useMemo<UserProfileContextValue>(

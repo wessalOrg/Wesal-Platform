@@ -1,6 +1,10 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useT } from "@/i18n";
+import { useAuthenticatedRequestScope } from "@/hooks/useAuthenticatedRequestScope";
+import { useHallImageSelection } from "@/hooks/useHallImageSelection";
+import { formatHallImageIssues, HallImageValidationError, type HallImageIssue } from "@/lib/hall-image-validation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   hallRegistrationSubmitErrorMessage,
@@ -26,6 +30,9 @@ type UseHallRegistrationFormOptions = {
 
 export function useHallRegistrationForm(options: UseHallRegistrationFormOptions = {}) {
   const { logout } = useAuth();
+  const t = useT();
+  const { scope, isCurrent } = useAuthenticatedRequestScope();
+  const { select, cancelCover, isPending } = useHallImageSelection(scope, isCurrent);
   const [values, setValues] = useState<HallRegistrationFormValues>(
     EMPTY_HALL_REGISTRATION_VALUES,
   );
@@ -33,6 +40,12 @@ export function useHallRegistrationForm(options: UseHallRegistrationFormOptions 
   const [formError, setFormError] = useState<string | null>(null);
   const [status, setStatus] = useState<HallRegistrationSubmitStatus>("idle");
   const submittingRef = useRef(false);
+  const [seenScope, setSeenScope] = useState(scope);
+  if (seenScope !== scope) {
+    setSeenScope(scope); setValues({ ...EMPTY_HALL_REGISTRATION_VALUES, photos: [] });
+    setFieldErrors({}); setFormError(null); setStatus("idle");
+  }
+  useLayoutEffect(() => { submittingRef.current = false; }, [scope]);
 
   const clearFeedback = useCallback(() => {
     setFieldErrors({});
@@ -42,39 +55,33 @@ export function useHallRegistrationForm(options: UseHallRegistrationFormOptions 
     }
   }, [status]);
 
-  const patchValues = useCallback(
-    (patch: Partial<HallRegistrationFormValues>) => {
-      setValues((current) => ({ ...current, ...patch }));
-      if (Object.keys(fieldErrors).length || formError || status === "success") {
-        setFieldErrors({});
-        setFormError(null);
-        if (status === "success" || status === "error") setStatus("idle");
-      }
-    },
-    [fieldErrors, formError, status],
-  );
+  const imageFeedback = useCallback((field: "photos" | "mainPhoto", rejected: HallImageIssue[]) => {
+    setFieldErrors(current => { const next = { ...current }; delete next[field];
+      if (rejected.length) next[field] = formatHallImageIssues(rejected, t); return next; });
+    setFormError(null);
+    setStatus(current => current === "error" || current === "success" ? "idle" : current);
+  }, [t]);
 
-  const addPhotos = useCallback(
-    (files: FileList | File[]) => {
-      const next = Array.from(files).filter((file) => file.type.startsWith("image/"));
-      if (next.length === 0) return;
-      setValues((current) => ({
-        ...current,
-        photos: [...current.photos, ...next],
-      }));
-      if (fieldErrors.photos || formError || status === "success") {
-        setFieldErrors((current) => {
-          if (!current.photos) return current;
-          const next = { ...current };
-          delete next.photos;
-          return next;
-        });
-        setFormError(null);
-        if (status === "success" || status === "error") setStatus("idle");
-      }
-    },
-    [fieldErrors.photos, formError, status],
-  );
+  const patchValues = useCallback((patch: Partial<HallRegistrationFormValues>) => {
+    const { mainPhoto, ...rest } = patch;
+    if (mainPhoto !== undefined) {
+      if (submittingRef.current) return;
+      if (mainPhoto === null) { cancelCover(); setValues(current => ({ ...current, mainPhoto: null })); imageFeedback("mainPhoto", []); }
+      else void select([mainPhoto], true, result => {
+        if (result.accepted[0]) setValues(current => ({ ...current, mainPhoto: result.accepted[0] }));
+        imageFeedback("mainPhoto", result.rejected);
+      });
+    }
+    if (Object.keys(rest).length) { setValues(current => ({ ...current, ...rest })); clearFeedback(); }
+  }, [cancelCover, select, imageFeedback, clearFeedback]);
+
+  const addPhotos = useCallback((files: FileList | File[]) => {
+    if (submittingRef.current) return;
+    void select(files, false, result => {
+      if (result.accepted.length) setValues(current => ({ ...current, photos: [...current.photos, ...result.accepted] }));
+      imageFeedback("photos", result.rejected);
+    });
+  }, [select, imageFeedback]);
 
   const removePhoto = useCallback(
     (index: number) => {
@@ -92,7 +99,8 @@ export function useHallRegistrationForm(options: UseHallRegistrationFormOptions 
   );
 
   const submit = useCallback(async (): Promise<boolean> => {
-    if (submittingRef.current) return false;
+    if (!isCurrent() || submittingRef.current) return false;
+    if (isPending()) { setFormError("owner.hallImages.pending"); return false; }
 
     const clientErrors = validateHallRegistrationForm(values);
     if (Object.keys(clientErrors).length > 0) {
@@ -112,6 +120,7 @@ export function useHallRegistrationForm(options: UseHallRegistrationFormOptions 
         initiationId: options.initiationId,
       });
       const created = await createHall(formData);
+      if (!isCurrent()) return false;
       emitHallCreated({
         hallId: created.hallId,
         hallName: values.hallName.trim(),
@@ -124,6 +133,11 @@ export function useHallRegistrationForm(options: UseHallRegistrationFormOptions 
       notifyHallOwnerHallsChanged();
       return true;
     } catch (err) {
+      if (!isCurrent()) return false;
+      if (err instanceof HallImageValidationError) {
+        setFieldErrors(Object.fromEntries(Object.entries(err.issues).map(([field, issues]) => [field, formatHallImageIssues(issues, t)])));
+        setFormError("owner.management.addHall.errors.validation"); setStatus("error"); return false;
+      }
       if (isUnauthorizedApiError(err)) {
         await logout({ redirect: false });
         setStatus("idle");
@@ -140,9 +154,9 @@ export function useHallRegistrationForm(options: UseHallRegistrationFormOptions 
       setStatus("error");
       return false;
     } finally {
-      submittingRef.current = false;
+      if (isCurrent()) submittingRef.current = false;
     }
-  }, [logout, options.initiationId, values]);
+  }, [logout, options.initiationId, values, isCurrent, isPending, t]);
 
   return {
     values,

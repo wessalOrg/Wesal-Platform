@@ -19,7 +19,7 @@ import SuccessToast from "@/components/ui/SuccessToast";
 import { useAdminHallDetail } from "@/hooks/useAdminHallDetail";
 import { useApproveHallSubmission } from "@/hooks/useApproveHallSubmission";
 import { useUiLang } from "@/components/layout/LanguageProvider";
-import { ADMIN_MANAGEMENT_PATH, ADMIN_REJECTED_HALLS_PATH } from "@/lib/account-profile-path";
+import { adminPendingHallsPath, parseAdminPendingPage, ADMIN_REJECTED_HALLS_PATH } from "@/lib/account-profile-path";
 import { canApproveHallStatus } from "@/lib/admin-halls-mapper";
 import { formatBookingDateLabel } from "@/lib/booking-date";
 import { fetchAdminOwnerIdentityUrl } from "@/services/admin-documents";
@@ -34,8 +34,9 @@ export default function AdminHallSubmissionDetailView({
   hallId,
 }: AdminHallSubmissionDetailViewProps) {
   const t = useT();
-  const fromRejected = useSearchParams().get("from") === "rejected";
-  const backHref = fromRejected ? ADMIN_REJECTED_HALLS_PATH : ADMIN_MANAGEMENT_PATH;
+  const searchParams = useSearchParams();
+  const fromRejected = searchParams.get("from") === "rejected";
+  const backHref = fromRejected ? ADMIN_REJECTED_HALLS_PATH : adminPendingHallsPath(parseAdminPendingPage(searchParams.get("pendingPage")));
   const lang = useUiLang();
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
   const detail = useAdminHallDetail(hallId);

@@ -41,15 +41,14 @@ export function useAnchoredPanelStyle(
     visibility: "hidden",
   });
 
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    setStyle({ position: "fixed", zIndex: 300, visibility: "hidden" });
+  }
+
   useLayoutEffect(() => {
-    if (!open) {
-      setStyle({
-        position: "fixed",
-        zIndex: 300,
-        visibility: "hidden",
-      });
-      return;
-    }
+    if (!open) return;
 
     const place = () => {
       const el = anchorRef.current;
@@ -100,6 +99,7 @@ export function useAnchoredPanelStyle(
       });
     };
 
+    // Layout measurement must finish before keyboard focus moves into the portal.
     place();
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);

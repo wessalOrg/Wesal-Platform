@@ -5,6 +5,9 @@ export type NotificationAudience = "seeker" | "owner" | "admin";
  * `platform-notification-mapper.ts`.
  */
 export type PlatformNotificationType =
+  | "event_request_hall"
+  | "event_request_decoration_gifts"
+  | "event_request_photography"
   | "welcome"
   | "booking_submitted"
   | "booking_accepted"
@@ -46,6 +49,10 @@ export type NotificationFilter = "all" | "offers" | "requests" | "system";
 
 /** Standardized metadata keys from the notification payload contract. */
 export type PlatformNotificationMetadata = {
+  event_request_id?: string;
+  seeker_id?: string;
+  event_type?: string;
+  service_type?: string;
   hall_id?: string;
   booking_id?: string;
   conversation_id?: string;
@@ -104,6 +111,9 @@ export function notificationFilterForType(
     case "account_rejected":
     case "registration_rejected":
     case "registration_needs_changes":
+    case "event_request_hall":
+    case "event_request_decoration_gifts":
+    case "event_request_photography":
       return "requests";
     default:
       return "system";

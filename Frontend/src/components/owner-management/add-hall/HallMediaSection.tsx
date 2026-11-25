@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type ChangeEvent } from "react";
+import { useMemo, useRef, type ChangeEvent } from "react";
+import { HALL_IMAGE_ACCEPT } from "@/lib/hall-image-validation";
+import { useHallImagePreviews } from "@/hooks/useHallImagePreviews";
 import HallImage from "@/components/halls/HallImage";
 import HallFormField, {
   hallFieldClassName,
@@ -38,19 +40,8 @@ export default function HallMediaSection({
   const youtubeError = resolveError(fieldErrors.youtubeVideoUrl);
   const mainPhotoError = resolveError(fieldErrors.mainPhoto);
 
-  const preview = useMemo(() => {
-    if (!values.mainPhoto) return null;
-    return {
-      name: values.mainPhoto.name,
-      url: URL.createObjectURL(values.mainPhoto),
-    };
-  }, [values.mainPhoto]);
-
-  useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL(preview.url);
-    };
-  }, [preview]);
+  const files = useMemo(() => values.mainPhoto ? [values.mainPhoto] : [], [values.mainPhoto]);
+  const preview = useHallImagePreviews(files)[0] ?? null;
 
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -102,7 +93,7 @@ export default function HallMediaSection({
               ref={inputRef}
               id="hall-main-photo"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept={HALL_IMAGE_ACCEPT}
               disabled={disabled}
               aria-invalid={mainPhotoError ? true : undefined}
               aria-describedby={

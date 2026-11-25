@@ -104,6 +104,8 @@ export type PagedOffers<T> = {
   items: T[];
   pageNumber: number;
   pageSize: number;
+  /** False when the response omitted authoritative count metadata. */
+  hasTotalCount?: boolean;
   totalCount: number;
   totalPages: number;
 };

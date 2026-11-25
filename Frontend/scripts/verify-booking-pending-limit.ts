@@ -19,7 +19,6 @@ import {
   mockFetchMyBookings,
   mockSubmitBookingRequest,
 } from "../src/services/bookings-mock";
-import { submitBookingRequest } from "../src/services/bookings";
 
 const EXPECTED_EN =
   "You already have 3 pending booking requests. Please wait for them to be resolved or manage your current requests.";
@@ -125,7 +124,7 @@ async function testFourthPendingRejectedWithoutState() {
 
   await assert.rejects(
     () =>
-      submitBookingRequest({
+      mockSubmitBookingRequest({
         hallId: "9",
         date: "2026-12-15",
         periods: ["SecondPeriod"],

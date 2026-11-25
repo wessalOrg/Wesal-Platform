@@ -147,7 +147,7 @@ export default function ProfessionalContentCard({
       </div>
       <div className="space-y-1.5 p-3 text-start sm:space-y-2 sm:p-3.5">
         {caption ? (
-          <p className="line-clamp-3 text-sm leading-6 text-[var(--wesal-text)]">
+          <p className="line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-[var(--wesal-text)]">
             {caption}
           </p>
         ) : (

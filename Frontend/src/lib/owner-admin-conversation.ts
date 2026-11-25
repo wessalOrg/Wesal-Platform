@@ -24,7 +24,6 @@ function participantKey(item: ConversationSummary): string {
  */
 export function isOwnerAdminConversation(
   item: ConversationSummary,
-  _allItems: ConversationSummary[] = [],
 ): boolean {
   if (item.kind === "AdminAccount") return true;
   if (PLATFORM_PARTICIPANT_ID.test(participantKey(item))) return true;
@@ -40,9 +39,8 @@ export function isOwnerAdminConversation(
 export function ownerConversationTitle(
   item: ConversationSummary,
   lang: UiLang,
-  allItems: ConversationSummary[] = [],
 ): string {
-  if (isOwnerAdminConversation(item, allItems)) return t("owner.messages.admin");
+  if (isOwnerAdminConversation(item)) return t("owner.messages.admin");
   return conversationPreviewTitle(item, lang);
 }
 
@@ -65,7 +63,7 @@ export function pickOwnerAdminConversation(
   hallId?: string | null,
 ): ConversationSummary | null {
   const needle = hallId?.trim().toLowerCase() || "";
-  const adminItems = items.filter((item) => isOwnerAdminConversation(item, items));
+  const adminItems = items.filter((item) => isOwnerAdminConversation(item));
 
   if (needle) {
     const adminForHall = adminItems.filter((item) => hallKey(item) === needle);

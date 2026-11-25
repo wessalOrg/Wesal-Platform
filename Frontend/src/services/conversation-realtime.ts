@@ -1,3 +1,7 @@
+import {
+  isCurrentAuthenticatedAccount, readAuthenticatedAccount, subscribeAuthenticatedAccount,
+  type AuthenticatedAccount,
+} from "@/lib/authenticated-account";
 import { HubConnection, HubConnectionBuilder, HubConnectionState } from "@microsoft/signalr";
 import { apiOrigin } from "@/lib/api";
 import { mapRealtimeMessageDto } from "@/lib/conversation-mapper";
@@ -64,189 +68,241 @@ function mapUnreadCounts(data: unknown): UnreadCountsPayload | null {
   return { conversationId, unreadMessageCount, totalUnreadCount };
 }
 
-const handlersByConversation = new Map<string, Set<MessageHandler>>();
-const inboxHandlers = new Set<MessageHandler>();
-const unreadHandlers = new Set<UnreadHandler>();
-let openConversationId: string | null = null;
+/** One transport and its consumers belong to one continuous authenticated login. */
+type ConversationHub = {
+  account: AuthenticatedAccount;
+  connection: HubConnection;
+  active: boolean;
+  startPromise: Promise<HubConnection | null> | null;
+  inbox: Set<MessageHandler>;
+  unread: Set<UnreadHandler>;
+  threads: Map<string, Set<MessageHandler>>;
+  joined: Set<string>;
+  memberships: Map<string, Promise<void>>;
+  openConversationId: string | null;
+  sentOpenConversationId: string | null;
+  presence: Promise<void>;
+  unsubscribeAccount: () => void;
+};
+let currentHub: ConversationHub | null = null;
 
-function dispatchMessage(payload: IncomingRealtimeMessage) {
-  handlersByConversation.get(payload.conversationId)?.forEach((handler) => handler(payload));
-  inboxHandlers.forEach((handler) => handler(payload));
+function isCurrent(record: ConversationHub): boolean {
+  return record.active && currentHub === record && isCurrentAuthenticatedAccount(record.account);
 }
 
-function dispatchUnread(payload: UnreadCountsPayload) {
-  unreadHandlers.forEach((handler) => handler(payload));
+function stopHub(record: ConversationHub): void {
+  if (!record.active) return;
+  record.active = false;
+  if (currentHub === record) currentHub = null;
+  record.unsubscribeAccount();
+  record.connection.off("MessageReceived");
+  record.connection.off("UnreadCountsUpdated");
+  record.inbox.clear();
+  record.unread.clear();
+  record.threads.clear();
+  record.joined.clear();
+  record.memberships.clear();
+  record.openConversationId = null;
+  // Invalidate synchronously; transport shutdown can finish after the next login starts.
+  void record.connection.stop().catch(() => undefined);
 }
 
-let connection: HubConnection | null = null;
-let startPromise: Promise<HubConnection | null> | null = null;
-let boundConnection: HubConnection | null = null;
-let connectedToken: string | null = null;
+function releaseUnusedHub(record: ConversationHub): void {
+  if (!record.inbox.size && !record.unread.size && !record.threads.size && !record.openConversationId) {
+    stopHub(record);
+  }
+}
 
-function bindHubEvents(hub: HubConnection) {
-  if (boundConnection === hub) return;
-  boundConnection = hub;
-  hub.on("MessageReceived", (raw: unknown) => {
+/** Serialize join/leave so an unfinished join cannot outlive its last subscriber. */
+function syncMembership(record: ConversationHub, id: string): void {
+  const previous = record.memberships.get(id) ?? Promise.resolve();
+  const operation = previous.then(async () => {
+    if (!isCurrent(record) || record.connection.state !== HubConnectionState.Connected) return;
+    const wanted = Boolean(record.threads.get(id)?.size);
+    if (wanted && !record.joined.has(id)) {
+      await record.connection.invoke("JoinConversation", id);
+      if (isCurrent(record)) record.joined.add(id);
+    } else if (!wanted && record.joined.has(id)) {
+      await record.connection.invoke("LeaveConversation", id);
+      if (isCurrent(record)) record.joined.delete(id);
+    }
+  }).catch(() => undefined);
+  record.memberships.set(id, operation);
+  void operation.then(() => {
+    if (record.memberships.get(id) === operation) record.memberships.delete(id);
+  });
+}
+
+function syncPresence(record: ConversationHub): void {
+  record.presence = record.presence.then(async () => {
+    if (!isCurrent(record) || record.connection.state !== HubConnectionState.Connected) return;
+    const previous = record.sentOpenConversationId;
+    if (previous && previous !== record.openConversationId) {
+      await record.connection.invoke("SetConversationOpen", previous, false);
+      if (!isCurrent(record)) return;
+      record.sentOpenConversationId = null;
+    }
+    const next = record.openConversationId;
+    if (next && next !== record.sentOpenConversationId && isCurrent(record)) {
+      await record.connection.invoke("SetConversationOpen", next, true);
+      if (isCurrent(record)) record.sentOpenConversationId = next;
+    }
+  }).catch(() => undefined);
+}
+
+function restoreSubscriptions(record: ConversationHub): void {
+  for (const id of record.threads.keys()) syncMembership(record, id);
+  syncPresence(record);
+}
+
+function ensureStarted(record: ConversationHub): Promise<HubConnection | null> {
+  if (!isCurrent(record)) return Promise.resolve(null);
+  if (record.connection.state === HubConnectionState.Connected) return Promise.resolve(record.connection);
+  if (record.startPromise) return record.startPromise;
+  // Automatic reconnect owns the transport until it succeeds or closes.
+  if (record.connection.state !== HubConnectionState.Disconnected) return Promise.resolve(null);
+  const pending = record.connection.start().then(async () => {
+    if (!isCurrent(record)) {
+      // Some transports finish start after stop was requested. Never resurrect that hub.
+      await record.connection.stop().catch(() => undefined);
+      return null;
+    }
+    restoreSubscriptions(record);
+    return record.connection;
+  }).catch(() => null).finally(() => {
+    if (record.startPromise === pending) record.startPromise = null;
+  });
+  record.startPromise = pending;
+  return pending;
+}
+
+function getHub(): ConversationHub | null {
+  const account = readAuthenticatedAccount();
+  if (currentHub && currentHub.account !== account) stopHub(currentHub);
+  if (!account || account.token.startsWith("stub-")) return null;
+  if (currentHub) return currentHub;
+  const connection = new HubConnectionBuilder()
+    .withUrl(conversationHubUrl(), {
+      accessTokenFactory: () => isCurrent(record) ? account.token : "",
+    })
+    .withAutomaticReconnect()
+    .configureLogging(realtimeLogger)
+    .build();
+  const record: ConversationHub = {
+    account, connection, active: true, startPromise: null,
+    inbox: new Set(), unread: new Set(), threads: new Map(), joined: new Set(), memberships: new Map(),
+    openConversationId: null, sentOpenConversationId: null, presence: Promise.resolve(),
+    unsubscribeAccount: () => undefined,
+  };
+  currentHub = record;
+  record.unsubscribeAccount = subscribeAuthenticatedAccount(() => {
+    if (!isCurrentAuthenticatedAccount(account)) stopHub(record);
+  });
+  connection.on("MessageReceived", (raw: unknown) => {
+    if (!isCurrent(record)) return;
     const payload = mapRealtime(raw);
     if (!payload) return;
-    dispatchMessage(payload);
+    // Recheck for each consumer: a callback may itself log out or switch accounts.
+    record.threads.get(payload.conversationId)?.forEach(handler => { if (isCurrent(record)) handler(payload); });
+    record.inbox.forEach(handler => { if (isCurrent(record)) handler(payload); });
   });
-  hub.on("UnreadCountsUpdated", (raw: unknown) => {
+  connection.on("UnreadCountsUpdated", (raw: unknown) => {
+    if (!isCurrent(record)) return;
     const payload = mapUnreadCounts(raw);
-    if (!payload) return;
-    dispatchUnread(payload);
+    if (payload) record.unread.forEach(handler => { if (isCurrent(record)) handler(payload); });
   });
-  hub.onreconnected(() => {
-    for (const id of handlersByConversation.keys()) {
-      void hub.invoke("JoinConversation", id).catch(() => undefined);
-    }
-    if (openConversationId) {
-      void hub.invoke("SetConversationOpen", openConversationId, true).catch(() => undefined);
-    }
+  connection.onreconnected(() => {
+    if (!isCurrent(record)) return;
+    record.joined.clear();
+    record.sentOpenConversationId = null;
+    restoreSubscriptions(record);
   });
+  connection.onclose(() => {
+    record.joined.clear();
+    record.sentOpenConversationId = null;
+  });
+  return record;
 }
 
-async function ensureHub(): Promise<HubConnection | null> {
-  const token = getAccessToken();
-  if (!token || token.startsWith("stub-")) return null;
-  if (connection?.state === HubConnectionState.Connected && connectedToken === token) {
-    bindHubEvents(connection);
-    return connection;
-  }
-  if (startPromise) return startPromise;
-
-  startPromise = (async () => {
-    if (connection && connection.state !== HubConnectionState.Disconnected) {
-      try {
-        await connection.stop();
-      } catch {
-        /* ignore stale socket */
-      }
-    }
-    connectedToken = token;
-    boundConnection = null;
-    connection = new HubConnectionBuilder()
-      .withUrl(conversationHubUrl(), {
-        accessTokenFactory: () => getAccessToken() ?? "",
-      })
-      .withAutomaticReconnect()
-      .configureLogging(realtimeLogger)
-      .build();
-    await connection.start();
-    bindHubEvents(connection);
-    return connection;
-  })().finally(() => {
-    startPromise = null;
+function subscribeAccountMock(onMessage: MessageHandler): () => void {
+  const account = readAuthenticatedAccount();
+  if (!account) return () => undefined;
+  let active = true;
+  const unsubscribe = subscribeMockMessages(payload => {
+    if (active && isCurrentAuthenticatedAccount(account)) onMessage(payload);
   });
-
-  return startPromise;
+  let unsubscribeAccount: () => void = () => undefined;
+  const dispose = () => { active = false; unsubscribe(); unsubscribeAccount(); };
+  unsubscribeAccount = subscribeAuthenticatedAccount(() => {
+    if (!isCurrentAuthenticatedAccount(account)) dispose();
+  });
+  return dispose;
 }
 
 /** Live messages for the signed-in user, including threads that are not open. */
 export function subscribeIncomingMessages(onMessage: MessageHandler): () => void {
-  if (usesMockRealtime()) {
-    return subscribeMockMessages(onMessage);
-  }
-
-  inboxHandlers.add(onMessage);
-  void ensureHub().catch(() => undefined);
-  return () => {
-    inboxHandlers.delete(onMessage);
-  };
+  if (usesMockRealtime()) return subscribeAccountMock(onMessage);
+  const record = getHub();
+  if (!record) return () => undefined;
+  record.inbox.add(onMessage);
+  void ensureStarted(record);
+  return () => { record.inbox.delete(onMessage); releaseUnusedHub(record); };
 }
 
 /** Server-pushed unread totals / per-conversation counters. */
 export function subscribeUnreadCounts(onUpdate: UnreadHandler): () => void {
   if (usesMockRealtime()) return () => undefined;
-  unreadHandlers.add(onUpdate);
-  void ensureHub().catch(() => undefined);
-  return () => {
-    unreadHandlers.delete(onUpdate);
-  };
+  const record = getHub();
+  if (!record) return () => undefined;
+  record.unread.add(onUpdate);
+  void ensureStarted(record);
+  return () => { record.unread.delete(onUpdate); releaseUnusedHub(record); };
 }
 
-/**
- * Tell the hub which conversation the user is actively reading so it can
- * suppress push alerts and keep unread counters accurate.
- */
+/** Tell the current account's hub which conversation is actively being read. */
 export function setConversationOpen(conversationId: string | null): void {
-  const next = conversationId?.trim() || null;
-  const previous = openConversationId;
-  openConversationId = next;
   if (usesMockRealtime()) return;
-
-  void (async () => {
-    try {
-      const hub = await ensureHub();
-      if (!hub) return;
-      if (previous && previous !== next) {
-        await hub.invoke("SetConversationOpen", previous, false).catch(() => undefined);
-      }
-      if (next) {
-        await hub.invoke("SetConversationOpen", next, true).catch(() => undefined);
-      }
-    } catch {
-      /* REST mark-read still works if the hub call fails. */
-    }
-  })();
+  const next = conversationId?.trim() || null;
+  const record = next ? getHub() : currentHub;
+  if (!record || !isCurrent(record)) return;
+  record.openConversationId = next;
+  void ensureStarted(record).then(hub => {
+    if (hub && isCurrent(record)) syncPresence(record);
+    releaseUnusedHub(record);
+  });
 }
 
-/** Hub mark-read (alongside REST) so UnreadCountsUpdated stays in sync. */
+/** Hub mark-read supplements REST, which remains the source of truth. */
 export function markConversationReadOnHub(conversationId: string): void {
   const id = conversationId.trim();
   if (!id || usesMockRealtime()) return;
-  void (async () => {
-    try {
-      const hub = await ensureHub();
-      if (!hub) return;
-      await hub.invoke("MarkConversationRead", id).catch(() => undefined);
-    } catch {
-      /* REST mark-read is the source of truth if hub invoke fails. */
-    }
-  })();
+  const record = getHub();
+  if (!record) return;
+  void ensureStarted(record).then(async hub => {
+    if (hub && isCurrent(record)) await hub.invoke("MarkConversationRead", id);
+  }).catch(() => undefined).finally(() => releaseUnusedHub(record));
 }
 
-export function subscribeConversationMessages(
-  conversationId: string,
-  onMessage: MessageHandler,
-): () => void {
+export function subscribeConversationMessages(conversationId: string, onMessage: MessageHandler): () => void {
   if (!conversationId) return () => undefined;
-
-  if (usesMockRealtime()) {
-    return subscribeMockMessages((payload) => {
-      if (payload.conversationId !== conversationId) return;
-      onMessage(payload);
-    });
-  }
-
-  let set = handlersByConversation.get(conversationId);
-  if (!set) {
-    set = new Set();
-    handlersByConversation.set(conversationId, set);
-  }
-  const shouldJoin = set.size === 0;
-  set.add(onMessage);
-
-  void (async () => {
-    try {
-      const hub = await ensureHub();
-      if (!hub || !handlersByConversation.get(conversationId)?.has(onMessage)) return;
-      if (shouldJoin) {
-        await hub.invoke("JoinConversation", conversationId);
-      }
-    } catch {
-      /* REST send still works if the socket cannot join. */
-    }
-  })();
-
+  if (usesMockRealtime()) return subscribeAccountMock(payload => {
+    if (payload.conversationId === conversationId) onMessage(payload);
+  });
+  const record = getHub();
+  if (!record) return () => undefined;
+  let handlers = record.threads.get(conversationId);
+  if (!handlers) { handlers = new Set(); record.threads.set(conversationId, handlers); }
+  handlers.add(onMessage);
+  void ensureStarted(record).then(hub => {
+    if (hub && isCurrent(record)) syncMembership(record, conversationId);
+  });
   return () => {
-    const live = handlersByConversation.get(conversationId);
-    live?.delete(onMessage);
-    if (live && live.size === 0) {
-      handlersByConversation.delete(conversationId);
-      if (connection?.state === HubConnectionState.Connected) {
-        void connection.invoke("LeaveConversation", conversationId).catch(() => undefined);
-      }
+    const handlers = record.threads.get(conversationId);
+    handlers?.delete(onMessage);
+    if (handlers && !handlers.size) {
+      record.threads.delete(conversationId);
+      syncMembership(record, conversationId);
     }
+    releaseUnusedHub(record);
   };
 }

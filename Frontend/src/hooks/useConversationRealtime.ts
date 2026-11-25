@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import {
+  readAuthenticatedAccount, serverAuthenticatedAccount, subscribeAuthenticatedAccount,
+} from "@/lib/authenticated-account";
 import { subscribeConversationMessages } from "@/services/conversation-realtime";
 import type { IncomingRealtimeMessage } from "@/types/messages";
 
@@ -9,6 +12,7 @@ export function useConversationRealtime(
   ownerKey: string | null,
   onMessage: (payload: IncomingRealtimeMessage) => void,
 ) {
+  const account = useSyncExternalStore(subscribeAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount);
   const handlerRef = useRef(onMessage);
 
   useEffect(() => {
@@ -16,9 +20,9 @@ export function useConversationRealtime(
   }, [onMessage]);
 
   useEffect(() => {
-    if (!conversationId || !ownerKey) return;
+    if (!conversationId || !account || (ownerKey !== account.userId && ownerKey !== account.token)) return;
     return subscribeConversationMessages(conversationId, (payload) => {
       handlerRef.current(payload);
     });
-  }, [conversationId, ownerKey]);
+  }, [account, conversationId, ownerKey]);
 }

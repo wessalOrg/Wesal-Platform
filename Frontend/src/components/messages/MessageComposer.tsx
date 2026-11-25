@@ -123,6 +123,7 @@ export default function MessageComposer({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
+      aria-busy={attachmentBusy || undefined}
     >
       <label className="sr-only" htmlFor={id}>
         {t("messages.composerPlaceholder")}
@@ -157,6 +158,7 @@ export default function MessageComposer({
           </button>
         </div>
       ) : null}
+      {attachmentBusy ? <p role="status" className="mb-2 text-xs text-[var(--wesal-muted)]">{t("messages.attaching")}</p> : null}
       <div className="flex items-center gap-2">
         {onPickAttachment ? (
           <>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useId, useMemo, useRef, useState, type FormEvent } from "react";
+import { useImagePreviewUrls } from "@/hooks/useImagePreviewUrls";
 import OfferPriceDisplay from "@/components/offers/OfferPriceDisplay";
 import OfferStatusBadge from "@/components/offers/OfferStatusBadge";
 import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
@@ -86,14 +87,17 @@ export default function ProfessionalOfferForm({
   onRequestStop,
 }: ProfessionalOfferFormProps) {
   const t = useT();
-  const { setErrors, clearErrors, fieldProps, errorFor } = useOfferValidationErrors();
+  const { setErrors, clearNonDateErrors, revalidateDates, fieldProps, errorFor } = useOfferValidationErrors();
+  const dateFieldsId = useId();
+  const startsId = `${dateFieldsId}-starts`;
+  const endsId = `${dateFieldsId}-ends`;
   const [checkingImages, setCheckingImages] = useState(false);
   const checkingRef = useRef(false);
   const busy = requestBusy || checkingImages;
   const [values, setValues] = useState<ProfessionalOfferFormValues>(() =>
     initial ? fromOffer(initial) : emptyValues(),
   );
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const { previewUrls, replacePreviews } = useImagePreviewUrls();
 
   const oldPriceNum = Number(values.oldPrice);
   const offerPriceNum = Number(values.offerPrice);
@@ -121,16 +125,17 @@ export default function ProfessionalOfferForm({
 
   function patch(partial: Partial<ProfessionalOfferFormValues>) {
     setValues((prev) => ({ ...prev, ...partial }));
-    clearErrors();
+    if (partial.startsAt !== undefined || partial.endsAt !== undefined) {
+      revalidateDates({ ...values, ...partial });
+    } else clearNonDateErrors();
   }
 
   function onPickFiles(files: FileList | null) {
     if (!files?.length) return;
     const next = [...values.newFiles, ...Array.from(files)];
-    previewUrls.forEach((url) => URL.revokeObjectURL(url));
-    setPreviewUrls(next.map((file) => URL.createObjectURL(file)));
+    replacePreviews(next);
     patch({ newFiles: next, replaceImages: mode === "edit" });
-    setErrors({ images: offerImageMetadataError(next, values.existingImages.length) ?? undefined });
+    setErrors((previous) => ({ ...previous, images: offerImageMetadataError(next, values.existingImages.length) ?? undefined }));
   }
 
   function removeExisting(id: string) {
@@ -142,8 +147,7 @@ export default function ProfessionalOfferForm({
 
   function removeNew(index: number) {
     const next = values.newFiles.filter((_, i) => i !== index);
-    previewUrls.forEach((url) => URL.revokeObjectURL(url));
-    setPreviewUrls(next.map((file) => URL.createObjectURL(file)));
+    replacePreviews(next);
     patch({ newFiles: next, replaceImages: mode === "edit" });
   }
 
@@ -257,9 +261,9 @@ export default function ProfessionalOfferForm({
               {values.content.length}/{TITLE_MAX}
             </span>
           </span>
-          <input
-            type="text"
-            className={hallFieldClassName(false)}
+          <textarea
+            rows={1}
+            className={`${hallFieldClassName(false)} resize-none`}
             maxLength={TITLE_MAX}
             value={values.content}
             {...fieldProps("content")}
@@ -311,10 +315,12 @@ export default function ProfessionalOfferForm({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
+            <label htmlFor={startsId} className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
               <span className="offer-editor-label"><OfferManageIcon name="scheduled" />{t("offers.form.startsAt")}<span aria-hidden="true">*</span></span>
-            </span>
+            </label>
             <WesalDateTimeField
+              id={startsId}
+              required
               value={values.startsAt}
               {...fieldProps("startsAt")}
               disabled={busy}
@@ -325,10 +331,12 @@ export default function ProfessionalOfferForm({
             {errorFor("startsAt")}
           </div>
           <div>
-            <span className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
+            <label htmlFor={endsId} className="mb-1.5 block text-sm font-bold text-[var(--wesal-maroon-dark)]">
               <span className="offer-editor-label"><OfferManageIcon name="scheduled" />{t("offers.form.endsAt")}<span aria-hidden="true">*</span></span>
-            </span>
+            </label>
             <WesalDateTimeField
+              id={endsId}
+              required
               value={values.endsAt}
               {...fieldProps("endsAt")}
               disabled={busy}
@@ -397,7 +405,7 @@ export default function ProfessionalOfferForm({
             </span>
           </div>
           <div className="space-y-2 p-3">
-            <p className="line-clamp-2 text-sm font-extrabold text-[var(--wesal-maroon-dark)]">
+            <p className="line-clamp-2 whitespace-pre-wrap text-sm font-extrabold text-[var(--wesal-maroon-dark)]">
               {values.content.trim() || t("offers.card.untitled")}
             </p>
             <OfferPriceDisplay

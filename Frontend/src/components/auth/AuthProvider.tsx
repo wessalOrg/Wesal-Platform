@@ -11,8 +11,9 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { AUTH_CHANGE_EVENT, clearAuthSession } from "@/lib/auth-storage";
+import { AUTH_CHANGE_EVENT, clearAuthSession, getStoredAuth } from "@/lib/auth-storage";
 import { getAccessToken } from "@/lib/auth-token";
+import { readAuthenticatedAccount } from "@/lib/authenticated-account";
 import { clearStoredAccountType } from "@/lib/account-type";
 import { readLocalSession } from "@/lib/local-session";
 import { logoutAccount } from "@/services/auth";
@@ -48,6 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [nameOverride, setNameOverride] = useState<string | null>(null);
   const sessionEpochRef = useRef(0);
   const loggingOutRef = useRef(false);
+  const mountedRef = useRef(false);
+  const validationRef = useRef<AbortController | null>(null);
+
+  const invalidateValidation = useCallback(() => {
+    sessionEpochRef.current += 1;
+    validationRef.current?.abort();
+    validationRef.current = null;
+  }, []);
 
   const applySession = useCallback((next: SessionState, epoch: number) => {
     if (epoch !== sessionEpochRef.current) return;
@@ -59,42 +68,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applyLocalSession = useCallback(
     (session?: SessionState) => {
       if (loggingOutRef.current) return;
-      const epoch = ++sessionEpochRef.current;
-      applySession(session ?? readLocalSession() ?? GUEST_SESSION, epoch);
+      invalidateValidation();
+      const local = readLocalSession();
+      setNameOverride(null);
+      applySession(local ? session ?? local : GUEST_SESSION, sessionEpochRef.current);
     },
-    [applySession],
+    [applySession, invalidateValidation],
   );
 
   const refreshSession = useCallback(async () => {
     if (loggingOutRef.current) return;
-    const epoch = ++sessionEpochRef.current;
-    const next = await fetchSession();
+    invalidateValidation();
+    const epoch = sessionEpochRef.current;
+    const account = readAuthenticatedAccount();
+    const token = getAccessToken();
+    const controller = new AbortController();
+    validationRef.current = controller;
+    const next = await fetchSession(controller.signal);
+    if (!mountedRef.current || controller.signal.aborted || epoch !== sessionEpochRef.current
+      || readAuthenticatedAccount() !== account || getAccessToken() !== token) return;
+    validationRef.current = null;
     applySession(next, epoch);
-  }, [applySession]);
+    if (!next.isAuthenticated && (getAccessToken() || getStoredAuth())) {
+      // Notify all account-scoped consumers too; a rejected cached identity must
+      // not be available to a remount, local restore, inbox or notification hook.
+      clearAuthSession();
+    }
+  }, [applySession, invalidateValidation]);
 
   useEffect(() => {
-    let cancelled = false;
+    mountedRef.current = true;
     const local = readLocalSession();
     if (local) {
       applySession(local, ++sessionEpochRef.current);
-    } else if (getAccessToken()) {
+    } else if (getAccessToken() || getStoredAuth()) {
       // Expired/invalid token with no usable session: drop it so the UI is Guest.
       clearAuthSession();
     }
 
-    const epoch = ++sessionEpochRef.current;
-    void fetchSession().then((next) => {
-      if (cancelled) return;
-      applySession(next, epoch);
-    });
+    void refreshSession();
 
     return () => {
-      cancelled = true;
+      mountedRef.current = false;
+      invalidateValidation();
     };
-  }, [applySession]);
+  }, [applySession, invalidateValidation, refreshSession]);
 
   useEffect(() => {
-    const syncFromStorage = () => {
+    const syncFromStorage = (event: Event) => {
+      if (event instanceof StorageEvent && event.key !== null
+        && !["wesal_auth", "wesal-access-token", "wesal_remember_me"].includes(event.key)) return;
       if (loggingOutRef.current) return;
       const local = readLocalSession();
       if (local) {
@@ -102,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void refreshSession();
         return;
       }
-      sessionEpochRef.current += 1;
+      invalidateValidation();
       setNameOverride(null);
       setSession(GUEST_SESSION);
       setStatus("ready");
@@ -114,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener(AUTH_CHANGE_EVENT, syncFromStorage);
       window.removeEventListener("storage", syncFromStorage);
     };
-  }, [applyLocalSession, refreshSession]);
+  }, [applyLocalSession, invalidateValidation, refreshSession]);
 
   const applyIdentity = useCallback((patch: { userName?: string | null }) => {
     if (patch.userName === undefined) return;
@@ -139,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       loggingOutRef.current = true;
       setIsLoggingOut(true);
-      sessionEpochRef.current += 1;
+      invalidateValidation();
 
       const token = getAccessToken();
       // Flip UI to Guest immediately so navbar/actions never keep owner/user state.
@@ -159,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [resetToGuest, router],
+    [invalidateValidation, resetToGuest, router],
   );
 
   const viewedSession = useMemo<SessionState>(

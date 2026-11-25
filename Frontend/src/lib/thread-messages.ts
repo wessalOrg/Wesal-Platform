@@ -9,7 +9,7 @@ function mergeMessage(current: ThreadMessage, incoming: ThreadMessage): ThreadMe
     senderName: (incoming.senderName ?? "").trim() || current.senderName || "",
     senderUserId: incoming.senderUserId || current.senderUserId || "",
     content: incoming.content ?? current.content ?? "",
-    clientRequestId: current.clientRequestId ?? incoming.clientRequestId,
+    clientRequestId: incoming.clientRequestId ?? current.clientRequestId,
     delivery: incoming.delivery ?? current.delivery ?? "sent",
   };
 }
@@ -28,7 +28,11 @@ export function upsertThreadMessage(messages: ThreadMessage[], incoming: ThreadM
   if (byId >= 0) {
     const next = [...messages];
     next[byId] = mergeMessage(messages[byId], incoming);
-    return sortThreadMessages(next);
+    // A realtime echo may arrive before the HTTP acknowledgement identifies its
+    // optimistic counterpart. Once both IDs are known, keep the canonical row.
+    return sortThreadMessages(incoming.clientRequestId
+      ? next.filter((item, index) => index === byId || item.clientRequestId !== incoming.clientRequestId)
+      : next);
   }
 
   if (incoming.clientRequestId) {
@@ -43,6 +47,8 @@ export function upsertThreadMessage(messages: ThreadMessage[], incoming: ThreadM
   const pendingMatch = messages.findIndex(
     (item) =>
       (item.delivery === "pending" || item.delivery === "failed") &&
+      (!item.clientRequestId || !incoming.clientRequestId) &&
+      !item.hasAttachment && !incoming.hasAttachment &&
       isSameUserId(item.senderUserId, incoming.senderUserId) &&
       item.content === incoming.content,
   );

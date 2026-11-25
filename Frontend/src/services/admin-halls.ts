@@ -9,7 +9,6 @@ import {
   mapAdminHallUnlock,
   mapAdminMarkPaid,
   mapAdminOwnerMessage,
-  mapAdminPendingHalls,
   mapAdminSubscriptionOverview,
   type AdminHallPage,
 } from "@/lib/admin-halls-mapper";
@@ -74,15 +73,26 @@ function buildDemoAdminHallDetail(hallId: string): AdminHallDetail {
   };
 }
 
-export async function fetchAdminPendingHalls(): Promise<AdminPendingHall[]> {
+export async function fetchAdminPendingHalls(page = 1, signal?: AbortSignal): Promise<AdminHallPage> {
   if (usesDemoAdminStub()) {
-    return DEMO_PENDING_HALLS.map((hall) => ({ ...hall }));
+    const pageSize = 50, totalCount = DEMO_PENDING_HALLS.length, totalPages = Math.ceil(totalCount / pageSize);
+    return { items: DEMO_PENDING_HALLS.slice((page - 1) * pageSize, page * pageSize), page, pageSize, totalCount, totalPages,
+      hasPreviousPage: page > 1, hasNextPage: page < totalPages };
   }
   const { data } = await api.get<unknown>("/admin/halls/pending", {
-    params: { page: 1, pageSize: 50 },
+    params: { page, pageSize: 50 },
+    signal,
     timeout: 10000,
   });
-  return mapAdminPendingHalls(data);
+  const dto = data && typeof data === "object" ? data as Record<string, unknown> : {};
+  if (!Array.isArray(dto.items) || !Number.isInteger(dto.pageNumber) || Number(dto.pageNumber) < 1 ||
+      !Number.isInteger(dto.pageSize) || Number(dto.pageSize) < 1 ||
+      !Number.isInteger(dto.totalCount) || Number(dto.totalCount) < 0 ||
+      !Number.isInteger(dto.totalPages) || Number(dto.totalPages) < 0 ||
+      typeof dto.hasPreviousPage !== "boolean" || typeof dto.hasNextPage !== "boolean") {
+    throw new ApiError("admin.halls.queue.errors.loadFailed", 502);
+  }
+  return { ...mapAdminHallPage(data), hasPreviousPage: dto.hasPreviousPage, hasNextPage: dto.hasNextPage };
 }
 
 const REJECTED_HALLS_PAGE_SIZE = 10;

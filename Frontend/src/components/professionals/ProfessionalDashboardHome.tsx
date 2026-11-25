@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import AccountActivatedModal from "@/components/professionals/AccountActivatedModal";
 import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAccess";
 import { useProfessionalReviewNotes } from "@/hooks/useProfessionalReviewNotes";
@@ -24,6 +24,7 @@ import {
   hasSeenAccountActivatedModal,
   markAccountActivatedModalSeen,
   notifyProfessionalAccountApproved,
+  subscribePlatformNotifications,
 } from "@/lib/platform-notifications-store";
 import { professionalRoleLabelKey } from "@/lib/professional-role-label";
 import {
@@ -56,7 +57,15 @@ export default function ProfessionalDashboardHome() {
   const access = useProfessionalAccountAccess();
   const [contactPending, setContactPending] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
-  const [activatedOpen, setActivatedOpen] = useState(false);
+  const [dismissedActivation, setDismissedActivation] = useState<string | null>(null);
+  const activationUserId = access.userId?.trim() || "";
+  const activationSeen = useSyncExternalStore(
+    subscribePlatformNotifications,
+    () => !activationUserId || hasSeenAccountActivatedModal(activationUserId),
+    () => true,
+  );
+  const activatedOpen = !access.statusLoading && access.phase === "approved" &&
+    Boolean(activationUserId) && !activationSeen && dismissedActivation !== activationUserId;
 
   const phase = access.phase;
   const { notes: adminNotes, loading: notesLoading } = useProfessionalReviewNotes(phase);
@@ -76,15 +85,12 @@ export default function ProfessionalDashboardHome() {
     if (!userId) return;
 
     notifyProfessionalAccountApproved(userId);
-    if (!hasSeenAccountActivatedModal(userId)) {
-      setActivatedOpen(true);
-    }
   }, [access.statusLoading, access.userId, phase]);
 
   const onCloseActivated = () => {
     const userId = access.userId?.trim();
     if (userId) markAccountActivatedModalSeen(userId);
-    setActivatedOpen(false);
+    setDismissedActivation(userId || null);
   };
 
   const onContactAdmin = async () => {

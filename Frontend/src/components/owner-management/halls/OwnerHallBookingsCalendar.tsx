@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import HallMonthCalendar, {
   type CalendarDayStatus,
 } from "@/components/halls/HallMonthCalendar";
@@ -43,13 +43,15 @@ export default function OwnerHallBookingsCalendar({
   const dateLocale = locale === "ar" ? "ar-EG" : "en-GB";
   const { load, range, onVisibleMonthChange, retry } = useOwnerBookingsCalendar(hallId, enabled);
   const notifications = useHallNotifications(hallId, enabled, range);
-  const [selectedDate, setSelectedDate] = useState<string | null>(() => localTodayIso());
+  const [selectedDate, setSelectedDate] = useState<string | null>(() => parseDateIso(focusDate) ?? localTodayIso());
   const manualBookings = NO_LEGACY_BOOKINGS;
 
-  useEffect(() => {
+  const [seenFocusDate, setSeenFocusDate] = useState(focusDate);
+  if (seenFocusDate !== focusDate) {
+    setSeenFocusDate(focusDate);
     const iso = parseDateIso(focusDate);
     if (iso) setSelectedDate(iso);
-  }, [focusDate]);
+  }
 
   const notificationItems = notifications.items;
 

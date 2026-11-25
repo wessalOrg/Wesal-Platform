@@ -26,6 +26,8 @@ import {
   setStoredAuth,
 } from "@/lib/auth-storage";
 import { setAccessToken } from "@/lib/auth-token";
+import { applyDemoSession, type DemoLoginRole } from "@/lib/demo-login";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { isValidLoginEmail } from "@/lib/login-validation";
 import { loginAccount } from "@/services/auth";
 import { googleLogin } from "@/services/auth";
@@ -244,6 +246,28 @@ export default function LoginFormCard({
     }
   };
 
+  const onDemoLogin = (role: DemoLoginRole) => {
+    if (pending) return;
+    setFormError(null);
+    setPending(true);
+    try {
+      const demo = applyDemoSession(role);
+      if (!demo) {
+        setFormError(t("auth.stub.demoFailed"));
+        return;
+      }
+      applyLocalSession(demo.session);
+      void refreshSession();
+      clearBookingHallContext();
+      navigateAfterAuth(
+        router,
+        resolveLoginDestination(demo.session.role, redirectTo, action),
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
   const onGoogleCredential = async (credential: string) => {
     if (!credential || pending) return;
     setPending(true); setFormError(null);
@@ -341,6 +365,59 @@ export default function LoginFormCard({
 
       <div className="my-3 flex items-center gap-3 text-xs text-[var(--wesal-muted)] sm:my-4"><span className="h-px flex-1 bg-[var(--wesal-border)]" />{t("auth.google.or")}<span className="h-px flex-1 bg-[var(--wesal-border)]" /></div>
       <GoogleAuthButton onCredential={(credential) => void onGoogleCredential(credential)} disabled={pending} />
+
+      {isDemoModeEnabled() ? (
+        <div className="mt-4 rounded-xl border border-dashed border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)]/70 px-3 py-3">
+          <p className="text-center text-xs text-[var(--wesal-muted)]">{t("auth.stub.hint")}</p>
+          <div className="mt-2.5 flex flex-col gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onDemoLogin("Admin")}
+              className="btn-outline w-full !min-h-10 !rounded-xl !text-sm"
+              data-testid="login-demo-admin"
+            >
+              {t("auth.stub.demoAdmin")}
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onDemoLogin("RegisteredUser")}
+              className="btn-outline w-full !min-h-10 !rounded-xl !text-sm"
+              data-testid="login-demo-seeker"
+            >
+              {t("auth.stub.demoSeeker")}
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onDemoLogin("HallOwner")}
+              className="btn-outline w-full !min-h-10 !rounded-xl !text-sm"
+              data-testid="login-demo-hall-owner"
+            >
+              {t("auth.stub.demoHallOwner")}
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onDemoLogin("EventCoordinator")}
+              className="btn-outline w-full !min-h-10 !rounded-xl !text-sm"
+              data-testid="login-demo-coordinator"
+            >
+              {t("auth.stub.demoCoordinator")}
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onDemoLogin("Photographer")}
+              className="btn-outline w-full !min-h-10 !rounded-xl !text-sm"
+              data-testid="login-demo-photographer"
+            >
+              {t("auth.stub.demoPhotographer")}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <p className="mt-3 text-center text-xs text-[var(--wesal-muted)] sm:mt-4 sm:text-sm">
         {t("auth.login.noAccount")}{" "}

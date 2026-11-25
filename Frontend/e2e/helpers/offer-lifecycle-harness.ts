@@ -1,17 +1,20 @@
 import { build } from "esbuild";
 import path from "node:path";
 import en from "../../src/i18n/messages/en";
+import ar from "../../src/i18n/messages/ar";
 
 /** Production offer components and services, isolated from unrelated app-shell providers. */
-export async function buildOfferLifecycleHarness() {
+export async function buildOfferLifecycleHarness(options: { owner?: boolean; language?: "ar" | "en" } = {}) {
+  const language = options.language ?? "en";
   const mocks: Record<string, string> = {
-    "@/i18n": `const catalog=${JSON.stringify(en)};export const useT=()=> (key,vars={})=>Object.entries(vars).reduce((s,[k,v])=>s.replaceAll('{'+k+'}',String(v)),catalog[key]??key);`,
-    "@/components/layout/LanguageProvider": `export const useUiLang=()=>"en";`,
+    "@/i18n": `const catalog=${JSON.stringify(language === "ar" ? ar : en)};export const useT=()=> (key,vars={})=>Object.entries(vars).reduce((s,[k,v])=>s.replaceAll('{'+k+'}',String(v)),catalog[key]??key);`,
+    "@/components/layout/LanguageProvider": `export const useUiLang=()=>${JSON.stringify(language)};`,
     "@/components/auth/AuthProvider": `export const useAuth=()=>({session:{isAuthenticated:false}});`,
-    "@/hooks/useAccountAccess": `export const useAccountAccess=()=>({ready:true,authenticated:false,userId:null,isAdmin:false});`,
-    "@/hooks/useProfessionalAccountAccess": `export const useProfessionalAccountAccess=()=>({userId:'pro-a',canPublish:true,statusLoading:false});`,
-    "@/hooks/useAccountPublishingLock": `export const useAccountPublishingLock=()=>({isLocked:false});`,
-    "@/hooks/useFavoritePostIds": `const ids=new Set();export const useFavoritePostIds=()=>({ids,markSaved(){}});`,
+    "@/hooks/useAccountAccess": `export const useAccountAccess=()=>({ready:true,authenticated:${Boolean(options.owner)},userId:${options.owner ? "'pro-a'" : "null"},isAdmin:false});`,
+    "@/hooks/useProfessionalAccountAccess": `export const useProfessionalAccountAccess=()=>({userId:'pro-a',sessionKey:'pro-a',ready:true,authenticated:true,isProfessional:true,profileStatus:'ready',canPublish:true,statusLoading:false});`,
+    "@/components/profile/UserProfileProvider": `export const useUserProfileStore=()=>({refetch:async()=>{}});`,
+    "@/hooks/useAccountPublishingLock": `export const useAccountPublishingLock=()=>({isLocked:false,ready:true});`,
+    "@/hooks/useFavoritePostIds": `const ids=new Set();export const useFavoritePostIds=()=>({ids,markSaved(){},savedFor:()=>null,loading:false,errorKey:null,errors:new Map(),pending:new Set(),counts:new Map(),rememberCount(){},refresh:async()=>{},setSaved:async()=>false});`,
     "@/hooks/useStartProfessionalConversation": `export const useStartProfessionalConversation=()=>({start:async()=>null,starting:false,error:null});`,
     "@/hooks/useHallOwnerHalls": `const halls=['hall-a','hall-b'].map(id=>({id,name:id,status:'Approved',paymentStatus:'Paid',adminLocked:false,systemLocked:false}));export const useHallOwnerHalls=()=>({halls,isLoading:false});`,
     "next/link": `import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`,
@@ -23,6 +26,7 @@ export async function buildOfferLifecycleHarness() {
       import Discover from './src/components/discover/DiscoverPageView';
       import Profile from './src/components/professionals/ProfessionalPublicProfileView';
       import Manager from './src/components/offers/ProfessionalOffersManagePage';
+      import Posts from './src/components/professionals/ProfessionalPostsManagePage';
       import Halls from './src/components/offers/HallOwnerOffersPage';
       import HallSection from './src/components/owner-management/halls/HallOffersSection';
       import Banner from './src/components/offers/HallActiveOfferBanner';
@@ -36,7 +40,7 @@ export async function buildOfferLifecycleHarness() {
       function Harness(){const [id,setId]=useState('pro-a');const [shown,setShown]=useState(true);const mode=location.pathname.split('/').pop();
         return <><button id="switch" onClick={()=>setId(id==='pro-a'?'pro-b':'pro-a')}>Switch</button>
         <button id="unmount" onClick={()=>setShown(false)}>Unmount</button>{shown&&(
-        mode==='discover'?<Discover/>:mode==='profile'?<Profile userId={id}/>:mode==='manager'?<Manager/>:
+        mode==='discover'?<Discover/>:mode==='profile'?<Profile userId={id}/>:mode==='manager'?<Manager/>:mode==='posts'?<Posts/>:
         mode==='halls'?<Halls/>:mode==='section'?<HallSection hallId="hall-a"/>:mode==='banner'?<Banner hallId="hall-a"/>:
         mode==='detail-banner'?<DetailBanner hallId="hall-a"/>:mode==='profile-section'?<ProfileSection userId={id}/>:<Probe/>)}</>}
       createRoot(document.getElementById('root')).render(<StrictMode><Harness/></StrictMode>);`,

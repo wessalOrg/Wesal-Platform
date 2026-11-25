@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/i18n";
-import { isUnauthorizedApiError } from "@/lib/api-error";
+import PostFavoriteButton from "@/components/posts/PostFavoriteButton";
 import { discoverItemHref } from "@/lib/discover-filter";
 import {
   hydrateSavedHallsFromServer,
@@ -13,23 +13,19 @@ import {
   subscribeSavedHalls,
   toggleSavedHall,
 } from "@/lib/saved-halls";
-import {
-  addPostFavorite,
-  removePostFavorite,
-} from "@/services/post-interactions";
 import type { DiscoverItem } from "@/types/offers";
 
 type DiscoverExploreCardProps = {
   item: DiscoverItem;
   index?: number;
-  initialSaved?: boolean;
+  initialSaved?: boolean | null;
   onFavoriteChanged?: (postId: string, saved: boolean) => void;
 };
 
 export default function DiscoverExploreCard({
   item,
   index = 0,
-  initialSaved = false,
+  initialSaved,
   onFavoriteChanged,
 }: DiscoverExploreCardProps) {
   const t = useT();
@@ -157,72 +153,13 @@ function CardFooter({
   );
 }
 
-function PostHeartButton({
-  postId,
-  initialSaved = false,
-  onChanged,
-}: {
+function PostHeartButton({ postId, initialSaved, onChanged }: {
   postId: string;
-  initialSaved?: boolean;
+  initialSaved?: boolean | null;
   onChanged?: (postId: string, saved: boolean) => void;
 }) {
-  const t = useT();
-  const router = useRouter();
-  const { session } = useAuth();
-  const [saved, setSaved] = useState(initialSaved);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setSaved(initialSaved);
-  }, [initialSaved, postId]);
-
-  async function toggle(event: React.MouseEvent) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (busy) return;
-    if (!session.isAuthenticated) {
-      router.push(
-        `/login?redirect=${encodeURIComponent(`/posts/${encodeURIComponent(postId)}`)}`,
-      );
-      return;
-    }
-    const next = !saved;
-    setBusy(true);
-    setSaved(next);
-    onChanged?.(postId, next);
-    try {
-      if (next) await addPostFavorite(postId);
-      else await removePostFavorite(postId);
-    } catch (err) {
-      setSaved(!next);
-      onChanged?.(postId, !next);
-      if (isUnauthorizedApiError(err)) {
-        router.push(
-          `/login?redirect=${encodeURIComponent(`/posts/${encodeURIComponent(postId)}`)}`,
-        );
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      className={`inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-sm transition ${
-        saved ? "text-[var(--wesal-maroon)]" : "text-[var(--wesal-muted)]"
-      }`}
-      aria-pressed={saved}
-      aria-label={saved ? t("posts.favorite.remove") : t("posts.favorite.add")}
-      disabled={busy}
-      onClick={(event) => {
-        void toggle(event);
-      }}
-      data-testid={`discover-favorite-${postId}`}
-    >
-      <HeartIcon filled={saved} />
-    </button>
-  );
+  return <PostFavoriteButton postId={postId} initialSaved={initialSaved} variant="icon"
+    testId={"discover-favorite-" + postId} onChanged={saved => onChanged?.(postId, saved)} />;
 }
 
 function HallHeartButton({ hallId }: { hallId: string }) {

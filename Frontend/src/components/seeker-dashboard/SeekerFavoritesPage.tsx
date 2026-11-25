@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import MabroukFigure from "@/components/brand/MabroukFigure";
 import FavoriteItemCard, {
   useFavoriteDateLabel,
@@ -22,9 +22,12 @@ import {
 import { fetchHallById } from "@/services/halls";
 import {
   fetchFavoritePosts,
-  removePostFavorite,
 } from "@/services/post-interactions";
 import type { HallDetails } from "@/types/hall";
+import { useAuthenticatedRequestScope } from "@/hooks/useAuthenticatedRequestScope";
+import { useFavoritePostIds } from "@/hooks/useFavoritePostIds";
+import { useContentPagination } from "@/hooks/useContentPagination";
+import ContentPagination from "@/components/ui/ContentPagination";
 import type { FavoritePost } from "@/types/posts";
 
 /** Section 12 — saved halls + saved posts only (no offer/role favorites API). */
@@ -44,6 +47,27 @@ export default function SeekerFavoritesPage() {
   const t = useT();
   const lang = useUiLang();
   const { session } = useAuth();
+  const { account, scope, isCurrent } = useAuthenticatedRequestScope(session.isAuthenticated);
+  const { savedFor, setSaved, captureRead, observePage, revision } = useFavoritePostIds({ hydrate: false });
+  const fetchPosts = useCallback(async (page: number, size: number) => {
+    if (!isCurrent()) throw new Error("Obsolete favorites request");
+    const read = captureRead();
+    const result = await fetchFavoritePosts(page, size);
+    if (!isCurrent()) throw new Error("Obsolete favorites response");
+    observePage(result, read);
+    return result;
+  }, [isCurrent, captureRead, observePage]);
+  const pagination = useContentPagination({ context: scope, enabled: Boolean(account) && session.isAuthenticated, pageSize: 50, fetchPage: fetchPosts });
+  const posts = pagination.items.filter(post => savedFor(post.id) !== false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const lastRevision = useRef({ scope, revision });
+  const refreshPosts = pagination.refresh;
+  useEffect(() => {
+    const previous = lastRevision.current;
+    lastRevision.current = { scope, revision };
+    if (previous.scope === scope && previous.revision !== revision) void refreshPosts();
+  }, [scope, revision, refreshPosts]);
+  const postsLoading = pagination.busy;
   const savedIds = useSyncExternalStore(
     subscribeSavedHalls,
     readSavedHallIds,
@@ -52,25 +76,29 @@ export default function SeekerFavoritesPage() {
   const [filter, setFilter] = useState<FavoriteFilter>("all");
   const [hallRows, setHallRows] = useState<HallRow[]>([]);
   const [hallsLoading, setHallsLoading] = useState(savedIds.length > 0);
-  const [posts, setPosts] = useState<FavoritePost[]>([]);
-  const [postsLoading, setPostsLoading] = useState(false);
   const [pending, setPending] = useState<PendingRemove | null>(null);
   const [removing, setRemoving] = useState(false);
   const idsKey = savedIds.join("\0");
+  const [seenIdsKey, setSeenIdsKey] = useState(idsKey);
+  if (seenIdsKey !== idsKey) {
+    setSeenIdsKey(idsKey);
+    setHallsLoading(Boolean(idsKey));
+    if (!idsKey) setHallRows([]);
+  }
+  const [previousScope, setPreviousScope] = useState(scope);
+  if (previousScope !== scope) {
+    setPreviousScope(scope); setHallRows([]); setHallsLoading(savedIds.length > 0);
+    setPending(null); setRemoving(false); setRemoveError(null);
+  }
 
-  useEffect(() => {
-    void hydrateSavedHallsFromServer();
-  }, []);
+  useEffect(() => { void hydrateSavedHallsFromServer(); }, [account]);
 
   useEffect(() => {
     const ids = idsKey ? idsKey.split("\0") : [];
     if (ids.length === 0) {
-      setHallRows([]);
-      setHallsLoading(false);
       return;
     }
     let active = true;
-    setHallsLoading(true);
     void Promise.all(
       [...ids].reverse().map(async (id): Promise<HallRow> => {
         const result = await fetchHallById(id);
@@ -79,37 +107,14 @@ export default function SeekerFavoritesPage() {
           : { id, status: "missing" };
       }),
     ).then((next) => {
-      if (!active) return;
+      if (!active || !isCurrent()) return;
       setHallRows(next);
       setHallsLoading(false);
     });
     return () => {
       active = false;
     };
-  }, [idsKey]);
-
-  useEffect(() => {
-    if (!session.isAuthenticated) {
-      setPosts([]);
-      setPostsLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setPostsLoading(true);
-    void fetchFavoritePosts(1, 50)
-      .then((page) => {
-        if (!cancelled) setPosts(page.items);
-      })
-      .catch(() => {
-        if (!cancelled) setPosts([]);
-      })
-      .finally(() => {
-        if (!cancelled) setPostsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [session.isAuthenticated]);
+  }, [idsKey, isCurrent]);
 
   const visibleHalls = useMemo(
     () => hallRows.filter((row) => savedIds.includes(row.id) && row.status === "ready"),
@@ -121,10 +126,13 @@ export default function SeekerFavoritesPage() {
   const loading = hallsLoading || postsLoading;
   const hasContent =
     (showHalls && visibleHalls.length > 0) || (showPosts && posts.length > 0);
-  const isEmpty = !loading && !hasContent;
+  const isEmpty = !loading && !hasContent && !pagination.error;
 
   async function confirmRemove() {
-    if (!pending) return;
+    if (!pending || !isCurrent()) return;
+    const captured = scope.capture();
+    const active = () => captured() && isCurrent();
+    setRemoveError(null);
     setRemoving(true);
     const current = pending;
     setPending(null);
@@ -132,15 +140,14 @@ export default function SeekerFavoritesPage() {
       if (current.kind === "hall") {
         removeSavedHall(current.id);
       } else {
-        setPosts((prev) => prev.filter((row) => row.id !== current.id));
-        await removePostFavorite(current.id);
+        await setSaved(current.id, false);
       }
     } catch {
-      if (current.kind === "post") {
-        void fetchFavoritePosts(1, 50).then((page) => setPosts(page.items));
+      if (active() && current.kind === "post") {
+        setRemoveError("posts.favorites.errors.removeFailed");
       }
     } finally {
-      setRemoving(false);
+      if (active()) setRemoving(false);
     }
   }
 
@@ -232,6 +239,9 @@ export default function SeekerFavoritesPage() {
             : null}
         </div>
       )}
+
+      {removeError ? <p role="alert" className="text-sm text-[#b42318]">{t(removeError)}</p> : null}
+      {showPosts ? <ContentPagination {...pagination} onMore={() => void pagination.loadMore()} onRetry={() => void pagination.refresh()} /> : null}
 
       <RemoveFavoriteConfirmDialog
         open={Boolean(pending)}

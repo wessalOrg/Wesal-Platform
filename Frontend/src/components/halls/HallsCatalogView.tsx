@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import CatalogHallCard from "@/components/halls/CatalogHallCard";
 import HallsFilterBar from "@/components/halls/HallsFilterBar";
-import { useHallFilters, hasActiveHallFilters, serializeHallFilters } from "@/hooks/useHallFilters";
+import { useHallFilters, serializeHallFilters } from "@/hooks/useHallFilters";
 import { usePublicHallsRevalidation } from "@/hooks/usePublicHallsRevalidation";
 import { useT } from "@/i18n";
-import { fetchCatalogHalls, fetchSearchHalls, filterCatalogHalls } from "@/services/halls";
-import type { FeaturedHall } from "@/types/hall";
+import { useHallCatalogPage } from "@/hooks/useHallCatalogPage";
+import { useUiLang } from "@/components/layout/LanguageProvider";
 
 const HallDetailsView = dynamic(
   () => import("@/components/halls/HallDetailsView"),
@@ -16,7 +16,6 @@ const HallDetailsView = dynamic(
 );
 
 const PAGE_SIZE = 6;
-const SEARCH_PAGE_SIZE = 50;
 const PAGE_BTN_CLASS =
   "flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-[var(--wesal-gold)]/60 bg-[var(--wesal-maroon)]/25 text-xs font-bold text-[var(--wesal-maroon)] shadow-[0_6px_16px_rgba(193,123,127,0.16)] transition hover:border-[var(--wesal-gold)] hover:bg-[var(--wesal-maroon)] hover:text-white disabled:cursor-not-allowed disabled:border-[var(--wesal-gold)]/25 disabled:bg-white/40 disabled:text-[var(--wesal-maroon)]/35 disabled:shadow-none sm:h-10 sm:w-10 sm:text-sm";
 const PAGE_NUM_ACTIVE_CLASS =
@@ -40,6 +39,7 @@ function getPageItems(pageCount: number, current: number): (number | "ellipsis")
 
 export default function HallsCatalogView() {
   const t = useT();
+  const lang = useUiLang();
   const {
     filters,
     detailedDraft,
@@ -50,13 +50,7 @@ export default function HallsCatalogView() {
     setDetailedAddress,
     resetFilters,
   } = useHallFilters();
-  const [halls, setHalls] = useState<FeaturedHall[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
-  const [errorKind, setErrorKind] = useState<"catalog" | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const { region, address, detailedAddress } = filters;
   const filterKey = serializeHallFilters(filters);
   const [paging, setPaging] = useState({ key: filterKey, page: 0 });
   if (paging.key !== filterKey) {
@@ -68,7 +62,6 @@ export default function HallsCatalogView() {
   };
   const [openHallId, setOpenHallId] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const isFirstLoad = useRef(true);
 
   const requestRevalidate = useCallback(() => {
     setReloadKey((key) => key + 1);
@@ -76,65 +69,19 @@ export default function HallsCatalogView() {
 
   usePublicHallsRevalidation(requestRevalidate);
 
-  useEffect(() => {
-    let active = true;
-    if (isFirstLoad.current) {
-      setStatus("loading");
-    } else {
-      setIsRefreshing(true);
-    }
-
-    const useSearch = hasActiveHallFilters({ region, address, detailedAddress });
-
-    void (async () => {
-      const result = useSearch
-        ? await fetchSearchHalls({
-            region,
-            address,
-            detailedAddress,
-            pageSize: SEARCH_PAGE_SIZE,
-          })
-        : await fetchCatalogHalls();
-
-      const resolved =
-        useSearch && result.source !== "api" ? await fetchCatalogHalls() : result;
-
-      if (!active) return;
-      isFirstLoad.current = false;
-
-      setHalls(resolved.halls);
-      if (resolved.source === "api") {
-        setError(null);
-        setErrorKind(null);
-      } else {
-        setError(resolved.error ?? t("halls.catalog.connectionError"));
-        setErrorKind("catalog");
-      }
-
-      setStatus("ready");
-      setIsRefreshing(false);
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [address, detailedAddress, region, reloadKey, t]);
-
-  const filtered = useMemo(
-    () => filterCatalogHalls(halls, { region, address, detailedAddress }),
-    [halls, region, address, detailedAddress],
-  );
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, pageCount - 1);
-  const visible = filtered.slice(
-    safePage * PAGE_SIZE,
-    safePage * PAGE_SIZE + PAGE_SIZE,
-  );
-  const hasPrev = safePage > 0;
-  const hasNext = safePage < pageCount - 1;
+  const { halls: visible, pagination, error: hasError, loading, refreshing: isRefreshing, ready } =
+    useHallCatalogPage(filters, page + 1, PAGE_SIZE, reloadKey);
+  const status = loading ? "loading" : ready ? "ready" : "error";
+  const error = hasError ? t("halls.catalog.connectionError") : null;
+  const pageCount = Math.max(1, pagination?.totalPages ?? 0);
+  // A refresh can remove the current last page. Request the new last page once.
+  if (pagination && ready && !isRefreshing && page >= pageCount) setPage(pageCount - 1);
+  const safePage = page;
+  const hasPrev = page > 0;
+  const hasNext = page + 1 < pageCount;
 
   const goToPage = (nextPage: number) => {
+    if (nextPage === page) return;
     setPage(nextPage);
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -154,7 +101,7 @@ export default function HallsCatalogView() {
       />
 
       <div className="mt-5 flex flex-wrap items-center justify-end gap-3 sm:mt-6">
-        <p className="inline-flex items-center gap-2 text-xs font-medium text-[var(--wesal-maroon)] sm:text-sm">
+        <p aria-live="polite" className="inline-flex items-center gap-2 text-xs font-medium text-[var(--wesal-maroon)] sm:text-sm">
           {status === "loading" || isRefreshing ? (
             <>
               <Spinner />
@@ -163,12 +110,12 @@ export default function HallsCatalogView() {
                 : t("halls.catalog.updating")}
             </>
           ) : (
-            t("halls.catalog.found", { count: filtered.length })
+            pagination ? t("halls.catalog.found", { count: pagination.totalCount }) : null
           )}
         </p>
       </div>
 
-      {error && errorKind ? (
+      {error ? (
         <div
           className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)] px-4 py-3 text-sm text-[var(--wesal-text)]"
           data-testid="halls-catalog-error"
@@ -236,7 +183,7 @@ export default function HallsCatalogView() {
             <CatalogHallCard
               key={hall.id}
               hall={hall}
-              index={safePage * PAGE_SIZE + index}
+              index={index}
               showBookButton
               compact
               onOpen={() => setOpenHallId(hall.id)}
@@ -245,7 +192,7 @@ export default function HallsCatalogView() {
         </div>
       ) : null}
 
-      {status === "ready" && visible.length === 0 ? (
+      {status === "ready" && !error && visible.length === 0 ? (
         <div
           className="mt-7 rounded-xl border border-[var(--wesal-border)] bg-white px-5 py-8 text-center"
           data-testid="halls-search-empty"
@@ -272,10 +219,11 @@ export default function HallsCatalogView() {
         </div>
       ) : null}
 
-      {status === "ready" && pageCount > 1 ? (
+      {pagination && pageCount > 1 ? (
         <nav
           className="mt-7 flex items-center justify-center gap-1.5 pb-3 sm:mt-8 sm:gap-2"
           aria-label={t("halls.catalog.pagination")}
+          aria-busy={loading || isRefreshing}
         >
           <button
             type="button"
@@ -285,7 +233,7 @@ export default function HallsCatalogView() {
             aria-label={t("halls.catalog.prevPage")}
             className={PAGE_BTN_CLASS}
           >
-            <Chevron dir="right" />
+            <Chevron dir={lang === "ar" ? "right" : "left"} />
           </button>
           {getPageItems(pageCount, safePage).map((item, index) =>
             item === "ellipsis" ? (
@@ -320,7 +268,7 @@ export default function HallsCatalogView() {
             aria-label={t("halls.catalog.nextPage")}
             className={PAGE_BTN_CLASS}
           >
-            <Chevron dir="left" />
+            <Chevron dir={lang === "ar" ? "left" : "right"} />
           </button>
         </nav>
       ) : null}

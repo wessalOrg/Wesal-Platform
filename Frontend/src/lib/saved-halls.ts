@@ -4,6 +4,8 @@ import {
   hasHallFavoritesSession,
   removeFavoriteHall,
 } from "@/services/hall-favorites";
+import { isCurrentAuthenticatedAccount, readAuthenticatedAccount, subscribeAuthenticatedAccount,
+  type AuthenticatedAccount } from "@/lib/authenticated-account";
 
 const SAVED_HALLS_KEY = "wesal-saved-halls";
 const EMPTY_SAVED_HALLS: string[] = [];
@@ -14,6 +16,23 @@ let snapshot: string[] = EMPTY_SAVED_HALLS;
 let snapshotKey = "";
 let hydratedAt = 0;
 let hydrationInflight: Promise<void> | null = null;
+let owner: AuthenticatedAccount | null = null;
+
+function synchronizeOwner() {
+  const account = readAuthenticatedAccount();
+  if (account !== owner) {
+    owner = account;
+    snapshot = EMPTY_SAVED_HALLS;
+    snapshotKey = "";
+    hydratedAt = 0;
+    hydrationInflight = null;
+  }
+  return account;
+}
+
+function storageKey(account: AuthenticatedAccount | null) {
+  return `${SAVED_HALLS_KEY}:${account ? `user:${encodeURIComponent(account.userId)}` : "guest"}`;
+}
 
 function parseSavedHallIds(raw: string | null): string[] {
   if (!raw) return EMPTY_SAVED_HALLS;
@@ -37,7 +56,12 @@ function remember(ids: string[]): string[] {
 
 export function readSavedHallIds(): string[] {
   if (typeof window === "undefined") return EMPTY_SAVED_HALLS;
-  return remember(parseSavedHallIds(window.localStorage.getItem(SAVED_HALLS_KEY)));
+  const account = synchronizeOwner();
+  try {
+    return remember(parseSavedHallIds(window.localStorage.getItem(storageKey(account))));
+  } catch {
+    return remember(EMPTY_SAVED_HALLS);
+  }
 }
 
 export function getServerSavedHallIds(): string[] {
@@ -50,18 +74,24 @@ function emitSavedHalls() {
 
 export function subscribeSavedHalls(listener: () => void) {
   listeners.add(listener);
+  const unsubscribeAccount = subscribeAuthenticatedAccount(() => {
+    synchronizeOwner();
+    listener();
+  });
   const onStorage = (event: StorageEvent) => {
-    if (event.key === SAVED_HALLS_KEY) listener();
+    if (event.key === null || event.key === storageKey(readAuthenticatedAccount())) listener();
   };
   window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(listener);
+    unsubscribeAccount();
     window.removeEventListener("storage", onStorage);
   };
 }
 
 function writeSavedHallIds(ids: string[]) {
-  window.localStorage.setItem(SAVED_HALLS_KEY, JSON.stringify(ids));
+  const account = synchronizeOwner();
+  try { window.localStorage.setItem(storageKey(account), JSON.stringify(ids)); } catch { /* private mode */ }
   remember(ids);
   emitSavedHalls();
 }
@@ -74,23 +104,27 @@ function writeSavedHallIds(ids: string[]) {
  */
 export async function hydrateSavedHallsFromServer(): Promise<void> {
   if (typeof window === "undefined") return;
-  if (!hasHallFavoritesSession()) return;
+  const account = synchronizeOwner();
+  if (!account || !hasHallFavoritesSession()) return;
   if (hydrationInflight) return hydrationInflight;
   if (hydratedAt > 0 && Date.now() - hydratedAt < HYDRATION_TTL_MS) return;
 
-  hydrationInflight = (async () => {
+  const pending = Promise.resolve().then(async () => {
     try {
       const ids = await fetchFavoriteHallIds();
+      if (!isCurrentAuthenticatedAccount(account)) return;
       writeSavedHallIds(ids);
     } catch {
       // Offline / transient failure: keep what is already saved locally.
     } finally {
-      hydratedAt = Date.now();
-      hydrationInflight = null;
+      if (isCurrentAuthenticatedAccount(account) && hydrationInflight === pending) {
+        hydratedAt = Date.now();
+        hydrationInflight = null;
+      }
     }
-  })();
-
-  return hydrationInflight;
+  });
+  hydrationInflight = pending;
+  return pending;
 }
 
 function syncSavedHallToServer(hallId: string, add: boolean) {

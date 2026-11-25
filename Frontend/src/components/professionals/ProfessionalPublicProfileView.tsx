@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import ContentPagination from "@/components/ui/ContentPagination";
+import { useContentPagination } from "@/hooks/useContentPagination";
 import ProfessionalBioEditor from "@/components/professionals/ProfessionalBioEditor";
 import ProfilePhoneCopyButton from "@/components/professionals/ProfilePhoneCopyButton";
 import ProfessionalContentCard from "@/components/professionals/ProfessionalContentCard";
@@ -87,12 +89,6 @@ function ProfessionalProfileWorkspace({
   const [pictureUploading, setPictureUploading] = useState(false);
   const [pictureError, setPictureError] = useState<string | null>(null);
   const [pictureSuccess, setPictureSuccess] = useState<string | null>(null);
-  const [posts, setPosts] = useState<ProfessionalProfileContentItem[] | null>(null);
-  const [offers, setOffers] = useState<ProfessionalProfileContentItem[] | null>(null);
-  const [listStates, setListStates] = useState<Record<ProfessionalProfileTab, { loading: boolean; error: string | null }>>({
-    posts: { loading: false, error: null }, offers: { loading: false, error: null },
-  });
-  const { loading: listLoading, error: listError } = listStates[tab];
   const [postFormMode, setPostFormMode] = useState<"create" | "edit" | null>(null);
   const [editingPost, setEditingPost] =
     useState<ProfessionalProfileContentItem | null>(null);
@@ -108,6 +104,23 @@ function ProfessionalProfileWorkspace({
     isOwner && profile?.isPubliclyAvailable && canPublish && !approvalLoading,
   );
   const canManageOffers = canManagePosts;
+  const publishingBlocked = !publishingLock.ready || publishingLock.isLocked;
+  const availabilityRefreshAttempted = useRef(false);
+
+  useEffect(() => {
+    if (publishingBlocked || !canPublish || approvalLoading || profile?.isPubliclyAvailable) {
+      availabilityRefreshAttempted.current = false;
+      return;
+    }
+    // A profile fetched during a lock can remain private after the shared lock expires.
+    // Retry once per permission transition; an independently private profile must not loop.
+    if (!isOwner || profile?.isPubliclyAvailable !== false || availabilityRefreshAttempted.current) return;
+    const timer = window.setTimeout(() => {
+      availabilityRefreshAttempted.current = true;
+      void reload();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [publishingBlocked, canPublish, approvalLoading, profile?.isPubliclyAvailable, isOwner, reload]);
 
   const displayBio =
     localBio !== undefined ? localBio : (profile?.bio ?? null);
@@ -118,71 +131,56 @@ function ProfessionalProfileWorkspace({
 
   const profileIsPublic = profile?.isPubliclyAvailable;
   const profileUserId = profile?.userId;
-  const loadTabLists = useCallback(
-    async (nextTab: ProfessionalProfileTab, quiet = false) => {
-      if (!profileIsPublic || !profileUserId) return;
-      const current = scope.latest(nextTab);
-      if (!current()) return;
-      if (!quiet) setListStates((states) => ({ ...states, [nextTab]: { loading: true, error: null } }));
-      try {
-        const page = nextTab === "posts"
-          ? await fetchProfessionalProfilePosts(profileUserId, 1, 12)
-          : canManageOffers ? await fetchOwnProfessionalOffers(1, 20)
-          : await fetchProfessionalProfileOffers(profileUserId, 1, 12);
-        if (!current()) return;
-        if (nextTab === "posts") setPosts(page.items);
-        else setOffers(page.items);
-      } catch {
-        if (current()) setListStates((states) => ({ ...states, [nextTab]: {
-          loading: false, error: nextTab === "posts"
-            ? "professionals.posts.errors.loadFailed" : "professionals.offers.errors.loadFailed",
-        } }));
-      } finally {
-        if (current()) setListStates((states) => ({ ...states, [nextTab]: { ...states[nextTab], loading: false } }));
-      }
-    },
-    [profileIsPublic, profileUserId, canManageOffers, scope],
-  );
-
-  const tabItems = tab === "posts" ? posts : offers;
-  useEffect(() => {
-    if (!profileIsPublic || tabItems !== null) return;
-    const timer = window.setTimeout(() => { void loadTabLists(tab); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [profileIsPublic, tab, tabItems, loadTabLists]);
+  const fetchPostsPage = useCallback((page: number, size: number) =>
+    fetchProfessionalProfilePosts(userId, page, size), [userId]);
+  const fetchOffersPage = useCallback((page: number, size: number) =>
+    canManageOffers ? fetchOwnProfessionalOffers(page, size)
+      : fetchProfessionalProfileOffers(userId, page, size), [canManageOffers, userId]);
+  const postPages = useContentPagination({ context: userId, enabled: Boolean(profileIsPublic && profileUserId),
+    pageSize: 12, fetchPage: fetchPostsPage });
+  const offerPages = useContentPagination({ context: userId + (canManageOffers ? ":own" : ":public"),
+    enabled: Boolean(profileIsPublic && profileUserId), pageSize: 12, fetchPage: fetchOffersPage });
+  const posts = postPages.loaded ? postPages.items : null;
+  const offers = offerPages.loaded ? offerPages.items : null;
+  const pagination = tab === "posts" ? postPages : offerPages;
+  const listLoading = pagination.busy;
+  const listError = pagination.error ? (tab === "posts"
+    ? "professionals.posts.errors.loadFailed" : "professionals.offers.errors.loadFailed") : null;
+  const loadTabLists = (nextTab: ProfessionalProfileTab) =>
+    nextTab === "posts" ? postPages.refresh() : offerPages.refresh();
 
   useOfferLifecycle(offers ?? profile?.offers ?? [], {
     enabled: Boolean(profileIsPublic),
-    discoverUnloaded: !canManageOffers && tab === "offers",
+    discoverUnloaded: !canManageOffers,
     revalidateAtBoundary: !canManageOffers,
-    onRevalidate: () => tab === "offers" ? loadTabLists("offers", true) : undefined,
+    onRevalidate: () => offerPages.refresh(),
   });
 
   const onTabChange = (next: ProfessionalProfileTab) => {
     setTab(next);
-    if (next === "offers" && offers !== null) void loadTabLists("offers", true);
+    if (next !== tab && (next === "posts" || offers !== null || offerPages.error)) {
+      void loadTabLists(next);
+    }
   };
 
   const refreshAfterPostMutation = async (mode: "create" | "edit") => {
     const current = scope.capture();
     if (!current()) return;
-    scope.latest("posts");
-    setPosts(null);
+    await postPages.refresh();
+    if (!current()) return;
     setPostActionSuccess(
       mode === "edit"
         ? t("professionals.posts.updateSuccess")
         : t("professionals.posts.createSuccess"),
     );
-    await reload();
   };
 
   const refreshAfterOfferMutation = async (messageKey: string) => {
     const current = scope.capture();
     if (!current()) return;
-    scope.latest("offers");
-    setOffers(null);
+    await offerPages.refresh();
+    if (!current()) return;
     setOfferActionSuccess(t(messageKey));
-    await reload();
   };
 
   const onStopOffer = async (item: ProfessionalProfileContentItem) => {
@@ -195,9 +193,7 @@ function ProfessionalProfileWorkspace({
     } catch (error) {
       if (!current()) return;
       if (error instanceof ApiError && error.status === 409) {
-        scope.latest("offers");
-        setOffers(null);
-        await reload();
+        await offerPages.refresh();
         if (!current()) return;
         throw new Error(t("professionals.offers.errors.stopConflict"));
       }
@@ -324,17 +320,18 @@ function ProfessionalProfileWorkspace({
 
   const avatarUrl = displayPictureUrl ? resolveMediaUrl(displayPictureUrl) : "";
   const location = professionalPublicLocation(profile);
-  const postsForTab = posts ?? profile.posts;
+  const postsForTab = posts ?? [];
   // Public visitors only see active offers; owners keep full mine list for stop/manage.
-  const offersForTab = (offers ?? profile.offers).filter((offer) =>
+  const offersForTab = (offers ?? []).filter((offer) =>
     canManageOffers
       ? true
       : isOfferPubliclyVisible(offer.startsAt, offer.endsAt, offer.stoppedAt),
   );
-  const postsCount = posts?.length ?? profile.posts.length;
-  const offersCount = canManageOffers
-    ? (offers?.length ?? profile.offers.length)
-    : offersForTab.length;
+  const postsCount = postPages.total ?? "\u2026";
+  // A boundary can invalidate a public total before the replacement response arrives.
+  const offersCount = !canManageOffers && offers?.some((offer) =>
+    !isOfferPubliclyVisible(offer.startsAt, offer.endsAt, offer.stoppedAt))
+    ? "\u2026" : (offerPages.total ?? "\u2026");
 
   return (
     <div className={`ppp${!isOwner ? " ppp--visitor" : ""}`} data-testid="professional-public-profile">
@@ -584,14 +581,14 @@ function ProfessionalProfileWorkspace({
                 type="button"
                 className="btn-primary !min-h-10 px-3.5 text-sm disabled:cursor-not-allowed disabled:opacity-55"
                 data-testid="professional-post-create-open"
-                disabled={publishingLock.isLocked || postSubmitting}
+                disabled={publishingBlocked || postSubmitting}
                 title={
                   publishingLock.isLocked
                     ? t("moderation.restriction.blocked")
                     : undefined
                 }
                 onClick={() => {
-                  if (publishingLock.isLocked || postSaveInProgress.current) return;
+                  if (publishingBlocked || postSaveInProgress.current) return;
                   setEditingPost(null);
                   setPostFormMode("create");
                   setOfferFormOpen(false);
@@ -607,14 +604,14 @@ function ProfessionalProfileWorkspace({
                 type="button"
                 className="btn-outline !min-h-10 px-3.5 text-sm disabled:cursor-not-allowed disabled:opacity-55"
                 data-testid="professional-offer-create-open"
-                disabled={publishingLock.isLocked || postSubmitting}
+                disabled={publishingBlocked || postSubmitting}
                 title={
                   publishingLock.isLocked
                     ? t("moderation.restriction.blocked")
                     : undefined
                 }
                 onClick={() => {
-                  if (publishingLock.isLocked || postSaveInProgress.current) return;
+                  if (publishingBlocked || postSaveInProgress.current) return;
                   setOfferFormOpen(true);
                   setPostFormMode(null);
                   setEditingPost(null);
@@ -639,7 +636,7 @@ function ProfessionalProfileWorkspace({
         </p>
       ) : null}
 
-      {postFormMode && !publishingLock.isLocked ? (
+      {postFormMode && canManagePosts && !publishingBlocked ? (
         <ProfessionalPostForm
           mode={postFormMode}
           initialPost={postFormMode === "edit" ? editingPost : null}
@@ -659,7 +656,7 @@ function ProfessionalProfileWorkspace({
         />
       ) : null}
 
-      {offerFormOpen && !publishingLock.isLocked ? (
+      {offerFormOpen && canManageOffers && !publishingBlocked ? (
         <ProfessionalOfferForm
           onClose={() => setOfferFormOpen(false)}
           onSaved={() => {
@@ -680,9 +677,9 @@ function ProfessionalProfileWorkspace({
             items={postsForTab}
             kind="post"
             canEdit={canManagePosts}
-            editDisabled={postSubmitting}
+            editDisabled={postSubmitting || publishingBlocked}
             onEdit={(item) => {
-              if (postSaveInProgress.current) return;
+              if (publishingBlocked || !canManagePosts || postSaveInProgress.current) return;
               setEditingPost(item);
               setPostFormMode("edit");
               setPostActionSuccess(null);
@@ -707,12 +704,14 @@ function ProfessionalProfileWorkspace({
             }
             items={offersForTab}
             kind="offer"
-            canStop={canManageOffers}
+            canStop={canManageOffers && !publishingBlocked}
             onStop={onStopOffer}
             showLifecycle={canManageOffers}
           />
         )
       ) : null}
+      {profileIsPublic && (pagination.loaded || !pagination.error) ? <ContentPagination {...pagination}
+        onMore={() => void pagination.loadMore()} onRetry={() => void pagination.refresh()} /> : null}
     </div>
   );
 }

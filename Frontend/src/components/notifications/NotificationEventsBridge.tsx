@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { readNotificationAccount, serverNotificationAccount, subscribeNotificationAccount,
+  isCurrentNotificationAccount } from "@/lib/notification-account";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { t } from "@/i18n";
 import { formatBookingDateLabel } from "@/lib/booking-date";
@@ -29,6 +31,7 @@ import {
 import {
   notifySeekerWelcome,
   pushPlatformNotification,
+  type PushPlatformNotificationInput,
 } from "@/lib/platform-notifications-store";
 import { subscribeOwnerBookingRequestEvents } from "@/services/booking-notification-realtime";
 import { subscribePlatformNotificationRealtime } from "@/services/platform-notification-realtime";
@@ -58,10 +61,13 @@ function lookupHallName(hallId: string, bookingId?: string, fallback?: string) {
 
 /**
  * Turns existing booking/hall domain events into the local notification feed.
- * No inbox API exists — this only mirrors client-side lifecycle events.
+ * Mirrors client-side lifecycle events into the current account's notification inbox.
  */
 export default function NotificationEventsBridge() {
   const account = useAccountAccess();
+  const notificationAccount = useSyncExternalStore(
+    subscribeNotificationAccount, readNotificationAccount, serverNotificationAccount,
+  );
 
   useEffect(() => {
     if (!account.ready || !account.authenticated || account.isAdmin || account.isHallOwner) {
@@ -75,13 +81,15 @@ export default function NotificationEventsBridge() {
   useEffect(() => {
     if (!account.ready || !account.authenticated) return;
     return subscribePlatformNotificationRealtime();
-  }, [account.authenticated, account.ready, account.sessionKey]);
+  }, [account.authenticated, account.ready, notificationAccount]);
 
   useEffect(() => {
+    if (!notificationAccount) return;
+    const notify = (input: PushPlatformNotificationInput) => pushPlatformNotification(input, notificationAccount);
     const onSubmitted = (event: Event) => {
       const detail = (event as CustomEvent<BookingSubmittedDetail>).detail;
       if (!detail?.hallId) return;
-      pushPlatformNotification({
+      notify({
         type: "booking_submitted",
         audience: "seeker",
         titleKey: "notify.bookingSubmitted.title",
@@ -104,7 +112,7 @@ export default function NotificationEventsBridge() {
         detail.timeRange?.trim() || formatPeriods(detail.periods) || t("halls.period.generic");
       const amount =
         detail.depositAmount != null ? formatDepositAmount(detail.depositAmount) : "—";
-      pushPlatformNotification({
+      notify({
         type: "booking_accepted",
         audience: "seeker",
         titleKey: "notify.bookingAccepted.title",
@@ -131,7 +139,7 @@ export default function NotificationEventsBridge() {
       if (!detail?.bookingId) return;
       const hallName = lookupHallName(detail.hallId, detail.bookingId, detail.hallName);
       const reason = detail.rejectionReason?.trim() || t("notify.bookingRejected.reasonMissing");
-      pushPlatformNotification({
+      notify({
         type: "booking_rejected",
         audience: "seeker",
         titleKey: "notify.bookingRejected.title",
@@ -156,7 +164,7 @@ export default function NotificationEventsBridge() {
       const userName = detail.requesterName?.trim() || t("common.user");
       const date = formatBookingDateLabel(detail.date, locale());
       const period = formatPeriods([detail.period]);
-      pushPlatformNotification({
+      notify({
         type: "booking_cancelled",
         audience: "owner",
         titleKey: "notify.bookingCancelled.title",
@@ -178,7 +186,7 @@ export default function NotificationEventsBridge() {
       const detail = (event as CustomEvent<HallCreatedDetail>).detail;
       if (!detail?.hallName && !detail?.hallId) return;
       const hallName = detail.hallName.trim() || t("common.hall");
-      pushPlatformNotification({
+      notify({
         type: "hall_submitted",
         audience: "owner",
         titleKey: "notify.hallSubmitted.title",
@@ -188,7 +196,7 @@ export default function NotificationEventsBridge() {
         tone: "success",
       });
       if (detail.hallId) {
-        pushPlatformNotification({
+        notify({
           type: "hall_review_request",
           audience: "admin",
           titleKey: "notify.hallReview.title",
@@ -204,7 +212,7 @@ export default function NotificationEventsBridge() {
       const detail = (event as CustomEvent<HallApprovedDetail>).detail;
       if (!detail?.hallId) return;
       const hallName = detail.hallName.trim() || t("common.hall");
-      pushPlatformNotification({
+      notify({
         type: "hall_approved",
         audience: "owner",
         titleKey: "notify.hallApproved.title",
@@ -220,7 +228,7 @@ export default function NotificationEventsBridge() {
       if (!detail?.hallId) return;
       const hallName = detail.hallName.trim() || t("common.hall");
       const reason = detail.reason?.trim() || "";
-      pushPlatformNotification({
+      notify({
         type: "hall_rejected",
         audience: "owner",
         titleKey: "notify.hallRejected.title",
@@ -244,6 +252,7 @@ export default function NotificationEventsBridge() {
     window.addEventListener(HALL_APPROVED_EVENT, onHallApproved);
     window.addEventListener(HALL_REJECTED_EVENT, onHallRejected);
     const unsubscribeOwnerRealtime = subscribeOwnerBookingRequestEvents((event) => {
+      if (!isCurrentNotificationAccount(notificationAccount)) return;
       if (event.replay || !event.id) return;
       if (event.kind === "cancelled") {
         emitBookingCancelled({
@@ -271,7 +280,7 @@ export default function NotificationEventsBridge() {
       window.removeEventListener(HALL_REJECTED_EVENT, onHallRejected);
       unsubscribeOwnerRealtime();
     };
-  }, []);
+  }, [notificationAccount]);
 
   return null;
 }

@@ -1,3 +1,4 @@
+import { resolvePublishingLock } from "@/lib/publishing-lock";
 import type { UserProfile } from "@/types/profile";
 
 function asText(value: unknown): string {
@@ -35,10 +36,7 @@ export function mapProfileDto(data: unknown): UserProfile {
   const lockedUntil =
     asText(dto.lockedUntil ?? dto.LockedUntil) || null;
   const isLockedRaw = Boolean(dto.isLocked ?? dto.IsLocked);
-  const lockedUntilMs = lockedUntil ? Date.parse(lockedUntil) : NaN;
-  const isLocked =
-    isLockedRaw &&
-    (Number.isNaN(lockedUntilMs) || lockedUntilMs > Date.now());
+  const lock = resolvePublishingLock({ isLocked: isLockedRaw, lockedUntil });
 
   return {
     id: asText(dto.id ?? dto.Id ?? dto.userId ?? dto.UserId) || "self",
@@ -55,8 +53,8 @@ export function mapProfileDto(data: unknown): UserProfile {
         ? null
         : String(approvalRaw).trim() || null,
     createdAt,
-    isLocked,
-    lockedUntil: isLocked ? lockedUntil : null,
+    isLocked: lock.isLocked,
+    lockedUntil: lock.lockedUntil,
   };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { HALL_REGION_LABEL_KEYS, isHallRegion } from "@/constants/hallRegions";
@@ -15,7 +16,11 @@ type OwnerHallReadOnlyViewProps = {
   hallId: string;
 };
 
-export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewProps) {
+export default function OwnerHallReadOnlyView(props: OwnerHallReadOnlyViewProps) {
+  return <OwnerHallReadOnlyViewContent key={props.hallId} {...props} />;
+}
+
+function OwnerHallReadOnlyViewContent({ hallId }: OwnerHallReadOnlyViewProps) {
   const t = useT();
   const lang = useUiLang();
   const [details, setDetails] = useState<HallOwnerHallDetails | null>(null);
@@ -25,8 +30,6 @@ export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewP
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
-    setErrorKey(null);
     void fetchOwnerHallDetails(hallId)
       .then((next) => {
         if (!cancelled) setDetails(next);
@@ -57,7 +60,7 @@ export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewP
     return (
       <section className="rounded-2xl bg-white p-6" role="alert">
         <p className="text-sm text-[var(--wesal-muted)]">{t(errorKey ?? "owner.management.halls.loadError")}</p>
-        <button type="button" className="btn-outline mt-4" onClick={() => setReloadKey((value) => value + 1)}>
+        <button type="button" className="btn-outline mt-4" onClick={() => { setIsLoading(true); setErrorKey(null); setReloadKey((value) => value + 1); }}>
           {t("common.retry")}
         </button>
       </section>
@@ -88,7 +91,7 @@ export default function OwnerHallReadOnlyView({ hallId }: OwnerHallReadOnlyViewP
         {photos.length > 0 ? (
           <div className="grid gap-2 p-3 sm:grid-cols-2">
             {photos.map((url) => (
-              <img key={url} src={url} alt="" className="h-52 w-full rounded-2xl object-cover sm:h-64" />
+              <Image key={url} src={url} alt="" width={640} height={256} unoptimized loading="eager" className="h-52 w-full rounded-2xl object-cover sm:h-64" />
             ))}
           </div>
         ) : (

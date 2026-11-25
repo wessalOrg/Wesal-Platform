@@ -6,7 +6,8 @@ import { isActiveExpiryWarning } from "@/lib/subscription-expiry-warning-message
 import type { HallExpiryWarning, HallOwnerHall } from "@/types/hall-owner-halls";
 
 /**
- * Assumed owner halls list contract (US-OWNER-05) until OpenAPI lands.
+ * OwnerHallDto provides hallId, hallName, status, and paymentStatus.
+ * Optional lock aliases are accepted when explicitly supplied; missing flags remain unknown.
  *
  * GET /api/v1/owner/halls
  * Auth: Bearer (Hall Owner)

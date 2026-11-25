@@ -3,9 +3,11 @@
 import MabroukFigure from "@/components/brand/MabroukFigure";
 import ConversationListItem from "@/components/messages/ConversationListItem";
 import { useT } from "@/i18n";
+import ConversationPagination, { type InboxPagination } from "@/components/messages/ConversationPagination";
 import type { ConversationSummary, InboxStatus } from "@/types/messages";
 
 type ConversationListProps = {
+  pagination?: InboxPagination;
   status: InboxStatus;
   conversations: ConversationSummary[];
   selectedId: string | null;
@@ -16,6 +18,7 @@ type ConversationListProps = {
 };
 
 export default function ConversationList({
+  pagination,
   status,
   conversations,
   selectedId,
@@ -64,6 +67,7 @@ export default function ConversationList({
   }
 
   return (
+    <>
     <ul className="space-y-1 p-2" data-testid="inbox-conversation-list">
       {conversations
         .filter((conversation) => conversation?.conversationId)
@@ -78,5 +82,7 @@ export default function ConversationList({
         </li>
       ))}
     </ul>
+    <ConversationPagination pagination={pagination} />
+    </>
   );
 }

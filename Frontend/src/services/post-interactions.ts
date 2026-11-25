@@ -173,16 +173,20 @@ function mapPagedComments(
 function mapPagedFavorites(
   data: ApiPaged<ApiFavorite> | null | undefined,
 ): PagedResult<FavoritePost> {
-  const rows = data?.items ?? data?.Items ?? [];
+  const rows = data?.items ?? data?.Items;
+  const pageNumber = asNumber(data?.pageNumber ?? data?.PageNumber);
+  const pageSize = asNumber(data?.pageSize ?? data?.PageSize);
+  const totalCount = asNumber(data?.totalCount ?? data?.TotalCount);
+  const totalPages = asNumber(data?.totalPages ?? data?.TotalPages);
+  if (!Array.isArray(rows) || pageNumber === null || pageSize === null || totalCount === null || totalPages === null
+    || ![pageNumber, pageSize, totalCount, totalPages].every(Number.isInteger)
+    || pageNumber < 1 || pageSize < 1 || totalCount < 0 || totalPages < 0) {
+    throw new ApiError("posts.favorites.errors.loadFailed", 0);
+  }
   const items = Array.isArray(rows)
     ? rows.map(mapFavorite).filter((row): row is FavoritePost => Boolean(row))
     : [];
-  const pageNumber = asNumber(data?.pageNumber ?? data?.PageNumber) ?? 1;
-  const pageSize = asNumber(data?.pageSize ?? data?.PageSize) ?? items.length;
-  const totalCount = asNumber(data?.totalCount ?? data?.TotalCount) ?? items.length;
-  const totalPages =
-    asNumber(data?.totalPages ?? data?.TotalPages) ??
-    (pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0);
+  if (items.length !== rows.length) throw new ApiError("posts.favorites.errors.loadFailed", 0);
   return { items, pageNumber, pageSize, totalCount, totalPages };
 }
 

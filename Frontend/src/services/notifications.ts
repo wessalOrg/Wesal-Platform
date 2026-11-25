@@ -17,6 +17,7 @@ export function notificationsUseMock(): boolean {
 
 /** Mirrors `UserNotificationDto`; enums are serialized as their C# names. */
 type ApiUserNotification = {
+  payloadJson?: string | null;
   id?: string;
   /** `NotificationKind` name (the DTO exposes it as `type`). */
   type?: string;
@@ -43,14 +44,32 @@ type ApiUserNotification = {
 
 type ApiPagedUserNotifications = {
   items?: ApiUserNotification[] | null;
+  pageNumber?: number;
+  pageSize?: number;
+  totalCount?: number;
+  totalPages?: number;
+  hasPreviousPage?: boolean;
+  hasNextPage?: boolean;
+};
+
+export type NotificationPage = {
+  items: PlatformNotification[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
 };
 
 function mapInboxItem(item: ApiUserNotification): PlatformNotification | null {
+  if (!item || typeof item !== "object") return null;
   const id = String(item.id ?? "").trim();
   if (!id) return null;
 
   const mapped = mapServerNotification({
     kind: item.type ?? item.kind,
+    payloadJson: item.payloadJson,
     title: item.title,
     body: item.body,
     targetId: item.targetId,
@@ -79,7 +98,7 @@ function mapInboxItem(item: ApiUserNotification): PlatformNotification | null {
     action_label: mapped.actionLabel,
     metadata: mapped.metadata,
     is_read: Boolean(item.isRead ?? item.readAt),
-    created_at: item.createdAt?.trim() || new Date().toISOString(),
+    created_at: typeof item.createdAt === "string" && item.createdAt.trim() ? item.createdAt.trim() : new Date().toISOString(),
     tone: mapped.tone,
     titleKey: "",
     bodyKey: "",
@@ -89,30 +108,41 @@ function mapInboxItem(item: ApiUserNotification): PlatformNotification | null {
 
 /** Loads the authenticated user's durable inbox, newest first. */
 export async function fetchServerNotifications(
+  page = 1,
   pageSize = 40,
-): Promise<PlatformNotification[]> {
+  signal?: AbortSignal,
+): Promise<NotificationPage> {
   const { data } = await api.get<ApiPagedUserNotifications>("/notifications", {
-    params: { page: 1, pageSize },
+    params: { page, pageSize },
     timeout: 8000,
+    signal,
   });
-  const rows = Array.isArray(data?.items) ? data.items : [];
-  return rows
-    .map(mapInboxItem)
-    .filter((item): item is PlatformNotification => Boolean(item));
+  if (!data || !Array.isArray(data.items) ||
+      !Number.isInteger(data.pageNumber) || Number(data.pageNumber) < 1 ||
+      !Number.isInteger(data.pageSize) || Number(data.pageSize) < 1 ||
+      !Number.isInteger(data.totalCount) || Number(data.totalCount) < 0 ||
+      !Number.isInteger(data.totalPages) || Number(data.totalPages) < 0 ||
+      typeof data.hasPreviousPage !== "boolean" || typeof data.hasNextPage !== "boolean") {
+    throw new Error("Invalid notifications pagination response.");
+  }
+  return { items: data.items.map(mapInboxItem).filter((item): item is PlatformNotification => Boolean(item)),
+    pageNumber: data.pageNumber!, pageSize: data.pageSize!, totalCount: data.totalCount!,
+    totalPages: data.totalPages!, hasPreviousPage: data.hasPreviousPage, hasNextPage: data.hasNextPage };
 }
 
-export async function markServerNotificationRead(notificationId: string): Promise<void> {
-  await api.put(`/notifications/${notificationId}/read`, undefined, { timeout: 8000 });
+export async function markServerNotificationRead(notificationId: string, signal?: AbortSignal): Promise<void> {
+  await api.put(`/notifications/${notificationId}/read`, undefined, { timeout: 8000, signal });
 }
 
-export async function markAllServerNotificationsRead(): Promise<void> {
-  await api.put("/notifications/read-all", undefined, { timeout: 8000 });
+export async function markAllServerNotificationsRead(signal?: AbortSignal): Promise<void> {
+  await api.put("/notifications/read-all", undefined, { timeout: 8000, signal });
 }
 
 /** GET /notifications/unread-count — authoritative badge total. */
-export async function fetchNotificationsUnreadCount(): Promise<number> {
+export async function fetchNotificationsUnreadCount(signal?: AbortSignal): Promise<number> {
   const { data } = await api.get<unknown>("/notifications/unread-count", {
     timeout: 8000,
+    signal,
   });
   if (typeof data === "number" && Number.isFinite(data)) return Math.max(0, data);
   if (data && typeof data === "object") {

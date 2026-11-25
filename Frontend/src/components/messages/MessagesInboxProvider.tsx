@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
@@ -21,6 +22,9 @@ import { useMessageDrafts } from "@/hooks/useMessageDrafts";
 import { useThreadDeliverySync } from "@/hooks/useThreadDeliverySync";
 import { getCurrentUserId, isSameUserId } from "@/lib/current-user";
 import {
+  readAuthenticatedAccount, serverAuthenticatedAccount, subscribeAuthenticatedAccount,
+} from "@/lib/authenticated-account";
+import {
   applyUnreadCount as applySharedUnreadSnapshot,
   refreshUnreadCount,
 } from "@/hooks/useUnreadCount";
@@ -33,6 +37,7 @@ import {
   subscribeIncomingMessages,
   subscribeUnreadCounts,
 } from "@/services/conversation-realtime";
+import type { InboxPagination } from "@/components/messages/ConversationPagination";
 import type { ConversationSummary, InboxStatus, MessageThread, ThreadStatus } from "@/types/messages";
 
 type MessagesInboxContextValue = {
@@ -43,6 +48,7 @@ type MessagesInboxContextValue = {
   inboxStatus: InboxStatus;
   conversations: ConversationSummary[];
   inboxError: string | null;
+  pagination: InboxPagination;
   retryInbox: () => void;
   refreshInbox: () => void;
   ensureConversation: (conversation: ConversationSummary) => void;
@@ -64,6 +70,7 @@ type MessagesInboxContextValue = {
 const MessagesInboxContext = createContext<MessagesInboxContextValue | null>(null);
 
 export function MessagesInboxProvider({ children }: { children: ReactNode }) {
+  const realtimeAccount = useSyncExternalStore(subscribeAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount);
   const pathname = usePathname();
   const { ready, authenticated, sessionKey, userId, displayName, isHallOwner, role } =
     useAccountAccess();
@@ -129,7 +136,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   // 13.5 — tell the hub the actively viewed conversation only (suppresses alerts / unread).
   // Closing the floating inbox or leaving messages routes must clear hub presence.
   useEffect(() => {
-    if (!sessionReady || !ownerKey || !inboxActive || !selectedId) {
+    if (!sessionReady || !ownerKey || !realtimeAccount || !inboxActive || !selectedId) {
       setConversationOpen(null);
       return;
     }
@@ -137,11 +144,11 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
     return () => {
       setConversationOpen(null);
     };
-  }, [sessionReady, ownerKey, inboxActive, selectedId]);
+  }, [realtimeAccount, sessionReady, ownerKey, inboxActive, selectedId]);
 
   // Keep inbox list + badge synced for every incoming message (including closed threads).
   useEffect(() => {
-    if (!sessionReady || !ownerKey) return;
+    if (!sessionReady || !ownerKey || !realtimeAccount) return;
     return subscribeIncomingMessages((payload) => {
       if (!payload?.conversationId || !payload.message) return;
       const own = isSameUserId(payload.message.senderUserId, currentUserId);
@@ -167,6 +174,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   }, [
     applyPreview,
     applyUnreadCount,
+    realtimeAccount,
     currentUserId,
     ownerKey,
     selectedId,
@@ -174,7 +182,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
   ]);
 
   useEffect(() => {
-    if (!sessionReady || !ownerKey) return;
+    if (!sessionReady || !ownerKey || !realtimeAccount) return;
     return subscribeUnreadCounts((payload) => {
       if (typeof payload.totalUnreadCount === "number") {
         applySharedUnreadSnapshot(payload.totalUnreadCount);
@@ -185,7 +193,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
         applyUnreadCount(payload.conversationId, payload.unreadMessageCount);
       }
     });
-  }, [applyUnreadCount, ownerKey, sessionReady]);
+  }, [applyUnreadCount, realtimeAccount, ownerKey, sessionReady]);
 
   useConversationRealtime(
     sessionReady && ownerKey && threadFetchEnabled ? selectedId : null,
@@ -379,6 +387,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       inboxStatus: inbox.status,
       conversations: inbox.conversations,
       inboxError: inbox.error,
+      pagination: { hasMore: inbox.hasMore, loading: inbox.loadingMore, error: inbox.loadMoreError, totalCount: inbox.totalCount, onLoadMore: inbox.loadMore },
       retryInbox: inbox.retry,
       refreshInbox,
       ensureConversation,
@@ -404,6 +413,7 @@ export function MessagesInboxProvider({ children }: { children: ReactNode }) {
       inbox.status,
       inbox.conversations,
       inbox.error,
+      inbox.hasMore, inbox.loadingMore, inbox.loadMoreError, inbox.totalCount, inbox.loadMore,
       inbox.retry,
       refreshInbox,
       ensureConversation,

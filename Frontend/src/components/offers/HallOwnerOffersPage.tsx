@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import ContentPagination from "@/components/ui/ContentPagination";
+import { useContentPagination } from "@/hooks/useContentPagination";
 import HallOfferFormModal, {
   type HallOfferFormValues,
 } from "@/components/offers/HallOfferFormModal";
@@ -83,9 +85,13 @@ function HallOffersWorkspace({ selectedHallId, approvedHalls, hallsLoading, onHa
   const scope = useRequestScope();
   const saving = useRef(false);
   const stopping = useRef(false);
-  const [offers, setOffers] = useState<HallOffer[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const fetchPage = useCallback((page: number, size: number) =>
+    fetchOwnerHallOffers(selectedHallId, page, size), [selectedHallId]);
+  const pagination = useContentPagination({ context: selectedHallId,
+    enabled: Boolean(selectedHallId), fetchPage, pageSize: 50, autoLoadAll: true });
+  const offers = pagination.items;
+  const status = pagination.loaded ? "ready" : pagination.error ? "error" : "loading";
+  const errorKey = pagination.error instanceof ApiError ? pagination.error.message : null;
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [editing, setEditing] = useState<HallOffer | null>(null);
@@ -95,35 +101,7 @@ function HallOffersWorkspace({ selectedHallId, approvedHalls, hallsLoading, onHa
   const [stopBusy, setStopBusy] = useState(false);
   const [stopError, setStopError] = useState<string | null>(null);
 
-  const loadOffers = useCallback(async (quiet = false) => {
-    const current = scope.latest("offers");
-    if (!current()) return;
-    const hallId = selectedHallId;
-    if (!hallId) {
-      setOffers([]);
-      setStatus("ready");
-      return;
-    }
-    if (!quiet) setStatus("loading");
-    setErrorKey(null);
-    try {
-      const page = await fetchOwnerHallOffers(hallId, 1, 50);
-      if (!current()) return;
-      setOffers(page.items);
-      setStatus("ready");
-    } catch (err) {
-      if (!current()) return;
-      setStatus("error");
-      setErrorKey(
-        err instanceof ApiError ? err.message : "offers.errors.loadFailed",
-      );
-    }
-  }, [scope, selectedHallId]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => { void loadOffers(); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [loadOffers]);
+  const loadOffers = pagination.refresh;
 
   const selectedHall = approvedHalls.find((hall) => hall.id === selectedHallId);
   const hallName = selectedHall
@@ -132,7 +110,7 @@ function HallOffersWorkspace({ selectedHallId, approvedHalls, hallsLoading, onHa
 
   useOfferLifecycle(offers, {
     revalidateAtBoundary: false,
-    onRevalidate: () => loadOffers(true),
+    onRevalidate: () => loadOffers(),
   });
   const rows: OfferRow[] = offers.map((item) => ({ ...item,
     status: resolveOfferStatus(item.startsAt, item.endsAt, item.stoppedAt),
@@ -144,7 +122,8 @@ function HallOffersWorkspace({ selectedHallId, approvedHalls, hallsLoading, onHa
     const expired = rows.filter(
       (o) => o.status === "expired" || o.status === "stopped",
     ).length;
-    return { total: rows.length, active, scheduled, expired };
+    return { total: pagination.total ?? "\u2026", active: pagination.complete ? active : "\u2026",
+      scheduled: pagination.complete ? scheduled : "\u2026", expired: pagination.complete ? expired : "\u2026" };
   })();
 
   const visible = (() => {
@@ -325,7 +304,7 @@ function HallOffersWorkspace({ selectedHallId, approvedHalls, hallsLoading, onHa
             : errorKey || t("offers.errors.loadFailed")}
         </p>
       ) : null}
-      {status === "ready" && visible.length === 0 ? (
+      {status === "ready" && !pagination.busy && !pagination.error && visible.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--wesal-border)] bg-white p-6 text-center text-sm text-[var(--wesal-muted)]">
           {t("offers.owner.empty")}
         </p>
@@ -412,6 +391,8 @@ function HallOffersWorkspace({ selectedHallId, approvedHalls, hallsLoading, onHa
         onSubmit={handleFormSubmit}
       />
 
+      <ContentPagination {...pagination} onMore={() => void pagination.loadMore()}
+        onRetry={() => void pagination.refresh()} />
       <StopOfferConfirmDialog
         open={Boolean(stopTarget)}
         busy={stopBusy}
@@ -427,7 +408,7 @@ function HallOffersWorkspace({ selectedHallId, approvedHalls, hallsLoading, onHa
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-2xl border border-[var(--wesal-border)] bg-white p-3 shadow-sm">
       <p className="text-[0.7rem] font-bold text-[var(--wesal-muted)]">{label}</p>

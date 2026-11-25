@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { readAuthenticatedAccount, subscribeAuthenticatedAccount, serverAuthenticatedAccount,
+  isCurrentAuthenticatedAccount, type AuthenticatedAccount } from "@/lib/authenticated-account";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { ApiError, isUnauthorizedApiError } from "@/lib/api-error";
@@ -16,6 +18,7 @@ import type {
 } from "@/types/hall-owner-halls";
 import type { HallApprovalStatus } from "@/constants/hallApprovalStatus";
 import type { PaymentStatus } from "@/lib/hall-payment-status";
+import type { HallSubscriptionStatus } from "@/types/hall-subscription";
 
 type HallOwnerHallsSnapshot = {
   halls: HallOwnerHall[];
@@ -26,6 +29,7 @@ type HallOwnerHallsSnapshot = {
 };
 
 const listeners = new Set<() => void>();
+let owner: AuthenticatedAccount | null = null;
 
 let snapshot: HallOwnerHallsSnapshot = {
   halls: [],
@@ -36,6 +40,9 @@ let snapshot: HallOwnerHallsSnapshot = {
 };
 
 let generation = 0;
+// A subscription response can arrive before the owner list. Keep its positive
+// admin-lock evidence until that session ends or an explicit list flag supersedes it.
+const subscriptionAdminLocks = new Set<string>();
 /** Prior approval statuses — used to detect Pending → Approved for public revalidation. */
 let previousApprovalById = new Map<string, HallApprovalStatus>();
 
@@ -52,12 +59,25 @@ function setSnapshot(partial: Partial<HallOwnerHallsSnapshot>): void {
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
+  const unsubscribe = subscribeAuthenticatedAccount(() => {
+    const previous = owner; synchronizeOwner(); if (previous !== owner) emit();
+  });
   return () => {
+    unsubscribe();
     listeners.delete(listener);
   };
 }
 
+function synchronizeOwner() {
+  const account = readAuthenticatedAccount();
+  if (owner !== account) {
+    owner = account; resetHallOwnerHallsStore(false);
+  }
+  return account;
+}
+
 function getSnapshot(): HallOwnerHallsSnapshot {
+  synchronizeOwner();
   return snapshot;
 }
 
@@ -92,6 +112,22 @@ export function applyOwnedHallAdminLocked(hallId: string): void {
       hall.id === id ? { ...hall, adminLocked: true } : hall,
     ),
   });
+}
+
+/** Locked proves AdminLocked; other subscription states cannot establish overall unlock. */
+export function applyOwnedHallSubscriptionStatus(
+  account: AuthenticatedAccount,
+  hallId: string,
+  status: HallSubscriptionStatus,
+): void {
+  if (!isCurrentAuthenticatedAccount(account) || synchronizeOwner() !== account) return;
+  if (status !== "locked") return;
+  subscriptionAdminLocks.add(hallId);
+  const adminLocked = true;
+  if (!snapshot.halls.some((hall) => hall.id === hallId && hall.adminLocked !== adminLocked)) return;
+  setSnapshot({ halls: snapshot.halls.map((hall) =>
+    hall.id === hallId ? { ...hall, adminLocked } : hall,
+  ) });
 }
 
 export function reportOwnedHallPaymentRequired(hallId: string): void {
@@ -129,10 +165,14 @@ function detectNewlyApproved(next: HallOwnerHall[]): boolean {
 }
 
 async function loadHallOwnerHalls(
+  account: AuthenticatedAccount | null,
   mode: "initial" | "refresh",
   logout: () => Promise<void>,
 ): Promise<void> {
+  if (!account || !isCurrentAuthenticatedAccount(account) || synchronizeOwner() !== account) return;
+  if (mode === "initial" && snapshot.status === "loading") return;
   const gen = ++generation;
+  const current = () => gen === generation && isCurrentAuthenticatedAccount(account);
   const treatAsInitial = mode === "initial" || !snapshot.hasLoaded;
 
   if (treatAsInitial) {
@@ -143,10 +183,18 @@ async function loadHallOwnerHalls(
 
   try {
     const next = await fetchHallOwnerHalls();
-    if (gen !== generation) return;
+    if (!current()) return;
     const shouldRevalidatePublic = detectNewlyApproved(next);
     setSnapshot({
-      halls: next,
+      // A DTO that omits flags cannot clear an explicit lock/authoritative observation.
+      halls: next.map((hall) => {
+        const previous = snapshot.halls.find((item) => item.id === hall.id);
+        if (hall.adminLocked !== null) subscriptionAdminLocks.delete(hall.id);
+        return { ...hall,
+          adminLocked: hall.adminLocked ?? (subscriptionAdminLocks.has(hall.id) ? true : previous?.adminLocked ?? null),
+          systemLocked: hall.systemLocked ?? previous?.systemLocked ?? null,
+        };
+      }),
       status: "ready",
       errorKey: null,
       isRefreshing: false,
@@ -157,9 +205,10 @@ async function loadHallOwnerHalls(
       notifyPublicHallsChanged();
     }
   } catch (err) {
-    if (gen !== generation) return;
+    if (!current()) return;
     if (isUnauthorizedApiError(err)) {
       await logout();
+      if (!current()) return;
       previousApprovalById = new Map();
       setSnapshot({
         halls: [],
@@ -192,16 +241,18 @@ async function loadHallOwnerHalls(
   }
 }
 
-function resetHallOwnerHallsStore(): void {
+function resetHallOwnerHallsStore(notify = true): void {
   generation += 1;
+  subscriptionAdminLocks.clear();
   previousApprovalById = new Map();
-  setSnapshot({
+  snapshot = {
     halls: [],
     status: "idle",
     errorKey: null,
     isRefreshing: false,
     hasLoaded: false,
-  });
+  };
+  if (notify) emit();
 }
 
 /**
@@ -214,6 +265,7 @@ function resetHallOwnerHallsStore(): void {
 export function useHallOwnerHalls() {
   const { logout } = useAuth();
   const { ready, authenticated, isHallOwner } = useAccountAccess();
+  const account = useSyncExternalStore(subscribeAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount);
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const logoutQuiet = useCallback(async () => {
@@ -221,11 +273,13 @@ export function useHallOwnerHalls() {
   }, [logout]);
 
   const refetch = useCallback(() => {
+    if (!ready || !authenticated || !isHallOwner) return;
     void loadHallOwnerHalls(
+      account,
       snapshot.hasLoaded ? "refresh" : "initial",
       logoutQuiet,
     );
-  }, [logoutQuiet]);
+  }, [logoutQuiet, account, ready, authenticated, isHallOwner]);
 
   useEffect(() => {
     if (!ready) return;
@@ -233,26 +287,27 @@ export function useHallOwnerHalls() {
       resetHallOwnerHallsStore();
       return;
     }
-    void loadHallOwnerHalls("initial", logoutQuiet);
-  }, [ready, authenticated, isHallOwner, logoutQuiet]);
+    void loadHallOwnerHalls(account, "initial", logoutQuiet);
+  }, [ready, authenticated, isHallOwner, logoutQuiet, account]);
 
   useEffect(() => {
     if (!ready || !authenticated || !isHallOwner) return;
 
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        void loadHallOwnerHalls("refresh", logoutQuiet);
+        void loadHallOwnerHalls(account, "refresh", logoutQuiet);
       }
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [ready, authenticated, isHallOwner, logoutQuiet]);
+  }, [ready, authenticated, isHallOwner, logoutQuiet, account]);
 
   useEffect(() => {
+    if (!ready || !authenticated || !isHallOwner) return;
     return subscribeHallOwnerHallsChanged(() => {
-      void loadHallOwnerHalls("refresh", logoutQuiet);
+      void loadHallOwnerHalls(account, "refresh", logoutQuiet);
     });
-  }, [logoutQuiet]);
+  }, [logoutQuiet, account, ready, authenticated, isHallOwner]);
 
   return {
     halls: state.halls,

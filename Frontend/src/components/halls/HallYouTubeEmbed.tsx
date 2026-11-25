@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, type MouseEvent } from "react";
+import { useHydrated } from "@/hooks/useHydrated";
 import { createPortal } from "react-dom";
 import { useT } from "@/i18n";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
@@ -29,11 +30,7 @@ export default function HallYouTubeEmbed({
   const videoId = toYouTubeVideoId(url);
   const embedBase = toYouTubeEmbedUrl(url);
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useHydrated();
 
   useEffect(() => {
     if (!open) return;

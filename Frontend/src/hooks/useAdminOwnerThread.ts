@@ -264,7 +264,7 @@ export function useAdminOwnerThread(
         setSending(sendingRef.current.size > 0);
       }
     },
-    [applyIncoming, conversationId, sessionKey, target],
+    [applyIncoming, sessionKey, target],
   );
 
   const retrySend = useCallback(

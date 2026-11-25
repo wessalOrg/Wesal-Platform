@@ -1,5 +1,6 @@
 "use client";
 
+import HallLockStatusNotice from "@/components/halls/HallLockStatusNotice";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import OwnerPaidSubscriptionDays from "@/components/halls/subscription/OwnerPaidSubscriptionDays";
@@ -332,6 +333,7 @@ export default function OwnerDashboardHome() {
                     <HallApprovalStatusBadge status={hall.status} />
                   </div>
                   <HallSubscriptionNote hall={hall} />
+                  <HallLockStatusNotice access={hall} />
                 </Link>
               </li>
             ))}
@@ -362,7 +364,7 @@ function HallSubscriptionNote({ hall }: { hall: HallOwnerHall }) {
 
   return (
     <div className="mt-1.5">
-      <OwnerPaidSubscriptionDays hallId={hall.id} ended={hall.systemLocked} />
+      <OwnerPaidSubscriptionDays hallId={hall.id}  />
     </div>
   );
 }

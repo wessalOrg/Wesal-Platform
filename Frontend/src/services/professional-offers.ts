@@ -149,7 +149,8 @@ function mapPaged(data: ApiPaged | null | undefined): PagedOffers<ProfessionalOf
   const totalPages =
     asNumber(data?.totalPages ?? data?.TotalPages) ??
     (pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0);
-  return { items, pageNumber, pageSize, totalCount, totalPages };
+  return { items, pageNumber, pageSize, totalCount, totalPages,
+    hasTotalCount: asNumber(data?.totalCount ?? data?.TotalCount) != null };
 }
 
 function appendOfferFields(

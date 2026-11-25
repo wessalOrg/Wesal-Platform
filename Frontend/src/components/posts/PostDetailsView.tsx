@@ -24,7 +24,11 @@ type PostDetailsViewProps = {
   onClose?: () => void;
 };
 
-export default function PostDetailsView({
+export default function PostDetailsView(props: PostDetailsViewProps) {
+  return <PostDetailsViewContent key={props.postId} {...props} />;
+}
+
+function PostDetailsViewContent({
   postId,
   onClose,
 }: PostDetailsViewProps) {
@@ -39,8 +43,6 @@ export default function PostDetailsView({
 
   useEffect(() => {
     let cancelled = false;
-    setStatus("loading");
-    setErrorKey(null);
 
     void (async () => {
       try {

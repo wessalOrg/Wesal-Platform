@@ -1,9 +1,16 @@
-import { HubConnection, HubConnectionBuilder, HubConnectionState } from "@microsoft/signalr";
+import { HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
 import { apiOrigin } from "@/lib/api";
-import { getAccessToken } from "@/lib/auth-token";
 import { realtimeLogger } from "@/lib/realtime-logger";
+import {
+  isCurrentNotificationAccount,
+  readNotificationAccount,
+  subscribeNotificationAccount,
+  type NotificationAccount,
+} from "@/lib/notification-account";
 import { mapServerNotification } from "@/lib/platform-notification-mapper";
 import { pushPlatformNotification } from "@/lib/platform-notifications-store";
+import { isEventRequestNotificationKind } from "@/lib/event-request-notification";
+import { currentNotificationRequests } from "@/lib/notification-requests";
 
 /** Shape of the backend `NotificationEvent` (already localized for the recipient). */
 export type ServerNotificationEvent = {
@@ -23,9 +30,15 @@ export type ServerNotificationEvent = {
 };
 
 /** Converts one server notification into the local feed. Unknown kinds are ignored. */
-export function applyServerNotification(raw: unknown): void {
-  if (!raw || typeof raw !== "object") return;
+export function applyServerNotification(raw: unknown, account = readNotificationAccount()): void {
+  if (!isCurrentNotificationAccount(account) || !raw || typeof raw !== "object") return;
   const event = raw as ServerNotificationEvent & Record<string, unknown>;
+  if (isEventRequestNotificationKind(event.kind)) {
+    // EventRequestService persists before dispatch. REST owns the real ID, timestamp and read state.
+    // If no inbox consumer is mounted yet, its initial hydration retrieves these durable rows.
+    void currentNotificationRequests(account)?.refreshEventRequests();
+    return;
+  }
   const mapped = mapServerNotification({
     kind: event.kind,
     title: event.title,
@@ -65,15 +78,19 @@ export function applyServerNotification(raw: unknown): void {
     tone: mapped.tone,
     // §13.5 — live MessageNotificationBanner owns the popup for new messages.
     toast: mapped.type === "new_message" ? false : undefined,
-  });
+  }, account);
 }
 
 const HUB_EVENT = "NotificationReceived";
 
-let connection: HubConnection | null = null;
-let connectedToken: string | null = null;
-let startPromise: Promise<void> | null = null;
-let subscribers = 0;
+type NotificationHub = {
+  account: NotificationAccount;
+  connection: HubConnection;
+  subscribers: number;
+  active: boolean;
+  unsubscribe: () => void;
+};
+let currentHub: NotificationHub | null = null;
 
 function hubUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_NOTIFICATIONS_HUB_URL?.trim();
@@ -84,50 +101,37 @@ async function joinGroup(hub: HubConnection) {
   await hub.invoke("JoinNotificationsGroup").catch(() => undefined);
 }
 
-async function stopHub() {
-  const hub = connection;
-  connection = null;
-  connectedToken = null;
-  startPromise = null;
-  if (!hub) return;
-  try {
-    await hub.stop();
-  } catch {
-    /* ignore */
-  }
+function stopHub(record: NotificationHub) {
+  record.active = false;
+  record.unsubscribe();
+  if (currentHub === record) currentHub = null;
+  void record.connection.stop().catch(() => undefined);
 }
 
-async function startHub() {
-  const token = getAccessToken();
-  if (!token || token.startsWith("stub-")) return;
-  if (connection?.state === HubConnectionState.Connected && connectedToken === token) return;
-  if (startPromise) return startPromise;
-
-  startPromise = (async () => {
-    if (connection) await stopHub();
-    connectedToken = token;
-    const hub = new HubConnectionBuilder()
-      .withUrl(hubUrl(), { accessTokenFactory: () => getAccessToken() ?? "" })
-      .withAutomaticReconnect()
-      .configureLogging(realtimeLogger)
-      .build();
-    hub.on(HUB_EVENT, applyServerNotification);
-    hub.onreconnected(() => {
-      void joinGroup(hub);
-    });
-    connection = hub;
-    await hub.start();
-    await joinGroup(hub);
-  })()
-    .catch(() => {
-      connection = null;
-      connectedToken = null;
-    })
-    .finally(() => {
-      startPromise = null;
-    });
-
-  return startPromise;
+function startHub(account: NotificationAccount): NotificationHub {
+  const connection = new HubConnectionBuilder()
+    .withUrl(hubUrl(), { accessTokenFactory: () =>
+      isCurrentNotificationAccount(account) ? account.token : "" })
+    .withAutomaticReconnect()
+    .configureLogging(realtimeLogger)
+    .build();
+  const record: NotificationHub = { account, connection, subscribers: 0, active: true, unsubscribe: () => undefined };
+  currentHub = record;
+  const valid = () => record.active && currentHub === record && isCurrentNotificationAccount(account);
+  record.unsubscribe = subscribeNotificationAccount(() => {
+    if (!isCurrentNotificationAccount(account)) stopHub(record);
+  });
+  connection.on(HUB_EVENT, (raw: unknown) => {
+    if (valid()) applyServerNotification(raw, account);
+  });
+  connection.onreconnected(() => {
+    if (valid()) void joinGroup(connection);
+  });
+  void connection.start().then(() => {
+    if (valid()) return joinGroup(connection);
+    return connection.stop();
+  }).catch(() => { if (valid()) stopHub(record); });
+  return record;
 }
 
 /**
@@ -135,10 +139,13 @@ async function startHub() {
  * notification into the local notification feed. Returns an unsubscribe function.
  */
 export function subscribePlatformNotificationRealtime(): () => void {
-  subscribers += 1;
-  void startHub();
+  const account = readNotificationAccount();
+  if (!account || account.token.startsWith("stub-")) return () => undefined;
+  if (currentHub && currentHub.account !== account) stopHub(currentHub);
+  const record = currentHub ?? startHub(account);
+  record.subscribers += 1;
   return () => {
-    subscribers = Math.max(0, subscribers - 1);
-    if (subscribers === 0) void stopHub();
+    record.subscribers -= 1;
+    if (record.subscribers === 0) stopHub(record);
   };
 }

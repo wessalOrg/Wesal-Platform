@@ -41,14 +41,19 @@ export default function ProfileAvatarCropDialog({
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    if (!open || !imageSrc) return;
-
-    let cancelled = false;
+  const imageKey = open ? imageSrc : null;
+  const [loadedImageKey, setLoadedImageKey] = useState<string | null>(null);
+  if (loadedImageKey !== imageKey) {
+    setLoadedImageKey(imageKey);
     setZoom(1);
     setOffset({ x: 0, y: 0 });
     setNatural({ w: 0, h: 0 });
     setReady(false);
+  }
+
+  useEffect(() => {
+    if (!open || !imageSrc) return;
+    let cancelled = false;
 
     const image = new Image();
     image.onload = () => {

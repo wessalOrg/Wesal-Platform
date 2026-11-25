@@ -1,24 +1,16 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { useAccountAccess } from "@/hooks/useAccountAccess";
+import { useEffect, useState } from "react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { isCurrentNotificationAccount, type NotificationAccount } from "@/lib/notification-account";
 import {
   professionalReviewNotesBody,
   professionalReviewNotesFromThread,
 } from "@/lib/professional-review-notes";
 import {
-  readPlatformNotificationsSnapshot,
-  replacePlatformNotifications,
-  subscribePlatformNotifications,
-} from "@/lib/platform-notifications-store";
-import {
   fetchConversationThread,
   fetchMyAdminAccountConversation,
 } from "@/services/conversations";
-import {
-  fetchServerNotifications,
-  notificationsUseMock,
-} from "@/services/notifications";
 import type { ProfessionalAccountPhase } from "@/types/account-approval";
 
 /**
@@ -26,75 +18,49 @@ import type { ProfessionalAccountPhase } from "@/types/account-approval";
  * Rejection reason comes from GET /notifications; NeedsChanges notes from the Admin thread.
  */
 export function useProfessionalReviewNotes(phase: ProfessionalAccountPhase) {
-  const { userId } = useAccountAccess();
-  const [threadNotes, setThreadNotes] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useSyncExternalStore(
-    subscribePlatformNotifications,
-    readPlatformNotificationsSnapshot,
-    () => "",
-  );
+  // Reuse the same account-scoped inbox request as the navbar instead of a second,
+  // independently merging request that could survive an account transition.
+  const { account } = useNotifications("seeker");
+  const [result, setResult] = useState<{
+    account: NotificationAccount; phase: ProfessionalAccountPhase; notes: string | null;
+  } | null>(null);
 
   const fromInbox =
     phase === "rejected" || phase === "needs_changes"
       ? professionalReviewNotesBody(phase)
       : null;
 
-  // Keep the durable inbox warm so rejection reasons survive after login/refresh.
-  useEffect(() => {
-    if (phase !== "rejected" && phase !== "needs_changes") return;
-    if (notificationsUseMock()) return;
-    let cancelled = false;
-    void fetchServerNotifications()
-      .then((items) => {
-        if (!cancelled) replacePlatformNotifications(items);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [phase]);
-
   // NeedsChanges notes live in the Admin conversation (not the notification body).
   // Rejection also posts the reason there — use as fallback when inbox is empty.
   useEffect(() => {
-    if (phase !== "rejected" && phase !== "needs_changes") {
-      setThreadNotes(null);
-      return;
-    }
-    if (phase === "rejected" && fromInbox) {
-      setThreadNotes(null);
-      return;
-    }
+    if (!account || (phase !== "rejected" && phase !== "needs_changes") || fromInbox) return;
 
     let cancelled = false;
-    setLoading(true);
+    const current = () => !cancelled && isCurrentNotificationAccount(account);
     void (async () => {
+      let notes: string | null = null;
       try {
         const admin = await fetchMyAdminAccountConversation();
-        if (cancelled || !admin?.conversationId) {
-          if (!cancelled) setThreadNotes(null);
-          return;
+        if (current() && admin?.conversationId) {
+          const thread = await fetchConversationThread(admin.conversationId);
+          notes = professionalReviewNotesFromThread(thread.messages, account.userId);
         }
-        const thread = await fetchConversationThread(admin.conversationId);
-        if (cancelled) return;
-        setThreadNotes(
-          professionalReviewNotesFromThread(thread.messages, userId),
-        );
       } catch {
-        if (!cancelled) setThreadNotes(null);
+        // The notification inbox remains available when the conversation is unavailable.
       } finally {
-        if (!cancelled) setLoading(false);
+        if (current()) setResult({ account, phase, notes });
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [phase, fromInbox, userId]);
+  }, [account, phase, fromInbox]);
 
+  const resolved = result?.account === account && result?.phase === phase;
+  const threadNotes = resolved ? result.notes : null;
   const notes = fromInbox || threadNotes;
+  const loading = Boolean(account && (phase === "rejected" || phase === "needs_changes") && !resolved);
   return {
     notes,
     loading: loading && !notes,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { useHydrated } from "@/hooks/useHydrated";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -49,7 +50,14 @@ export default function Navbar({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const notify = useDismissibleOverlay();
+  const {
+    rootRef: notifyRootRef,
+    open: notifyOpen,
+    panelId: notifyPanelId,
+    toggle: toggleNotify,
+    close: closeNotify,
+    setOpen: setNotifyOpen,
+  } = useDismissibleOverlay();
   const [hash, setHash] = useState("");
   const [menuPath, setMenuPath] = useState(pathname);
   const router = useRouter();
@@ -146,14 +154,14 @@ export default function Navbar({
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-1.5 lg:gap-2">
             <PwaInstallButton />
-            <div ref={notify.rootRef} className="hidden shrink-0 items-center gap-1 sm:gap-1.5 lg:flex">
+            <div ref={notifyRootRef} className="hidden shrink-0 items-center gap-1 sm:gap-1.5 lg:flex">
               <LanguageSwitcher />
               {authenticated ? (
                 <NavbarNotificationsButton
-                  open={notify.open}
-                  panelId={notify.panelId}
-                  onToggle={notify.toggle}
-                  onClose={notify.close}
+                  open={notifyOpen}
+                  panelId={notifyPanelId}
+                  onToggle={toggleNotify}
+                  onClose={closeNotify}
                 />
               ) : null}
               {authenticated ? <NavbarMessagesButton /> : null}
@@ -230,14 +238,14 @@ export default function Navbar({
               <div className="relative z-10 mb-3 flex flex-wrap items-center justify-center gap-2">
                 <NavbarMessagesButton onNavigate={() => setOpen(false)} />
                 <NavbarNotificationsButton
-                  open={notify.open}
-                  panelId={notify.panelId}
+                  open={notifyOpen}
+                  panelId={notifyPanelId}
                   showPanel={false}
                   onToggle={() => {
                     setOpen(false);
-                    notify.setOpen(true);
+                    setNotifyOpen(true);
                   }}
-                  onClose={notify.close}
+                  onClose={closeNotify}
                 />
               </div>
             ) : null}
@@ -285,9 +293,9 @@ export default function Navbar({
       <BodyPortal>
         <div className="lg:hidden">
           <AccountNotificationsPanel
-            open={notify.open}
-            onClose={notify.close}
-            panelId={notify.panelId}
+            open={notifyOpen}
+            onClose={closeNotify}
+            panelId={notifyPanelId}
           />
         </div>
       </BodyPortal>
@@ -296,12 +304,9 @@ export default function Navbar({
 }
 
 function BodyPortal({ children }: { children: ReactNode }) {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    setTarget(document.body);
-  }, []);
-  if (!target) return null;
-  return createPortal(children, target);
+  const mounted = useHydrated();
+  if (!mounted) return null;
+  return createPortal(children, document.body);
 }
 
 function GuestActions({

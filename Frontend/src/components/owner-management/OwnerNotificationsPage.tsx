@@ -24,7 +24,13 @@ export default function OwnerNotificationsPage() {
   const { halls } = useHallOwnerHalls();
   const hallKey = halls.map((hall) => `${hall.id}\u0000${hall.name}`).join("\n");
   const [requests, setRequests] = useState<OwnerHallBookingRequest[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [loadingRequests, setLoadingRequests] = useState(Boolean(hallKey));
+  const [seenHallKey, setSeenHallKey] = useState(hallKey);
+  if (seenHallKey !== hallKey) {
+    setSeenHallKey(hallKey);
+    setRequests([]);
+    setLoadingRequests(Boolean(hallKey));
+  }
 
   useEffect(() => {
     const owned = hallKey
@@ -34,13 +40,10 @@ export default function OwnerNotificationsPage() {
         })
       : [];
     if (owned.length === 0) {
-      setRequests([]);
-      setLoadingRequests(false);
       return;
     }
 
     let active = true;
-    setLoadingRequests(true);
     void Promise.all(
       owned.map((hall) => fetchOwnerHallBookingRequests(hall.id).catch(() => [])),
     ).then((groups) => {

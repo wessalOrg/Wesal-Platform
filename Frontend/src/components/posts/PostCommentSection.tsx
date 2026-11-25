@@ -24,7 +24,11 @@ type PostCommentSectionProps = {
   onTotalChange?: (total: number) => void;
 };
 
-export default function PostCommentSection({
+export default function PostCommentSection(props: PostCommentSectionProps) {
+  return <PostCommentSectionContent key={props.postId} {...props} />;
+}
+
+function PostCommentSectionContent({
   postId,
   className = "",
   onTotalChange,
@@ -50,17 +54,15 @@ export default function PostCommentSection({
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const load = useCallback(async () => {
-    setStatus("loading");
-    try {
-      const page = await fetchPostComments(postId, 1, 30);
+  const load = useCallback(() => {
+    return fetchPostComments(postId, 1, 30).then((page) => {
       setComments(page.items);
       setTotalCount(page.totalCount || page.items.length);
       onTotalChange?.(page.totalCount || page.items.length);
       setStatus("ready");
-    } catch {
+    }).catch(() => {
       setStatus("error");
-    }
+    });
   }, [onTotalChange, postId]);
 
   useEffect(() => {

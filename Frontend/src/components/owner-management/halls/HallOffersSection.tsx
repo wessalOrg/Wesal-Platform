@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import ContentPagination from "@/components/ui/ContentPagination";
+import { useContentPagination } from "@/hooks/useContentPagination";
 import HallOfferForm from "@/components/owner-management/halls/HallOfferForm";
 import { ApiError } from "@/lib/api-error";
 import {
@@ -10,10 +12,8 @@ import {
   type OfferLifecycleStatus,
 } from "@/lib/offer-validation";
 import { useOfferLifecycle } from "@/hooks/useOfferLifecycle";
-import { useRequestScope } from "@/hooks/useRequestScope";
 import { useT } from "@/i18n";
 import { fetchOwnerHallOffers, stopHallOffer } from "@/services/hall-offers";
-import type { HallOffer } from "@/types/offers";
 
 type HallOffersSectionProps = {
   hallId: string;
@@ -58,10 +58,15 @@ function lifecycleLabelKey(status: OfferLifecycleStatus): string {
 
 export default function HallOffersSection({ hallId }: HallOffersSectionProps) {
   const t = useT();
-  const scope = useRequestScope();
-  const [items, setItems] = useState<HallOffer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const fetchPage = useCallback((page: number, size: number) => fetchOwnerHallOffers(hallId, page, size), [hallId]);
+  const pagination = useContentPagination({ context: hallId, pageSize: 30, fetchPage, autoLoadAll: true });
+  const items = pagination.items;
+  const loading = !pagination.loaded && pagination.busy;
+  const errorKey = pagination.error instanceof ApiError
+    ? pagination.error.status === 401 ? "owner.offers.errors.unauthorized"
+      : pagination.error.status === 403 ? "owner.offers.errors.forbidden"
+      : pagination.error.status === 404 ? "owner.offers.errors.notFound" : "owner.offers.errors.loadFailed"
+    : pagination.error ? "owner.offers.errors.loadFailed" : null;
   const [formOpen, setFormOpen] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [stoppingId, setStoppingId] = useState<string | null>(null);
@@ -72,39 +77,9 @@ export default function HallOffersSection({ hallId }: HallOffersSectionProps) {
       ? "en-GB"
       : "ar-EG";
 
-  const load = useCallback(async (quiet = false) => {
-    const current = scope.latest("offers");
-    if (!current()) return;
-    if (!quiet) setLoading(true);
-    setErrorKey(null);
-    try {
-      const page = await fetchOwnerHallOffers(hallId, 1, 30);
-      if (current()) setItems(page.items);
-    } catch (error) {
-      if (!current()) return;
-      if (error instanceof ApiError && error.status === 401) {
-        setErrorKey("owner.offers.errors.unauthorized");
-      } else if (error instanceof ApiError && error.status === 403) {
-        setErrorKey("owner.offers.errors.forbidden");
-      } else if (error instanceof ApiError && error.status === 404) {
-        setErrorKey("owner.offers.errors.notFound");
-      } else {
-        setErrorKey("owner.offers.errors.loadFailed");
-      }
-      setItems([]);
-    } finally {
-      if (current()) setLoading(false);
-    }
-  }, [hallId, scope]);
+  const load = pagination.refresh;
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void load();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [load]);
-
-  useOfferLifecycle(items, { revalidateAtBoundary: false, onRevalidate: () => load(true) });
+  useOfferLifecycle(items, { revalidateAtBoundary: false, onRevalidate: () => load() });
 
   const onStop = async (offerId: string) => {
     if (stoppingId) return;
@@ -165,14 +140,14 @@ export default function HallOffersSection({ hallId }: HallOffersSectionProps) {
           aria-busy="true"
           data-testid="hall-offers-loading"
         />
-      ) : errorKey ? (
+      ) : errorKey && !pagination.loaded ? (
         <div className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 text-center">
           <p className="text-sm text-[var(--wesal-muted)]">{t(errorKey)}</p>
           <button type="button" className="btn-outline mt-3" onClick={() => void load()}>
             {t("common.retry")}
           </button>
         </div>
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && !pagination.busy ? (
         <p className="rounded-2xl border border-[var(--wesal-border)] bg-white p-4 text-sm text-[var(--wesal-muted)]">
           {t("owner.offers.empty")}
         </p>
@@ -280,6 +255,8 @@ export default function HallOffersSection({ hallId }: HallOffersSectionProps) {
           })}
         </ul>
       )}
+      {pagination.loaded || !pagination.error ? <ContentPagination {...pagination}
+        onMore={() => void pagination.loadMore()} onRetry={() => void pagination.refresh()} /> : null}
     </div>
   );
 }

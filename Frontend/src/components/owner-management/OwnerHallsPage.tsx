@@ -1,5 +1,10 @@
 ﻿"use client";
 
+import HallLockStatusNotice from "@/components/halls/HallLockStatusNotice";
+import { getHallLockStatus, mergeHallAccess, hallAccessFromHall } from "@/lib/hall-access";
+import { useAuthenticatedRequestScope } from "@/hooks/useAuthenticatedRequestScope";
+import Image from "next/image";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import HallRejectionReasonNotice from "@/components/owner-management/halls/HallRejectionReasonNotice";
@@ -25,28 +30,44 @@ import { useT } from "@/i18n";
 import type { HallOwnerHall } from "@/types/hall-owner-halls";
 import type { HallOwnerHallDetails } from "@/types/hall-owner-hall-management";
 
-type HallLane = "available" | "review" | "unavailable";
+type HallLane = "available" | "review" | "unavailable" | "unknown";
 type HallFilter = "all" | HallLane;
 
 function hallLane(hall: HallOwnerHall): HallLane {
   if (hall.adminLocked || hall.systemLocked || hall.status === "Rejected") {
     return "unavailable";
   }
-  if (hall.status === "Approved" && hall.paymentStatus === "Paid") return "available";
+  if (hall.status === "Approved" && hall.paymentStatus === "Paid") {
+    return getHallLockStatus(hall) === "unlocked" ? "available" : "unknown";
+  }
   return "review";
 }
 
 export default function OwnerHallsPage() {
   const t = useT();
   const lang = useUiLang();
-  const { halls, isLoading, status, errorKey, refetch, isRefreshing } =
+  const { halls: ownedHalls, isLoading, status, errorKey, refetch, isRefreshing } =
     useHallOwnerHalls();
   const { startAddHall, isInitiating } = useAddHallInitiation();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<HallFilter>("all");
+  const { scope, isCurrent } = useAuthenticatedRequestScope();
+  const [seenScope, setSeenScope] = useState(scope);
   const [detailsById, setDetailsById] = useState<Record<string, HallOwnerHallDetails>>({});
 
-  const hallIds = halls.map((hall) => hall.id).join("|");
+  if (seenScope !== scope) {
+    setSeenScope(scope);
+    setDetailsById({});
+  }
+
+  const halls = useMemo(() => ownedHalls.map((hall) => {
+    const details = detailsById[hall.id];
+    if (!details) return hall;
+    const access = mergeHallAccess(hallAccessFromHall(hall), hallAccessFromHall(details));
+    return { ...hall, adminLocked: access.adminLocked, systemLocked: access.systemLocked };
+  }), [ownedHalls, detailsById]);
+
+  const hallIds = ownedHalls.map((hall) => hall.id).join("|");
 
   useEffect(() => {
     const ids = hallIds ? hallIds.split("|") : [];
@@ -78,7 +99,7 @@ export default function OwnerHallsPage() {
         }
       }),
     ).then((rows) => {
-      if (cancelled) return;
+      if (cancelled || !isCurrent()) return;
       const next: Record<string, HallOwnerHallDetails> = {};
       for (const row of rows) {
         if (row) next[row[0]] = row[1];
@@ -88,7 +109,7 @@ export default function OwnerHallsPage() {
     return () => {
       cancelled = true;
     };
-  }, [hallIds]);
+  }, [hallIds, isCurrent]);
 
   const counts = useMemo(() => {
     const available = halls.filter((hall) => hallLane(hall) === "available").length;
@@ -333,19 +354,22 @@ function OwnerHallCard({
 }) {
   const t = useT();
   const lang = useUiLang();
-  const lane = hallLane(hall);
+  const combinedAccess = mergeHallAccess(hallAccessFromHall(hall), details ? hallAccessFromHall(details) : undefined);
+  const lane = hallLane({ ...hall, ...combinedAccess, status: hall.status });
   const name = localizeHallName(hall.id, details?.name || hall.name, lang);
   const regionLabel =
     details?.region && isHallRegion(details.region)
       ? t(HALL_REGION_LABEL_KEYS[details.region])
       : "";
   const location = [regionLabel, details?.address].filter(Boolean).join(" - ");
-  const locked = hall.adminLocked;
+  const locked = combinedAccess.adminLocked === true;
   const photos = hallPhotoUrls(details);
   const showSubscription =
-    hall.status === "Approved" && (hall.paymentStatus === "Paid" || hall.systemLocked);
+    hall.status === "Approved" && (hall.paymentStatus === "Paid" || hall.systemLocked === true);
   const badgeKey =
-    lane === "available"
+    lane === "unknown"
+      ? "owner.hallsPage.badge.unknown"
+      : lane === "available"
       ? "owner.hallsPage.badge.available"
       : hall.status === "Approved" && hall.paymentStatus !== "Paid"
         ? "owner.hallsPage.badge.payment"
@@ -353,13 +377,15 @@ function OwnerHallCard({
           ? "owner.hallsPage.badge.review"
           : "owner.hallsPage.badge.unavailable";
   const badgeClass =
-    lane === "available"
+    lane === "unknown"
+      ? "bg-[var(--wesal-pink-soft)] text-[var(--wesal-muted)]"
+      : lane === "available"
       ? "bg-[#e7f6ee] text-[#047857]"
       : lane === "review"
         ? "bg-[#fff4e5] text-[#9a5b12]"
         : "bg-[#fdecec] text-[#b42318]";
   const dotClass =
-    lane === "available" ? "bg-[#12b76a]" : lane === "review" ? "bg-[#f5a524]" : "bg-[#b42318]";
+    lane === "unknown" ? "bg-[var(--wesal-muted)]" : lane === "available" ? "bg-[#12b76a]" : lane === "review" ? "bg-[#f5a524]" : "bg-[#b42318]";
 
   return (
     <li
@@ -413,7 +439,6 @@ function OwnerHallCard({
           <dl className="grid w-full grid-cols-2 gap-1.5 px-1">
             <SubscriptionStat
               hallId={showSubscription ? hall.id : null}
-              ended={hall.systemLocked}
               fallbackDays={hall.daysRemaining}
             />
             <StatTile
@@ -469,6 +494,7 @@ function OwnerHallCard({
             <HallRejectionReasonNotice hallId={hall.id} rejected />
           ) : null}
           {locked ? <OwnerHallAdminLockedNotice /> : null}
+          <HallLockStatusNotice access={combinedAccess} />
         </div>
       </div>
     </li>
@@ -489,7 +515,7 @@ function HallCardPhotos({ images, emptyLabel }: { images: string[]; emptyLabel: 
   return (
     <div className="relative min-h-44 w-full shrink-0 bg-[var(--wesal-pink-soft)] md:w-64">
       {current ? (
-        <img src={current} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <Image src={current} alt="" fill unoptimized loading="eager" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <div className="flex min-h-44 items-center justify-center px-4 text-xs text-[var(--wesal-muted)]">
           {emptyLabel}
@@ -527,30 +553,32 @@ function HallCardPhotos({ images, emptyLabel }: { images: string[]; emptyLabel: 
 
 function SubscriptionStat({
   hallId,
-  ended,
   fallbackDays,
 }: {
   hallId: string | null;
-  ended: boolean;
   fallbackDays?: number | null;
 }) {
   const t = useT();
-  const { status, subscription } = useSubscription(ended ? null : hallId, !ended && hallId != null);
+  const { status, subscription } = useSubscription(hallId, hallId != null);
   let value = "—";
-  let valueClass = "text-[#047857]";
-  let tone: "default" | "success" | "danger" = "success";
-  if (ended) {
-    value = t("owner.subscription.hallsExpiredNote");
-    valueClass = "text-[#b42318]";
-    tone = "danger";
-  } else if (status === "ready" && subscription) {
+  let valueClass = "text-[var(--wesal-muted)]";
+  let tone: "default" | "success" | "danger" = "default";
+  if (status === "ready" && subscription) {
     const days = subscription.daysRemaining;
-    const finished = subscription.status === "expired" || (days != null && days <= 0);
+    const finished = subscription.status === "expired";
     if (finished) {
       value = t("owner.subscription.hallsExpiredNote");
       valueClass = "text-[#b42318]";
       tone = "danger";
-    } else if (days != null) {
+    } else if (subscription.status === "locked") {
+      value = t("owner.subscription.locked");
+      tone = "danger";
+      valueClass = "text-[#b42318]";
+    } else if (subscription.status === "unpaid") {
+      value = t("owner.subscription.unpaid");
+    } else if (subscription.status === "active" && days != null) {
+      tone = "success";
+      valueClass = "text-[#047857]";
       value = t("owner.hallsPage.days", { count: days });
     } else if (fallbackDays != null && fallbackDays > 0) {
       value = t("owner.hallsPage.days", { count: fallbackDays });
@@ -565,7 +593,7 @@ function SubscriptionStat({
       value={value}
       valueClass={valueClass}
       tone={tone}
-      testId={ended || valueClass.includes("b42318") ? "hall-subscription-ended-note" : "hall-subscription-days-note"}
+      testId={subscription?.status === "expired" ? "hall-subscription-ended-note" : subscription?.status === "locked" ? "hall-subscription-lock-note" : "hall-subscription-days-note"}
     />
   );
 }

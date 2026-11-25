@@ -5,27 +5,20 @@ import { useSubscription } from "@/hooks/useSubscription";
 
 type OwnerPaidSubscriptionDaysProps = {
   hallId: string;
-  /** Server already marked the subscription cycle as ended. */
-  ended?: boolean;
 };
 
 /** Compact note from GET /owner/halls/{id}/subscription — not the halls list DTO. */
 export default function OwnerPaidSubscriptionDays({
   hallId,
-  ended = false,
 }: OwnerPaidSubscriptionDaysProps) {
   const t = useT();
-  const { status, subscription } = useSubscription(hallId, !ended);
-
-  if (ended) {
-    return <SubscriptionEndedNote label={t("owner.subscription.hallsExpiredNote")} />;
-  }
+  const { status, subscription } = useSubscription(hallId, true);
 
   if (status !== "ready" || !subscription) return null;
 
   const days = subscription.daysRemaining;
   const finished =
-    subscription.status === "expired" || (days != null && days <= 0);
+    subscription.status === "expired";
   if (finished) {
     return <SubscriptionEndedNote label={t("owner.subscription.hallsExpiredNote")} />;
   }

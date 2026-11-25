@@ -43,13 +43,14 @@ const api = axios.create({
   timeout: 8000,
 });
 
+// Bind credentials when the caller starts the request, before a same-turn account switch.
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-});
+}, undefined, { synchronous: true });
 
 api.interceptors.response.use(
   (response) => response,

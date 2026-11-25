@@ -16,7 +16,7 @@ export type Post = {
   saveCount: number;
   shareCount: number;
   commentCount: number;
-  isSavedByCurrentUser: boolean;
+  isSavedByCurrentUser: boolean | null;
   createdAt: string | null;
   updatedAt: string | null;
   images: PostImage[];

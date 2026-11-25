@@ -5,6 +5,9 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   DEV_API_BASE_URL,
   PROD_API_BASE_URL,
@@ -126,12 +129,22 @@ check("API origin for uploads / SignalR / media is the Render host", () => {
 // ---- prebuild gate (scripts/verify-production-env.mjs), end to end ------------
 
 const gate = fileURLToPath(new URL("./verify-production-env.mjs", import.meta.url));
+const gateWorkingDirectory = mkdtempSync(join(tmpdir(), "wesal-env-gate-"));
 
-function runGate(env) {
+function runGate(env, cwd = gateWorkingDirectory) {
   const base = { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "" };
-  const r = spawnSync(process.execPath, [gate], { env: { ...base, ...env }, encoding: "utf8" });
+  const r = spawnSync(process.execPath, [gate], { cwd, env: { ...base, ...env }, encoding: "utf8" });
   return { code: r.status, out: `${r.stdout}${r.stderr}` };
 }
+
+check("gate loads Next production env files instead of silently validating an empty environment", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "wesal-env-gate-"));
+  writeFileSync(join(cwd, ".env.local"), "NEXT_PUBLIC_API_BASE_URL=https://api.example.test/api/v1\nNEXT_PUBLIC_DEMO_MODE=true\n");
+  const r = runGate({ VERCEL_ENV: "production" }, cwd);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /NEXT_PUBLIC_DEMO_MODE/);
+  assert.doesNotMatch(r.out, /canonical production API/);
+});
 
 check("gate: production + env missing -> passes and announces canonical API", () => {
   const r = runGate({ VERCEL_ENV: "production" });

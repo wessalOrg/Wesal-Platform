@@ -41,6 +41,7 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
     inboxStatus,
     conversations,
     inboxError,
+    pagination,
     retryInbox,
     threadStatus,
     thread,
@@ -73,7 +74,7 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
   const inquiryContext = findThreadContextCard(thread?.messages);
   const threadTitle = selected
     ? isHallOwner
-      ? ownerConversationTitle(selected, lang, conversations)
+      ? ownerConversationTitle(selected, lang)
       : adminAccountThread
         ? t("messages.adminChat.title")
         : conversationPreviewTitle(selected, lang)
@@ -90,7 +91,7 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
   const threadBadge = conversationPeerRoleLabel({
     viewerIsHallOwner: isHallOwner,
     viewerIsAdmin: isAdmin,
-    peerIsAdmin: adminAccountThread || Boolean(selected && isOwnerAdminConversation(selected, conversations)),
+    peerIsAdmin: adminAccountThread || Boolean(selected && isOwnerAdminConversation(selected)),
   });
 
   if (!ready) {
@@ -139,6 +140,7 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
           className={`seeker-messages-list${showThread ? " seeker-messages-list--hidden-mobile" : ""}`}
         >
           <ConversationList
+                pagination={pagination}
             status={inboxStatus}
             conversations={conversations}
             selectedId={selectedId}
@@ -163,7 +165,7 @@ export default function MessagesInbox({ initialConversationId }: MessagesInboxPr
                 badge={threadBadge}
                 peerDisplayName={
                   adminAccountThread ||
-                  (isHallOwner && selected && isOwnerAdminConversation(selected, conversations))
+                  (isHallOwner && selected && isOwnerAdminConversation(selected))
                     ? t("messages.adminChat.title")
                     : null
                 }

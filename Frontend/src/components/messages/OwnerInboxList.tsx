@@ -50,8 +50,8 @@ export default function OwnerInboxList({
     () => conversations.filter((item) => item?.conversationId),
     [conversations],
   );
-  const userRows = rows.filter((item) => !isOwnerAdminConversation(item, rows));
-  const adminRows = rows.filter((item) => isOwnerAdminConversation(item, rows));
+  const userRows = rows.filter((item) => !isOwnerAdminConversation(item));
+  const adminRows = rows.filter((item) => isOwnerAdminConversation(item));
   const unreadCount = rows.reduce(
     (sum, item) => sum + Math.max(item.unreadMessageCount || 0, item.isUnread ? 1 : 0),
     0,
@@ -60,7 +60,7 @@ export default function OwnerInboxList({
   const visible = (filter === "users" ? userRows : filter === "admin" ? adminRows : rows).filter(
     (item) => {
       if (!needle) return true;
-      const title = ownerConversationTitle(item, lang, rows).toLowerCase();
+      const title = ownerConversationTitle(item, lang).toLowerCase();
       const hall = conversationHallLabel(item, lang).toLowerCase();
       const preview = conversationListPreview(
         item.lastMessagePreview,
@@ -146,13 +146,13 @@ export default function OwnerInboxList({
       ) : (
         <ul className="owner-chat-rows" data-testid="inbox-conversation-list">
           {visible.map((conversation) => {
-            const title = ownerConversationTitle(conversation, lang, rows);
+            const title = ownerConversationTitle(conversation, lang);
             const preview = conversationListPreview(
               conversation.lastMessagePreview,
               Boolean(conversation.lastMessageHasAttachment),
             );
             const selected = conversation.conversationId === selectedId;
-            const admin = isOwnerAdminConversation(conversation, rows);
+            const admin = isOwnerAdminConversation(conversation);
             const unreadCount = selected
               ? 0
               : Math.max(

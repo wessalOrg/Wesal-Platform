@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import MessageNotificationBanner, {
   type MessageNotificationPayload,
@@ -12,6 +12,8 @@ import { refreshUnreadCount } from "@/hooks/useUnreadCount";
 import { conversationMessagesPath } from "@/constants/seekerDashboardNav";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
 import { subscribeIncomingMessages } from "@/services/conversation-realtime";
+import { useAuthenticatedRequestScope } from "@/hooks/useAuthenticatedRequestScope";
+import type { AuthenticatedAccount } from "@/lib/authenticated-account";
 
 const GROUP_WINDOW_MS = 4500;
 
@@ -39,7 +41,11 @@ export default function IncomingMessageAlert() {
   const pathname = usePathname();
   const router = useRouter();
   const { role } = useAccountAccess();
-  const [banner, setBanner] = useState<MessageNotificationPayload | null>(null);
+  const { account, scope, isCurrent } = useAuthenticatedRequestScope(inbox.canUseMessaging, inbox.currentUserId ?? "");
+  const [notification, setNotification] = useState<{
+    account: AuthenticatedAccount; item: MessageNotificationPayload;
+  } | null>(null);
+  const banner = notification?.account === account && inbox.canUseMessaging ? notification?.item ?? null : null;
   const surfaceRef = useRef({
     isOpen: inbox.isOpen,
     selectedId: inbox.selectedId,
@@ -47,22 +53,29 @@ export default function IncomingMessageAlert() {
     onMessagesPage: onMessagesSurface(pathname),
   });
   const groupRef = useRef<{ conversationId: string; at: number } | null>(null);
+  useLayoutEffect(() => { groupRef.current = null; }, [scope]);
 
-  surfaceRef.current = {
-    isOpen: inbox.isOpen,
-    selectedId: inbox.selectedId,
-    pathConversationId: conversationIdFromPath(pathname),
-    onMessagesPage: onMessagesSurface(pathname),
-  };
+  useLayoutEffect(() => {
+    surfaceRef.current = {
+      isOpen: inbox.isOpen,
+      selectedId: inbox.selectedId,
+      pathConversationId: conversationIdFromPath(pathname),
+      onMessagesPage: onMessagesSurface(pathname),
+    };
+  }, [inbox.isOpen, inbox.selectedId, pathname]);
 
   const { canUseMessaging, currentUserId, openInbox, selectConversation, conversations } =
     inbox;
   const conversationsRef = useRef(conversations);
-  conversationsRef.current = conversations;
+  useLayoutEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   useEffect(() => {
-    if (!canUseMessaging) return;
+    if (!canUseMessaging || !account || !isCurrent() || !isSameUserId(account.userId, currentUserId)) return;
+    const captured = scope.capture();
     return subscribeIncomingMessages((payload) => {
+      if (!captured() || !isCurrent()) return;
       const message = payload?.message;
       const conversationId = payload?.conversationId;
       if (!message || !conversationId) return;
@@ -92,42 +105,46 @@ export default function IncomingMessageAlert() {
         groupRef.current?.conversationId === conversationId &&
         now - groupRef.current.at < GROUP_WINDOW_MS;
 
-      setBanner((previous) => {
+      setNotification((previousNotification) => {
+        const previous = previousNotification?.account === account ? previousNotification.item : null;
         if (grouping && previous?.conversationId === conversationId) {
-          return {
+          return { account, item: {
             ...previous,
             preview: preview || previous.preview,
             sentAt: message.sentAt,
             messageCount: previous.messageCount + 1,
             senderName: message.senderName || previous.senderName,
             senderAvatarUrl: peerAvatar || previous.senderAvatarUrl,
-          };
+          } };
         }
-        return {
+        return { account, item: {
           conversationId,
           senderName: message.senderName,
           senderAvatarUrl: peerAvatar,
           preview,
           sentAt: message.sentAt,
           messageCount: 1,
-        };
+        } };
       });
       groupRef.current = { conversationId, at: now };
     });
-  }, [canUseMessaging, currentUserId]);
+  }, [canUseMessaging, currentUserId, account, scope, isCurrent]);
 
-  const closeBanner = useCallback(() => setBanner(null), []);
+  const closeBanner = useCallback(() => {
+    if (isCurrent()) setNotification(null);
+  }, [isCurrent]);
 
   const openBanner = useCallback(
     (item: MessageNotificationPayload) => {
+      if (!isCurrent() || notification?.account !== account || notification.item !== item) return;
       selectConversation(item.conversationId);
       openInbox(item.conversationId);
       router.push(
         conversationMessagesPath(role, { conversationId: item.conversationId }),
       );
-      setBanner(null);
+      setNotification(null);
     },
-    [openInbox, role, router, selectConversation],
+    [openInbox, role, router, selectConversation, isCurrent, account, notification],
   );
 
   return (

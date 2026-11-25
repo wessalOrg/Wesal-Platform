@@ -1,7 +1,9 @@
 "use client";
 
+import ContentPagination from "@/components/ui/ContentPagination";
+import { useContentPagination } from "@/hooks/useContentPagination";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import ProfessionalOfferForm, {
   type ProfessionalOfferFormValues,
 } from "@/components/offers/ProfessionalOfferForm";
@@ -13,9 +15,11 @@ import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
 import { useAccountPublishingLock } from "@/hooks/useAccountPublishingLock";
 import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAccess";
 import { useOfferLifecycle } from "@/hooks/useOfferLifecycle";
-import { useRequestScope } from "@/hooks/useRequestScope";
 import { useT } from "@/i18n";
 import { ApiError } from "@/lib/api-error";
+import { readAuthenticatedAccount, serverAuthenticatedAccount, subscribeAuthenticatedAccount } from "@/lib/authenticated-account";
+import { createRequestScope } from "@/lib/request-scope";
+import { isSameUserId } from "@/lib/current-user";
 import OfferDateRange from "./OfferDateRange";
 import { datetimeLocalToIso } from "@/lib/offer-validation";
 import { resolveOfferStatus } from "@/lib/offer-status";
@@ -33,17 +37,34 @@ import "./professional-offers-manage.css";
 
 type StatusFilter = "all" | OfferLifecycleStatus;
 type ViewMode = "list" | "create" | "edit";
+type EditLoadState = {
+  scope: ReturnType<typeof createRequestScope>;
+  offerId: string;
+  pending: boolean;
+  errorKey: string | null;
+};
 
 export default function ProfessionalOffersManagePage() {
   const t = useT();
-  const scope = useRequestScope();
   const publishingLock = useAccountPublishingLock();
   const { canPublish, userId, statusLoading: approvalLoading } =
     useProfessionalAccountAccess();
-  const canMutate = canPublish && !publishingLock.isLocked && !approvalLoading;
-  const [offers, setOffers] = useState<ProfessionalOffer[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const canMutate = canPublish && publishingLock.ready && !publishingLock.isLocked && !approvalLoading;
+  const account = useSyncExternalStore(subscribeAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount);
+  const editScope = useMemo(() => ({ account, userId, canMutate, ...createRequestScope() }), [account, userId, canMutate]);
+  useLayoutEffect(() => {
+    editScope.activate();
+    return () => editScope.dispose();
+  }, [editScope]);
+  const [editLoad, setEditLoad] = useState<EditLoadState | null>(null);
+  const editAction = editLoad?.scope === editScope ? editLoad : null;
+  const pendingEdit = useRef<{ offerId: string; current: () => boolean } | null>(null);
+  const fetchPage = useCallback((page: number, size: number) =>
+    fetchMyProfessionalOffers(page, size), []);
+  const pagination = useContentPagination({ context: userId ?? "",
+    enabled: Boolean(userId), fetchPage, pageSize: 50, autoLoadAll: true });
+  const offers = pagination.items;
+  const status = pagination.loaded ? "ready" : pagination.error ? "error" : "loading";
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [view, setView] = useState<ViewMode>("list");
   const [editing, setEditing] = useState<ProfessionalOffer | null>(null);
@@ -53,33 +74,11 @@ export default function ProfessionalOffersManagePage() {
   const [stopBusy, setStopBusy] = useState(false);
   const [stopError, setStopError] = useState<string | null>(null);
 
-  const load = useCallback(async (quiet = false) => {
-    const current = scope.latest("offers");
-    if (!current()) return;
-    if (!quiet) setStatus("loading");
-    setErrorKey(null);
-    try {
-      const page = await fetchMyProfessionalOffers(1, 50);
-      if (!current()) return;
-      setOffers(page.items);
-      setStatus("ready");
-    } catch (err) {
-      if (!current()) return;
-      setStatus("error");
-      setErrorKey(
-        err instanceof ApiError ? err.message : "offers.errors.loadFailed",
-      );
-    }
-  }, [scope]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => { void load(); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [load]);
+  const load = pagination.refresh;
 
   useOfferLifecycle(offers, {
     revalidateAtBoundary: false,
-    onRevalidate: () => load(true),
+    onRevalidate: () => load(),
   });
 
   const rows = offers.map((offer) => ({
@@ -91,7 +90,9 @@ export default function ProfessionalOffersManagePage() {
     const scheduled = rows.filter((r) => r.status === "scheduled").length;
     const expired = rows.filter((r) => r.status === "expired").length;
     const stopped = rows.filter((r) => r.status === "stopped").length;
-    return { total: rows.length, active, scheduled, expired, stopped };
+    return { total: pagination.total ?? "\u2026",
+      active: pagination.complete ? active : "\u2026", scheduled: pagination.complete ? scheduled : "\u2026",
+      expired: pagination.complete ? expired : "\u2026", stopped: pagination.complete ? stopped : "\u2026" };
   })();
 
   const visible = (() => {
@@ -99,27 +100,47 @@ export default function ProfessionalOffersManagePage() {
     return rows.filter((row) => row.status === filter);
   })();
 
-  async function openEdit(offer: ProfessionalOffer) {
-    setFormBusy(true);
+  function cancelEditLoad() {
+    editScope.latest("edit");
+    pendingEdit.current = null;
+    setEditLoad(null);
+  }
+
+  async function openEdit(offer: Pick<ProfessionalOffer, "id">) {
+    if (!canMutate || formBusy || stopBusy || !editScope.isActive()) return;
+    if (pendingEdit.current?.offerId === offer.id && pendingEdit.current.current()) return;
+    const latest = editScope.latest("edit");
+    const current = () => latest() && readAuthenticatedAccount() === account;
+    const request = { offerId: offer.id, current };
+    pendingEdit.current = request;
+    setEditLoad({ scope: editScope, offerId: offer.id, pending: true, errorKey: null });
     setFormError(null);
     try {
       const fresh = await fetchProfessionalOffer(offer.id);
+      if (!current()) return;
+      if (fresh.id !== offer.id || (fresh.ownerUserId && !isSameUserId(fresh.ownerUserId, userId))) {
+        throw new Error("Unexpected offer editing context");
+      }
       setEditing(fresh);
       setView("edit");
+      setEditLoad(null);
     } catch (err) {
-      setErrorKey(
-        err instanceof ApiError ? err.message : "offers.errors.loadFailed",
-      );
+      if (!current()) return;
+      setEditLoad({ scope: editScope, offerId: offer.id, pending: false,
+        errorKey: err instanceof ApiError && err.status === 404
+          ? "offers.errors.editNotFound" : "offers.errors.editLoadFailed" });
     } finally {
-      setFormBusy(false);
+      if (pendingEdit.current === request) pendingEdit.current = null;
     }
   }
 
   async function handleSubmit(values: ProfessionalOfferFormValues) {
+    if (!editScope.isActive() || readAuthenticatedAccount() !== account) return;
     if (!canPublish || approvalLoading) {
       setFormError("professionals.offers.errors.forbidden");
       return;
     }
+    if (!publishingLock.ready) return;
     if (publishingLock.isLocked) {
       setFormError("moderation.restriction.blocked");
       return;
@@ -157,7 +178,7 @@ export default function ProfessionalOffersManagePage() {
   }
 
   async function handleStop() {
-    if (!stopTarget) return;
+    if (!stopTarget || !editScope.isActive() || readAuthenticatedAccount() !== account) return;
     setStopBusy(true);
     setStopError(null);
     try {
@@ -252,6 +273,7 @@ export default function ProfessionalOffersManagePage() {
             }
             onClick={() => {
               if (!canMutate) return;
+              cancelEditLoad();
               setEditing(null);
               setFormError(null);
               setView("create");
@@ -295,12 +317,21 @@ export default function ProfessionalOffersManagePage() {
       ) : null}
       {status === "error" ? (
         <p className="text-sm text-[#b42318]" role="alert">
-          {errorKey?.startsWith("offers.") || errorKey?.startsWith("errors.")
-            ? t(errorKey)
-            : errorKey || t("offers.errors.loadFailed")}
+          {t("offers.errors.loadFailed")}
         </p>
       ) : null}
-      {status === "ready" && visible.length === 0 ? (
+      {editAction?.pending ? (
+        <p role="status" className="text-sm text-[var(--wesal-muted)]">{t("offers.pro.loadingEditor")}</p>
+      ) : editAction?.errorKey ? (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 text-sm text-[var(--wesal-maroon-dark)]">
+          <p>{t(editAction.errorKey)}</p>
+          <button type="button" className="btn-outline !min-h-10" disabled={!canMutate || formBusy || stopBusy}
+            onClick={() => { void openEdit({ id: editAction.offerId }); }}>
+            {t("common.retry")}
+          </button>
+        </div>
+      ) : null}
+      {status === "ready" && !pagination.busy && !pagination.error && visible.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--wesal-border)] bg-white p-6 text-center text-sm text-[var(--wesal-muted)]">
           {t("offers.pro.empty")}
         </p>
@@ -314,7 +345,7 @@ export default function ProfessionalOffersManagePage() {
               const lifecycleOpen = offerStatus === "active" || offerStatus === "scheduled";
               const lines = offer.content?.trim().split(/\r?\n/) ?? [];
               const title = lines[0] || t("offers.card.untitled");
-              const description = lines.slice(1).join(" ");
+              const description = lines.slice(1).join("\n");
               const profileId = offer.ownerUserId || userId;
               const actionDisabled = !canMutate || formBusy;
               const actionHint = publishingLock.isLocked
@@ -347,14 +378,16 @@ export default function ProfessionalOffersManagePage() {
                     ) : null}
                     {lifecycleOpen ? (
                       <>
-                        <button type="button" className="pro-offers-action" disabled={actionDisabled}
+                        <button type="button" className="pro-offers-action"
+                          disabled={actionDisabled || (editAction?.pending && editAction.offerId === offer.id)}
+                          aria-busy={editAction?.pending && editAction.offerId === offer.id}
                           aria-label={t("offers.actions.edit")} title={actionHint || t("offers.actions.edit")}
                           onClick={() => { if (!actionDisabled) void openEdit(offer); }}>
                           <OfferManageIcon name="edit" />
                         </button>
                         <button type="button" className="pro-offers-action" disabled={actionDisabled}
                           aria-label={t("offers.actions.stop")} title={actionHint || t("offers.actions.stop")}
-                          onClick={() => { if (!actionDisabled) { setStopError(null); setStopTarget(offer); } }}>
+                          onClick={() => { if (!actionDisabled) { cancelEditLoad(); setStopError(null); setStopTarget(offer); } }}>
                           <OfferManageIcon name="more" />
                         </button>
                       </>
@@ -367,6 +400,8 @@ export default function ProfessionalOffersManagePage() {
         </section>
       ) : null}
 
+      <ContentPagination {...pagination} onMore={() => void pagination.loadMore()}
+        onRetry={() => void pagination.refresh()} />
       <StopOfferConfirmDialog
         open={Boolean(stopTarget)}
         busy={stopBusy}

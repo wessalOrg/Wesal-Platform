@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import ContentPagination from "@/components/ui/ContentPagination";
+import { useContentPagination } from "@/hooks/useContentPagination";
 import DiscoverOfferCard from "@/components/offers/DiscoverOfferCard";
 import { useT } from "@/i18n";
 import { useOfferLifecycle } from "@/hooks/useOfferLifecycle";
-import { useRequestScope } from "@/hooks/useRequestScope";
 import { isOfferPubliclyVisible } from "@/lib/offer-status";
 import { fetchProfileProfessionalOffers } from "@/services/professional-offers";
 import type { DiscoverItem, ProfessionalOffer } from "@/types/offers";
@@ -27,26 +28,12 @@ function ProfileOffers({
   className = "",
 }: PublicProfileOffersSectionProps) {
   const t = useT();
-  const scope = useRequestScope();
-  const [loadedOffers, setOffers] = useState<ProfessionalOffer[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-
-  const load = useCallback(async (quiet = false) => {
-    const current = scope.latest("offers");
-    if (!current()) return;
-    if (!quiet) setStatus("loading");
-    try {
-      const page = await fetchProfileProfessionalOffers(userId, 1, 20);
-      if (!current()) return;
-      setOffers(page.items);
-      setStatus("ready");
-    } catch { if (current()) setStatus("error"); }
-  }, [scope, userId]);
-  useEffect(() => {
-    const timer = window.setTimeout(() => { void load(); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [load]);
-  useOfferLifecycle(loadedOffers, { discoverUnloaded: true, onRevalidate: () => load(true) });
+  const fetchPage = useCallback((page: number, size: number) => fetchProfileProfessionalOffers(userId, page, size), [userId]);
+  const pagination = useContentPagination({ context: userId, pageSize: 20, fetchPage });
+  const loadedOffers = pagination.items;
+  const status = pagination.loaded ? "ready" : pagination.error ? "error" : "loading";
+  const load = pagination.refresh;
+  useOfferLifecycle(loadedOffers, { discoverUnloaded: true, onRevalidate: () => load() });
   const offers = loadedOffers.filter((offer) => isOfferPubliclyVisible(offer.startsAt, offer.endsAt, offer.stoppedAt));
 
   if (status === "loading") {
@@ -57,7 +44,7 @@ function ProfileOffers({
     );
   }
 
-  if (status === "ready" && offers.length === 0) {
+  if (status === "ready" && offers.length === 0 && !pagination.hasMore && !pagination.error) {
     return null;
   }
 
@@ -79,6 +66,8 @@ function ProfileOffers({
           ))}
         </div>
       )}
+      <ContentPagination {...pagination} onMore={() => void pagination.loadMore()}
+        onRetry={() => void pagination.refresh()} />
     </section>
   );
 }

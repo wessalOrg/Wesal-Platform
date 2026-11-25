@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState, type FormEvent } from "react";
-import { useHelpCenterTickets } from "@/hooks/useHelpCenterTickets";
+import { useAdminHelpTickets } from "@/hooks/useAdminHelpTickets";
+import { useAuthenticatedRequestScope } from "@/hooks/useAuthenticatedRequestScope";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import { useT } from "@/i18n";
 import type { HelpTicket } from "@/types/help-center";
@@ -59,23 +60,33 @@ function groupConversations(tickets: HelpTicket[]): HelpConversation[] {
 export default function AdminHelpCenterPage() {
   const t = useT();
   const lang = useUiLang();
-  const { tickets, ready, reply, markConversationRead } = useHelpCenterTickets("all");
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const { account } = useAuthenticatedRequestScope();
+  const [pageState, setPageState] = useState({ account, page: 1 });
+  const page = pageState.account === account ? pageState.page : 1;
+  const changePage = useCallback((next: number) => setPageState({ account, page: next }), [account]);
+  const { result, ready, loading, error, reload, reply, markConversationRead, isCurrent } = useAdminHelpTickets(page, changePage);
+  const [selection, setSelection] = useState<{ account: typeof account; userId: string } | null>(null);
+  const selectedUserId = selection?.account === account ? selection.userId : null;
+  const [readError, setReadError] = useState<{ account: typeof account; userId: string } | null>(null);
 
-  const conversations = useMemo(() => groupConversations(tickets), [tickets]);
+  const conversations = useMemo(() => groupConversations(result?.items ?? []), [result]);
   const selected = conversations.find((conversation) => conversation.userId === selectedUserId) ?? null;
   const showDetails = Boolean(selected);
 
   // Opening a conversation clears its unread badge for every Admin (shared read state).
   const openConversation = useCallback(
     (userId: string) => {
-      setSelectedUserId(userId);
-      void markConversationRead(userId).catch(() => undefined);
+      if (!isCurrent()) return;
+      setSelection({ account, userId });
+      setReadError(null);
+      void markConversationRead(userId).catch(() => {
+        if (isCurrent()) setReadError({ account, userId });
+      });
     },
-    [markConversationRead],
+    [account, isCurrent, markConversationRead],
   );
 
-  const closeConversation = useCallback(() => setSelectedUserId(null), []);
+  const closeConversation = useCallback(() => setSelection(null), []);
 
   return (
     <div className="seeker-messages" data-testid="admin-help-center-page">
@@ -84,18 +95,32 @@ export default function AdminHelpCenterPage() {
         <p className="seeker-settings-lead">{t("admin.help.subtitle")}</p>
       </header>
 
-      {!ready ? (
+      {error ? <div role="alert" className="mb-3 text-sm text-[#b42318]">
+        {t("admin.help.errors.loadFailed")} <button type="button" className="btn-outline" onClick={reload}>{t("admin.help.retry")}</button>
+      </div> : null}
+      {result ? <nav className="mb-3 flex flex-wrap items-center justify-between gap-3" aria-label={t("admin.help.pagination")}>
+        <span data-testid="admin-help-total">{t("admin.help.total", { count: result.totalCount })}</span>
+        <div className="flex items-center gap-3">
+          <button type="button" className="btn-outline" disabled={loading || !result.hasPreviousPage} onClick={() => changePage(page - 1)} data-testid="admin-help-previous">{t("admin.help.previous")}</button>
+          <span>{t("admin.help.page", { page, pages: Math.max(1, result.totalPages) })}</span>
+          <button type="button" className="btn-outline" disabled={loading || !result.hasNextPage} onClick={() => changePage(page + 1)} data-testid="admin-help-next">{t("admin.help.next")}</button>
+          <button type="button" className="btn-outline" disabled={loading} onClick={reload}>{t("admin.help.refresh")}</button>
+        </div>
+      </nav> : null}
+      {result && result.totalPages > 1 ? <p className="mb-3 text-sm text-[var(--wesal-muted)]">{t("admin.help.partial")}</p> : null}
+
+      {!ready || (loading && !result) ? (
         <div
           className="seeker-pending-panel h-40 animate-pulse"
           aria-busy="true"
           data-testid="admin-help-loading"
         />
-      ) : conversations.length === 0 ? (
+      ) : !error && conversations.length === 0 ? (
         <div className="seeker-pending-empty" data-testid="admin-help-empty">
           <p>{t("admin.help.empty")}</p>
         </div>
-      ) : (
-        <section className="seeker-messages-workspace admin-messages-workspace">
+      ) : result ? (
+        <section className="seeker-messages-workspace admin-messages-workspace" aria-busy={loading}>
           <div
             className={`seeker-messages-list admin-messages-list${
               showDetails ? " seeker-messages-list--hidden-mobile" : ""
@@ -147,6 +172,7 @@ export default function AdminHelpCenterPage() {
                 </header>
 
                 <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+                  {readError?.account === account && readError.userId === selected.userId ? <p role="alert">{t("admin.help.errors.readFailed")} <button type="button" onClick={() => openConversation(selected.userId)}>{t("admin.help.retry")}</button></p> : null}
                   {selected.tickets.map((ticket) => (
                     <QuestionCard key={ticket.id} ticket={ticket} lang={lang} onReply={reply} />
                   ))}
@@ -157,7 +183,7 @@ export default function AdminHelpCenterPage() {
             )}
           </div>
         </section>
-      )}
+      ) : null}
     </div>
   );
 }

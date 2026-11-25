@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useUiLang } from "@/components/layout/LanguageProvider";
 import AnchoredPanel from "@/components/ui/AnchoredPanel";
 import { useT } from "@/i18n";
@@ -23,6 +24,9 @@ const EVENT_TYPES: OwnerManualEventType[] = [
   "birthday",
   "other",
 ];
+
+// Select/date popovers also use body portals; they belong to the same focus scope.
+const BookingDialogContext = createContext<string | null>(null);
 
 function hour12Label(hour24: number, lang: "ar" | "en"): string {
   const period = hour24 < 12 ? (lang === "ar" ? "ص" : "AM") : lang === "ar" ? "م" : "PM";
@@ -83,6 +87,7 @@ export default function OwnerAddBookingModal({
   const t = useT();
   const lang = useUiLang();
   const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
   const dateLocale = lang === "ar" ? "ar-EG" : "en-GB";
   const timeOptions = useMemo(() => buildTimeOptions(lang === "ar" ? "ar" : "en"), [lang]);
   const [recovery, setRecovery] = useState<Submission | null>(null);
@@ -137,7 +142,37 @@ export default function OwnerAddBookingModal({
     };
   }, [onClose, open, saving]);
 
-  if (!open) return null;
+  useEffect(() => {
+    if (!open) return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialog.querySelector<HTMLElement>("button:not(:disabled)")?.focus({ preventScroll: true });
+    const onTab = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const popovers = Array.from(document.querySelectorAll<HTMLElement>("[data-booking-dialog]"))
+        .filter((element) => element.dataset.bookingDialog === titleId);
+      const roots = [dialog, ...popovers];
+      const controls = roots.flatMap((root) => Array.from(root.querySelectorAll<HTMLElement>(
+        'a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])',
+      ))).filter((element) => !element.matches(':disabled,[tabindex="-1"]') && element.getClientRects().length > 0);
+      const first = controls[0], last = controls[controls.length - 1];
+      const focused = document.activeElement;
+      const outside = !roots.some((root) => focused && root.contains(focused));
+      if (!first || outside || (event.shiftKey && focused === first) || (!event.shiftKey && focused === last)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first)?.focus();
+        if (!first) dialog.focus();
+      }
+    };
+    document.addEventListener("keydown", onTab, true);
+    return () => {
+      document.removeEventListener("keydown", onTab, true);
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, [open, titleId]);
+
+  if (!open || typeof document === "undefined") return null;
 
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -204,22 +239,27 @@ export default function OwnerAddBookingModal({
     } finally { inFlight.current = false; setSaving(false); }
   }
 
-  return (
+  return createPortal(
+    <BookingDialogContext.Provider value={titleId}>
     <div
       className="fixed inset-0 z-[160] flex items-end justify-center sm:items-center sm:p-4"
       data-testid="owner-add-booking-overlay"
+      dir={lang === "ar" ? "rtl" : "ltr"}
     >
       <button
         type="button"
         className="absolute inset-0 bg-[rgba(60,40,35,0.35)]"
         aria-label={t("common.close")}
         disabled={saving}
+        tabIndex={-1}
         onClick={() => {
           if (!saving) onClose();
         }}
       />
       <div
         role="dialog"
+        ref={dialogRef}
+        tabIndex={-1}
         aria-modal="true"
         aria-labelledby={titleId}
         className="relative z-10 flex max-h-[min(94vh,52rem)] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_28px_80px_rgba(60,35,30,0.2)] sm:rounded-2xl"
@@ -476,6 +516,8 @@ export default function OwnerAddBookingModal({
         </footer>
       </div>
     </div>
+    </BookingDialogContext.Provider>,
+    document.body,
   );
 }
 
@@ -541,6 +583,7 @@ function SiteSelect({
   onChange: (value: string) => void;
   testId: string;
 }) {
+  const dialogId = useContext(BookingDialogContext);
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -592,6 +635,7 @@ function SiteSelect({
         options={{ width: "anchor", estimateHeight: 240 }}
         id={listId}
         role="listbox"
+        data-booking-dialog={dialogId ?? undefined}
         className="m-0 list-none rounded-xl border border-[var(--wesal-border)] bg-white py-1 shadow-[0_14px_32px_rgba(90,55,45,0.14)]"
         data-testid={`${testId}-menu`}
       >
@@ -655,6 +699,7 @@ function SiteDatePicker({
   onChange: (value: string) => void;
   testId: string;
 }) {
+  const dialogId = useContext(BookingDialogContext);
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -668,12 +713,15 @@ function SiteDatePicker({
     return { year, month: month - 1 };
   });
 
-  useEffect(() => {
-    if (!open) return;
-    const iso = selected ?? today;
-    const [year, month] = iso.split("-").map(Number);
-    setCursor({ year, month: month - 1 });
-  }, [open, selected, today]);
+  const cursorKey = `${open}:${selected ?? today}`;
+  const [seenCursorKey, setSeenCursorKey] = useState(cursorKey);
+  if (seenCursorKey !== cursorKey) {
+    setSeenCursorKey(cursorKey);
+    if (open) {
+      const [year, month] = (selected ?? today).split("-").map(Number);
+      setCursor({ year, month: month - 1 });
+    }
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -759,6 +807,7 @@ function SiteDatePicker({
         options={{ width: "anchor", estimateHeight: 340 }}
         className="rounded-2xl border border-[var(--wesal-border)] bg-white p-3 shadow-[0_16px_40px_rgba(90,55,45,0.16)]"
         data-testid={`${testId}-calendar`}
+        data-booking-dialog={dialogId ?? undefined}
       >
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-sm font-bold text-[var(--wesal-text)]">{monthLabel}</p>

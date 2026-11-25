@@ -211,6 +211,8 @@ export type AdminHallPage = {
   pageSize: number;
   totalCount: number;
   totalPages: number;
+  hasPreviousPage?: boolean;
+  hasNextPage?: boolean;
 };
 
 /** PagedResult from GET /admin/halls/pending and GET /admin/halls/rejected. */

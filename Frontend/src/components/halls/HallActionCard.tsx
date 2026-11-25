@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import Link from "next/link";
 import BookingPendingLimitAlert from "@/components/bookings/BookingPendingLimitAlert";
 import { useT } from "@/i18n";
@@ -111,7 +113,9 @@ export default function HallActionCard({
       data-testid="hall-action-card"
     >
       <h2 className="hall-section-title flex items-center gap-2">
-        <img
+        <Image
+          unoptimized
+          loading="eager"
           src="/icons/booking-summary.jpg"
           alt=""
           width={36}

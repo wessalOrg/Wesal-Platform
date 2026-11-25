@@ -108,8 +108,18 @@ export function professionalProfilePath(userId: string): string {
 /** Admin post / offer moderation (Section 15). */
 export const ADMIN_POSTS_PATH = "/admin/posts";
 
-export function adminHallSubmissionPath(hallId: string): string {
-  return `${ADMIN_MANAGEMENT_PATH}/halls/${encodeURIComponent(hallId)}`;
+export function parseAdminPendingPage(raw: string | null): number {
+  const value = Number(raw);
+  return Number.isSafeInteger(value) && value >= 1 && value <= 2147483647 ? value : 1;
+}
+
+export function adminPendingHallsPath(page = 1): string {
+  return page > 1 ? `${ADMIN_MANAGEMENT_PATH}?page=${page}` : ADMIN_MANAGEMENT_PATH;
+}
+
+export function adminHallSubmissionPath(hallId: string, pendingPage = 1): string {
+  const path = `${ADMIN_MANAGEMENT_PATH}/halls/${encodeURIComponent(hallId)}`;
+  return pendingPage > 1 ? `${path}?pendingPage=${pendingPage}` : path;
 }
 
 export function adminCoordinatorRequestPath(userId: string): string {

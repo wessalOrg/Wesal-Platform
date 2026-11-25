@@ -56,8 +56,10 @@ function roleFromClaims(claims: JwtClaims | null): WesalRole | null {
 
 export function readLocalSession(): SessionState | null {
   const stored = getStoredAuth();
-  const token = getAccessToken() || stored?.token || null;
-  if (!token) return null;
+  const token = getAccessToken();
+  // The persisted identity is a cache, not a replacement for the credential
+  // actually attached to API requests. Never mix a partial account transition.
+  if (!token || (stored && stored.token !== token)) return null;
 
   const claims = decodeJwtPayload(token);
   if (isExpiredToken(claims)) {

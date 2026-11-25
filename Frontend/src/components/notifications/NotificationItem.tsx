@@ -107,6 +107,12 @@ function NotificationTypeIcon({
   tone: PlatformNotificationTone;
 }) {
   switch (type) {
+    case "event_request_hall":
+      return <svg data-testid="event-request-hall-icon" viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11H4Zm5 0v-7h6v7M2 9l10-7 10 7" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /></svg>;
+    case "event_request_decoration_gifts":
+      return <svg data-testid="event-request-gifts-icon" viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true"><path d="M4 11h16v9H4v-9Zm-1-4h18v4H3V7Zm9 0v13M12 7C3 8 5 0 9 4l3 3Zm0 0c9 1 7-7 3-3l-3 3Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /></svg>;
+    case "event_request_photography":
+      return <svg data-testid="event-request-photography-icon" viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true"><path d="M4 7h4l2-3h4l2 3h4v13H4V7Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /><circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="1.7" /></svg>;
     case "account_needs_edit":
     case "offer_edits_saved":
     case "post_edits_saved":

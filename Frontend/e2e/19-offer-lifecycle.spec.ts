@@ -13,7 +13,9 @@ test.beforeAll(async () => { bundle = await buildOfferLifecycleHarness(); });
 
 type Request = { path: string; method: string; url: URL; reply: (body: unknown, status?: number) => Promise<void> };
 async function mount(page: Page, mode: string) {
-  await page.clock.install({ time: new Date(base) });
+  // Freeze setup too: network/UI setup must not consume the offer's 10-second window.
+  await page.clock.install({ time: new Date(base - 60_000) });
+  await page.clock.pauseAt(new Date(base));
   const pending: Request[] = [], errors: string[] = [];
   const seen: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -31,7 +33,12 @@ async function mount(page: Page, mode: string) {
   await page.addScriptTag({ content: bundle });
   await page.clock.runFor(1);
   const take = async (path: string) => {
-    await expect.poll(() => { expect(errors).toEqual([]); return pending.findIndex((r) => r.path === path); }).toBeGreaterThanOrEqual(0);
+    await expect.poll(async () => {
+      // Flush deferred fetch startup without allowing real setup time to advance the clock.
+      await page.clock.runFor(1);
+      expect(errors).toEqual([]);
+      return pending.findIndex((r) => r.path === path);
+    }).toBeGreaterThanOrEqual(0);
     return pending.splice(pending.findIndex((r) => r.path === path), 1)[0];
   };
   return { take, pending, seen };

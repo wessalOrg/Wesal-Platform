@@ -15,8 +15,8 @@ export type HallOwnerHall = {
   daysRemaining: number | null;
   subscriptionExpiresAt: string | null;
   expiryWarning: HallExpiryWarning | null;
-  adminLocked: boolean;
-  systemLocked: boolean;
+  adminLocked: boolean | null;
+  systemLocked: boolean | null;
 };
 
 export type HallOwnerHallsLoadStatus = "idle" | "loading" | "ready" | "error";

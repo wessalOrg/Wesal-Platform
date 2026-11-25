@@ -1,6 +1,7 @@
 import type { BookingRequestResult, BookingStatus, UserBooking } from "@/types/booking";
 import { parseBookingPeriodType } from "@/lib/booking-period";
 import { parseBookingStatus } from "@/lib/booking-status";
+import { readAuthenticatedAccount } from "@/lib/authenticated-account";
 
 const STORAGE_KEY = "wesal-user-bookings";
 export const USER_BOOKINGS_CHANGED_EVENT = "wesal-user-bookings-changed";
@@ -16,8 +17,10 @@ function canUseStorage() {
 
 function readAll(): UserBooking[] {
   if (!canUseStorage()) return [];
+  const account = readAuthenticatedAccount();
+  if (!account) return [];
   try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    const raw = window.sessionStorage.getItem(`${STORAGE_KEY}:${encodeURIComponent(account.userId)}`);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -31,7 +34,10 @@ function readAll(): UserBooking[] {
 
 function writeAll(bookings: UserBooking[]) {
   if (!canUseStorage()) return;
-  window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
+  const account = readAuthenticatedAccount();
+  if (!account) return;
+  try { window.sessionStorage.setItem(`${STORAGE_KEY}:${encodeURIComponent(account.userId)}`, JSON.stringify(bookings)); }
+  catch { /* private mode */ }
 }
 
 function mapStoredBooking(value: unknown): UserBooking | null {

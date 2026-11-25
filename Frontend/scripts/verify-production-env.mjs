@@ -16,6 +16,10 @@
  * The rules live in src/lib/api-base-url.mjs, shared with the app runtime.
  */
 import { evaluateFrontendEnv } from "../src/lib/api-base-url.mjs";
+import nextEnv from "@next/env";
+
+// Match `next build`: inspect the actual .env files without logging their contents.
+nextEnv.loadEnvConfig(process.cwd(), false);
 
 const { failures, warnings, notes } = evaluateFrontendEnv(process.env);
 

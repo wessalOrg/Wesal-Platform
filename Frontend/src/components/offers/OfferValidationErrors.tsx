@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { useT } from "@/i18n";
-import type { OfferField, OfferFieldErrors } from "@/lib/offer-form-validation";
+import { getOfferDateFieldErrors, type OfferField, type OfferFieldErrors, type OfferValidationInput } from "@/lib/offer-form-validation";
 import { OFFER_CONTENT_MAX, OFFER_IMAGES_MAX } from "@/lib/offer-validation";
 
 function FieldError({ id, field, message }: { id: string; field: OfferField; message?: string }) {
@@ -20,6 +20,12 @@ export function useOfferValidationErrors() {
     errors,
     setErrors,
     clearErrors: () => setErrors({}),
+    clearNonDateErrors: () => setErrors((previous) => ({ startsAt: previous.startsAt, endsAt: previous.endsAt })),
+    revalidateDates: (input: Pick<OfferValidationInput, "startsAt" | "endsAt">) => setErrors((previous) => {
+      if (!previous.startsAt && !previous.endsAt) return previous;
+      const { startsAt, endsAt } = getOfferDateFieldErrors(input);
+      return { ...previous, startsAt, endsAt };
+    }),
     fieldProps: (field: OfferField) => ({
       "data-testid": `offer-field-${field}`,
       "aria-invalid": Boolean(errors[field]),

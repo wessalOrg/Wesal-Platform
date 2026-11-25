@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ProfessionalOffersManagePage from "@/components/offers/ProfessionalOffersManagePage";
+import ProfessionalOffersRouteGuard from "@/components/offers/ProfessionalOffersRouteGuard";
 import { translate } from "@/i18n";
 
 export const metadata: Metadata = {
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function ProfileOffersRoutePage() {
-  return <ProfessionalOffersManagePage />;
+  return (
+    <ProfessionalOffersRouteGuard>
+      <ProfessionalOffersManagePage />
+    </ProfessionalOffersRouteGuard>
+  );
 }

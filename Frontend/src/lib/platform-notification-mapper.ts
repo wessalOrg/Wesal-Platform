@@ -5,6 +5,7 @@ import {
 } from "@/lib/account-profile-path";
 import { SEEKER_BOOKINGS_PATH, conversationMessagePath } from "@/constants/seekerDashboardNav";
 import { ownerBookingsPath } from "@/lib/hall-owner-query-keys";
+import { eventRequestConversationId, isEventRequestNotification } from "@/lib/event-request-notification";
 import type {
   NotificationAudience,
   PlatformNotification,
@@ -47,6 +48,9 @@ function messagesPath(id: string | null): string {
  * statistics dashboard only (Section 14 / 16).
  */
 export const SERVER_NOTIFICATION_KIND_MAP: Record<string, ServerNotificationKindMapping> = {
+  EVENT_REQUEST_HALL: { type: "event_request_hall", audience: "owner", tone: "info", target: "conversation" },
+  EVENT_REQUEST_DECORATION_GIFTS: { type: "event_request_decoration_gifts", audience: "seeker", tone: "info", target: "conversation" },
+  EVENT_REQUEST_PHOTOGRAPHY: { type: "event_request_photography", audience: "seeker", tone: "info", target: "conversation" },
   WelcomeLogin: { type: "welcome", audience: "seeker", tone: "info" },
 
   HallCreatedForOwner: { type: "hall_submitted", audience: "owner", tone: "success", target: "hall" },
@@ -344,6 +348,8 @@ const ACTION_TARGET_METADATA: Record<
 };
 
 export type ServerNotificationInput = {
+  /** Structured event-request fields are included only in the durable REST DTO. */
+  payloadJson?: unknown;
   kind?: string | null;
   title?: string | null;
   body?: string | null;
@@ -373,33 +379,53 @@ export type MappedServerNotification = {
 export function mapServerNotification(
   input: ServerNotificationInput,
 ): MappedServerNotification | null {
-  const kind = input.kind?.trim() || "";
-  const mapping = kind ? SERVER_NOTIFICATION_KIND_MAP[kind] : undefined;
-  const title = input.title?.trim() ?? "";
-  const body = input.body?.trim() ?? "";
+  if (!input || typeof input !== "object") return null;
+  const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
+  const kind = text(input.kind);
+  const mapping = kind && Object.hasOwn(SERVER_NOTIFICATION_KIND_MAP, kind) ? SERVER_NOTIFICATION_KIND_MAP[kind] : undefined;
+  const title = text(input.title);
+  const body = text(input.body);
   if (!mapping || (!title && !body)) return null;
 
-  const conversationId = input.conversationId?.trim() || null;
-  const targetId = input.targetId?.trim() || conversationId || null;
+  const eventRequest = isEventRequestNotification(mapping.type);
+  const conversationId = eventRequest
+    ? eventRequestConversationId(input.conversationId) ??
+      (!input.actionTarget || input.actionTarget === "Conversation" ? eventRequestConversationId(input.targetId) : null)
+    : text(input.conversationId) || null;
+  const targetId = eventRequest ? conversationId : text(input.targetId) || conversationId || null;
   const target =
     mapping.target ??
     (input.actionTarget ? ACTION_TARGET_METADATA[input.actionTarget] : undefined);
   const metadata: PlatformNotificationMetadata = { server_kind: kind || undefined };
+  if (eventRequest && typeof input.payloadJson === "string") {
+    try {
+      const payload: unknown = JSON.parse(input.payloadJson);
+      if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+        const fields = payload as Record<string, unknown>;
+        metadata.event_request_id = text(fields.eventRequestId) || undefined;
+        metadata.seeker_id = text(fields.seekerId) || undefined;
+        metadata.user_name = text(fields.fullName) || undefined;
+        metadata.date = text(fields.eventDate) || undefined;
+        metadata.event_type = text(fields.eventType) || undefined;
+        metadata.service_type = text(fields.serviceType) || undefined;
+      }
+    } catch { /* Optional structured fields never replace the localized backend content or routing. */ }
+  }
   if (targetId && target === "hall") metadata.hall_id = targetId;
   if (targetId && target === "conversation") metadata.conversation_id = targetId;
   if (targetId && target === "booking") metadata.booking_id = targetId;
   if (targetId && target === "post") metadata.post_id = targetId;
   if (targetId && target === "offer") metadata.offer_id = targetId;
   if (conversationId) metadata.conversation_id = conversationId;
-  if (input.senderName?.trim()) metadata.sender_name = input.senderName.trim();
-  if (input.senderAvatarUrl?.trim()) metadata.sender_avatar_url = input.senderAvatarUrl.trim();
-  if (input.messagePreview?.trim()) metadata.message_preview = input.messagePreview.trim();
+  if (text(input.senderName)) metadata.sender_name = text(input.senderName);
+  if (text(input.senderAvatarUrl)) metadata.sender_avatar_url = text(input.senderAvatarUrl);
+  if (text(input.messagePreview)) metadata.message_preview = text(input.messagePreview);
   if (typeof input.messageCount === "number" && input.messageCount > 0) {
     metadata.message_count = String(Math.floor(input.messageCount));
   }
 
   const richTitle =
-    mapping.type === "new_message" ? metadata.sender_name || title : title;
+    mapping.type === "new_message" ? metadata.sender_name || title : eventRequest ? title || body : title;
   const richBody =
     mapping.type === "new_message" ? metadata.message_preview || body : body;
 
@@ -417,7 +443,7 @@ export function mapServerNotification(
     tone: mapping.tone,
     title: richTitle,
     body: richBody,
-    actionLabel: input.actionLabel?.trim() || undefined,
+    actionLabel: text(input.actionLabel) || undefined,
     action_url: mapping.actionUrl?.(actionTargetId) ?? "",
     metadata,
   };

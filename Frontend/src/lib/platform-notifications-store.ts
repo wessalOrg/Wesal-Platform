@@ -1,6 +1,12 @@
 import { t } from "@/i18n";
 import { resolveNotificationActionUrl } from "@/lib/platform-notification-routes";
 import { platformNotificationDedupeKey } from "@/lib/platform-notification-mapper";
+import {
+  isCurrentNotificationAccount,
+  readNotificationAccount,
+  subscribeNotificationAccount,
+  type NotificationAccount,
+} from "@/lib/notification-account";
 import type {
   NotificationAudience,
   PlatformNotification,
@@ -9,7 +15,8 @@ import type {
   PlatformNotificationType,
 } from "@/types/platform-notification";
 
-const STORAGE_KEY = "wesal-platform-notifications";
+// The legacy, unowned key is deliberately never read or migrated.
+const STORAGE_KEY = "wesal-platform-notifications:v2:";
 const WELCOME_SEEN_KEY = "wesal-welcome-seen";
 const ACCOUNT_APPROVED_SEEN_KEY = "wesal-account-approved-seen";
 const ACCOUNT_ACTIVATED_MODAL_SEEN_KEY = "wesal-account-activated-modal-seen";
@@ -85,19 +92,21 @@ function defaultTone(type: PlatformNotificationType): PlatformNotificationTone {
  * Serialized store contents (or "" when empty / on the server). Stable by string
  * equality, so it is safe as a `useSyncExternalStore` snapshot.
  */
-export function readPlatformNotificationsSnapshot(): string {
-  if (!canUseStorage()) return "";
+export function readPlatformNotificationsSnapshot(
+  account = readNotificationAccount(),
+): string {
+  if (!isCurrentNotificationAccount(account)) return "";
   try {
-    return window.localStorage.getItem(STORAGE_KEY) ?? "";
+    return window.localStorage.getItem(STORAGE_KEY + encodeURIComponent(account.userId)) ?? "";
   } catch {
     return "";
   }
 }
 
-function readRaw(): PlatformNotification[] {
-  if (!canUseStorage()) return [];
+function readRaw(account = readNotificationAccount()): PlatformNotification[] {
+  if (!isCurrentNotificationAccount(account)) return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = readPlatformNotificationsSnapshot(account);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -109,9 +118,12 @@ function readRaw(): PlatformNotification[] {
   }
 }
 
-function writeAll(items: PlatformNotification[]) {
-  if (!canUseStorage()) return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, MAX_ITEMS)));
+function writeAll(items: PlatformNotification[], account: NotificationAccount | null) {
+  if (!isCurrentNotificationAccount(account)) return;
+  window.localStorage.setItem(
+    STORAGE_KEY + encodeURIComponent(account.userId),
+    JSON.stringify(items.slice(0, MAX_ITEMS)),
+  );
 }
 
 function mapStored(value: unknown): PlatformNotification | null {
@@ -173,8 +185,9 @@ export function hydratePlatformNotification(item: PlatformNotification): Platfor
 
 export function listPlatformNotifications(
   audience?: NotificationAudience,
+  account = readNotificationAccount(),
 ): PlatformNotification[] {
-  const items = readRaw().map(hydratePlatformNotification);
+  const items = readRaw(account).map(hydratePlatformNotification);
   if (!audience) return items;
   return items.filter((item) => item.audience === audience);
 }
@@ -192,8 +205,12 @@ export function isServerNotificationId(id: string): boolean {
  * client derives from its own realtime feeds and the server does not persist — have no
  * server counterpart and are kept, so switching devices does not silently lose them.
  */
-export function replacePlatformNotifications(serverItems: PlatformNotification[]): void {
-  const local = readRaw();
+export function replacePlatformNotifications(
+  serverItems: PlatformNotification[],
+  account = readNotificationAccount(),
+): void {
+  if (!isCurrentNotificationAccount(account)) return;
+  const local = readRaw(account);
   const serverKeys = new Set(serverItems.map(platformNotificationDedupeKey));
   const keepLocal = local.filter(
     (item) =>
@@ -203,7 +220,7 @@ export function replacePlatformNotifications(serverItems: PlatformNotification[]
   const merged = [...serverItems, ...keepLocal].sort(
     (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
   );
-  writeAll(merged);
+  writeAll(merged, account);
   notifyChanged();
 }
 
@@ -223,8 +240,10 @@ function isRecentDuplicate(
 
 export function pushPlatformNotification(
   input: PushPlatformNotificationInput,
+  account = readNotificationAccount(),
 ): PlatformNotification | null {
-  const current = readRaw();
+  if (!isCurrentNotificationAccount(account)) return null;
+  const current = readRaw(account);
   const metadata = input.metadata ?? {};
   if (isRecentDuplicate(current, { type: input.type, audience: input.audience, metadata })) {
     return null;
@@ -260,29 +279,31 @@ export function pushPlatformNotification(
     params,
   };
 
-  writeAll([item, ...current]);
+  writeAll([item, ...current], account);
   notifyChanged();
 
   if (input.toast !== false && canUseStorage()) {
     window.dispatchEvent(
-      new CustomEvent(PLATFORM_NOTIFICATION_TOAST, { detail: hydratePlatformNotification(item) }),
+      new CustomEvent(PLATFORM_NOTIFICATION_TOAST, {
+        detail: { account, item: hydratePlatformNotification(item) },
+      }),
     );
   }
 
   return hydratePlatformNotification(item);
 }
 
-export function markPlatformNotificationRead(id: string): void {
-  const next = readRaw().map((item) => (item.id === id ? { ...item, is_read: true } : item));
-  writeAll(next);
+export function markPlatformNotificationRead(id: string, account = readNotificationAccount()): void {
+  const next = readRaw(account).map((item) => (item.id === id ? { ...item, is_read: true } : item));
+  writeAll(next, account);
   notifyChanged();
 }
 
-export function markPlatformNotificationsRead(audience?: NotificationAudience): void {
-  const next = readRaw().map((item) =>
+export function markPlatformNotificationsRead(audience?: NotificationAudience, account = readNotificationAccount()): void {
+  const next = readRaw(account).map((item) =>
     !audience || item.audience === audience ? { ...item, is_read: true } : item,
   );
-  writeAll(next);
+  writeAll(next, account);
   notifyChanged();
 }
 
@@ -318,7 +339,7 @@ export function hasSeenWelcome(userId: string): boolean {
 /** Seeker welcome after registration (or first session if register did not fire). */
 export function notifySeekerWelcome(userId?: string | null): void {
   const id = userId?.trim() || "";
-  if (!id || hasSeenWelcome(id)) return;
+  if (!id || readNotificationAccount()?.userId !== id || hasSeenWelcome(id)) return;
   markWelcomeSeen(id);
   pushPlatformNotification({
     type: "welcome",
@@ -336,7 +357,7 @@ export function markWelcomeSeen(userId: string): void {
 /** Local fallback when the durable inbox has not yet delivered the approval event. */
 export function notifyProfessionalAccountApproved(userId?: string | null): void {
   const id = userId?.trim() || "";
-  if (!id || hasSeenId(ACCOUNT_APPROVED_SEEN_KEY, id)) return;
+  if (!id || readNotificationAccount()?.userId !== id || hasSeenId(ACCOUNT_APPROVED_SEEN_KEY, id)) return;
   const alreadyDelivered = readRaw().some(
     (item) => item.type === "account_approved" && item.audience === "seeker",
   );
@@ -362,9 +383,11 @@ export function markAccountActivatedModalSeen(userId: string): void {
 
 export function subscribePlatformNotifications(listener: () => void): () => void {
   if (!canUseStorage()) return () => undefined;
+  const unsubscribeAccount = subscribeNotificationAccount(listener);
   window.addEventListener(PLATFORM_NOTIFICATIONS_CHANGED, listener);
   window.addEventListener("storage", listener);
   return () => {
+    unsubscribeAccount();
     window.removeEventListener(PLATFORM_NOTIFICATIONS_CHANGED, listener);
     window.removeEventListener("storage", listener);
   };

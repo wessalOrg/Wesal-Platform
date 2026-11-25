@@ -235,6 +235,9 @@ export default function SubscriptionReadyPanel({
         </div>
       )}
 
+      <p className="text-xs leading-5 text-[var(--wesal-muted)]" role="status">
+        {t("owner.subscription.lockStatusNote")}
+      </p>
       <ul className="hall-sub-features grid grid-cols-2 gap-2">
         {FEATURE_KEYS.map((key) => (
           <li key={key} className="hall-sub-feature">

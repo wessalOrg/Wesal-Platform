@@ -1,5 +1,6 @@
 "use client";
 
+import HallLockStatusNotice from "@/components/halls/HallLockStatusNotice";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import OwnerDeleteHallAction from "@/components/halls/OwnerDeleteHallAction";
@@ -74,7 +75,7 @@ export default function HallOwnerHallManagementView({
   const access = mergeHallAccess(
     details ? hallAccessFromHall(details) : undefined,
     selectedHall ? hallAccessFromHall(selectedHall) : undefined,
-    hallAccessFromFlags(isAdminLocked, isSystemLocked, {
+    hallAccessFromFlags(isAdminLocked ? true : null, isSystemLocked ? true : null, {
       paymentStatus: isPaymentRequired ? "Unpaid" : undefined,
     }),
   );
@@ -240,6 +241,7 @@ export default function HallOwnerHallManagementView({
         </div>
       </header>
 
+      <HallLockStatusNotice access={access} />
       <HallRejectionReasonNotice hallId={hallId} rejected={details.status === "Rejected"} />
 
       <div className="min-w-0 space-y-6 rounded-2xl border border-[var(--wesal-border)] bg-white p-4 sm:space-y-8 sm:p-6">

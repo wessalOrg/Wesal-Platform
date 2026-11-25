@@ -733,22 +733,21 @@ function InfoRow({
 }
 
 function PhotographerGalleryPanel({ detail }: { detail: AdminPhotographerRequestDetail }) {
+  return <PhotographerGalleryPanelContent key={`${detail.userId}:${galleryItemsFor(detail).length}`} detail={detail} />;
+}
+
+function PhotographerGalleryPanelContent({ detail }: { detail: AdminPhotographerRequestDetail }) {
   const t = useT();
-  const items = useMemo(() => galleryItemsFor(detail), [detail]);
+  const [items] = useState(() => galleryItemsFor(detail));
   const [docs, setDocs] = useState<(AdminSecureDocument | null)[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(items.length > 0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const loadKey = `${detail.userId}:${items.length}`;
 
   useEffect(() => {
     let cancelled = false;
     const createdUrls: string[] = [];
-    setLoading(true);
-    setLightboxIndex(null);
-    const currentItems = galleryItemsFor(detail);
+    const currentItems = items;
     if (currentItems.length === 0) {
-      setDocs([]);
-      setLoading(false);
       return () => {
         cancelled = true;
       };
@@ -776,9 +775,7 @@ function PhotographerGalleryPanel({ detail }: { detail: AdminPhotographerRequest
       cancelled = true;
       createdUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-    // loadKey encodes demo/real gallery availability for this request.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadKey]);
+  }, [items]);
 
   const readyIndexes = docs
     .map((doc, index) => (doc?.url ? index : -1))
@@ -881,7 +878,11 @@ function PhotographerGalleryPanel({ detail }: { detail: AdminPhotographerRequest
   );
 }
 
-function PhotographerIdentityPanel({
+function PhotographerIdentityPanel(props: { userId: string; available: boolean }) {
+  return <PhotographerIdentityPanelContent key={props.userId + ":" + props.available} {...props} />;
+}
+
+function PhotographerIdentityPanelContent({
   userId,
   available,
 }: {
@@ -890,17 +891,13 @@ function PhotographerIdentityPanel({
 }) {
   const t = useT();
   const [doc, setDoc] = useState<AdminSecureDocument | null>(null);
-  const [phase, setPhase] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [phase, setPhase] = useState<"idle" | "loading" | "ready" | "error">(available ? "loading" : "idle");
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (!available) {
-      setPhase("idle");
-      return;
-    }
+    if (!available) return;
     let cancelled = false;
     let activeUrl: string | null = null;
-    setPhase("loading");
     void fetchAdminPhotographerIdentityUrl(userId)
       .then((next) => {
         if (cancelled) {

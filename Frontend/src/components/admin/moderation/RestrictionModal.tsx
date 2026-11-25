@@ -47,11 +47,18 @@ export default function RestrictionModal({
   const [customHours, setCustomHours] = useState("24");
   const [reason, setReason] = useState("");
 
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) {
+      setPreset("7d");
+      setCustomHours("24");
+      setReason("");
+    }
+  }
+
   useEffect(() => {
     if (!open) return;
-    setPreset("7d");
-    setCustomHours("24");
-    setReason("");
     lockBodyScroll();
 
     const onKey = (event: KeyboardEvent) => {

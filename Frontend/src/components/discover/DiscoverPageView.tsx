@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import DiscoverEmptyState from "@/components/discover/DiscoverEmptyState";
 import DiscoverExploreGrid from "@/components/discover/DiscoverExploreGrid";
@@ -10,6 +10,7 @@ import { useFavoritePostIds } from "@/hooks/useFavoritePostIds";
 import { useOfferLifecycle } from "@/hooks/useOfferLifecycle";
 import { useRequestScope } from "@/hooks/useRequestScope";
 import { useT } from "@/i18n";
+import { hasNextContentPage, mergeContent } from "@/lib/content-pagination";
 import { ApiError } from "@/lib/api-error";
 import {
   filterVisibleDiscoverItems,
@@ -30,10 +31,11 @@ const PAGE_SIZE = 12;
 export default function DiscoverPageView() {
   const t = useT();
   const scope = useRequestScope();
+  const offerSearch = useRef<{ term: string; items: DiscoverItem[] } | null>(null);
   const searchParams = useSearchParams();
   const { ids: savedPostIds, markSaved } = useFavoritePostIds();
   const [filter, setFilter] = useState<DiscoverFilter>(() =>
-    normalizeDiscoverFilter(searchParams.get("filter")),
+    searchParams.get("offer")?.trim() ? "Offers" : normalizeDiscoverFilter(searchParams.get("filter")),
   );
   const [draftQuery, setDraftQuery] = useState(
     () => searchParams.get("q")?.trim() ?? "",
@@ -44,7 +46,7 @@ export default function DiscoverPageView() {
   const [loadedItems, setItems] = useState<DiscoverItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [serverTotalCount, setTotalCount] = useState(0);
+  const [serverTotalCount, setTotalCount] = useState<number | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "loading",
   );
@@ -79,7 +81,11 @@ export default function DiscoverPageView() {
 
         if (term && nextFilter === "Offers") {
           // Search API rejects Offers — page through the active Offers feed and match locally.
-          const matched = await collectMatchingOffers(term, current);
+          const cached = !quiet && nextPage > 1 && offerSearch.current?.term === term
+            ? filterVisibleDiscoverItems(offerSearch.current.items) : null;
+          const matched = cached ?? await collectMatchingOffers(term, current);
+          if (!current()) return;
+          offerSearch.current = { term, items: matched };
           result = {
             items: matched.slice((nextPage - 1) * PAGE_SIZE, nextPage * PAGE_SIZE),
             pageNumber: nextPage,
@@ -88,8 +94,10 @@ export default function DiscoverPageView() {
             totalPages: Math.max(1, Math.ceil(matched.length / PAGE_SIZE) || 1),
           };
         } else if (term) {
+          offerSearch.current = null;
           result = await searchDiscoverFeed(term, nextFilter, nextPage, PAGE_SIZE);
         } else if (searched && !term) {
+          offerSearch.current = null;
           result = {
             items: [] as DiscoverItem[],
             pageNumber: 1,
@@ -98,6 +106,7 @@ export default function DiscoverPageView() {
             totalPages: 0,
           };
         } else {
+          offerSearch.current = null;
           // Browse feed (All default) without requiring a query first.
           result = await fetchDiscoverFeed(nextFilter, nextPage, PAGE_SIZE);
         }
@@ -111,7 +120,7 @@ export default function DiscoverPageView() {
         }
         setItems(result.items);
         setTotalPages(Math.max(1, result.totalPages));
-        setTotalCount(result.totalCount);
+        setTotalCount(result.hasTotalCount === false ? null : result.totalCount);
         setStatus("ready");
       } catch (err) {
         if (!current()) return;
@@ -130,20 +139,23 @@ export default function DiscoverPageView() {
     return () => window.clearTimeout(timer);
   }, [appliedQuery, filter, hasSearched, load, page]);
 
-  useEffect(() => {
-    const fromUrl = normalizeDiscoverFilter(searchParams.get("filter"));
-    const q = searchParams.get("q")?.trim() ?? "";
-    const offerId = searchParams.get("offer")?.trim() ?? "";
-    const nextFilter = offerId ? "Offers" : fromUrl;
-    setFilter(nextFilter);
-    setDraftQuery(q);
-    setAppliedQuery(q);
-    setHasSearched(Boolean(q));
+  const fromUrl = normalizeDiscoverFilter(searchParams.get("filter"));
+  const urlQuery = searchParams.get("q")?.trim() ?? "";
+  const urlOffer = searchParams.get("offer")?.trim() ?? "";
+  const urlKey = JSON.stringify([fromUrl, urlQuery, urlOffer]);
+  const [seenUrl, setSeenUrl] = useState(urlKey);
+  if (seenUrl !== urlKey) {
+    setSeenUrl(urlKey);
+    setFilter(urlOffer ? "Offers" : fromUrl);
+    setDraftQuery(urlQuery);
+    setAppliedQuery(urlQuery);
+    setHasSearched(Boolean(urlQuery));
     setPage(1);
-    if (offerId && fromUrl !== "Offers") {
-      syncUrl("Offers", q);
-    }
-  }, [searchParams, syncUrl]);
+  }
+
+  useEffect(() => {
+    if (urlOffer && fromUrl !== "Offers") syncUrl("Offers", urlQuery);
+  }, [fromUrl, urlOffer, urlQuery, syncUrl]);
 
   useOfferLifecycle(loadedItems.filter((item) => item.contentType === "ProfessionalOffer" || item.contentType === "HallOffer"), {
     enabled: filter === "All" || filter === "Offers",
@@ -151,7 +163,7 @@ export default function DiscoverPageView() {
     onRevalidate: () => load(filter, page, appliedQuery, hasSearched, true),
   });
   const items = filterVisibleDiscoverItems(loadedItems);
-  const totalCount = Math.max(0, serverTotalCount - (loadedItems.length - items.length));
+  const totalCount = loadedItems.length !== items.length ? "\u2026" : (serverTotalCount ?? "\u2026");
 
   // Scroll/highlight a deep-linked offer card after the Offers feed loads.
   useEffect(() => {
@@ -294,7 +306,7 @@ export default function DiscoverPageView() {
                 >
                   ‹
                 </button>
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => Math.max(1, Math.min(page - 2, totalPages - 4)) + i).map(
                   (n) => (
                     <button
                       key={n}
@@ -304,6 +316,7 @@ export default function DiscoverPageView() {
                           ? "bg-[var(--wesal-maroon)] text-white"
                           : "border border-[var(--wesal-border)] text-[var(--wesal-muted)]"
                       }`}
+                      aria-current={n === page ? "page" : undefined}
                       onClick={() => setPage(n)}
                     >
                       {n}
@@ -329,26 +342,25 @@ export default function DiscoverPageView() {
 }
 
 const OFFERS_SEARCH_PAGE_SIZE = 50;
-const OFFERS_SEARCH_MAX_PAGES = 10;
 
 async function collectMatchingOffers(term: string, current: () => boolean): Promise<DiscoverItem[]> {
   const needle = term.trim().toLowerCase();
   if (!needle) return [];
-  const matched: DiscoverItem[] = [];
+  let matched: DiscoverItem[] = [];
   let page = 1;
   let totalPages = 1;
-  while (current() && page <= totalPages && page <= OFFERS_SEARCH_MAX_PAGES) {
+  while (current() && page <= totalPages) {
     const feed = await fetchDiscoverFeed("Offers", page, OFFERS_SEARCH_PAGE_SIZE);
-    totalPages = Math.max(1, feed.totalPages);
+    if (!current()) return [];
+    totalPages = hasNextContentPage(feed, page, OFFERS_SEARCH_PAGE_SIZE) ? page + 1 : page;
     for (const item of filterVisibleDiscoverItems(feed.items)) {
       const hay =
         `${item.displayName ?? ""} ${item.content ?? ""} ${item.location ?? ""}`.toLowerCase();
-      if (hay.includes(needle)) matched.push(item);
+      if (hay.includes(needle)) matched = mergeContent(matched, [item]);
     }
-    if (feed.items.length === 0) break;
     page += 1;
   }
-  return matched;
+  return filterVisibleDiscoverItems(matched);
 }
 
 function HeroSearchIcon() {

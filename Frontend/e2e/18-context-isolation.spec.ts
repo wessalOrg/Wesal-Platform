@@ -20,7 +20,7 @@ test.beforeAll(async () => {
     "@/components/layout/LanguageProvider": `export const useUiLang=()=>"en";`,
     "@/hooks/useAccountAccess": `export const useAccountAccess=()=>({ready:true,authenticated:true,userId:"pro-a",isAdmin:false});`,
     "@/hooks/useProfessionalAccountAccess": `export const useProfessionalAccountAccess=()=>({canPublish:true,statusLoading:false});`,
-    "@/hooks/useAccountPublishingLock": `export const useAccountPublishingLock=()=>({isLocked:false});`,
+    "@/hooks/useAccountPublishingLock": `export const useAccountPublishingLock=()=>({isLocked:false,ready:true});`,
     "@/hooks/useStartProfessionalConversation": `export const useStartProfessionalConversation=()=>({start:async()=>null,starting:false,error:null});`,
     "@/hooks/useHallOwnerHalls": `const halls=${JSON.stringify(halls)}; export const useHallOwnerHalls=()=>({halls,isLoading:false});`,
     "next/link": `import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`,

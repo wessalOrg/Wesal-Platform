@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useHydrated } from "@/hooks/useHydrated";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   applyDocumentLanguage,
@@ -35,7 +36,13 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { session, status: authStatus } = useAuth();
   const [lang, setLang] = useState<UiLang>(DEFAULT_UI_LANG);
-  const [status, setStatus] = useState<"loading" | "ready">("loading");
+  const hydrated = useHydrated();
+  const [initialized, setInitialized] = useState(false);
+  const status: LanguageContextValue["status"] = hydrated ? "ready" : "loading";
+  if (hydrated && !initialized) {
+    setInitialized(true);
+    setLang(getStoredUiLang());
+  }
 
   const applyLanguage = useCallback((next: UiLang) => {
     setLang(next);
@@ -45,10 +52,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const stored = getStoredUiLang();
-    applyLanguage(stored);
-    setStatus("ready");
-  }, [applyLanguage]);
+    if (!hydrated) return;
+    setStoredUiLang(lang);
+    applyDocumentLanguage(lang);
+    notifyUiLangChange();
+  }, [hydrated, lang]);
 
   useEffect(() => {
     if (authStatus !== "ready" || !session.isAuthenticated) return;

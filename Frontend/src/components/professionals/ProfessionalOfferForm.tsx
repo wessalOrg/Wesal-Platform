@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
+import { useImagePreviewUrls } from "@/hooks/useImagePreviewUrls";
 import { hallFieldClassName } from "@/components/owner-management/add-hall/HallFormField";
 import WesalDateTimeField from "@/components/ui/WesalDateTimeField";
 import { ApiError, isForbiddenApiError, isUnauthorizedApiError } from "@/lib/api-error";
@@ -32,7 +33,7 @@ export default function ProfessionalOfferForm({
 }: ProfessionalOfferFormProps) {
   const t = useT();
   const scope = useRequestScope();
-  const { setErrors, clearErrors, fieldProps, errorFor } = useOfferValidationErrors();
+  const { setErrors, clearNonDateErrors, revalidateDates, fieldProps, errorFor } = useOfferValidationErrors();
   const titleId = useId();
   const contentId = useId();
   const oldPriceId = useId();
@@ -40,7 +41,6 @@ export default function ProfessionalOfferForm({
   const startsId = useId();
   const endsId = useId();
   const fileId = useId();
-  const objectUrls = useRef<string[]>([]);
 
   const [content, setContent] = useState("");
   const [oldPriceText, setOldPriceText] = useState("");
@@ -48,16 +48,9 @@ export default function ProfessionalOfferForm({
   const [startsLocal, setStartsLocal] = useState("");
   const [endsLocal, setEndsLocal] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const { previewUrls: previews, replacePreviews: updatePreviews } = useImagePreviewUrls();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    return () => {
-      for (const url of objectUrls.current) URL.revokeObjectURL(url);
-      objectUrls.current = [];
-    };
-  }, []);
 
   const oldParsed = parseOfferMoney(oldPriceText);
   const offerParsed = parseOfferMoney(offerPriceText);
@@ -67,11 +60,8 @@ export default function ProfessionalOfferForm({
       : null;
 
   const replacePreviews = (nextFiles: File[]) => {
-    clearErrors();
-    for (const url of objectUrls.current) URL.revokeObjectURL(url);
-    const next = nextFiles.map((file) => URL.createObjectURL(file));
-    objectUrls.current = next;
-    setPreviews(next);
+    clearNonDateErrors();
+    updatePreviews(nextFiles);
   };
 
   const validate = (): CreatePayload | null => {
@@ -160,7 +150,7 @@ export default function ProfessionalOfferForm({
             inputMode="decimal"
             className={`${hallFieldClassName(false)} mt-2 w-full`}
             placeholder={t("professionals.offers.pricePlaceholder")}
-            onChange={(e) => { setOldPriceText(e.target.value); clearErrors(); }}
+            onChange={(e) => { setOldPriceText(e.target.value); clearNonDateErrors(); }}
           />
             {errorFor("oldPrice")}
         </div>
@@ -176,7 +166,7 @@ export default function ProfessionalOfferForm({
             inputMode="decimal"
             className={`${hallFieldClassName(false)} mt-2 w-full`}
             placeholder={t("professionals.offers.pricePlaceholder")}
-            onChange={(e) => { setOfferPriceText(e.target.value); clearErrors(); }}
+            onChange={(e) => { setOfferPriceText(e.target.value); clearNonDateErrors(); }}
           />
             {errorFor("offerPrice")}
         </div>
@@ -207,11 +197,12 @@ export default function ProfessionalOfferForm({
           <div className="mt-2">
             <WesalDateTimeField
               id={startsId}
+              required
               value={startsLocal}
               {...fieldProps("startsAt")}
               disabled={submitting}
               triggerClassName={`${hallFieldClassName(false)} w-full`}
-              onChange={(value) => { setStartsLocal(value); clearErrors(); }}
+              onChange={(value) => { setStartsLocal(value); revalidateDates({ startsAt: value, endsAt: endsLocal }); }}
             />
             {errorFor("startsAt")}
           </div>
@@ -223,11 +214,12 @@ export default function ProfessionalOfferForm({
           <div className="mt-2">
             <WesalDateTimeField
               id={endsId}
+              required
               value={endsLocal}
               {...fieldProps("endsAt")}
               disabled={submitting}
               triggerClassName={`${hallFieldClassName(false)} w-full`}
-              onChange={(value) => { setEndsLocal(value); clearErrors(); }}
+              onChange={(value) => { setEndsLocal(value); revalidateDates({ startsAt: startsLocal, endsAt: value }); }}
             />
             {errorFor("endsAt")}
           </div>
@@ -247,7 +239,7 @@ export default function ProfessionalOfferForm({
           maxLength={OFFER_CONTENT_MAX + 40}
           className={`${hallFieldClassName(false)} mt-2 min-h-[5rem] w-full resize-y`}
           placeholder={t("professionals.offers.contentPlaceholder")}
-          onChange={(e) => { setContent(e.target.value); clearErrors(); }}
+          onChange={(e) => { setContent(e.target.value); clearNonDateErrors(); }}
         />
             {errorFor("content")}
       </div>
@@ -303,7 +295,7 @@ export default function ProfessionalOfferForm({
             const next = [...files, ...picked];
             setFiles(next);
             replacePreviews(next);
-            setErrors({ images: offerImageMetadataError(next) ?? undefined });
+            setErrors((previous) => ({ ...previous, images: offerImageMetadataError(next) ?? undefined }));
             event.target.value = "";
           }}
         />

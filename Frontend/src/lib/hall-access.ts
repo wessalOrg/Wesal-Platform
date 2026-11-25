@@ -15,9 +15,25 @@ import {
 export type HallAccessState = {
   hallStatus: HallApprovalStatus | null;
   paymentStatus: PaymentStatus;
-  adminLocked: boolean;
-  systemLocked: boolean;
+  adminLocked: boolean | null;
+  systemLocked: boolean | null;
 };
+
+/** Missing flags are not evidence that a hall is unlocked. */
+export const UNKNOWN_HALL_ACCESS: HallAccessState = {
+  hallStatus: null,
+  paymentStatus: PAYMENT_STATUS.Paid,
+  adminLocked: null,
+  systemLocked: null,
+};
+
+export type HallLockStatus = "locked" | "unlocked" | "unknown";
+
+export function getHallLockStatus(access: Pick<HallAccessState, "adminLocked" | "systemLocked">): HallLockStatus {
+  if (access.adminLocked === true || access.systemLocked === true) return "locked";
+  if (access.adminLocked === false && access.systemLocked === false) return "unlocked";
+  return "unknown";
+}
 
 export const UNLOCKED_HALL_ACCESS: HallAccessState = {
   hallStatus: null,
@@ -43,15 +59,15 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-export function parseBooleanFlag(value: unknown, fallback = false): boolean {
+export function parseBooleanFlag(value: unknown): boolean | null {
   if (typeof value === "boolean") return value;
   if (typeof value === "number" && Number.isFinite(value)) return value !== 0;
   if (typeof value === "string") {
     const token = value.trim().toLowerCase();
     if (token === "true" || token === "1" || token === "yes") return true;
-    if (token === "false" || token === "0" || token === "no" || token === "") return false;
+    if (token === "false" || token === "0" || token === "no") return false;
   }
-  return fallback;
+  return null;
 }
 
 function firstDefined(...candidates: unknown[]): unknown {
@@ -69,23 +85,21 @@ function toOwnerHallStatus(raw: unknown): HallApprovalStatus | null {
   return null;
 }
 
-/** Maps AdminLocked aliases. Missing values default to false — never inferred from SystemLocked. */
-export function readAdminLocked(source: unknown): boolean {
+/** Missing or malformed AdminLocked aliases remain unknown. */
+export function readAdminLocked(source: unknown): boolean | null {
   const dto = asRecord(source);
-  if (!dto) return false;
+  if (!dto) return null;
   return parseBooleanFlag(
     firstDefined(dto.adminLocked, dto.AdminLocked, dto.isAdminLocked, dto.IsAdminLocked),
-    false,
   );
 }
 
-/** Maps SystemLocked aliases. Missing values default to false — never inferred from AdminLocked or payment. */
-export function readSystemLocked(source: unknown): boolean {
+/** SystemLocked is never inferred from payment, approval, or subscription dates. */
+export function readSystemLocked(source: unknown): boolean | null {
   const dto = asRecord(source);
-  if (!dto) return false;
+  if (!dto) return null;
   return parseBooleanFlag(
     firstDefined(dto.systemLocked, dto.SystemLocked, dto.isSystemLocked, dto.IsSystemLocked),
-    false,
   );
 }
 
@@ -114,8 +128,8 @@ export function hallAccessFromUnknown(source: unknown): HallAccessState {
 }
 
 export function hallAccessFromFlags(
-  adminLocked: boolean,
-  systemLocked: boolean,
+  adminLocked: boolean | null,
+  systemLocked: boolean | null,
   extras?: {
     paymentStatus?: PaymentStatus;
     hallStatus?: HallApprovalStatus | null;
@@ -132,8 +146,8 @@ export function hallAccessFromFlags(
 export function hallAccessFromHall(hall: {
   status: HallApprovalStatus;
   paymentStatus: HallPaymentStatus;
-  adminLocked: boolean;
-  systemLocked: boolean;
+  adminLocked: boolean | null;
+  systemLocked: boolean | null;
 }): HallAccessState {
   return {
     hallStatus: hall.status,
@@ -154,14 +168,19 @@ export function mergeHallAccess(
     paymentStatus: present.some((state) => state.paymentStatus === PAYMENT_STATUS.Unpaid)
       ? PAYMENT_STATUS.Unpaid
       : PAYMENT_STATUS.Paid,
-    adminLocked: present.some((state) => state.adminLocked),
-    systemLocked: present.some((state) => state.systemLocked),
+    adminLocked: mergeLockFlags(present.map((state) => state.adminLocked)),
+    systemLocked: mergeLockFlags(present.map((state) => state.systemLocked)),
   };
+}
+
+function mergeLockFlags(flags: Array<boolean | null>): boolean | null {
+  if (flags.includes(true)) return true;
+  return flags.includes(false) ? false : null;
 }
 
 /**
  * UI precedence when multiple blocks apply (SRS/backend do not define a table):
- *   1. SystemLocked → SYSTEM_LOCKED (cycle ended; not Payment Pending, not Admin-only)
+ *   1. Explicit SystemLocked → SYSTEM_LOCKED (independent of subscription dates)
  *   2. AdminLocked + SystemLocked → combined copy (both flags stay set)
  *   3. Approved + Unpaid → PAYMENT_REQUIRED
  *   4. AdminLocked
@@ -179,6 +198,8 @@ export function getManagementAccess(access: HallAccessState): ManagementAccessRe
   if (access.adminLocked) {
     return { allowed: false, reason: "ADMIN_LOCKED" };
   }
+  // Unknown flags do not assert an unlocked hall or introduce a new restriction.
+  // The backend remains authoritative for operational permissions.
   return { allowed: true };
 }
 
@@ -203,7 +224,7 @@ export function canAccessDashboard(access: HallAccessState): boolean {
 
 /** Public seeker actions (book / contact) are blocked by Admin or System lock only. */
 export function isHallPubliclyUnavailable(access: HallAccessState): boolean {
-  return access.adminLocked || access.systemLocked;
+  return access.adminLocked === true || access.systemLocked === true;
 }
 
 export function hallLockedMessageKey(reason: BookingDataLockReason): string {

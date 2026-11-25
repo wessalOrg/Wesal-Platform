@@ -29,12 +29,12 @@ export function useOwnerSeekerChat() {
               item.hallId.trim().toLowerCase() === hallKey &&
               requester &&
               item.otherParticipantId.trim().toLowerCase() === requester &&
-              !isOwnerAdminConversation(item, items),
+              !isOwnerAdminConversation(item),
           ) ??
           items.find(
             (item) =>
               item.hallId.trim().toLowerCase() === hallKey &&
-              !isOwnerAdminConversation(item, items),
+              !isOwnerAdminConversation(item),
           );
         router.push(
           conversationMessagesPath("HallOwner", {

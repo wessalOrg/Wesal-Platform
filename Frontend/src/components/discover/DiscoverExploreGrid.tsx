@@ -60,7 +60,7 @@ export default function DiscoverExploreGrid({
             key={`${item.contentType}-${item.id}`}
             item={item}
             index={index}
-            initialSaved={Boolean(savedPostIds?.has(item.id))}
+            initialSaved={savedPostIds?.has(item.id) ? true : null}
             onFavoriteChanged={onFavoriteChanged}
           />
         ),

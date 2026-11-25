@@ -1,3 +1,5 @@
+import { assertHallImages } from "@/lib/hall-image-validation";
+import { readAuthenticatedAccount } from "@/lib/authenticated-account";
 import api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/auth-token";
@@ -205,6 +207,9 @@ export async function updateOwnerHall(
   hallId: string,
   values: HallEditFormValues,
 ): Promise<HallOwnerHallDetails | null> {
+  const imageOwner = readAuthenticatedAccount();
+  await assertHallImages(values.mainPhoto, values.photos);
+  if (readAuthenticatedAccount() !== imageOwner) throw new ApiError("owner.management.hallEdit.errors.submitFailed", 0);
   const body = mapHallFormToUpdateHallRequest(values);
   const hasNewFiles = Boolean(values.mainPhoto) || values.photos.length > 0;
 

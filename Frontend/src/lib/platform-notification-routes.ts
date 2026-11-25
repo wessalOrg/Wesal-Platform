@@ -18,6 +18,7 @@ import {
   ownerHallNotificationsPath,
 } from "@/lib/hall-owner-query-keys";
 import { formatRelativeTime } from "@/lib/relative-time";
+import { eventRequestConversationId, isEventRequestNotification } from "@/lib/event-request-notification";
 import type {
   NotificationAudience,
   PlatformNotification,
@@ -30,6 +31,11 @@ export function resolveNotificationActionUrl(
   actionUrl?: string | null,
   audience?: NotificationAudience,
 ): string {
+  if (isEventRequestNotification(type)) {
+    const base = type === "event_request_hall" ? "/owner/messages" : SEEKER_MESSAGES_PATH;
+    const id = eventRequestConversationId(metadata.conversation_id);
+    return id ? `${base}?conversation_id=${encodeURIComponent(id)}` : base;
+  }
   const explicit = actionUrl?.trim();
   const hallId = metadata.hall_id?.trim() || "";
   const bookingId = metadata.booking_id?.trim() || "";

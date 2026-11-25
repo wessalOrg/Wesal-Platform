@@ -124,12 +124,12 @@ export default function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: FAB_POSITION_BOOT_SCRIPT }}
         />
-        <PwaRegister />
         <AuthProvider>
           <AudioPermissionProvider>
             <HallOwnerAudioAlerts />
             <UserProfileProvider>
               <LanguageProvider>
+                <PwaRegister />
                 <MessagesInboxProvider>
                   <NotificationEventsBridge />
                   <AiAssistantProvider>{children}</AiAssistantProvider>

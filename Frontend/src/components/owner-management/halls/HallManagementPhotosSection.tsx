@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type ChangeEvent } from "react";
+import { useRef, type ChangeEvent } from "react";
 import HallImage from "@/components/halls/HallImage";
+import { HALL_IMAGE_ACCEPT } from "@/lib/hall-image-validation";
+import { useHallImagePreviews } from "@/hooks/useHallImagePreviews";
 import HallFormField from "@/components/owner-management/add-hall/HallFormField";
 import HallFormSection from "@/components/owner-management/add-hall/HallFormSection";
 import { useT } from "@/i18n";
@@ -42,23 +44,7 @@ export default function HallManagementPhotosSection({
   const inputRef = useRef<HTMLInputElement>(null);
   const photosError = resolveError(fieldErrors.photos);
 
-  const newPreviews = useMemo(
-    () =>
-      newPhotos.map((file, index) => ({
-        key: `${file.name}-${file.size}-${file.lastModified}-${index}`,
-        name: file.name,
-        url: URL.createObjectURL(file),
-      })),
-    [newPhotos],
-  );
-
-  useEffect(() => {
-    return () => {
-      for (const preview of newPreviews) {
-        URL.revokeObjectURL(preview.url);
-      }
-    };
-  }, [newPreviews]);
+  const newPreviews = useHallImagePreviews(newPhotos);
 
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -86,7 +72,7 @@ export default function HallManagementPhotosSection({
             ref={inputRef}
             id="hall-mgmt-photos-add"
             type="file"
-            accept="image/*"
+            accept={HALL_IMAGE_ACCEPT}
             multiple
             disabled={disabled}
             aria-invalid={photosError ? true : undefined}

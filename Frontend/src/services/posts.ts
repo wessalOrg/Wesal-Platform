@@ -85,6 +85,11 @@ function mapImage(raw: ApiImage, postId: string): PostImage | null {
   return { id, url, order: asNumber(raw.order ?? raw.Order) ?? 0 };
 }
 
+function readSavedFlag(raw: ApiPost): boolean | null {
+  const flag = raw.isSavedByCurrentUser ?? raw.IsSavedByCurrentUser ?? raw.isFavorited ?? raw.IsFavorited;
+  return typeof flag === "boolean" ? flag : null;
+}
+
 export function mapPost(raw: ApiPost | null | undefined): Post | null {
   if (!raw || typeof raw !== "object") return null;
   const id = asText(raw.id ?? raw.Id);
@@ -110,12 +115,7 @@ export function mapPost(raw: ApiPost | null | undefined): Post | null {
     saveCount: asNumber(raw.saveCount ?? raw.SaveCount) ?? 0,
     shareCount: asNumber(raw.shareCount ?? raw.ShareCount) ?? 0,
     commentCount: asNumber(raw.commentCount ?? raw.CommentCount) ?? 0,
-    isSavedByCurrentUser: Boolean(
-      raw.isSavedByCurrentUser ??
-        raw.IsSavedByCurrentUser ??
-        raw.isFavorited ??
-        raw.IsFavorited,
-    ),
+    isSavedByCurrentUser: readSavedFlag(raw),
     createdAt: asText(raw.createdAt ?? raw.CreatedAt) || null,
     updatedAt: asText(raw.updatedAt ?? raw.UpdatedAt) || null,
     images,

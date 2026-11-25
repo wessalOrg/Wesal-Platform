@@ -35,10 +35,17 @@ export default function DeletePostModal({
   const [reason, setReason] = useState("");
   const [touched, setTouched] = useState(false);
 
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) {
+      setReason("");
+      setTouched(false);
+    }
+  }
+
   useEffect(() => {
     if (!open) return;
-    setReason("");
-    setTouched(false);
     lockBodyScroll();
     window.setTimeout(() => textareaRef.current?.focus(), 40);
 

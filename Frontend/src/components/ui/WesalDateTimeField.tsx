@@ -13,6 +13,10 @@ type WesalDateTimeFieldProps = {
   triggerClassName?: string;
   testId?: string;
   id?: string;
+  required?: boolean;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
+  "data-testid"?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
 };
@@ -87,12 +91,19 @@ export default function WesalDateTimeField({
   triggerClassName,
   testId,
   id,
+  required = false,
+  "aria-label": ariaLabel,
+  "aria-labelledby": labelledBy,
+  "data-testid": fieldTestId,
   "aria-invalid": invalid,
   "aria-describedby": describedBy,
 }: WesalDateTimeFieldProps) {
   const t = useT();
   const lang = useUiLang();
   const panelId = useId();
+  const requiredId = `${panelId}-required`;
+  const valueId = `${panelId}-value`;
+  const keyboardOpen = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement | null>(null);
@@ -110,17 +121,29 @@ export default function WesalDateTimeField({
 
   useEffect(() => {
     if (!open) return;
+    // The portal's positioning pass first makes the panel visible and focusable.
+    const focusFrame = keyboardOpen.current ? window.requestAnimationFrame(() => {
+      const day = panelRef.current?.querySelector<HTMLButtonElement>('.wesal-datetime-day[aria-pressed="true"]')
+        ?? panelRef.current?.querySelector<HTMLButtonElement>(".wesal-datetime-day");
+      day?.focus({ preventScroll: true });
+    }) : null;
+    keyboardOpen.current = false;
     function onPointer(event: MouseEvent) {
       const target = event.target as Node;
       if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
       setOpen(false);
     }
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        triggerRef.current?.focus({ preventScroll: true });
+      }
     }
     document.addEventListener("mousedown", onPointer);
     document.addEventListener("keydown", onKey);
     return () => {
+      if (focusFrame !== null) window.cancelAnimationFrame(focusFrame);
       document.removeEventListener("mousedown", onPointer);
       document.removeEventListener("keydown", onKey);
     };
@@ -191,25 +214,40 @@ export default function WesalDateTimeField({
     <div className="wesal-datetime" ref={rootRef} aria-invalid={invalid}>
       <button
         ref={triggerRef}
-        id={id}
+        id={id ?? `${panelId}-trigger`}
         type="button"
+        role="combobox"
         className={
           triggerClassName
             ? `${triggerClassName} wesal-datetime-trigger`
             : "consult-input wesal-datetime-trigger"
         }
         aria-expanded={open}
-        aria-describedby={describedBy}
-        aria-controls={panelId}
+        aria-haspopup="dialog"
+        aria-label={ariaLabel}
+        aria-labelledby={labelledBy}
+        aria-invalid={invalid}
+        aria-required={required || undefined}
+        aria-describedby={[describedBy, required ? requiredId : null, valueId].filter(Boolean).join(" ")}
+        aria-controls={open ? panelId : undefined}
         disabled={disabled}
-        data-testid={testId}
-        onClick={() => {
+        data-testid={testId ?? fieldTestId}
+        onKeyDown={(event) => {
+          if (disabled || open || (event.key !== "ArrowDown" && event.key !== "ArrowUp")) return;
+          event.preventDefault();
+          keyboardOpen.current = true;
+          setCursor(selected ?? nowParts());
+          setOpen(true);
+        }}
+        onClick={(event) => {
           if (disabled) return;
+          keyboardOpen.current = event.detail === 0;
           setCursor(selected ?? nowParts());
           setOpen((current) => !current);
         }}
       >
         <span
+          id={valueId}
           dir="ltr"
           className={selected ? "wesal-datetime-value" : "wesal-datetime-placeholder"}
         >
@@ -217,6 +255,7 @@ export default function WesalDateTimeField({
         </span>
         <CalendarIcon />
       </button>
+      {required ? <span id={requiredId} className="sr-only">{t("offers.validation.dateRequiredHint")}</span> : null}
 
       <AnchoredPanel
         open={open && !disabled}
@@ -295,6 +334,7 @@ export default function WesalDateTimeField({
                 onClick={() => {
                   onChange("");
                   setOpen(false);
+                  triggerRef.current?.focus({ preventScroll: true });
                 }}
               >
                 {t("home.consult.dateClear")}
@@ -305,6 +345,7 @@ export default function WesalDateTimeField({
                   const next = nowParts();
                   commit(next);
                   setOpen(false);
+                  triggerRef.current?.focus({ preventScroll: true });
                 }}
               >
                 {t("home.consult.dateToday")}

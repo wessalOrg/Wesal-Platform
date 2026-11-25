@@ -1,3 +1,4 @@
+import { hallImageMetadataError, HALL_CREATE_MAX_PHOTOS } from "@/lib/hall-image-validation";
 import { isHallRegion } from "@/constants/hallRegions";
 import { isValidRegisterPhone } from "@/lib/register-validation";
 import { isYouTubeVideoUrl } from "@/lib/youtube-embed";
@@ -74,13 +75,15 @@ export function validateHallRegistrationForm(
     errors.otherFeatures = "owner.management.addHall.errors.otherFeaturesTooLong";
   }
 
-  if (values.mainPhoto && !values.mainPhoto.type.startsWith("image/")) {
-    errors.mainPhoto = "owner.management.addHall.errors.mainPhotoInvalid";
-  }
 
   if (values.photos.length < 1 && !values.mainPhoto) {
     errors.photos = "owner.management.addHall.errors.photosRequired";
   }
 
+  const coverIssue = values.mainPhoto ? hallImageMetadataError(values.mainPhoto) : null;
+  const photoIssue = values.photos.map(hallImageMetadataError).find(Boolean);
+  if (coverIssue) errors.mainPhoto = coverIssue.key;
+  if (photoIssue) errors.photos = photoIssue.key;
+  if (values.photos.length > HALL_CREATE_MAX_PHOTOS) errors.photos = "owner.hallImages.count";
   return errors;
 }

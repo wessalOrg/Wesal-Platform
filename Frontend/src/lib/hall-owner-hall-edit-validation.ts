@@ -1,3 +1,4 @@
+import { hallImageMetadataError } from "@/lib/hall-image-validation";
 import { isHallRegion } from "@/constants/hallRegions";
 import { isValidRegisterPhone } from "@/lib/register-validation";
 import { isYouTubeVideoUrl } from "@/lib/youtube-embed";
@@ -75,11 +76,15 @@ export function validateHallEditForm(
     errors.otherFeatures = "owner.management.addHall.errors.otherFeaturesTooLong";
   }
 
-  const hasPersistedMedia =
-    values.existingPhotos.length > 0 || Boolean(values.coverApiUrl || values.coverPhotoUrl);
-  if (!hasPersistedMedia && values.photos.length < 1 && !values.mainPhoto) {
+  // The update service requires a non-empty gallery independently of its cover.
+  if (values.existingPhotos.length + values.photos.length < 1) {
     errors.photos = "owner.management.addHall.errors.photosRequired";
   }
+
+  const coverIssue = values.mainPhoto ? hallImageMetadataError(values.mainPhoto) : null;
+  const photoIssue = values.photos.map(hallImageMetadataError).find(Boolean);
+  if (coverIssue) errors.mainPhoto = coverIssue.key;
+  if (photoIssue) errors.photos = photoIssue.key;
 
   return errors;
 }

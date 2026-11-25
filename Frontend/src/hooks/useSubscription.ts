@@ -13,7 +13,7 @@ export function useSubscription(hallId: string | null, enabled = true) {
   return {
     ...state,
     subscriptionStatus: subscription?.subscriptionStatus ?? subscription?.status ?? null,
-    isPaid: subscription?.isPaid ?? false,
+    isPaid: subscription?.isPaid ?? null,
     subscriptionExpiresAt: subscription?.subscriptionExpiresAt ?? null,
     daysRemaining: subscription?.daysRemaining ?? null,
   };

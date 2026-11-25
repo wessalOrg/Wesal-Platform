@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useAuthenticatedRequestScope } from "@/hooks/useAuthenticatedRequestScope";
 import { BookingError } from "@/lib/booking-errors";
 import { executeCancelBooking } from "@/lib/booking-cancel-command";
 import { finalizedStatusFromError } from "@/lib/booking-cancel-errors";
@@ -13,6 +14,7 @@ export type CancelBookingOutcome =
   | { ok: false; skipped?: false; status: BookingStatus; error: BookingError };
 
 export function useCancelBooking() {
+  const { scope, isCurrent } = useAuthenticatedRequestScope();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
@@ -20,23 +22,30 @@ export function useCancelBooking() {
   const [lockedIds, setLockedIds] = useState<Record<string, true>>({});
   const inFlight = useRef<string | null>(null);
   const lockedRef = useRef(lockedIds);
-  useEffect(() => {
+  useLayoutEffect(() => { inFlight.current = null; }, [scope]);
+  const [previousScope, setPreviousScope] = useState(scope);
+  if (previousScope !== scope) {
+    setPreviousScope(scope); setCancellingId(null); setErrorKey(null);
+    setSuccessId(null); setFeedbackId(null); setLockedIds({});
+  }
+  useLayoutEffect(() => {
     lockedRef.current = lockedIds;
   });
 
   const resetFeedback = useCallback(() => {
+    if (!isCurrent()) return;
     setErrorKey(null);
     setSuccessId(null);
     setFeedbackId(null);
-  }, []);
+  }, [isCurrent]);
 
   const isCancelLocked = useCallback(
-    (bookingId: string) => Boolean(lockedRef.current[bookingId]),
-    [],
+    (bookingId: string) => isCurrent() && Boolean(lockedRef.current[bookingId]),
+    [isCurrent],
   );
 
   const cancel = useCallback(async (booking: UserBooking): Promise<CancelBookingOutcome> => {
-    if (!canCancelBooking(booking.status) || lockedRef.current[booking.bookingId]) {
+    if (!isCurrent() || !canCancelBooking(booking.status) || lockedRef.current[booking.bookingId]) {
       return { ok: false, skipped: true, status: booking.status };
     }
     if (inFlight.current) {
@@ -44,6 +53,8 @@ export function useCancelBooking() {
     }
 
     inFlight.current = booking.bookingId;
+    const captured = scope.capture();
+    const current = () => captured() && isCurrent();
     setCancellingId(booking.bookingId);
     setFeedbackId(booking.bookingId);
     setErrorKey(null);
@@ -55,9 +66,11 @@ export function useCancelBooking() {
         bookingId: booking.bookingId,
         status: booking.status,
       });
+      if (!current()) return { ok: false, skipped: true, status: booking.status };
       setSuccessId(result.bookingId);
       return { ok: true, result };
     } catch (err) {
+      if (!current()) return { ok: false, skipped: true, status: booking.status };
       const error =
         err instanceof BookingError ? err : new BookingError("errors.booking.cancel.generic");
       setErrorKey(error.message);
@@ -68,10 +81,12 @@ export function useCancelBooking() {
       const finalized = finalizedStatusFromError(error);
       return { ok: false, status: finalized ?? booking.status, error };
     } finally {
-      inFlight.current = null;
-      setCancellingId(null);
+      if (current()) {
+        inFlight.current = null;
+        setCancellingId(null);
+      }
     }
-  }, []);
+  }, [isCurrent, scope]);
 
   return {
     cancellingId,

@@ -31,6 +31,8 @@ export type ProfessionalProfileContentPage = {
   items: ProfessionalProfileContentItem[];
   page: number;
   pageSize: number;
+  /** False when the response omitted authoritative count metadata. */
+  hasTotalCount?: boolean;
   totalCount: number;
   totalPages: number;
 };

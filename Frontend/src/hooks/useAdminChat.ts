@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
-import { isAcceptedChatImage } from "@/lib/chat-image-message";
+import { chatImageValidationError } from "@/lib/chat-image-message";
+import { useChatAttachmentPreview } from "@/hooks/useChatAttachmentPreview";
+import { isCurrentAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount, subscribeAuthenticatedAccount, type AuthenticatedAccount } from "@/lib/authenticated-account";
 import {
   isOwnerAdminConversation,
   pickOwnerAdminConversation,
@@ -21,6 +23,17 @@ type UseAdminChatOptions = {
   focusConversationId?: string | null;
   focusAdmin?: boolean;
 };
+
+function createAttachmentSendLock(account: AuthenticatedAccount | null) {
+  const pending = new Set<string>();
+  return {
+    start(id: string) {
+      if (!isCurrentAuthenticatedAccount(account) || pending.has(id)) return false;
+      pending.add(id); return true;
+    },
+    finish(id: string) { pending.delete(id); },
+  };
+}
 
 function readWindowFocus(pathname: string): {
   hallId: string | null;
@@ -64,9 +77,17 @@ export function useAdminChat({
     focusConversationIdProp !== undefined ? focusConversationIdProp : fromWindow.conversationId;
   const focusAdmin = focusAdminProp !== undefined ? focusAdminProp : fromWindow.contactAdmin;
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const account = useSyncExternalStore(subscribeAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount);
+  const sendLock = useMemo(() => createAttachmentSendLock(account), [account]);
+  const previewUrl = useChatAttachmentPreview(file);
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const draftScope = useMemo(() => ({ account, selectedId, file }), [account, selectedId, file]);
+  const activeDraft = useRef<typeof draftScope | null>(null);
+  useLayoutEffect(() => {
+    activeDraft.current = draftScope;
+    return () => { activeDraft.current = null; };
+  }, [draftScope]);
 
   const matchedConversation = useMemo(() => {
     if (focusAdmin) {
@@ -75,7 +96,7 @@ export function useAdminChat({
       if (!focusConversationId) return null;
       const byId =
         conversations.find((item) => item.conversationId === focusConversationId) ?? null;
-      if (byId && isOwnerAdminConversation(byId, conversations)) return byId;
+      if (byId && isOwnerAdminConversation(byId)) return byId;
       return null;
     }
     if (focusConversationId) {
@@ -116,15 +137,8 @@ export function useAdminChat({
     selectedId,
   ]);
 
-  // WESAL: image attachments are a per-participant capability, not an owner-only one. The
-  // backend endpoint is role-agnostic and `ConversationAccess` authorizes it by thread
-  // participation, so a SEEKER must be able to attach the booking deposit receipt in the
-  // seeker <-> owner thread. Gating this on `isHallOwner` was the entire reason the paperclip
-  // never rendered for a seeker.
-  //
-  // The owner-only hall-management gate is NOT bypassed by dropping that check: it is enforced
-  // on the send path itself (`sendAttachment` in MessagesInboxProvider refuses when
-  // `canAccessMessaging` is false) and again server-side by `EnsureOwnerMessagingAccess`.
+  // Keep the intended image control for all participants. The server still authorizes uploads
+  // and currently rejects CustomerProvider images; that restriction is surfaced, never bypassed.
   const canAttach = Boolean(selectedId) && Boolean(sendAttachment);
 
   const missingConversation =
@@ -136,68 +150,62 @@ export function useAdminChat({
 
   const clearAttachment = useCallback(() => {
     setFile(null);
-    setPreviewUrl((current) => {
-      if (current) URL.revokeObjectURL(current);
-      return null;
-    });
+    setAttachmentBusy(false);
   }, []);
 
-  // Attachment draft + error belong to one conversation: reset when the
-  // selection changes (reconciled during render; the [previewUrl] cleanup
-  // below revokes the previous object URL).
+  // Clear the draft before rendering a different account/conversation. URL
+  // cleanup belongs exclusively to the preview hook, after DOM replacement.
   const [boundSelectedId, setBoundSelectedId] = useState(selectedId);
-  if (boundSelectedId !== selectedId) {
+  const [boundAccount, setBoundAccount] = useState(account);
+  if (boundSelectedId !== selectedId || boundAccount !== account) {
     setBoundSelectedId(selectedId);
+    setBoundAccount(account);
     setFile(null);
-    setPreviewUrl(null);
+    setAttachmentBusy(false);
     setErrorKey(null);
   }
 
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
   const pickAttachment = useCallback(
     (next: File) => {
-      if (!canAttach) return;
-      if (!isAcceptedChatImage(next)) {
-        setErrorKey("messages.attachInvalid");
+      if (!canAttach || !isCurrentAuthenticatedAccount(account) ||
+          activeDraft.current?.account !== account || activeDraft.current.selectedId !== selectedId) return;
+      const validationError = chatImageValidationError(next);
+      if (validationError) {
+        setErrorKey(validationError);
         return;
       }
       setErrorKey(null);
       setFile(next);
-      setPreviewUrl((current) => {
-        if (current) URL.revokeObjectURL(current);
-        return URL.createObjectURL(next);
-      });
+      setAttachmentBusy(false);
     },
-    [canAttach],
+    [account, canAttach, selectedId],
   );
 
   const sendWithAttachment = useCallback(
     async (text: string) => {
       if (file && sendAttachment) {
+        if (!selectedId || activeDraft.current !== draftScope || !sendLock.start(selectedId)) return;
         setAttachmentBusy(true);
         setErrorKey(null);
         try {
           const sent = await sendAttachment(file, text);
+          if (activeDraft.current !== draftScope) return;
           if (sent) {
             clearAttachment();
           } else {
             setErrorKey("errors.send.failed");
           }
         } catch {
-          setErrorKey("errors.send.failed");
+          if (activeDraft.current === draftScope) setErrorKey("errors.send.failed");
         } finally {
-          setAttachmentBusy(false);
+          sendLock.finish(selectedId);
+          if (activeDraft.current === draftScope) setAttachmentBusy(false);
         }
         return;
       }
       await sendMessage(text);
     },
-    [clearAttachment, file, sendAttachment, sendMessage],
+    [clearAttachment, draftScope, file, selectedId, sendAttachment, sendLock, sendMessage],
   );
 
   return {

@@ -107,7 +107,7 @@ export function mapProfessionalProfileContentPage(
   kind: "post" | "offer" = "post",
 ): ProfessionalProfileContentPage {
   if (!payload || typeof payload !== "object") {
-    return { items: [], page: 1, pageSize: 10, totalCount: 0, totalPages: 0 };
+    return { items: [], page: 1, pageSize: 10, totalCount: 0, totalPages: 0, hasTotalCount: false };
   }
   const dto = payload as Record<string, unknown>;
   const rawItems = dto.items ?? dto.Items;
@@ -124,7 +124,8 @@ export function mapProfessionalProfileContentPage(
     asInt(dto.totalPages ?? dto.TotalPages) ||
       (pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0),
   );
-  return { items, page, pageSize, totalCount, totalPages };
+  return { items, page, pageSize, totalCount, totalPages,
+    hasTotalCount: typeof (dto.totalCount ?? dto.TotalCount) === "number" };
 }
 
 export function mapPublicProfessionalProfile(

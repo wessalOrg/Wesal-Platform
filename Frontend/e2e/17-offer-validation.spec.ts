@@ -26,7 +26,7 @@ test("shared fields reject invalid dates and prices, and permit past starts and 
   expect(getOfferFieldErrors({ ...valid, startsAt: "2030-01-01T10:00" }, now)).toEqual({});
   expect(getOfferFieldErrors({ ...valid, offerPrice: "200" }, now).offerPrice).toBe("offers.validation.offerBelowOld");
   expect(getOfferFieldErrors({ ...valid, startsAt: "" }, now).startsAt).toBe("offers.validation.startRequired");
-  expect(getOfferFieldErrors({ ...valid, startsAt: "2030-02-30T10:00" }, now).startsAt).toBe("offers.validation.datesInvalid");
+  expect(getOfferFieldErrors({ ...valid, startsAt: "2030-02-30T10:00" }, now).startsAt).toBe("offers.validation.startInvalid");
   expect(getOfferFieldErrors({ ...valid, endsAt: valid.startsAt }, now).endsAt).toBe("offers.validation.endAfterStart");
   expect(getOfferFieldErrors({ ...valid, startsAt: "2030-01-01", endsAt: "2030-01-02" }, now).endsAt).toBe("offers.validation.endNotFuture");
   expect(getOfferFieldErrors({ ...valid, content: "" }, now).content).toBe("offers.validation.contentOrImage");

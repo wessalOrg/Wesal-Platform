@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { isCurrentAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount,
+  subscribeAuthenticatedAccount, type AuthenticatedAccount } from "@/lib/authenticated-account";
 import { usePathname } from "next/navigation";
 import { useOptionalMessagesInbox } from "@/components/messages/MessagesInboxProvider";
 import { useAccountAccess } from "@/hooks/useAccountAccess";
@@ -10,16 +12,21 @@ import { pickOwnerAdminConversation } from "@/lib/owner-admin-conversation";
 import { fetchInboxConversations } from "@/services/conversations";
 import type { ConversationSummary } from "@/types/messages";
 
-let inboxCache: { at: number; items: ConversationSummary[] } | null = null;
+let inboxCache: { account: AuthenticatedAccount; at: number; promise: Promise<ConversationSummary[]> } | null = null;
 const INBOX_CACHE_MS = 15_000;
 
-async function loadOwnerInbox(): Promise<ConversationSummary[]> {
-  if (inboxCache && Date.now() - inboxCache.at < INBOX_CACHE_MS) {
-    return inboxCache.items;
+function loadOwnerInbox(account: AuthenticatedAccount): Promise<ConversationSummary[]> {
+  if (inboxCache?.account === account && Date.now() - inboxCache.at < INBOX_CACHE_MS) {
+    return inboxCache.promise;
   }
-  const items = await fetchInboxConversations();
-  inboxCache = { at: Date.now(), items };
-  return items;
+  const promise = fetchInboxConversations().then((items) => {
+    if (!isCurrentAuthenticatedAccount(account)) throw new Error("Obsolete inbox session");
+    return items;
+  });
+  // Store the promise now: a late response cannot replace a newer account's cache.
+  inboxCache = { account, at: Date.now(), promise };
+  void promise.catch(() => { if (inboxCache?.promise === promise) inboxCache = null; });
+  return promise;
 }
 
 function pickHallId(
@@ -43,7 +50,10 @@ export function useContactAdmin() {
   const { isHallOwner } = useAccountAccess();
   const { halls } = useHallOwnerHalls();
   const inbox = useOptionalMessagesInbox();
-  const [fetched, setFetched] = useState<ConversationSummary[] | null>(null);
+  const account = useSyncExternalStore(
+    subscribeAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount,
+  );
+  const [fetched, setFetched] = useState<{ account: AuthenticatedAccount; items: ConversationSummary[] } | null>(null);
 
   const preferredHallId = useMemo(
     () => pickHallId(halls, pathname),
@@ -51,26 +61,27 @@ export function useContactAdmin() {
   );
 
   useEffect(() => {
-    if (!isHallOwner) return;
+    if (!isHallOwner || !account) return;
     let cancelled = false;
-    void loadOwnerInbox()
+    void loadOwnerInbox(account)
       .then((items) => {
-        if (!cancelled) setFetched(items);
+        if (!cancelled && isCurrentAuthenticatedAccount(account)) setFetched({ account, items });
       })
       .catch(() => {
-        if (!cancelled) setFetched([]);
+        if (!cancelled && isCurrentAuthenticatedAccount(account)) setFetched({ account, items: [] });
       });
     return () => {
       cancelled = true;
     };
-  }, [isHallOwner]);
+  }, [account, isHallOwner]);
 
   const inboxConversations = inbox?.conversations;
+  const inboxOwnerId = inbox?.currentUserId;
   const conversations = useMemo<ConversationSummary[]>(() => {
-    if (inboxConversations?.length) return inboxConversations;
+    if (account && inboxOwnerId === account.userId && inboxConversations?.length) return inboxConversations;
     // Fetched inbox only applies to owners; ignore stale data after a role change.
-    return isHallOwner ? fetched ?? [] : [];
-  }, [fetched, inboxConversations, isHallOwner]);
+    return isHallOwner && fetched?.account === account ? fetched.items : [];
+  }, [account, fetched, inboxConversations, inboxOwnerId, isHallOwner]);
 
   const adminConversation = useMemo(
     () => pickOwnerAdminConversation(conversations, preferredHallId),

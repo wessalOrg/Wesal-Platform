@@ -11,7 +11,8 @@ export type HallSubscription = {
   hallId: string;
   status: HallSubscriptionStatus;
   subscriptionStatus: HallSubscriptionStatus;
-  isPaid: boolean;
+  /** PaymentStatus belongs to the owner hall DTO; subscription status is independent. */
+  isPaid: boolean | null;
   billing: HallSubscriptionBilling | null;
   cycleStart: string | null;
   subscriptionExpiresAt: string | null;

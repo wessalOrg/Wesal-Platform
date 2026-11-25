@@ -80,10 +80,9 @@ export default function HallOfferFormModal({
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const [values, setValues] = useState<HallOfferFormValues>(emptyValues);
-  const [formSeed, setFormSeed] = useState({ open, initial });
-
-  if (open !== formSeed.open || (open && initial !== formSeed.initial)) {
-    setFormSeed({ open, initial });
+  const [formContext, setFormContext] = useState({ open: false, initial });
+  if (formContext.open !== open || formContext.initial !== initial) {
+    setFormContext({ open, initial });
     if (open) {
       setValues(initial ? fromOffer(initial) : emptyValues());
       setErrors({});

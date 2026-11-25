@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useAuthenticatedRequestScope } from "@/hooks/useAuthenticatedRequestScope";
+import { isCurrentAuthenticatedAccount, readAuthenticatedAccount, type AuthenticatedAccount } from "@/lib/authenticated-account";
 import { useCancelBooking } from "@/hooks/useCancelBooking";
 import {
   BOOKING_ACCEPTED_EVENT,
@@ -31,83 +33,100 @@ type BookingsCache = {
   fetchedAt: number;
 };
 
-let sharedCache: BookingsCache | null = null;
-let sharedInflight: Promise<UserBooking[]> | null = null;
-
-function readWarmBookings(): UserBooking[] {
-  if (sharedCache?.bookings.length) return sharedCache.bookings;
-  return loadRememberedBookings();
+type AccountBookings = { cache: BookingsCache | null; inflight: Promise<UserBooking[]> | null };
+const accounts = new WeakMap<AuthenticatedAccount, AccountBookings>();
+function accountBookings(account: AuthenticatedAccount): AccountBookings {
+  let bucket = accounts.get(account);
+  if (!bucket) { bucket = { cache: null, inflight: null }; accounts.set(account, bucket); }
+  return bucket;
 }
-
-function isCacheFresh() {
-  return Boolean(sharedCache && Date.now() - sharedCache.fetchedAt < CACHE_TTL_MS);
+function readWarmBookings(account: AuthenticatedAccount | null): UserBooking[] {
+  if (!account || !isCurrentAuthenticatedAccount(account)) return [];
+  return accountBookings(account).cache?.bookings ?? loadRememberedBookings();
 }
-
-function publishCache(next: UserBooking[]) {
-  sharedCache = { bookings: next, fetchedAt: Date.now() };
+function isCacheFresh(account: AuthenticatedAccount | null) {
+  const cache = account ? accountBookings(account).cache : null;
+  return Boolean(cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS);
+}
+function publishCache(account: AuthenticatedAccount, next: UserBooking[]) {
+  if (!isCurrentAuthenticatedAccount(account)) return;
+  accountBookings(account).cache = { bookings: next, fetchedAt: Date.now() };
   replaceRememberedBookings(next);
 }
-
-/** Prefetch bookings into the shared cache while the seeker shell is idle. */
+function loadBookings(account: AuthenticatedAccount): Promise<UserBooking[]> {
+  const bucket = accountBookings(account);
+  if (bucket.inflight) return bucket.inflight;
+  const pending = fetchMyBookings().then(next => { publishCache(account, next); return next; }).finally(() => {
+    if (bucket.inflight === pending) bucket.inflight = null;
+  });
+  bucket.inflight = pending;
+  return pending;
+}
+/** Prefetch only for the current continuous login. */
 export function warmUserBookings(): void {
-  if (isCacheFresh() || sharedInflight) return;
-  sharedInflight = fetchMyBookings()
-    .then((next) => {
-      publishCache(next);
-      return next;
-    })
-    .catch(() => readWarmBookings())
-    .finally(() => {
-      sharedInflight = null;
-    });
+  const account = readAuthenticatedAccount();
+  if (!account || isCacheFresh(account)) return;
+  void loadBookings(account).catch(() => undefined);
 }
 
 export function useUserBookings() {
+  const { account, scope, isCurrent } = useAuthenticatedRequestScope();
   const [bookings, setBookings] = useState<UserBooking[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(account ? "loading" : "ready");
   const cancellation = useCancelBooking();
   const knownStatusRef = useRef<Map<string, BookingStatus>>(new Map());
   const primedRef = useRef(false);
 
+  const [previousScope, setPreviousScope] = useState(scope);
+  if (previousScope !== scope) {
+    setPreviousScope(scope); setBookings([]); setStatus(account ? "loading" : "ready");
+  }
+  useLayoutEffect(() => {
+    knownStatusRef.current = new Map(); primedRef.current = false;
+  }, [scope]);
+
   const reload = useCallback(async (opts?: { force?: boolean }) => {
-    if (!opts?.force && isCacheFresh() && sharedCache) {
-      setBookings(sharedCache.bookings);
+    if (!account || !isCurrent()) return;
+    const captured = scope.capture();
+    const current = () => captured() && isCurrent();
+    const bucket = accountBookings(account);
+    if (!opts?.force && isCacheFresh(account) && bucket.cache) {
+      setBookings(bucket.cache.bookings);
       setStatus("ready");
       return;
     }
 
     try {
-      if (!sharedInflight) {
-        sharedInflight = fetchMyBookings().finally(() => {
-          sharedInflight = null;
-        });
-      }
-      const next = await sharedInflight;
-      publishCache(next);
+      const next = await loadBookings(account);
+      if (!current()) return;
       setBookings(next);
       setStatus("ready");
     } catch {
+      if (!current()) return;
       setStatus((current) => (current === "ready" ? current : "error"));
     }
-  }, []);
+  }, [account, isCurrent, scope]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const warm = readWarmBookings();
+      if (!isCurrent()) return;
+      const warm = readWarmBookings(account);
       if (warm.length > 0) {
         setBookings(warm);
         setStatus("ready");
       }
-      void reload({ force: !isCacheFresh() });
+      void reload({ force: !isCacheFresh(account) });
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [reload]);
+  }, [reload, account, isCurrent]);
 
   const applyStatus = useCallback((
     bookingId: string,
     next: BookingStatus,
     extra?: { rejectionReason?: string | null; depositAmount?: number | null },
   ) => {
+    if (!account || !isCurrent()) return;
+    const bucket = accountBookings(account);
     const reason = extra?.rejectionReason?.trim();
     setBookings((current) => {
       const updated = current.map((item) =>
@@ -120,13 +139,13 @@ export function useUserBookings() {
             }
           : item,
       );
-      if (sharedCache) {
-        sharedCache = { bookings: updated, fetchedAt: sharedCache.fetchedAt };
+      if (bucket.cache) {
+        bucket.cache = { bookings: updated, fetchedAt: bucket.cache.fetchedAt };
       }
       return updated;
     });
     patchRememberedBooking(bookingId, next, extra);
-  }, []);
+  }, [account, isCurrent]);
 
   useEffect(() => {
     const onCancelled = (event: Event) => {
@@ -150,10 +169,12 @@ export function useUserBookings() {
       applyStatus(detail.bookingId, "Confirmed");
     };
     const onRemembered = () => {
+      if (!account || !isCurrent()) return;
+      const bucket = accountBookings(account);
       const next = loadRememberedBookings();
       setBookings(next);
-      if (sharedCache) {
-        sharedCache = { bookings: next, fetchedAt: sharedCache.fetchedAt };
+      if (bucket.cache) {
+        bucket.cache = { bookings: next, fetchedAt: bucket.cache.fetchedAt };
       }
     };
     window.addEventListener(BOOKING_CANCELLED_EVENT, onCancelled);
@@ -168,7 +189,7 @@ export function useUserBookings() {
       window.removeEventListener(BOOKING_PUBLISHED_EVENT, onPublished);
       window.removeEventListener(USER_BOOKINGS_CHANGED_EVENT, onRemembered);
     };
-  }, [applyStatus]);
+  }, [applyStatus, account, isCurrent]);
 
   useEffect(() => {
     const known = knownStatusRef.current;
@@ -206,11 +227,13 @@ export function useUserBookings() {
 
   const cancelBooking = useCallback(
     async (booking: UserBooking) => {
-      if (!canCancelBooking(booking.status) || cancellation.isCancelLocked(booking.bookingId)) {
+      if (!isCurrent() || !canCancelBooking(booking.status) || cancellation.isCancelLocked(booking.bookingId)) {
         return false;
       }
 
+      const captured = scope.capture();
       const outcome = await cancellation.cancel(booking);
+      if (!captured() || !isCurrent()) return false;
       if (outcome.ok) {
         applyStatus(booking.bookingId, "Cancelled");
         return true;
@@ -221,20 +244,21 @@ export function useUserBookings() {
       applyStatus(booking.bookingId, outcome.status);
       return false;
     },
-    [applyStatus, cancellation],
+    [applyStatus, cancellation, isCurrent, scope],
   );
 
   const upsertFromCreated = useCallback((items: UserBooking[]) => {
+    if (!account || !isCurrent()) return;
     rememberUserBookings(items);
     setBookings((current) => {
       const merged = [
         ...items,
         ...current.filter((item) => !items.some((created) => created.bookingId === item.bookingId)),
       ];
-      sharedCache = { bookings: merged, fetchedAt: Date.now() };
+      accountBookings(account).cache = { bookings: merged, fetchedAt: Date.now() };
       return merged;
     });
-  }, []);
+  }, [account, isCurrent]);
 
   const pending = useMemo(
     () => bookings.filter((item) => item.status === "Pending"),

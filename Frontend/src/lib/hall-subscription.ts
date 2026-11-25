@@ -1,3 +1,4 @@
+import { parseBooleanFlag } from "@/lib/hall-access";
 import { ApiError } from "@/lib/api-error";
 import { parseDateIso, utcDaysRemaining } from "@/lib/booking-date";
 import type {
@@ -162,11 +163,7 @@ export function mapHallSubscription(payload: unknown, hallId: string): HallSubsc
     asInt(data.daysRemaining ?? data.days_remaining) ??
     (cycleEnd ? utcDaysRemaining(cycleEnd) : null);
   const paidFlag = data.isPaid ?? data.is_paid ?? data.paid;
-  const isPaid =
-    status === "active" ||
-    (paidFlag !== undefined && paidFlag !== null && paidFlag !== ""
-      ? asBool(paidFlag)
-      : false);
+  const isPaid = parseBooleanFlag(paidFlag);
 
   return {
     hallId: asText(data.hallId) || asText(data.id) || hallId.trim(),

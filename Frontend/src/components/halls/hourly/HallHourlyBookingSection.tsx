@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import HallMonthCalendar from "@/components/halls/HallMonthCalendar";
 import AppointmentSavedModal from "@/components/halls/hourly/AppointmentSavedModal";
 import HallHourlyRangePicker from "@/components/halls/hourly/HallHourlyRangePicker";
@@ -48,7 +50,9 @@ export default function HallHourlyBookingSection({
       data-testid="hall-hourly-booking"
     >
       <h2 className="hall-section-title flex items-center gap-2">
-        <img
+        <Image
+          unoptimized
+          loading="eager"
           src="/icons/hourly-calendar.jpg"
           alt=""
           width={36}

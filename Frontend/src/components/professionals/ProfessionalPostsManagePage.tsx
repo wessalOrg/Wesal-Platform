@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import ContentPagination from "@/components/ui/ContentPagination";
+import { useContentPagination } from "@/hooks/useContentPagination";
 import ProfessionalPostForm from "@/components/professionals/ProfessionalPostForm";
 import PublishingRestrictionBanner from "@/components/moderation/PublishingRestrictionBanner";
 import AuthenticatedApiImage from "@/components/ui/AuthenticatedApiImage";
@@ -14,13 +16,7 @@ import { useProfessionalAccountAccess } from "@/hooks/useProfessionalAccountAcce
 import { useAccountPublishingLock } from "@/hooks/useAccountPublishingLock";
 import { useT } from "@/i18n";
 import { fetchProfessionalProfilePosts } from "@/services/professional-profile";
-import type { ProfessionalProfileContentItem, ProfessionalProfileContentPage } from "@/types/professional-profile";
-
-type LoadedPosts = {
-  key: string;
-  result: ProfessionalProfileContentPage | null;
-  failed: boolean;
-};
+import type { ProfessionalProfileContentItem } from "@/types/professional-profile";
 
 export default function ProfessionalPostsManagePage() {
   const t = useT();
@@ -28,9 +24,6 @@ export default function ProfessionalPostsManagePage() {
   const access = useProfessionalAccountAccess();
   const profileStore = useUserProfileStore();
   const publishingLock = useAccountPublishingLock();
-  const [page, setPage] = useState(1);
-  const [revision, setRevision] = useState(0);
-  const [loaded, setLoaded] = useState<LoadedPosts | null>(null);
   const [form, setForm] = useState<{
     owner: string;
     post: ProfessionalProfileContentItem | null;
@@ -40,27 +33,14 @@ export default function ProfessionalPostsManagePage() {
   const [success, setSuccess] = useState<{ owner: string; key: string } | null>(null);
   const ownerId = access.userId || access.profile?.id || "";
   const owner = access.sessionKey || "";
-  const requestKey = `${owner}|${page}|${revision}`;
   const canRead = access.ready && access.authenticated && access.isProfessional &&
     access.profileStatus === "ready" && Boolean(ownerId);
-  const isLocked = Boolean(access.profile?.isLocked || publishingLock.isLocked);
+  const isLocked = publishingLock.isLocked;
   const canPublish = access.canPublish && publishingLock.ready && !isLocked;
   const activeForm = form?.owner === owner && canPublish ? form : null;
-  const current = loaded?.key === requestKey ? loaded : null;
-  const posts = current?.result?.items ?? [];
-
-  useEffect(() => {
-    if (!canRead) return;
-    let active = true;
-    void fetchProfessionalProfilePosts(ownerId, page, 12)
-      .then((result) => {
-        if (active) setLoaded({ key: requestKey, result, failed: false });
-      })
-      .catch(() => {
-        if (active) setLoaded({ key: requestKey, result: null, failed: true });
-      });
-    return () => { active = false; };
-  }, [canRead, ownerId, page, requestKey]);
+  const fetchPage = useCallback((page: number, size: number) => fetchProfessionalProfilePosts(ownerId, page, size), [ownerId]);
+  const pagination = useContentPagination({ context: owner + ":" + ownerId, enabled: canRead, pageSize: 12, fetchPage });
+  const posts = pagination.items;
 
   const openForm = (post: ProfessionalProfileContentItem | null = null) => {
     if (!canPublish || postSaveInProgress.current) return;
@@ -108,7 +88,7 @@ export default function ProfessionalPostsManagePage() {
         </p>
       ) : null}
 
-      {isLocked ? <PublishingRestrictionBanner lockedUntil={access.profile?.lockedUntil || publishingLock.lockedUntil} /> : null}
+      {isLocked ? <PublishingRestrictionBanner lockedUntil={publishingLock.lockedUntil} /> : null}
 
       {success?.owner === owner ? (
         <p className="rounded-xl bg-[var(--wesal-pink)] p-3 text-sm text-[var(--wesal-maroon-dark)]" role="status">{t(success.key)}</p>
@@ -126,8 +106,7 @@ export default function ProfessionalPostsManagePage() {
           onClose={() => setForm(null)}
           onSaved={() => {
             setSuccess({ owner, key: activeForm.post ? "professionals.posts.updateSuccess" : "professionals.posts.createSuccess" });
-            setPage(1);
-            setRevision((value) => value + 1);
+            void pagination.refresh();
           }}
         />
       ) : null}
@@ -135,16 +114,16 @@ export default function ProfessionalPostsManagePage() {
       {canRead ? (
         <section className="space-y-4" aria-label={t("professionals.posts.title")}>
           <h2 className="text-lg font-bold text-[var(--wesal-text)]">
-            {t("dashboard.posts.total", { count: current?.result?.totalCount ?? "…" })}
+            {t("dashboard.posts.total", { count: pagination.total ?? "…" })}
           </h2>
-          {!current ? (
+          {!pagination.loaded && pagination.busy ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-busy="true" data-testid="dashboard-posts-loading">
               {Array.from({ length: 3 }, (_, index) => <div key={index} className="h-60 animate-pulse rounded-2xl bg-white" />)}
             </div>
-          ) : current.failed ? (
+          ) : !pagination.loaded && pagination.error ? (
             <div className="seeker-settings-card" role="alert" data-testid="dashboard-posts-error">
               <p>{t("professionals.posts.errors.loadFailed")}</p>
-              <button type="button" className="btn-outline mt-3" onClick={() => setRevision((value) => value + 1)}>{t("common.retry")}</button>
+              <button type="button" className="btn-outline mt-3" onClick={() => void pagination.refresh()}>{t("common.retry")}</button>
             </div>
           ) : posts.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[var(--wesal-border)] bg-white px-5 py-12 text-center" data-testid="dashboard-posts-empty">
@@ -176,13 +155,8 @@ export default function ProfessionalPostsManagePage() {
               ))}
             </div>
           )}
-          {(current?.result?.totalPages ?? 0) > 1 ? (
-            <nav className="flex flex-wrap items-center justify-center gap-3" aria-label={t("professionals.posts.title")}>
-              <button type="button" className="btn-outline !min-h-10" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>{t("dashboard.posts.previous")}</button>
-              <span className="text-sm text-[var(--wesal-muted)]">{t("dashboard.posts.page", { page, total: current!.result!.totalPages })}</span>
-              <button type="button" className="btn-outline !min-h-10" disabled={page >= current!.result!.totalPages} onClick={() => setPage((value) => value + 1)}>{t("dashboard.posts.next")}</button>
-            </nav>
-          ) : null}
+          {pagination.loaded || !pagination.error ? <ContentPagination {...pagination}
+            onMore={() => void pagination.loadMore()} onRetry={() => void pagination.refresh()} /> : null}
         </section>
       ) : null}
     </div>

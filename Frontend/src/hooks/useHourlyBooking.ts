@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
+import { useAuthenticatedRequestScope } from "@/hooks/useAuthenticatedRequestScope";
 import { ApiError } from "@/lib/api-error";
 import { formatBookingDateLabel, isFutureBookingDate } from "@/lib/booking-date";
 import { emitBookingSubmitted } from "@/lib/booking-events";
@@ -64,6 +65,7 @@ function mergeDay(days: HourlyDay[], next: HourlyDay): HourlyDay[] {
 }
 
 export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfirmed }: Options) {
+  const { scope, isCurrent } = useAuthenticatedRequestScope(true, hallId);
   const t = useT();
   const identity = useUserIdentity();
   const [visibleMonth, setVisibleMonth] = useState<VisibleMonth>(() => {
@@ -89,6 +91,11 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
   const [promptOpen, setPromptOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [previousScope, setPreviousScope] = useState(scope);
+  if (previousScope !== scope) {
+    setPreviousScope(scope); setNameDraft(null); setPhoneDraft(null);
+    setPromptOpen(false); setSubmitting(false); setErrorKey(null);
+  }
 
   const loadCatalog = useCallback(
     async (iso: string) => {
@@ -241,7 +248,9 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
   }, [submitting]);
 
   const submit = useCallback(async () => {
-    if (!canSubmit || !dateIso || confirmedStarts.length === 0 || submitting) return false;
+    if (!isCurrent() || !canSubmit || !dateIso || confirmedStarts.length === 0 || submitting) return false;
+    const captured = scope.capture();
+    const current = () => captured() && isCurrent();
     const customerName = accountName.trim();
     const customerPhone = phone.trim();
     if (!customerName) {
@@ -276,6 +285,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
         requesterName: customerName,
         eventTypeLabel,
       });
+      if (!current()) return false;
       if (result.bookingId) {
         rememberUserBookings([
           {
@@ -325,8 +335,9 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
       setConfirmedStarts([]);
       onConfirmed?.(null);
       await reload();
-      return true;
+      return current();
     } catch (err) {
+      if (!current()) return false;
       const key =
         err instanceof ApiError && err.message.startsWith("errors.")
           ? err.message
@@ -334,7 +345,7 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
       setErrorKey(key);
       return false;
     } finally {
-      setSubmitting(false);
+      if (current()) setSubmitting(false);
     }
   }, [
     canSubmit,
@@ -351,6 +362,8 @@ export function useHourlyBooking({ hallId, hallName, locale, canSubmit, onConfir
     reload,
     onConfirmed,
     t,
+    isCurrent,
+    scope,
   ]);
 
   const shiftMonth = useCallback((delta: number) => {

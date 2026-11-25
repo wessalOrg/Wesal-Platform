@@ -2,6 +2,8 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState } from "@micros
 import { apiOrigin } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth-token";
 import { realtimeLogger } from "@/lib/realtime-logger";
+import { isCurrentNotificationAccount, readNotificationAccount, subscribeNotificationAccount,
+  type NotificationAccount } from "@/lib/notification-account";
 import {
   parseBookingRequestRealtimeEvent,
   type BookingRequestRealtimeEvent,
@@ -23,6 +25,8 @@ type EventHandler = (event: BookingRequestRealtimeEvent) => void;
 const handlers = new Set<EventHandler>();
 let connection: HubConnection | null = null;
 let startPromise: Promise<HubConnection | null> | null = null;
+let startAccount: NotificationAccount | null = null;
+let connectionAccount: NotificationAccount | null = null;
 let boundConnection: HubConnection | null = null;
 let connectedToken: string | null = null;
 let windowBound = false;
@@ -38,7 +42,8 @@ function notificationsHubUrl(): string {
   return `${apiOrigin()}/hubs/owner-dashboard`;
 }
 
-function publish(raw: unknown) {
+function publish(raw: unknown, account = readNotificationAccount()) {
+  if (!isCurrentNotificationAccount(account)) return;
   const event = parseBookingRequestRealtimeEvent(raw);
   if (!event) return;
   handlers.forEach((handler) => handler(event));
@@ -61,69 +66,82 @@ function unbindWindowBus() {
   window.removeEventListener(OWNER_BOOKING_REQUEST_EVENT, onWindowEvent);
 }
 
-function bindHubEvents(hub: HubConnection) {
+function bindHubEvents(hub: HubConnection, account: NotificationAccount) {
   if (boundConnection === hub) return;
   boundConnection = hub;
   for (const name of HUB_EVENTS) {
     hub.on(name, (raw: unknown) => {
-      publish(raw);
+      publish(raw, account);
     });
   }
 }
 
 async function ensureHub(): Promise<HubConnection | null> {
-  const token = getAccessToken();
-  if (!token || token.startsWith("stub-")) return null;
-  if (connection?.state === HubConnectionState.Connected && connectedToken === token) {
-    bindHubEvents(connection);
+  const account = readNotificationAccount();
+  if (!account || account.token.startsWith("stub-")) return null;
+  if (connection?.state === HubConnectionState.Connected && connectionAccount === account && connectedToken === account.token) {
+    bindHubEvents(connection, account);
     return connection;
   }
-  if (startPromise) return startPromise;
+  if (startPromise && startAccount === account) return startPromise;
 
-  startPromise = (async () => {
-    if (connection && connection.state !== HubConnectionState.Disconnected) {
+  const previous = connection;
+  const hub = new HubConnectionBuilder()
+    .withUrl(notificationsHubUrl(), {
+      accessTokenFactory: () => isCurrentNotificationAccount(account) ? account.token : "",
+    })
+    .withAutomaticReconnect()
+    .configureLogging(realtimeLogger)
+    .build();
+  connection = hub;
+  connectionAccount = account;
+  connectedToken = account.token;
+  boundConnection = null;
+  startAccount = account;
+  const current = () => connection === hub && isCurrentNotificationAccount(account);
+  const operation = (async () => {
+    if (previous && previous.state !== HubConnectionState.Disconnected) {
       try {
-        await connection.stop();
+        await previous.stop();
       } catch {
         /* ignore stale socket */
       }
     }
-    connectedToken = token;
-    boundConnection = null;
-    connection = new HubConnectionBuilder()
-      .withUrl(notificationsHubUrl(), {
-        accessTokenFactory: () => getAccessToken() ?? "",
-      })
-      .withAutomaticReconnect()
-      .configureLogging(realtimeLogger)
-      .build();
-    await connection.start();
-    bindHubEvents(connection);
-    connection.onreconnected(() => {
-      void connection?.invoke("JoinOwnerGroup").catch(() => undefined);
+    if (!current()) return null;
+    await hub.start();
+    if (!current()) { await hub.stop(); return null; }
+    bindHubEvents(hub, account);
+    hub.onreconnected(() => {
+      if (current()) void hub.invoke("JoinOwnerGroup").catch(() => undefined);
     });
-    await connection.invoke("JoinOwnerGroup").catch(() => undefined);
-    return connection;
+    await hub.invoke("JoinOwnerGroup").catch(() => undefined);
+    return current() ? hub : null;
   })()
     .catch(() => {
-      connection = null;
-      boundConnection = null;
-      connectedToken = null;
+      if (connection === hub) {
+        connection = null;
+        connectionAccount = null;
+        boundConnection = null;
+        connectedToken = null;
+      }
       return null;
     })
     .finally(() => {
-      startPromise = null;
+      if (startPromise === operation) { startPromise = null; startAccount = null; }
     });
 
-  return startPromise;
+  startPromise = operation;
+  return operation;
 }
 
 async function stopHub() {
   const hub = connection;
   connection = null;
+  connectionAccount = null;
   boundConnection = null;
   connectedToken = null;
   startPromise = null;
+  startAccount = null;
   if (!hub) return;
   try {
     await hub.stop();
@@ -139,12 +157,17 @@ async function stopHub() {
 export function subscribeOwnerBookingRequestEvents(onEvent: EventHandler): () => void {
   handlers.add(onEvent);
   bindWindowBus();
+  const unsubscribeAccount = subscribeNotificationAccount(() => {
+    if (!usesMockRealtime() && readNotificationAccount()) void ensureHub();
+    else void stopHub();
+  });
 
   if (!usesMockRealtime() && handlers.size === 1) {
     void ensureHub();
   }
 
   return () => {
+    unsubscribeAccount();
     handlers.delete(onEvent);
     if (handlers.size > 0) return;
     unbindWindowBus();

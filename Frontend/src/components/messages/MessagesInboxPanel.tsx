@@ -95,6 +95,7 @@ export default function MessagesInboxPanel() {
     inboxStatus,
     conversations,
     inboxError,
+    pagination,
     retryInbox,
     threadStatus,
     thread,
@@ -312,13 +313,13 @@ export default function MessagesInboxPanel() {
   if (!isOpen) return null;
 
   const peerIsAdmin = selected
-    ? isOwnerAdminConversation(selected, conversations)
+    ? isOwnerAdminConversation(selected)
     : false;
   const adminAccountThread = selected ? isAdminAccountConversation(selected) : false;
   const inquiryContext = findThreadContextCard(thread?.messages);
   const threadTitle = selected
     ? peerIsAdmin || isHallOwner
-      ? ownerConversationTitle(selected, lang, conversations)
+      ? ownerConversationTitle(selected, lang)
       : adminAccountThread
         ? t("messages.adminChat.title")
         : conversationPreviewTitle(selected, lang)
@@ -427,6 +428,7 @@ export default function MessagesInboxPanel() {
               }`}
             >
               <ConversationList
+                pagination={pagination}
                 status={inboxStatus}
                 conversations={conversations}
                 selectedId={selectedId}
@@ -451,7 +453,7 @@ export default function MessagesInboxPanel() {
                 badge={showThread ? threadBadge : null}
                 peerDisplayName={
                   adminAccountThread ||
-                  (isHallOwner && selected && isOwnerAdminConversation(selected, conversations))
+                  (isHallOwner && selected && isOwnerAdminConversation(selected))
                     ? t("messages.adminChat.title")
                     : null
                 }

@@ -5,24 +5,29 @@ import {
   hallSubscriptionErrorMessageKey,
   toHallSubscriptionError,
 } from "@/lib/hall-subscription";
-import { fetchHallSubscriptionStatus } from "@/services/hall-subscription";
+import { useAuthenticatedRequestScope } from "@/hooks/useAuthenticatedRequestScope";
+import { applyOwnedHallSubscriptionStatus } from "@/hooks/useHallOwnerHalls";
+import { fetchScopedHallSubscription } from "@/lib/hall-subscription-requests";
 import type {
   HallSubscription,
   HallSubscriptionLoadStatus,
 } from "@/types/hall-subscription";
 
 /**
- * Hall-scoped subscription status. Changing `hallId` drops the previous hall immediately.
+ * Session- and hall-scoped status. Obsolete responses never update visible state.
  */
 export function useHallSubscriptionStatus(hallId: string | null, enabled: boolean) {
   const scopedId = enabled && hallId?.trim() ? hallId.trim() : null;
+  const { account, scope, isCurrent } = useAuthenticatedRequestScope(enabled, scopedId ?? "");
+  const [seenScope, setSeenScope] = useState(scope);
   const [seenId, setSeenId] = useState<string | null>(scopedId);
   const [retryTick, setRetryTick] = useState(0);
-  const [status, setStatus] = useState<HallSubscriptionLoadStatus>(scopedId ? "loading" : "idle");
+  const [status, setStatus] = useState<HallSubscriptionLoadStatus>(scopedId && account ? "loading" : "idle");
   const [subscription, setSubscription] = useState<HallSubscription | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
 
-  if (scopedId !== seenId) {
+  if (scopedId !== seenId || seenScope !== scope) {
+    setSeenScope(scope);
     setSeenId(scopedId);
     setSubscription(null);
     setErrorKey(null);
@@ -30,20 +35,21 @@ export function useHallSubscriptionStatus(hallId: string | null, enabled: boolea
   }
 
   useEffect(() => {
-    if (!scopedId) return;
+    if (!scopedId || !account) return;
 
-    const controller = new AbortController();
     let cancelled = false;
 
-    void fetchHallSubscriptionStatus(scopedId, controller.signal)
+    void fetchScopedHallSubscription(account, scopedId)
       .then((next) => {
-        if (cancelled) return;
+        if (cancelled || !isCurrent()) return;
+        if (next.hallId !== scopedId) throw new Error("Unexpected subscription hall identity");
+        applyOwnedHallSubscriptionStatus(account, scopedId, next.status);
         setSubscription(next);
         setErrorKey(null);
         setStatus("ready");
       })
       .catch((err: unknown) => {
-        if (cancelled || controller.signal.aborted) return;
+        if (cancelled || !isCurrent()) return;
         const mapped = toHallSubscriptionError(err);
         setSubscription(null);
         setErrorKey(hallSubscriptionErrorMessageKey(mapped.kind));
@@ -52,17 +58,16 @@ export function useHallSubscriptionStatus(hallId: string | null, enabled: boolea
 
     return () => {
       cancelled = true;
-      controller.abort();
     };
-  }, [scopedId, retryTick]);
+  }, [scopedId, retryTick, account, isCurrent]);
 
   const retry = useCallback(() => {
-    if (!scopedId) return;
+    if (!scopedId || !isCurrent()) return;
     setSubscription(null);
     setErrorKey(null);
     setStatus("loading");
     setRetryTick((tick) => tick + 1);
-  }, [scopedId]);
+  }, [scopedId, isCurrent]);
 
   return {
     hallId: scopedId,

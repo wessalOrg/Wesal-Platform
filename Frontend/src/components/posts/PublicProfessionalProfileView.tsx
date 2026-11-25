@@ -13,7 +13,11 @@ type PublicProfessionalProfileViewProps = {
   userId: string;
 };
 
-export default function PublicProfessionalProfileView({
+export default function PublicProfessionalProfileView(props: PublicProfessionalProfileViewProps) {
+  return <PublicProfessionalProfileViewContent key={props.userId} {...props} />;
+}
+
+function PublicProfessionalProfileViewContent({
   userId,
 }: PublicProfessionalProfileViewProps) {
   const t = useT();
@@ -24,7 +28,6 @@ export default function PublicProfessionalProfileView({
 
   useEffect(() => {
     let cancelled = false;
-    setStatus("loading");
     void fetchPublicProfessionalProfile(userId)
       .then((row) => {
         if (cancelled) return;

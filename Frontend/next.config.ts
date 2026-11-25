@@ -1,10 +1,22 @@
 import type { NextConfig } from "next";
 import path from "path";
+import { existsSync } from "node:fs";
+
+const localDemoModule = path.resolve(__dirname, "src/lib/demo-auth.ts");
+const useLocalDemo = process.env.NODE_ENV === "development"
+  && process.env.NEXT_PUBLIC_DEMO_MODE === "true" && existsSync(localDemoModule);
 
 const nextConfig: NextConfig = {
   agentRules: false,
   turbopack: {
     root: path.resolve(__dirname),
+    resolveAlias: useLocalDemo ? { "@/lib/demo-login": "./src/lib/demo-auth.ts" } : {},
+  },
+  webpack(config) {
+    if (useLocalDemo) {
+      config.resolve.alias = { ...config.resolve.alias, "@/lib/demo-login": localDemoModule };
+    }
+    return config;
   },
   images: {
     formats: ["image/avif", "image/webp"],

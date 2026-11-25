@@ -531,44 +531,69 @@ export async function fetchHallDetails(id: string): Promise<HallDetailsLoadResul
   }
 }
 
-/**
- * All approved halls for the catalog page (US-LAND-06).
- * GET /v1/halls, then GET /v1/halls/search if the listing route is missing.
- */
-export async function fetchCatalogHalls(): Promise<FeaturedHallsLoadResult> {
-  const load = async (path: string) => {
-    const { data } = await api.get<FeaturedResponse>(path, { timeout: 8000 });
-    return {
-      halls: normalize(data).map(mapApiHall),
-      source: "api" as const,
-    };
-  };
+/** Pagination fields returned by the public hall endpoints (PagedResult<HallListItemDto>). */
+export type HallCatalogPagination = {
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+export type HallCatalogLoadResult = FeaturedHallsLoadResult & { pagination: HallCatalogPagination | null };
+export type HallPageRequest = { pageNumber?: number; pageSize?: number; signal?: AbortSignal };
 
+function hallPageParameters({ pageNumber = 1, pageSize = 12 }: HallPageRequest) {
+  return {
+    pageNumber: Number.isFinite(pageNumber) ? Math.max(1, Math.trunc(pageNumber)) : 1,
+    pageSize: Number.isFinite(pageSize) ? Math.max(1, Math.min(50, Math.trunc(pageSize))) : 12,
+  };
+}
+
+function mapCatalogPage(data: unknown): HallCatalogLoadResult {
+  if (!data || typeof data !== "object") throw new Error(t("halls.catalog.connectionError"));
+  const dto = data as Record<string, unknown>;
+  // Missing totals are an invalid contract, never an invitation to count one page as the whole catalog.
+  if (!Array.isArray(dto.items) ||
+      !Number.isInteger(dto.pageNumber) || Number(dto.pageNumber) < 1 ||
+      !Number.isInteger(dto.pageSize) || Number(dto.pageSize) < 1 ||
+      !Number.isInteger(dto.totalCount) || Number(dto.totalCount) < 0 ||
+      !Number.isInteger(dto.totalPages) || Number(dto.totalPages) < 0 ||
+      typeof dto.hasPreviousPage !== "boolean" || typeof dto.hasNextPage !== "boolean") {
+    throw new Error(t("halls.catalog.connectionError"));
+  }
+  return {
+    halls: (dto.items as ApiFeaturedHall[]).map(mapApiHall), source: "api",
+    pagination: {
+      pageNumber: Number(dto.pageNumber), pageSize: Number(dto.pageSize),
+      totalCount: Number(dto.totalCount), totalPages: Number(dto.totalPages),
+      hasPreviousPage: dto.hasPreviousPage, hasNextPage: dto.hasNextPage,
+    },
+  };
+}
+
+function catalogFallback(filters: HallSearchFilters, request: HallPageRequest): HallCatalogLoadResult {
+  if (!isDemoModeEnabled()) return { halls: [], source: "fallback", pagination: null, error: t("halls.catalog.connectionError") };
+  const { pageNumber, pageSize } = hallPageParameters(request);
+  const all = filterCatalogHalls(FEATURED_HALLS_FALLBACK, filters);
+  const totalCount = all.length, totalPages = Math.ceil(totalCount / pageSize);
+  return {
+    halls: all.slice((pageNumber - 1) * pageSize, pageNumber * pageSize), source: "fallback",
+    error: t("halls.catalog.connectionError"),
+    pagination: { pageNumber, pageSize, totalCount, totalPages, hasPreviousPage: pageNumber > 1, hasNextPage: pageNumber < totalPages },
+  };
+}
+
+/** GET /halls — public visibility and ordering are determined by the backend. */
+export async function fetchCatalogHalls(request: HallPageRequest = {}): Promise<HallCatalogLoadResult> {
   try {
-    return await load("/halls");
-  } catch {
-    try {
-      return await load("/halls/search");
-    } catch (err) {
-      if (!isDemoModeEnabled()) {
-        return {
-          halls: [],
-          source: "fallback",
-          error:
-            err instanceof Error
-              ? err.message
-              : t("errors.offlineHalls"),
-        };
-      }
-      return {
-        halls: FEATURED_HALLS_FALLBACK,
-        source: "fallback",
-        error:
-          err instanceof Error
-            ? err.message
-            : t("errors.offlineHalls"),
-      };
-    }
+    const { data } = await api.get<unknown>("/halls", {
+      params: hallPageParameters(request), signal: request.signal, timeout: 8000,
+    });
+    return mapCatalogPage(data);
+  } catch (error) {
+    if (request.signal?.aborted) throw error;
+    return catalogFallback({}, request);
   }
 }
 
@@ -580,6 +605,7 @@ export type HallSearchFilters = {
   region?: HallRegion;
   date?: string;
   period?: HallBookingPeriodFilter;
+  pageNumber?: number;
   pageSize?: number;
 };
 
@@ -608,44 +634,25 @@ export function filterCatalogHalls(
   });
 }
 
-/** GET /v1/halls/search — falls back so the catalog can still filter locally. */
+/** GET /halls/search — paginate the filtered result, without filtering a partial page locally. */
 export async function fetchSearchHalls(
   filters: HallSearchFilters,
-): Promise<FeaturedHallsLoadResult> {
-  const params: Record<string, string> = {};
+  signal?: AbortSignal,
+): Promise<HallCatalogLoadResult> {
+  const params: Record<string, string | number> = hallPageParameters(filters);
   if (filters.name?.trim()) params.name = filters.name.trim();
   const area = (filters.address ?? filters.area)?.trim();
   if (area) params.area = area;
-  if (filters.detailedAddress?.trim()) {
-    params.detailedAddress = filters.detailedAddress.trim();
-  }
-  if (filters.region && filters.region !== "all") {
-    params.region = REGION_API_PARAMS[filters.region];
-  }
-  if (filters.pageSize && filters.pageSize > 0) {
-    params.pageSize = String(filters.pageSize);
-  }
-  const dateIso = filters.date?.trim()
-    ? parseTypedDateToIso(filters.date)
-    : null;
+  if (filters.detailedAddress?.trim()) params.detailedAddress = filters.detailedAddress.trim();
+  if (filters.region && filters.region !== "all") params.region = REGION_API_PARAMS[filters.region];
+  const dateIso = filters.date?.trim() ? parseTypedDateToIso(filters.date) : null;
   if (dateIso) params.date = dateIso;
-
   try {
-    const { data } = await api.get<FeaturedResponse>("/halls/search", {
-      params,
-      timeout: 8000,
-    });
-    return {
-      halls: normalize(data).map(mapApiHall),
-      source: "api",
-    };
-  } catch (err) {
-    return {
-      halls: [],
-      source: "fallback",
-      error:
-        err instanceof Error ? err.message : t("errors.searchFallback"),
-    };
+    const { data } = await api.get<unknown>("/halls/search", { params, signal, timeout: 8000 });
+    return mapCatalogPage(data);
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return catalogFallback(filters, filters);
   }
 }
 

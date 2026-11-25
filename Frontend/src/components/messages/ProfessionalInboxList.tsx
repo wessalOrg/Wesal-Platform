@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import MabroukFigure from "@/components/brand/MabroukFigure";
 import ConversationListItem from "@/components/messages/ConversationListItem";
 import { useT } from "@/i18n";
+import ConversationPagination, { type InboxPagination } from "@/components/messages/ConversationPagination";
 import { isAdminAccountConversation } from "@/lib/admin-account-conversation";
 import { formatUnreadCount } from "@/lib/unread-badge";
 import type { ConversationSummary, InboxStatus } from "@/types/messages";
@@ -11,6 +12,7 @@ import type { ConversationSummary, InboxStatus } from "@/types/messages";
 type InboxFilter = "customers" | "admin";
 
 type ProfessionalInboxListProps = {
+  pagination?: InboxPagination;
   status: InboxStatus;
   conversations: ConversationSummary[];
   selectedId: string | null;
@@ -21,6 +23,7 @@ type ProfessionalInboxListProps = {
 };
 
 export default function ProfessionalInboxList({
+  pagination,
   status,
   conversations,
   selectedId,
@@ -80,7 +83,7 @@ export default function ProfessionalInboxList({
         <FilterChip
           active={filter === "customers"}
           label={t("messages.professional.filterCustomers")}
-          count={customerRows.length}
+          count={pagination?.totalCount ?? customerRows.length}
           onClick={() => setFilter("customers")}
         />
         <FilterChip
@@ -138,6 +141,7 @@ export default function ProfessionalInboxList({
           ))}
         </ul>
       )}
+      {filter === "customers" && status !== "loading" && status !== "error" ? <ConversationPagination pagination={pagination} /> : null}
     </div>
   );
 }

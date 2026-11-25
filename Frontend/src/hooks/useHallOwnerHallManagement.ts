@@ -1,6 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuthenticatedRequestScope } from "@/hooks/useAuthenticatedRequestScope";
+import { useT } from "@/i18n";
+import { useHallImageSelection } from "@/hooks/useHallImageSelection";
+import { formatHallImageIssues, HallImageValidationError, type HallImageIssue } from "@/lib/hall-image-validation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ApiError, isForbiddenApiError, isUnauthorizedApiError } from "@/lib/api-error";
 import {
@@ -39,6 +43,10 @@ import type {
  */
 export function useHallOwnerHallManagement(hallId: string, enabled = true) {
   const { logout } = useAuth();
+  const { scope, isCurrent } = useAuthenticatedRequestScope(enabled, hallId);
+  const t = useT();
+  const { select, cancelCover, isPending } = useHallImageSelection(scope, isCurrent);
+  const [seenScope, setSeenScope] = useState(scope);
 
   const [boundHallId, setBoundHallId] = useState(hallId);
   const [boundEnabled, setBoundEnabled] = useState(enabled);
@@ -59,7 +67,8 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
   const loadGenerationRef = useRef(0);
 
   // Reset synchronously when selected Hall changes — prevents Hall A draft/UI on Hall B.
-  if (hallId !== boundHallId || enabled !== boundEnabled) {
+  if (hallId !== boundHallId || enabled !== boundEnabled || seenScope !== scope) {
+    setSeenScope(scope);
     setBoundHallId(hallId);
     setBoundEnabled(enabled);
     setDetails(null);
@@ -81,7 +90,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
   }, []);
 
   const load = useCallback(async () => {
-    if (!enabled) return;
+    if (!enabled || !isCurrent()) return;
     const generation = ++loadGenerationRef.current;
     const requestHallId = hallId;
     setLoadStatus("loading");
@@ -90,13 +99,13 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     try {
       // Hall-scoped fetch boundary: one in-flight load per hallId (generation-guarded).
       let next = await fetchOwnerHallDetails(requestHallId);
-      if (generation !== loadGenerationRef.current) return;
+      if (!isCurrent() || generation !== loadGenerationRef.current) return;
       if (next.id !== requestHallId) return;
       if (next.rating == null) {
         try {
           const publicHall = await fetchHallById(requestHallId);
           if (
-            generation === loadGenerationRef.current &&
+            isCurrent() && generation === loadGenerationRef.current &&
             publicHall.status === "ok" &&
             publicHall.hall.rating != null
           ) {
@@ -110,11 +119,11 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
           /* keep owner details without public rating */
         }
       }
-      if (generation !== loadGenerationRef.current) return;
+      if (!isCurrent() || generation !== loadGenerationRef.current) return;
       hydrateFromDetails(next);
       setLoadStatus("ready");
     } catch (err) {
-      if (generation !== loadGenerationRef.current) return;
+      if (!isCurrent() || generation !== loadGenerationRef.current) return;
       if (isUnauthorizedApiError(err)) {
         await logout({ redirect: false });
         setDetails(null);
@@ -157,11 +166,11 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
       );
       setLoadStatus("error");
     }
-  }, [enabled, hallId, hydrateFromDetails, logout]);
+  }, [enabled, hallId, hydrateFromDetails, logout, isCurrent]);
 
   useEffect(() => {
     submittingRef.current = false;
-  }, [hallId, enabled]);
+  }, [hallId, enabled, scope]);
 
   useEffect(() => {
     if (!enabled) {
@@ -195,19 +204,24 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     setResubmitted(false);
   }, [submitStatus]);
 
-  const patchValues = useCallback(
-    (patch: Partial<HallEditFormValues>) => {
-      setValues((current) => (current ? { ...current, ...patch } : current));
-      if (
-        Object.keys(fieldErrors).length ||
-        formError ||
-        submitStatus === "success"
-      ) {
-        clearFeedback();
-      }
-    },
-    [clearFeedback, fieldErrors, formError, submitStatus],
-  );
+  const imageFeedback = useCallback((field: "photos" | "mainPhoto", rejected: HallImageIssue[]) => {
+    setFieldErrors(current => { const next = { ...current }; delete next[field];
+      if (rejected.length) next[field] = formatHallImageIssues(rejected, t); return next; });
+    setFormError(null);
+    setSubmitStatus(current => current === "error" || current === "success" ? "idle" : current);
+  }, [t]);
+  const patchValues = useCallback((patch: Partial<HallEditFormValues>) => {
+    const { mainPhoto, ...rest } = patch;
+    if (mainPhoto !== undefined) {
+      if (submittingRef.current) return;
+      if (mainPhoto === null) { cancelCover(); setValues(current => current ? { ...current, mainPhoto: null } : current); imageFeedback("mainPhoto", []); }
+      else void select([mainPhoto], true, result => {
+        if (result.accepted[0]) setValues(current => current ? { ...current, mainPhoto: result.accepted[0] } : current);
+        imageFeedback("mainPhoto", result.rejected);
+      });
+    }
+    if (Object.keys(rest).length) { setValues(current => current ? { ...current, ...rest } : current); clearFeedback(); }
+  }, [cancelCover, select, imageFeedback, clearFeedback]);
 
   const removeExistingPhoto = useCallback(
     (photoId: string) => {
@@ -235,6 +249,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
 
   const setCoverPhoto = useCallback(
     (url: string) => {
+      cancelCover();
       setValues((current) => {
         if (!current) return current;
         const selected = current.existingPhotos.find((photo) => photo.url === url);
@@ -247,24 +262,16 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
       });
       clearFeedback();
     },
-    [clearFeedback],
+    [clearFeedback, cancelCover],
   );
 
-  const addNewPhotos = useCallback(
-    (files: FileList | File[]) => {
-      const next = Array.from(files).filter((file) =>
-        file.type.startsWith("image/"),
-      );
-      if (next.length === 0) return;
-      setValues((current) =>
-        current
-          ? { ...current, photos: [...current.photos, ...next] }
-          : current,
-      );
-      clearFeedback();
-    },
-    [clearFeedback],
-  );
+  const addNewPhotos = useCallback((files: FileList | File[]) => {
+    if (submittingRef.current) return;
+    void select(files, false, result => {
+      if (result.accepted.length) setValues(current => current ? { ...current, photos: [...current.photos, ...result.accepted] } : current);
+      imageFeedback("photos", result.rejected);
+    });
+  }, [select, imageFeedback]);
 
   const removeNewPhoto = useCallback(
     (index: number) => {
@@ -282,7 +289,8 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
   );
 
   const submit = useCallback(async (): Promise<boolean> => {
-    if (submittingRef.current) return false;
+    if (!isCurrent() || submittingRef.current) return false;
+    if (isPending()) { setFormError("owner.hallImages.pending"); return false; }
     if (!values || !details) return false;
     // Never submit Hall A payload against Hall B route.
     if (details.id !== hallId) return false;
@@ -309,7 +317,7 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
     const wasRejected = details.status === "Rejected";
     const submitGeneration = loadGenerationRef.current;
     const isSubmitStale = () =>
-      submitGeneration !== loadGenerationRef.current || targetHallId !== hallId;
+      !isCurrent() || submitGeneration !== loadGenerationRef.current || targetHallId !== hallId;
 
     try {
       const updated = await updateOwnerHall(targetHallId, values);
@@ -327,6 +335,10 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
       return true;
     } catch (err) {
       if (isSubmitStale()) return false;
+      if (err instanceof HallImageValidationError) {
+        setFieldErrors(Object.fromEntries(Object.entries(err.issues).map(([field, issues]) => [field, formatHallImageIssues(issues, t)])));
+        setFormError("owner.management.addHall.errors.validation"); setSubmitStatus("error"); return false;
+      }
 
       if (isUnauthorizedApiError(err) || (err instanceof ApiError && err.code === "Unauthorized")) {
         await logout({ redirect: false });
@@ -392,9 +404,9 @@ export function useHallOwnerHallManagement(hallId: string, enabled = true) {
       setSubmitStatus("error");
       return false;
     } finally {
-      submittingRef.current = false;
+      if (isCurrent()) submittingRef.current = false;
     }
-  }, [details, hallId, hydrateFromDetails, logout, values]);
+  }, [details, hallId, hydrateFromDetails, logout, values, isCurrent, isPending, t]);
 
   const isStaleSelection = Boolean(details && details.id !== hallId);
 

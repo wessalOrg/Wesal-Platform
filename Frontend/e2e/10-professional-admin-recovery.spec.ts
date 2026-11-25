@@ -1,6 +1,46 @@
 import { expect, test, type Page } from "@playwright/test";
+import { build } from "esbuild";
+import path from "node:path";
 
 const adminId = "61d33083-e81b-4ee9-8658-f548ce817d8f";
+
+function conversationPage(items: Array<Record<string, unknown>>) {
+  return {
+    items, pageNumber: 1, pageSize: 100, totalCount: items.length,
+    totalPages: items.length ? 1 : 0, hasPreviousPage: false, hasNextPage: false,
+  };
+}
+
+// Kind-less rows belong to the legacy view model, not the current paginated
+// CustomerProvider API. Exercise the real mapper and list without inventing an
+// API response containing an admin row or an incorrect customer total.
+async function mountLegacyInbox(page: Page) {
+  const mocks: Record<string, string> = {
+    "@/components/brand/MabroukFigure": "export default()=>null;",
+    "@/components/layout/LanguageProvider": "export const useUiLang=()=>'ar';",
+    "@/hooks/useAccountAccess": "export const useAccountAccess=()=>({isProfessional:true,isAdmin:false,isHallOwner:false});",
+    "@/i18n": `import ar from './src/i18n/messages/ar';export const t=(key,params={})=>Object.entries(params).reduce((text,[name,value])=>text.replaceAll('{'+name+'}',String(value)),ar[key]??key);export const useT=()=>t;`,
+  };
+  const result = await build({
+    stdin: { resolveDir: process.cwd(), loader: "tsx", contents: `
+      import React from'react';import{createRoot}from'react-dom/client';
+      import List from'./src/components/messages/ProfessionalInboxList';
+      import{mapInboxItemDto}from'./src/lib/conversation-mapper';
+      const rows=[{conversationId:'arabic-admin',hallId:'',otherParticipantId:'platform-user-id',otherParticipantName:'فريق وصال - الإدارة'},
+        {conversationId:'real-customer',hallId:'',otherParticipantId:'customer-id',otherParticipantName:'Customer',lastMessagePreview:'رسالة تذكر إدارة وصال'}].map(mapInboxItemDto);
+      createRoot(document.getElementById('root')).render(<List status='ready' conversations={rows} selectedId={null} onSelect={()=>{}} onRetry={()=>{}}/>);` },
+    bundle: true, write: false, platform: "browser", jsx: "automatic", tsconfig: path.resolve("tsconfig.json"),
+    define: { "process.env.NODE_ENV": '"production"', "process.env": "{}" },
+    plugins: [{ name: "legacy-inbox-view", setup(builder) {
+      builder.onResolve({ filter: /.*/ }, ({ path: name }) => name in mocks ? { path: name, namespace: "mock" } : undefined);
+      builder.onLoad({ filter: /.*/, namespace: "mock" }, ({ path: name }) => ({ contents: mocks[name], loader: "tsx", resolveDir: process.cwd() }));
+    } }],
+  });
+  await page.route("**/*", route => route.request().url().endsWith("/legacy-inbox-view")
+    ? route.fulfill({ contentType: "text/html", body: '<html lang="ar" dir="rtl"><div id="root"></div></html>' }) : route.abort());
+  await page.goto("http://localhost:3000/legacy-inbox-view");
+  await page.addScriptTag({ content: result.outputFiles[0].text });
+}
 
 async function setup(page: Page, adminUnavailable = false) {
   let created = 0;
@@ -75,7 +115,7 @@ test("A customer deep link does not add a second administration row", async ({ p
   await setup(page);
   const customerId = "82d33083-e81b-4ee9-8658-f548ce817d8f";
   await page.route("**/api/v1/professional/conversations?*", (route) => route.fulfill({
-    contentType: "application/json", body: JSON.stringify([]),
+    contentType: "application/json", body: JSON.stringify(conversationPage([])),
   }));
   await page.route(`**/api/v1/conversations/${customerId}/messages`, (route) => route.fulfill({
     contentType: "application/json", body: JSON.stringify({
@@ -97,12 +137,12 @@ test("A customer deep link does not add a second administration row", async ({ p
 test("A legacy admin row is replaced by the canonical admin row without losing customers", async ({ page }) => {
   await setup(page);
   await page.route("**/api/v1/professional/conversations?*", (route) => route.fulfill({
-    contentType: "application/json", body: JSON.stringify([
+    contentType: "application/json", body: JSON.stringify(conversationPage([
       { conversationId: "legacy-admin", kind: "HallBooking", hallId: "",
         otherParticipantId: "admin", otherParticipantName: "Wesal Admin" },
       { conversationId: "customer-admin-name", kind: "CustomerProvider", hallId: "",
         otherParticipantId: "customer", otherParticipantName: "Admin" },
-    ]),
+    ])),
   }));
   await page.goto("/profile/messages?contact=admin");
   await expect(page.getByTestId("message-thread-body")).toContainText("Admin recovery test message");
@@ -114,16 +154,7 @@ test("A legacy admin row is replaced by the canonical admin row without losing c
 });
 
 test("Arabic platform conversations without a kind stay in the Admin filter", async ({ page }) => {
-  await setup(page, true);
-  await page.route("**/api/v1/professional/conversations?*", (route) => route.fulfill({
-    contentType: "application/json", body: JSON.stringify([
-      { conversationId: "arabic-admin", hallId: "", otherParticipantId: "platform-user-id",
-        otherParticipantName: "فريق وصال - الإدارة" },
-      { conversationId: "real-customer", hallId: "", otherParticipantId: "customer-id",
-        otherParticipantName: "Customer", lastMessagePreview: "رسالة تذكر إدارة وصال" },
-    ]),
-  }));
-  await page.goto("/profile/messages");
+  await mountLegacyInbox(page);
   const inbox = page.getByTestId("professional-chat-inbox");
   await expect(inbox.getByRole("tab", { name: /العملاء/ })).toHaveText("العملاء(1)");
   await expect(inbox.locator('[data-conversation-id="real-customer"]')).toHaveCount(1);
@@ -131,4 +162,25 @@ test("Arabic platform conversations without a kind stay in the Admin filter", as
   await inbox.getByRole("tab", { name: /الإدارة/ }).click();
   await expect(inbox.locator('[data-conversation-id="arabic-admin"]')).toHaveCount(1);
   await expect(inbox.locator('[data-conversation-id="real-customer"]')).toHaveCount(0);
+});
+
+test("paginated customers and the separate admin lookup preserve counts and explicit customer kinds", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/v1/professional/conversations?*", route => {
+    const url = new URL(route.request().url());
+    expect(url.searchParams.get("page")).toBe("1");
+    expect(url.searchParams.get("pageSize")).toBe("100");
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify(conversationPage([
+      { conversationId: "customer-admin-name", kind: "CustomerProvider", hallId: null,
+        otherParticipantId: "customer", otherParticipantName: "Admin" },
+    ])) });
+  });
+  await page.goto("/profile/messages");
+  const inbox = page.getByTestId("professional-chat-inbox");
+  await expect(inbox.getByRole("tab", { name: /العملاء/ })).toHaveText("العملاء(1)");
+  await expect(inbox.locator('[data-conversation-id="customer-admin-name"]')).toHaveCount(1);
+  await expect(inbox.locator(`[data-conversation-id="${adminId}"]`)).toHaveCount(0);
+  await inbox.getByRole("tab", { name: /الإدارة/ }).click();
+  await expect(inbox.locator(`[data-conversation-id="${adminId}"]`)).toHaveCount(1);
+  await expect(inbox.locator('[data-conversation-id="customer-admin-name"]')).toHaveCount(0);
 });

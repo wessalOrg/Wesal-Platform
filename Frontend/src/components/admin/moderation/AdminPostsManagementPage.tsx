@@ -69,33 +69,29 @@ export default function AdminPostsManagementPage() {
   } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setErrorKey(null);
-    try {
-      const ownerRole = roleFilter === "all" ? undefined : roleFilter;
-      const query = { page, pageSize, ownerRole };
-      const [postsPage, offersPage] = await Promise.all([
-        contentFilter === "offers"
-          ? Promise.resolve({
-              items: [] as AdminModeratedContent[],
-              pageNumber: 1,
-              pageSize,
-              totalCount: 0,
-              totalPages: 0,
-            })
-          : fetchAdminModeratedPosts(query),
-        contentFilter === "posts"
-          ? Promise.resolve({
-              items: [] as AdminModeratedContent[],
-              pageNumber: 1,
-              pageSize,
-              totalCount: 0,
-              totalPages: 0,
-            })
-          : fetchAdminModeratedOffers(query),
-      ]);
-
+  const fetchItems = useCallback(() => {
+    const ownerRole = roleFilter === "all" ? undefined : roleFilter;
+    const query = { page, pageSize, ownerRole };
+    return Promise.all([
+      contentFilter === "offers"
+        ? Promise.resolve({
+            items: [] as AdminModeratedContent[],
+            pageNumber: 1,
+            pageSize,
+            totalCount: 0,
+            totalPages: 0,
+          })
+        : fetchAdminModeratedPosts(query),
+      contentFilter === "posts"
+        ? Promise.resolve({
+            items: [] as AdminModeratedContent[],
+            pageNumber: 1,
+            pageSize,
+            totalCount: 0,
+            totalPages: 0,
+          })
+        : fetchAdminModeratedOffers(query),
+    ]).then(([postsPage, offersPage]) => {
       let merged =
         contentFilter === "posts"
           ? postsPage.items
@@ -144,21 +140,30 @@ export default function AdminPostsManagementPage() {
               : offersPage.totalPages || 1,
         ),
       );
-    } catch (err) {
+    }).catch((err: unknown) => {
       setErrorKey(
         err instanceof ApiError ? err.message : "admin.moderation.errors.loadFailed",
       );
       setItems([]);
-    } finally {
+    }).finally(() => {
       setLoading(false);
-    }
+    });
   }, [appliedSearch, contentFilter, page, roleFilter, statusFilter]);
 
+  const [seenRequest, setSeenRequest] = useState(() => fetchItems);
+  if (seenRequest !== fetchItems) {
+    setSeenRequest(() => fetchItems);
+    setLoading(true);
+    setErrorKey(null);
+  }
+  const load = async () => {
+    setLoading(true);
+    setErrorKey(null);
+    await fetchItems();
+  };
   useEffect(() => {
-    queueMicrotask(() => {
-      void load();
-    });
-  }, [load]);
+    void fetchItems();
+  }, [fetchItems]);
 
   const roleLabel = useCallback(
     (role: string) => {
