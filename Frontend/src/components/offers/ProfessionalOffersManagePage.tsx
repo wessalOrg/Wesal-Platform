@@ -2,7 +2,7 @@
 
 import ContentPagination from "@/components/ui/ContentPagination";
 import { useContentPagination } from "@/hooks/useContentPagination";
-import Link from "next/link";
+import { OfferDetailsDialog } from "@/components/offers/ProfessionalOfferDetails";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import ProfessionalOfferForm, {
   type ProfessionalOfferFormValues,
@@ -31,7 +31,6 @@ import {
   updateProfessionalOffer,
 } from "@/services/professional-offers";
 import type { OfferLifecycleStatus, ProfessionalOffer } from "@/types/offers";
-import { professionalProfilePath } from "@/lib/account-profile-path";
 import OfferManageIcon from "@/components/offers/OfferManageIcon";
 import "./professional-offers-manage.css";
 
@@ -51,6 +50,7 @@ export default function ProfessionalOffersManagePage() {
     useProfessionalAccountAccess();
   const canMutate = canPublish && publishingLock.ready && !publishingLock.isLocked && !approvalLoading;
   const account = useSyncExternalStore(subscribeAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount);
+  const [preview, setPreview] = useState<{ account: typeof account; offerId: string } | null>(null);
   const editScope = useMemo(() => ({ account, userId, canMutate, ...createRequestScope() }), [account, userId, canMutate]);
   useLayoutEffect(() => {
     editScope.activate();
@@ -346,7 +346,6 @@ export default function ProfessionalOffersManagePage() {
               const lines = offer.content?.trim().split(/\r?\n/) ?? [];
               const title = lines[0] || t("offers.card.untitled");
               const description = lines.slice(1).join("\n");
-              const profileId = offer.ownerUserId || userId;
               const actionDisabled = !canMutate || formBusy;
               const actionHint = publishingLock.isLocked
                 ? t("moderation.restriction.blocked")
@@ -372,12 +371,11 @@ export default function ProfessionalOffersManagePage() {
                     </div>
                   </div>
                   <div className="pro-offers-actions">
-                    {profileId ? (
-                      <Link href={professionalProfilePath(profileId)} className="pro-offers-action"
-                        aria-label={t("offers.card.viewProfile")} title={t("offers.card.viewProfile")}>
-                        <OfferManageIcon name="view" />
-                      </Link>
-                    ) : null}
+                    <button type="button" className="pro-offers-action"
+                      aria-label={t("offers.card.viewDetails")} title={t("offers.card.viewDetails")}
+                      onClick={() => { cancelEditLoad(); setPreview({ account, offerId: offer.id }); }}>
+                      <OfferManageIcon name="view" />
+                    </button>
                     {lifecycleOpen ? (
                       <>
                         <button type="button" className="pro-offers-action"
@@ -404,6 +402,10 @@ export default function ProfessionalOffersManagePage() {
 
       <ContentPagination {...pagination} onMore={() => void pagination.loadMore()}
         onRetry={() => void pagination.refresh()} />
+      {account && preview?.account === account ? (
+        <OfferDetailsDialog key={preview.offerId} offerId={preview.offerId}
+          managementPreview onClose={() => setPreview(null)} />
+      ) : null}
       <StopOfferConfirmDialog
         open={Boolean(stopTarget)}
         busy={stopBusy}

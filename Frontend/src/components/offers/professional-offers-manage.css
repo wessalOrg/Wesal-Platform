@@ -5,8 +5,8 @@
   min-height: 142px;
   border: 1px solid var(--wesal-border);
   border-radius: 22px;
-  background: linear-gradient(110deg, #f3dad9, #fbf3f1 60%, #fcf8f7);
-  box-shadow: 0 6px 18px rgb(122 70 68 / 4%);
+  background: linear-gradient(110deg, var(--wesal-pink), var(--wesal-pink-soft) 60%, #fff);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--wesal-maroon) 4%, transparent);
 }
 .pro-offers-hero::before,
 .pro-offers-hero::after {
@@ -19,46 +19,47 @@
   top: 70px;
   border-radius: 50%;
   transform: rotate(-18deg);
-  background: linear-gradient(125deg, rgb(211 157 155 / 22%), transparent 75%);
+  background: linear-gradient(125deg, color-mix(in srgb, var(--wesal-maroon) 22%, transparent), transparent 75%);
 }
 .pro-offers-hero::after { top: 42px; inset-inline-end: 23%; opacity: .6; }
 .pro-offers-hero-content { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 142px; padding: 28px 30px; }
 .pro-offers-hero-copy { min-width: 0; }
 .pro-offers-hero h1 { display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 800; color: var(--wesal-maroon-dark); }
-.pro-offers-hero h1 svg { width: 27px; height: 27px; color: #ab334b; }
-.pro-offers-hero-subtitle { margin-top: 6px; font-size: 13px; color: #795754; }
-.pro-offers-create { display: inline-flex; align-items: center; justify-content: center; gap: 9px; flex-shrink: 0; min-height: 46px; padding: 10px 20px; border-radius: 12px; background: linear-gradient(115deg, #c07582, #a52e48); color: #fff; font-size: 14px; font-weight: 700; box-shadow: 0 5px 14px rgb(164 46 72 / 12%); transition: filter 150ms; }
+.pro-offers-hero h1 svg { width: 27px; height: 27px; color: var(--wesal-maroon); }
+.pro-offers-hero-subtitle { margin-top: 6px; font-size: 13px; color: var(--wesal-muted); }
+.pro-offers-create { display: inline-flex; align-items: center; justify-content: center; gap: 9px; flex-shrink: 0; min-height: 46px; padding: 10px 20px; border-radius: 12px; background: var(--wesal-maroon); color: #fff; font-size: 14px; font-weight: 700; box-shadow: 0 5px 14px color-mix(in srgb, var(--wesal-maroon) 12%, transparent); transition: filter 150ms; }
 .pro-offers-create:hover { filter: brightness(1.07); }
 .pro-offers-create:disabled { opacity: .5; cursor: not-allowed; }
 .pro-offers-create > span { font-size: 21px; line-height: 1; }
 .pro-offers-filters { display: flex; flex-wrap: wrap; gap: 10px; padding-block: 4px 10px; }
-.pro-offers-filter { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 7px; min-height: 44px; padding: 8px 19px; border: 1px solid var(--wesal-border); border-radius: 999px; background: #fffdfc; color: #78524f; font-size: 13px; font-weight: 600; transition: background 150ms, box-shadow 150ms; }
+.pro-offers-filter { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 7px; min-height: 44px; padding: 8px 19px; border: 1px solid var(--wesal-border); border-radius: 999px; background: #fff; color: var(--wesal-maroon-dark); font-size: 13px; font-weight: 600; transition: background 150ms, box-shadow 150ms; }
 .pro-offers-filter svg { width: 18px; height: 18px; }
-.pro-offers-filter.is-active { background: linear-gradient(110deg, #b96274, #a8324b); color: white; border-color: transparent; box-shadow: 0 4px 12px rgb(166 49 73 / 10%); }
+.pro-offers-filter.is-active { background: var(--wesal-maroon); color: white; border-color: transparent; box-shadow: 0 4px 12px color-mix(in srgb, var(--wesal-maroon) 10%, transparent); }
 .pro-offers-filter:not(.is-active):hover { background: var(--wesal-pink-soft); }
 .pro-offers-filter:not(.is-active) svg { color: var(--wesal-maroon-dark); }
-.pro-offers-filter:not(.is-active):nth-child(2) svg { color: #8b9d56; }
-.pro-offers-list { overflow: hidden; border: 1px solid var(--wesal-border); border-radius: 22px; background: linear-gradient(110deg, #fff, #fdfaf9); box-shadow: 0 6px 20px rgb(122 70 68 / 4%); }
-.pro-offers-list-heading { min-height: 44px; padding: 12px 24px; padding-inline-start: 154px; background: linear-gradient(110deg, #f8eeeb, #f7edeb); color: #78524f; font-size: 13px; font-weight: 700; }
+.pro-offers-list { overflow: hidden; border: 1px solid var(--wesal-border); border-radius: 22px; background: linear-gradient(110deg, #fff, var(--wesal-pink-soft)); box-shadow: 0 6px 20px color-mix(in srgb, var(--wesal-maroon) 4%, transparent); }
+.pro-offers-list-heading { min-height: 44px; padding: 12px 24px; padding-inline-start: 154px; background: var(--wesal-pink-soft); color: var(--wesal-maroon-dark); font-size: 13px; font-weight: 700; }
 .pro-offers-row { display: flex; align-items: center; gap: 22px; padding: 18px 22px; }
 .pro-offers-row + .pro-offers-row { border-top: 1px solid var(--wesal-border); }
 .pro-offers-image { display: grid; place-items: center; flex-shrink: 0; width: 130px; height: 124px; overflow: hidden; border-radius: 17px; background: var(--wesal-pink-soft); color: var(--wesal-maroon); }
 .pro-offers-image > svg { width: 30px; height: 30px; opacity: .5; }
 .pro-offers-details { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: flex-start; gap: 8px; }
-.pro-offers-details h2 { max-width: 100%; font-size: 16px; font-weight: 800; color: #81514d; overflow-wrap: anywhere; }
-.pro-offers-description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: pre-wrap; font-size: 13px; line-height: 1.8; color: #7b625c; overflow-wrap: anywhere; }
+.pro-offers-details h2 { max-width: 100%; font-size: 16px; font-weight: 800; color: var(--wesal-maroon-dark); overflow-wrap: anywhere; }
+.pro-offers-description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: pre-wrap; font-size: 13px; line-height: 1.8; color: var(--wesal-muted); overflow-wrap: anywhere; }
 .pro-offers-price-line { display: flex; align-items: center; gap: 10px; max-width: 100%; }
 .pro-offers-price-line > span { flex-shrink: 0; font-size: 10px; padding: 3px 8px; }
-.pro-offers-price { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 7px; min-width: 0; max-width: 100%; padding: 6px 12px; border-radius: 999px; background: #f9e6e8; }
-.pro-offers-price > svg { width: 17px; height: 17px; color: #ad3a52; flex-shrink: 0; }
+.pro-offers-price-line > [data-testid^="offer-status-"] { background: var(--wesal-pink-soft); color: var(--wesal-maroon-dark); box-shadow: 0 0 0 1px color-mix(in srgb, var(--wesal-maroon) 28%, transparent); }
+.pro-offers-price-line > [data-testid^="offer-status-"] > span { background: var(--wesal-maroon); }
+.pro-offers-price { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 7px; min-width: 0; max-width: 100%; padding: 6px 12px; border-radius: 999px; background: var(--wesal-pink); }
+.pro-offers-price > svg { width: 17px; height: 17px; color: var(--wesal-maroon); flex-shrink: 0; }
 .pro-offers-meta { min-width: 0; max-width: 100%; color: var(--wesal-muted); font-size: 11px; }
 .pro-offers-meta .offer-date-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .pro-offers-meta .offer-date-range-row { min-width: 0; gap: 5px; }
 .pro-offers-meta .offer-date-range bdi { white-space: normal; }
 .pro-offers-actions { display: flex; align-items: center; gap: 10px; margin-inline-start: auto; }
-.pro-offers-action { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #f8ece9; color: #8c5b57; transition: background 150ms; }
+.pro-offers-action { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: var(--wesal-pink-soft); color: var(--wesal-maroon-dark); transition: background 150ms; }
 .pro-offers-action svg { width: 20px; height: 20px; }
-.pro-offers-action:hover { background: #efdad5; }
+.pro-offers-action:hover { background: var(--wesal-pink); }
 .pro-offers-action:disabled { opacity: .4; cursor: not-allowed; }
 :is(.pro-offers-action, .pro-offers-filter, .pro-offers-create):focus-visible { outline: 2px solid var(--wesal-maroon-dark); outline-offset: 3px; }
 @media (max-width: 767px) {

@@ -8,7 +8,7 @@ import en from "../src/i18n/messages/en";
 let bundle: string;
 test.beforeAll(async () => {
   const mocks: Record<string, string> = {
-    "@/i18n": `const catalogs=${JSON.stringify({ ar, en })};export const useT=()=>key=>catalogs[window.offerLang][key]??key;`,
+    "@/i18n": `const catalogs=${JSON.stringify({ ar, en })};export const t=key=>catalogs[window.offerLang][key]??key;export const useT=()=>t;`,
     "@/components/layout/LanguageProvider": "export const useUiLang=()=>window.offerLang;",
     "@/hooks/useAccountPublishingLock": "export const useAccountPublishingLock=()=>({ready:true,isLocked:false});",
     "@/components/brand/MabroukFigure": "export default function Figure(){return null}",
@@ -40,7 +40,7 @@ const offer = (id: string, fresh = false, ownerUserId = "user-a") => ({ id, owne
   content: `${fresh ? "Fresh" : "Listed"} ${id}\nFull offer description`, oldPrice: 200, offerPrice: 100,
   startsAt: "2030-01-01T10:00:00Z", endsAt: "2099-01-01T10:00:00Z", images: [], stoppedAt: null });
 type DetailCall = { id: string; reply: (mode?: Mode) => Promise<void> };
-async function mount(page: Page, options: { mode?: Mode; hold?: boolean; lang?: "ar" | "en"; role?: string; listError?: boolean; writeFailure?: boolean } = {}) {
+async function mount(page: Page, options: { mode?: Mode; hold?: boolean; lang?: "ar" | "en"; role?: string; listError?: boolean; writeFailure?: boolean; withImages?: boolean } = {}) {
   const details: DetailCall[] = [], writes: Array<{ path: string; body: string }> = [], errors: string[] = [];
   let mode = options.mode ?? "valid", hold = options.hold ?? false;
   let writeFailure = options.writeFailure ?? false;
@@ -49,6 +49,8 @@ async function mount(page: Page, options: { mode?: Mode; hold?: boolean; lang?: 
     const request = route.request(), pathname = new URL(request.url()).pathname;
     if (pathname === "/offer-edit-test") return route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' });
     if (!pathname.startsWith("/api/v1/")) throw new Error(`Unexpected network ${pathname}`);
+    if (pathname.includes("/images/")) return route.fulfill({ contentType: "image/png",
+      body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEElEQVQImWM4WF0PRwzEcQDUUhuxFgs8twAAAABJRU5ErkJggg==", "base64") });
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }).catch(() => undefined);
     if (pathname === "/api/v1/offers/mine") return options.listError ? json({ title: "PRIVATE LIST ERROR" }, 500)
       : json({ items: [offer("offer-a"), offer("offer-b")], totalCount: 2, page: 1, pageSize: 50 });
@@ -61,7 +63,9 @@ async function mount(page: Page, options: { mode?: Mode; hold?: boolean; lang?: 
       if (response === "network") return route.abort("failed").catch(() => undefined);
       if (response === "500" || response === "404") return json({ title: "PRIVATE BACKEND ERROR" }, Number(response));
       if (response === "missing") return json(null);
-      return json(offer(response === "wrong-id" ? "offer-b" : id, true, response === "wrong-owner" ? "user-b" : "user-a"));
+      return json({ ...offer(response === "wrong-id" ? "offer-b" : id, true, response === "wrong-owner" ? "user-b" : "user-a"),
+        images: options.withImages ? [1, 2, 3].map(index => ({ id: `image-${index}`, order: index,
+          url: `/api/v1/offers/${id}/images/image-${index}` })) : [] });
     };
     details.push({ id, reply }); if (hold) return; return reply();
   });
@@ -100,6 +104,65 @@ for (const lang of ["ar", "en"] as const) for (const width of [390, 768, 1366]) 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
+
+for (const role of ["Photographer", "EventCoordinator"]) for (const lang of ["ar", "en"] as const) {
+  test(`${role} ${lang}: preview opens offer details inside the dashboard and restores focus on close`, async ({ page }) => {
+    const { catalog } = await mount(page, { role, lang, withImages: true });
+    const url = page.url();
+    const trigger = page.getByTestId("pro-offer-row-offer-a").getByRole("button", { name: catalog["offers.card.viewDetails"], exact: true });
+    await trigger.click();
+    const dialog = page.getByTestId("professional-offer-details");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByTestId("professional-offer-full-text")).toHaveText(offer("offer-a", true).content);
+    await expect(dialog.getByTestId("content-image-gallery")).toBeVisible();
+    for (const index of [1, 2, 3]) {
+      await expect(dialog.getByTestId("content-gallery-count")).toHaveText(`${index}/3`);
+      await expect(dialog.getByRole("img")).toBeVisible();
+      if (index < 3) await dialog.getByRole("button", { name: catalog["posts.nextImage"], exact: true }).click();
+    }
+    await expect(dialog.getByRole("link")).toHaveCount(0);
+    await expect(dialog.getByTestId("offer-inquiry-button")).toHaveCount(0);
+    expect(page.url()).toBe(url);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await expect(page.getByTestId("pro-offer-row-offer-b")).toBeVisible();
+  });
+}
+
+test("dashboard preview provides an in-place retry after a detail request fails", async ({ page }) => {
+  const { catalog, setMode } = await mount(page, { mode: "500" });
+  await page.getByTestId("pro-offer-row-offer-a").getByRole("button", { name: catalog["offers.card.viewDetails"], exact: true }).click();
+  const dialog = page.getByTestId("professional-offer-details");
+  await expect(dialog.getByRole("alert")).toHaveText(catalog["offers.errors.loadFailed"]);
+  setMode("valid");
+  await dialog.getByRole("button", { name: catalog["common.retry"], exact: true }).click();
+  await expect(dialog.getByTestId("professional-offer-full-text")).toHaveText(offer("offer-a", true).content);
+});
+
+for (const transition of ["offerTest.login('user-b')", "offerTest.logout()", "offerTest.logout();offerTest.login('user-a')"]) {
+  test(`pending dashboard preview is discarded after ${transition}`, async ({ page }) => {
+    const { catalog, details } = await mount(page, { hold: true });
+    await page.getByTestId("pro-offer-row-offer-a").getByRole("button", { name: catalog["offers.card.viewDetails"], exact: true }).click();
+    // The harness intentionally uses StrictMode, which replays the dialog's effect.
+    await expect.poll(() => details.length).toBe(2);
+    await page.evaluate(transition);
+    await expect(page.getByTestId("professional-offer-details")).toHaveCount(0);
+    await Promise.all(details.map(call => call.reply()));
+    await expect(page.getByTestId("professional-offer-details")).toHaveCount(0);
+  });
+}
+
+test("opening the dashboard preview invalidates an older edit-detail request", async ({ page }) => {
+  const { edit, details, catalog } = await mount(page, { hold: true });
+  await edit().click(); await expect.poll(() => details.length).toBe(1);
+  await page.getByTestId("pro-offer-row-offer-b").getByRole("button", { name: catalog["offers.card.viewDetails"], exact: true }).click();
+  await expect.poll(() => details.length).toBe(3);
+  expect(details.map(call => call.id)).toEqual(["offer-a", "offer-b", "offer-b"]);
+  await Promise.all(details.slice(1).map(call => call.reply())); await details[0].reply();
+  await expect(page.getByTestId("professional-offer-full-text")).toHaveText(offer("offer-b", true).content);
+  await expect(page.getByTestId("professional-offers-form-page")).toHaveCount(0);
+});
 
 test("an edit-detail HTTP 500 is visible after the list has loaded", async ({ page }) => {
   const { edit } = await mount(page, { mode: "500" }); await edit().click();

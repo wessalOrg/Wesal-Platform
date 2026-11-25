@@ -31,7 +31,11 @@ export default function ProfessionalOfferDetails({ offerId, disabled = false }: 
   </>;
 }
 
-function OfferDetailsDialog({ offerId, onClose }: { offerId: string; onClose: () => void }) {
+export function OfferDetailsDialog({ offerId, onClose, managementPreview = false }: {
+  offerId: string;
+  onClose: () => void;
+  managementPreview?: boolean;
+}) {
   const t = useT();
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -82,8 +86,8 @@ function OfferDetailsDialog({ offerId, onClose }: { offerId: string; onClose: ()
         </p>
         <OfferPriceDisplay oldPrice={state.offer.oldPrice} offerPrice={state.offer.offerPrice} />
         <OfferDateRange startsAt={state.offer.startsAt} endsAt={state.offer.endsAt} />
-        {state.offer.ownerUserId ? <Link href={professionalProfilePath(state.offer.ownerUserId)} className="text-sm font-bold text-[var(--wesal-maroon)]" onClick={closeDialog}>{t("offers.card.viewProfile")}</Link> : null}
-        <PostInquiryButton kind="offer" contentId={state.offer.id} variant="outline" />
+        {!managementPreview && state.offer.ownerUserId ? <Link href={professionalProfilePath(state.offer.ownerUserId)} className="text-sm font-bold text-[var(--wesal-maroon)]" onClick={closeDialog}>{t("offers.card.viewProfile")}</Link> : null}
+        {!managementPreview ? <PostInquiryButton kind="offer" contentId={state.offer.id} variant="outline" /> : null}
       </div>
     </div> : null}
   </dialog>;

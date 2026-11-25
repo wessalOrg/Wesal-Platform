@@ -141,7 +141,7 @@ export default function ProfessionalBioEditor({
           {error}
         </p>
       ) : null}
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-4 flex flex-wrap justify-start gap-2 rtl:justify-end">
         <button
           type="button"
           className="btn-primary !min-h-11"
