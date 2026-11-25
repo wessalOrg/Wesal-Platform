@@ -10,6 +10,7 @@ type PostInquiryButtonProps = {
   providerUserId?: string | null;
   className?: string;
   variant?: "primary" | "outline";
+  label?: string;
 };
 
 export default function PostInquiryButton({
@@ -18,6 +19,7 @@ export default function PostInquiryButton({
   providerUserId,
   className = "",
   variant = "primary",
+  label,
 }: PostInquiryButtonProps) {
   const t = useT();
   const { start, starting, error } = useStartContentConversation();
@@ -38,9 +40,9 @@ export default function PostInquiryButton({
         <ChatIcon />
         {starting
           ? t("posts.inquiry.starting")
-          : kind === "offer"
+          : label ?? (kind === "offer"
             ? t("posts.inquiry.offer")
-            : t("posts.inquiry.post")}
+            : t("posts.inquiry.post"))}
       </button>
       {error ? (
         <p className="mt-2 text-xs text-[#b42318]" role="alert">

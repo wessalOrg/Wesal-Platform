@@ -9,6 +9,7 @@ import { useT } from "@/i18n";
 const QUICK_LINKS = [
   { href: "/", labelKey: "nav.home" },
   { href: "/discover", labelKey: "nav.discover" },
+  { href: "/posts-and-offers", labelKey: "nav.postsAndOffers" },
   { href: "/#how-it-works", labelKey: "nav.howItWorks" },
   { href: "/about", labelKey: "nav.about" },
   { href: "/faq", labelKey: "nav.faq" },

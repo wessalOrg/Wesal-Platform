@@ -18,10 +18,11 @@ import { useTranslateLang } from "@/i18n";
 import { getAccountProfilePath } from "@/lib/account-profile-path";
 import { markAuthNavigation } from "@/lib/auth-nav";
 
-/** Section 17 — landing top bar keeps only Home + Discover. */
+/** Public navigation shared by desktop and mobile. */
 const NAV_HREFS = [
   { href: "/", key: "nav.home" },
   { href: "/discover", key: "nav.discover" },
+  { href: "/posts-and-offers", key: "nav.postsAndOffers" },
 ] as const;
 
 function navPath(href: string) {
