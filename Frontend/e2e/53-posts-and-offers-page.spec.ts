@@ -61,6 +61,7 @@ async function mount(page: Page, options: { lang?: "ar" | "en"; empty?: boolean;
     if (p === "/community-test") return route.fulfill({ contentType: "text/html", body: '<html><body><div id="root"></div></body></html>' });
     if (p === "/test-image.png") return route.fulfill({ contentType: "image/webp", body: fs.readFileSync(path.resolve("public/halls/featured-02.webp")) });
     if (p === "/test-font.ttf") return route.fulfill({ contentType: "font/ttf", body: fs.readFileSync(path.resolve("src/fonts/DINNextLTArabic-Regular.ttf")) });
+    if (p === "/community/hero-flowers.webp") return route.fulfill({ contentType: "image/webp", body: fs.readFileSync(path.resolve("public/community/hero-flowers.webp")) });
     if (p.includes("/images/")) return route.fulfill({ contentType: "image/png", body: png });
     if (p.startsWith("/hero/")) return route.fulfill({ contentType: "image/webp", body: fs.readFileSync(path.resolve("public/hero/hall-slide-b.webp")) });
     if (p === "/api/v1/discover") {

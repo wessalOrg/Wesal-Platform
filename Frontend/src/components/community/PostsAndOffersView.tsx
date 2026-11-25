@@ -24,7 +24,16 @@ export default function PostsAndOffersView() {
 function CommunityHeading() {
   const t = useT();
   return <header className="community-hero">
-    <div><h1><CommunityIcon name="layers" />{t("community.title")}</h1><p>{t("community.subtitle")}</p></div>
+    <svg className="community-hero-wave" viewBox="0 0 1200 220" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 163C105 173 92 225 243 225H414C522 225 518 139 645 90C742 52 805 11 951 0H1200V220H0Z" fill="currentColor" fillOpacity=".62" />
+      <path d="M0 164C105 174 92 225 243 225H414C522 225 518 139 645 90" fill="none" stroke="var(--wesal-gold)" strokeOpacity=".35" strokeWidth=".8" />
+      <path d="M0 204C71 186 105 211 163 220" fill="none" stroke="white" strokeOpacity=".7" strokeWidth="2" />
+    </svg>
+    <svg className="community-hero-botanical" viewBox="0 0 100 66" fill="none" stroke="currentColor" strokeWidth=".8" aria-hidden="true">
+      <path d="M99 2C75 10 52 29 32 62M95 3C76 4 43 10 13 25M91 5C79 17 78 36 75 53" />
+      <path d="M76 11Q58 0 49 7Q61 16 76 11ZM60 20Q43 12 36 20Q48 27 60 20ZM45 37Q29 25 23 32Q29 44 45 37ZM37 50Q20 45 19 57Q31 60 37 50ZM82 17Q96 21 89 32Q78 29 82 17ZM78 31Q88 39 78 47Q71 40 78 31ZM48 13Q30 4 25 15Q36 22 48 13Z" />
+    </svg>
+    <div className="community-hero-copy"><h1><CommunityIcon name="layers" />{t("community.title")}</h1><p>{t("community.subtitle")}</p></div>
   </header>;
 }
 

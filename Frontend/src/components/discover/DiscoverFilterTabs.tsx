@@ -22,7 +22,7 @@ export default function DiscoverFilterTabs({
       aria-label={t("discover.filtersLabel")}
       data-testid="discover-filter-tabs"
     >
-      {DISCOVER_FILTERS.map((key) => {
+      {DISCOVER_FILTERS.filter(key => key !== "Offers").map((key) => {
         const active = value === key;
         return (
           <button

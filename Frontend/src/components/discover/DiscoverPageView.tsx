@@ -1,183 +1,90 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import DiscoverEmptyState from "@/components/discover/DiscoverEmptyState";
 import DiscoverExploreGrid from "@/components/discover/DiscoverExploreGrid";
 import DiscoverFilterTabs from "@/components/discover/DiscoverFilterTabs";
 import DiscoverSearchBox from "@/components/discover/DiscoverSearchBox";
-import { useFavoritePostIds } from "@/hooks/useFavoritePostIds";
-import { useOfferLifecycle } from "@/hooks/useOfferLifecycle";
 import { useRequestScope } from "@/hooks/useRequestScope";
 import { useT } from "@/i18n";
-import { hasNextContentPage, mergeContent } from "@/lib/content-pagination";
 import { ApiError } from "@/lib/api-error";
-import {
-  filterVisibleDiscoverItems,
-  normalizeDiscoverFilter,
-} from "@/lib/discover-filter";
-import {
-  fetchDiscoverFeed,
-  searchDiscoverFeed,
-} from "@/services/discover";
+import { readAuthenticatedAccount, serverAuthenticatedAccount, subscribeAuthenticatedAccount } from "@/lib/authenticated-account";
+import { createDirectoryLoader, directoryFilter, directoryItems } from "@/services/discover-directory";
 import type { DiscoverFilter, DiscoverItem } from "@/types/offers";
 
 const PAGE_SIZE = 12;
 
-/**
- * Section 18–19 Discover page: filter tabs, context search, mixed explore grid.
- * Default filter is All. Search uses GET /search (Offers uses client filter on feed).
- */
+/** Public directory: halls, coordinators and photographers only. */
 export default function DiscoverPageView() {
-  const t = useT();
+  const t = useT(), router = useRouter();
   const scope = useRequestScope();
-  const offerSearch = useRef<{ term: string; items: DiscoverItem[] } | null>(null);
   const searchParams = useSearchParams();
-  const { ids: savedPostIds, markSaved } = useFavoritePostIds();
-  const [filter, setFilter] = useState<DiscoverFilter>(() =>
-    searchParams.get("offer")?.trim() ? "Offers" : normalizeDiscoverFilter(searchParams.get("filter")),
-  );
-  const [draftQuery, setDraftQuery] = useState(
-    () => searchParams.get("q")?.trim() ?? "",
-  );
-  const [appliedQuery, setAppliedQuery] = useState(
-    () => searchParams.get("q")?.trim() ?? "",
-  );
+  const account = useSyncExternalStore(subscribeAuthenticatedAccount, readAuthenticatedAccount, serverAuthenticatedAccount);
+  const [filter, setFilter] = useState<DiscoverFilter>(() => directoryFilter(searchParams.get("filter")));
+  const [draftQuery, setDraftQuery] = useState(() => searchParams.get("q")?.trim() ?? "");
+  const [appliedQuery, setAppliedQuery] = useState(() => searchParams.get("q")?.trim() ?? "");
   const [loadedItems, setItems] = useState<DiscoverItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [serverTotalCount, setTotalCount] = useState<number | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    "loading",
-  );
+  const [loadStatus, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorKey, setErrorKey] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(
-    () => Boolean(searchParams.get("q")?.trim()),
-  );
+  const [hasSearched, setHasSearched] = useState(() => Boolean(searchParams.get("q")?.trim()));
+  const legacyOffers = searchParams.get("filter") === "Offers" || Boolean(searchParams.get("offer")?.trim());
+  const criteria = useMemo(() => ({ account, filter, page, appliedQuery, hasSearched }), [account, filter, page, appliedQuery, hasSearched]);
+  const [resultCriteria, setResultCriteria] = useState<typeof criteria | null>(null);
+  const directory = useMemo(() => ({ account, filter, read: createDirectoryLoader(appliedQuery) }), [account, filter, appliedQuery]);
+  const status = resultCriteria === criteria ? loadStatus : "loading";
+  const items = status === "ready" ? directoryItems(loadedItems, filter) : [];
+  const totalCount = serverTotalCount ?? "\u2026";
 
   const syncUrl = useCallback((nextFilter: DiscoverFilter, nextQuery: string) => {
     const url = new URL(window.location.href);
     url.searchParams.set("filter", nextFilter);
+    url.searchParams.delete("offer");
     if (nextQuery.trim()) url.searchParams.set("q", nextQuery.trim());
     else url.searchParams.delete("q");
     window.history.replaceState({}, "", url.toString());
   }, []);
 
-  const load = useCallback(
-    async (
-      nextFilter: DiscoverFilter,
-      nextPage: number,
-      nextQuery: string,
-      searched: boolean,
-      quiet = false,
-    ) => {
-      const current = scope.latest("discover");
+  const load = useCallback(async () => {
+    const current = scope.latest("discover");
+    if (!current() || legacyOffers) return;
+    setStatus("loading"); setErrorKey(null);
+    try {
+      const result = hasSearched && !appliedQuery.trim()
+        ? { items: [], totalPages: 0, totalCount: 0, hasTotalCount: true }
+        : await directory.read(filter, page, PAGE_SIZE, current);
       if (!current()) return;
-      if (!quiet) setStatus("loading");
-      setErrorKey(null);
-      try {
-        const term = nextQuery.trim();
-        let result;
-
-        if (term && nextFilter === "Offers") {
-          // Search API rejects Offers — page through the active Offers feed and match locally.
-          const cached = !quiet && nextPage > 1 && offerSearch.current?.term === term
-            ? filterVisibleDiscoverItems(offerSearch.current.items) : null;
-          const matched = cached ?? await collectMatchingOffers(term, current);
-          if (!current()) return;
-          offerSearch.current = { term, items: matched };
-          result = {
-            items: matched.slice((nextPage - 1) * PAGE_SIZE, nextPage * PAGE_SIZE),
-            pageNumber: nextPage,
-            pageSize: PAGE_SIZE,
-            totalCount: matched.length,
-            totalPages: Math.max(1, Math.ceil(matched.length / PAGE_SIZE) || 1),
-          };
-        } else if (term) {
-          offerSearch.current = null;
-          result = await searchDiscoverFeed(term, nextFilter, nextPage, PAGE_SIZE);
-        } else if (searched && !term) {
-          offerSearch.current = null;
-          result = {
-            items: [] as DiscoverItem[],
-            pageNumber: 1,
-            pageSize: PAGE_SIZE,
-            totalCount: 0,
-            totalPages: 0,
-          };
-        } else {
-          offerSearch.current = null;
-          // Browse feed (All default) without requiring a query first.
-          result = await fetchDiscoverFeed(nextFilter, nextPage, PAGE_SIZE);
-        }
-
-        if (!current()) return;
-        const lastPage = Math.max(1, result.totalPages);
-        if (quiet && nextPage > lastPage) {
-          setTotalPages(lastPage);
-          setPage(lastPage);
-          return;
-        }
-        setItems(result.items);
-        setTotalPages(Math.max(1, result.totalPages));
-        setTotalCount(result.hasTotalCount === false ? null : result.totalCount);
-        setStatus("ready");
-      } catch (err) {
-        if (!current()) return;
-        if (!quiet) setItems([]);
-        setStatus("error");
-        setErrorKey(
-          err instanceof ApiError ? err.message : "discover.errors.loadFailed",
-        );
-      }
-    },
-    [scope],
-  );
+      const lastPage = Math.max(1, result.totalPages);
+      if (page > lastPage) { setPage(lastPage); return; }
+      setItems(result.items); setTotalPages(lastPage);
+      setTotalCount(result.hasTotalCount === false ? null : result.totalCount);
+      setResultCriteria(criteria); setStatus("ready");
+    } catch (error) {
+      if (!current()) return;
+      setItems([]); setResultCriteria(criteria); setStatus("error");
+      setErrorKey(error instanceof ApiError ? error.message : "discover.errors.loadFailed");
+    }
+  }, [scope, criteria, directory, filter, page, appliedQuery, hasSearched, legacyOffers]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => { void load(filter, page, appliedQuery, hasSearched); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [appliedQuery, filter, hasSearched, load, page]);
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => { window.clearTimeout(timer); scope.latest("discover"); };
+  }, [load, scope]);
 
-  const fromUrl = normalizeDiscoverFilter(searchParams.get("filter"));
+  const fromUrl = directoryFilter(searchParams.get("filter"));
   const urlQuery = searchParams.get("q")?.trim() ?? "";
-  const urlOffer = searchParams.get("offer")?.trim() ?? "";
-  const urlKey = JSON.stringify([fromUrl, urlQuery, urlOffer]);
+  const urlKey = JSON.stringify([fromUrl, urlQuery]);
   const [seenUrl, setSeenUrl] = useState(urlKey);
   if (seenUrl !== urlKey) {
-    setSeenUrl(urlKey);
-    setFilter(urlOffer ? "Offers" : fromUrl);
-    setDraftQuery(urlQuery);
-    setAppliedQuery(urlQuery);
-    setHasSearched(Boolean(urlQuery));
-    setPage(1);
+    setSeenUrl(urlKey); setFilter(fromUrl); setDraftQuery(urlQuery);
+    setAppliedQuery(urlQuery); setHasSearched(Boolean(urlQuery)); setPage(1);
   }
-
   useEffect(() => {
-    if (urlOffer && fromUrl !== "Offers") syncUrl("Offers", urlQuery);
-  }, [fromUrl, urlOffer, urlQuery, syncUrl]);
-
-  useOfferLifecycle(loadedItems.filter((item) => item.contentType === "ProfessionalOffer" || item.contentType === "HallOffer"), {
-    enabled: filter === "All" || filter === "Offers",
-    discoverUnloaded: filter === "All" || filter === "Offers",
-    onRevalidate: () => load(filter, page, appliedQuery, hasSearched, true),
-  });
-  const items = filterVisibleDiscoverItems(loadedItems);
-  const totalCount = loadedItems.length !== items.length ? "\u2026" : (serverTotalCount ?? "\u2026");
-
-  // Scroll/highlight a deep-linked offer card after the Offers feed loads.
-  useEffect(() => {
-    const offerId = searchParams.get("offer")?.trim();
-    if (!offerId || status !== "ready" || filter !== "Offers") return;
-    const node = document.getElementById(`discover-offer-${offerId}`);
-    if (!node) return;
-    node.scrollIntoView({ behavior: "smooth", block: "center" });
-    node.classList.add("ring-2", "ring-[var(--wesal-maroon)]");
-    const timer = window.setTimeout(() => {
-      node.classList.remove("ring-2", "ring-[var(--wesal-maroon)]");
-    }, 2400);
-    return () => window.clearTimeout(timer);
-  }, [filter, items, searchParams, status]);
+    if (legacyOffers) router.replace("/posts-and-offers");
+  }, [legacyOffers, router]);
 
   function changeFilter(next: DiscoverFilter) {
     setFilter(next);
@@ -268,7 +175,7 @@ export default function DiscoverPageView() {
             <button
               type="button"
               className="btn-outline mt-3"
-              onClick={() => void load(filter, page, appliedQuery, hasSearched)}
+              onClick={() => void load()}
             >
               {t("common.retry")}
             </button>
@@ -289,8 +196,6 @@ export default function DiscoverPageView() {
             <DiscoverExploreGrid
               filter={filter}
               items={items}
-              savedPostIds={savedPostIds}
-              onFavoriteChanged={markSaved}
             />
             {totalPages > 1 ? (
               <nav
@@ -339,28 +244,6 @@ export default function DiscoverPageView() {
       </div>
     </div>
   );
-}
-
-const OFFERS_SEARCH_PAGE_SIZE = 50;
-
-async function collectMatchingOffers(term: string, current: () => boolean): Promise<DiscoverItem[]> {
-  const needle = term.trim().toLowerCase();
-  if (!needle) return [];
-  let matched: DiscoverItem[] = [];
-  let page = 1;
-  let totalPages = 1;
-  while (current() && page <= totalPages) {
-    const feed = await fetchDiscoverFeed("Offers", page, OFFERS_SEARCH_PAGE_SIZE);
-    if (!current()) return [];
-    totalPages = hasNextContentPage(feed, page, OFFERS_SEARCH_PAGE_SIZE) ? page + 1 : page;
-    for (const item of filterVisibleDiscoverItems(feed.items)) {
-      const hay =
-        `${item.displayName ?? ""} ${item.content ?? ""} ${item.location ?? ""}`.toLowerCase();
-      if (hay.includes(needle)) matched = mergeContent(matched, [item]);
-    }
-    page += 1;
-  }
-  return filterVisibleDiscoverItems(matched);
 }
 
 function HeroSearchIcon() {

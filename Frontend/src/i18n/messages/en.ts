@@ -1469,7 +1469,7 @@ const en: MessageCatalog = {
     "Statistics are available only for approved coordinator and photographer accounts.",
   "meta.discoverTitle": "Your joy starts here | Wesal",
   "meta.discoverDescription":
-    "Search and explore halls, coordinators, photographers, and offers on Wesal.",
+    "Search and explore halls, photographers, and event coordinators on Wesal.",
   "meta.adminManagementTitle": "Admin hall review | Wesal",
   "meta.adminManagementDescription": "Review and approve hall submissions on Wesal.",
   "admin.appTitle": "Admin dashboard",
@@ -3652,10 +3652,10 @@ const en: MessageCatalog = {
   "offers.pro.editTitle": "Edit offer",
   "offers.pro.formSubtitle": "Follow and manage your offers, and update their status easily.",
   "discover.title": "Discover",
-  "discover.subtitle": "Explore halls, coordinators, photographers, and active offers.",
+  "discover.subtitle": "Explore halls, photographers, and event coordinators.",
   "discover.hero.title": "Search and explore",
   "discover.hero.subtitle":
-    "Search for halls, coordinators, photographers, or shops",
+    "Search for halls, photographers, and event coordinators",
   "discover.loading": "Loading…",
   "discover.searching": "Searching…",
   "discover.idleHint": "Start searching to find what you're looking for",
@@ -3676,7 +3676,7 @@ const en: MessageCatalog = {
   "discover.search.submit": "Search",
   "discover.search.clear": "Clear search",
   "discover.search.placeholder.all":
-    "Search by hall, shop, store, or photographer name",
+    "Search by hall, photographer, or event coordinator name",
   "discover.search.placeholder.halls": "Search by hall name or area",
   "discover.search.placeholder.coordinators": "Search by coordinator shop name",
   "discover.search.placeholder.photographers": "Search by studio name",

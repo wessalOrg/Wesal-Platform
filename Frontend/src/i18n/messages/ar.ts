@@ -1461,7 +1461,7 @@ const ar: MessageCatalog = {
 
   "meta.discoverTitle": "فرحتك من هنا | وصال",
   "meta.discoverDescription":
-    "ابحث واستكشف القاعات والمنسقين والمصورين والعروض على وصال.",
+    "ابحث واستكشف القاعات والمصورين ومنسقي المناسبات على وصال.",
   "meta.adminManagementTitle": "مراجعة القاعات | وصال",
   "meta.adminManagementDescription": "مراجعة واعتماد طلبات القاعات في وصال.",
   "admin.appTitle": "لوحة الإدارة",
@@ -3592,10 +3592,10 @@ const ar: MessageCatalog = {
   "offers.pro.editTitle": "تعديل العرض",
   "offers.pro.formSubtitle": "تابع وأدر عروضك وحدّث حالتها بسهولة.",
   "discover.title": "الاستكشاف",
-  "discover.subtitle": "اكتشف القاعات والمنسقين والمصورين والعروض النشطة.",
+  "discover.subtitle": "اكتشف القاعات والمصورين ومنسقي المناسبات.",
   "discover.hero.title": "البحث والاستكشاف",
   "discover.hero.subtitle":
-    "ابحث عن القاعات، المنسقين، المصورين أو المتاجر",
+    "ابحث عن القاعات والمصورين ومنسقي المناسبات",
   "discover.loading": "جاري التحميل…",
   "discover.searching": "جاري البحث...",
   "discover.idleHint": "ابدأ البحث للعثور على ما تبحث عنه",
@@ -3616,7 +3616,7 @@ const ar: MessageCatalog = {
   "discover.search.submit": "بحث",
   "discover.search.clear": "مسح البحث",
   "discover.search.placeholder.all":
-    "ابحث باسم قاعة، محل، متجر أو مصور",
+    "ابحث باسم القاعة أو المصور أو منسق المناسبات",
   "discover.search.placeholder.halls": "ابحث باسم القاعة أو المنطقة",
   "discover.search.placeholder.coordinators": "ابحث باسم محل المنسق",
   "discover.search.placeholder.photographers": "ابحث باسم الاستوديو",
