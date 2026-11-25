@@ -6,7 +6,7 @@ import PostDetailsView from "@/components/posts/PostDetailsView";
 import { translate } from "@/i18n";
 
 type PageProps = {
-  params: Promise<{ postId: string }> | { postId: string };
+  params: Promise<{ postId: string }>;
 };
 
 export const metadata: Metadata = {
