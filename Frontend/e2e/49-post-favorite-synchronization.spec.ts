@@ -120,9 +120,9 @@ const many = Array.from({ length: 150 }, (_, index) => "bbbbbbbb-bbbb-4bbb-8bbb-
 test("actual public DTO keeps absent favorite state unknown", async ({ page }) => {
   await mount(page); expect(await page.evaluate(id => (window as HarnessWindow).mapPost({ id, images: [] }).isSavedByCurrentUser, postId)).toBeNull();
 });
-test("opening a saved post directly hydrates both details buttons from favorites", async ({ page }) => {
+test("opening a saved post directly hydrates the details heart from favorites", async ({ page }) => {
   const errors = await mount(page, { saved: [postId] }); await expectState(page, true);
-  await expect(page.getByTestId("post-favorite-button")).toHaveCount(2);
+  await expect(page.getByTestId("post-favorite-button")).toHaveCount(1);
   for (const button of await page.getByTestId("post-favorite-button").all()) await expect(button).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => (window as HarnessWindow).requests.filter(r => r.path === "/favorites").length)).toBe(1); expect(errors).toEqual([]);
 });
@@ -133,11 +133,11 @@ test("refreshing the document restores saved state from the API", async ({ page 
   await mount(page, { saved: [postId] }); await expectState(page, true);
   await page.reload(); await inject(page, { saved: [postId] }); await expectState(page, true);
 });
-test("save and remove synchronize duplicate buttons and preserve counts", async ({ page }) => {
+test("save and remove synchronize the details heart and preserve displayed counts", async ({ page }) => {
   await mount(page); const buttons = page.getByTestId("post-favorite-button"); await expectState(page, false);
-  await buttons.first().click(); for (const button of await buttons.all()) { await expect(button).toHaveAttribute("aria-pressed", "true"); await expect(button).toContainText("9"); }
+  await buttons.first().click(); await expect(buttons).toHaveAttribute("aria-pressed", "true"); await expect(page.getByTestId("post-save-count")).toContainText("9");
   await expect(buttons.first()).toBeEnabled(); await buttons.last().click(); await expectState(page, false);
-  await expect(buttons.first()).toContainText("8");
+  await expect(page.getByTestId("post-save-count")).toContainText("8");
   expect(await page.evaluate(() => (window as HarnessWindow).requests.filter(r => r.method !== "GET").map(r => r.method))).toEqual(["POST", "DELETE"]);
 });
 test("Discover and details share state instead of trusting stale initialSaved props", async ({ page }) => {

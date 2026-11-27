@@ -28,11 +28,11 @@ test.beforeAll(async () => {
   };
   const result = await build({
     stdin: { resolveDir: process.cwd(), loader: "tsx", contents: `import React from'react';import{createRoot}from'react-dom/client';import View from'./src/components/community/PostsAndOffersView';
-      import{setAccessToken}from'./src/lib/auth-token';import{setStoredAuth,clearAuthSession}from'./src/lib/auth-storage';
+      import Details from'./src/components/posts/PostDetailsView';import{setAccessToken}from'./src/lib/auth-token';import{setStoredAuth,clearAuthSession}from'./src/lib/auth-storage';
       window.lang=new URLSearchParams(location.search).get('lang')||'ar';window.navigations=[];document.documentElement.dir=lang==='ar'?'rtl':'ltr';document.documentElement.lang=lang;
       window.actions={login(id){const token=id+'-token';setAccessToken(token);setStoredAuth({token,user:{id,role:'RegisteredUser'}})},logout:clearAuthSession,
         language(value){window.lang=value;document.documentElement.dir=value==='ar'?'rtl':'ltr';document.documentElement.lang=value;window.dispatchEvent(new Event('language'))}};
-      createRoot(document.getElementById('root')).render(<main className="community-page"><View/></main>);` },
+      createRoot(document.getElementById('root')).render(<main className="community-page">{location.search.includes('details=1')?<Details postId="post-1"/>:<View/>}</main>);` },
     platform: "browser", bundle: true, write: false, jsx: "automatic", loader: { ".css": "empty" },
     define: { "process.env.NODE_ENV": '"production"' },
     plugins: [{ name: "community-api", setup(builder) {
@@ -49,11 +49,13 @@ const post = (n: number) => ({ id: `post-${n}`, contentType: "Post", ownerUserId
 const offer = (n: number) => ({ id: `offer-${n}`, contentType: "ProfessionalOffer", ownerUserId: `owner-${n % 2}`, content: `Special offer ${n}\nComplete offer description.`, oldPrice: 250, offerPrice: 200,
   imageUrl: "/test-image.png", startsAt: new Date(now - 1000).toISOString(), endsAt: new Date(now + 86400000).toISOString(), createdAt: "2026-11-20T10:00:00Z" });
 
-async function mount(page: Page, options: { lang?: "ar" | "en"; empty?: boolean; mixedFirst?: boolean; expire?: boolean; failInitial?: string; hallOffer?: boolean } = {}) {
+async function mount(page: Page, options: { lang?: "ar" | "en"; empty?: boolean; mixedFirst?: boolean; expire?: boolean; failInitial?: string; hallOffer?: boolean; details?: boolean } = {}) {
   const calls: Array<{ filter: string; page: number; owner: string }> = [], profileCalls: string[] = [], writes: string[] = [];
   let failure: string | null = options.failInitial ?? null, failPage = 1, held: { filter: string; page: number } | null = null;
   const pending: Array<() => Promise<void>> = [];
   const saved = new Set<string>();
+  const comments: Array<{ id: string; postId: string; text: string; authorUserId: string; authorName: string; createdAt: string }> = [];
+  let commentReads = 0;
   await page.clock.install({ time: now });
   await page.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url()), p = url.pathname;
@@ -84,6 +86,14 @@ async function mount(page: Page, options: { lang?: "ar" | "en"; empty?: boolean;
       const id = p.split("/").pop()!; profileCalls.push(id);
       return json({ userId: id, role: "Photographer", isPubliclyAvailable: true, approvalStatus: "Approved", displayName: `Studio ${id}`, profilePictureUrl: "/test-image.png", posts: [], offers: [] });
     }
+    if (p === "/api/v1/posts/post-1") return json({ ...post(1), images: [], ownerName: "Studio owner-1", ownerAvatarUrl: "/test-image.png", saveCount: 0 });
+    if (p === "/api/v1/posts/post-1/comments") {
+      if (request.method() === "POST") {
+        writes.push(p); const created = { id: `comment-${comments.length + 1}`, postId: "post-1", text: request.postDataJSON().text,
+          authorUserId: "A", authorName: "Account A", createdAt: new Date(now).toISOString() }; comments.push(created); return json(created);
+      }
+      commentReads++; return json({ items: comments, pageNumber: 1, pageSize: 30, totalCount: comments.length, totalPages: comments.length ? 1 : 0 });
+    }
     if (/\/api\/v1\/offers\/offer-\d+$/.test(p)) return json({ ...offer(Number(p.split("-").pop())),
       content: "Full offer text\nSecond paragraph\nLast paragraph", images: [1, 2, 3].map(n => ({ id: `image-${n}`, order: n, url: `${p}/images/image-${n}` })) });
     if (p === "/api/v1/favorites" && request.method() === "GET") return json({ items: [...saved].map(id => ({ ...post(Number(id.split("-").pop())), id, images: [] })), pageNumber: 1, pageSize: 50, totalCount: saved.size, totalPages: saved.size ? 1 : 0 });
@@ -93,13 +103,14 @@ async function mount(page: Page, options: { lang?: "ar" | "en"; empty?: boolean;
     if (p.endsWith("/shares")) return route.fulfill({ status: 204 });
     throw new Error(`Unexpected request ${request.method()} ${p}`);
   });
-  await page.goto(`http://localhost:3000/community-test?lang=${options.lang ?? "ar"}`);
+  await page.goto(`http://localhost:3000/community-test?lang=${options.lang ?? "ar"}${options.details ? "&details=1" : ""}`);
   await page.addScriptTag({ content: bundle });
   expect(styles).toContain("container-wesal");
   await page.addStyleTag({ content: styles + "\n@font-face{font-family:WesalTest;src:url('/test-font.ttf')}body{font-family:WesalTest,Arial,sans-serif}" });
-  await expect(page.getByTestId("posts-and-offers-page")).toBeVisible();
-  await expect.poll(() => calls.length).toBe(2);
+  if (options.details) await expect(page.getByTestId("post-details-post-1")).toBeVisible();
+  else { await expect(page.getByTestId("posts-and-offers-page")).toBeVisible(); await expect.poll(() => calls.length).toBe(2); }
   return { calls, profileCalls, writes, pending, saved,
+    commentReads: () => commentReads,
     fail(filter: string | null, number = 1) { failure = filter; failPage = number; },
     hold(filter: string, number: number) { held = { filter, page: number }; }, release() { held = null; return Promise.all(pending.splice(0).map(reply => reply())); } };
 }
@@ -243,6 +254,51 @@ test("hall offer links and messaging use the hall contract", async ({ page }) =>
   await contact.click();
   await expect.poll(() => api.writes).toContain("/api/v1/halls/hall-1/conversations");
   expect(api.writes.some(p => p.startsWith("/api/v1/offers/"))).toBe(false);
+});
+
+for (const lang of ["ar", "en"] as const) {
+  test(`${lang}: post details have three icon actions and comments open on demand without losing a draft`, async ({ page }) => {
+    const api = await mount(page, { details: true, lang });
+    const details = page.getByTestId("post-details-post-1"), actions = page.getByTestId("post-details-actions");
+    await expect(actions.getByRole("button")).toHaveCount(3);
+    await expect(actions).toHaveText("");
+    await expect(details.getByTestId("post-inquiry-button")).toHaveCount(0);
+    await expect(details.getByRole("link", { name: (lang === "ar" ? ar : en)["posts.viewPublisher"], exact: true })).toHaveCount(0);
+    await expect(details.getByTestId("post-comment-section")).toHaveCount(0); expect(api.commentReads()).toBe(0);
+    const toggle = details.getByTestId("post-comments-toggle"); await toggle.focus(); await page.keyboard.press("Enter");
+    const section = details.getByTestId("post-comment-section"), input = section.locator("textarea");
+    await expect(toggle).toHaveAttribute("aria-expanded", "true"); await expect(section).toBeVisible(); await expect(input).toBeFocused();
+    await input.fill("Keep this draft"); await toggle.click(); await expect(section).toBeHidden();
+    await toggle.click(); await expect(input).toHaveValue("Keep this draft"); expect(api.commentReads()).toBe(1);
+  });
+}
+
+test("the revealed comment form submits using the existing API and updates the list", async ({ page }) => {
+  const api = await mount(page, { details: true }); await page.evaluate("actions.login('A')");
+  await page.getByTestId("post-comments-toggle").click();
+  const section = page.getByTestId("post-comment-section");
+  await section.locator("textarea").fill("A real new comment");
+  await section.getByRole("button", { name: ar["posts.comments.send"], exact: true }).click();
+  await expect(section.getByText("A real new comment", { exact: true })).toBeVisible();
+  await expect(section.locator("textarea")).toHaveValue("");
+  expect(api.writes.filter(p => p.endsWith("/comments"))).toHaveLength(1);
+});
+
+test("guest comment submission still requires login", async ({ page }) => {
+  const api = await mount(page, { details: true }); await page.getByTestId("post-comments-toggle").click();
+  const section = page.getByTestId("post-comment-section"); await section.locator("textarea").fill("Guest draft");
+  await section.getByRole("button", { name: ar["posts.comments.send"], exact: true }).click();
+  expect(await page.evaluate("navigations[0]")).toBe("/login?redirect=%2Fposts%2Fpost-1"); expect(api.writes).toHaveLength(0);
+});
+
+test("the icon-only share button copies the existing post link", async ({ page }) => {
+  await mount(page, { details: true });
+  await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+    writeText: (text: string) => { Object.assign(window, { copiedPostLink: text }); return Promise.resolve(); },
+  } }));
+  const share = page.getByTestId("post-share-button"); await expect(share).toHaveAccessibleName(ar["posts.share.label"]);
+  await expect(share).toHaveText(""); await share.click();
+  await expect.poll(() => page.evaluate("copiedPostLink")).toBe("http://localhost:3000/posts/post-1");
 });
 
 for (const lang of ["ar", "en"] as const) for (const width of [390, 768, 1366]) {

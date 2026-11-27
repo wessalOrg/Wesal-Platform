@@ -93,10 +93,12 @@ for (const width of [1366, 820, 390]) {
     await expect(details.getByText(fullPost, { exact: true })).toBeVisible();
     expect(await details.getByText(fullPost, { exact: true }).evaluate((el) => getComputedStyle(el).webkitLineClamp)).toBe("none");
     await expect(details.getByRole("link", { name: "Original Publisher", exact: true })).toHaveAttribute("href", `/professionals/${owner}`);
+    await expect(page.getByTestId("post-comment-section")).toHaveCount(0);
+    await page.getByTestId("post-comments-toggle").click();
     await expect(page.getByTestId("post-comment-section")).toBeVisible();
-    await expect(page.getByTestId("post-favorite-button")).toHaveCount(2);
+    await expect(page.getByTestId("post-favorite-button")).toHaveCount(1);
     await expect(page.getByTestId("post-share-button")).toBeVisible();
-    await expect(page.getByTestId("post-inquiry-button")).toBeVisible();
+    await expect(page.getByTestId("post-inquiry-button")).toHaveCount(0);
     await checkGallery(page, ar);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await details.screenshot({ path: test.info().outputPath(`post-details-${width}.png`) });

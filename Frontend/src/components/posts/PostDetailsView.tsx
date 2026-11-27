@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import ContentImageGallery from "@/components/posts/ContentImageGallery";
 import PostActionsMenu from "@/components/posts/PostActionsMenu";
 import PostCommentSection from "@/components/posts/PostCommentSection";
 import PostFavoriteButton from "@/components/posts/PostFavoriteButton";
-import PostInquiryButton from "@/components/posts/PostInquiryButton";
 import PostShareButton from "@/components/posts/PostShareButton";
 import SuccessToast from "@/components/ui/SuccessToast";
 import { useUiLang } from "@/components/layout/LanguageProvider";
@@ -40,6 +39,16 @@ function PostDetailsViewContent({
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [commentTotal, setCommentTotal] = useState(0);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentsActivated, setCommentsActivated] = useState(false);
+  const commentsId = useId();
+  const commentsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!commentsOpen) return;
+    commentsRef.current?.querySelector("textarea")?.focus({ preventScroll: true });
+    commentsRef.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }, [commentsOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,25 +134,7 @@ function PostDetailsViewContent({
       >
         <div className="grid gap-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
           <ContentImageGallery key={post.id} images={post.images}
-            emptyState={post.content?.trim() || t("posts.textOnly")} className="lg:min-h-[32rem]">
-              <PostFavoriteButton
-                postId={post.id}
-                initialSaved={post.isSavedByCurrentUser}
-                saveCount={post.saveCount}
-                className="!border-0 !bg-white/90 !px-2.5 !py-2 shadow-[0_8px_18px_rgba(0,0,0,0.12)]"
-                onChanged={(saved, nextCount) => {
-                  setPost((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          isSavedByCurrentUser: saved,
-                          saveCount: nextCount,
-                        }
-                      : prev,
-                  );
-                }}
-              />
-          </ContentImageGallery>
+            emptyState={post.content?.trim() || t("posts.textOnly")} className="lg:min-h-[32rem]" />
 
           <div className="flex min-h-0 flex-col gap-4 p-4 sm:p-5">
             {onClose ? (
@@ -211,7 +202,7 @@ function PostDetailsViewContent({
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--wesal-muted)]">
-              <span className="font-semibold">
+              <span className="font-semibold" data-testid="post-save-count">
                 {formatCompactCount(post.saveCount, locale)} {t("posts.stats.saves")}
               </span>
               <span className="font-semibold">
@@ -219,10 +210,10 @@ function PostDetailsViewContent({
               </span>
             </div>
 
-            <div className="mx-auto flex w-fit max-w-full flex-col items-stretch gap-3">
-              <div className="flex flex-wrap items-center justify-center gap-2 border-y border-[var(--wesal-border)] py-3">
+            <div className="flex items-center justify-center gap-3 border-y border-[var(--wesal-border)] py-3" data-testid="post-details-actions">
                 <PostFavoriteButton
                   postId={post.id}
+                  variant="icon"
                   initialSaved={post.isSavedByCurrentUser}
                   saveCount={post.saveCount}
                   onChanged={(saved, nextCount) => {
@@ -237,32 +228,29 @@ function PostDetailsViewContent({
                     );
                   }}
                 />
+                <button type="button"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)]"
+                  aria-label={t("posts.stats.comments")} title={t("posts.stats.comments")}
+                  aria-expanded={commentsOpen} aria-controls={commentsId} data-testid="post-comments-toggle"
+                  onClick={() => { setCommentsActivated(true); setCommentsOpen(value => !value); }}>
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M21 11a9 9 0 0 1-9 9H4l-2 2V11a9 9 0 0 1 19 0Z" />
+                  </svg>
+                </button>
                 <PostShareButton
                   postId={post.id}
+                  variant="icon"
                   onCopied={() => setLinkCopied(true)}
                 />
-                {profileHref ? (
-                  <Link
-                    href={profileHref}
-                    className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--wesal-border)] bg-white px-3 py-1.5 text-xs font-bold text-[var(--wesal-maroon)]"
-                  >
-                    {t("posts.viewPublisher")}
-                  </Link>
-                ) : null}
-              </div>
-              <PostInquiryButton
-                kind="post"
-                contentId={post.id}
-                providerUserId={post.ownerUserId}
-                className="w-full"
-              />
             </div>
 
-            <PostCommentSection
+            <div id={commentsId} ref={commentsRef} hidden={!commentsOpen}>
+            {commentsActivated ? <PostCommentSection
               postId={post.id}
               className="min-h-0 flex-1 border-t border-[var(--wesal-border)] pt-4"
               onTotalChange={setCommentTotal}
-            />
+            /> : null}
+            </div>
           </div>
         </div>
       </article>

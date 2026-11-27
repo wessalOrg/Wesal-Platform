@@ -10,6 +10,7 @@ type PostShareButtonProps = {
   /** Prefer clipboard copy (Figma “نسخ رابط المنشور”) over native share sheet. */
   preferCopy?: boolean;
   onCopied?: () => void;
+  variant?: "default" | "icon";
 };
 
 export default function PostShareButton({
@@ -17,6 +18,7 @@ export default function PostShareButton({
   className = "",
   preferCopy = true,
   onCopied,
+  variant = "default",
 }: PostShareButtonProps) {
   const t = useT();
   const [copied, setCopied] = useState(false);
@@ -51,7 +53,9 @@ export default function PostShareButton({
   return (
     <button
       type="button"
-      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--wesal-border)] bg-white px-3 py-1.5 text-xs font-bold text-[var(--wesal-muted)] transition hover:border-[var(--wesal-maroon)] hover:text-[var(--wesal-maroon)] ${className}`.trim()}
+      className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-[var(--wesal-border)] bg-white text-xs font-bold text-[var(--wesal-muted)] transition hover:border-[var(--wesal-maroon)] hover:text-[var(--wesal-maroon)] ${variant === "icon" ? "h-11 w-11 shrink-0" : "px-3 py-1.5"} ${className}`.trim()}
+      aria-label={t(copied ? "posts.share.copied" : "posts.share.label")}
+      title={t(copied ? "posts.share.copied" : "posts.share.label")}
       disabled={busy}
       onClick={() => {
         void share();
@@ -59,7 +63,7 @@ export default function PostShareButton({
       data-testid="post-share-button"
     >
       <ShareIcon />
-      {copied ? t("posts.share.copied") : t("posts.share.label")}
+      {variant === "default" ? (copied ? t("posts.share.copied") : t("posts.share.label")) : null}
     </button>
   );
 }
