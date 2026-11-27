@@ -3674,6 +3674,7 @@ const ar: MessageCatalog = {
   "posts.inquiry.offer": "استفسر عن هذا العرض",
   "posts.inquiry.starting": "جاري فتح المحادثة…",
   "posts.comments.title": "التعليقات",
+  "posts.comments.showMore": "عرض المزيد من التعليقات",
   "posts.comments.titleWithCount": "التعليقات ({count})",
   "posts.comments.placeholder": "أضف تعليقاً…",
   "posts.comments.send": "إرسال",

@@ -49,12 +49,14 @@ const post = (n: number) => ({ id: `post-${n}`, contentType: "Post", ownerUserId
 const offer = (n: number) => ({ id: `offer-${n}`, contentType: "ProfessionalOffer", ownerUserId: `owner-${n % 2}`, content: `Special offer ${n}\nComplete offer description.`, oldPrice: 250, offerPrice: 200,
   imageUrl: "/test-image.png", startsAt: new Date(now - 1000).toISOString(), endsAt: new Date(now + 86400000).toISOString(), createdAt: "2026-11-20T10:00:00Z" });
 
-async function mount(page: Page, options: { lang?: "ar" | "en"; empty?: boolean; mixedFirst?: boolean; expire?: boolean; failInitial?: string; hallOffer?: boolean; details?: boolean } = {}) {
+async function mount(page: Page, options: { lang?: "ar" | "en"; empty?: boolean; mixedFirst?: boolean; expire?: boolean; failInitial?: string; hallOffer?: boolean; details?: boolean; commentCount?: number } = {}) {
   const calls: Array<{ filter: string; page: number; owner: string }> = [], profileCalls: string[] = [], writes: string[] = [];
   let failure: string | null = options.failInitial ?? null, failPage = 1, held: { filter: string; page: number } | null = null;
   const pending: Array<() => Promise<void>> = [];
   const saved = new Set<string>();
-  const comments: Array<{ id: string; postId: string; text: string; authorUserId: string; authorName: string; createdAt: string }> = [];
+  const comments: Array<{ id: string; postId: string; text: string; authorUserId: string; authorName: string; createdAt: string }> =
+    Array.from({ length: options.commentCount ?? 0 }, (_, i) => ({ id: `comment-${i + 1}`, postId: "post-1", text: `Existing comment ${i + 1}`,
+      authorUserId: `visitor-${i + 1}`, authorName: `Visitor ${i + 1}`, createdAt: new Date(now - (i + 1) * 60000).toISOString() }));
   let commentReads = 0;
   await page.clock.install({ time: now });
   await page.route("**/*", async route => {
@@ -264,7 +266,7 @@ for (const lang of ["ar", "en"] as const) {
     await expect(actions).toHaveText("");
     await expect(details.getByTestId("post-inquiry-button")).toHaveCount(0);
     await expect(details.getByRole("link", { name: (lang === "ar" ? ar : en)["posts.viewPublisher"], exact: true })).toHaveCount(0);
-    await expect(details.getByTestId("post-comment-section")).toHaveCount(0); expect(api.commentReads()).toBe(0);
+    await expect(details.getByTestId("post-comment-section")).toBeHidden(); await expect.poll(api.commentReads).toBe(1);
     const toggle = details.getByTestId("post-comments-toggle"); await toggle.focus(); await page.keyboard.press("Enter");
     const section = details.getByTestId("post-comment-section"), input = section.locator("textarea");
     await expect(toggle).toHaveAttribute("aria-expanded", "true"); await expect(section).toBeVisible(); await expect(input).toBeFocused();
@@ -272,6 +274,43 @@ for (const lang of ["ar", "en"] as const) {
     await toggle.click(); await expect(input).toHaveValue("Keep this draft"); expect(api.commentReads()).toBe(1);
   });
 }
+
+for (const lang of ["ar", "en"] as const) {
+  test(`${lang}: existing comments preview two rows and reveal the rest on demand`, async ({ page }) => {
+    const api = await mount(page, { details: true, lang, commentCount: 10 });
+    const catalog = lang === "ar" ? ar : en;
+    const section = page.getByTestId("post-comment-section");
+    await expect(section).toBeVisible();
+    await expect(section.getByRole("heading")).toHaveText(catalog["posts.comments.titleWithCount"].replace("{count}", "10"));
+    await expect(section.locator("ul > li[data-testid]")).toHaveCount(2);
+    await expect(section.locator("textarea")).toBeHidden();
+    const actions = page.getByTestId("post-details-actions");
+    const group = await actions.boundingBox(), favorite = await actions.getByTestId("post-favorite-button").boundingBox();
+    expect(group).not.toBeNull(); expect(favorite).not.toBeNull();
+    expect(lang === "ar" ? group!.x + group!.width - favorite!.x - favorite!.width : favorite!.x - group!.x).toBeLessThan(2);
+    const more = section.getByRole("button", { name: catalog["posts.comments.showMore"], exact: true });
+    for (let count = 4; count <= 10; count += 2) {
+      await more.click(); await expect(section.locator("ul > li[data-testid]")).toHaveCount(count);
+    }
+    await expect(more).toHaveCount(0); expect(api.commentReads()).toBe(1);
+    await section.getByTestId("post-comment-comment-1").getByRole("button", { name: catalog["posts.comments.reply"], exact: true }).click();
+    await expect(section.locator("textarea")).toBeVisible(); await expect(section.locator("textarea")).toBeFocused();
+    await expect(section.getByText(catalog["posts.comments.replyingTo"].replace("{name}", "Visitor 1"), { exact: true })).toBeVisible();
+  });
+}
+
+test("a new comment keeps the two-row preview and existing comments survive closing the composer", async ({ page }) => {
+  await mount(page, { details: true, commentCount: 10 }); await page.evaluate("actions.login('A')");
+  const section = page.getByTestId("post-comment-section"), toggle = page.getByTestId("post-comments-toggle");
+  await expect(section.locator("ul > li[data-testid]")).toHaveCount(2);
+  await toggle.click(); await section.locator("textarea").fill("Newest comment");
+  await section.getByRole("button", { name: ar["posts.comments.send"], exact: true }).click();
+  await expect(section.getByText("Newest comment", { exact: true })).toBeVisible();
+  await expect(section.locator("ul > li[data-testid]")).toHaveCount(2);
+  await expect(section.getByRole("heading")).toHaveText(ar["posts.comments.titleWithCount"].replace("{count}", "11"));
+  await toggle.click(); await expect(section.locator("textarea")).toBeHidden();
+  await expect(section.getByText("Newest comment", { exact: true })).toBeVisible();
+});
 
 test("the revealed comment form submits using the existing API and updates the list", async ({ page }) => {
   const api = await mount(page, { details: true }); await page.evaluate("actions.login('A')");

@@ -22,6 +22,10 @@ type PostCommentSectionProps = {
   postId: string;
   className?: string;
   onTotalChange?: (total: number) => void;
+  previewCount?: number;
+  composerVisible?: boolean;
+  composerId?: string;
+  onRequestComposer?: () => void;
 };
 
 export default function PostCommentSection(props: PostCommentSectionProps) {
@@ -32,6 +36,10 @@ function PostCommentSectionContent({
   postId,
   className = "",
   onTotalChange,
+  previewCount,
+  composerVisible = true,
+  composerId,
+  onRequestComposer,
 }: PostCommentSectionProps) {
   const t = useT();
   const router = useRouter();
@@ -53,6 +61,12 @@ function PostCommentSectionContent({
     parentId?: string | null;
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(previewCount ?? Infinity);
+
+  function selectReply(comment: PostComment) {
+    setReplyTo(comment);
+    onRequestComposer?.();
+  }
 
   const load = useCallback(() => {
     return fetchPostComments(postId, 1, 30).then((page) => {
@@ -187,6 +201,7 @@ function PostCommentSectionContent({
     <section
       className={`space-y-4 ${className}`.trim()}
       data-testid="post-comment-section"
+      hidden={!composerVisible && comments.length === 0}
     >
       <div className="flex items-center gap-2">
         <ChatBubbleIcon />
@@ -196,6 +211,8 @@ function PostCommentSectionContent({
       </div>
 
       <form
+        id={composerId}
+        hidden={!composerVisible}
         onSubmit={submit}
         className="rounded-2xl border border-[var(--wesal-border)] bg-[var(--wesal-pink-soft)]/40 p-3"
       >
@@ -260,15 +277,16 @@ function PostCommentSectionContent({
       ) : null}
 
       <ul className="space-y-3">
-        {comments.map((comment) => (
+        {comments.slice(0, visibleCount).map((comment) => (
           <li
             key={comment.id}
+            data-testid={`post-comment-${comment.id}`}
             className="rounded-2xl border border-[var(--wesal-border)] bg-white p-3"
           >
             <CommentRow
               comment={comment}
               canDelete={isSameUserId(comment.authorUserId, currentUserId)}
-              onReply={() => setReplyTo(comment)}
+              onReply={() => selectReply(comment)}
               onDelete={() => setPendingDelete({ comment, parentId: null })}
               onToggleReplies={() => {
                 void loadReplies(comment);
@@ -282,7 +300,7 @@ function PostCommentSectionContent({
                     <CommentRow
                       comment={reply}
                       canDelete={isSameUserId(reply.authorUserId, currentUserId)}
-                      onReply={() => setReplyTo(comment)}
+                      onReply={() => selectReply(comment)}
                       onDelete={() =>
                         setPendingDelete({ comment: reply, parentId: comment.id })
                       }
@@ -295,6 +313,16 @@ function PostCommentSectionContent({
           </li>
         ))}
       </ul>
+      {comments.length > visibleCount ? (
+        <button
+          type="button"
+          className="inline-flex min-h-11 items-center text-sm font-bold text-[var(--wesal-maroon-dark)]"
+          data-testid="post-comments-more"
+          onClick={() => setVisibleCount(count => count + (previewCount ?? 2))}
+        >
+          {t("posts.comments.showMore")}
+        </button>
+      ) : null}
 
       <DeleteCommentDialog
         open={Boolean(pendingDelete)}

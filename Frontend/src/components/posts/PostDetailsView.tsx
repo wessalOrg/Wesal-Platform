@@ -40,7 +40,6 @@ function PostDetailsViewContent({
   const [linkCopied, setLinkCopied] = useState(false);
   const [commentTotal, setCommentTotal] = useState(0);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [commentsActivated, setCommentsActivated] = useState(false);
   const commentsId = useId();
   const commentsRef = useRef<HTMLDivElement>(null);
 
@@ -210,7 +209,7 @@ function PostDetailsViewContent({
               </span>
             </div>
 
-            <div className="flex items-center justify-center gap-3 border-y border-[var(--wesal-border)] py-3" data-testid="post-details-actions">
+            <div className="flex items-center justify-start gap-3 border-y border-[var(--wesal-border)] py-3" data-testid="post-details-actions">
                 <PostFavoriteButton
                   postId={post.id}
                   variant="icon"
@@ -232,7 +231,7 @@ function PostDetailsViewContent({
                   className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wesal-border)] bg-white text-[var(--wesal-maroon)]"
                   aria-label={t("posts.stats.comments")} title={t("posts.stats.comments")}
                   aria-expanded={commentsOpen} aria-controls={commentsId} data-testid="post-comments-toggle"
-                  onClick={() => { setCommentsActivated(true); setCommentsOpen(value => !value); }}>
+                  onClick={() => setCommentsOpen(value => !value)}>
                   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M21 11a9 9 0 0 1-9 9H4l-2 2V11a9 9 0 0 1 19 0Z" />
                   </svg>
@@ -244,12 +243,16 @@ function PostDetailsViewContent({
                 />
             </div>
 
-            <div id={commentsId} ref={commentsRef} hidden={!commentsOpen}>
-            {commentsActivated ? <PostCommentSection
+            <div ref={commentsRef}>
+            <PostCommentSection
               postId={post.id}
               className="min-h-0 flex-1 border-t border-[var(--wesal-border)] pt-4"
               onTotalChange={setCommentTotal}
-            /> : null}
+              previewCount={2}
+              composerVisible={commentsOpen}
+              composerId={commentsId}
+              onRequestComposer={() => setCommentsOpen(true)}
+            />
             </div>
           </div>
         </div>

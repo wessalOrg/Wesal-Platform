@@ -3734,6 +3734,7 @@ const en: MessageCatalog = {
   "posts.inquiry.offer": "Ask about this offer",
   "posts.inquiry.starting": "Opening chat…",
   "posts.comments.title": "Comments",
+  "posts.comments.showMore": "Show more comments",
   "posts.comments.titleWithCount": "Comments ({count})",
   "posts.comments.placeholder": "Add a comment…",
   "posts.comments.send": "Send",

@@ -93,7 +93,7 @@ for (const width of [1366, 820, 390]) {
     await expect(details.getByText(fullPost, { exact: true })).toBeVisible();
     expect(await details.getByText(fullPost, { exact: true }).evaluate((el) => getComputedStyle(el).webkitLineClamp)).toBe("none");
     await expect(details.getByRole("link", { name: "Original Publisher", exact: true })).toHaveAttribute("href", `/professionals/${owner}`);
-    await expect(page.getByTestId("post-comment-section")).toHaveCount(0);
+    await expect(page.getByTestId("post-comment-section")).toBeHidden();
     await page.getByTestId("post-comments-toggle").click();
     await expect(page.getByTestId("post-comment-section")).toBeVisible();
     await expect(page.getByTestId("post-favorite-button")).toHaveCount(1);
