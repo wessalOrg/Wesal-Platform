@@ -23,18 +23,59 @@ export default function PostsAndOffersView() {
 
 function CommunityHeading() {
   const t = useT();
-  return <header className="community-hero">
-    <svg className="community-hero-wave" viewBox="0 0 1200 220" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0 163C105 173 92 225 243 225H414C522 225 518 139 645 90C742 52 805 11 951 0H1200V220H0Z" fill="currentColor" fillOpacity=".62" />
-      <path d="M0 164C105 174 92 225 243 225H414C522 225 518 139 645 90" fill="none" stroke="var(--wesal-gold)" strokeOpacity=".35" strokeWidth=".8" />
-      <path d="M0 204C71 186 105 211 163 220" fill="none" stroke="white" strokeOpacity=".7" strokeWidth="2" />
-    </svg>
-    <svg className="community-hero-botanical" viewBox="0 0 100 66" fill="none" stroke="currentColor" strokeWidth=".8" aria-hidden="true">
-      <path d="M99 2C75 10 52 29 32 62M95 3C76 4 43 10 13 25M91 5C79 17 78 36 75 53" />
-      <path d="M76 11Q58 0 49 7Q61 16 76 11ZM60 20Q43 12 36 20Q48 27 60 20ZM45 37Q29 25 23 32Q29 44 45 37ZM37 50Q20 45 19 57Q31 60 37 50ZM82 17Q96 21 89 32Q78 29 82 17ZM78 31Q88 39 78 47Q71 40 78 31ZM48 13Q30 4 25 15Q36 22 48 13Z" />
-    </svg>
-    <div className="community-hero-copy"><h1><CommunityIcon name="layers" />{t("community.title")}</h1><p>{t("community.subtitle")}</p></div>
-  </header>;
+  return (
+    <header className="community-hero" data-testid="community-hero">
+      <div className="community-hero-copy">
+        <h1>
+          <CommunityIcon name="layers" />
+          {t("community.title")}
+        </h1>
+        <p>{t("community.subtitle")}</p>
+        <div className="community-hero-rule">
+          <span />
+          <CommunityIcon name="calendar" />
+          <span />
+        </div>
+        <div className="community-hero-actions">
+          <a className="community-hero-cta community-hero-cta-posts" href="#community-posts-section">
+            <CommunityIcon name="image" />
+            {t("community.posts.title")}
+            <CommunityIcon name="arrow" />
+          </a>
+          <a className="community-hero-cta community-hero-cta-offers" href="#community-offers-section">
+            <CommunityIcon name="tag" />
+            {t("community.offers.title")}
+            <CommunityIcon name="arrow" />
+          </a>
+        </div>
+      </div>
+
+      <div className="community-hero-visual" aria-hidden="true">
+        <div className="community-hero-percent">
+          <span>%</span>
+        </div>
+        <article className="community-hero-post">
+          {/* eslint-disable-next-line @next/next/no-img-element -- decorative hero collage asset */}
+          <img
+            className="community-hero-post-image"
+            src="/hero/hall-ballroom.jpg"
+            alt=""
+          />
+          <div className="community-hero-post-actions">
+            <CommunityIcon name="heart" />
+            <CommunityIcon name="comment" />
+            <CommunityIcon name="share" />
+            <CommunityIcon name="bookmark" />
+          </div>
+        </article>
+        <div className="community-hero-gift">
+          {/* eslint-disable-next-line @next/next/no-img-element -- decorative accent */}
+          <img src="/community/hero-flowers.webp" alt="" />
+        </div>
+        <span className="community-hero-silk" />
+      </div>
+    </header>
+  );
 }
 
 function ContentSection({ kind }: { kind: "posts" | "offers" }) {
@@ -59,7 +100,7 @@ function ContentSection({ kind }: { kind: "posts" | "offers" }) {
   const loadMore = () => { void pagination.loadMore(); };
   const retry = () => { void (pagination.loaded && pagination.hasMore ? pagination.loadMore() : pagination.refresh()); };
 
-  return <section className="community-section" aria-labelledby={`community-${kind}-title`} data-testid={`community-${kind}-section`}>
+  return <section id={`community-${kind}-section`} className="community-section" aria-labelledby={`community-${kind}-title`} data-testid={`community-${kind}-section`}>
     <header className="community-section-heading">
       <div><h2 id={`community-${kind}-title`}><CommunityIcon name={kind === "offers" ? "tag" : "image"} />{t(`community.${kind}.title`)}</h2><p>{t(`community.${kind}.subtitle`)}</p></div>
       <button type="button" className="community-view-all" aria-expanded={expanded} aria-controls={`community-${kind}-items`}
